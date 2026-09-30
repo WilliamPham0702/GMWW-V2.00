@@ -1,0 +1,44 @@
+
+/* GMWW V2.04 — clean shell, separate pages, compact Player preview */
+.topbar{display:none!important}
+.main{flex:1!important;min-height:0!important;position:relative!important;overflow:hidden!important;padding:0!important}
+.page{position:absolute!important;inset:0!important;display:none!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;max-width:none!important;margin:0!important;padding:14px 12px calc(92px + env(safe-area-inset-bottom))!important}
+.page.active{display:block!important}
+#library .section-title{display:none!important}
+#library .tabs{margin-top:0!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;padding:5px!important;border-radius:16px!important}
+#library .tab{min-height:48px!important;padding:8px 4px!important;font-size:10px!important;gap:4px!important;flex-direction:column!important}
+#library .tab .tab-ico{font-size:16px!important}
+#library .tab .tab-copy{align-items:center!important;text-align:center!important}
+#library .tab .tab-copy b{font-size:10px!important}
+#library .tab .tab-copy small{display:none!important}
+.library-panel{display:none!important}.library-panel.active{display:block!important}
+.library-page-head{margin:4px 2px 9px!important}
+.action-type-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.action-type-btn{border:1px solid rgba(157,224,255,.13);background:#0a1b2b;color:#8aa7ba;border-radius:11px;padding:9px 8px;font-size:11px;font-weight:850}
+.action-type-btn.active{color:#fff;background:#123a56;border-color:rgba(79,220,255,.32)}
+.lib-editor-card{border:1px solid rgba(157,224,255,.14);background:linear-gradient(180deg,rgba(15,42,64,.96),rgba(7,25,41,.98));border-radius:16px;padding:11px;margin-bottom:9px}
+.lib-editor-card h4{margin:0 0 8px;font-size:13px;color:#d8f7ff}
+.lib-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.lib-field{display:grid;gap:3px}.lib-field.full{grid-column:1/-1}
+.lib-field label{font-size:9px;color:#82a1b7;font-weight:800}
+.lib-field input,.lib-field select,.lib-field textarea{width:100%;border:1px solid rgba(157,224,255,.16);background:#071827;color:#effaff;border-radius:9px;padding:7px 8px;font-size:10.5px;outline:none}
+.lib-field textarea{min-height:56px;resize:vertical}
+.lib-save{display:flex;justify-content:flex-end;margin-top:8px}
+.lib-save button{border:1px solid #2aaecf;background:linear-gradient(180deg,#42d5f4,#169cbc);color:#04141d;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:900}
+.lib-empty{padding:26px 16px;text-align:center;border:1px dashed rgba(157,224,255,.18);border-radius:15px;color:#7f9eb4;background:rgba(255,255,255,.02)}
+.player-preview{max-width:360px!important;margin:0 auto!important;border-radius:18px!important}
+.card-head{padding:8px 10px 4px!important}.card-head h2{font-size:18px!important;line-height:1.05!important}
+.art{padding:0 8px!important;display:flex!important;justify-content:center!important}.art img{width:min(54%,185px)!important;height:auto!important;aspect-ratio:1024/936!important;object-fit:cover!important;border-radius:11px!important}
+.info-block{padding:5px 9px!important}.info-block .label{font-size:8px!important;margin-bottom:3px!important}.faction{font-size:10px!important;padding:3px 7px!important}
+.desc{font-size:9.8px!important;line-height:1.25!important}.desc+.desc{margin-top:4px!important}
+.skills{grid-template-columns:1fr 1fr!important;gap:5px!important}.skill{padding:5px 6px!important;border-radius:9px!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important}.skill b{font-size:10px!important}.skill span{font-size:8.6px!important}
+.edit-content{display:none!important}
+.settings{max-width:500px!important;margin:10px auto 0!important;padding:12px!important}
+.settings .action,.settings .rule,.settings .auto{display:none!important}
+.card-link-editor{display:grid;gap:8px}
+.card-link-row{display:grid;grid-template-columns:105px 1fr;gap:8px;align-items:center}
+.card-link-row label{font-size:10px;color:#86a5ba;font-weight:850}
+.card-link-row select,.card-link-row textarea{width:100%;border:1px solid rgba(157,224,255,.16);background:#071827;color:#fff;border-radius:9px;padding:8px;font-size:10.5px}
+.card-link-row textarea{min-height:58px;resize:vertical}
+.card-link-note{font-size:9px;line-height:1.35;color:#6f8da3;margin:2px 0 0}
+.bottom-nav{height:calc(70px + env(safe-area-inset-bottom))!important}
