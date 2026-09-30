@@ -111,6 +111,38 @@ document.addEventListener('DOMContentLoaded', function () {
     if (h3) h3.insertAdjacentElement('afterend', link); else settings.prepend(link);
   }
 
+
+  function restoreEditorCards() {
+    $('[data-action-id]').forEach(function (card) {
+      try {
+        var saved = JSON.parse(localStorage.getItem('gmww-v204-' + card.getAttribute('data-action-id')) || 'null');
+        if (saved) $('[data-k]', card).forEach(function (x) { var k = x.getAttribute('data-k'); if (saved[k] != null) x.value = saved[k]; });
+      } catch (_) {}
+    });
+    $('[data-effect-id]').forEach(function (card) {
+      try {
+        var saved = JSON.parse(localStorage.getItem('gmww-v204-' + card.getAttribute('data-effect-id')) || 'null');
+        if (saved) $('[data-k]', card).forEach(function (x) { var k = x.getAttribute('data-k'); if (saved[k] != null) x.value = saved[k]; });
+      } catch (_) {}
+    });
+  }
+
+  function syncPreviewFromActionLibrary() {
+    var skills = $('.skill');
+    var exile = $('[data-action-id="action_exile"]');
+    var revive = $('[data-action-id="action_revive"]');
+    if (exile && skills[0]) {
+      var n1 = $('[data-k="name"]', exile), u1 = $('[data-k="uses"]', exile);
+      if (n1) skills[0].querySelector('b').textContent = '① ' + n1.value.toUpperCase();
+      if (u1) skills[0].querySelector('span').textContent = u1.value;
+    }
+    if (revive && skills[1]) {
+      var n2 = $('[data-k="name"]', revive), u2 = $('[data-k="uses"]', revive);
+      if (n2) skills[1].querySelector('b').textContent = '② ' + n2.value.toUpperCase();
+      if (u2) skills[1].querySelector('span').textContent = u2.value;
+    }
+  }
+
   function saveCardLinks() {
     var data = {
       type: $('#cardTypeV204') ? $('#cardTypeV204').value : 'Lá Bài',
@@ -137,13 +169,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   } catch (_) {}
 
-  $$('[data-save-action]').forEach(function (b) {
+  restoreEditorCards();
+  syncPreviewFromActionLibrary();
+  $('[data-action-id] [data-k]').forEach(function (el) { el.addEventListener('input', syncPreviewFromActionLibrary); });
+
+  $('[data-save-action]').forEach(function (b) {
     b.addEventListener('click', function () {
       var card = b.closest('[data-action-id]');
       if (!card) return;
       var obj = {};
       $$('[data-k]', card).forEach(function (x) { obj[x.getAttribute('data-k')] = x.value; });
       localStorage.setItem('gmww-v204-' + card.getAttribute('data-action-id'), JSON.stringify(obj));
+      syncPreviewFromActionLibrary();
     });
   });
   $$('[data-save-effect]').forEach(function (b) {
