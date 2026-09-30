@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-<title>Quản Trò Ma Sói — V2.01</title>
+<title>Quản Trò Ma Sói — V2.02</title>
 <style>
 :root{
   --bg:#06111f; --bg2:#0a1b2d; --panel:#0d2237; --panel2:#102a43; --line:rgba(157,224,255,.18);
@@ -24,9 +24,9 @@ button,input{font:inherit}
 .placeholder .icon{font-size:44px;margin-bottom:12px}.placeholder b{color:var(--text);font-size:20px;display:block;margin-bottom:6px}
 .section-title{display:flex;justify-content:space-between;align-items:end;gap:10px;margin:3px 2px 14px}
 .section-title h2{font-size:25px;margin:0;font-weight:900}.section-title p{font-size:12px;color:var(--muted);margin:4px 0 0}
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:#0a1b2b;border:1px solid var(--line);padding:4px;border-radius:16px;margin-bottom:14px;position:sticky;top:0;z-index:3;box-shadow:0 8px 30px rgba(0,0,0,.18)}
-.tab{border:0;background:transparent;color:var(--muted);padding:11px 8px;border-radius:12px;font-weight:800}.tab.active{background:linear-gradient(180deg,#143a55,#0e2f48);color:#fff;box-shadow:0 7px 18px rgba(0,0,0,.22)}
-.library-panel{display:none}.library-panel.active{display:block}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#071827;border:1px solid var(--line);padding:7px;border-radius:18px;margin-bottom:16px;position:sticky;top:0;z-index:3;box-shadow:0 10px 32px rgba(0,0,0,.22)}
+.tab{border:1px solid rgba(157,224,255,.10);background:rgba(255,255,255,.025);color:var(--muted);padding:12px 10px;border-radius:14px;font-weight:850;display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px}.tab .tab-ico{font-size:20px}.tab .tab-copy{display:flex;flex-direction:column;align-items:flex-start;line-height:1.08}.tab .tab-copy b{font-size:13px}.tab .tab-copy small{font-size:10px;color:#7996aa;margin-top:4px;font-weight:700}.tab.active{background:linear-gradient(180deg,#174665,#0f3450);color:#fff;border-color:rgba(79,220,255,.34);box-shadow:0 7px 18px rgba(0,0,0,.22)}.tab.active .tab-copy small{color:#9feeff}
+.library-panel{display:none}.library-panel.active{display:block}.library-page-head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 11px}.library-page-head h3{margin:0;font-size:17px}.library-page-head span{font-size:11px;color:var(--muted);font-weight:800}
 .role-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:15px}
 .role-tile{position:relative;background:linear-gradient(180deg,rgba(18,46,70,.95),rgba(9,27,43,.96));border:1px solid var(--line);border-radius:18px;padding:9px;box-shadow:var(--shadow);cursor:pointer;overflow:hidden}
 .role-tile img{display:block;width:100%;aspect-ratio:1024/936;object-fit:cover;border-radius:12px;background:#07101b}
@@ -51,7 +51,7 @@ button,input{font:inherit}
 </head>
 <body>
 <div class="app">
-<header class="topbar"><div class="brand"><h1>Quản Trò Ma Sói</h1><span class="version">V2.01</span></div></header>
+<header class="topbar"><div class="brand"><h1>Quản Trò Ma Sói</h1><span class="version">V2.02</span></div></header>
 <main class="main">
 <section id="home" class="page placeholder"><div><div class="icon">🏠</div><b>Trang Chủ</b><span>Sẽ xây dựng ở bước tiếp theo.</span></div></section>
 <section id="members" class="page placeholder"><div><div class="icon">👥</div><b>Thành Viên</b><span>Sẽ xây dựng ở bước tiếp theo.</span></div></section>
@@ -59,8 +59,12 @@ button,input{font:inherit}
 <section id="library" class="page active">
   <div id="libraryHome">
     <div class="section-title"><div><h2>Thư Viện</h2><p>Quản lý Lá Bài và Lá Artifact</p></div></div>
-    <div class="tabs"><button class="tab active" data-lib="roles">Lá Bài</button><button class="tab" data-lib="artifacts">Lá Artifact</button></div>
+    <div class="tabs">
+      <button class="tab active" data-lib="roles"><span class="tab-ico">🃏</span><span class="tab-copy"><b>LÁ BÀI</b><small>Vai trò người chơi</small></span></button>
+      <button class="tab" data-lib="artifacts"><span class="tab-ico">✦</span><span class="tab-copy"><b>LÁ ARTIFACT</b><small>Vật phẩm hỗ trợ</small></span></button>
+    </div>
     <div id="roles" class="library-panel active">
+      <div class="library-page-head"><h3>Lá Bài</h3><span>1 lá</span></div>
       <div class="role-list">
         <article class="role-tile" id="witchTile">
           <button class="star" id="starBtn" aria-label="Đánh dấu thường dùng">☆</button>
@@ -69,7 +73,7 @@ button,input{font:inherit}
         </article>
       </div>
     </div>
-    <div id="artifacts" class="library-panel"><div class="empty"><b>Lá Artifact</b><br/>Trang đã sẵn sàng. Chưa thêm Artifact mẫu.</div></div>
+    <div id="artifacts" class="library-panel"><div class="library-page-head"><h3>Lá Artifact</h3><span>0 lá</span></div><div class="empty"><b>Chưa có Lá Artifact mẫu</b><br/>Trang Lá Artifact đã được tạo và hoạt động độc lập với Lá Bài.</div></div>
   </div>
 
   <div id="editor" class="editor">
