@@ -2,7 +2,7 @@
 /* GMWW V2.04 — clean shell, separate pages, compact Player preview */
 .topbar{display:none!important}
 .main{flex:1!important;min-height:0!important;position:relative!important;overflow:hidden!important;padding:0!important}
-.page{position:absolute!important;inset:0!important;display:none!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;max-width:none!important;margin:0!important;padding:14px 12px calc(92px + env(safe-area-inset-bottom))!important}
+.page{position:absolute!important;inset:0!important;display:none!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;max-width:none!important;margin:0!important;padding:calc(env(safe-area-inset-top) + 10px) 12px calc(92px + env(safe-area-inset-bottom))!important}
 .page.active{display:block!important}
 #library .section-title{display:none!important}
 #library .tabs{margin-top:0!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;padding:5px!important;border-radius:16px!important}
@@ -42,3 +42,5 @@
 .card-link-row textarea{min-height:58px;resize:vertical}
 .card-link-note{font-size:9px;line-height:1.35;color:#6f8da3;margin:2px 0 0}
 .bottom-nav{height:calc(70px + env(safe-area-inset-bottom))!important}
+
+.settings .type-line{display:none!important}
