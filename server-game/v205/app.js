@@ -100,9 +100,9 @@ function themeById(id){return state.themes.list.find(x=>x.id===id)||state.themes
 function prefFor(id){prefs.cards[id]=prefs.cards[id]||{starred:false,starOrder:null,hidden:false};return prefs.cards[id]}
 
 function factionMeta(id){
-  if(id==='wolf')return{label:'Phe Sói',icon:'🐾',cls:'wolf'};
-  if(id==='third')return{label:'Phe Ba',icon:'🔥',cls:'third'};
-  return{label:'Phe Dân Làng',icon:'🍃',cls:'village'};
+  if(id==='wolf')return{id:'wolf',label:'Phe Sói',icon:'🐾',cls:'wolf'};
+  if(id==='third')return{id:'third',label:'Phe Ba',icon:'🔥',cls:'third'};
+  return{id:'village',label:'Phe Dân Làng',icon:'🍃',cls:'village'};
 }
 function phaseLabel(v){return({night:'Ban đêm',day:'Ban ngày',both:'Cả ngày và đêm'})[v]||v}
 function usageLabel(v,n){
