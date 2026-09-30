@@ -21,3 +21,25 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run check
+      - name: Smoke-test Player Web locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-wrangler.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true; cat /tmp/gmww-wrangler.log || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/api/health > /tmp/health.json; then break; fi
+            sleep 1
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/health.json
+          curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
+          grep -q 'GMWW PLAYER' /tmp/player.html
+          curl -fsS http://127.0.0.1:8787/gmww-members-live.js > /tmp/player-live.js
+          test -s /tmp/player-live.js
+          curl -fsS http://127.0.0.1:8787/gmww-sea-background.webp > /tmp/background.webp
+          test -s /tmp/background.webp
+          ROOM_JSON=$(curl -fsS -X POST http://127.0.0.1:8787/api/rooms -H 'content-type: application/json' --data '{"roomName":"CI Smoke"}')
+          ROOM_CODE=$(node -e 'const d=JSON.parse(process.argv[1]); if(!d.roomCode) process.exit(1); process.stdout.write(d.roomCode)' "$ROOM_JSON")
+          curl -fsS "http://127.0.0.1:8787/api/rooms/$ROOM_CODE" > /tmp/room.json
+          grep -q "$ROOM_CODE" /tmp/room.json
