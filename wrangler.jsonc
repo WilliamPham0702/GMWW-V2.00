@@ -9,10 +9,12 @@
       { "name": "ROOMS", "class_name": "RoomDurableObject" }
     ]
   },
-  "exports": {
-    "RoomDurableObject": { "type": "durable-object", "storage": "sqlite" },
-    "MemberDurableObject": { "type": "durable-object", "state": "deleted" }
-  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RoomDurableObject"]
+    }
+  ],
   "assets": {
     "directory": "./assets",
     "binding": "ASSETS",
