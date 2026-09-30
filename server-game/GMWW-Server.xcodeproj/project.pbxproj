@@ -1,0 +1,29 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+  A1 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GMWW_ServerApp.swift; sourceTree = "<group>";};
+  A2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>";};
+  A3 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>";};
+  A4 = {isa = PBXFileReference; lastKnownFileType = folder; path = Web; sourceTree = "<group>";};
+  A5 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>";};
+  B1 = {isa = PBXBuildFile; fileRef = A1;}; B2 = {isa = PBXBuildFile; fileRef = A2;}; B4 = {isa = PBXBuildFile; fileRef = A4;}; B5 = {isa = PBXBuildFile; fileRef = A5;};
+  G1 = {isa = PBXGroup; children = (G2,P1); sourceTree = "<group>";};
+  G2 = {isa = PBXGroup; children = (A1,A2,A3,A4,A5); path = "GMWW-Server"; sourceTree = "<group>";};
+  P1 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = "GMWW-Server.app"; sourceTree = BUILT_PRODUCTS_DIR;};
+  S1 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B1,B2); runOnlyForDeploymentPostprocessing = 0;};
+  R1 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B4,B5); runOnlyForDeploymentPostprocessing = 0;};
+  F1 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
+  T1 = {isa = PBXNativeTarget; buildConfigurationList = C2; buildPhases = (S1,F1,R1); buildRules = (); dependencies = (); name = "GMWW-Server"; productName = "GMWW-Server"; productReference = P1; productType = "com.apple.product-type.application";};
+  PR = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = YES; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600;}; buildConfigurationList = C1; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base); mainGroup = G1; productRefGroup = G1; projectDirPath = ""; projectRoot = ""; targets = (T1);};
+  D1 = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos;}; name = Debug;};
+  D2 = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos;}; name = Release;};
+  D3 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; CODE_SIGN_IDENTITY = ""; CURRENT_PROJECT_VERSION = 201; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = "GMWW-Server/Info.plist"; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 2.01; PRODUCT_BUNDLE_IDENTIFIER = com.gmww.v2.server; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Debug;};
+  D4 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; CODE_SIGN_IDENTITY = ""; CURRENT_PROJECT_VERSION = 201; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = "GMWW-Server/Info.plist"; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 2.01; PRODUCT_BUNDLE_IDENTIFIER = com.gmww.v2.server; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Release;};
+  C1 = {isa = XCConfigurationList; buildConfigurations = (D1,D2); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+  C2 = {isa = XCConfigurationList; buildConfigurations = (D3,D4); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+ };
+ rootObject = PR;
+}
