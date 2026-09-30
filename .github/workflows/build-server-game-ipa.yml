@@ -21,11 +21,26 @@ jobs:
           APPDIR="server-game/GMWW-Server"
           mkdir -p "$APPDIR/Web"
           cp "$APPDIR/GMWW.html" "$APPDIR/Web/GMWW.html"
+          cp "server-game/v204.css" "$APPDIR/Web/v204.css"
+          cp "server-game/v204.js" "$APPDIR/Web/v204.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("server-game/GMWW-Server/Web/GMWW.html")
+          s=p.read_text(encoding="utf-8")
+          s=s.replace("V2.02","V2.04")
+          s=s.replace("</head>",'<link rel="stylesheet" href="v204.css"></head>')
+          s=s.replace("</body>",'<script src="v204.js"></script></body>')
+          p.write_text(s,encoding="utf-8")
+          PY
           test -s "$APPDIR/Web/GMWW.html"
-          grep -q 'V2.02' "$APPDIR/Web/GMWW.html"
+          grep -q 'V2.04' "$APPDIR/Web/GMWW.html"
           grep -q 'PHÙ THUỶ GIÀ' "$APPDIR/Web/GMWW.html"
           grep -q 'LÁ BÀI' "$APPDIR/Web/GMWW.html"
           grep -q 'LÁ ARTIFACT' "$APPDIR/Web/GMWW.html"
+          grep -q 'v204.css' "$APPDIR/Web/GMWW.html"
+          grep -q 'v204.js' "$APPDIR/Web/GMWW.html"
+          grep -q 'HÀNH ĐỘNG' "$APPDIR/Web/v204.js"
+          grep -q 'HIỆU ỨNG' "$APPDIR/Web/v204.js"
           grep -q 'data:image/webp;base64,' "$APPDIR/Web/GMWW.html"
 
       - name: Generate App Icon
@@ -58,7 +73,7 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.02 app
+      - name: Build unsigned V2.04 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -71,18 +86,18 @@ jobs:
           test -d "$APP"
           test -s "$APP/Web/GMWW.html"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.02'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.04'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload Quan-Tro-Ma-Soi-V2.02-unsigned.ipa
-          unzip -t Quan-Tro-Ma-Soi-V2.02-unsigned.ipa >/dev/null
-          unzip -l Quan-Tro-Ma-Soi-V2.02-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          ditto -c -k --sequesterRsrc --keepParent Payload Quan-Tro-Ma-Soi-V2.04-unsigned.ipa
+          unzip -t Quan-Tro-Ma-Soi-V2.04-unsigned.ipa >/dev/null
+          unzip -l Quan-Tro-Ma-Soi-V2.04-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
 
-      - name: Upload V2.02 IPA
+      - name: Upload V2.04 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.02-IPA
-          path: Quan-Tro-Ma-Soi-V2.02-unsigned.ipa
+          name: GMWW-V2.04-IPA
+          path: Quan-Tro-Ma-Soi-V2.04-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
