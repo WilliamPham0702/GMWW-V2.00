@@ -22,8 +22,10 @@ jobs:
           mkdir -p "$APPDIR/Web"
           cp "$APPDIR/GMWW.html" "$APPDIR/Web/GMWW.html"
           test -s "$APPDIR/Web/GMWW.html"
-          grep -q 'V2.01' "$APPDIR/Web/GMWW.html"
+          grep -q 'V2.02' "$APPDIR/Web/GMWW.html"
           grep -q 'PHÙ THUỶ GIÀ' "$APPDIR/Web/GMWW.html"
+          grep -q 'LÁ BÀI' "$APPDIR/Web/GMWW.html"
+          grep -q 'LÁ ARTIFACT' "$APPDIR/Web/GMWW.html"
           grep -q 'data:image/webp;base64,' "$APPDIR/Web/GMWW.html"
 
       - name: Generate App Icon
@@ -56,7 +58,7 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.01 app
+      - name: Build unsigned V2.02 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -69,18 +71,18 @@ jobs:
           test -d "$APP"
           test -s "$APP/Web/GMWW.html"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.01'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.02'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload Quan-Tro-Ma-Soi-V2.01-unsigned.ipa
-          unzip -t Quan-Tro-Ma-Soi-V2.01-unsigned.ipa >/dev/null
-          unzip -l Quan-Tro-Ma-Soi-V2.01-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          ditto -c -k --sequesterRsrc --keepParent Payload Quan-Tro-Ma-Soi-V2.02-unsigned.ipa
+          unzip -t Quan-Tro-Ma-Soi-V2.02-unsigned.ipa >/dev/null
+          unzip -l Quan-Tro-Ma-Soi-V2.02-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
 
-      - name: Upload V2.01 IPA
+      - name: Upload V2.02 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Quan-Tro-Ma-Soi-V2.01-IPA
-          path: Quan-Tro-Ma-Soi-V2.01-unsigned.ipa
+          name: GMWW-V2.02-IPA
+          path: Quan-Tro-Ma-Soi-V2.02-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
