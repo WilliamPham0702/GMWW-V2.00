@@ -1,10 +1,12 @@
 {
   "name": "gmww-v2-00",
-  "version": "2.1.0",
+  "version": "2.4.0",
   "private": true,
+  "description": "GMWW V2 Player Web and Cloudflare realtime gateway",
   "scripts": {
-    "check": "node --check src/index.js",
-    "deploy": "wrangler deploy"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
