@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GMWW V2.05</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <section class="page active" id="home">
+      <div class="placeholder"><span>🏠</span><b>Trang Chủ</b><small>Sẽ xây dựng sau.</small></div>
+    </section>
+
+    <section class="page" id="members">
+      <div class="placeholder"><span>👥</span><b>Thành Viên</b><small>Sẽ xây dựng sau.</small></div>
+    </section>
+
+    <section class="page" id="start">
+      <div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div>
+    </section>
+
+    <section class="page" id="library">
+      <div id="libraryHome">
+        <nav class="library-tabs" id="libraryTabs">
+          <button class="libtab active" data-lib="cards">🃏<b>Lá Bài</b></button>
+          <button class="libtab" data-lib="artifacts">✦<b>Artifact</b></button>
+          <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
+          <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
+          <button class="libtab" data-lib="themes">🌊<b>Chủ Đề</b></button>
+          <button class="libtab" data-lib="audio">🔊<b>Âm Thanh</b></button>
+        </nav>
+
+        <section class="libpane active" id="lib-cards">
+          <div class="filter-row">
+            <button class="filter active" data-card-filter="all">Tất cả</button>
+            <button class="filter" data-card-filter="star">★ Thường dùng</button>
+            <button class="filter" data-card-filter="hidden">◌ Tạm ẩn</button>
+          </div>
+          <div class="card-grid" id="cardGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-artifacts">
+          <div class="empty-card"><b>Chưa có Lá Artifact mẫu</b><small>Cấu trúc dùng chung với Lá Bài; khác phần hiển thị số lần sử dụng và viền.</small></div>
+        </section>
+
+        <section class="libpane" id="lib-actions">
+          <div class="section-tools">
+            <div class="seg" id="actionKindSeg">
+              <button class="active" data-action-kind="role">Lá Bài</button>
+              <button data-action-kind="artifact">Artifact</button>
+            </div>
+            <input class="search" id="actionSearch" placeholder="Tìm Hành Động">
+          </div>
+          <div class="box-grid" id="actionGrid"></div>
+          <p class="hint">Nhấn 2 lần vào box để chỉnh sửa.</p>
+        </section>
+
+        <section class="libpane" id="lib-effects">
+          <div class="section-tools"><input class="search" id="effectSearch" placeholder="Tìm Hiệu Ứng"></div>
+          <div class="box-grid" id="effectGrid"></div>
+          <p class="hint">Nhấn 2 lần vào box để chỉnh sửa.</p>
+        </section>
+
+        <section class="libpane" id="lib-themes">
+          <div class="theme-head">
+            <div class="seg" id="themeSeg">
+              <button data-theme="theme-default">Mặc định</button>
+              <button class="active" data-theme="theme-sea">🌊 Biển</button>
+            </div>
+          </div>
+          <div class="theme-card">
+            <div class="theme-role-preview"><img id="themePreview" alt=""><div><b>Phù Thuỷ Già</b><small id="themeStatus"></small></div></div>
+            <div class="form-grid">
+              <label class="full">Link Display 1024 × 936<input id="themeDisplayUrl" type="url" placeholder="https://..."></label>
+              <label class="full">Link Thumbnail 360 × 330<input id="themeThumbUrl" type="url" placeholder="https://..."></label>
+              <label>Thay Display<input id="themeDisplayFile" type="file" accept="image/*"></label>
+              <label>Thay Thumbnail<input id="themeThumbFile" type="file" accept="image/*"></label>
+            </div>
+            <div class="button-row">
+              <button class="secondary" id="themeFallback">Dùng Mặc định</button>
+              <button class="primary" id="themeSave">Lưu Chủ Đề</button>
+            </div>
+            <p class="hint">Ưu tiên Chủ Đề Biển. Nếu không có ảnh Biển mới fallback về Mặc định. Thumbnail và Display là 2 tài nguyên riêng.</p>
+          </div>
+        </section>
+
+        <section class="libpane" id="lib-audio">
+          <div class="audio-note">Âm thanh được quản lý tập trung. Lá Bài và Hành Động chỉ chọn Audio theo ID.</div>
+          <div class="box-grid" id="audioGrid"></div>
+        </section>
+      </div>
+
+      <div id="cardEditor" class="card-editor hidden">
+        <div class="editor-bar">
+          <button id="closeCardEditor" class="back">‹ Lá Bài</button>
+          <div class="face-switch">
+            <button class="active" data-face="front">Mặt hiển thị</button>
+            <button data-face="back">Cài đặt lá</button>
+          </div>
+        </div>
+
+        <div class="face active" id="cardFront">
+          <article class="player-card" id="playerCard">
+            <div class="player-title" id="playerName">PHÙ THUỶ GIÀ</div>
+            <div class="player-art"><img id="playerDisplay" alt="Phù Thuỷ Già"></div>
+            <div class="player-faction" id="playerFaction"></div>
+            <div class="player-desc" id="playerDesc"></div>
+            <div class="player-functions" id="playerFunctions"></div>
+          </article>
+        </div>
+
+        <div class="face" id="cardBack">
+          <div class="settings-card">
+            <h3>Cài đặt Lá Bài</h3>
+            <div class="form-grid">
+              <label class="full">Tên<input id="cardName"></label>
+              <div class="full field-block"><span>Phe mặc định</span>
+                <div class="faction-seg" id="factionSeg">
+                  <button data-faction="village">🍃 Phe Dân Làng</button>
+                  <button data-faction="wolf"><span class="red-paw">🐾</span> Phe Sói</button>
+                  <button data-faction="third">🔥 Phe Ba</button>
+                </div>
+              </div>
+              <label class="full">Mô tả<textarea id="cardDescription"></textarea></label>
+              <label>Audio Lá Bài<select id="cardAudio"></select></label>
+              <label>Chức năng tự động<select id="cardAuto"><option value="none">Không có</option><option value="custom">Có</option></select></label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-title"><h3>Chức năng trên Lá</h3><button class="mini primary" id="addAbility">＋ Thêm</button></div>
+            <div id="abilityList"></div>
+            <p class="hint">Các giới hạn dùng bao nhiêu lần, lúc nào dùng, cho ai… thuộc Lá Bài/Artifact. Hành Động chỉ là chức năng tái sử dụng.</p>
+          </div>
+
+          <div class="settings-card">
+            <h3>Rule chung của Lá</h3>
+            <div class="form-grid">
+              <label>Nhóm độc quyền<select id="mutexMode"><option value="none">Không</option><option value="one-per-phase">Mỗi lượt chỉ 1 chức năng</option></select></label>
+              <label>Áp dụng<select id="mutexScope"><option value="night">Mỗi đêm</option><option value="day">Mỗi ngày</option><option value="cycle">Mỗi chu kỳ</option></select></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="settings">
+      <div class="placeholder"><span>⚙</span><b>Cài Đặt</b><small>Sẽ xây dựng sau.</small></div>
+    </section>
+  </main>
+
+  <nav id="bottomNav">
+    <button class="nav active" data-page="home"><span>⌂</span><b>Trang Chủ</b></button>
+    <button class="nav" data-page="members"><span>♟</span><b>Thành Viên</b></button>
+    <button class="nav start" data-page="start"><i>▶</i><b>Bắt Đầu</b></button>
+    <button class="nav" data-page="library"><span>▣</span><b>Thư Viện</b></button>
+    <button class="nav" data-page="settings"><span>⚙</span><b>Cài Đặt</b></button>
+  </nav>
+</div>
+
+<div class="sheet hidden" id="editSheet">
+  <div class="sheet-card">
+    <div class="sheet-head"><h3 id="sheetTitle"></h3><button id="sheetClose">×</button></div>
+    <div id="sheetBody"></div>
+    <div class="button-row"><button class="secondary" id="sheetCancel">Hủy</button><button class="primary" id="sheetSave">Lưu</button></div>
+  </div>
+</div>
+
+<script src="artwork.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
