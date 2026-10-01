@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.26';
-const STATE_KEY='GMWW_V226_STATE';
-const PREF_KEY='GMWW_V226_PREFS';
-const OLD_STATE_KEYS=['GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.27';
+const STATE_KEY='GMWW_V227_STATE';
+const PREF_KEY='GMWW_V227_PREFS';
+const OLD_STATE_KEYS=['GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -639,12 +639,13 @@ if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(checkServerHealth,60)));
 window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
 
-/* V2.26 — GitHub optimization helper in Cài Đặt */
+/* V2.27 — stable GitHub optimization controls for iPhone/WKWebView */
 const GMWW_GITHUB_REPO_URL='https://github.com/WilliamPham0702/GMWW-V2.00';
+const GMWW_GITHUB_API_URL='https://api.github.com/repos/WilliamPham0702/GMWW-V2.00';
 let githubOptimizeBusy=false;
 function setGithubOptimizeState(kind,text,detail,status,result){
   const pill=document.getElementById('githubOptimizePill');
-  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'ĐÃ KIỂM TRA':kind==='warn'?'CẦN TỐI ƯU':kind==='bad'?'KHÔNG THỂ KIỂM TRA':'ĐANG KIỂM TRA'}
+  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'ĐÃ KIỂM TRA':kind==='warn'?'CẦN KIỂM TRA':kind==='bad'?'KHÔNG KẾT NỐI':'ĐANG KIỂM TRA'}
   const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   put('githubOptimizeText',text);
   put('githubOptimizeDetail',detail);
@@ -656,27 +657,36 @@ async function checkGithubOptimize(){
   if(githubOptimizeBusy)return;
   githubOptimizeBusy=true;
   const btn=document.getElementById('checkGithubOptimize');
-  if(btn){btn.disabled=true;btn.textContent='Đang kiểm tra…'}
-  setGithubOptimizeState('checking','Đang kiểm tra khả năng truy cập GitHub…','Đang xác minh repo GMWW-V2.00 có thể mở từ thiết bị.','Đang kiểm tra','—');
+  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent='Đang kiểm tra…'}
+  setGithubOptimizeState('checking','Đang kiểm tra GitHub…','Đọc thông tin repo GMWW-V2.00; không sửa hoặc xoá file.','Đang kiểm tra','—');
   const started=performance.now();
+  let timer=null;
   try{
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
-    const res=await fetch(GMWW_GITHUB_REPO_URL,{method:'HEAD',cache:'no-store',mode:'no-cors',signal:controller.signal});
-    clearTimeout(timer);
+    const controller=new AbortController();
+    timer=setTimeout(()=>controller.abort(),5000);
+    const res=await fetch(GMWW_GITHUB_API_URL,{method:'GET',cache:'no-store',headers:{'Accept':'application/vnd.github+json'},signal:controller.signal});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const body=await res.json();
     const latency=Math.max(1,Math.round(performance.now()-started));
-    setGithubOptimizeState('ok','GitHub sẵn sàng để tối ưu','Repo đã sẵn sàng. Dùng ChatGPT để phân tích file nặng, ảnh PNG/JPG, thumbnail dư và file trùng trước khi xoá.','Sẵn sàng',latency+' ms');
+    const repoSizeKb=Math.max(0,Number(body?.size||0));
+    const repoSize=repoSizeKb>=1024?(repoSizeKb/1024).toFixed(1)+' MB':repoSizeKb+' KB';
+    setGithubOptimizeState('ok','GitHub hoạt động bình thường','Repo truy cập được. Có thể tiếp tục tối ưu ảnh/tài nguyên qua ChatGPT mà không ảnh hưởng gameplay.','Sẵn sàng',repoSize+' • '+latency+' ms');
   }catch(err){
     const online=navigator.onLine;
-    setGithubOptimizeState(online?'warn':'bad',online?'Không xác minh được trực tiếp':'Thiết bị đang offline',online?'Bạn vẫn có thể mở GitHub hoặc dùng ChatGPT để kiểm tra repo.':'Kết nối Internet rồi thử lại.',online?'Cần kiểm tra thủ công':'Offline','—');
+    setGithubOptimizeState(online?'warn':'bad',online?'GitHub chưa phản hồi':'Thiết bị đang offline',online?'Không thay đổi dữ liệu. Hãy thử lại sau hoặc dùng nút Mở GitHub.':'Kết nối Internet rồi thử lại.',online?'Thử lại sau':'Offline','—');
   }finally{
+    if(timer)clearTimeout(timer);
     githubOptimizeBusy=false;
-    if(btn){btn.disabled=false;btn.textContent='Kiểm tra tối ưu'}
+    if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.textContent='Kiểm tra tối ưu'}
   }
 }
 const githubOptimizeButton=document.getElementById('checkGithubOptimize');
-if(githubOptimizeButton)githubOptimizeButton.addEventListener('click',checkGithubOptimize);
+if(githubOptimizeButton){
+  githubOptimizeButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();checkGithubOptimize()},{passive:false});
+}
 const githubOpenButton=document.getElementById('openGithubRepo');
-if(githubOpenButton)githubOpenButton.addEventListener('click',()=>{window.location.href=GMWW_GITHUB_REPO_URL});
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>{const checked=document.getElementById('githubOptimizeChecked')?.textContent;if(!checked||checked==='—')checkGithubOptimize()},120)));
+if(githubOpenButton){
+  githubOpenButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.location.assign(GMWW_GITHUB_REPO_URL)},{passive:false});
+}
 
 })();
