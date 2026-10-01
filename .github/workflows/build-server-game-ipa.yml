@@ -1,9 +1,12 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# IPA is intentionally manual-only.
-# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
+# IPA is manual-only in normal operation. The trigger-file path is used only for an explicit one-shot build.
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/ipa-build-trigger'
 
 jobs:
   build:
@@ -47,6 +50,8 @@ jobs:
           grep -q "audio_card_role_wolf" "$APPDIR/Web/app.js"
           grep -q "theme-card-row-simple" "$APPDIR/Web/style.css"
           grep -q "data-pref=\\\"hide\\\"" "$APPDIR/Web/app.js"
+          grep -q "Tối ưu GitHub" "$APPDIR/Web/GMWW.html"
+          grep -q "checkGithubOptimize" "$APPDIR/Web/app.js"
           ! grep -q 'data-filter="star"' "$APPDIR/Web/GMWW.html"
           ! grep -q 'data-theme-display-url' "$APPDIR/Web/app.js"
           ! grep -q 'data-theme-thumb-url' "$APPDIR/Web/app.js"
