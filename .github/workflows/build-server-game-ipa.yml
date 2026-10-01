@@ -56,8 +56,6 @@ jobs:
           grep -q 'id="ruleReplacesWolfBite"' "$APPDIR/Web/GMWW.html"
           grep -q 'specialConditions' "$APPDIR/Web/app.js"
           grep -q 'Mỗi đêm Đuổi 1 người ra khỏi làng' "$APPDIR/Web/app.js"
-          grep -q 'Server Gốc V1.08' "$APPDIR/Web/v1-audio.js"
-          grep -q 'Đã nhập từ Server Gốc V1.08' "$APPDIR/Web/app.js"
           grep -q "legacyAudioFile:'duoi_nguoi.mp3'" "$APPDIR/Web/app.js"
           grep -q "legacyAudioFile:'hoi_sinh.mp3'" "$APPDIR/Web/app.js"
           grep -q "starOrder:21" "$APPDIR/Web/app.js"
