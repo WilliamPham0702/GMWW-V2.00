@@ -173,3 +173,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .theme-card-name{min-width:0}.theme-card-name b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 .theme-card-row-simple .theme-slot-actions button:first-child{font-size:18px;color:#bfefff;border-color:rgba(79,220,255,.28)}
 .theme-card-row-simple .theme-slot-actions button:last-child{font-size:17px;color:#ffe0a2;border-color:rgba(240,200,108,.26)}
+
+
+/* V2.26 GitHub optimization helper */
+.github-opt-card{margin-top:9px}.github-opt-summary{margin:12px 0 10px;padding:11px;border-radius:12px;background:rgba(4,18,30,.38);border:1px solid rgba(157,224,255,.10)}.github-opt-summary b{display:block;font-size:13.5px}.github-opt-summary small{display:block;color:var(--muted);font-size:10.5px;margin-top:3px;line-height:1.45}.github-opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.github-opt-grid>div{padding:9px;border-radius:10px;background:#071b2b;border:1px solid rgba(157,224,255,.10)}.github-opt-grid small{display:block;color:var(--muted);font-size:9.5px}.github-opt-grid b{display:block;margin-top:4px;font-size:11.5px;color:#e8faff;overflow-wrap:anywhere}.github-opt-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.github-opt-actions button{min-height:38px;font-size:11px;font-weight:900}.github-opt-actions button:disabled{opacity:.55}
+@media(max-width:370px){.github-opt-actions{grid-template-columns:1fr}}
