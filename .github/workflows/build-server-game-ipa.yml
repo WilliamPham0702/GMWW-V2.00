@@ -53,8 +53,8 @@ jobs:
           grep -q 'data-audio-play' "$APPDIR/Web/app.js"
           grep -q 'Mô tả riêng trên Lá' "$APPDIR/Web/app.js"
           grep -q 'groupGateScope' "$APPDIR/Web/app.js"
-          grep -q 'passiveFirstTime' "$APPDIR/Web/index.html"
-          grep -q 'ruleReplacesWolfBite' "$APPDIR/Web/index.html"
+          grep -q 'id="passiveFirstTime"' "$APPDIR/Web/GMWW.html"
+          grep -q 'id="ruleReplacesWolfBite"' "$APPDIR/Web/GMWW.html"
           grep -q 'specialConditions' "$APPDIR/Web/app.js"
           grep -q "ui.waitingRoom" "$APPDIR/Web/app.js"
           node - <<'NODE'
