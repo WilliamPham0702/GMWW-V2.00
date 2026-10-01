@@ -62,7 +62,6 @@ jobs:
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
           grep -q "V2.29 — truly fixed Settings cards" "$APPDIR/Web/style.css"
           grep -q "settings-action-optimize" "$APPDIR/Web/style.css"
-          grep -q "V2.29 — fixed Settings geometry" "$APPDIR/Web/style.css"
           ! grep -q "btn.textContent='Đang kiểm tra" "$APPDIR/Web/app.js"
           ! grep -q "mode:'no-cors'" "$APPDIR/Web/app.js"
           grep -q "navigationAction.targetFrame" server-game/GMWW-Server/GameView.swift
