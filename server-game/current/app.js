@@ -212,7 +212,15 @@ function loadPrefs(){
   return clone(DEFAULT_PREFS);
 }
 
-let state=loadState(),prefs=loadPrefs();
+function applyV221AudioGuard(s){
+  const keep='ROLE:source-18';
+  for(const kind of ['cards','artifacts','actions','system'])for(const a of (s.audio?.[kind]||[])){
+    if(a.sourceKey&&a.sourceKey!==keep){delete a.sourceKey;a.verifiedBinary=false}
+  }
+  return s;
+}
+let state=applyV221AudioGuard(loadState()),prefs=loadPrefs();
+saveState();
 let currentKind='cards',currentId='role_old_witch',editDraft=null,cardFilter='all',artifactFilter='all',actionKind='role',audioKind='cards',editContext=null,lastTouchMap=new WeakMap(),defaultThumb='',objectUrls=new Map();
 
 function saveState(){state.version=VERSION;localStorage.setItem(STATE_KEY,JSON.stringify(state))}
