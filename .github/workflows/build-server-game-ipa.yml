@@ -15,15 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.11 web bundle
+      - name: Prepare clean V2.12 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
+          export APPDIR_FOR_ASSERT="$APPDIR"
           rm -rf "$APPDIR/Web"
           mkdir -p "$APPDIR/Web"
-          cp server-game/v211/index.html "$APPDIR/Web/GMWW.html"
-          cp server-game/v211/style.css "$APPDIR/Web/style.css"
-          cp server-game/v211/app.js "$APPDIR/Web/app.js"
+          cp server-game/v212/index.html "$APPDIR/Web/GMWW.html"
+          cp server-game/v212/style.css "$APPDIR/Web/style.css"
+          cp server-game/v212/app.js "$APPDIR/Web/app.js"
           cp server-game/v205/artwork.js "$APPDIR/Web/artwork.js"
           cp server-game/v208/sea-artwork.js "$APPDIR/Web/sea-artwork.js"
           cp server-game/v208/phu-thuy-gia-sea-display.webp "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
@@ -33,7 +34,7 @@ jobs:
           test -s "$APPDIR/Web/artwork.js"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          grep -q 'GMWW V2.11' "$APPDIR/Web/GMWW.html"
+          grep -q 'GMWW V2.12' "$APPDIR/Web/GMWW.html"
           grep -q 'card-zone-head' "$APPDIR/Web/GMWW.html"
           grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
           grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
@@ -47,8 +48,15 @@ jobs:
           grep -q 'applyV210Rules' "$APPDIR/Web/app.js"
           grep -q 'formatInformation' "$APPDIR/Web/app.js"
           grep -q 'theme-collapsible' "$APPDIR/Web/app.js"
-          grep -Fq '$('\''[data-theme]'\'',holder).forEach' "$APPDIR/Web/app.js"
-          grep -Fq '$('\''[data-theme-upload]'\'',row).forEach' "$APPDIR/Web/app.js"
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync(process.env.APPDIR_FOR_ASSERT + '/Web/app.js','utf8');
+          if(!s.includes("$('[data-theme]',holder).forEach")) process.exit(1);
+          if(s.includes("$('[data-theme]',holder).forEach")) process.exit(1);
+          if(!s.includes("$('[data-theme-upload]',row).forEach")) process.exit(1);
+          if(s.includes("$('[data-theme-upload]',row).forEach")) process.exit(1);
+          NODE
+
           grep -q 'pushToPlayerWeb:true,targetPreviousCycleOnly:true' "$APPDIR/Web/app.js"
           grep -q 'toNight:null' "$APPDIR/Web/app.js"
           ! grep -q 'Mục tiêu tối thiểu' "$APPDIR/Web/GMWW.html"
@@ -62,17 +70,17 @@ jobs:
       - name: Validate JavaScript
         run: |
           set -euo pipefail
-          node --check server-game/v211/app.js
+          node --check server-game/v212/app.js
           node --check server-game/v208/sea-artwork.js
           node --check server-game/v205/artwork.js
 
       - name: Verify typography and artwork
         run: |
           set -euo pipefail
-          grep -q 'font-size:14.5px' server-game/v211/style.css
-          grep -q 'font-size:24px' server-game/v211/style.css
-          grep -q 'text-align:justify' server-game/v211/style.css
-          grep -q '.editor-actions{position:static' server-game/v211/style.css
+          grep -q 'font-size:14.5px' server-game/v212/style.css
+          grep -q 'font-size:24px' server-game/v212/style.css
+          grep -q 'text-align:justify' server-game/v212/style.css
+          grep -q '.editor-actions{position:static' server-game/v212/style.css
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '1024'
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '936'
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '360'
@@ -108,13 +116,13 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.11 app
+      - name: Build unsigned V2.12 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild             -project server-game/GMWW-Server.xcodeproj             -scheme GMWW-Server             -configuration Release             -sdk iphoneos             -derivedDataPath build-v2             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             build
 
-      - name: Package and verify V2.11 IPA
+      - name: Package and verify V2.12 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -124,21 +132,21 @@ jobs:
           test -s "$APP/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.11'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '211'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.12'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '212'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.11-unsigned.ipa
-          unzip -t GMWW-V2.11-unsigned.ipa >/dev/null
-          unzip -l GMWW-V2.11-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
-          unzip -l GMWW-V2.11-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
-          unzip -l GMWW-V2.11-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.12-unsigned.ipa
+          unzip -t GMWW-V2.12-unsigned.ipa >/dev/null
+          unzip -l GMWW-V2.12-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          unzip -l GMWW-V2.12-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
+          unzip -l GMWW-V2.12-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
 
-      - name: Upload V2.11 IPA
+      - name: Upload V2.12 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.11-IPA
-          path: GMWW-V2.11-unsigned.ipa
+          name: GMWW-V2.12-IPA
+          path: GMWW-V2.12-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
