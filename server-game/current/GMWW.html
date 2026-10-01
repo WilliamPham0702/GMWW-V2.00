@@ -215,6 +215,27 @@
           <div class="health-foot"><small id="healthCheckedAt">Chưa kiểm tra</small><button class="secondary" id="checkServerHealth" type="button">Kiểm tra ngay</button></div>
           <p class="health-note">Tính năng này chỉ giám sát kết nối và tình trạng Server; không thay đổi gameplay hoặc dữ liệu ván.</p>
         </div>
+
+        <div class="settings-card github-opt-card" id="githubOptimizeCard">
+          <div class="settings-title">
+            <div><h3>Tối ưu GitHub</h3><small>Kiểm tra repo GMWW-V2.00 và đề xuất dọn nhẹ an toàn</small></div>
+            <span class="health-pill checking" id="githubOptimizePill">SẴN SÀNG</span>
+          </div>
+          <div class="github-opt-summary">
+            <div><b id="githubOptimizeText">Chưa kiểm tra GitHub</b><small id="githubOptimizeDetail">Phân tích file nặng, ảnh chưa tối ưu và tài nguyên dư thừa trong repo.</small></div>
+          </div>
+          <div class="github-opt-grid">
+            <div><small>Repo</small><b>GMWW-V2.00</b></div>
+            <div><small>Trạng thái</small><b id="githubOptimizeStatus">Chờ kiểm tra</b></div>
+            <div><small>Lần kiểm tra</small><b id="githubOptimizeChecked">—</b></div>
+            <div><small>Kết quả</small><b id="githubOptimizeResult">—</b></div>
+          </div>
+          <div class="github-opt-actions">
+            <button class="secondary" id="checkGithubOptimize" type="button">Kiểm tra tối ưu</button>
+            <button class="primary" id="openGithubRepo" type="button">Mở GitHub</button>
+          </div>
+          <p class="health-note">Chế độ trong game chỉ kiểm tra và mở repo. Việc xoá/đổi file trên GitHub vẫn cần xác nhận để tránh ảnh hưởng source production.</p>
+        </div>
       </div>
     </section>
   </main>
