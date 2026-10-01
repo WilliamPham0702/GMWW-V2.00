@@ -15,16 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.13 web bundle
+      - name: Prepare clean V2.14 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
           export APPDIR_FOR_ASSERT="$APPDIR"
           rm -rf "$APPDIR/Web"
           mkdir -p "$APPDIR/Web"
-          cp server-game/v213/index.html "$APPDIR/Web/GMWW.html"
-          cp server-game/v213/style.css "$APPDIR/Web/style.css"
-          cp server-game/v213/app.js "$APPDIR/Web/app.js"
+          cp server-game/v214/index.html "$APPDIR/Web/GMWW.html"
+          cp server-game/v214/style.css "$APPDIR/Web/style.css"
+          cp server-game/v214/app.js "$APPDIR/Web/app.js"
           cp server-game/v205/artwork.js "$APPDIR/Web/artwork.js"
           cp server-game/v208/sea-artwork.js "$APPDIR/Web/sea-artwork.js"
           cp server-game/v208/phu-thuy-gia-sea-display.webp "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
@@ -34,7 +34,7 @@ jobs:
           test -s "$APPDIR/Web/artwork.js"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          grep -q 'GMWW V2.13' "$APPDIR/Web/GMWW.html"
+          grep -q 'GMWW V2.14' "$APPDIR/Web/GMWW.html"
           grep -q 'card-zone-head' "$APPDIR/Web/GMWW.html"
           grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
           grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
@@ -51,6 +51,11 @@ jobs:
           grep -q 'bindFaceSwipe' "$APPDIR/Web/app.js"
           grep -q 'audio-row' "$APPDIR/Web/style.css"
           grep -q 'data-audio-play' "$APPDIR/Web/app.js"
+          grep -q 'Mô tả riêng trên Lá' "$APPDIR/Web/app.js"
+          grep -q 'groupGateScope' "$APPDIR/Web/app.js"
+          grep -q 'passiveFirstTime' "$APPDIR/Web/index.html"
+          grep -q 'ruleReplacesWolfBite' "$APPDIR/Web/index.html"
+          grep -q 'specialConditions' "$APPDIR/Web/app.js"
           grep -q "ui.waitingRoom" "$APPDIR/Web/app.js"
           node - <<'NODE'
           const fs=require('fs');
@@ -74,17 +79,17 @@ jobs:
       - name: Validate JavaScript
         run: |
           set -euo pipefail
-          node --check server-game/v213/app.js
+          node --check server-game/v214/app.js
           node --check server-game/v208/sea-artwork.js
           node --check server-game/v205/artwork.js
 
       - name: Verify typography and artwork
         run: |
           set -euo pipefail
-          grep -q 'font-size:14.5px' server-game/v213/style.css
-          grep -q 'font-size:24px' server-game/v213/style.css
-          grep -q 'text-align:justify' server-game/v213/style.css
-          grep -q '.editor-actions{position:static' server-game/v213/style.css
+          grep -q 'font-size:14.5px' server-game/v214/style.css
+          grep -q 'font-size:24px' server-game/v214/style.css
+          grep -q 'text-align:justify' server-game/v214/style.css
+          grep -q '.editor-actions{position:static' server-game/v214/style.css
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '1024'
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '936'
           sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '360'
@@ -120,13 +125,13 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.13 app
+      - name: Build unsigned V2.14 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild             -project server-game/GMWW-Server.xcodeproj             -scheme GMWW-Server             -configuration Release             -sdk iphoneos             -derivedDataPath build-v2             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             build
 
-      - name: Package and verify V2.13 IPA
+      - name: Package and verify V2.14 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -136,21 +141,21 @@ jobs:
           test -s "$APP/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.13'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '213'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.14'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '214'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.13-unsigned.ipa
-          unzip -t GMWW-V2.13-unsigned.ipa >/dev/null
-          unzip -l GMWW-V2.13-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
-          unzip -l GMWW-V2.13-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
-          unzip -l GMWW-V2.13-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.14-unsigned.ipa
+          unzip -t GMWW-V2.14-unsigned.ipa >/dev/null
+          unzip -l GMWW-V2.14-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          unzip -l GMWW-V2.14-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
+          unzip -l GMWW-V2.14-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
 
-      - name: Upload V2.13 IPA
+      - name: Upload V2.14 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.13-IPA
-          path: GMWW-V2.13-unsigned.ipa
+          name: GMWW-V2.14-IPA
+          path: GMWW-V2.14-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
