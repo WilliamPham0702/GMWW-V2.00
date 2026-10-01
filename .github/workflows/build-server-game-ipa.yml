@@ -85,7 +85,6 @@ jobs:
           const s=fs.readFileSync('server-game/v215/app.js','utf8');
           const bad=[...s.matchAll(/(^|[^$])\$\([^;\n]*?\)\.forEach/g)];
           if(bad.length){ console.error('invalid single-element selector loop',bad.map(x=>x[0])); process.exit(1); }
-          if(!s.includes("function setFace(face){$('.face-switch button').forEach")) process.exit(1);
           NODE
           node --check server-game/v208/sea-artwork.js
           node --check server-game/v205/artwork.js
