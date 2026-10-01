@@ -51,9 +51,9 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const s=fs.readFileSync(process.env.APPDIR_FOR_ASSERT + '/Web/app.js','utf8');
-          if(!s.includes("$('[data-theme]',holder).forEach")) process.exit(1);
+          if(!s.includes("$$('[data-theme]',holder).forEach")) process.exit(1);
           if(s.includes("$('[data-theme]',holder).forEach")) process.exit(1);
-          if(!s.includes("$('[data-theme-upload]',row).forEach")) process.exit(1);
+          if(!s.includes("$$('[data-theme-upload]',row).forEach")) process.exit(1);
           if(s.includes("$('[data-theme-upload]',row).forEach")) process.exit(1);
           NODE
 
