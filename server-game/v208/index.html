@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GMWW V2.08</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <section class="page active" id="home"><div class="placeholder"><span>🏠</span><b>Trang Chủ</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page" id="members"><div class="placeholder"><span>👥</span><b>Thành Viên</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page" id="start"><div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div></section>
+
+    <section class="page" id="library">
+      <div id="libraryHome">
+        <nav class="library-tabs">
+          <button class="libtab active" data-lib="cards">🃏<b>Lá Bài</b></button>
+          <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
+          <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
+          <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
+          <button class="libtab" data-lib="themes">🌊<b>Chủ Đề</b></button>
+          <button class="libtab" data-lib="audio">🔊<b>Âm Thanh</b></button>
+        </nav>
+
+        <section class="libpane active" id="lib-cards">
+          <div class="filter-row" data-filter-kind="cards">
+            <button class="filter active" data-filter="all">Tất cả</button>
+            <button class="filter" data-filter="star">★ Thường dùng</button>
+            <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
+          </div>
+          <div class="card-grid" id="cardGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-artifacts">
+          <div class="filter-row" data-filter-kind="artifacts">
+            <button class="filter active" data-filter="all">Tất cả</button>
+            <button class="filter" data-filter="star">★ Thường dùng</button>
+            <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
+          </div>
+          <div class="card-grid" id="artifactGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-actions">
+          <div class="section-tools">
+            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">Lá Bài</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
+            <input class="search" id="actionSearch" placeholder="Tìm Hành Động">
+          </div>
+          <div class="box-grid" id="actionGrid"></div>
+          <p class="hint">Đây là Hành Động gốc. Nhấn 2 lần vào box để chỉnh sửa ID/Tên/Mô tả/Hiệu Ứng liên kết. Giới hạn sử dụng và mục tiêu được cài ở từng Lá.</p>
+        </section>
+
+        <section class="libpane" id="lib-effects">
+          <div class="section-tools"><input class="search" id="effectSearch" placeholder="Tìm Hiệu Ứng"></div>
+          <div class="box-grid" id="effectGrid"></div>
+          <p class="hint">Hiệu Ứng là kết quả Engine thực thi. Nhấn 2 lần để chỉnh sửa.</p>
+        </section>
+
+        <section class="libpane" id="lib-themes">
+          <div class="theme-head"><div class="seg" id="themeSeg"><button data-theme="theme-default">Mặc định</button><button class="active" data-theme="theme-sea">🌊 Biển</button></div></div>
+          <div class="theme-card">
+            <div class="theme-role-preview"><img id="themePreview" alt=""><div><b id="themeEntityName">Phù Thuỷ Già</b><small id="themeStatus"></small></div></div>
+            <div class="form-grid">
+              <label class="full">Link Display 1024 × 936<input id="themeDisplayUrl" type="url" placeholder="https://..."></label>
+              <label class="full">Link Thumbnail 360 × 330<input id="themeThumbUrl" type="url" placeholder="https://..."></label>
+              <label>Thay Display<input id="themeDisplayFile" type="file" accept="image/*"></label>
+              <label>Thay Thumbnail<input id="themeThumbFile" type="file" accept="image/*"></label>
+            </div>
+            <div class="button-row"><button class="secondary" id="themeFallback">Dùng Mặc định</button><button class="primary" id="themeSave">Lưu Chủ Đề</button></div>
+            <p class="hint">Ưu tiên Chủ Đề Biển; thiếu override mới fallback Mặc định. Thumbnail và Display là hai asset riêng.</p>
+          </div>
+        </section>
+
+        <section class="libpane" id="lib-audio">
+          <div class="audio-note"><b>ÂM THANH TÁCH RIÊNG</b><br>Không đặt Audio trong Cài đặt Lá hoặc Cài đặt Hành Động. Mapping Audio sẽ được quản lý tập trung tại đây.</div>
+          <div class="box-grid" id="audioGrid"></div>
+        </section>
+      </div>
+
+      <div id="entityEditor" class="card-editor hidden">
+        <div class="editor-bar">
+          <button id="closeEntityEditor" class="back">‹ Thư Viện</button>
+          <div class="face-switch"><button class="active" data-face="front">Mặt Player Web</button><button data-face="back">Cài đặt</button></div>
+        </div>
+
+        <div class="face active" id="entityFront">
+          <article class="player-card">
+            <div class="player-title" id="playerName"></div>
+            <div class="player-art"><img id="playerDisplay" alt=""></div>
+            <div class="player-info" id="playerInformation"></div>
+          </article>
+          <p class="preview-note">Player Web chỉ nhận: <b>Tên + Artwork + Thông tin</b>. Không hiển thị Phe hoặc Hành Động trên mặt Lá.</p>
+        </div>
+
+        <div class="face" id="entityBack">
+          <div class="settings-card" id="entitySettingsCard">
+            <h3 id="entitySettingsTitle">Cài đặt Lá Bài</h3>
+            <div class="form-grid">
+              <label class="full">Tên<input id="entityName"></label>
+              <div class="full field-block" id="factionBlock"><span>Phe mặc định</span><div class="faction-seg" id="factionSeg"><button data-faction="village">🍃 Phe Dân Làng</button><button data-faction="wolf"><span class="red-paw">🐾</span> Phe Sói</button><button data-faction="third">🔥 Phe Ba</button></div></div>
+              <label class="full">Thông tin<textarea id="entityInformation"></textarea></label>
+            </div>
+
+            <div class="subhead">Thuộc tính của Lá</div>
+            <div class="check-grid" id="roleFlagGrid">
+              <label class="check"><input type="checkbox" id="flagUseDay"><span>Hoạt động Ban Ngày</span></label>
+              <label class="check"><input type="checkbox" id="flagUseNight"><span>Hoạt động Ban Đêm</span></label>
+              <label class="check"><input type="checkbox" id="flagNightImmune"><span>Bất tử Ban Đêm</span></label>
+              <label class="check"><input type="checkbox" id="flagLifeEnabled"><span>Nhiều mạng</span></label>
+              <label class="check"><input type="checkbox" id="flagMultiTask"><span>Cho phép đa chức năng</span></label>
+              <label class="check"><input type="checkbox" id="flagPassive"><span>Lá có nội tại / Passive</span></label>
+              <label class="check"><input type="checkbox" id="flagMultiNightActions"><span>Nhiều Hành Động trong đêm</span></label>
+              <label class="check"><input type="checkbox" id="flagSoloWolfOnly"><span>Chỉ khi là Sói đơn độc</span></label>
+              <label class="check"><input type="checkbox" id="flagGroup7Official"><span>Rule Group 7</span></label>
+            </div>
+            <div class="form-grid compact-fields">
+              <label>Số mạng<select id="flagLives"></select></label>
+              <label>Điều kiện thắng riêng<textarea id="winCondition" placeholder="Để trống nếu thắng theo Phe"></textarea></label>
+            </div>
+
+            <div class="artifact-only hidden" id="artifactSpecific">
+              <div class="subhead">Thuộc tính riêng ARTIFACTS</div>
+              <div class="check-grid">
+                <label class="check"><input type="checkbox" id="artifactOwnerSelection"><span>GM chọn chủ sở hữu</span></label>
+                <label class="check"><input type="checkbox" id="artifactPersistentOwner"><span>Giữ chủ sở hữu xuyên ván</span></label>
+                <label class="check"><input type="checkbox" id="artifactRevealFollow"><span>Chỉ hiển thị mục tiêu theo dõi</span></label>
+              </div>
+              <div class="form-grid compact-fields">
+                <label>Thức cùng Vai Trò<select id="artifactWakeRole"></select></label>
+                <label>Thức cùng Hành Động<select id="artifactWakeAction"></select></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-title"><div><h3>Cài đặt Hành Động trên Lá</h3><small>Chỉ cấu hình cách Hành Động này hoạt động khi gắn vào Lá hiện tại.</small></div><button class="mini primary" id="addFunction">＋ Thêm</button></div>
+            <div id="functionList"></div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Rule nâng cao của Lá</h3>
+            <div class="check-grid">
+              <label class="check"><input type="checkbox" id="passiveRuleEnabled"><span>Dùng Passive Rule</span></label>
+              <label class="check"><input type="checkbox" id="groupGateEnabled"><span>Dùng Group Action Gate</span></label>
+            </div>
+            <div class="form-grid compact-fields">
+              <label>Passive Trigger<select id="passiveRuleType"><option value="stake_survive">Treo cổ lần đầu: sống + mất quyền bỏ phiếu</option><option value="stake_revenge">Chết do treo cổ → chọn 1 người chết sáng sau</option><option value="source_death">Khi nguồn chết</option></select></label>
+              <label>Gate Action<select id="groupGateAction"></select></label>
+              <label class="full">Gate chặn khi<div class="inline-checks"><label class="check small"><input type="checkbox" id="gateExpelled"><span>Bị Đuổi</span></label><label class="check small"><input type="checkbox" id="gateBlocked"><span>Bị Chặn/Đóng Băng</span></label></div></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="settings"><div class="placeholder"><span>⚙</span><b>Cài Đặt</b><small>Sẽ xây dựng sau.</small></div></section>
+  </main>
+
+  <nav id="bottomNav">
+    <button class="nav active" data-page="home"><span>⌂</span><b>Trang Chủ</b></button>
+    <button class="nav" data-page="members"><span>♟</span><b>Thành Viên</b></button>
+    <button class="nav start" data-page="start"><i>▶</i><b>Bắt Đầu</b></button>
+    <button class="nav" data-page="library"><span>▣</span><b>Thư Viện</b></button>
+    <button class="nav" data-page="settings"><span>⚙</span><b>Cài Đặt</b></button>
+  </nav>
+</div>
+
+<div class="sheet hidden" id="editSheet">
+  <div class="sheet-card"><div class="sheet-head"><h3 id="sheetTitle"></h3><button id="sheetClose">×</button></div><div id="sheetBody"></div><div class="button-row"><button class="secondary" id="sheetCancel">Hủy</button><button class="primary" id="sheetSave">Lưu</button></div></div>
+</div>
+
+<script src="artwork.js"></script>
+<script src="sea-artwork.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
