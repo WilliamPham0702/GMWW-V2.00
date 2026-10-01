@@ -1,9 +1,8 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# Normally manual-only. Push trigger is enabled temporarily for the V2.25 validation build.
+# IPA is intentionally manual-only.
+# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
