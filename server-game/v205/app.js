@@ -6,7 +6,7 @@ const DB_NAME='GMWW_V205_THEME_ASSETS';
 const DB_STORE='assets';
 
 const DEFAULT_STATE={
-  version:'2.05',
+  version:'2.06',
   cards:[{
     id:'role_old_witch',
     name:'Phù Thuỷ Già',
@@ -27,7 +27,7 @@ const DEFAULT_STATE={
       {id:'action_exile',name:'Đuổi',effectIds:['effect_exile'],audioId:'audio_action_exile'},
       {id:'action_revive',name:'Hồi Sinh',effectIds:['effect_revive'],audioId:'audio_action_revive'}
     ],
-    artifact:[]
+    artifacts:[]
   },
   effects:[
     {id:'effect_exile',name:'Đuổi',primitive:'EXPEL',duration:'untilNextMorning'},
@@ -67,7 +67,11 @@ function mergeState(raw){
   const s=clone(DEFAULT_STATE);
   if(Array.isArray(raw.cards))s.cards=raw.cards;
   if(Array.isArray(raw.artifacts))s.artifacts=raw.artifacts;
-  if(raw.actions&&Array.isArray(raw.actions.role)&&Array.isArray(raw.actions.artifact))s.actions=raw.actions;
+  else if(Array.isArray(raw.atifats))s.artifacts=raw.atifats;
+  if(raw.actions&&Array.isArray(raw.actions.role)){
+    s.actions.role=raw.actions.role;
+    s.actions.artifacts=Array.isArray(raw.actions.artifacts)?raw.actions.artifacts:(Array.isArray(raw.actions.artifact)?raw.actions.artifact:[]);
+  }
   if(Array.isArray(raw.effects))s.effects=raw.effects;
   if(Array.isArray(raw.audio))s.audio=raw.audio;
   if(raw.themes&&Array.isArray(raw.themes.list))s.themes=raw.themes;
@@ -93,7 +97,7 @@ let pendingThemeFiles={display:null,thumb:null};
 function saveState(){localStorage.setItem(STATE_KEY,JSON.stringify(state))}
 function savePrefs(){localStorage.setItem(PREF_KEY,JSON.stringify(prefs))}
 function cardById(id){return state.cards.find(x=>x.id===id)||null}
-function actionById(id){return [...state.actions.role,...state.actions.artifact].find(x=>x.id===id)||null}
+function actionById(id){return [...state.actions.role,...state.actions.artifacts].find(x=>x.id===id)||null}
 function effectById(id){return state.effects.find(x=>x.id===id)||null}
 function audioById(id){return state.audio.find(x=>x.id===id)||null}
 function themeById(id){return state.themes.list.find(x=>x.id===id)||state.themes.list[0]}
@@ -403,7 +407,7 @@ function openEffectEditor(id){
   );
 }
 function createAction(){
-  const a={id:uid(actionKind==='role'?'action':'artifact_action'),name:'Hành Động Mới',effectIds:[],audioId:''};
+  const a={id:uid(actionKind==='role'?'action':'artifacts_action'),name:'Hành Động Mới',effectIds:[],audioId:''};
   state.actions[actionKind].push(a);saveState();renderActions();openActionEditor(a.id);
 }
 function createEffect(){
