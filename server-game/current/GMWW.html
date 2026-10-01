@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.20</title>
+<title>GMWW V2.21</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,6 +25,7 @@
         </nav>
 
         <section class="libpane active" id="lib-cards">
+          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small>Xếp theo thứ tự đánh sao</small></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="cards">
             <button class="filter" data-filter="star">★ Thường dùng</button>
             <button class="filter active" data-filter="all">Tất cả</button>
@@ -34,6 +35,7 @@
         </section>
 
         <section class="libpane" id="lib-artifacts">
+          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small>Xếp theo thứ tự đánh sao</small></div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="artifacts">
             <button class="filter" data-filter="star">★ Thường dùng</button>
             <button class="filter active" data-filter="all">Tất cả</button>
@@ -84,6 +86,7 @@
 
       <div id="entityEditor" class="card-editor hidden">
         <div class="editor-bar">
+          <button class="editor-back" id="topBackEntity" aria-label="Quay về">‹</button>
           <div class="face-switch"><button class="active" data-face="front">Mặt Player Web</button><button data-face="back">Cài đặt</button></div>
         </div>
 
