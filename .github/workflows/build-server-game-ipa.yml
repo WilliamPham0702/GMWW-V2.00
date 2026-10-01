@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.21 web bundle
+      - name: Prepare clean V2.22 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -33,7 +33,7 @@ jobs:
           test -s "$APPDIR/Web/artwork.js"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          grep -q 'GMWW V2.21' "$APPDIR/Web/GMWW.html"
+          grep -q 'GMWW V2.22' "$APPDIR/Web/GMWW.html"
           grep -q 'card-zone-head' "$APPDIR/Web/GMWW.html"
           grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
           grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
@@ -42,6 +42,8 @@ jobs:
           grep -q 'Hình nền' "$APPDIR/Web/app.js"
           grep -q 'Banner Trang Chủ' "$APPDIR/Web/app.js"
           grep -q 'Hình Thanh Điều Hướng' "$APPDIR/Web/app.js"
+          grep -q 'Sức khỏe Server' "$APPDIR/Web/GMWW.html"
+          grep -q 'checkServerHealth' "$APPDIR/Web/app.js"
           grep -q 'pushToPlayerWeb' "$APPDIR/Web/app.js"
           grep -q 'themeArtifactRows' "$APPDIR/Web/GMWW.html"
           grep -q 'applyV210Rules' "$APPDIR/Web/app.js"
