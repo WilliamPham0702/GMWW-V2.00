@@ -178,3 +178,11 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 /* V2.26 GitHub optimization helper */
 .github-opt-card{margin-top:9px}.github-opt-summary{margin:12px 0 10px;padding:11px;border-radius:12px;background:rgba(4,18,30,.38);border:1px solid rgba(157,224,255,.10)}.github-opt-summary b{display:block;font-size:13.5px}.github-opt-summary small{display:block;color:var(--muted);font-size:10.5px;margin-top:3px;line-height:1.45}.github-opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.github-opt-grid>div{padding:9px;border-radius:10px;background:#071b2b;border:1px solid rgba(157,224,255,.10)}.github-opt-grid small{display:block;color:var(--muted);font-size:9.5px}.github-opt-grid b{display:block;margin-top:4px;font-size:11.5px;color:#e8faff;overflow-wrap:anywhere}.github-opt-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.github-opt-actions button{min-height:38px;font-size:11px;font-weight:900}.github-opt-actions button:disabled{opacity:.55}
 @media(max-width:370px){.github-opt-actions{grid-template-columns:1fr}}
+
+
+/* V2.27 — stable iPhone touch targets for Settings actions */
+#settings button{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.github-opt-actions{position:relative;z-index:2}
+.github-opt-actions button,.health-foot button{min-height:46px;pointer-events:auto;position:relative;z-index:3}
+.github-opt-actions button:active,.health-foot button:active{transform:scale(.985)}
+.github-opt-actions button[aria-busy="true"]{transform:none}
