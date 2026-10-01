@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.16';
-const STATE_KEY='GMWW_V216_STATE';
-const PREF_KEY='GMWW_V216_PREFS';
-const OLD_STATE_KEYS=['GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.17';
+const STATE_KEY='GMWW_V217_STATE';
+const PREF_KEY='GMWW_V217_PREFS';
+const OLD_STATE_KEYS=['GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -54,8 +54,8 @@ const DEFAULT_STATE={
   }],
   actions:{
     role:[
-      {id:'action_exile',name:'Đuổi Người',description:'Đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',effectIds:['effect_exile']},
-      {id:'action_revive',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',effectIds:['effect_revive']}
+      {id:'action_exile',legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3',effectIds:['effect_exile']},
+      {id:'action_revive',legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3',effectIds:['effect_revive']}
     ],
     artifacts:[{id:'action_mirror',name:'Tráng Gương',description:'Sao chép chức năng của mục tiêu theo rule của ARTIFACTS.',effectIds:['effect_copy_functions']}]
   },
@@ -65,11 +65,11 @@ const DEFAULT_STATE={
     {id:'effect_copy_functions',name:'Sao chép chức năng',primitive:'COPY_FUNCTIONS',duration:'night',description:'Cho chủ sở hữu thêm chức năng của mục tiêu theo rule ARTIFACTS.',webTemplate:{eventType:'COPY_FUNCTIONS',emoji:'🪞',title:'TRÁNG GƯƠNG',requireAck:false,requireResponse:false}}
   ],
   audio:{
-    cards:[{id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',fileName:'',status:'Chưa gắn file'}],
+    cards:[{id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',status:'Đã nhập từ Server Gốc V1.08',verifiedBinary:true}],
     artifacts:[{id:'audio_artifact_mirror',name:'Tráng Gương',targetId:'artifact_mirror',fileName:'',status:'Chưa gắn file'}],
     actions:[
-      {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',fileName:'duoi_nguoi.mp3',status:'Theo Server Gốc V1.08'},
-      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'hoi_sinh.mp3',status:'Theo Server Gốc V1.08'},
+      {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',status:'Liên kết metadata Server Gốc V1.08',verifiedBinary:false},
+      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',status:'Liên kết metadata Server Gốc V1.08',verifiedBinary:false},
       {id:'audio_action_mirror',name:'Tráng Gương',targetId:'action_mirror',fileName:'',status:'Chưa gắn file'}
     ],
     system:[
@@ -86,7 +86,7 @@ const DEFAULT_STATE={
     ]
   }
 };
-const DEFAULT_PREFS={cards:{role_old_witch:{starred:true,starOrder:1,hidden:false}},artifacts:{artifact_mirror:{starred:true,starOrder:1,hidden:false}}};
+const DEFAULT_PREFS={cards:{role_old_witch:{starred:true,starOrder:21,hidden:false}},artifacts:{artifact_mirror:{starred:true,starOrder:1,hidden:false}}};
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -165,12 +165,23 @@ function applyV210Rules(s){
     if(revive){if(!String(revive.description||'').trim())revive.description=DEFAULT_STATE.cards[0].functions[1].description;revive.phase='night';revive.usageMode='onceGame';revive.usageCount=1;revive.targetCount=1;revive.noSelf=true;revive.allowDead=true;revive.allowConsecutive=false;revive.pushToPlayerWeb=true;revive.targetPreviousCycleOnly=true}
   }
   const cardAudio=(s.audio&&s.audio.cards)||[];
-  const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.name==='Phù Thuỷ Già');
-  if(witchAudio.length){
-    const keep=witchAudio.find(a=>a.targetId==='role_old_witch')||witchAudio[0];
-    keep.id='audio_role_old_witch';keep.name='Phù Thuỷ Già';keep.targetId='role_old_witch';keep.fileName='Phù Thuỷ Già.mp3';keep.status='Server Gốc V1.08';
-    s.audio.cards=cardAudio.filter(a=>!(a.targetId==='role_old_witch'||a.name==='Phù Thuỷ Già')||a===keep);
-  }else s.audio.cards.unshift({id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',fileName:'Phù Thuỷ Già.mp3',status:'Server Gốc V1.08'});
+  const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.sourceKey==='ROLE:source-18'||a.name==='Phù Thuỷ Già');
+  const keepCard=witchAudio[0]||{};
+  Object.assign(keepCard,{id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',status:'Đã nhập từ Server Gốc V1.08',verifiedBinary:true});
+  s.audio.cards=[keepCard,...cardAudio.filter(a=>!witchAudio.includes(a))];
+
+  const actionAudio=(s.audio&&s.audio.actions)||[];
+  const canonicalActions=[
+    {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',status:'Liên kết metadata Server Gốc V1.08',verifiedBinary:false},
+    {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',status:'Liên kết metadata Server Gốc V1.08',verifiedBinary:false}
+  ];
+  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||a.sourceKey===c.sourceKey||a.name===c.name));
+  s.audio.actions=[...canonicalActions,...otherActions];
+
+  const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
+  if(exileAction)Object.assign(exileAction,{legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3'});
+  const reviveAction=(s.actions?.role||[]).find(a=>a.id==='action_revive'||String(a.legacyId)==='2');
+  if(reviveAction)Object.assign(reviveAction,{legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3'});
   return s;
 }
 function loadState(){
@@ -355,7 +366,7 @@ function pickEntityThemeFile(themeId,kind,entityId,assetKind){pickFile(async f=>
 async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};t.mappings[entityId]={displayUrl:'',thumbUrl:'',bundledSea:kind==='cards'&&entityId==='role_old_witch'};for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
 function addTheme(){const name=prompt('Tên Chủ Đề mới');if(!String(name||'').trim())return;const id='theme-'+Date.now().toString(36),src=themeById(state.themes.activeId);state.themes.list.push({id,name:String(name).trim(),builtin:false,locked:false,ui:clone(src.ui||{}),mappings:clone(src.mappings||{})});state.themes.selectedEditorId=id;state.themes.activeId=id;saveState();renderTheme()}
 
-function renderAudio(){const list=state.audio[audioKind]||[];$('#audioGrid').innerHTML='<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+list.map(a=>'<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(a.fileName||a.status||'Chưa gắn file')+'</small></div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>').join('');
+function renderAudio(){const list=state.audio[audioKind]||[];$('#audioGrid').innerHTML='<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+list.map(a=>'<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc([a.fileName,a.status].filter(Boolean).join(' • ')||'Chưa gắn file')+'</small></div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>').join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',status:'Chưa gắn file'});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
 }
@@ -391,7 +402,7 @@ function bindCore(){
   $('#addTheme').onclick=addTheme;
   $$('#audioKindSeg button').forEach(b=>b.onclick=()=>{$$('#audioKindSeg button').forEach(x=>x.classList.toggle('active',x===b));audioKind=b.dataset.audioKind;renderAudio()});
 }
-async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch');if(await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}))}catch(e){console.warn('V1 audio seed failed',e)}}
+async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch'),stamp='V1.08|ROLE:source-18|'+a.base64.length;if(localStorage.getItem('GMWW_V1_AUDIO_SEED_SOURCE18')===stamp&&await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}));localStorage.setItem('GMWW_V1_AUDIO_SEED_SOURCE18',stamp)}catch(e){console.warn('V1 audio seed failed',e)}}
 async function boot(){await ensureDefaultThumb();await seedBundledV1Audio();bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();await renderTheme();await applyActiveThemeUi()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
