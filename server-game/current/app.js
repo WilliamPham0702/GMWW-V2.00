@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.24';
-const STATE_KEY='GMWW_V224_STATE';
-const PREF_KEY='GMWW_V224_PREFS';
-const OLD_STATE_KEYS=['GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.25';
+const STATE_KEY='GMWW_V225_STATE';
+const PREF_KEY='GMWW_V225_PREFS';
+const OLD_STATE_KEYS=['GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -33,7 +33,7 @@ const DEFAULT_STATE={
   version:VERSION,
   cards:[
     {
-      id:'role_old_witch',legacyId:'source-18',name:'Phù Thuỷ Già',factionId:'village',artworkId:'role-art-dcb4b00b5b',
+      id:'role_old_witch',legacyId:'source-18',name:'Phù Thuỷ Già',factionId:'village',
       information:'Mỗi đêm bạn có thể Đuổi 1 người ra khỏi làng. Tất cả các tác động lên người đó đều không có tác dụng.\n\nHoặc bạn có thể Hồi Sinh 1 người bị chết từ ngày hoặc đêm hôm trước.\n\nMỗi đêm chỉ được chọn sử dụng 1 trong 2 chức năng: Đuổi hoặc Hồi Sinh.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'Mỗi đêm chỉ dùng Đuổi hoặc Hồi Sinh, không dùng cả hai.',conditions:'',attributes:'',
@@ -44,7 +44,7 @@ const DEFAULT_STATE={
       ]
     },
     {
-      id:'role_fairy',legacyId:'source-19',name:'Yêu Tinh',factionId:'village',artworkId:'role-art-7ac675d033',
+      id:'role_fairy',legacyId:'source-19',name:'Yêu Tinh',factionId:'village',
       information:'Mỗi đêm bạn thức dậy và di chuyển vết Sói Cắn sang trái hoặc sang phải. Bạn không được biết vết Sói Cắn đang ở đâu. Trường hợp không có vết Sói Cắn, bạn vẫn được gọi dậy và kích hoạt chức năng bình thường nhưng hành động không có tác dụng.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'',conditions:'Luôn được gọi dậy mỗi đêm, kể cả khi không có vết Sói Cắn.',attributes:'Không được biết vị trí vết Sói Cắn.',
@@ -52,7 +52,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_fairy_transfer',actionId:'action_transfer_bite',description:'Chọn hướng Trái hoặc Phải để dịch chuyển vết Sói Cắn. Nếu không có vết cắn, hành động vẫn ghi nhận nhưng không tạo tác động.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:0,noSelf:false,allowDead:false,noTarget:true,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_transfer_bite']}]
     },
     {
-      id:'role_assassin',legacyId:'source-20',name:'Sát Thủ',factionId:'third',artworkId:'role-art-13a16b6f9f',
+      id:'role_assassin',legacyId:'source-20',name:'Sát Thủ',factionId:'third',
       information:'Mỗi đêm bạn được gọi dậy, chọn một người và đánh dấu lên họ Like 👍 hoặc Dislike 👎. Sáng hôm sau, người đó được gọi dậy và chọn dấu của họ. Nếu dấu của họ cùng với bạn, họ sống. Nếu dấu của họ khác với bạn, họ chết.\n\nĐiều kiện thắng: Khi tất cả các Sói và Kẻ Hủy Diệt (nếu có trong ván) chết hết, bạn sẽ thắng.',
       lives:1,flags:{useDay:true,useNight:true,nightImmune:true,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'Khi tất cả các Sói và Kẻ Hủy Diệt (nếu có trong ván) chết hết, Sát Thủ thắng.',
@@ -61,7 +61,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_assassin_mark',actionId:'action_assassin_mark',description:'Chọn 1 người và bí mật đánh dấu Like 👍 hoặc Dislike 👎. Sáng hôm sau mục tiêu chọn dấu; cùng dấu sống, khác dấu chết. Nếu mục tiêu đã bị Đuổi trong chính đêm đó, không gọi lại sáng hôm sau và Sát Thủ mất lượt.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_assassin_mark']}]
     },
     {
-      id:'role_maiden',legacyId:'source-17',name:'Thiếu Nữ',factionId:'village',artworkId:'role-art-12d139b2aa',
+      id:'role_maiden',legacyId:'source-17',name:'Thiếu Nữ',factionId:'village',
       information:'Mỗi đêm bạn có thể Thăm Nhà một người khác. Nếu mục tiêu là Sói thì bạn chết.\n\nNếu người được thăm bị tác động chết thì bạn cũng chết theo.\n\nNếu bạn không đi Thăm Nhà người khác và bạn bị tác động chết thì bạn cũng chết.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'',conditions:'Mục tiêu hợp lệ theo trạng thái đầu đêm.',attributes:'',
@@ -69,7 +69,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_maiden_visit',actionId:'action_visit_house',description:'Chọn 1 người khác để Thăm Nhà. Nếu mục tiêu là Sói thì Thiếu Nữ chết; nếu người được thăm bị tác động chết trong đêm thì Thiếu Nữ chết theo. Nếu không đi thăm và bị tác động chết thì chết bình thường.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_visit_house']}]
     },
     {
-      id:'role_snow_wolf',legacyId:'source-46',name:'Sói Tuyết',factionId:'wolf',artworkId:'role-art-5cc41f937c',
+      id:'role_snow_wolf',legacyId:'source-46',name:'Sói Tuyết',factionId:'wolf',
       information:'Mỗi đêm bạn chọn 1 người để Đóng Băng. Người bị Đóng Băng không thể thực hiện chức năng trong đêm đó.\n\nNếu Đóng Băng trúng Sói Trùm, vết Cắn của bầy Sói trong đêm đó không có tác dụng.\n\nBạn không được tham gia Cắn khi bầy Sói còn sống. Bạn chỉ được thực hiện chức năng Cắn khi bầy Sói chỉ còn một mình bạn.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'Không Đóng Băng cùng một người 2 đêm liên tiếp.',conditions:'Chức năng Cắn chỉ kích hoạt khi Sói Tuyết là Sói duy nhất còn sống.',attributes:'',
@@ -80,7 +80,7 @@ const DEFAULT_STATE={
       ]
     },
     {
-      id:'role_guard',legacyId:'source-4',name:'Bảo Vệ',factionId:'village',artworkId:'role-art-34afffaef3',
+      id:'role_guard',legacyId:'source-4',name:'Bảo Vệ',factionId:'village',
       information:'Mỗi đêm, bạn được chọn một người để bảo vệ họ khỏi vết Sói Cắn.\n\nNgười được bảo vệ sẽ không chết bởi vết Sói Cắn trực tiếp hoặc vết Sói Cắn được dịch chuyển vào họ.\n\nBảo Vệ không có tác dụng trước bình của Phù Thủy hoặc các tác động gây chết khác.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'Không được bảo vệ cùng một người hai đêm liên tiếp.',conditions:'',attributes:'',
@@ -88,7 +88,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_guard_protect',actionId:'action_protect',description:'Bảo vệ 1 người khỏi tác động gây chết có nguồn gốc wolf_bite, gồm Cắn trực tiếp và vết Cắn dịch chuyển. Không chặn bình Phù Thủy hay tác động chết khác.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:1,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_protected']}]
     },
     {
-      id:'role_alpha_wolf',legacyId:'source-44',name:'Sói Trùm',factionId:'wolf',artworkId:'role-art-f4aef09684',
+      id:'role_alpha_wolf',legacyId:'source-44',name:'Sói Trùm',factionId:'wolf',
       information:'Phe Sói. Sói Trùm tham gia Cắn cùng đàn. Tiên Tri soi Sói Trùm cho kết quả KHÔNG PHẢI SÓI. Nếu Sói Trùm bị Sói Tuyết Đóng Băng, toàn bộ vết Cắn của đàn trong đêm đó bị hủy.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'',conditions:'',attributes:'Tiên Tri soi cho kết quả KHÔNG PHẢI SÓI.',
@@ -96,7 +96,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_alpha_wolf_bite',actionId:'action_wolf_bite',description:'Thức dậy cùng Bầy Sói và tham gia Cắn chung.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,usesPackBite:true,allowFriendlyFaction:true,effectIds:['effect_wolf_bite']}]
     },
     {
-      id:'role_wolf',legacyId:'source-43',name:'Sói Thường',factionId:'wolf',artworkId:'role-art-980bcb375a',
+      id:'role_wolf',legacyId:'source-43',name:'Sói Thường',factionId:'wolf',
       information:'Mỗi đêm, bạn thức dậy cùng Bầy Sói tham gia Cắn.',
       lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
       winCondition:'',limits:'',conditions:'Mục tiêu hợp lệ theo trạng thái đầu đêm.',attributes:'',
@@ -104,35 +104,7 @@ const DEFAULT_STATE={
       functions:[{id:'fn_wolf_bite',actionId:'action_wolf_bite',description:'Mỗi đêm thức dậy cùng Bầy Sói và tham gia Cắn. Được chọn bản thân và người cùng Phe; không chọn người đã chết/bị Đuổi từ trước khi đêm bắt đầu.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,usesPackBite:true,allowFriendlyFaction:true,effectIds:['effect_wolf_bite']}]
     }
   ],
-  artifacts:[
-    {
-      id:'artifact_mirror',legacyId:'atifat-1789042413093',name:'Tráng Gương',
-      information:'Copy chức năng của người khác nhưng vẫn giữ chức năng gốc. Khi đến Action của chức năng được copy, hệ thống tạo thêm một lượt thực hiện tuần tự trong cùng box Action; không tạo thêm Night Order riêng.',
-      flags:{useDay:true,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
-      artifact:{ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:'',sameBoxSequentialInstance:true,hideArtifactOnPlayerWeb:true},
-      winCondition:'',limits:'1 lần / suốt ván',conditions:'',attributes:'Giữ Vai Trò gốc và chức năng gốc.',
-      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
-      functions:[{id:'fn_artifact_mirror',actionId:'action_mirror',description:'Sao chép chức năng của mục tiêu; giữ chức năng gốc và thêm lượt thực hiện copy tuần tự trong cùng box Action.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_copy_functions']}]
-    },
-    {
-      id:'artifact_role_swap',legacyId:'atifat-1789042448651',name:'Đổi Vai Trò',
-      information:'Đổi Vai Trò giữa 2 Người Chơi.',
-      flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
-      artifact:{ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:'',hideArtifactOnPlayerWeb:true},
-      winCondition:'',limits:'1 lần / suốt ván',conditions:'Đầu đêm chọn A và B; khi xác nhận, Vai Trò của A và B được hoán đổi.',attributes:'',
-      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
-      functions:[{id:'fn_artifact_role_swap',actionId:'action_role_swap',description:'Chọn 2 Người Chơi và hoán đổi Vai Trò của họ.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:2,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_swap_roles']}]
-    },
-    {
-      id:'artifact_wake_with_seer',legacyId:'atifat-wake-with-seer',name:'Thức cùng Tiên Tri',
-      information:'Người sở hữu thức cùng lượt Tiên Tri và được biết Tiên Tri đã soi ai; không biết kết quả soi.',
-      flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
-      artifact:{ownerSelection:true,persistentOwner:true,revealFollowTargetOnly:true,wakeWithRoleId:'source-2',wakeWithActionId:'9',hideArtifactOnPlayerWeb:true},
-      winCondition:'',limits:'Không giới hạn số đêm.',conditions:'Đầu ván GM chọn Người Chơi sở hữu lá trong ngăn Bị Tác Động.',attributes:'',
-      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
-      functions:[{id:'fn_artifact_wake_seer',actionId:'action_wake_with_seer',description:'Chỉ mở sau khi Tiên Tri hoàn tất soi; xác nhận để người sở hữu biết Tiên Tri đã soi ai, không tiết lộ kết quả.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:0,noSelf:false,allowDead:false,noTarget:true,allowConsecutive:true,passive:false,activation:'after_seer_action',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:[]}]
-    }
-  ],
+  artifacts:[],
   actions:{
     role:[
       {id:'action_exile',legacyId:'1',name:'Đuổi Người',description:'Đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3',effectIds:['effect_exile']},
@@ -144,11 +116,7 @@ const DEFAULT_STATE={
       {id:'action_protect',legacyId:'4',name:'Bảo Vệ',description:'Bảo vệ 1 người khỏi tác động chết có nguồn gốc Sói Cắn.',effectIds:['effect_protected']},
       {id:'action_wolf_bite',legacyId:'action-wolf-bite',name:'Sói Cắn',description:'Vết Cắn chung của Bầy Sói.',effectIds:['effect_wolf_bite'],allowFriendlyFaction:true}
     ],
-    artifacts:[
-      {id:'action_mirror',legacyId:'23',name:'Tráng Gương',description:'Sao chép chức năng của mục tiêu và tạo thêm lượt tuần tự trong cùng box Action.',effectIds:['effect_copy_functions']},
-      {id:'action_role_swap',legacyId:'24',name:'Đổi Vai Trò',description:'Hoán đổi Vai Trò giữa 2 Người Chơi.',effectIds:['effect_swap_roles']},
-      {id:'action_wake_with_seer',legacyId:'action-atifat-wake-seer',name:'Thức cùng Tiên Tri',description:'Thức cùng Tiên Tri và biết Tiên Tri soi ai; không biết kết quả.',effectIds:[]}
-    ]
+    artifacts:[]
   },
   effects:[
     {id:'effect_exile',name:'Đuổi',primitive:'EXPEL',duration:'nextDay',description:'Đuổi người chơi ra khỏi làng; vô hiệu các tác động lên người bị Đuổi trong thời hạn hiệu lực.',webTemplate:{eventType:'EXPEL',emoji:'🚪',title:'BỊ ĐUỔI KHỎI LÀNG',requireAck:true,requireResponse:false}},
@@ -159,22 +127,28 @@ const DEFAULT_STATE={
     {id:'effect_snow_wolf_freeze',name:'Đóng Băng',primitive:'BLOCK',duration:'night',description:'Chặn chức năng mục tiêu trong đêm; nếu mục tiêu là Sói Trùm thì vô hiệu vết Cắn chung của Bầy Sói đêm đó.',params:{ifTargetRole:'source-44',cancelPackBite:true,noSelf:true,noConsecutiveTarget:true},webTemplate:{eventType:'BLOCK',emoji:'❄️',title:'BẠN BỊ ĐÓNG BĂNG',requireAck:true,requireResponse:false}},
     {id:'effect_protected',name:'Bảo Vệ',primitive:'PROTECT',duration:'night',description:'Chỉ chặn tác động chết có nguồn gốc wolf_bite, kể cả vết Cắn dịch chuyển; không chặn bình Phù Thủy hay tác động chết khác.',params:{scope:'wolf_bite'},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
     {id:'effect_wolf_bite',name:'Sói Cắn',primitive:'KILL',duration:'instant',description:'Tác động Sói Cắn chung của Bầy Sói.',params:{scope:'wolf_bite',sharedPackBite:true},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
-    {id:'effect_copy_functions',name:'Sao chép chức năng',primitive:'COPY_FUNCTIONS',duration:'game',description:'Giữ chức năng gốc và thêm chức năng đã copy; thực hiện bằng action instance tuần tự trong cùng box.',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
-    {id:'effect_swap_roles',name:'Đổi Vai Trò',primitive:'SWAP_ROLES',duration:'game',description:'Hoán đổi Vai Trò giữa 2 Người Chơi.',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}}
   ],
   audio:{
     cards:[
-      {id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',verifiedBinary:true},
-      {id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',fileName:'gmww-wolf-pack.m4a',verifiedBinary:true}
+      {id:'audio_card_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_fairy',name:'Yêu Tinh',targetId:'role_fairy',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_assassin',name:'Sát Thủ',targetId:'role_assassin',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_maiden',name:'Thiếu Nữ',targetId:'role_maiden',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_snow_wolf',name:'Sói Tuyết',targetId:'role_snow_wolf',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_guard',name:'Bảo Vệ',targetId:'role_guard',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_alpha_wolf',name:'Sói Trùm',targetId:'role_alpha_wolf',fileName:'',verifiedBinary:false},
+      {id:'audio_card_role_wolf',name:'Sói Thường',targetId:'role_wolf',fileName:'',verifiedBinary:false}
     ],
-    artifacts:[
-      {id:'audio_artifact_mirror',name:'Tráng Gương',targetId:'artifact_mirror',fileName:'',verifiedBinary:false},
-      {id:'audio_artifact_role_swap',name:'Đổi Vai Trò',targetId:'artifact_role_swap',fileName:'',verifiedBinary:false},
-      {id:'audio_artifact_wake_seer',name:'Thức cùng Tiên Tri',targetId:'artifact_wake_with_seer',fileName:'',verifiedBinary:false}
-    ],
+    artifacts:[],
     actions:[
       {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',fileName:'',verifiedBinary:false},
-      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'',verifiedBinary:false}
+      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'',verifiedBinary:false},
+      {id:'audio_action_transfer_bite',name:'Dịch Chuyển Vết Cắn',targetId:'action_transfer_bite',fileName:'',verifiedBinary:false},
+      {id:'audio_action_assassin_mark',name:'Đánh Dấu',targetId:'action_assassin_mark',fileName:'',verifiedBinary:false},
+      {id:'audio_action_visit_house',name:'Thăm Nhà',targetId:'action_visit_house',fileName:'',verifiedBinary:false},
+      {id:'audio_action_snow_wolf_freeze',name:'Đóng Băng',targetId:'action_snow_wolf_freeze',fileName:'',verifiedBinary:false},
+      {id:'audio_action_protect',name:'Bảo Vệ',targetId:'action_protect',fileName:'',verifiedBinary:false},
+      {id:'audio_action_wolf_bite',name:'Sói Cắn',targetId:'action_wolf_bite',fileName:'',verifiedBinary:false}
     ],
     system:[
       {id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false},
@@ -185,16 +159,7 @@ const DEFAULT_STATE={
     activeId:'theme-sea',selectedEditorId:'theme-sea',
     list:[
       {id:'theme-default',name:'Mặc định',builtin:true,locked:true,ui:{},mappings:{}},
-      {id:'theme-sea',name:'Biển',builtin:true,locked:false,ui:{},mappings:{
-        role_old_witch:{displayUrl:'',thumbUrl:'',bundledSea:true},
-        role_fairy:{displayUrl:'',thumbUrl:'',artworkId:'role-art-7ac675d033'},
-        role_assassin:{displayUrl:'',thumbUrl:'',artworkId:'role-art-13a16b6f9f'},
-        role_maiden:{displayUrl:'',thumbUrl:'',artworkId:'role-art-12d139b2aa'},
-        role_snow_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-5cc41f937c'},
-        role_guard:{displayUrl:'',thumbUrl:'',artworkId:'role-art-34afffaef3'},
-        role_alpha_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-f4aef09684'},
-        role_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-980bcb375a'}
-      }}
+      {id:'theme-sea',name:'Biển',builtin:true,locked:false,ui:{},mappings:{}}
     ]
   }
 };
@@ -209,11 +174,7 @@ const DEFAULT_PREFS={
     role_maiden:{starred:true,starOrder:23,hidden:false},
     role_assassin:{starred:true,starOrder:24,hidden:false}
   },
-  artifacts:{
-    artifact_mirror:{starred:true,starOrder:1,hidden:false},
-    artifact_role_swap:{starred:true,starOrder:2,hidden:false},
-    artifact_wake_with_seer:{starred:true,starOrder:7,hidden:false}
-  }
+  artifacts:{}
 }
 
 const $=(s,r=document)=>r.querySelector(s);
@@ -327,47 +288,66 @@ function applyV210Rules(s){
   if(reviveAction)Object.assign(reviveAction,{legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3'});
   return s;
 }
-function applyV224Catalog(s){
+function applyV225Catalog(s,migrating=false){
   const upsert=(arr,item,keys=['id'])=>{
     arr=Array.isArray(arr)?arr:[];
     const idx=arr.findIndex(x=>keys.some(k=>item[k]&&x&&x[k]===item[k]));
-    if(idx>=0)arr[idx]=clone(item);else arr.push(clone(item));
+    if(idx>=0)arr[idx]=Object.assign({},arr[idx],clone(item));else arr.push(clone(item));
     return arr;
   };
   for(const c of DEFAULT_STATE.cards)s.cards=upsert(s.cards,c,['id','legacyId']);
-  for(const a of DEFAULT_STATE.artifacts)s.artifacts=upsert(s.artifacts,a,['id','legacyId']);
+  s.artifacts=Array.isArray(s.artifacts)?s.artifacts:[];
   s.actions=s.actions||{role:[],artifacts:[]};
   for(const a of DEFAULT_STATE.actions.role)s.actions.role=upsert(s.actions.role,a,['id','legacyId']);
-  for(const a of DEFAULT_STATE.actions.artifacts)s.actions.artifacts=upsert(s.actions.artifacts,a,['id','legacyId']);
+  s.actions.artifacts=Array.isArray(s.actions.artifacts)?s.actions.artifacts:[];
+  s.effects=Array.isArray(s.effects)?s.effects:[];
   for(const e of DEFAULT_STATE.effects)s.effects=upsert(s.effects,e,['id']);
-  s.audio=s.audio||clone(DEFAULT_STATE.audio);
-  for(const k of ['cards','artifacts','actions','system']){
-    s.audio[k]=Array.isArray(s.audio[k])?s.audio[k]:[];
-    for(const a of DEFAULT_STATE.audio[k])s.audio[k]=upsert(s.audio[k],a,['id']);
+  s.audio=s.audio||{cards:[],artifacts:[],actions:[],system:[]};
+  for(const k of ['cards','artifacts','actions','system'])s.audio[k]=Array.isArray(s.audio[k])?s.audio[k]:[];
+
+  if(migrating){
+    const removedArtifacts=new Set(['artifact_mirror','artifact_role_swap','artifact_wake_with_seer']);
+    const removedArtifactLegacy=new Set(['atifat-1789042413093','atifat-1789042448651','atifat-wake-with-seer']);
+    s.artifacts=s.artifacts.filter(x=>!removedArtifacts.has(x.id)&&!removedArtifactLegacy.has(x.legacyId));
+    const removedArtifactActions=new Set(['action_mirror','action_role_swap','action_wake_with_seer']);
+    s.actions.artifacts=s.actions.artifacts.filter(x=>!removedArtifactActions.has(x.id));
+    const removedEffects=new Set(['effect_copy_functions','effect_swap_roles']);
+    s.effects=s.effects.filter(x=>!removedEffects.has(x.id));
+    s.audio.artifacts=s.audio.artifacts.filter(x=>!removedArtifacts.has(x.targetId));
+    for(const t of (s.themes?.list||[]))t.mappings={};
   }
-  s.themes=s.themes||clone(DEFAULT_STATE.themes);
-  const sea=(s.themes.list||[]).find(x=>x.id==='theme-sea');
-  const defSea=DEFAULT_STATE.themes.list.find(x=>x.id==='theme-sea');
-  if(sea&&defSea)sea.mappings=Object.assign({},defSea.mappings||{},sea.mappings||{});
+
+  const syncAudio=(kind,target,idPrefix)=>{
+    const list=s.audio[kind];
+    let a=list.find(x=>x.targetId===target.id);
+    if(!a){a={id:idPrefix+target.id,name:target.name,targetId:target.id,fileName:'',verifiedBinary:false};list.push(a)}
+    if(migrating){a.name=target.name;a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}
+  };
+  for(const c of s.cards)syncAudio('cards',c,'audio_card_');
+  for(const a of s.actions.role)syncAudio('actions',a,'audio_action_');
+  if(!s.audio.system.some(x=>x.id==='audio_system_confirm'))s.audio.system.push({id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false});
+  if(!s.audio.system.some(x=>x.id==='audio_system_countdown'))s.audio.system.push({id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false});
+  if(migrating)for(const a of s.audio.system){a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}
   s.version=VERSION;
   return s;
 }
-function applyV224Prefs(p){
+function applyV225Prefs(p,migrating=false){
   p=p||{cards:{},artifacts:{}};
   p.cards=Object.assign({},DEFAULT_PREFS.cards,p.cards||{});
-  p.artifacts=Object.assign({},DEFAULT_PREFS.artifacts,p.artifacts||{});
+  p.artifacts=Object.assign({},p.artifacts||{});
+  if(migrating)for(const id of ['artifact_mirror','artifact_role_swap','artifact_wake_with_seer'])delete p.artifacts[id];
   return p;
 }
 
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV224Catalog(applyV210Rules(s))}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV224Catalog(applyV210Rules(migrateOld(raw)));localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return applyV224Catalog(clone(DEFAULT_STATE));
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV225Catalog(applyV210Rules(s),false)}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV225Catalog(applyV210Rules(migrateOld(raw)),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyV225Catalog(clone(DEFAULT_STATE),false);
 }
 function loadPrefs(){
-  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV224Prefs(deepMerge(clone(DEFAULT_PREFS),cur))}catch(_){}
-  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;const out=applyV224Prefs(p);localStorage.setItem(PREF_KEY,JSON.stringify(out));return out}}catch(_){}}
-  return applyV224Prefs(clone(DEFAULT_PREFS));
+  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV225Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
+  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;const out=applyV225Prefs(p,true);localStorage.setItem(PREF_KEY,JSON.stringify(out));return out}}catch(_){}}
+  return applyV225Prefs(clone(DEFAULT_PREFS),false);
 }
 
 function applyV221AudioGuard(s){
@@ -377,7 +357,7 @@ function applyV221AudioGuard(s){
   }
   return s;
 }
-let state=applyV221AudioGuard(loadState()),prefs=loadPrefs();
+let state=loadState(),prefs=loadPrefs();
 saveState();
 let currentKind='cards',currentId='role_old_witch',editDraft=null,cardFilter='all',artifactFilter='all',actionKind='role',audioKind='cards',editContext=null,lastTouchMap=new WeakMap(),defaultThumb='',objectUrls=new Map();
 
@@ -398,22 +378,23 @@ function openDb(){return new Promise((resolve,reject)=>{const q=indexedDB.open(D
 async function dbPut(key,blob){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({key,blob,updatedAt:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
 async function dbGet(key){const db=await openDb();const out=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const q=tx.objectStore(DB_STORE).get(key);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});db.close();return out}
 async function dbDelete(key){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
-function cardBlobKey(themeId,kind,id,assetKind){return themeId+'|'+kind+'|'+id+'|'+assetKind}
+function cardBlobKey(themeId,kind,id,assetKind){return 'v225|'+themeId+'|'+kind+'|'+id+'|'+assetKind}
 function uiBlobKey(themeId,slotId){return themeId+'|ui|'+slotId}
 async function blobUrlFor(key){if(objectUrls.has(key))return objectUrls.get(key);try{const rec=await dbGet(key);if(rec&&rec.blob){const u=URL.createObjectURL(rec.blob);objectUrls.set(key,u);return u}}catch(_){}return''}
 function imageToThumb(src){return new Promise(resolve=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1024,sh=im.naturalHeight||936,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);resolve(c.toDataURL('image/webp',.82))};im.onerror=()=>resolve(src);im.src=src})}
-async function ensureDefaultThumb(){if(defaultThumb)return defaultThumb;defaultThumb=await imageToThumb(window.GMWW205_DEFAULT_DISPLAY||'');return defaultThumb}
+async function ensureDefaultThumb(){if(defaultThumb)return defaultThumb;defaultThumb=await imageToThumb('default-artwork.webp');return defaultThumb}
 async function resolveArtwork(kind,id,assetKind){
-  const active=state.themes.activeId||'theme-sea',t=themeById(active),m=(t.mappings&&t.mappings[id])||{};
+  const active=state.themes.activeId||'theme-sea';
   if(active!=='theme-default'){
     const local=await blobUrlFor(cardBlobKey(active,kind,id,assetKind));if(local)return local;
-    const url=String(assetKind==='thumb'?m.thumbUrl:m.displayUrl||'').trim();if(url)return url;
-    const bundled=window.GMWW224_SEA_ASSETS&&window.GMWW224_SEA_ASSETS[kind]&&window.GMWW224_SEA_ASSETS[kind][id];
-    if(bundled&&bundled[assetKind])return bundled[assetKind];
-    if(id==='role_old_witch'&&kind==='cards'){if(assetKind==='thumb'&&window.GMWW208_SEA_THUMB)return window.GMWW208_SEA_THUMB;if(assetKind==='display'&&window.GMWW208_SEA_DISPLAY)return window.GMWW208_SEA_DISPLAY}
+    if(assetKind==='thumb'){
+      const displayLocal=await blobUrlFor(cardBlobKey(active,kind,id,'display'));if(displayLocal)return displayLocal;
+    }
   }
-  if(assetKind==='thumb')return await ensureDefaultThumb();return window.GMWW205_DEFAULT_DISPLAY||'';
+  if(assetKind==='thumb')return await ensureDefaultThumb();
+  return 'default-artwork.webp';
 }
+
 async function resolveUiSlot(themeId,slotId){const local=await blobUrlFor(uiBlobKey(themeId,slotId));if(local)return local;const t=themeById(themeId),u=String(t.ui?.[slotId]?.url||'').trim();return u}
 async function applyActiveThemeUi(){
   const id=state.themes.activeId||'theme-sea';
@@ -423,11 +404,24 @@ async function applyActiveThemeUi(){
 
 function entityTileHtml(kind,e){
   const p=prefFor(kind,e.id),sub=kind==='cards'?(factionMeta(e.factionId).icon+' '+factionMeta(e.factionId).label):'✦ ARTIFACTS';
-  return '<article class="role-tile '+(p.hidden?'hidden-pref':'')+'" data-kind="'+kind+'" data-id="'+esc(e.id)+'"><div class="tile-actions"><button class="hide '+(p.hidden?'on':'')+'" data-pref="hide">'+(p.hidden?'◉':'◌')+'</button><button class="star '+(p.starred?'on':'')+'" data-pref="star">'+(p.starred?'★':'☆')+'</button></div><img data-thumb-kind="'+kind+'" data-thumb-id="'+esc(e.id)+'" alt=""><h3>'+esc(e.name)+'</h3><small>'+esc(sub)+(p.hidden?' • Tạm ẩn':'')+'</small></article>'
+  return '<article class="role-tile '+(p.hidden?'hidden-pref':'')+'" data-kind="'+kind+'" data-id="'+esc(e.id)+'"><div class="tile-actions"><button class="hide '+(p.hidden?'on':'')+'" data-pref="hide">'+(p.hidden?'HIỆN':'ẨN')+'</button><button class="star '+(p.starred?'on':'')+'" data-pref="star">'+(p.starred?'★':'☆')+'</button></div><img data-thumb-kind="'+kind+'" data-thumb-id="'+esc(e.id)+'" alt=""><h3>'+esc(e.name)+'</h3><small>'+esc(sub)+(p.hidden?' • Tạm ẩn':'')+'</small></article>'
 }
 function bindEntityTiles(kind,root,list){
   list.forEach(async e=>{const im=$('[data-thumb-kind="'+kind+'"][data-thumb-id="'+CSS.escape(e.id)+'"]',root);if(im)im.src=await resolveArtwork(kind,e.id,'thumb')});
   Array.from(root.querySelectorAll('[data-kind="'+kind+'"][data-id]')).forEach(tile=>tile.onclick=ev=>{const pref=ev.target.closest('[data-pref]');if(pref){ev.stopPropagation();togglePref(kind,tile.dataset.id,pref.dataset.pref);return}openEntityEditor(kind,tile.dataset.id)});
+}
+function ensureAudioPlaceholder(kind,target){
+  const bucket=kind==='cards'?'cards':kind==='artifacts'?'artifacts':'actions';
+  state.audio[bucket]=state.audio[bucket]||[];
+  let a=state.audio[bucket].find(x=>x.targetId===target.id);
+  if(!a){a={id:uid('audio'),name:target.name,targetId:target.id,fileName:'',verifiedBinary:false};state.audio[bucket].push(a)}else a.name=target.name;
+  return a;
+}
+function createEntity(kind){
+  const isCard=kind==='cards',id=uid(isCard?'role':'artifact');
+  const raw={id,name:isCard?'Lá Bài Mới':'ARTIFACT Mới',information:'',lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},functions:[]};
+  if(isCard)raw.factionId='village';else raw.artifact={ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:''};
+  const e=normalizeEntity(raw,kind);entityList(kind).unshift(e);prefFor(kind,id);ensureAudioPlaceholder(kind,e);saveState();savePrefs();renderEntityGrid(kind);openEntityEditor(kind,id);
 }
 function renderEntityGrid(kind){
   const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),favGrid=$(kind==='cards'?'#cardFavoriteGrid':'#artifactFavoriteGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
@@ -435,11 +429,14 @@ function renderEntityGrid(kind){
   const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
   favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
-  let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;if(filter==='star')return false;return !p.hidden&&!p.starred});
+  let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
   list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
-  grid.innerHTML=list.map(e=>entityTileHtml(kind,e)).join('');
+  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Lá Bài':'Thêm ARTIFACT')+'</b></button>';
+  grid.innerHTML=add+list.map(e=>entityTileHtml(kind,e)).join('');
   bindEntityTiles(kind,grid,list);
+  const addBtn=$('[data-add-entity="'+kind+'"]',grid);if(addBtn)addBtn.onclick=()=>createEntity(kind);
 }
+
 function togglePref(kind,id,type){const p=prefFor(kind,id);if(type==='star'){if(p.starred){p.starred=false;p.starOrder=null}else{p.hidden=false;p.starred=true;const orders=Object.values(prefs[kind]||{}).filter(x=>x.starred).map(x=>Number(x.starOrder)||0);p.starOrder=Math.max(0,...orders)+1}}else{p.hidden=!p.hidden;if(p.hidden){p.starred=false;p.starOrder=null}}savePrefs();renderEntityGrid(kind)}
 
 async function renderEntityFront(){
@@ -512,8 +509,8 @@ function bindFunctionControls(){
 let editBackRendered=false;
 function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);editBackRendered=false;$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');setFace('front');renderEntityFront();$('#library').scrollTop=0}
 function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
-function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
-function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];saveState();savePrefs();closeEntityEditor()}
+function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);ensureAudioPlaceholder(currentKind,editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
+function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];const bucket=currentKind==='cards'?'cards':'artifacts';state.audio[bucket]=(state.audio[bucket]||[]).filter(a=>a.targetId!==currentId);saveState();savePrefs();closeEntityEditor()}
 function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}Array.from(document.querySelectorAll('.face-switch button')).forEach(b=>b.classList.toggle('active',b.dataset.face===face));Array.from(document.querySelectorAll('.face')).forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
 let faceTouchStart=null;
 function bindFaceSwipe(){
@@ -529,7 +526,7 @@ function showSheet(title,html,ctx){editContext=ctx;$('#sheetTitle').textContent=
 function closeSheet(){$('#editSheet').classList.add('hidden');editContext=null}
 function openActionEditor(id){const a=actionById(id);if(!a)return;showSheet('Hành Động • '+a.name,'<div class="form-grid"><label class="full">ID<input id="editActionId" value="'+esc(a.id)+'" readonly></label><label class="full">Tên<input id="editActionName" value="'+esc(a.name)+'"></label><label class="full">Mô tả<textarea id="editActionDescription">'+esc(a.description||'')+'</textarea></label><label class="full">Hiệu Ứng liên kết<select id="editActionEffect"><option value="">Không</option>'+state.effects.map(e=>'<option value="'+esc(e.id)+'" '+((a.effectIds||[]).includes(e.id)?'selected':'')+'>'+esc(e.name)+'</option>').join('')+'</select></label></div>',{type:'action',id})}
 function openEffectEditor(id){const e=effectById(id);if(!e)return;const w=e.webTemplate||{};showSheet('Hiệu Ứng • '+e.name,'<div class="form-grid"><label class="full">ID<input id="editEffectId" value="'+esc(e.id)+'" readonly></label><label class="full">Tên<input id="editEffectName" value="'+esc(e.name)+'"></label><label>Primitive<select id="editPrimitive">'+selectOptions([['EXPEL','EXPEL'],['REVIVE','REVIVE'],['KILL','KILL'],['PROTECT','PROTECT'],['BLOCK','BLOCK'],['TRANSFER_EFFECT','TRANSFER_EFFECT'],['REVEAL_FACTION','REVEAL_FACTION'],['REVEAL_ROLE','REVEAL_ROLE'],['COPY_FUNCTIONS','COPY_FUNCTIONS'],['CUSTOM','CUSTOM']],e.primitive)+'</select></label><label>Thời lượng<select id="editDuration">'+selectOptions([['instant','Tức thời'],['night','Đêm đó'],['nextDay','Đến hết sáng hôm sau'],['untilRemoved','Đến khi gỡ']],e.duration)+'</select></label><label class="full">Mô tả Engine<textarea id="editEffectDescription">'+esc(e.description||'')+'</textarea></label><label>Event type<input id="webEventType" value="'+esc(w.eventType||'')+'"></label><label>Emoji<input id="webEmoji" value="'+esc(w.emoji||'')+'"></label><label class="full">Tiêu đề Player Web<input id="webTitle" value="'+esc(w.title||'')+'"></label></div><div class="check-grid" style="margin-top:8px"><label class="check"><input type="checkbox" id="webRequireAck" '+(w.requireAck?'checked':'')+'><span>Yêu cầu xác nhận</span></label><label class="check"><input type="checkbox" id="webRequireResponse" '+(w.requireResponse?'checked':'')+'><span>Yêu cầu phản hồi</span></label></div>',{type:'effect',id})}
-function createAction(){const a={id:uid(actionKind==='role'?'action':'artifact_action'),name:'Hành Động Mới',description:'',effectIds:[]};actionList(actionKind).push(a);saveState();renderActions();openActionEditor(a.id)}
+function createAction(){const a={id:uid(actionKind==='role'?'action':'artifact_action'),name:'Hành Động Mới',description:'',effectIds:[]};actionList(actionKind).push(a);ensureAudioPlaceholder('actions',a);saveState();renderActions();openActionEditor(a.id)}
 function createEffect(){const e={id:uid('effect'),name:'Hiệu Ứng Mới',primitive:'CUSTOM',duration:'instant',description:'',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}};state.effects.push(e);saveState();renderEffects();openEffectEditor(e.id)}
 function saveSheet(){if(!editContext)return;if(editContext.type==='action'){const a=actionById(editContext.id);a.name=($('#editActionName').value||'').trim()||a.name;a.description=$('#editActionDescription').value||'';a.effectIds=$('#editActionEffect').value?[$('#editActionEffect').value]:[];saveState();renderActions()}else if(editContext.type==='effect'){const e=effectById(editContext.id);e.name=($('#editEffectName').value||'').trim()||e.name;e.primitive=$('#editPrimitive').value;e.duration=$('#editDuration').value;e.description=$('#editEffectDescription').value||'';e.webTemplate={eventType:$('#webEventType').value||'',emoji:$('#webEmoji').value||'',title:$('#webTitle').value||'',requireAck:$('#webRequireAck').checked,requireResponse:$('#webRequireResponse').checked};saveState();renderEffects()}closeSheet()}
 
@@ -544,23 +541,23 @@ async function renderTheme(){
 async function renderThemeEntityRows(themeId,kind,holder){
   if(!holder)return;holder.innerHTML='';
   for(const c of entityList(kind)){
-    const src=await resolveArtwork(kind,c.id,'thumb'),m=themeById(themeId).mappings?.[c.id]||{};
-    const row=document.createElement('div');row.className='theme-card-row';
-    row.innerHTML='<img alt=""><div><b>'+esc(c.name)+'</b><small>Thumbnail / Display riêng</small><div class="form-grid" style="margin-top:6px"><label>Display URL<input data-theme-display-url value="'+esc(m.displayUrl||'')+'"></label><label>Thumbnail URL<input data-theme-thumb-url value="'+esc(m.thumbUrl||'')+'"></label></div></div><div class="theme-slot-actions"><button data-theme-upload="display" title="Display">D</button><button data-theme-upload="thumb" title="Thumbnail">T</button><button data-theme-clear title="Mặc định">↺</button></div>';
+    const src=await resolveArtwork(kind,c.id,'thumb');
+    const row=document.createElement('div');row.className='theme-card-row theme-card-row-simple';
+    row.innerHTML='<img alt=""><div class="theme-card-name"><b>'+esc(c.name)+'</b></div><div class="theme-slot-actions"><button data-theme-upload title="Upload Artwork">↑</button><button data-theme-clear title="Reset">↺</button></div>';
     $('img',row).src=src;holder.appendChild(row);
-    $('[data-theme-display-url]',row).onchange=()=>saveEntityThemeUrl(themeId,kind,c.id,'display',$('[data-theme-display-url]',row).value);
-    $('[data-theme-thumb-url]',row).onchange=()=>saveEntityThemeUrl(themeId,kind,c.id,'thumb',$('[data-theme-thumb-url]',row).value);
-    $$('[data-theme-upload]',row).forEach(b=>b.onclick=()=>pickEntityThemeFile(themeId,kind,c.id,b.dataset.themeUpload));
+    $('[data-theme-upload]',row).onclick=()=>pickEntityThemeArtwork(themeId,kind,c.id);
     $('[data-theme-clear]',row).onclick=()=>clearEntityTheme(themeId,kind,c.id);
   }
 }
+
 async function saveUiSlotUrl(themeId,slotId,url){const t=themeById(themeId);t.ui=t.ui||{};t.ui[slotId]=t.ui[slotId]||{};t.ui[slotId].url=String(url||'').trim();saveState();await renderTheme();await applyActiveThemeUi()}
 function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*';i.hidden=true;document.body.appendChild(i);i.onchange=()=>{const f=i.files?.[0];i.remove();if(f)cb(f)};i.click()}
 function pickUiSlotFile(themeId,slotId){pickFile(async f=>{await dbPut(uiBlobKey(themeId,slotId),f);objectUrls.delete(uiBlobKey(themeId,slotId));await renderTheme();await applyActiveThemeUi()})}
 async function clearUiSlot(themeId,slotId){const t=themeById(themeId);if(t.ui)delete t.ui[slotId];await dbDelete(uiBlobKey(themeId,slotId)).catch(()=>{});objectUrls.delete(uiBlobKey(themeId,slotId));saveState();await renderTheme();await applyActiveThemeUi()}
-function saveEntityThemeUrl(themeId,kind,entityId,assetKind,url){const t=themeById(themeId);t.mappings=t.mappings||{};t.mappings[entityId]=t.mappings[entityId]||{};t.mappings[entityId][assetKind==='display'?'displayUrl':'thumbUrl']=String(url||'').trim();saveState();renderTheme();renderEntityGrid(kind)}
-function pickEntityThemeFile(themeId,kind,entityId,assetKind){pickFile(async f=>{await dbPut(cardBlobKey(themeId,kind,entityId,assetKind),f);objectUrls.delete(cardBlobKey(themeId,kind,entityId,assetKind));await renderTheme();renderEntityGrid(kind)})}
-async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};t.mappings[entityId]={displayUrl:'',thumbUrl:'',bundledSea:kind==='cards'&&entityId==='role_old_witch'};for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
+function thumbBlobFromFile(file){return new Promise(resolve=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1064,sh=im.naturalHeight||1478,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);c.toBlob(b=>{URL.revokeObjectURL(u);resolve(b||file)},'image/webp',.9)};im.onerror=()=>{URL.revokeObjectURL(u);resolve(file)};im.src=u})}
+function pickEntityThemeArtwork(themeId,kind,entityId){pickFile(async f=>{const dk=cardBlobKey(themeId,kind,entityId,'display'),tk=cardBlobKey(themeId,kind,entityId,'thumb');await dbPut(dk,f);await dbPut(tk,await thumbBlobFromFile(f));objectUrls.delete(dk);objectUrls.delete(tk);saveState();await renderTheme();renderEntityGrid(kind)})}
+async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};delete t.mappings[entityId];for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
+
 function addTheme(){const name=prompt('Tên Chủ Đề mới');if(!String(name||'').trim())return;const id='theme-'+Date.now().toString(36),src=themeById(state.themes.activeId);state.themes.list.push({id,name:String(name).trim(),builtin:false,locked:false,ui:clone(src.ui||{}),mappings:clone(src.mappings||{})});state.themes.selectedEditorId=id;state.themes.activeId=id;saveState();renderTheme()}
 
 function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
