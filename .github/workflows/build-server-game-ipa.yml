@@ -15,36 +15,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.06 web bundle
+      - name: Prepare clean V2.08 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
           rm -rf "$APPDIR/Web"
           mkdir -p "$APPDIR/Web"
-          cp server-game/v205/index.html "$APPDIR/Web/GMWW.html"
-          cp server-game/v205/style.css "$APPDIR/Web/style.css"
-          cp server-game/v205/app.js "$APPDIR/Web/app.js"
+          cp server-game/v208/index.html "$APPDIR/Web/GMWW.html"
+          cp server-game/v208/style.css "$APPDIR/Web/style.css"
+          cp server-game/v208/app.js "$APPDIR/Web/app.js"
           cp server-game/v205/artwork.js "$APPDIR/Web/artwork.js"
+          cp server-game/v208/sea-artwork.js "$APPDIR/Web/sea-artwork.js"
+          cp server-game/v208/phu-thuy-gia-sea-display.webp "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
+          cp server-game/v208/phu-thuy-gia-sea-thumb.webp "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
           test -s "$APPDIR/Web/GMWW.html"
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/artwork.js"
-          grep -q 'GMWW V2.06' "$APPDIR/Web/GMWW.html"
-          grep -q 'ARTIFACTS' "$APPDIR/Web/GMWW.html"
-          grep -q 'Lá Bài' "$APPDIR/Web/GMWW.html"
-          grep -q 'Hành Động' "$APPDIR/Web/GMWW.html"
-          grep -q 'Hiệu Ứng' "$APPDIR/Web/GMWW.html"
-          grep -q 'Chủ Đề' "$APPDIR/Web/GMWW.html"
-          grep -q 'Âm Thanh' "$APPDIR/Web/GMWW.html"
-          grep -q 'role_old_witch' "$APPDIR/Web/app.js"
-          grep -q 'action_exile' "$APPDIR/Web/app.js"
-          grep -q 'effect_exile' "$APPDIR/Web/app.js"
-          grep -q 'GMWW205_DEFAULT_DISPLAY' "$APPDIR/Web/artwork.js"
+          test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
+          test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
+          grep -q 'GMWW V2.08' "$APPDIR/Web/GMWW.html"
+          grep -q 'Mặt Player Web' "$APPDIR/Web/GMWW.html"
+          grep -q 'Cài đặt Hành Động trên Lá' "$APPDIR/Web/GMWW.html"
+          grep -q 'ÂM THANH TÁCH RIÊNG' "$APPDIR/Web/GMWW.html"
+          grep -q 'pushToPlayerWeb' "$APPDIR/Web/app.js"
+          grep -q 'nightImmune' "$APPDIR/Web/app.js"
+          grep -q 'groupActionGate' "$APPDIR/Web/app.js"
+          ! grep -q 'id="cardAudio"' "$APPDIR/Web/GMWW.html"
 
       - name: Validate JavaScript
         run: |
           set -euo pipefail
-          node --check server-game/v205/app.js
+          node --check server-game/v208/app.js
+          node --check server-game/v208/sea-artwork.js
           node --check server-game/v205/artwork.js
+
+      - name: Verify artwork dimensions
+        run: |
+          set -euo pipefail
+          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '1024'
+          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '936'
+          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '360'
+          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '329'
 
       - name: Generate App Icon
         run: |
@@ -76,35 +87,37 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.06 app
+      - name: Build unsigned V2.08 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild             -project server-game/GMWW-Server.xcodeproj             -scheme GMWW-Server             -configuration Release             -sdk iphoneos             -derivedDataPath build-v2             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             build
 
-      - name: Package and verify V2.06 IPA
+      - name: Package and verify V2.08 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
           test -d "$APP"
           test -s "$APP/Web/GMWW.html"
           test -s "$APP/Web/app.js"
-          test -s "$APP/Web/artwork.js"
+          test -s "$APP/Web/phu-thuy-gia-sea-display.webp"
+          test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.06'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.08'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '208'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.06-unsigned.ipa
-          unzip -t GMWW-V2.06-unsigned.ipa >/dev/null
-          unzip -l GMWW-V2.06-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
-          unzip -l GMWW-V2.06-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/app.js'
-          unzip -l GMWW-V2.06-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/artwork.js'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.08-unsigned.ipa
+          unzip -t GMWW-V2.08-unsigned.ipa >/dev/null
+          unzip -l GMWW-V2.08-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          unzip -l GMWW-V2.08-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
+          unzip -l GMWW-V2.08-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
 
-      - name: Upload V2.06 IPA
+      - name: Upload V2.08 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.06-IPA
-          path: GMWW-V2.06-unsigned.ipa
+          name: GMWW-V2.08-IPA
+          path: GMWW-V2.08-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
