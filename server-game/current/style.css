@@ -135,3 +135,15 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 
 /* V2.16: function description follows the same dark control system */
 .function-grid textarea{width:100%;border:1px solid rgba(157,224,255,.14);background:#061725!important;color:#fff!important;border-radius:8px;padding:7px;font-size:11.8px;resize:vertical;-webkit-text-fill-color:#fff}
+
+
+/* V2.21 navigation + fixed favorites */
+.favorite-shelf{position:relative;margin:0 0 10px;padding:10px;border:1px solid rgba(240,200,108,.34);border-radius:16px;background:linear-gradient(180deg,rgba(49,40,20,.46),rgba(11,27,41,.96));box-shadow:0 10px 28px rgba(0,0,0,.2)}
+.favorite-shelf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:#ffd36b}
+.favorite-shelf-head b{font-size:14px}.favorite-shelf-head small{font-size:10px;color:#a8b8c4}
+.favorite-empty{grid-column:1/-1;min-height:58px;display:grid;place-items:center;color:#71899b;font-size:11px;border:1px dashed rgba(240,200,108,.2);border-radius:11px}
+.editor-bar{position:sticky;top:0;z-index:24;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px;background:linear-gradient(180deg,#06111f 76%,rgba(6,17,31,.88));padding:2px 0 8px}
+.editor-bar .face-switch{grid-column:2}
+.editor-back{grid-column:1;width:38px;height:38px;border-radius:50%;border:1px solid rgba(157,224,255,.22);background:#0c263a;color:#e8faff;font-size:32px;line-height:1;display:grid;place-items:center;padding:0 0 4px}
+.card-editor .player-card{contain:layout paint;will-change:auto}
+.card-editor .card-zone-art img{transform:translateZ(0);backface-visibility:hidden}
