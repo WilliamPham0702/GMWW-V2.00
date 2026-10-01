@@ -57,7 +57,7 @@ jobs:
           grep -q "/api/gm/members" "$APPDIR/Web/app.js"
           grep -q "renderMemberRanking" "$APPDIR/Web/app.js"
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
-          grep -q "V2.31 — truly fixed Settings cards" "$APPDIR/Web/style.css"
+          grep -q "V2.29 — truly fixed Settings cards" "$APPDIR/Web/style.css"
           grep -q "settings-action-optimize" "$APPDIR/Web/style.css"
           ! grep -q "btn.textContent='Đang kiểm tra" "$APPDIR/Web/app.js"
           ! grep -q "mode:'no-cors'" "$APPDIR/Web/app.js"
