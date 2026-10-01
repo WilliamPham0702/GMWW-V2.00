@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.28';
-const STATE_KEY='GMWW_V228_STATE';
-const PREF_KEY='GMWW_V228_PREFS';
-const OLD_STATE_KEYS=['GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.29';
+const STATE_KEY='GMWW_V229_STATE';
+const PREF_KEY='GMWW_V229_PREFS';
+const OLD_STATE_KEYS=['GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -605,6 +605,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
+const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 let serverHealthBusy=false;
 function setServerHealthState(kind,text,detail,data={}){
   const pill=document.getElementById('serverHealthPill'),dot=document.getElementById('serverHealthDot');
@@ -688,5 +689,228 @@ const githubOpenButton=document.getElementById('openGithubRepo');
 if(githubOpenButton){
   githubOpenButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.location.assign(GMWW_GITHUB_REPO_URL)},{passive:false});
 }
+
+
+/* V2.29 — V1 Member management + Ranking + History */
+const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:''};
+
+function gmHeaders(extra={}){return {...extra,Authorization:'Bearer '+GMWW_GM_AUTH}}
+async function gmApi(path,opts={}){
+  const headers=gmHeaders(opts.headers||{});
+  if(opts.body!==undefined&&!headers['content-type'])headers['content-type']='application/json';
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+path,{...opts,headers,cache:'no-store',signal:controller.signal});
+    let data={};try{data=await res.json()}catch{}
+    if(!res.ok)throw new Error(data.message||data.error||('HTTP '+res.status));
+    return data;
+  }finally{clearTimeout(timer)}
+}
+function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
+function memberAvatarUrl(id){return GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(String(id||''))+'/image'}
+function memberDate(v,withTime=false){
+  if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
+  return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function memberStats(m){const s=m?.stats||{},w=Number(s.wins||0),l=Number(s.losses||0),games=w+l,rate=games?Math.round(w*100/games):0;return{w,l,games,rate}}
+function setMemberBusy(on){
+  memberAdminState.busy=!!on;
+  const refresh=document.getElementById('refreshMembers');if(refresh){refresh.disabled=!!on;refresh.classList.toggle('is-busy',!!on)}
+  const add=document.getElementById('addMember');if(add)add.disabled=!!on;
+}
+async function loadMembers(force=false){
+  if(memberAdminState.busy)return;
+  if(memberAdminState.loaded&&!force){renderMembersAll();return}
+  setMemberBusy(true);
+  const list=document.getElementById('memberDirectoryList');if(list)list.innerHTML='<div class="member-empty">Đang đồng bộ Thành Viên…</div>';
+  try{
+    const [dir,avatars]=await Promise.all([
+      gmApi('/api/gm/members'),
+      memberAdminState.avatars.length?Promise.resolve({avatars:memberAdminState.avatars}):fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({avatars:[]}))
+    ]);
+    memberAdminState.members=Array.isArray(dir?.members)?dir.members:[];
+    if(Array.isArray(avatars?.avatars)&&avatars.avatars.length)memberAdminState.avatars=avatars.avatars;
+    memberAdminState.loaded=true;
+    renderMembersAll();
+  }catch(err){
+    if(list)list.innerHTML='<div class="member-empty member-error">'+memberEsc(err.message||'Không tải được Thành Viên.')+'</div>';
+  }finally{setMemberBusy(false)}
+}
+function renderMembersAll(){renderMemberSummary();renderMemberDirectory();renderMemberRanking();renderMemberHistory();renderHistoryMemberOptions()}
+function renderMemberSummary(){
+  const rows=memberAdminState.members,put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
+  const online=rows.filter(m=>m.online).length,resets=rows.filter(m=>m.resetRequestedAt).length,games=rows.reduce((n,m)=>n+memberStats(m).games,0);
+  put('memberTotal',rows.length);put('memberOnline',online);put('memberResetRequests',resets);put('memberGames',games);
+}
+function filteredMembers(){
+  const q=memberAdminState.query.trim().toLocaleLowerCase('vi'),f=memberAdminState.filter;
+  return memberAdminState.members.filter(m=>{
+    const hit=!q||String(m.displayName||'').toLocaleLowerCase('vi').includes(q)||String(m.loginId||'').toLowerCase().includes(q);
+    const status=f==='all'||(f==='online'&&m.online)||(f==='offline'&&!m.online)||(f==='reset'&&m.resetRequestedAt);
+    return hit&&status;
+  });
+}
+function renderMemberDirectory(){
+  const box=document.getElementById('memberDirectoryList');if(!box)return;
+  const rows=filteredMembers();box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Không có Thành Viên phù hợp.</div>';return}
+  for(const m of rows){
+    const s=memberStats(m),card=document.createElement('article');card.className='member-card';
+    card.innerHTML=
+      '<img class="member-avatar" alt="">'+
+      '<div class="member-card-main"><div class="member-name-row"><div><b></b><small></small></div><span class="member-status"></span></div>'+
+      '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
+      '<div class="member-flags"></div></div>'+
+      '<div class="member-card-actions">'+
+      '<button data-act="history" type="button">Lịch sử</button><button data-act="edit" type="button">Sửa</button>'+
+      '<button data-act="reset" type="button">Reset MK</button><button data-act="delete" class="danger-mini" type="button">Xoá</button></div>';
+    const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
+    card.querySelector('.member-card-main small').textContent='@'+m.loginId;
+    const status=card.querySelector('.member-status');status.textContent=m.online?'ONLINE':'OFFLINE';status.classList.toggle('online',!!m.online);
+    card.querySelector('.member-room').textContent=m.currentRoomCode?('Phòng '+m.currentRoomCode+(m.ready?' • Sẵn sàng':'')):'Chưa vào phòng';
+    const flags=card.querySelector('.member-flags');
+    if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU RESET</span>';
+    if(m.source)flags.innerHTML+='<span class="member-flag">'+memberEsc(m.source)+'</span>';
+    card.querySelector('[data-act="history"]').onclick=()=>{memberAdminState.historyLogin=m.loginId;switchMemberTab('history');renderHistoryMemberOptions();renderMemberHistory()};
+    card.querySelector('[data-act="edit"]').onclick=()=>openMemberSheet('edit',m);
+    card.querySelector('[data-act="reset"]').onclick=()=>openMemberSheet('reset',m);
+    card.querySelector('[data-act="delete"]').onclick=()=>deleteMember(m);
+    box.appendChild(card);
+  }
+}
+function renderMemberRanking(){
+  const box=document.getElementById('memberRankingList');if(!box)return;
+  const rows=[...memberAdminState.members].sort((a,b)=>{
+    const A=memberStats(a),B=memberStats(b);
+    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi');
+  });
+  box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Chưa có dữ liệu xếp hạng.</div>';return}
+  rows.forEach((m,i)=>{
+    const s=memberStats(m),row=document.createElement('article');row.className='ranking-row'+(i<3?' podium':'');
+    row.innerHTML='<div class="rank-no"></div><img class="rank-avatar" alt=""><div class="rank-main"><b></b><small></small></div><div class="rank-stats"><b>'+s.w+'</b><small>Thắng</small></div><div class="rank-stats"><b>'+s.rate+'%</b><small>Tỷ lệ</small></div><div class="rank-stats"><b>'+s.games+'</b><small>Ván</small></div>';
+    row.querySelector('.rank-no').textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+    const img=row.querySelector('.rank-avatar');img.src=memberAvatarUrl(m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    row.querySelector('.rank-main b').textContent=m.displayName||m.loginId;
+    row.querySelector('.rank-main small').textContent=s.l+' Thua'+(m.online?' • Online':'');
+    box.appendChild(row);
+  });
+}
+function allHistoryRows(){
+  const out=[];
+  for(const m of memberAdminState.members){
+    for(const h of (Array.isArray(m.history)?m.history:[]))out.push({...h,loginId:m.loginId,displayName:m.displayName||m.loginId,avatarId:m.avatarId});
+  }
+  return out.sort((a,b)=>(Date.parse(b.playedAt||0)||0)-(Date.parse(a.playedAt||0)||0));
+}
+function renderHistoryMemberOptions(){
+  const sel=document.getElementById('historyMemberFilter');if(!sel)return;
+  const value=memberAdminState.historyLogin||'';
+  sel.innerHTML='<option value="">Tất cả Thành Viên</option>'+memberAdminState.members.map(m=>'<option value="'+memberEsc(m.loginId)+'">'+memberEsc(m.displayName||m.loginId)+'</option>').join('');
+  sel.value=value;
+}
+function renderMemberHistory(){
+  const box=document.getElementById('memberHistoryList');if(!box)return;
+  const member=memberAdminState.historyLogin,result=memberAdminState.historyResult;
+  const rows=allHistoryRows().filter(h=>(!member||h.loginId===member)&&(result==='all'||h.result===result));
+  box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Chưa có lịch sử chơi phù hợp.</div>';return}
+  for(const h of rows){
+    const row=document.createElement('article');row.className='history-row';
+    const win=h.result==='win';
+    row.innerHTML='<img class="history-avatar" alt=""><div class="history-main"><div class="history-title"><b></b><span class="history-result '+(win?'win':'lose')+'">'+(win?'THẮNG':'THUA')+'</span></div><small class="history-sub"></small><small class="history-detail"></small></div><time></time>';
+    const img=row.querySelector('.history-avatar');img.src=memberAvatarUrl(h.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    row.querySelector('.history-title b').textContent=h.displayName||h.loginId;
+    row.querySelector('.history-sub').textContent=[h.roomName||h.gameName||'Ván GMWW',h.roleName||'',h.faction||''].filter(Boolean).join(' • ');
+    row.querySelector('.history-detail').textContent=[h.winnerFaction?('Thắng: '+h.winnerFaction):'',h.roomCode?('Phòng '+h.roomCode):''].filter(Boolean).join(' • ');
+    row.querySelector('time').textContent=memberDate(h.playedAt,true);
+    box.appendChild(row);
+  }
+}
+function switchMemberTab(tab){
+  memberAdminState.tab=tab;
+  document.querySelectorAll('#memberTabs [data-member-tab]').forEach(b=>b.classList.toggle('active',b.dataset.memberTab===tab));
+  document.querySelectorAll('.member-pane').forEach(p=>p.classList.toggle('active',p.id==='memberPane-'+tab));
+  if(tab==='history')renderMemberHistory();if(tab==='ranking')renderMemberRanking();
+}
+function openMemberSheet(mode,m=null){
+  memberAdminState.sheetMode=mode;memberAdminState.sheetMember=m;memberAdminState.selectedAvatarId=m?.avatarId||memberAdminState.avatars[0]?.id||'';
+  const sheet=document.getElementById('memberSheet'),title=document.getElementById('memberSheetTitle'),body=document.getElementById('memberSheetBody'),save=document.getElementById('memberSheetSave');
+  if(!sheet||!body)return;
+  if(mode==='reset'){
+    title.textContent='Reset mật khẩu • '+(m?.displayName||m?.loginId||'');
+    body.innerHTML='<div class="member-form"><label>Mật khẩu tạm thời<input id="memberResetPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label><p class="member-form-note">Sau khi reset, các phiên đăng nhập cũ của Thành Viên sẽ bị vô hiệu hoá.</p></div>';
+    save.textContent='RESET MẬT KHẨU';
+  }else{
+    const editing=mode==='edit';
+    title.textContent=editing?'Sửa Thành Viên':'Thêm Thành Viên';
+    body.innerHTML='<div class="member-form">'+
+      '<label>Member ID<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Không dấu, không khoảng trắng"></label>'+
+      '<label>Tên hiển thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Tên hiển thị"></label>'+
+      (editing?'':'<label>Mật khẩu tạm thời<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label>')+
+      '<div class="member-avatar-picker"><div class="member-form-label">Avatar</div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+    renderMemberAvatarPicker();
+    save.textContent=editing?'LƯU THAY ĐỔI':'TẠO THÀNH VIÊN';
+  }
+  sheet.classList.remove('hidden');
+}
+function renderMemberAvatarPicker(){
+  const box=document.getElementById('memberAvatarGrid');if(!box)return;box.innerHTML='';
+  for(const a of memberAdminState.avatars){
+    const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
+    b.innerHTML='<img alt=""><small></small>';const img=b.querySelector('img');img.src=String(a.imageUrl||memberAvatarUrl(a.id));img.onerror=()=>{img.style.visibility='hidden'};b.querySelector('small').textContent=a.name||a.id;
+    b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
+  }
+  if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Kho Avatar.</div>';
+}
+function closeMemberSheet(){const s=document.getElementById('memberSheet');if(s)s.classList.add('hidden');memberAdminState.sheetMode='';memberAdminState.sheetMember=null}
+async function saveMemberSheet(){
+  const btn=document.getElementById('memberSheetSave');if(btn?.disabled)return;
+  const mode=memberAdminState.sheetMode,m=memberAdminState.sheetMember;
+  try{
+    if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+    if(mode==='reset'){
+      const newPassword=document.getElementById('memberResetPassword')?.value||'';if(newPassword.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
+      await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId,newPassword})});
+    }else{
+      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=document.getElementById('memberDisplayName')?.value.trim()||'',avatarId=memberAdminState.selectedAvatarId;
+      if(displayName.length<2)throw new Error('Tên hiển thị phải có ít nhất 2 ký tự.');
+      if(!avatarId)throw new Error('Vui lòng chọn Avatar.');
+      if(mode==='edit'){
+        await gmApi('/api/gm/members/edit',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId})});
+      }else{
+        const password=document.getElementById('memberPassword')?.value||'';if(password.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
+        await gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,password})});
+      }
+    }
+    closeMemberSheet();memberAdminState.loaded=false;await loadMembers(true);
+  }catch(err){alert(err.message||'Không thể lưu Thành Viên.')}
+  finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function deleteMember(m){
+  if(!m||!confirm('Xoá Thành Viên "'+(m.displayName||m.loginId)+'"?\\nLịch sử và phiên đăng nhập của Thành Viên này cũng sẽ bị xoá.'))return;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/'+encodeURIComponent(m.loginId),{method:'DELETE'});memberAdminState.loaded=false;await loadMembers(true)}
+  catch(err){alert(err.message||'Không thể xoá Thành Viên.')}finally{setMemberBusy(false)}
+}
+async function purgeAllMembers(){
+  if(!confirm('Xoá TOÀN BỘ Thành Viên và các phiên đăng nhập?'))return;
+  const typed=prompt('Nhập XOÁ HẾT để xác nhận:','');if(String(typed||'').trim().toUpperCase()!=='XOÁ HẾT')return;
+  try{setMemberBusy(true);await gmApi('/api/gm/members',{method:'DELETE'});memberAdminState.members=[];memberAdminState.loaded=false;await loadMembers(true)}
+  catch(err){alert(err.message||'Không thể xoá toàn bộ Thành Viên.')}finally{setMemberBusy(false)}
+}
+const memberTabsEl=document.getElementById('memberTabs');if(memberTabsEl)memberTabsEl.addEventListener('click',e=>{const b=e.target.closest('[data-member-tab]');if(b)switchMemberTab(b.dataset.memberTab)});
+const memberSearchEl=document.getElementById('memberSearch');if(memberSearchEl)memberSearchEl.addEventListener('input',()=>{memberAdminState.query=memberSearchEl.value;renderMemberDirectory()});
+const memberFilterRow=document.getElementById('memberFilterRow');if(memberFilterRow)memberFilterRow.addEventListener('click',e=>{const b=e.target.closest('[data-member-filter]');if(!b)return;memberAdminState.filter=b.dataset.memberFilter;memberFilterRow.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderMemberDirectory()});
+const historyResultFilter=document.getElementById('historyResultFilter');if(historyResultFilter)historyResultFilter.addEventListener('click',e=>{const b=e.target.closest('[data-history-result]');if(!b)return;memberAdminState.historyResult=b.dataset.historyResult;historyResultFilter.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderMemberHistory()});
+const historyMemberFilter=document.getElementById('historyMemberFilter');if(historyMemberFilter)historyMemberFilter.addEventListener('change',()=>{memberAdminState.historyLogin=historyMemberFilter.value;renderMemberHistory()});
+const refreshMembers=document.getElementById('refreshMembers');if(refreshMembers)refreshMembers.addEventListener('click',()=>{memberAdminState.loaded=false;loadMembers(true)});
+const addMember=document.getElementById('addMember');if(addMember)addMember.addEventListener('click',()=>openMemberSheet('create'));
+const purgeMembers=document.getElementById('purgeMembers');if(purgeMembers)purgeMembers.addEventListener('click',purgeAllMembers);
+const memberSheetClose=document.getElementById('memberSheetClose');if(memberSheetClose)memberSheetClose.addEventListener('click',closeMemberSheet);
+const memberSheetCancel=document.getElementById('memberSheetCancel');if(memberSheetCancel)memberSheetCancel.addEventListener('click',closeMemberSheet);
+const memberSheetSave=document.getElementById('memberSheetSave');if(memberSheetSave)memberSheetSave.addEventListener('click',saveMemberSheet);
+const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSheet.addEventListener('click',e=>{if(e.target===memberSheet)closeMemberSheet()});
+document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
 
 })();
