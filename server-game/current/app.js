@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.27';
-const STATE_KEY='GMWW_V227_STATE';
-const PREF_KEY='GMWW_V227_PREFS';
-const OLD_STATE_KEYS=['GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.28';
+const STATE_KEY='GMWW_V228_STATE';
+const PREF_KEY='GMWW_V228_PREFS';
+const OLD_STATE_KEYS=['GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -617,7 +617,7 @@ function setServerHealthState(kind,text,detail,data={}){
 }
 async function checkServerHealth(){
   if(serverHealthBusy)return; serverHealthBusy=true;
-  const btn=document.getElementById('checkServerHealth');if(btn){btn.disabled=true;btn.textContent='Đang kiểm tra…'}
+  const btn=document.getElementById('checkServerHealth');if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.classList.add('is-busy')}
   setServerHealthState('checking','Đang kiểm tra Server…','Đang kết nối tới GMWW V2 production');
   const started=performance.now();
   try{
@@ -632,7 +632,7 @@ async function checkServerHealth(){
   }catch(err){
     const latency=Math.max(1,Math.round(performance.now()-started));
     setServerHealthState('bad','Không thể kết nối Server','Kiểm tra Internet hoặc trạng thái Cloudflare',{web:'Không xác định',api:'Offline',latency:latency+' ms',version:'—'});
-  }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.textContent='Kiểm tra ngay'}}
+  }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
 }
 const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
@@ -657,7 +657,7 @@ async function checkGithubOptimize(){
   if(githubOptimizeBusy)return;
   githubOptimizeBusy=true;
   const btn=document.getElementById('checkGithubOptimize');
-  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent='Đang kiểm tra…'}
+  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.classList.add('is-busy')}
   setGithubOptimizeState('checking','Đang kiểm tra GitHub…','Đọc thông tin repo GMWW-V2.00; không sửa hoặc xoá file.','Đang kiểm tra','—');
   const started=performance.now();
   let timer=null;
@@ -677,7 +677,7 @@ async function checkGithubOptimize(){
   }finally{
     if(timer)clearTimeout(timer);
     githubOptimizeBusy=false;
-    if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.textContent='Kiểm tra tối ưu'}
+    if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}
   }
 }
 const githubOptimizeButton=document.getElementById('checkGithubOptimize');
