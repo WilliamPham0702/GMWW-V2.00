@@ -1,9 +1,12 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# IPA is intentionally manual-only.
-# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
+# IPA is manual-only in normal operation. Trigger path is used for this explicit one-shot build.
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/ipa-build-trigger'
 
 jobs:
   build:
@@ -12,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.28 web bundle
+      - name: Prepare clean V2.29 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -37,9 +40,9 @@ jobs:
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/default-artwork.webp"
 
-          grep -q 'GMWW V2.28' "$APPDIR/Web/GMWW.html"
-          grep -q "const VERSION='2.28'" "$APPDIR/Web/app.js"
-          grep -q "GMWW_V228_STATE" "$APPDIR/Web/app.js"
+          grep -q 'GMWW V2.29' "$APPDIR/Web/GMWW.html"
+          grep -q "const VERSION='2.29'" "$APPDIR/Web/app.js"
+          grep -q "GMWW_V229_STATE" "$APPDIR/Web/app.js"
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
           grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
           grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
@@ -51,8 +54,15 @@ jobs:
           grep -q "checkGithubOptimize" "$APPDIR/Web/app.js"
           grep -q "GMWW_GITHUB_API_URL" "$APPDIR/Web/app.js"
           grep -q "TỐI ƯU / KIỂM TRA" "$APPDIR/Web/GMWW.html"
+          grep -q "Quản lý Thành Viên • Xếp Hạng • Lịch Sử" "$APPDIR/Web/GMWW.html"
+          grep -q "memberRankingList" "$APPDIR/Web/GMWW.html"
+          grep -q "memberHistoryList" "$APPDIR/Web/GMWW.html"
+          grep -q "/api/gm/members" "$APPDIR/Web/app.js"
+          grep -q "renderMemberRanking" "$APPDIR/Web/app.js"
+          grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
+          grep -q "V2.29 — truly fixed Settings cards" "$APPDIR/Web/style.css"
           grep -q "settings-action-optimize" "$APPDIR/Web/style.css"
-          grep -q "V2.28 — fixed Settings geometry" "$APPDIR/Web/style.css"
+          grep -q "V2.29 — fixed Settings geometry" "$APPDIR/Web/style.css"
           ! grep -q "btn.textContent='Đang kiểm tra" "$APPDIR/Web/app.js"
           ! grep -q "mode:'no-cors'" "$APPDIR/Web/app.js"
           grep -q "navigationAction.targetFrame" server-game/GMWW-Server/GameView.swift
@@ -103,7 +113,7 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.28 app
+      - name: Build unsigned V2.29 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -118,7 +128,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Package and verify V2.28 IPA
+      - name: Package and verify V2.29 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -131,26 +141,26 @@ jobs:
           ! test -e "$APP/Web/phu-thuy-gia-sea-display.webp"
 
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.28'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '228'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.29'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '229'
 
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.28.ipa
-          unzip -t GMWW-V2.28.ipa >/dev/null
-          unzip -l GMWW-V2.28.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
-          ! unzip -l GMWW-V2.28.ipa | grep -q 'phu-thuy-gia-sea-display'
-          ! unzip -l GMWW-V2.28.ipa | grep -q 'v1-audio.js'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.29.ipa
+          unzip -t GMWW-V2.29.ipa >/dev/null
+          unzip -l GMWW-V2.29.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
+          ! unzip -l GMWW-V2.29.ipa | grep -q 'phu-thuy-gia-sea-display'
+          ! unzip -l GMWW-V2.29.ipa | grep -q 'v1-audio.js'
 
-          IPA_BYTES=$(stat -f%z GMWW-V2.28.ipa)
+          IPA_BYTES=$(stat -f%z GMWW-V2.29.ipa)
           echo "IPA bytes: $IPA_BYTES"
           test "$IPA_BYTES" -lt 5000000
 
-      - name: Upload V2.28 IPA
+      - name: Upload V2.29 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.28
-          path: GMWW-V2.28.ipa
+          name: GMWW-V2.29
+          path: GMWW-V2.29.ipa
           if-no-files-found: error
           retention-days: 30
