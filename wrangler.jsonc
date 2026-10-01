@@ -16,7 +16,7 @@
   "assets": {
     "directory": "./assets",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/gmww-sea-background.png", "/gmww-sea-background.webp", "/favicon.svg"]
+    "run_worker_first": ["/api/*", "/gmww-sea-background.webp", "/gmww-sea-background.png", "/favicon.svg"]
   },
   "observability": { "enabled": true }
 }

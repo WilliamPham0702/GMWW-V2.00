@@ -362,7 +362,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-2;background:radial-gradi
 }
 
 /* GMWW Sea UI 0.40.13 */
-:root{--bg:url("/gmww-sea-background.png?v=20261001-uploaded-bg");--glass:rgba(5,34,52,.54);--glass2:rgba(4,27,45,.68);--line:rgba(255,207,105,.82);--ink:#fffdf4;--muted:#e9f8ff}
+:root{--bg:url("/gmww-sea-background.webp?v=20261001-webp90");--glass:rgba(5,34,52,.54);--glass2:rgba(4,27,45,.68);--line:rgba(255,207,105,.82);--ink:#fffdf4;--muted:#e9f8ff}
 body{background-position:center top;background-size:cover;background-attachment:fixed}
 .screen:before{background:linear-gradient(180deg,rgba(1,36,63,.10),rgba(2,22,39,.34))}
 .panel,.profile-main,.stat,.history-item,.room-card,.role-stage{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
