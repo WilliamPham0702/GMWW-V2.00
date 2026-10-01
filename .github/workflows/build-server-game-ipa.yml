@@ -125,7 +125,7 @@ jobs:
           test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.11'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '210'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '211'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
