@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.17';
-const STATE_KEY='GMWW_V217_STATE';
-const PREF_KEY='GMWW_V217_PREFS';
-const OLD_STATE_KEYS=['GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.18';
+const STATE_KEY='GMWW_V218_STATE';
+const PREF_KEY='GMWW_V218_PREFS';
+const OLD_STATE_KEYS=['GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -371,7 +371,7 @@ function renderAudio(){const list=state.audio[audioKind]||[];$('#audioGrid').inn
   $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
 }
 function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
-async function playAudioItem(a){if(!a)return;let src='';const blob=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);if(blob)src=URL.createObjectURL(blob);else if(a.url)src=a.url;if(!src){alert('Âm Thanh này chưa có file.');return}const au=new Audio(src);au.onended=()=>{if(blob)URL.revokeObjectURL(src)};au.onerror=()=>{if(blob)URL.revokeObjectURL(src);alert('Không thể phát file Âm Thanh.')} ;au.play().catch(()=>alert('Không thể phát file Âm Thanh.'))}
+async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);const blob=rec?.blob instanceof Blob?rec.blob:null;if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này chưa có file.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
 function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);a.fileName=f.name;a.status='Đã gắn file';saveState();renderAudio()};i.click()}
 async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});saveState();renderAudio()}
 
