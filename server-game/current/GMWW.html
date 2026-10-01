@@ -3,14 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.28</title>
+<title>GMWW V2.29</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <main id="stage">
     <section class="page active" id="home"><div class="placeholder"><span>🏠</span><b>Trang Chủ</b><small>Sẽ xây dựng sau.</small></div></section>
-    <section class="page" id="members"><div class="placeholder"><span>👥</span><b>Thành Viên</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page" id="members">
+      <div class="member-page">
+        <div class="member-page-head">
+          <div><h2>👥 Thành Viên</h2><small>Quản lý Thành Viên • Xếp Hạng • Lịch Sử</small></div>
+          <div class="member-head-actions">
+            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới">↻</button>
+            <button class="member-add-btn" id="addMember" type="button">＋ THÊM</button>
+          </div>
+        </div>
+
+        <div class="member-summary">
+          <div><small>Tổng Thành Viên</small><b id="memberTotal">0</b></div>
+          <div><small>Đang Online</small><b id="memberOnline">0</b></div>
+          <div><small>Tổng Ván</small><b id="memberGames">0</b></div>
+          <div><small>Yêu cầu Reset</small><b id="memberResetRequests">0</b></div>
+        </div>
+
+        <div class="member-tabs" id="memberTabs">
+          <button class="active" data-member-tab="directory" type="button">Thành Viên</button>
+          <button data-member-tab="ranking" type="button">Xếp Hạng</button>
+          <button data-member-tab="history" type="button">Lịch Sử</button>
+        </div>
+
+        <section class="member-pane active" id="memberPane-directory">
+          <div class="member-toolbar">
+            <input id="memberSearch" class="member-search" type="search" placeholder="Tìm tên hoặc Member ID">
+            <div class="member-filter-row" id="memberFilterRow">
+              <button class="active" data-member-filter="all" type="button">Tất cả</button>
+              <button data-member-filter="online" type="button">Online</button>
+              <button data-member-filter="offline" type="button">Offline</button>
+              <button data-member-filter="reset" type="button">Yêu cầu Reset</button>
+            </div>
+          </div>
+          <div class="member-list" id="memberDirectoryList"><div class="member-empty">Đang tải Thành Viên…</div></div>
+          <button class="member-purge-btn" id="purgeMembers" type="button">Xoá toàn bộ Thành Viên</button>
+        </section>
+
+        <section class="member-pane" id="memberPane-ranking">
+          <div class="member-section-head"><div><h3>🏆 Xếp Hạng</h3><small>Xếp theo số trận thắng, tỷ lệ thắng và số ván</small></div></div>
+          <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
+        </section>
+
+        <section class="member-pane" id="memberPane-history">
+          <div class="history-toolbar">
+            <select id="historyMemberFilter"><option value="">Tất cả Thành Viên</option></select>
+            <div class="member-filter-row" id="historyResultFilter">
+              <button class="active" data-history-result="all" type="button">Tất cả</button>
+              <button data-history-result="win" type="button">Thắng</button>
+              <button data-history-result="loss" type="button">Thua</button>
+            </div>
+          </div>
+          <div class="history-list" id="memberHistoryList"><div class="member-empty">Chưa có lịch sử chơi.</div></div>
+        </section>
+      </div>
+    </section>
     <section class="page" id="start"><div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div></section>
 
     <section class="page" id="library">
@@ -251,6 +305,17 @@
 
 <div class="sheet hidden" id="editSheet">
   <div class="sheet-card"><div class="sheet-head"><h3 id="sheetTitle"></h3><button id="sheetClose">×</button></div><div id="sheetBody"></div><div class="button-row"><button class="secondary" id="sheetCancel">Hủy</button><button class="primary" id="sheetSave">Lưu</button></div></div>
+</div>
+
+<div class="sheet hidden" id="memberSheet">
+  <div class="sheet-card member-sheet-card">
+    <div class="sheet-head"><h3 id="memberSheetTitle">Thành Viên</h3><button id="memberSheetClose" type="button">×</button></div>
+    <div id="memberSheetBody"></div>
+    <div class="button-row member-sheet-actions">
+      <button class="secondary" id="memberSheetCancel" type="button">Hủy</button>
+      <button class="primary" id="memberSheetSave" type="button">Lưu</button>
+    </div>
+  </div>
 </div>
 
 <script src="app.js"></script>
