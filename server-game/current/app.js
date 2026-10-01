@@ -288,7 +288,7 @@ function applyV210Rules(s){
   if(reviveAction)Object.assign(reviveAction,{legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3'});
   return s;
 }
-function applyV225Catalog(s,migrating=false){
+function applyV226Catalog(s,migrating=false){
   const upsert=(arr,item,keys=['id'])=>{
     arr=Array.isArray(arr)?arr:[];
     const idx=arr.findIndex(x=>keys.some(k=>item[k]&&x&&x[k]===item[k]));
@@ -332,7 +332,7 @@ function applyV225Catalog(s,migrating=false){
   s.version=VERSION;
   return s;
 }
-function applyV225Prefs(p,migrating=false){
+function applyV226Prefs(p,migrating=false){
   p=p||{cards:{},artifacts:{}};
   p.cards=Object.assign({},DEFAULT_PREFS.cards,p.cards||{});
   p.artifacts=Object.assign({},p.artifacts||{});
@@ -341,14 +341,14 @@ function applyV225Prefs(p,migrating=false){
 }
 
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV225Catalog(applyV210Rules(s),false)}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV225Catalog(applyV210Rules(migrateOld(raw)),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return applyV225Catalog(clone(DEFAULT_STATE),false);
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyV210Rules(s),false)}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyV210Rules(migrateOld(raw)),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyV226Catalog(clone(DEFAULT_STATE),false);
 }
 function loadPrefs(){
-  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV225Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
-  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;const out=applyV225Prefs(p,true);localStorage.setItem(PREF_KEY,JSON.stringify(out));return out}}catch(_){}}
-  return applyV225Prefs(clone(DEFAULT_PREFS),false);
+  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV226Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
+  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;const out=applyV226Prefs(p,true);localStorage.setItem(PREF_KEY,JSON.stringify(out));return out}}catch(_){}}
+  return applyV226Prefs(clone(DEFAULT_PREFS),false);
 }
 
 function applyV221AudioGuard(s){
