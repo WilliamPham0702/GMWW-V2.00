@@ -1,6 +1,6 @@
 # GMWW-V2.00
 
-Current development version: **V2.01**
+Current development version: **V2.25**
 
 ## Foundation
 - Independent GitHub repository
