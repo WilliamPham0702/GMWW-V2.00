@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.17 web bundle
+      - name: Prepare clean V2.18 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -33,7 +33,7 @@ jobs:
           test -s "$APPDIR/Web/artwork.js"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          grep -q 'GMWW V2.17' "$APPDIR/Web/GMWW.html"
+          grep -q 'GMWW V2.18' "$APPDIR/Web/GMWW.html"
           grep -q 'card-zone-head' "$APPDIR/Web/GMWW.html"
           grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
           grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
@@ -138,13 +138,13 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.17 app
+      - name: Build unsigned V2.18 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild             -project server-game/GMWW-Server.xcodeproj             -scheme GMWW-Server             -configuration Release             -sdk iphoneos             -derivedDataPath build-v2             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             build
 
-      - name: Package and verify V2.17 IPA
+      - name: Package and verify V2.18 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -154,21 +154,21 @@ jobs:
           test -s "$APP/Web/phu-thuy-gia-sea-display.webp"
           test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.17'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '217'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.18'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '218'
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.17-unsigned.ipa
-          unzip -t GMWW-V2.17-unsigned.ipa >/dev/null
-          unzip -l GMWW-V2.17-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
-          unzip -l GMWW-V2.17-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
-          unzip -l GMWW-V2.17-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.18-unsigned.ipa
+          unzip -t GMWW-V2.18-unsigned.ipa >/dev/null
+          unzip -l GMWW-V2.18-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
+          unzip -l GMWW-V2.18-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
+          unzip -l GMWW-V2.18-unsigned.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
 
-      - name: Upload V2.17 IPA
+      - name: Upload V2.18 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.17-IPA
-          path: GMWW-V2.17-unsigned.ipa
+          name: GMWW-V2.18-IPA
+          path: GMWW-V2.18-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
