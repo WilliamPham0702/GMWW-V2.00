@@ -290,8 +290,8 @@ function renderEntityBack(){
 function bindFunctionControls(){
   $$('#functionList .function-card').forEach(row=>{const idx=Number(row.dataset.fnIndex),fn=editDraft.functions[idx];
     $$('select[data-f]',row).forEach(s=>s.onchange=()=>{const k=s.dataset.f;if(k==='toNight')fn[k]=s.value==='end'?null:Number(s.value);else if(['usageCount','cooldownNights','targetCount','fromNight','perUserLimit'].includes(k))fn[k]=Number(s.value);else fn[k]=s.value;if(k==='targetCount'&&fn.targetCount>0)fn.noTarget=false;renderEntityFront()});
-    $('textarea[data-t]',row).forEach(t=>t.oninput=()=>{fn[t.dataset.t]=t.value});
-    $('input[data-b]',row).forEach(c=>c.onchange=()=>{const k=c.dataset.b;fn[k]=c.checked;if(k==='noTarget'&&c.checked)fn.targetCount=0;if(k==='noTarget'&&!c.checked&&fn.targetCount===0)fn.targetCount=1;renderEntityBack()});
+    $$('textarea[data-t]',row).forEach(t=>t.oninput=()=>{fn[t.dataset.t]=t.value});
+    $$('input[data-b]',row).forEach(c=>c.onchange=()=>{const k=c.dataset.b;fn[k]=c.checked;if(k==='noTarget'&&c.checked)fn.targetCount=0;if(k==='noTarget'&&!c.checked&&fn.targetCount===0)fn.targetCount=1;renderEntityBack()});
   });
   $$('[data-remove-fn]').forEach(b=>b.onclick=()=>{editDraft.functions.splice(Number(b.dataset.removeFn),1);renderEntityBack()});
 }
@@ -299,7 +299,7 @@ function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entit
 function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
 function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
 function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];saveState();savePrefs();closeEntityEditor()}
-function setFace(face){$('.face-switch button').forEach(b=>b.classList.toggle('active',b.dataset.face===face));$('.face').forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
+function setFace(face){$$('.face-switch button').forEach(b=>b.classList.toggle('active',b.dataset.face===face));$$('.face').forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
 let faceTouchStart=null;
 function bindFaceSwipe(){
   const editor=$('#entityEditor');
@@ -350,7 +350,7 @@ function addTheme(){const name=prompt('Tên Chủ Đề mới');if(!String(name|
 
 function renderAudio(){const list=state.audio[audioKind]||[];$('#audioGrid').innerHTML='<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+list.map(a=>'<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(a.fileName||a.status||'Chưa gắn file')+'</small></div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>').join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',status:'Chưa gắn file'});saveState();renderAudio()};
-  $('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
+  $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
 }
 function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
 async function playAudioItem(a){if(!a)return;let src='';const blob=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);if(blob)src=URL.createObjectURL(blob);else if(a.url)src=a.url;if(!src){alert('Âm Thanh này chưa có file.');return}const au=new Audio(src);au.onended=()=>{if(blob)URL.revokeObjectURL(src)};au.onerror=()=>{if(blob)URL.revokeObjectURL(src);alert('Không thể phát file Âm Thanh.')} ;au.play().catch(()=>alert('Không thể phát file Âm Thanh.'))}
