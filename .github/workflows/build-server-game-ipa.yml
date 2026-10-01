@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.26 web bundle
+      - name: Prepare clean V2.27 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -40,9 +40,9 @@ jobs:
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/default-artwork.webp"
 
-          grep -q 'GMWW V2.26' "$APPDIR/Web/GMWW.html"
-          grep -q "const VERSION='2.26'" "$APPDIR/Web/app.js"
-          grep -q "GMWW_V226_STATE" "$APPDIR/Web/app.js"
+          grep -q 'GMWW V2.27' "$APPDIR/Web/GMWW.html"
+          grep -q "const VERSION='2.27'" "$APPDIR/Web/app.js"
+          grep -q "GMWW_V227_STATE" "$APPDIR/Web/app.js"
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
           grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
           grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
@@ -52,6 +52,9 @@ jobs:
           grep -q "data-pref=\\\"hide\\\"" "$APPDIR/Web/app.js"
           grep -q "Tối ưu GitHub" "$APPDIR/Web/GMWW.html"
           grep -q "checkGithubOptimize" "$APPDIR/Web/app.js"
+          grep -q "GMWW_GITHUB_API_URL" "$APPDIR/Web/app.js"
+          ! grep -q "mode:'no-cors'" "$APPDIR/Web/app.js"
+          grep -q "navigationAction.targetFrame" server-game/GMWW-Server/GameView.swift
           ! grep -q 'data-filter="star"' "$APPDIR/Web/GMWW.html"
           ! grep -q 'data-theme-display-url' "$APPDIR/Web/app.js"
           ! grep -q 'data-theme-thumb-url' "$APPDIR/Web/app.js"
@@ -99,7 +102,7 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.26 app
+      - name: Build unsigned V2.27 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -114,7 +117,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Package and verify V2.26 IPA
+      - name: Package and verify V2.27 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -127,26 +130,26 @@ jobs:
           ! test -e "$APP/Web/phu-thuy-gia-sea-display.webp"
 
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.26'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '226'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.27'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '227'
 
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.26.ipa
-          unzip -t GMWW-V2.26.ipa >/dev/null
-          unzip -l GMWW-V2.26.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
-          ! unzip -l GMWW-V2.26.ipa | grep -q 'phu-thuy-gia-sea-display'
-          ! unzip -l GMWW-V2.26.ipa | grep -q 'v1-audio.js'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.27.ipa
+          unzip -t GMWW-V2.27.ipa >/dev/null
+          unzip -l GMWW-V2.27.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
+          ! unzip -l GMWW-V2.27.ipa | grep -q 'phu-thuy-gia-sea-display'
+          ! unzip -l GMWW-V2.27.ipa | grep -q 'v1-audio.js'
 
-          IPA_BYTES=$(stat -f%z GMWW-V2.26.ipa)
+          IPA_BYTES=$(stat -f%z GMWW-V2.27.ipa)
           echo "IPA bytes: $IPA_BYTES"
           test "$IPA_BYTES" -lt 5000000
 
-      - name: Upload V2.26 IPA
+      - name: Upload V2.27 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.26
-          path: GMWW-V2.26.ipa
+          name: GMWW-V2.27
+          path: GMWW-V2.27.ipa
           if-no-files-found: error
           retention-days: 30
