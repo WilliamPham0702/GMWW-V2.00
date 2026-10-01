@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.21</title>
+<title>GMWW V2.22</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -199,7 +199,26 @@
       </div>
     </section>
 
-    <section class="page" id="settings"><div class="placeholder"><span>⚙</span><b>Cài Đặt</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page" id="settings">
+      <div class="settings-page">
+        <div class="settings-page-head"><div><h2>⚙ Cài Đặt</h2><small>Quản lý Server Game và kết nối Player Web</small></div></div>
+        <div class="settings-card server-health-card" id="serverHealthCard">
+          <div class="settings-title"><div><h3>Sức khỏe Server</h3><small>GMWW V2 • Player Web</small></div><span class="health-pill checking" id="serverHealthPill">ĐANG KIỂM TRA</span></div>
+          <div class="health-summary">
+            <span class="health-dot checking" id="serverHealthDot"></span>
+            <div><b id="serverHealthText">Đang kiểm tra Server…</b><small id="serverHealthDetail">Đang kết nối tới GMWW V2 production</small></div>
+          </div>
+          <div class="health-grid">
+            <div><small>Player Web</small><b id="healthPlayerWeb">—</b></div>
+            <div><small>API Health</small><b id="healthApi">—</b></div>
+            <div><small>Độ trễ</small><b id="healthLatency">—</b></div>
+            <div><small>Phiên bản Server</small><b id="healthVersion">—</b></div>
+          </div>
+          <div class="health-foot"><small id="healthCheckedAt">Chưa kiểm tra</small><button class="secondary" id="checkServerHealth" type="button">Kiểm tra ngay</button></div>
+          <p class="health-note">Tính năng này chỉ giám sát kết nối và tình trạng Server; không thay đổi gameplay hoặc dữ liệu ván.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <nav id="bottomNav">
