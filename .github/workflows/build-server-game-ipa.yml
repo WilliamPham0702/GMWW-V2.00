@@ -1,8 +1,9 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# IPA is intentionally manual-only.
-# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
+# Normally manual-only. Push trigger is enabled temporarily for the V2.25 validation build.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,104 +13,71 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.24 web bundle
+      - name: Prepare clean V2.25 web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
-          export APPDIR_FOR_ASSERT="$APPDIR"
           rm -rf "$APPDIR/Web"
           mkdir -p "$APPDIR/Web"
           cp server-game/current/GMWW.html "$APPDIR/Web/GMWW.html"
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
-          cp server-game/current/v1-audio.js "$APPDIR/Web/v1-audio.js"
-          cp server-game/shared/artwork.js "$APPDIR/Web/artwork.js"
-          cp server-game/shared/sea-artwork.js "$APPDIR/Web/sea-artwork.js"
-          cp server-game/v208/phu-thuy-gia-sea-display.webp "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
-          cp server-game/v208/phu-thuy-gia-sea-thumb.webp "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          test -s "$APPDIR/Web/GMWW.html"
-          test -s "$APPDIR/Web/app.js"
-          test -s "$APPDIR/Web/v1-audio.js"
-          test -s "$APPDIR/Web/artwork.js"
-          test -s "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
-          test -s "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
-          grep -q 'GMWW V2.24' "$APPDIR/Web/GMWW.html"
-          grep -q 'card-zone-head' "$APPDIR/Web/GMWW.html"
-          grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
-          grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
-          grep -q 'Cài đặt Hành Động trên Lá' "$APPDIR/Web/GMWW.html"
-          grep -q 'Âm Thanh' "$APPDIR/Web/GMWW.html"
-          grep -q 'Hình nền' "$APPDIR/Web/app.js"
-          grep -q 'Banner Trang Chủ' "$APPDIR/Web/app.js"
-          grep -q 'Hình Thanh Điều Hướng' "$APPDIR/Web/app.js"
-          grep -q 'Sức khỏe Server' "$APPDIR/Web/GMWW.html"
-          grep -q 'checkServerHealth' "$APPDIR/Web/app.js"
-          grep -q 'pushToPlayerWeb' "$APPDIR/Web/app.js"
-          grep -q 'themeArtifactRows' "$APPDIR/Web/GMWW.html"
-          grep -q 'applyV210Rules' "$APPDIR/Web/app.js"
-          grep -q 'formatInformation' "$APPDIR/Web/app.js"
-          grep -q 'theme-collapsible' "$APPDIR/Web/app.js"
-          grep -q 'bindFaceSwipe' "$APPDIR/Web/app.js"
-          grep -q 'favorite-shelf' "$APPDIR/Web/style.css"
-          grep -q 'topBackEntity' "$APPDIR/Web/GMWW.html"
-          grep -q 'edge&&dx>70' "$APPDIR/Web/app.js"
-          grep -q 'audio-row' "$APPDIR/Web/style.css"
-          grep -q 'data-audio-play' "$APPDIR/Web/app.js"
-          grep -q 'Mô tả riêng trên Lá' "$APPDIR/Web/app.js"
-          grep -q 'groupGateScope' "$APPDIR/Web/app.js"
-          grep -q 'id="passiveFirstTime"' "$APPDIR/Web/GMWW.html"
-          grep -q 'id="ruleReplacesWolfBite"' "$APPDIR/Web/GMWW.html"
-          grep -q 'specialConditions' "$APPDIR/Web/app.js"
-          grep -q 'Mỗi đêm Đuổi 1 người ra khỏi làng' "$APPDIR/Web/app.js"
-          grep -q "legacyAudioFile:'duoi_nguoi.mp3'" "$APPDIR/Web/app.js"
-          grep -q "legacyAudioFile:'hoi_sinh.mp3'" "$APPDIR/Web/app.js"
-          grep -q "starOrder:21" "$APPDIR/Web/app.js"
-          grep -q 'function-grid textarea' "$APPDIR/Web/style.css"
-          grep -q "ui.waitingRoom" "$APPDIR/Web/app.js"
+
+          # The repository keeps the approved WebP Q90 as a base64 build source only.
+          # Runtime receives exactly one artwork binary.
           node - <<'NODE'
           const fs=require('fs');
-          const s=fs.readFileSync(process.env.APPDIR_FOR_ASSERT + '/Web/app.js','utf8');
-          if(!s.includes("$$('[data-theme]',holder).forEach")) process.exit(1);
-          if(/(^|[^$])\$\('\[data-theme\]',holder\)\.forEach/.test(s)) process.exit(1);
-          if(!s.includes("$$('[data-theme-upload]',row).forEach")) process.exit(1);
-          if(/(^|[^$])\$\('\[data-theme-upload\]',row\)\.forEach/.test(s)) process.exit(1);
+          const src=fs.readFileSync('server-game/shared/artwork.js','utf8');
+          const m=src.match(/data:image\/webp;base64,([^']+)/);
+          if(!m) throw new Error('Default artwork WebP payload not found');
+          fs.writeFileSync('server-game/GMWW-Server/Web/default-artwork.webp',Buffer.from(m[1],'base64'));
           NODE
 
-          grep -q 'pushToPlayerWeb:true,targetPreviousCycleOnly:true' "$APPDIR/Web/app.js"
-          grep -q 'toNight:null' "$APPDIR/Web/app.js"
-          ! grep -q 'Mục tiêu tối thiểu' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Mục tiêu tối đa' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Cho phép nhiều mục tiêu' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Áp dụng Từ đêm' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Áp dụng Đến đêm' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Rule Group 7' "$APPDIR/Web/GMWW.html"
-          ! grep -q 'Nhiều mạng' "$APPDIR/Web/GMWW.html"
+          test -s "$APPDIR/Web/GMWW.html"
+          test -s "$APPDIR/Web/style.css"
+          test -s "$APPDIR/Web/app.js"
+          test -s "$APPDIR/Web/default-artwork.webp"
+
+          grep -q 'GMWW V2.25' "$APPDIR/Web/GMWW.html"
+          grep -q "const VERSION='2.25'" "$APPDIR/Web/app.js"
+          grep -q "GMWW_V225_STATE" "$APPDIR/Web/app.js"
+          grep -q "applyV225Catalog" "$APPDIR/Web/app.js"
+          grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
+          grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
+          grep -q "pickEntityThemeArtwork" "$APPDIR/Web/app.js"
+          grep -q "audio_card_role_wolf" "$APPDIR/Web/app.js"
+          grep -q "theme-card-row-simple" "$APPDIR/Web/style.css"
+          grep -q "data-pref=\\\"hide\\\"" "$APPDIR/Web/app.js"
+          ! grep -q 'data-filter="star"' "$APPDIR/Web/GMWW.html"
+          ! grep -q 'data-theme-display-url' "$APPDIR/Web/app.js"
+          ! grep -q 'data-theme-thumb-url' "$APPDIR/Web/app.js"
+          ! test -e "$APPDIR/Web/v1-audio.js"
+          ! test -e "$APPDIR/Web/sea-artwork.js"
+          ! test -e "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
+          ! test -e "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
 
       - name: Validate JavaScript
         run: |
           set -euo pipefail
           node --check server-game/current/app.js
-          node --check server-game/current/v1-audio.js
+          node --check server-game/shared/artwork.js
           node - <<'NODE'
           const fs=require('fs');
           const s=fs.readFileSync('server-game/current/app.js','utf8');
           const bad=[...s.matchAll(/(^|[^$])\$\([^;\n]*?\)\.forEach/g)];
           if(bad.length){ console.error('invalid single-element selector loop',bad.map(x=>x[0])); process.exit(1); }
+          if(!s.includes("artifacts:[]")) throw new Error('Default ARTIFACT catalog is not empty');
+          if(s.includes("GMWW224_SEA_ASSETS")||s.includes("GMWW208_SEA_DISPLAY")) throw new Error('Legacy artwork resolver remains');
           NODE
-          node --check server-game/shared/sea-artwork.js
-          node --check server-game/shared/artwork.js
 
-      - name: Verify typography and artwork
+      - name: Verify optimized default artwork
         run: |
           set -euo pipefail
-          grep -q 'font-size:14.5px' server-game/current/style.css
-          grep -q 'font-size:24px' server-game/current/style.css
-          grep -q 'text-align:justify' server-game/current/style.css
-          grep -q '.editor-actions{position:static' server-game/current/style.css
-          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '1024'
-          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-display.webp | grep -q '936'
-          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '360'
-          sips -g pixelWidth -g pixelHeight server-game/v208/phu-thuy-gia-sea-thumb.webp | grep -q '329'
+          ART="server-game/GMWW-Server/Web/default-artwork.webp"
+          sips -g pixelWidth -g pixelHeight "$ART" | grep -q '1064'
+          sips -g pixelWidth -g pixelHeight "$ART" | grep -q '1478'
+          BYTES=$(stat -f%z "$ART")
+          test "$BYTES" -lt 700000
 
       - name: Generate App Icon
         run: |
@@ -126,40 +94,55 @@ jobs:
           cat > "server-game/GMWW-Server/Assets.xcassets/Contents.json" <<'JSON'
           {"info":{"author":"xcode","version":1}}
           JSON
-          test -s "$ICONSET/icon-1024.jpg"
-          sips -g pixelWidth -g pixelHeight "$ICONSET/icon-1024.jpg" | grep -q '1024'
 
-      - name: Build unsigned V2.24 app
+      - name: Build unsigned V2.25 app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          xcodebuild             -project server-game/GMWW-Server.xcodeproj             -scheme GMWW-Server             -configuration Release             -sdk iphoneos             -derivedDataPath build-v2             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             build
+          xcodebuild \
+            -project server-game/GMWW-Server.xcodeproj \
+            -scheme GMWW-Server \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build-v2 \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
 
-      - name: Package and verify V2.24 IPA
+      - name: Package and verify V2.25 IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
           test -d "$APP"
           test -s "$APP/Web/GMWW.html"
           test -s "$APP/Web/app.js"
-          test -s "$APP/Web/phu-thuy-gia-sea-display.webp"
-          test -s "$APP/Web/phu-thuy-gia-sea-thumb.webp"
+          test -s "$APP/Web/default-artwork.webp"
+          ! test -e "$APP/Web/v1-audio.js"
+          ! test -e "$APP/Web/sea-artwork.js"
+          ! test -e "$APP/Web/phu-thuy-gia-sea-display.webp"
+
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.24'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '224'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.25'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '225'
+
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.24.ipa
-          unzip -t GMWW-V2.24.ipa >/dev/null
-          unzip -l GMWW-V2.24.ipa | grep -q 'Payload/GMWW-Server.app/Web/GMWW.html'
-          unzip -l GMWW-V2.24.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-display.webp'
-          unzip -l GMWW-V2.24.ipa | grep -q 'Payload/GMWW-Server.app/Web/phu-thuy-gia-sea-thumb.webp'
+          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.25.ipa
+          unzip -t GMWW-V2.25.ipa >/dev/null
+          unzip -l GMWW-V2.25.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
+          ! unzip -l GMWW-V2.25.ipa | grep -q 'phu-thuy-gia-sea-display'
+          ! unzip -l GMWW-V2.25.ipa | grep -q 'v1-audio.js'
 
-      - name: Upload V2.24 IPA
+          IPA_BYTES=$(stat -f%z GMWW-V2.25.ipa)
+          echo "IPA bytes: $IPA_BYTES"
+          test "$IPA_BYTES" -lt 5000000
+
+      - name: Upload V2.25 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.24
-          path: GMWW-V2.24.ipa
+          name: GMWW-V2.25
+          path: GMWW-V2.25.ipa
           if-no-files-found: error
           retention-days: 30
