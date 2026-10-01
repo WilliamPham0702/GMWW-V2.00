@@ -38,7 +38,7 @@ jobs:
           grep -q 'Số mạng' "$APPDIR/Web/GMWW.html"
           grep -q 'Cho phép nhiều Hành Động trong cùng lượt' "$APPDIR/Web/GMWW.html"
           grep -q 'Cài đặt Hành Động trên Lá' "$APPDIR/Web/GMWW.html"
-          grep -q 'Audio' "$APPDIR/Web/GMWW.html"
+          grep -q 'Âm Thanh' "$APPDIR/Web/GMWW.html"
           grep -q 'Hình nền' "$APPDIR/Web/app.js"
           grep -q 'Banner Trang Chủ' "$APPDIR/Web/app.js"
           grep -q 'Hình Thanh Điều Hướng' "$APPDIR/Web/app.js"
