@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.21';
-const STATE_KEY='GMWW_V221_STATE';
-const PREF_KEY='GMWW_V221_PREFS';
-const OLD_STATE_KEYS=['GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.22';
+const STATE_KEY='GMWW_V222_STATE';
+const PREF_KEY='GMWW_V222_PREFS';
+const OLD_STATE_KEYS=['GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -444,4 +444,41 @@ function bindCore(){
 async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch'),stamp='V1.08|ROLE:source-18|'+a.base64.length;if(localStorage.getItem('GMWW_V1_AUDIO_SEED_SOURCE18')===stamp&&await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}));localStorage.setItem('GMWW_V1_AUDIO_SEED_SOURCE18',stamp)}catch(e){console.warn('V1 audio seed failed',e)}}
 async function boot(){await ensureDefaultThumb();bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();await renderTheme();await applyActiveThemeUi()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+/* V2.22 — Server Health in Cài Đặt */
+const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
+let serverHealthBusy=false;
+function setServerHealthState(kind,text,detail,data={}){
+  const pill=document.getElementById('serverHealthPill'),dot=document.getElementById('serverHealthDot');
+  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'HOẠT ĐỘNG TỐT':kind==='warn'?'CÓ CẢNH BÁO':kind==='bad'?'MẤT KẾT NỐI':'ĐANG KIỂM TRA'}
+  if(dot)dot.className='health-dot '+kind;
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  put('serverHealthText',text);put('serverHealthDetail',detail);
+  put('healthPlayerWeb',data.web||'—');put('healthApi',data.api||'—');put('healthLatency',data.latency||'—');put('healthVersion',data.version||'—');
+  put('healthCheckedAt','Kiểm tra lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+}
+async function checkServerHealth(){
+  if(serverHealthBusy)return; serverHealthBusy=true;
+  const btn=document.getElementById('checkServerHealth');if(btn){btn.disabled=true;btn.textContent='Đang kiểm tra…'}
+  setServerHealthState('checking','Đang kiểm tra Server…','Đang kết nối tới GMWW V2 production');
+  const started=performance.now();
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+    const res=await fetch(GMWW_SERVER_BASE+'/api/health?ipa='+Date.now(),{method:'GET',cache:'no-store',signal:controller.signal});
+    clearTimeout(timer);
+    const latency=Math.max(1,Math.round(performance.now()-started));
+    let body={};try{body=await res.json()}catch{}
+    if(!res.ok||body.ok!==true)throw new Error('HTTP '+res.status);
+    const level=latency<=800?'ok':'warn';
+    setServerHealthState(level,level==='ok'?'Server đang hoạt động tốt':'Server hoạt động nhưng phản hồi chậm',level==='ok'?'Kết nối Player Web và API bình thường':'Độ trễ hiện cao hơn mức khuyến nghị',{web:'Online',api:'Online',latency:latency+' ms',version:body.version||'—'});
+  }catch(err){
+    const latency=Math.max(1,Math.round(performance.now()-started));
+    setServerHealthState('bad','Không thể kết nối Server','Kiểm tra Internet hoặc trạng thái Cloudflare',{web:'Không xác định',api:'Offline',latency:latency+' ms',version:'—'});
+  }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.textContent='Kiểm tra ngay'}}
+}
+const healthButton=document.getElementById('checkServerHealth');
+if(healthButton)healthButton.addEventListener('click',checkServerHealth);
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(checkServerHealth,60)));
+window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
+
 })();
