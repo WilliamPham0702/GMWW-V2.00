@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.20';
-const STATE_KEY='GMWW_V220_STATE';
-const PREF_KEY='GMWW_V220_PREFS';
-const OLD_STATE_KEYS=['GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.21';
+const STATE_KEY='GMWW_V221_STATE';
+const PREF_KEY='GMWW_V221_PREFS';
+const OLD_STATE_KEYS=['GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -67,17 +67,17 @@ const DEFAULT_STATE={
   audio:{
     cards:[
       {id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',verifiedBinary:true},
-      {id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',sourceKey:'GROUP:WOLVES',fileName:'gmww-wolf-pack.m4a',verifiedBinary:true}
+      {id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',fileName:'',verifiedBinary:false}
     ],
     artifacts:[{id:'audio_artifact_mirror',name:'Tráng Gương',targetId:'artifact_mirror',fileName:'',verifiedBinary:false}],
     actions:[
-      {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',verifiedBinary:false},
-      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',verifiedBinary:false},
+      {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',fileName:'',verifiedBinary:false},
+      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'',verifiedBinary:false},
       {id:'audio_action_mirror',name:'Tráng Gương',targetId:'action_mirror',fileName:'',verifiedBinary:false}
     ],
     system:[
-      {id:'audio_system_confirm',name:'Xác nhận',sourceKey:'SYSTEM:CONFIRM_TARGET',fileName:'gmww-confirm.m4a',verifiedBinary:true},
-      {id:'audio_system_countdown',name:'Đếm ngược',sourceKey:'SYSTEM:DAY_COUNTDOWN_30',fileName:'gmww-countdown-30.m4a',verifiedBinary:true}
+      {id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false},
+      {id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false}
     ]
   },
   themes:{
@@ -253,13 +253,24 @@ async function applyActiveThemeUi(){
   for(const [slot,sel] of Object.entries(map)){const el=$(sel);if(!el)continue;const src=await resolveUiSlot(id,slot);if(src){el.style.backgroundImage='linear-gradient(rgba(3,12,21,.50),rgba(3,12,21,.70)),url("'+src.replace(/"/g,'\"')+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else{el.style.backgroundImage=''}}
 }
 
+function entityTileHtml(kind,e){
+  const p=prefFor(kind,e.id),sub=kind==='cards'?(factionMeta(e.factionId).icon+' '+factionMeta(e.factionId).label):'✦ ARTIFACTS';
+  return '<article class="role-tile '+(p.hidden?'hidden-pref':'')+'" data-kind="'+kind+'" data-id="'+esc(e.id)+'"><div class="tile-actions"><button class="hide '+(p.hidden?'on':'')+'" data-pref="hide">'+(p.hidden?'◉':'◌')+'</button><button class="star '+(p.starred?'on':'')+'" data-pref="star">'+(p.starred?'★':'☆')+'</button></div><img data-thumb-kind="'+kind+'" data-thumb-id="'+esc(e.id)+'" alt=""><h3>'+esc(e.name)+'</h3><small>'+esc(sub)+(p.hidden?' • Tạm ẩn':'')+'</small></article>'
+}
+function bindEntityTiles(kind,root,list){
+  list.forEach(async e=>{const im=$('[data-thumb-kind="'+kind+'"][data-thumb-id="'+CSS.escape(e.id)+'"]',root);if(im)im.src=await resolveArtwork(kind,e.id,'thumb')});
+  $('[data-kind="'+kind+'"][data-id]',root).forEach(tile=>tile.onclick=ev=>{const pref=ev.target.closest('[data-pref]');if(pref){ev.stopPropagation();togglePref(kind,tile.dataset.id,pref.dataset.pref);return}openEntityEditor(kind,tile.dataset.id)});
+}
 function renderEntityGrid(kind){
-  const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
-  let list=entityList(kind).filter(e=>{const p=prefFor(kind,e.id);if(filter==='star')return p.starred&&!p.hidden;if(filter==='hidden')return p.hidden;return true});
-  list.sort((a,b)=>{const pa=prefFor(kind,a.id),pb=prefFor(kind,b.id);if(pa.starred!==pb.starred)return pa.starred?-1:1;return(pa.starOrder||9999)-(pb.starOrder||9999)});
-  grid.innerHTML=list.map(e=>{const p=prefFor(kind,e.id),sub=kind==='cards'?(factionMeta(e.factionId).icon+' '+factionMeta(e.factionId).label):'✦ ARTIFACTS';return '<article class="role-tile '+(p.hidden?'hidden-pref':'')+'" data-kind="'+kind+'" data-id="'+esc(e.id)+'"><div class="tile-actions"><button class="hide '+(p.hidden?'on':'')+'" data-pref="hide">'+(p.hidden?'◉':'◌')+'</button><button class="star '+(p.starred?'on':'')+'" data-pref="star">'+(p.starred?'★':'☆')+'</button></div><img data-thumb-kind="'+kind+'" data-thumb-id="'+esc(e.id)+'" alt=""><h3>'+esc(e.name)+'</h3><small>'+esc(sub)+(p.hidden?' • Tạm ẩn':'')+'</small></article>'}).join('');
-  list.forEach(async e=>{const im=$('[data-thumb-kind="'+kind+'"][data-thumb-id="'+CSS.escape(e.id)+'"]');if(im)im.src=await resolveArtwork(kind,e.id,'thumb')});
-  $$('[data-kind="'+kind+'"][data-id]',grid).forEach(tile=>tile.onclick=ev=>{const pref=ev.target.closest('[data-pref]');if(pref){ev.stopPropagation();togglePref(kind,tile.dataset.id,pref.dataset.pref);return}openEntityEditor(kind,tile.dataset.id)});
+  const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),favGrid=$(kind==='cards'?'#cardFavoriteGrid':'#artifactFavoriteGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
+  const all=entityList(kind);
+  const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
+  favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
+  if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
+  let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;if(filter==='star')return false;return !p.hidden&&!p.starred});
+  list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
+  grid.innerHTML=list.map(e=>entityTileHtml(kind,e)).join('');
+  bindEntityTiles(kind,grid,list);
 }
 function togglePref(kind,id,type){const p=prefFor(kind,id);if(type==='star'){if(p.starred){p.starred=false;p.starOrder=null}else{p.hidden=false;p.starred=true;const orders=Object.values(prefs[kind]||{}).filter(x=>x.starred).map(x=>Number(x.starOrder)||0);p.starOrder=Math.max(0,...orders)+1}}else{p.hidden=!p.hidden;if(p.hidden){p.starred=false;p.starOrder=null}}savePrefs();renderEntityGrid(kind)}
 
@@ -330,16 +341,17 @@ function bindFunctionControls(){
   });
   $$('[data-remove-fn]').forEach(b=>b.onclick=()=>{editDraft.functions.splice(Number(b.dataset.removeFn),1);renderEntityBack()});
 }
-function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');setFace('front');renderEntityBack();renderEntityFront();$('#library').scrollTop=0}
+let editBackRendered=false;
+function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);editBackRendered=false;$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');setFace('front');renderEntityFront();$('#library').scrollTop=0}
 function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
 function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
 function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];saveState();savePrefs();closeEntityEditor()}
-function setFace(face){$$('.face-switch button').forEach(b=>b.classList.toggle('active',b.dataset.face===face));$$('.face').forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
+function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}$('.face-switch button').forEach(b=>b.classList.toggle('active',b.dataset.face===face));$('.face').forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
 let faceTouchStart=null;
 function bindFaceSwipe(){
   const editor=$('#entityEditor');
-  editor.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];faceTouchStart={x:t.clientX,y:t.clientY}},{passive:true});
-  editor.addEventListener('touchend',e=>{if(!faceTouchStart||!e.changedTouches.length)return;const t=e.changedTouches[0],dx=t.clientX-faceTouchStart.x,dy=t.clientY-faceTouchStart.y;faceTouchStart=null;if(Math.abs(dx)<55||Math.abs(dx)<=Math.abs(dy)*1.25)return;const front=$('#entityFront').classList.contains('active');if(dx<0&&front)setFace('back');else if(dx>0&&!front)setFace('front')},{passive:true});
+  editor.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];faceTouchStart={x:t.clientX,y:t.clientY,edge:t.clientX<30}},{passive:true});
+  editor.addEventListener('touchend',e=>{if(!faceTouchStart||!e.changedTouches.length)return;const t=e.changedTouches[0],dx=t.clientX-faceTouchStart.x,dy=t.clientY-faceTouchStart.y;const edge=faceTouchStart.edge;faceTouchStart=null;if(Math.abs(dx)<55||Math.abs(dx)<=Math.abs(dy)*1.25)return;if(edge&&dx>70){closeEntityEditor();return}const front=$('#entityFront').classList.contains('active');if(dx<0&&front)setFace('back');else if(dx>0&&!front)setFace('front')},{passive:true});
 }
 
 function renderActions(){const q=($('#actionSearch').value||'').toLowerCase().trim(),list=actionList(actionKind).filter(a=>!q||String(a.name).toLowerCase().includes(q));$('#actionGrid').innerHTML='<button class="compact-entry add-only" id="addActionBox" aria-label="Thêm">＋</button>'+list.map(a=>'<article class="compact-entry" data-action-id="'+esc(a.id)+'"><b>'+esc(a.name)+'</b></article>').join('');$$('[data-action-id]').forEach(el=>bindDouble(el,()=>openActionEditor(el.dataset.actionId)));$('#addActionBox').onclick=createAction}
