@@ -267,7 +267,7 @@ function entityTileHtml(kind,e){
 }
 function bindEntityTiles(kind,root,list){
   list.forEach(async e=>{const im=$('[data-thumb-kind="'+kind+'"][data-thumb-id="'+CSS.escape(e.id)+'"]',root);if(im)im.src=await resolveArtwork(kind,e.id,'thumb')});
-  $('[data-kind="'+kind+'"][data-id]',root).forEach(tile=>tile.onclick=ev=>{const pref=ev.target.closest('[data-pref]');if(pref){ev.stopPropagation();togglePref(kind,tile.dataset.id,pref.dataset.pref);return}openEntityEditor(kind,tile.dataset.id)});
+  Array.from(root.querySelectorAll('[data-kind="'+kind+'"][data-id]')).forEach(tile=>tile.onclick=ev=>{const pref=ev.target.closest('[data-pref]');if(pref){ev.stopPropagation();togglePref(kind,tile.dataset.id,pref.dataset.pref);return}openEntityEditor(kind,tile.dataset.id)});
 }
 function renderEntityGrid(kind){
   const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),favGrid=$(kind==='cards'?'#cardFavoriteGrid':'#artifactFavoriteGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
@@ -354,7 +354,7 @@ function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entit
 function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
 function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
 function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];saveState();savePrefs();closeEntityEditor()}
-function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}$('.face-switch button').forEach(b=>b.classList.toggle('active',b.dataset.face===face));$('.face').forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
+function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}Array.from(document.querySelectorAll('.face-switch button')).forEach(b=>b.classList.toggle('active',b.dataset.face===face));Array.from(document.querySelectorAll('.face')).forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
 let faceTouchStart=null;
 function bindFaceSwipe(){
   const editor=$('#entityEditor');
