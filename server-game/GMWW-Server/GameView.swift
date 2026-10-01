@@ -33,9 +33,11 @@ struct GameWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if navigationAction.navigationType == .linkActivated,
-               let url = navigationAction.request.url,
-               !url.isFileURL {
+            if let url = navigationAction.request.url,
+               !url.isFileURL,
+               navigationAction.targetFrame?.isMainFrame != false,
+               let scheme = url.scheme?.lowercased(),
+               scheme == "http" || scheme == "https" {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
                 return
