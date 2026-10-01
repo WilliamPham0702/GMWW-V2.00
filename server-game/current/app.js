@@ -639,4 +639,44 @@ if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(checkServerHealth,60)));
 window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
 
+/* V2.26 — GitHub optimization helper in Cài Đặt */
+const GMWW_GITHUB_REPO_URL='https://github.com/WilliamPham0702/GMWW-V2.00';
+let githubOptimizeBusy=false;
+function setGithubOptimizeState(kind,text,detail,status,result){
+  const pill=document.getElementById('githubOptimizePill');
+  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'ĐÃ KIỂM TRA':kind==='warn'?'CẦN TỐI ƯU':kind==='bad'?'KHÔNG THỂ KIỂM TRA':'ĐANG KIỂM TRA'}
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  put('githubOptimizeText',text);
+  put('githubOptimizeDetail',detail);
+  put('githubOptimizeStatus',status||'—');
+  put('githubOptimizeResult',result||'—');
+  put('githubOptimizeChecked',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+}
+async function checkGithubOptimize(){
+  if(githubOptimizeBusy)return;
+  githubOptimizeBusy=true;
+  const btn=document.getElementById('checkGithubOptimize');
+  if(btn){btn.disabled=true;btn.textContent='Đang kiểm tra…'}
+  setGithubOptimizeState('checking','Đang kiểm tra khả năng truy cập GitHub…','Đang xác minh repo GMWW-V2.00 có thể mở từ thiết bị.','Đang kiểm tra','—');
+  const started=performance.now();
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+    const res=await fetch(GMWW_GITHUB_REPO_URL,{method:'HEAD',cache:'no-store',mode:'no-cors',signal:controller.signal});
+    clearTimeout(timer);
+    const latency=Math.max(1,Math.round(performance.now()-started));
+    setGithubOptimizeState('ok','GitHub sẵn sàng để tối ưu','Repo đã sẵn sàng. Dùng ChatGPT để phân tích file nặng, ảnh PNG/JPG, thumbnail dư và file trùng trước khi xoá.','Sẵn sàng',latency+' ms');
+  }catch(err){
+    const online=navigator.onLine;
+    setGithubOptimizeState(online?'warn':'bad',online?'Không xác minh được trực tiếp':'Thiết bị đang offline',online?'Bạn vẫn có thể mở GitHub hoặc dùng ChatGPT để kiểm tra repo.':'Kết nối Internet rồi thử lại.',online?'Cần kiểm tra thủ công':'Offline','—');
+  }finally{
+    githubOptimizeBusy=false;
+    if(btn){btn.disabled=false;btn.textContent='Kiểm tra tối ưu'}
+  }
+}
+const githubOptimizeButton=document.getElementById('checkGithubOptimize');
+if(githubOptimizeButton)githubOptimizeButton.addEventListener('click',checkGithubOptimize);
+const githubOpenButton=document.getElementById('openGithubRepo');
+if(githubOpenButton)githubOpenButton.addEventListener('click',()=>{window.location.href=GMWW_GITHUB_REPO_URL});
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>{const checked=document.getElementById('githubOptimizeChecked')?.textContent;if(!checked||checked==='—')checkGithubOptimize()},120)));
+
 })();
