@@ -408,6 +408,8 @@ async function resolveArtwork(kind,id,assetKind){
   if(active!=='theme-default'){
     const local=await blobUrlFor(cardBlobKey(active,kind,id,assetKind));if(local)return local;
     const url=String(assetKind==='thumb'?m.thumbUrl:m.displayUrl||'').trim();if(url)return url;
+    const bundled=window.GMWW224_SEA_ASSETS&&window.GMWW224_SEA_ASSETS[kind]&&window.GMWW224_SEA_ASSETS[kind][id];
+    if(bundled&&bundled[assetKind])return bundled[assetKind];
     if(id==='role_old_witch'&&kind==='cards'){if(assetKind==='thumb'&&window.GMWW208_SEA_THUMB)return window.GMWW208_SEA_THUMB;if(assetKind==='display'&&window.GMWW208_SEA_DISPLAY)return window.GMWW208_SEA_DISPLAY}
   }
   if(assetKind==='thumb')return await ensureDefaultThumb();return window.GMWW205_DEFAULT_DISPLAY||'';
