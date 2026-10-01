@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.23';
-const STATE_KEY='GMWW_V223_STATE';
-const PREF_KEY='GMWW_V223_PREFS';
-const OLD_STATE_KEYS=['GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.24';
+const STATE_KEY='GMWW_V224_STATE';
+const PREF_KEY='GMWW_V224_PREFS';
+const OLD_STATE_KEYS=['GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -31,49 +31,150 @@ const THEME_UI_GROUPS=[
 
 const DEFAULT_STATE={
   version:VERSION,
-  cards:[{
-    id:'role_old_witch',legacyId:'source-18',name:'Phù Thuỷ Già',factionId:'village',
-    information:'Phe Dân. Mỗi đêm chọn Đuổi 1 người hoặc Hồi Sinh 1 người, không được làm cả hai. Không được Đuổi cùng một người trong 2 đêm liên tiếp. Hồi Sinh chỉ được dùng 1 lần trong ván và chỉ áp dụng cho người chết ở ngày trước hoặc đêm trước.',
-    lives:1,
-    flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
-    winCondition:'',
-    passiveRule:{enabled:false,type:'stake_survive'},
-    groupActionGate:{enabled:false,actionId:'',blockOn:['expelled','blocked']},
-    functions:[
-      {id:'fn_old_witch_exile',actionId:'action_exile',description:'Mỗi đêm Đuổi 1 người ra khỏi làng. Không được Đuổi cùng một người trong 2 đêm liên tiếp. Mỗi đêm chỉ chọn Đuổi hoặc Hồi Sinh, không thực hiện cả hai.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0},
-      {id:'fn_old_witch_revive',actionId:'action_revive',description:'Hồi Sinh 1 người đã chết ở ngày trước hoặc đêm trước. Chỉ được dùng 1 lần trong ván. Mỗi đêm chỉ chọn Đuổi hoặc Hồi Sinh, không thực hiện cả hai.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:true,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:true,perUserLimit:0}
-    ]
-  }],
-  artifacts:[{
-    id:'artifact_mirror',legacyId:'atifat-1789042413093',name:'Tráng Gương',
-    information:'A giữ Vai Trò Gốc và thứ tự thức gốc. Khi đến lượt thức của B, A thức cùng B và có thêm 1 lượt thực hiện Hành Động đã copy của B.',
-    flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
-    artifact:{ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:''},
-    winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',blockOn:[]},
-    functions:[{id:'fn_artifact_mirror',actionId:'action_mirror',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0}]
-  }],
+  cards:[
+    {
+      id:'role_old_witch',legacyId:'source-18',name:'Phù Thuỷ Già',factionId:'village',artworkId:'role-art-dcb4b00b5b',
+      information:'Mỗi đêm bạn có thể Đuổi 1 người ra khỏi làng. Tất cả các tác động lên người đó đều không có tác dụng.\n\nHoặc bạn có thể Hồi Sinh 1 người bị chết từ ngày hoặc đêm hôm trước.\n\nMỗi đêm chỉ được chọn sử dụng 1 trong 2 chức năng: Đuổi hoặc Hồi Sinh.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'Mỗi đêm chỉ dùng Đuổi hoặc Hồi Sinh, không dùng cả hai.',conditions:'',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[
+        {id:'fn_old_witch_exile',actionId:'action_exile',description:'Mỗi đêm Đuổi 1 người ra khỏi làng. Không được Đuổi cùng một người 2 đêm liên tiếp.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_exile']},
+        {id:'fn_old_witch_revive',actionId:'action_revive',description:'Hồi Sinh 1 người chết từ ngày hôm trước hoặc đêm hôm trước. Chỉ dùng 1 lần trong ván.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:true,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:true,perUserLimit:0,effectIds:['effect_revive']}
+      ]
+    },
+    {
+      id:'role_fairy',legacyId:'source-19',name:'Yêu Tinh',factionId:'village',artworkId:'role-art-7ac675d033',
+      information:'Mỗi đêm bạn thức dậy và di chuyển vết Sói Cắn sang trái hoặc sang phải. Bạn không được biết vết Sói Cắn đang ở đâu. Trường hợp không có vết Sói Cắn, bạn vẫn được gọi dậy và kích hoạt chức năng bình thường nhưng hành động không có tác dụng.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'',conditions:'Luôn được gọi dậy mỗi đêm, kể cả khi không có vết Sói Cắn.',attributes:'Không được biết vị trí vết Sói Cắn.',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_fairy_transfer',actionId:'action_transfer_bite',description:'Chọn hướng Trái hoặc Phải để dịch chuyển vết Sói Cắn. Nếu không có vết cắn, hành động vẫn ghi nhận nhưng không tạo tác động.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:0,noSelf:false,allowDead:false,noTarget:true,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_transfer_bite']}]
+    },
+    {
+      id:'role_assassin',legacyId:'source-20',name:'Sát Thủ',factionId:'third',artworkId:'role-art-13a16b6f9f',
+      information:'Mỗi đêm bạn được gọi dậy, chọn một người và đánh dấu lên họ Like 👍 hoặc Dislike 👎. Sáng hôm sau, người đó được gọi dậy và chọn dấu của họ. Nếu dấu của họ cùng với bạn, họ sống. Nếu dấu của họ khác với bạn, họ chết.\n\nĐiều kiện thắng: Khi tất cả các Sói và Kẻ Hủy Diệt (nếu có trong ván) chết hết, bạn sẽ thắng.',
+      lives:1,flags:{useDay:true,useNight:true,nightImmune:true,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'Khi tất cả các Sói và Kẻ Hủy Diệt (nếu có trong ván) chết hết, Sát Thủ thắng.',
+      limits:'Mỗi đêm 1 mục tiêu.',conditions:'Mục tiêu hợp lệ theo trạng thái đầu đêm; người bị tác động chết/Đuổi trong chính đêm vẫn có thể được chọn.',attributes:'Bất tử ban đêm.',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_assassin_mark',actionId:'action_assassin_mark',description:'Chọn 1 người và bí mật đánh dấu Like 👍 hoặc Dislike 👎. Sáng hôm sau mục tiêu chọn dấu; cùng dấu sống, khác dấu chết. Nếu mục tiêu đã bị Đuổi trong chính đêm đó, không gọi lại sáng hôm sau và Sát Thủ mất lượt.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_assassin_mark']}]
+    },
+    {
+      id:'role_maiden',legacyId:'source-17',name:'Thiếu Nữ',factionId:'village',artworkId:'role-art-12d139b2aa',
+      information:'Mỗi đêm bạn có thể Thăm Nhà một người khác. Nếu mục tiêu là Sói thì bạn chết.\n\nNếu người được thăm bị tác động chết thì bạn cũng chết theo.\n\nNếu bạn không đi Thăm Nhà người khác và bạn bị tác động chết thì bạn cũng chết.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'',conditions:'Mục tiêu hợp lệ theo trạng thái đầu đêm.',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_maiden_visit',actionId:'action_visit_house',description:'Chọn 1 người khác để Thăm Nhà. Nếu mục tiêu là Sói thì Thiếu Nữ chết; nếu người được thăm bị tác động chết trong đêm thì Thiếu Nữ chết theo. Nếu không đi thăm và bị tác động chết thì chết bình thường.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_visit_house']}]
+    },
+    {
+      id:'role_snow_wolf',legacyId:'source-46',name:'Sói Tuyết',factionId:'wolf',artworkId:'role-art-5cc41f937c',
+      information:'Mỗi đêm bạn chọn 1 người để Đóng Băng. Người bị Đóng Băng không thể thực hiện chức năng trong đêm đó.\n\nNếu Đóng Băng trúng Sói Trùm, vết Cắn của bầy Sói trong đêm đó không có tác dụng.\n\nBạn không được tham gia Cắn khi bầy Sói còn sống. Bạn chỉ được thực hiện chức năng Cắn khi bầy Sói chỉ còn một mình bạn.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'Không Đóng Băng cùng một người 2 đêm liên tiếp.',conditions:'Chức năng Cắn chỉ kích hoạt khi Sói Tuyết là Sói duy nhất còn sống.',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[
+        {id:'fn_snow_wolf_freeze',actionId:'action_snow_wolf_freeze',description:'Mỗi đêm Đóng Băng 1 người. Nếu trúng Sói Trùm, vết Cắn của Bầy Sói đêm đó không có tác dụng.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:1,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:true,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_snow_wolf_freeze']},
+        {id:'fn_snow_wolf_bite',actionId:'action_wolf_bite',description:'Chỉ Cắn khi Sói Tuyết là Sói duy nhất còn sống.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,requiresNoOtherLivingWolf:true,usesPackBite:true,allowFriendlyFaction:true,effectIds:['effect_wolf_bite']}
+      ]
+    },
+    {
+      id:'role_guard',legacyId:'source-4',name:'Bảo Vệ',factionId:'village',artworkId:'role-art-34afffaef3',
+      information:'Mỗi đêm, bạn được chọn một người để bảo vệ họ khỏi vết Sói Cắn.\n\nNgười được bảo vệ sẽ không chết bởi vết Sói Cắn trực tiếp hoặc vết Sói Cắn được dịch chuyển vào họ.\n\nBảo Vệ không có tác dụng trước bình của Phù Thủy hoặc các tác động gây chết khác.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'Không được bảo vệ cùng một người hai đêm liên tiếp.',conditions:'',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_guard_protect',actionId:'action_protect',description:'Bảo vệ 1 người khỏi tác động gây chết có nguồn gốc wolf_bite, gồm Cắn trực tiếp và vết Cắn dịch chuyển. Không chặn bình Phù Thủy hay tác động chết khác.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:1,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:false,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_protected']}]
+    },
+    {
+      id:'role_alpha_wolf',legacyId:'source-44',name:'Sói Trùm',factionId:'wolf',artworkId:'role-art-f4aef09684',
+      information:'Phe Sói. Sói Trùm tham gia Cắn cùng đàn. Tiên Tri soi Sói Trùm cho kết quả KHÔNG PHẢI SÓI. Nếu Sói Trùm bị Sói Tuyết Đóng Băng, toàn bộ vết Cắn của đàn trong đêm đó bị hủy.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'',conditions:'',attributes:'Tiên Tri soi cho kết quả KHÔNG PHẢI SÓI.',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:true,actionId:'action_wolf_bite',scope:'shared',blockOn:['expelled','blocked']},
+      functions:[{id:'fn_alpha_wolf_bite',actionId:'action_wolf_bite',description:'Thức dậy cùng Bầy Sói và tham gia Cắn chung.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,usesPackBite:true,allowFriendlyFaction:true,effectIds:['effect_wolf_bite']}]
+    },
+    {
+      id:'role_wolf',legacyId:'source-43',name:'Sói Thường',factionId:'wolf',artworkId:'role-art-980bcb375a',
+      information:'Mỗi đêm, bạn thức dậy cùng Bầy Sói tham gia Cắn.',
+      lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      winCondition:'',limits:'',conditions:'Mục tiêu hợp lệ theo trạng thái đầu đêm.',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'action_wolf_bite',scope:'shared',blockOn:[]},
+      functions:[{id:'fn_wolf_bite',actionId:'action_wolf_bite',description:'Mỗi đêm thức dậy cùng Bầy Sói và tham gia Cắn. Được chọn bản thân và người cùng Phe; không chọn người đã chết/bị Đuổi từ trước khi đêm bắt đầu.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,usesPackBite:true,allowFriendlyFaction:true,effectIds:['effect_wolf_bite']}]
+    }
+  ],
+  artifacts:[
+    {
+      id:'artifact_mirror',legacyId:'atifat-1789042413093',name:'Tráng Gương',
+      information:'Copy chức năng của người khác nhưng vẫn giữ chức năng gốc. Khi đến Action của chức năng được copy, hệ thống tạo thêm một lượt thực hiện tuần tự trong cùng box Action; không tạo thêm Night Order riêng.',
+      flags:{useDay:true,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      artifact:{ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:'',sameBoxSequentialInstance:true,hideArtifactOnPlayerWeb:true},
+      winCondition:'',limits:'1 lần / suốt ván',conditions:'',attributes:'Giữ Vai Trò gốc và chức năng gốc.',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_artifact_mirror',actionId:'action_mirror',description:'Sao chép chức năng của mục tiêu; giữ chức năng gốc và thêm lượt thực hiện copy tuần tự trong cùng box Action.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:true,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_copy_functions']}]
+    },
+    {
+      id:'artifact_role_swap',legacyId:'atifat-1789042448651',name:'Đổi Vai Trò',
+      information:'Đổi Vai Trò giữa 2 Người Chơi.',
+      flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      artifact:{ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:'',hideArtifactOnPlayerWeb:true},
+      winCondition:'',limits:'1 lần / suốt ván',conditions:'Đầu đêm chọn A và B; khi xác nhận, Vai Trò của A và B được hoán đổi.',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_artifact_role_swap',actionId:'action_role_swap',description:'Chọn 2 Người Chơi và hoán đổi Vai Trò của họ.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:2,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:['effect_swap_roles']}]
+    },
+    {
+      id:'artifact_wake_with_seer',legacyId:'atifat-wake-with-seer',name:'Thức cùng Tiên Tri',
+      information:'Người sở hữu thức cùng lượt Tiên Tri và được biết Tiên Tri đã soi ai; không biết kết quả soi.',
+      flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},
+      artifact:{ownerSelection:true,persistentOwner:true,revealFollowTargetOnly:true,wakeWithRoleId:'source-2',wakeWithActionId:'9',hideArtifactOnPlayerWeb:true},
+      winCondition:'',limits:'Không giới hạn số đêm.',conditions:'Đầu ván GM chọn Người Chơi sở hữu lá trong ngăn Bị Tác Động.',attributes:'',
+      passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},
+      functions:[{id:'fn_artifact_wake_seer',actionId:'action_wake_with_seer',description:'Chỉ mở sau khi Tiên Tri hoàn tất soi; xác nhận để người sở hữu biết Tiên Tri đã soi ai, không tiết lộ kết quả.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:0,noSelf:false,allowDead:false,noTarget:true,allowConsecutive:true,passive:false,activation:'after_seer_action',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,effectIds:[]}]
+    }
+  ],
   actions:{
     role:[
-      {id:'action_exile',legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3',effectIds:['effect_exile']},
-      {id:'action_revive',legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3',effectIds:['effect_revive']}
+      {id:'action_exile',legacyId:'1',name:'Đuổi Người',description:'Đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3',effectIds:['effect_exile']},
+      {id:'action_revive',legacyId:'2',name:'Hồi Sinh',description:'Hồi Sinh một người chết hợp lệ.',legacyAudioFile:'hoi_sinh.mp3',effectIds:['effect_revive']},
+      {id:'action_transfer_bite',legacyId:'6',name:'Dịch Chuyển Vết Cắn',description:'Dịch chuyển vết Sói Cắn sang trái hoặc phải; không có vết cắn vẫn thực hiện nhưng không tạo tác động.',effectIds:['effect_transfer_bite']},
+      {id:'action_assassin_mark',legacyId:'12',name:'Đánh Dấu',description:'Đánh dấu bí mật Like/Dislike và giải quyết vào sáng hôm sau.',effectIds:['effect_assassin_mark']},
+      {id:'action_visit_house',legacyId:'19',name:'Thăm Nhà',description:'Thiếu Nữ Thăm Nhà một Người Chơi khác trong đêm.',effectIds:['effect_visit_house']},
+      {id:'action_snow_wolf_freeze',legacyId:'action-snow-wolf-freeze',name:'Đóng Băng',description:'Đóng Băng chức năng 1 người trong đêm; nếu trúng Sói Trùm thì vô hiệu vết Cắn của Bầy Sói đêm đó.',effectIds:['effect_snow_wolf_freeze']},
+      {id:'action_protect',legacyId:'4',name:'Bảo Vệ',description:'Bảo vệ 1 người khỏi tác động chết có nguồn gốc Sói Cắn.',effectIds:['effect_protected']},
+      {id:'action_wolf_bite',legacyId:'action-wolf-bite',name:'Sói Cắn',description:'Vết Cắn chung của Bầy Sói.',effectIds:['effect_wolf_bite'],allowFriendlyFaction:true}
     ],
-    artifacts:[{id:'action_mirror',name:'Tráng Gương',description:'Sao chép chức năng của mục tiêu theo rule của ARTIFACTS.',effectIds:['effect_copy_functions']}]
+    artifacts:[
+      {id:'action_mirror',legacyId:'23',name:'Tráng Gương',description:'Sao chép chức năng của mục tiêu và tạo thêm lượt tuần tự trong cùng box Action.',effectIds:['effect_copy_functions']},
+      {id:'action_role_swap',legacyId:'24',name:'Đổi Vai Trò',description:'Hoán đổi Vai Trò giữa 2 Người Chơi.',effectIds:['effect_swap_roles']},
+      {id:'action_wake_with_seer',legacyId:'action-atifat-wake-seer',name:'Thức cùng Tiên Tri',description:'Thức cùng Tiên Tri và biết Tiên Tri soi ai; không biết kết quả.',effectIds:[]}
+    ]
   },
   effects:[
-    {id:'effect_exile',name:'Đuổi',primitive:'EXPEL',duration:'nextDay',description:'Đuổi người chơi ra khỏi làng; khóa tác động và chức năng đến hết buổi sáng hôm sau.',webTemplate:{eventType:'EXPEL',emoji:'🚪',title:'BỊ ĐUỔI KHỎI LÀNG',requireAck:true,requireResponse:false}},
-    {id:'effect_revive',name:'Hồi Sinh',primitive:'REVIVE',duration:'instant',description:'Hồi sinh người chơi hợp lệ và đưa họ trở lại trạng thái sống.',webTemplate:{eventType:'REVIVE',emoji:'✨',title:'ĐƯỢC HỒI SINH',requireAck:false,requireResponse:false}},
-    {id:'effect_copy_functions',name:'Sao chép chức năng',primitive:'COPY_FUNCTIONS',duration:'night',description:'Cho chủ sở hữu thêm chức năng của mục tiêu theo rule ARTIFACTS.',webTemplate:{eventType:'COPY_FUNCTIONS',emoji:'🪞',title:'TRÁNG GƯƠNG',requireAck:false,requireResponse:false}}
+    {id:'effect_exile',name:'Đuổi',primitive:'EXPEL',duration:'nextDay',description:'Đuổi người chơi ra khỏi làng; vô hiệu các tác động lên người bị Đuổi trong thời hạn hiệu lực.',webTemplate:{eventType:'EXPEL',emoji:'🚪',title:'BỊ ĐUỔI KHỎI LÀNG',requireAck:true,requireResponse:false}},
+    {id:'effect_revive',name:'Hồi Sinh',primitive:'REVIVE',duration:'instant',description:'Hồi sinh người chơi hợp lệ.',webTemplate:{eventType:'REVIVE',emoji:'✨',title:'ĐƯỢC HỒI SINH',requireAck:false,requireResponse:false}},
+    {id:'effect_transfer_bite',name:'Chuyển',primitive:'TRANSFER_EFFECT',duration:'instant',description:'Dịch chuyển tác động wolf_bite theo hướng đã chọn; nếu không có wolf_bite thì không tạo tác động.',params:{scope:'wolf_bite',allowSelf:true,autoSkipWithoutWolfBite:false},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
+    {id:'effect_assassin_mark',name:'Đánh Dấu',primitive:'MARK_TARGET',duration:'nextDay',description:'Lưu dấu Like/Dislike bí mật; sáng hôm sau mục tiêu chọn dấu. Cùng dấu sống, khác dấu chết.',params:{choices:['👍','👎'],resolve:'morning_compare',same:'alive',different:'kill'},webTemplate:{eventType:'ASSASSIN_MARK',emoji:'🎯',title:'BỊ ĐÁNH DẤU',requireAck:false,requireResponse:true}},
+    {id:'effect_visit_house',name:'Thăm Nhà',primitive:'MARK_TARGET',duration:'night',description:'Liên kết Thiếu Nữ với người được thăm trong đêm.',params:{dieIfWolf:true,dieIfTargetDies:true,allowConsecutive:true,noSelf:true},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
+    {id:'effect_snow_wolf_freeze',name:'Đóng Băng',primitive:'BLOCK',duration:'night',description:'Chặn chức năng mục tiêu trong đêm; nếu mục tiêu là Sói Trùm thì vô hiệu vết Cắn chung của Bầy Sói đêm đó.',params:{ifTargetRole:'source-44',cancelPackBite:true,noSelf:true,noConsecutiveTarget:true},webTemplate:{eventType:'BLOCK',emoji:'❄️',title:'BẠN BỊ ĐÓNG BĂNG',requireAck:true,requireResponse:false}},
+    {id:'effect_protected',name:'Bảo Vệ',primitive:'PROTECT',duration:'night',description:'Chỉ chặn tác động chết có nguồn gốc wolf_bite, kể cả vết Cắn dịch chuyển; không chặn bình Phù Thủy hay tác động chết khác.',params:{scope:'wolf_bite'},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
+    {id:'effect_wolf_bite',name:'Sói Cắn',primitive:'KILL',duration:'instant',description:'Tác động Sói Cắn chung của Bầy Sói.',params:{scope:'wolf_bite',sharedPackBite:true},webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
+    {id:'effect_copy_functions',name:'Sao chép chức năng',primitive:'COPY_FUNCTIONS',duration:'game',description:'Giữ chức năng gốc và thêm chức năng đã copy; thực hiện bằng action instance tuần tự trong cùng box.',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}},
+    {id:'effect_swap_roles',name:'Đổi Vai Trò',primitive:'SWAP_ROLES',duration:'game',description:'Hoán đổi Vai Trò giữa 2 Người Chơi.',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}}
   ],
   audio:{
     cards:[
       {id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',verifiedBinary:true},
-      {id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',fileName:'',verifiedBinary:false}
+      {id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',fileName:'gmww-wolf-pack.m4a',verifiedBinary:true}
     ],
-    artifacts:[{id:'audio_artifact_mirror',name:'Tráng Gương',targetId:'artifact_mirror',fileName:'',verifiedBinary:false}],
+    artifacts:[
+      {id:'audio_artifact_mirror',name:'Tráng Gương',targetId:'artifact_mirror',fileName:'',verifiedBinary:false},
+      {id:'audio_artifact_role_swap',name:'Đổi Vai Trò',targetId:'artifact_role_swap',fileName:'',verifiedBinary:false},
+      {id:'audio_artifact_wake_seer',name:'Thức cùng Tiên Tri',targetId:'artifact_wake_with_seer',fileName:'',verifiedBinary:false}
+    ],
     actions:[
       {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',fileName:'',verifiedBinary:false},
-      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'',verifiedBinary:false},
-      {id:'audio_action_mirror',name:'Tráng Gương',targetId:'action_mirror',fileName:'',verifiedBinary:false}
+      {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',fileName:'',verifiedBinary:false}
     ],
     system:[
       {id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false},
@@ -84,11 +185,36 @@ const DEFAULT_STATE={
     activeId:'theme-sea',selectedEditorId:'theme-sea',
     list:[
       {id:'theme-default',name:'Mặc định',builtin:true,locked:true,ui:{},mappings:{}},
-      {id:'theme-sea',name:'Biển',builtin:true,locked:false,ui:{},mappings:{role_old_witch:{displayUrl:'',thumbUrl:'',bundledSea:true}}}
+      {id:'theme-sea',name:'Biển',builtin:true,locked:false,ui:{},mappings:{
+        role_old_witch:{displayUrl:'',thumbUrl:'',bundledSea:true},
+        role_fairy:{displayUrl:'',thumbUrl:'',artworkId:'role-art-7ac675d033'},
+        role_assassin:{displayUrl:'',thumbUrl:'',artworkId:'role-art-13a16b6f9f'},
+        role_maiden:{displayUrl:'',thumbUrl:'',artworkId:'role-art-12d139b2aa'},
+        role_snow_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-5cc41f937c'},
+        role_guard:{displayUrl:'',thumbUrl:'',artworkId:'role-art-34afffaef3'},
+        role_alpha_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-f4aef09684'},
+        role_wolf:{displayUrl:'',thumbUrl:'',artworkId:'role-art-980bcb375a'}
+      }}
     ]
   }
 };
-const DEFAULT_PREFS={cards:{role_old_witch:{starred:true,starOrder:21,hidden:false}},artifacts:{artifact_mirror:{starred:true,starOrder:1,hidden:false}}};
+const DEFAULT_PREFS={
+  cards:{
+    role_snow_wolf:{starred:true,starOrder:1,hidden:false},
+    role_guard:{starred:true,starOrder:2,hidden:false},
+    role_alpha_wolf:{starred:true,starOrder:3,hidden:false},
+    role_wolf:{starred:true,starOrder:4,hidden:false},
+    role_old_witch:{starred:true,starOrder:21,hidden:false},
+    role_fairy:{starred:true,starOrder:22,hidden:false},
+    role_maiden:{starred:true,starOrder:23,hidden:false},
+    role_assassin:{starred:true,starOrder:24,hidden:false}
+  },
+  artifacts:{
+    artifact_mirror:{starred:true,starOrder:1,hidden:false},
+    artifact_role_swap:{starred:true,starOrder:2,hidden:false},
+    artifact_wake_with_seer:{starred:true,starOrder:7,hidden:false}
+  }
+}
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -201,15 +327,47 @@ function applyV210Rules(s){
   if(reviveAction)Object.assign(reviveAction,{legacyId:'2',name:'Hồi Sinh',description:'Cứu sống một người đã chết.',legacyAudioFile:'hoi_sinh.mp3'});
   return s;
 }
+function applyV224Catalog(s){
+  const upsert=(arr,item,keys=['id'])=>{
+    arr=Array.isArray(arr)?arr:[];
+    const idx=arr.findIndex(x=>keys.some(k=>item[k]&&x&&x[k]===item[k]));
+    if(idx>=0)arr[idx]=clone(item);else arr.push(clone(item));
+    return arr;
+  };
+  for(const c of DEFAULT_STATE.cards)s.cards=upsert(s.cards,c,['id','legacyId']);
+  for(const a of DEFAULT_STATE.artifacts)s.artifacts=upsert(s.artifacts,a,['id','legacyId']);
+  s.actions=s.actions||{role:[],artifacts:[]};
+  for(const a of DEFAULT_STATE.actions.role)s.actions.role=upsert(s.actions.role,a,['id','legacyId']);
+  for(const a of DEFAULT_STATE.actions.artifacts)s.actions.artifacts=upsert(s.actions.artifacts,a,['id','legacyId']);
+  for(const e of DEFAULT_STATE.effects)s.effects=upsert(s.effects,e,['id']);
+  s.audio=s.audio||clone(DEFAULT_STATE.audio);
+  for(const k of ['cards','artifacts','actions','system']){
+    s.audio[k]=Array.isArray(s.audio[k])?s.audio[k]:[];
+    for(const a of DEFAULT_STATE.audio[k])s.audio[k]=upsert(s.audio[k],a,['id']);
+  }
+  s.themes=s.themes||clone(DEFAULT_STATE.themes);
+  const sea=(s.themes.list||[]).find(x=>x.id==='theme-sea');
+  const defSea=DEFAULT_STATE.themes.list.find(x=>x.id==='theme-sea');
+  if(sea&&defSea)sea.mappings=Object.assign({},defSea.mappings||{},sea.mappings||{});
+  s.version=VERSION;
+  return s;
+}
+function applyV224Prefs(p){
+  p=p||{cards:{},artifacts:{}};
+  p.cards=Object.assign({},DEFAULT_PREFS.cards,p.cards||{});
+  p.artifacts=Object.assign({},DEFAULT_PREFS.artifacts,p.artifacts||{});
+  return p;
+}
+
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV210Rules(s)}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV210Rules(migrateOld(raw));localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return clone(DEFAULT_STATE);
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV224Catalog(applyV210Rules(s))}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV224Catalog(applyV210Rules(migrateOld(raw)));localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyV224Catalog(clone(DEFAULT_STATE));
 }
 function loadPrefs(){
-  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return deepMerge(clone(DEFAULT_PREFS),cur)}catch(_){}
-  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;localStorage.setItem(PREF_KEY,JSON.stringify(p));return p}}catch(_){}}
-  return clone(DEFAULT_PREFS);
+  try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV224Prefs(deepMerge(clone(DEFAULT_PREFS),cur))}catch(_){}
+  for(const k of OLD_PREF_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const p=clone(DEFAULT_PREFS);if(raw.cards)p.cards=raw.cards;if(raw.artifacts)p.artifacts=raw.artifacts;const out=applyV224Prefs(p);localStorage.setItem(PREF_KEY,JSON.stringify(out));return out}}catch(_){}}
+  return applyV224Prefs(clone(DEFAULT_PREFS));
 }
 
 function applyV221AudioGuard(s){
