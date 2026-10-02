@@ -9,7 +9,7 @@ export function positions(count){
   });return out;
 }
 export function safeText(v){return String(v??"").slice(0,80)}
-const game=document.getElementById("game");
+const game=typeof document==="undefined"?null:document.getElementById("game");
 if(game){
   const players=document.getElementById("players"),roster=document.getElementById("roster"),selection=document.getElementById("selection");
   const names=["Minh","Lan","Huy","An","Mai","Khoa","Linh","Dũng","Phương","Quân","Trang","Đức","Ngọc","Hà","Nam","Thảo","Long","Vy","Tuấn","Nhi","Khánh","Tú","Sơn","Oanh","Hùng","Hoa","Bảo","Tâm","Vân","Đạt"];
