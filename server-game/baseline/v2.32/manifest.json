@@ -1,0 +1,51 @@
+{
+  "baseline": "GMWW V2.32",
+  "status": "GOLDEN CLEAN BASELINE",
+  "purpose": "Canonical clean native/web baseline for future GMWW V2 builds; never patch a previously patched IPA.",
+  "appVersion": "2.32",
+  "build": "232",
+  "bundleIdentifier": "com.gmww.v2.server",
+  "sourceBuildCommit": "1ec80bcf90ac63f7fbba27c5e750b5a3484c6a5d",
+  "workflowRun": {
+    "number": 104,
+    "id": 36946023890,
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11201768386,
+    "name": "GMWW-V2.32",
+    "artifactDigest": "sha256:bbba4dd15536ed84c294a611918d3ca9ee4484bdb7b95b4788a3ab49baba7503",
+    "ipaSha256": "943d1d2e2e6c7e46b25e1cb756bf8554421188413d85e0a76fceff323ad06494",
+    "sizeBytes": 1094990
+  },
+  "sourceBlobs": {
+    "html": "452fa6b4c7ead55e2eea878e1d80da6cf14a5563",
+    "appJs": "b20a6b84105e1d27a573c228999de433d1850f69",
+    "styleCss": "a27d39a7c2ea8c4e12626d9e57f0bbc527f3a6c5",
+    "gameViewSwift": "fd331d890559c3b3f2607d88dcf1fe498eb4d75d",
+    "xcodeProject": "f635eaa09accf47b25334e81ffef57206dc66dbb"
+  },
+  "cleanBaselineChecks": {
+    "fullXcodeBuild": true,
+    "zipIntegrity": true,
+    "nodeSyntax": true,
+    "runtimeWebFiles": 4,
+    "sourceWebByteComparedInsideWorkflow": true,
+    "criticalJsDefinitionsUnique": true,
+    "legacySettingsOverrideBlocksRemoved": true,
+    "legacyPackagedFilesAbsent": true,
+    "bundleIdVerified": true,
+    "versionBuildVerified": true
+  },
+  "buildPolicy": {
+    "normalWorkflow": "manual-only",
+    "versionResolution": "derived from app.js + Xcode project; workflow does not hard-code release number",
+    "fastBuildRule": "future fast builds must start from this clean baseline/native shell plus current canonical source, never from the previous patched IPA",
+    "fullBuildRequiredFor": [
+      "Swift/native changes",
+      "Xcode project changes",
+      "Bundle/entitlement changes",
+      "native resource pipeline changes"
+    ]
+  }
+}
