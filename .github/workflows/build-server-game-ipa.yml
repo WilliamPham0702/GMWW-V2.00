@@ -20,25 +20,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(node - <<'NODE'
+          node - <<'NODE'
           const fs=require('fs');
-          const s=fs.readFileSync('server-game/current/app.js','utf8');
-          const m=s.match(/const VERSION='([^']+)'/);
-          if(!m) process.exit(1);
-          process.stdout.write(m[1]);
+          const app=fs.readFileSync('server-game/current/app.js','utf8');
+          const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+          const version=app.match(/const VERSION='([^']+)'/)?.[1]||'';
+          const build=project.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1]||'';
+          const marketing=project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
+          if(!version||!build) throw new Error('Missing VERSION/build metadata');
+          if(marketing!==version) throw new Error('MARKETING_VERSION '+marketing+' != app VERSION '+version);
+          if(version.replace(/\./g,'')!==build) throw new Error('Build '+build+' does not match version '+version);
+          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\nBUILD=${build}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\nbuild=${build}\n`);
+          console.log('Resolved V'+version+' / build '+build);
           NODE
-          )"
-          BUILD="$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9][0-9]*\);.*/\1/p' server-game/GMWW-Server.xcodeproj/project.pbxproj | head -n 1)"
-          MARKETING="$(sed -n 's/.*MARKETING_VERSION = \([^;]*\);.*/\1/p' server-game/GMWW-Server.xcodeproj/project.pbxproj | head -n 1)"
-          test -n "$VERSION"
-          test -n "$BUILD"
-          test "$MARKETING" = "$VERSION"
-          test "$(printf '%s' "$VERSION" | tr -d '.')" = "$BUILD"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "Resolved V$VERSION / build $BUILD"
 
       - name: Prepare clean web bundle
         run: |
