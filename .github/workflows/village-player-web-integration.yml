@@ -1,0 +1,93 @@
+name: Village Player Web Integration
+
+on:
+  push:
+    branches: [feature/village-player-web-integration-20261002]
+    paths:
+      - "assets/village/**"
+      - "prototype/village/**"
+      - "src/gmww-members-live.js"
+      - "src/index.js"
+      - "wrangler.jsonc"
+      - "package.json"
+      - ".github/workflows/village-player-web-integration.yml"
+  workflow_dispatch:
+
+jobs:
+  village-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Worker dry-run and syntax gates
+        run: |
+          npm run check
+          node --check src/gmww-members-live.js
+          node --check prototype/village/village.mjs
+          node --check prototype/village/village-room.mjs
+          node --check prototype/village/village-camera.mjs
+          node --check prototype/village/village-performance.mjs
+          node --check assets/village/village.mjs
+          node --check assets/village/village-room.mjs
+          node --check assets/village/village-camera.mjs
+          node --check assets/village/village-performance.mjs
+          grep -q "window.GMWWVillage" src/gmww-members-live.js
+          grep -q "/village/?embed=1" src/gmww-members-live.js
+          ! grep -R "GM_SYNC_TOKEN" prototype/village/ assets/village/
+
+      - name: Unit and bundle consistency tests
+        run: |
+          node prototype/village/village.test.mjs
+          node prototype/village/village-room.test.mjs
+          node prototype/village/village-static-sync.test.mjs
+
+      - name: Install Chromium test dependency
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install chromium
+
+      - name: Static mobile browser regression
+        shell: bash
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 >/tmp/village-http.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/prototype/village/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node prototype/village/village.browser.test.mjs
+
+      - name: Worker route smoke test
+        shell: bash
+        run: |
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 >/tmp/village-wrangler.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; tail -n 80 /tmp/village-wrangler.log || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/tmp/health.json; then break; fi
+            sleep 1
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/health.json
+          curl -fsS http://127.0.0.1:8787/village/ >/tmp/village.html
+          grep -q 'GMWW V2' /tmp/village.html
+          curl -fsS http://127.0.0.1:8787/village/village.mjs >/tmp/village.mjs
+          grep -q 'gmww:village-state' /tmp/village.mjs
+          curl -fsS http://127.0.0.1:8787/ >/tmp/player.html
+          grep -q 'GMWW Members' /tmp/player.html
+          curl -fsS http://127.0.0.1:8787/gmww-members-live.js >/tmp/live.js
+          grep -q 'GMWWVillage' /tmp/live.js
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: village-player-web-mobile-regression
+          path: prototype/village/screenshots/
+          if-no-files-found: ignore
