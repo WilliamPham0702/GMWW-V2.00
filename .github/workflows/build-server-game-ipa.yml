@@ -1,9 +1,12 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# IPA is intentionally manual-only.
-# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
+# Manual-only in normal operation. The one-shot trigger path is enabled only while producing an explicitly requested IPA.
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/ipa-build-trigger'
 
 jobs:
   build:
@@ -12,7 +15,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare clean V2.32 web bundle
+      - name: Resolve build metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('server-game/current/app.js','utf8');
+          const m=s.match(/const VERSION='([^']+)'/);
+          if(!m) process.exit(1);
+          process.stdout.write(m[1]);
+          NODE
+          )"
+          BUILD="$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9][0-9]*\);.*/\1/p' server-game/GMWW-Server.xcodeproj/project.pbxproj | head -n 1)"
+          MARKETING="$(sed -n 's/.*MARKETING_VERSION = \([^;]*\);.*/\1/p' server-game/GMWW-Server.xcodeproj/project.pbxproj | head -n 1)"
+          test -n "$VERSION"
+          test -n "$BUILD"
+          test "$MARKETING" = "$VERSION"
+          test "$(printf '%s' "$VERSION" | tr -d '.')" = "$BUILD"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Resolved V$VERSION / build $BUILD"
+
+      - name: Prepare clean web bundle
         run: |
           set -euo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -22,8 +50,6 @@ jobs:
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
 
-          # The repository keeps the approved WebP Q90 as a base64 build source only.
-          # Runtime receives exactly one artwork binary.
           node - <<'NODE'
           const fs=require('fs');
           const src=fs.readFileSync('server-game/shared/artwork.js','utf8');
@@ -37,28 +63,36 @@ jobs:
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/default-artwork.webp"
 
-          grep -q 'GMWW V2.32' "$APPDIR/Web/GMWW.html"
-          grep -q "const VERSION='2.32'" "$APPDIR/Web/app.js"
-          grep -q "GMWW_V232_STATE" "$APPDIR/Web/app.js"
+          grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
+          grep -q "const VERSION='$VERSION'" "$APPDIR/Web/app.js"
+          grep -q "GMWW_V${BUILD}_STATE" "$APPDIR/Web/app.js"
+          grep -q "GMWW_V${BUILD}_PREFS" "$APPDIR/Web/app.js"
+
+          # Core catalog / theme / audio / member capabilities must remain present.
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
           grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
           grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
           grep -q "pickEntityThemeArtwork" "$APPDIR/Web/app.js"
           grep -q "audio_card_role_wolf" "$APPDIR/Web/app.js"
           grep -q "theme-card-row-simple" "$APPDIR/Web/style.css"
-          grep -q "data-pref=\\\"hide\\\"" "$APPDIR/Web/app.js"
+          grep -q "data-pref=\"hide\"" "$APPDIR/Web/app.js"
           grep -q "Tối ưu GitHub" "$APPDIR/Web/GMWW.html"
           grep -q "checkGithubOptimize" "$APPDIR/Web/app.js"
           grep -q "GMWW_GITHUB_API_URL" "$APPDIR/Web/app.js"
-          grep -q "TỐI ƯU / KIỂM TRA" "$APPDIR/Web/GMWW.html"
           grep -q "Quản lý Thành Viên • Xếp Hạng • Lịch Sử" "$APPDIR/Web/GMWW.html"
           grep -q "memberRankingList" "$APPDIR/Web/GMWW.html"
           grep -q "memberHistoryList" "$APPDIR/Web/GMWW.html"
           grep -q "/api/gm/members" "$APPDIR/Web/app.js"
           grep -q "renderMemberRanking" "$APPDIR/Web/app.js"
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
-          grep -q "V2.29 — truly fixed Settings cards" "$APPDIR/Web/style.css"
-          grep -q "settings-action-optimize" "$APPDIR/Web/style.css"
+
+          # CLEAN BASELINE: only the canonical Settings block may remain.
+          grep -q "CLEAN BASELINE: SETTINGS" "$APPDIR/Web/style.css"
+          ! grep -q "V2.27 — stable iPhone touch targets for Settings actions" "$APPDIR/Web/style.css"
+          ! grep -q "V2.28 — fixed Settings geometry + prominent touch actions" "$APPDIR/Web/style.css"
+          ! grep -q "V2.29 — truly fixed Settings cards" "$APPDIR/Web/style.css"
+
+          # Known legacy/runtime regressions must stay absent.
           ! grep -q "btn.textContent='Đang kiểm tra" "$APPDIR/Web/app.js"
           ! grep -q "mode:'no-cors'" "$APPDIR/Web/app.js"
           grep -q "navigationAction.targetFrame" server-game/GMWW-Server/GameView.swift
@@ -70,7 +104,7 @@ jobs:
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
 
-      - name: Validate JavaScript
+      - name: Validate JavaScript and baseline structure
         run: |
           set -euo pipefail
           node --check server-game/current/app.js
@@ -79,9 +113,24 @@ jobs:
           const fs=require('fs');
           const s=fs.readFileSync('server-game/current/app.js','utf8');
           const bad=[...s.matchAll(/(^|[^$])\$\([^;\n]*?\)\.forEach/g)];
-          if(bad.length){ console.error('invalid single-element selector loop',bad.map(x=>x[0])); process.exit(1); }
+          if(bad.length) throw new Error('Invalid single-element selector loop');
           if(!s.includes("artifacts:[]")) throw new Error('Default ARTIFACT catalog is not empty');
           if(s.includes("GMWW224_SEA_ASSETS")||s.includes("GMWW208_SEA_DISPLAY")) throw new Error('Legacy artwork resolver remains');
+
+          const critical=[
+            'checkServerHealth','setServerHealthState','checkGithubOptimize','setGithubOptimizeState',
+            'loadMembers','renderMemberRanking','renderMemberHistory','switchMemberTab','openMemberSheet','saveMemberSheet'
+          ];
+          for(const name of critical){
+            const n=(s.match(new RegExp('function\\s+'+name+'\\s*\\(','g'))||[]).length;
+            if(n!==1) throw new Error(name+' must have exactly one definition, found '+n);
+          }
+
+          const css=fs.readFileSync('server-game/current/style.css','utf8');
+          let depth=0;
+          for(const ch of css){if(ch==='{')depth++;else if(ch==='}')depth--;if(depth<0)throw new Error('CSS brace underflow')}
+          if(depth!==0) throw new Error('CSS braces are unbalanced');
+          console.log('Clean baseline structure verified');
           NODE
 
       - name: Verify optimized default artwork
@@ -109,7 +158,7 @@ jobs:
           {"info":{"author":"xcode","version":1}}
           JSON
 
-      - name: Build unsigned V2.32 app
+      - name: Build unsigned app
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -124,39 +173,47 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Package and verify V2.32 IPA
+      - name: Package and verify IPA
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
+          IPA="GMWW-V$VERSION.ipa"
           test -d "$APP"
           test -s "$APP/Web/GMWW.html"
           test -s "$APP/Web/app.js"
+          test -s "$APP/Web/style.css"
           test -s "$APP/Web/default-artwork.webp"
           ! test -e "$APP/Web/v1-audio.js"
           ! test -e "$APP/Web/sea-artwork.js"
           ! test -e "$APP/Web/phu-thuy-gia-sea-display.webp"
 
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -q 'Quản Trò Ma Sói'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q '2.32'
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q '232'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -q '^com.gmww.v2.server$'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q "^$VERSION$"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q "^$BUILD$"
+
+          cmp -s server-game/current/GMWW.html "$APP/Web/GMWW.html"
+          cmp -s server-game/current/app.js "$APP/Web/app.js"
+          cmp -s server-game/current/style.css "$APP/Web/style.css"
 
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload GMWW-V2.32.ipa
-          unzip -t GMWW-V2.32.ipa >/dev/null
-          unzip -l GMWW-V2.32.ipa | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
-          ! unzip -l GMWW-V2.32.ipa | grep -q 'phu-thuy-gia-sea-display'
-          ! unzip -l GMWW-V2.32.ipa | grep -q 'v1-audio.js'
+          ditto -c -k --sequesterRsrc --keepParent Payload "$IPA"
+          unzip -t "$IPA" >/dev/null
+          unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
+          ! unzip -l "$IPA" | grep -q 'phu-thuy-gia-sea-display'
+          ! unzip -l "$IPA" | grep -q 'v1-audio.js'
 
-          IPA_BYTES=$(stat -f%z GMWW-V2.32.ipa)
+          IPA_BYTES=$(stat -f%z "$IPA")
           echo "IPA bytes: $IPA_BYTES"
           test "$IPA_BYTES" -lt 5000000
+          shasum -a 256 "$IPA"
 
-      - name: Upload V2.32 IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V2.32
-          path: GMWW-V2.32.ipa
+          name: GMWW-V${{ steps.meta.outputs.version }}
+          path: GMWW-V${{ steps.meta.outputs.version }}.ipa
           if-no-files-found: error
           retention-days: 30
