@@ -1,24 +1,28 @@
-# GMWW V2 — Ngôi làng: nguyên mẫu đồ họa độc lập
-Trạng thái: PROTOTYPE, chưa phải tính năng production, chưa kết nối dữ liệu người chơi.
+# GMWW V2 — Ngôi làng đồ họa (nhánh cách ly)
 
-## Chạy thử
-Trong thư mục repo: `python3 -m http.server 8080`, mở `http://localhost:8080/prototype/village/`.
-Kiểm thử hình học: `node prototype/village/village.test.mjs` (Node 22).
-Không triển khai lên Cloudflare hoặc IPA. Không gọi API, không gửi chat thật, không bật micro thật.
+## Phạm vi thực tế
+Đây là code đồ họa và adapter avatar để tích hợp sau; KHÔNG phải gameplay/voice/chat production. Không chỉnh src/, IPA hoặc dữ liệu iPhone.
 
-## Đã dựng
-- Bố cục làng CSS nhiều lớp: nền trời, nhà, quảng trường, lửa trại, lớp sáng ngày/đêm.
-- 1–30 avatar vòng tròn (trên 12 người: hai vòng), chọn avatar, zoom, responsive mobile/desktop.
-- HUD thời gian/giai đoạn, tab chat/người chơi/vai trò, mô phỏng gửi chat, nút mic/loa chỉ đổi trạng thái minh họa.
-- Không dùng ảnh đại diện thật trong prototype; emoji chỉ là placeholder.
+### Đã triển khai bằng mã nguồn
+- Bộ asset SVG gốc, tách độc lập: `assets/village-coast.svg` (làng ven biển/quảng trường), `assets/avatar-chibi.svg` (nhân vật chibi mặc định), `assets/campfire.svg` (lửa trại).
+- Layer màu/ánh sáng ngày-đêm riêng `village-art.css`, hiệu ứng lửa, chế độ giảm chuyển động.
+- Bố trí vòng tròn/đồng tâm cho 1–30 người, chạm chọn, zoom và kéo camera có giới hạn; bảng danh sách hỗ trợ.
+- Adapter `mapPublicPlayers(roomState)` nhận danh sách công khai từ `/api/rooms/:code` hoặc room state hiện hành, lọc ID trùng và bỏ thông tin vai trò. Giao diện có thể nhận `window.GMWW_PUBLIC_ROOM_STATE` hoặc `window.GMWW_VILLAGE_PLAYERS` do tầng tích hợp đã xác thực cung cấp.
+- Ánh xạ `avatarId` sang API hiện có `/api/avatars/{id}/image`, chấp nhận URL ảnh cùng origin; fallback SVG chibi nếu lỗi.
+- Tệp kiểm thử hình học/adapter và kiểm thử browser trên màn hình iPhone mô phỏng. Workflow riêng chạy kiểm thử và xuất ảnh regression nội bộ.
 
-## Chưa hoàn thành trước khi tích hợp
-1. Asset production theo concept được duyệt: xuất nền/nhà/lửa/hiệu ứng nhiều lớp ở độ phân giải chuẩn; bản CSS hiện tại KHÔNG đạt mức giống ảnh concept.
-2. Mapping ảnh avatar tài khoản từ nguồn xác thực; fallback chân dung và quy trình tạo chibi (chỉ khi có quyền asset).
-3. PixiJS hoặc renderer được benchmark trên iPhone thực; prototype dùng CSS/DOM nhằm chốt bố cục trước, không tự coi PixiJS đã triển khai.
-4. Xác minh hit targets khi đủ 30 người trên màn hình nhỏ; cân nhắc zoom/điểm tập trung và danh sách phụ.
-5. Kiểm thử thực tế FPS, RAM, texture, WebP và visual regression với ảnh concept.
-6. Tích hợp voice/chat, quyền đêm và gameplay chỉ sau khi luật Lá Chức Năng/Artifact được chốt.
+### Còn lại trước khi coi nhiệm vụ 4 hoàn tất
+- Art sản xuất đạt độ chi tiết *đúng hình concept đã duyệt*: SVG hiện tại chỉ là asset gốc dựng kỹ thuật, chưa thay thế được tranh fantasy/chibi nhiều lớp chất lượng cao.
+- Asset painterly WebP nền ngày và đêm đồng nhất hình học, character sprites đa dạng, atlas UI, chuyển động thật.
+- Tích hợp adapter vào Player Web thật qua room-state đã xác thực; kiểm tra avatar đăng ký và khách.
+- Kiểm thử hiệu năng/FPS/RAM trên **iPhone thật** và Android thật; browser iPhone emulation không thay thế được.
+- Kiểm thử trực quan so sánh concept và nghiệm thu người dùng.
+- Không merge main/deploy cho đến khi có phê duyệt và kiểm thử.
 
-## Quy tắc an toàn
-Đây là nguyên mẫu ở nhánh riêng; không sửa src/, server-game/, assets production hoặc workflow deploy. Mọi nhánh đang làm song song phải đọc main mới nhất trước khi tích hợp.
+## Chạy kiểm thử
+`node prototype/village/village.test.mjs`
+`python3 -m http.server 8080` (trong repo)
+Browser smoke CI: `node prototype/village/village.browser.test.mjs` sau khi cài Playwright/Chromium.
+
+## Chú ý bảo mật
+Public room-state không được chứa vai trò bí mật; avatar ảnh chỉ nhận từ cùng origin. Không dùng mô phỏng chat/voice trong prototype làm bằng chứng tính năng thật.
