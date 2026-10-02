@@ -1,12 +1,9 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# Manual-only in normal operation. The one-shot trigger path is enabled only while producing an explicitly requested IPA.
+# IPA is intentionally manual-only.
+# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - '.github/ipa-build-trigger'
 
 jobs:
   build:
