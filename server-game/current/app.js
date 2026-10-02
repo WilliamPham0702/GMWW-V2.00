@@ -837,7 +837,8 @@ function renderMemberDirectory(){
     card.querySelector('[data-act="history"]').onclick=e=>{action(e);memberAdminState.historyLogin=m.loginId;switchMemberTab('history');renderHistoryMemberOptions();renderMemberHistory()};
     card.querySelector('[data-act="reset"]').onclick=e=>{action(e);resetMemberPassword(m)};
     card.querySelector('[data-act="delete"]').onclick=e=>{action(e);deleteMember(m)};
-    card.ondblclick=e=>{if(!e.target.closest('.member-card-actions')){e.preventDefault();openMemberSheet('edit',m)}};
+    // One double-tap handler for touch; native double-click for mouse only.
+    card.ondblclick=e=>{if(e.target.closest('.member-card-actions'))return;if(e.detail>=2&&matchMedia('(pointer:fine)').matches){e.preventDefault();openMemberSheet('edit',m)}};
     let lastTap=0;
     card.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||e.target.closest('.member-card-actions'))return;const now=Date.now();if(now-lastTap<450){e.preventDefault();lastTap=0;openMemberSheet('edit',m)}else lastTap=now},{passive:false});
     box.appendChild(card);
@@ -949,19 +950,20 @@ async function resetMemberPassword(m){
   if(!m)return;
   const yes=window.confirm('Bạn có muốn RESET mật khẩu của "'+(m.displayName||m.loginId)+'" về 0000 không?\n\nOK = Xác nhận • Hủy = Không reset');
   if(!yes)return;
-  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId})});memberAdminState.loaded=false;alert('Đã reset mật khẩu về 0000.')}
-  catch(err){alert(err.message||'Không thể reset mật khẩu.');return}
+  let ok=false;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId})});memberAdminState.loaded=false;ok=true}
+  catch(err){alert(err.message||'Không thể reset mật khẩu.')}
   finally{setMemberBusy(false)}
-  await loadMembers(true);
+  if(ok){alert('Đã reset mật khẩu về 0000.');await loadMembers(true)}
 }
 async function resetRanking(){
   if(!confirm('Xếp hạng lại từ đầu?\nThao tác này sẽ đưa Thắng/Thua về 0 và xoá toàn bộ lịch sử cũ của tất cả Thành Viên.'))return;
-  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-ranking',{method:'POST'});memberAdminState.loaded=false;await loadMembers(true);switchMemberTab('ranking')}
+  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-ranking',{method:'POST'});memberAdminState.loaded=false;setMemberBusy(false);await loadMembers(true);switchMemberTab('ranking')}
   catch(err){alert(err.message||'Không thể xếp hạng lại.')}finally{setMemberBusy(false)}
 }
 async function clearMemberHistory(){
   if(!confirm('Xoá toàn bộ Lịch Sử?\nThống kê Thắng/Thua hiện tại sẽ được giữ nguyên.'))return;
-  try{setMemberBusy(true);await gmApi('/api/gm/members/history',{method:'DELETE'});memberAdminState.loaded=false;await loadMembers(true);switchMemberTab('history')}
+  try{setMemberBusy(true);await gmApi('/api/gm/members/history',{method:'DELETE'});memberAdminState.loaded=false;setMemberBusy(false);await loadMembers(true);switchMemberTab('history')}
   catch(err){alert(err.message||'Không thể xoá lịch sử.')}finally{setMemberBusy(false)}
 }
 async function deleteMember(m){
