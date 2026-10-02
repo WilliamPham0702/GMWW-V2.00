@@ -21,6 +21,7 @@ const required = [
   '.github/workflows/check-player-web.yml',
 ];
 const checks = [];
+let version = '';
 const check = (name, ok, detail = '') => checks.push({ name, ok: Boolean(ok), detail });
 const get = (path) => readFileSync(resolve(root, path), 'utf8');
 for (const path of required) check('file: ' + path, existsSync(resolve(root, path)));
@@ -35,7 +36,7 @@ const worker = get('src/index.js');
 const wrangler = get('wrangler.jsonc');
 const ipaWorkflow = get('.github/workflows/build-server-game-ipa.yml');
 const playerWorkflow = get('.github/workflows/check-player-web.yml');
-const version = app.match(/const VERSION='([0-9]+\.[0-9]+)'/)?.[1] || '';
+version = app.match(/const VERSION='([0-9]+\.[0-9]+)'/)?.[1] || '';
 const build = project.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1] || '';
 const marketing = project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim() || '';
 check('IPA version found', Boolean(version), version);
@@ -56,7 +57,7 @@ report();
 if (checks.some(c => !c.ok)) process.exitCode = 1;
 
 function report() {
-  const output = { kind: 'GMWW_PREPARATION_AUDIT', checkedAt: new Date().toISOString(), version: typeof version === 'undefined' ? null : version, passed: checks.filter(c => c.ok).length, total: checks.length, checks };
+  const output = { kind: 'GMWW_PREPARATION_AUDIT', checkedAt: new Date().toISOString(), version: version || null, passed: checks.filter(c => c.ok).length, total: checks.length, checks };
   if (process.argv.includes('--json')) console.log(JSON.stringify(output, null, 2));
   else {
     for (const c of checks) console.log((c.ok ? 'PASS' : 'FAIL') + ' ' + c.name + (c.detail ? ': ' + c.detail : ''));
