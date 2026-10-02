@@ -74,6 +74,8 @@ jobs:
           grep -q "/api/gm/members" "$APPDIR/Web/app.js"
           grep -q "renderMemberRanking" "$APPDIR/Web/app.js"
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
+          grep -q "auditLocalData" "$APPDIR/Web/app.js"
+          grep -q "clearSafeRuntimeCache" "$APPDIR/Web/app.js"
           ! grep -q 'data-act="edit"' "$APPDIR/Web/app.js"
           grep -q "ondblclick" "$APPDIR/Web/app.js"
           grep -q "cardFaceCount" "$APPDIR/Web/GMWW.html"
