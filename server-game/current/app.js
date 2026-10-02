@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.38';
-const STATE_KEY='GMWW_V238_STATE';
-const PREF_KEY='GMWW_V238_PREFS';
-const OLD_STATE_KEYS=['GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.39';
+const STATE_KEY='GMWW_V239_STATE';
+const PREF_KEY='GMWW_V239_PREFS';
+const OLD_STATE_KEYS=['GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -486,7 +486,7 @@ async function dbDelete(key){const db=await openDb();await new Promise((resolve,
 function cardBlobKey(themeId,kind,id,assetKind){return 'v225|'+themeId+'|'+kind+'|'+id+'|'+assetKind}
 function uiBlobKey(themeId,slotId){return themeId+'|ui|'+slotId}
 async function blobUrlFor(key){if(objectUrls.has(key))return objectUrls.get(key);try{const rec=await dbGet(key);if(rec&&rec.blob){const u=URL.createObjectURL(rec.blob);objectUrls.set(key,u);return u}}catch(_){}return''}
-function imageToThumb(src){return new Promise(resolve=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1024,sh=im.naturalHeight||936,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);resolve(c.toDataURL('image/webp',.82))};im.onerror=()=>resolve(src);im.src=src})}
+function imageToThumb(src){return new Promise(resolve=>{const im=new Image();im.onload=()=>{const sw=im.naturalWidth||1024,sh=im.naturalHeight||936,tries=[[300,275,.72],[260,238,.66],[220,202,.58],[180,165,.52]];let last='';for(const [w,h,q] of tries){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,w,h);const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(w-dw)/2,(h-dh)/2,dw,dh);last=c.toDataURL('image/webp',q);if(last.length<=100000){resolve(last);return}}resolve(last)};im.onerror=()=>resolve('');im.src=src})}
 async function ensureDefaultThumb(){if(defaultThumb)return defaultThumb;defaultThumb='default-artwork.webp';return defaultThumb}
 async function resolveArtwork(kind,id,assetKind){
   const active=state.themes.activeId||'theme-sea';
@@ -821,7 +821,7 @@ async function listStoredArtworkAvatars(){
   }finally{db.close()}
 }
 async function syncArtworkAvatars(){
-  const catalog=new Map(memberAdminState.avatars.map(a=>[String(a.id),a]));
+  const serverCatalog=new Map(memberAdminState.avatars.map(a=>[String(a.id),a])),catalog=new Map(serverCatalog);
   const stored=await listStoredArtworkAvatars().catch(()=>[]);
   for(const item of stored){
     const theme=themeById(item.themeId),entity=entityById(item.kind,item.entityId);
@@ -830,14 +830,18 @@ async function syncArtworkAvatars(){
     const id='artwork-'+(hash>>>0).toString(16),digest=String(item.updatedAt||0)+'-'+item.blob.size;
     const imageUrl=await blobUrlFor(item.key);if(!imageUrl)continue;
     const priority=item.themeId===state.themes.activeId?1200:1100;
-    const local={id,name:(entity?.name||item.entityId)+' • '+(theme?.name||item.themeId),imageUrl,source:'artwork',priority,digest};
-    const previous=catalog.get(id);catalog.set(id,local);
-    if(previous?.digest===digest)continue;
+    const local={id,name:(entity?.name||item.entityId)+' • '+(theme?.name||item.themeId),imageUrl,source:item.kind,priority,digest};
+    const previous=serverCatalog.get(id);
+    if(previous?.digest===digest){catalog.set(id,{...previous,imageUrl,priority,digest});continue}
     try{
       const img=await imageToThumb(imageUrl);
-      if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Thumbnail quá lớn');
+      if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Không tạo được thumbnail Avatar hợp lệ');
       await gmApi('/api/gm/avatars/upsert',{method:'POST',body:JSON.stringify({id,name:local.name,img,digest,priority,source:item.kind})});
-    }catch(err){console.warn('Không đồng bộ Avatar '+local.name,err.message)}
+      catalog.set(id,local);
+    }catch(err){
+      console.warn('Không đồng bộ Avatar '+local.name,err.message);
+      if(previous)catalog.set(id,previous);else catalog.delete(id);
+    }
   }
   memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
 }
@@ -864,7 +868,7 @@ async function loadMembers(force=false){
       fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({avatars:memberAdminState.avatars}))
     ]);
     memberAdminState.members=Array.isArray(dir?.members)?dir.members:[];
-    if(Array.isArray(avatars?.avatars)&&avatars.avatars.length)memberAdminState.avatars=avatars.avatars;
+    if(Array.isArray(avatars?.avatars)&&avatars.avatars.length)memberAdminState.avatars=avatars.avatars.map(a=>{const u=String(a?.imageUrl||'');return {...a,imageUrl:u.startsWith('/')?GMWW_SERVER_BASE+u:u}});
     await syncArtworkAvatars();
     memberAdminState.loaded=true;
     renderMembersAll();
