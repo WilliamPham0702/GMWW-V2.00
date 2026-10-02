@@ -1,4 +1,5 @@
 import {installVillageCamera} from "./village-camera.mjs";
+import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count){
@@ -29,32 +30,33 @@ if(game){
   // Integration contract: server-filtered public player records only (never role/faction).
   const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
   const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
-  const all=supplied?.length?supplied:sample;
+  let all=supplied?.length?supplied:sample;
+  let liveRoom=false;
   function trustedAvatarUrl(raw){
     if(typeof raw!=="string"||!raw.trim())return "";
     try{const u=new URL(raw,window.location.href);
       return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
     }catch{return "";}
   }
-  let night=false,selected=null,count=12;
+  let night=false,selectedId=null,count=12;
   function render(){
     const ps=positions(count);players.replaceChildren();roster.replaceChildren();
     ps.forEach((p,i)=>{
       const data=all[i]||sample[i];const playerName=safeText(data.displayName||data.name||names[i]);
-      const button=document.createElement("button");button.type="button";button.className="player"+(selected===i?" selected":"");button.dataset.style=String(i%5);button.dataset.playerId=safeText(data.id||("sample-"+(i+1)));
+      const button=document.createElement("button");button.type="button";button.className="player"+(selectedId===data.id?" selected":"");button.dataset.style=String(i%5);button.dataset.playerId=safeText(data.id||("sample-"+(i+1)));
       button.style.left=p.x+"%";button.style.top=p.y+"%";button.style.zIndex=String(10+Math.round(p.y));
       const avatar=document.createElement("span");avatar.className="portrait";
       const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
       const avatarUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
       if(avatarUrl){avatar.classList.add("has-image");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img);}
       const name=document.createElement("span");name.className="name";name.textContent=(i+1)+" · "+playerName;
-      button.append(avatar,name);button.setAttribute("aria-label","Chọn người chơi "+playerName);button.addEventListener("click",()=>{selected=i;document.getElementById("selectedLabel").textContent="Đã chọn: "+(i+1)+" · "+playerName;selection.hidden=false;render();});
-      players.append(button);const item=document.createElement("span");item.textContent=(i+1)+" · "+playerName;roster.append(item);
+      button.append(avatar,name);button.setAttribute("aria-label","Chọn người chơi "+playerName);button.addEventListener("click",()=>{selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(i+1)+" · "+playerName;selection.hidden=false;render();});
+      players.append(button);const item=document.createElement("span");item.textContent=(i+1)+" · "+playerName+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item);
     });
     document.getElementById("count").textContent=count+"/"+count;
   }
   if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
-  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
+  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selectedId=null;selection.hidden=true;render();});
   installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
   document.getElementById("mode").addEventListener("click",()=>{
     night=!night;game.classList.toggle("night",night);game.classList.toggle("day",!night);
@@ -71,12 +73,32 @@ if(game){
     document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));
     document.querySelectorAll(".tab").forEach(t=>{t.hidden=t.id!==btn.dataset.tab;t.classList.toggle("active",t.id===btn.dataset.tab)});
   }));
-  document.getElementById("clearSelection").addEventListener("click",()=>{selected=null;selection.hidden=true;render()});
+  document.getElementById("clearSelection").addEventListener("click",()=>{selectedId=null;selection.hidden=true;render()});
   document.getElementById("chatForm").addEventListener("submit",e=>{
     e.preventDefault();const input=document.getElementById("chatText"),text=input.value.trim();if(!text)return;
     const p=document.createElement("p"),b=document.createElement("b");b.textContent="Bạn: ";p.append(b,document.createTextNode(text));document.getElementById("messages").append(p);input.value="";p.scrollIntoView({block:"nearest"});
   });
   let muted=true,speaker=true;document.getElementById("mic").addEventListener("click",e=>{muted=!muted;e.target.textContent=muted?"🎙️ Micro: Tắt":"🎙️ Micro: Bật (mô phỏng)"});
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
+  // Opt-in live public state only. Never infer a room or credentials from storage.
+  const roomCode=validateRoomCode(window.GMWW_VILLAGE_ROOM_CODE||new URLSearchParams(window.location.search).get("room"));
+  if(roomCode){
+    liveRoom=true;
+    document.getElementById("size").hidden=true;
+    document.querySelector("label[for=size]").hidden=true;
+    createPublicRoomPoller({
+      roomCode,
+      visibility:()=>!document.hidden,
+      onState:state=>{
+        all=mergeStableSeats(all.filter(p=>!String(p.id).startsWith("sample-")),mapPublicPlayers(state));
+        count=all.length;
+        if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
+        if(count){render();}else{players.replaceChildren();roster.replaceChildren();document.getElementById("count").textContent="0/0";}
+        const room=state.room;
+        if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
+      },
+      onError:()=>{document.getElementById("count").textContent="Mất kết nối";}
+    });
+  }
   render();
 }
