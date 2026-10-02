@@ -533,7 +533,7 @@ function renderEntityGrid(kind){
   const all=entityList(kind);
   const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
   const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
-  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl)countEl.textContent='Mở mặt '+favorites.length+' • Tổng '+visibleTotal;
+  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl)countEl.textContent=(kind==='cards'?'Thường dùng '+favorites.length+' lá • Tổng cộng mở mặt '+visibleTotal+' lá':'Thường dùng '+favorites.length+' • Tổng cộng mở mặt '+visibleTotal);
   favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
   let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
@@ -751,57 +751,6 @@ const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(checkServerHealth,60)));
 window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
-
-/* V2.27 — stable GitHub optimization controls for iPhone/WKWebView */
-const GMWW_GITHUB_REPO_URL='https://github.com/WilliamPham0702/GMWW-V2.00';
-const GMWW_GITHUB_API_URL='https://api.github.com/repos/WilliamPham0702/GMWW-V2.00';
-let githubOptimizeBusy=false;
-function setGithubOptimizeState(kind,text,detail,status,result){
-  const pill=document.getElementById('githubOptimizePill');
-  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'ĐÃ KIỂM TRA':kind==='warn'?'CẦN KIỂM TRA':kind==='bad'?'KHÔNG KẾT NỐI':'ĐANG KIỂM TRA'}
-  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
-  put('githubOptimizeText',text);
-  put('githubOptimizeDetail',detail);
-  put('githubOptimizeStatus',status||'—');
-  put('githubOptimizeResult',result||'—');
-  put('githubOptimizeChecked',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
-}
-async function checkGithubOptimize(){
-  if(githubOptimizeBusy)return;
-  githubOptimizeBusy=true;
-  const btn=document.getElementById('checkGithubOptimize');
-  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.classList.add('is-busy')}
-  setGithubOptimizeState('checking','Đang kiểm tra GitHub…','Đọc thông tin repo GMWW-V2.00; không sửa hoặc xoá file.','Đang kiểm tra','—');
-  const started=performance.now();
-  let timer=null;
-  try{
-    const controller=new AbortController();
-    timer=setTimeout(()=>controller.abort(),5000);
-    const res=await fetch(GMWW_GITHUB_API_URL,{method:'GET',cache:'no-store',headers:{'Accept':'application/vnd.github+json'},signal:controller.signal});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const body=await res.json();
-    const latency=Math.max(1,Math.round(performance.now()-started));
-    const repoSizeKb=Math.max(0,Number(body?.size||0));
-    const repoSize=repoSizeKb>=1024?(repoSizeKb/1024).toFixed(1)+' MB':repoSizeKb+' KB';
-    setGithubOptimizeState('ok','GitHub hoạt động bình thường','Repo truy cập được. Có thể tiếp tục tối ưu ảnh/tài nguyên qua ChatGPT mà không ảnh hưởng gameplay.','Sẵn sàng',repoSize+' • '+latency+' ms');
-  }catch(err){
-    const online=navigator.onLine;
-    setGithubOptimizeState(online?'warn':'bad',online?'GitHub chưa phản hồi':'Thiết bị đang offline',online?'Không thay đổi dữ liệu. Hãy thử lại sau hoặc dùng nút Mở GitHub.':'Kết nối Internet rồi thử lại.',online?'Thử lại sau':'Offline','—');
-  }finally{
-    if(timer)clearTimeout(timer);
-    githubOptimizeBusy=false;
-    if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}
-  }
-}
-const githubOptimizeButton=document.getElementById('checkGithubOptimize');
-if(githubOptimizeButton){
-  githubOptimizeButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();checkGithubOptimize()},{passive:false});
-}
-const githubOpenButton=document.getElementById('openGithubRepo');
-if(githubOpenButton){
-  githubOpenButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.location.assign(GMWW_GITHUB_REPO_URL)},{passive:false});
-}
-
 
 /* V2.29 — V1 Member management + Ranking + History */
 const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:''};

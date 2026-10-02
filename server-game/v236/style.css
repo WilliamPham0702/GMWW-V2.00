@@ -440,3 +440,12 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .health-checked{display:block;text-align:right;margin-top:7px;opacity:.62}
 .github-mini{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
 .github-mini small{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* V2.36 final polish */
+.catalog-count-under{margin:2px 0 8px;color:#8da8ba;font-size:9.5px;line-height:1.3}
+#serverHealthCard{height:auto!important;min-height:0!important;max-height:none!important;display:block!important}
+#serverHealthCard .health-summary.compact-health{height:auto!important;min-height:54px!important;margin:7px 0!important}
+#serverHealthCard .server-action-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;height:auto!important;min-height:0!important}
+#serverHealthCard .server-action-grid .settings-action{width:100%!important;height:44px!important;min-height:44px!important;padding:0 5px!important}
+#serverHealthCard .server-action-grid .settings-action b{font-size:9.5px!important}
+#serverHealthCard .health-checked{display:block;text-align:right;margin-top:6px;color:#6f8da0;font-size:8px}
