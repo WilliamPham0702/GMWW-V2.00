@@ -79,7 +79,7 @@ jobs:
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
           grep -q "resetRanking" "$APPDIR/Web/app.js"
           grep -q "clearMemberHistory" "$APPDIR/Web/app.js"
-          grep -q "memberResetPassword" "$APPDIR/Web/app.js"
+          grep -q "resetMemberPassword" "$APPDIR/Web/app.js"
           ! grep -q "purgeMembers" "$APPDIR/Web/app.js"
           ! grep -q "Xoá toàn bộ Thành Viên" "$APPDIR/Web/GMWW.html"
 
