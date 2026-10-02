@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.37';
-const STATE_KEY='GMWW_V237_STATE';
-const PREF_KEY='GMWW_V237_PREFS';
-const OLD_STATE_KEYS=['GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.38';
+const STATE_KEY='GMWW_V238_STATE';
+const PREF_KEY='GMWW_V238_PREFS';
+const OLD_STATE_KEYS=['GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -533,7 +533,7 @@ function renderEntityGrid(kind){
   const all=entityList(kind);
   const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
   const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
-  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl)countEl.textContent=(kind==='cards'?'Thường dùng '+favorites.length+' lá • Tổng cộng mở mặt '+visibleTotal+' lá':'Thường dùng '+favorites.length+' Artifact • Tổng cộng mở mặt '+visibleTotal+' Artifact');
+  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' lá, tổng '+visibleTotal+' lá':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
   favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
   let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
@@ -806,29 +806,40 @@ async function gmApi(path,opts={}){
     return data;
   }finally{clearTimeout(timer)}
 }
+async function listStoredArtworkAvatars(){
+  const db=await openDb();
+  try{
+    const rows=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly'),q=tx.objectStore(DB_STORE).getAll();q.onsuccess=()=>resolve(Array.isArray(q.result)?q.result:[]);q.onerror=()=>reject(q.error)});
+    const picked=new Map();
+    for(const rec of rows){
+      const m=String(rec?.key||'').match(/^v225\|([^|]+)\|(cards|artifacts)\|([^|]+)\|(thumb|display)$/);
+      if(!m||!(rec?.blob instanceof Blob))continue;
+      const identity=m[1]+'|'+m[2]+'|'+m[3],current=picked.get(identity);
+      if(!current||m[4]==='thumb')picked.set(identity,{themeId:m[1],kind:m[2],entityId:m[3],assetKind:m[4],key:rec.key,blob:rec.blob,updatedAt:Number(rec.updatedAt)||0});
+    }
+    return [...picked.values()];
+  }finally{db.close()}
+}
 async function syncArtworkAvatars(){
   const catalog=new Map(memberAdminState.avatars.map(a=>[String(a.id),a]));
-  for(const theme of state.themes.list){
-    for(const kind of ['cards','artifacts'])for(const entity of entityList(kind)){
-      const key=cardBlobKey(theme.id,kind,entity.id,'thumb');
-      const rec=await dbGet(key).catch(()=>null);
-      const asset=rec?.blob?rec:await dbGet(cardBlobKey(theme.id,kind,entity.id,'display')).catch(()=>null);
-      if(!asset?.blob)continue;
-      const identity=theme.id+'|'+kind+'|'+entity.id;
-      let hash=2166136261;for(const ch of identity){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
-      const id='artwork-'+(hash>>>0).toString(16),digest=String(asset.updatedAt||0)+'-'+asset.blob.size;
-      const local={id,name:entity.name+' • '+theme.name,imageUrl:await blobUrlFor(rec?.blob?key:cardBlobKey(theme.id,kind,entity.id,'display')),source:'artwork',priority:1000};
-      const previous=catalog.get(id);catalog.set(id,local);
-      if(previous?.digest===digest)continue;
-      try{
-        const img=await imageToThumb(local.imageUrl);
-        if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Thumbnail quá lớn');
-        await gmApi('/api/gm/avatars/upsert',{method:'POST',body:JSON.stringify({id,name:local.name,img,digest,priority:1000,source:kind})});
-        local.digest=digest;
-      }catch(err){console.warn('Không đồng bộ Avatar '+entity.name,err.message)}
-    }
+  const stored=await listStoredArtworkAvatars().catch(()=>[]);
+  for(const item of stored){
+    const theme=themeById(item.themeId),entity=entityById(item.kind,item.entityId);
+    const identity=item.themeId+'|'+item.kind+'|'+item.entityId;
+    let hash=2166136261;for(const ch of identity){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
+    const id='artwork-'+(hash>>>0).toString(16),digest=String(item.updatedAt||0)+'-'+item.blob.size;
+    const imageUrl=await blobUrlFor(item.key);if(!imageUrl)continue;
+    const priority=item.themeId===state.themes.activeId?1200:1100;
+    const local={id,name:(entity?.name||item.entityId)+' • '+(theme?.name||item.themeId),imageUrl,source:'artwork',priority,digest};
+    const previous=catalog.get(id);catalog.set(id,local);
+    if(previous?.digest===digest)continue;
+    try{
+      const img=await imageToThumb(imageUrl);
+      if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Thumbnail quá lớn');
+      await gmApi('/api/gm/avatars/upsert',{method:'POST',body:JSON.stringify({id,name:local.name,img,digest,priority,source:item.kind})});
+    }catch(err){console.warn('Không đồng bộ Avatar '+local.name,err.message)}
   }
-  memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0));
+  memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberAvatarUrl(id){return GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(String(id||''))+'/image'}
@@ -896,7 +907,7 @@ function renderMemberDirectory(){
     const flags=card.querySelector('.member-flags');
     if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU RESET</span>';
     if(m.source)flags.innerHTML+='<span class="member-flag">'+memberEsc(m.source)+'</span>';
-    const bindAction=(btn,handler)=>{if(!btn)return;let firedAt=0;const run=e=>{e.preventDefault();e.stopPropagation();const now=Date.now();if(now-firedAt<650)return;firedAt=now;handler()};btn.addEventListener('pointerup',run,{passive:false});btn.addEventListener('click',run)};
+    const bindAction=(btn,handler)=>{if(!btn)return;btn.onclick=e=>{e.preventDefault();e.stopPropagation();if(memberAdminState.busy)return;handler()}};
     bindAction(card.querySelector('[data-act="reset"]'),()=>resetMemberPassword(m));
     bindAction(card.querySelector('[data-act="delete"]'),()=>deleteMember(m));
     // Edit only by double-tap / double-click on the member card body.
