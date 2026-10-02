@@ -48,6 +48,27 @@ try{
   assert(stagedBg.includes("/assets/village/assets/village-coast.svg"));
   assert.equal(await page.locator(".player").count(),2);
   await page.screenshot({path:"prototype/village/screenshots/staged-static-mobile.png",fullPage:true});
+  // Verify production embed mode receives only parent-supplied public state and reports mobile perf.
+  await page.goto("http://127.0.0.1:8080/",{waitUntil:"domcontentloaded"});
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>html,body{margin:0}iframe{width:390px;height:700px;border:0}</style><iframe id="v" src="/assets/village/?embed=1"></iframe><script>window.addEventListener('message',e=>{if(e.data&&e.data.type==='gmww:village-perf')window.__vperf=e.data})<\/script>`);
+  const iframe=page.locator("#v");await iframe.waitFor({state:"attached"});
+  const frame=page.frames().find(f=>f.url().includes("/assets/village/?embed=1"));assert(frame,"embedded village frame must load");
+  await frame.waitForLoadState("domcontentloaded");
+  await page.evaluate(()=>{
+    const f=document.querySelector("#v");
+    f.contentWindow.postMessage({type:"gmww:village-state",room:{code:"AB12",roomName:"Phòng kiểm thử",phase:"running"},cycle:{phase:"night",night:3},players:[
+      {participantId:"p1",displayName:"Lan",avatarId:"avatar-cut-001",online:true,secretRole:"wolf"},
+      {participantId:"p2",displayName:"Minh",avatarId:"avatar-cut-002",online:true}
+    ]},location.origin);
+  });
+  await frame.waitForFunction(()=>document.querySelectorAll(".player").length===2);
+  assert.equal(await frame.locator(".panel").isHidden(),true,"mock panel must be hidden in production embed");
+  assert.equal(await frame.locator("#game").evaluate(el=>el.classList.contains("night")),true);
+  assert.equal(await frame.locator(".roster").innerText().then(t=>t.includes("wolf")),false);
+  await page.waitForFunction(()=>window.__vperf&&Number(window.__vperf.fps)>=0,{timeout:7000});
+  const perf=await page.evaluate(()=>window.__vperf);
+  assert(perf.nodes<1500,"embedded village DOM should stay bounded");
+  await page.screenshot({path:"prototype/village/screenshots/embed-night-mobile.png",fullPage:true});
   assert.deepEqual(errors,[],"no browser script errors");
   console.log("Chromium mobile visual smoke: PASS (30 avatars, art, day/night, privacy UI)");
 }finally{await browser.close();}
