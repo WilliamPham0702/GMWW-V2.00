@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.37</title>
+<title>GMWW V2.38</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <section class="page" id="members">
       <div class="member-page">
         <div class="member-page-head">
-          <div><h2>👥 Thành Viên</h2><small>Quản lý Thành Viên • Xếp Hạng • Lịch Sử</small></div>
+          <div><h2>👥 Thành Viên</h2><small>Quản lý Thành Viên • Xếp Hạng</small></div>
           <div class="member-head-actions">
             <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới">↻</button>
             <button class="member-add-btn" id="addMember" type="button">＋ THÊM</button>
@@ -30,7 +30,6 @@
         <div class="member-tabs" id="memberTabs">
           <button class="active" data-member-tab="directory" type="button">Thành Viên</button>
           <button data-member-tab="ranking" type="button">Xếp Hạng</button>
-          <button data-member-tab="history" type="button">Lịch Sử</button>
         </div>
 
         <section class="member-pane active" id="memberPane-directory">
@@ -51,18 +50,6 @@
           <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
         </section>
 
-        <section class="member-pane" id="memberPane-history">
-          <div class="member-section-head"><div><h3>🕘 Lịch Sử</h3><small>Lịch sử kết quả các ván đã chơi</small></div><button class="member-tool-btn danger-mini" id="clearHistory" type="button" aria-label="Xoá lịch sử">⌫ Xoá lịch sử</button></div>
-          <div class="history-toolbar">
-            <select id="historyMemberFilter"><option value="">Tất cả Thành Viên</option></select>
-            <div class="member-filter-row" id="historyResultFilter">
-              <button class="active" data-history-result="all" type="button">Tất cả</button>
-              <button data-history-result="win" type="button">Thắng</button>
-              <button data-history-result="loss" type="button">Thua</button>
-            </div>
-          </div>
-          <div class="history-list" id="memberHistoryList"><div class="member-empty">Chưa có lịch sử chơi.</div></div>
-        </section>
       </div>
     </section>
     <section class="page" id="start"><div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div></section>
@@ -79,23 +66,21 @@
         </nav>
 
         <section class="libpane active" id="lib-cards">
-          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
+          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small class="catalog-count-badge" id="cardFaceCount">0 / 0</small></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="cards">
             <button class="filter active" data-filter="all">Tất cả</button>
             <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
           </div>
           <div class="card-grid" id="cardGrid"></div>
-          <div class="catalog-count-bottom" id="cardFaceCount">Thường dùng 0 lá • Tổng cộng mở mặt 0 lá</div>
         </section>
 
         <section class="libpane" id="lib-artifacts">
-          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
+          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small class="catalog-count-badge" id="artifactFaceCount">0 / 0</small></div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="artifacts">
             <button class="filter active" data-filter="all">Tất cả</button>
             <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
           </div>
           <div class="card-grid" id="artifactGrid"></div>
-          <div class="catalog-count-bottom" id="artifactFaceCount">Thường dùng 0 Artifact • Tổng cộng mở mặt 0 Artifact</div>
         </section>
 
         <section class="libpane" id="lib-actions">
