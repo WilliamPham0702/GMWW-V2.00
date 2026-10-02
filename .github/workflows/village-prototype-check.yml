@@ -49,6 +49,12 @@ jobs:
           test -s prototype/village/assets/avatar-chibi.svg
           test -s prototype/village/assets/campfire.svg
           test -s prototype/village/village-art.css
+          test -s assets/village/index.html
+          test -s assets/village/village.mjs
+          test -s assets/village/village-room.mjs
+          test -s assets/village/assets/village-coast.svg
+          test -s assets/village/assets/avatar-chibi.svg
+          test -s assets/village/assets/campfire.svg
           grep -q 'village-art.css' prototype/village/index.html
           grep -q 'GMWW_VILLAGE_PLAYERS' prototype/village/village.mjs
           ! grep -R 'GM_SYNC_TOKEN' prototype/village/
