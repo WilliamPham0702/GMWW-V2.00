@@ -36,6 +36,13 @@ try{
   assert.equal(await page.locator(".roster").innerText().then(t=>t.includes("wolf")),false);
   await page.waitForFunction(()=>document.querySelectorAll(".portrait.has-image img").length===2);
   await page.screenshot({path:"prototype/village/screenshots/public-room-mobile.png",fullPage:true});
+  // Verify the exact static path used by Cloudflare ASSETS after merge, not only the source prototype.
+  await page.goto("http://127.0.0.1:8080/assets/village/?room=AB12",{waitUntil:"networkidle"});
+  await page.waitForFunction(()=>document.querySelectorAll(".player").length===2);
+  const stagedBg=await page.locator(".stage").evaluate(el=>getComputedStyle(el).backgroundImage);
+  assert(stagedBg.includes("/assets/village/assets/village-coast.svg"));
+  assert.equal(await page.locator(".player").count(),2);
+  await page.screenshot({path:"prototype/village/screenshots/staged-static-mobile.png",fullPage:true});
   assert.deepEqual(errors,[],"no browser script errors");
   console.log("Chromium mobile visual smoke: PASS (30 avatars, art, day/night, privacy UI)");
 }finally{await browser.close();}
