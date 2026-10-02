@@ -9,12 +9,24 @@ export function positions(count){
   });return out;
 }
 export function safeText(v){return String(v??"").slice(0,80)}
+export function mapPublicPlayers(state){
+  const players=Array.isArray(state?.players)?state.players:[];
+  const ids=new Set();
+  return players.slice(0,30).filter(p=>{
+    const id=String(p?.participantId||p?.id||"");
+    if(!id||ids.has(id))return false;ids.add(id);return true;
+  }).map(p=>({
+    id:String(p.participantId||p.id),displayName:safeText(p.displayName||"Người chơi"),
+    avatarId:typeof p.avatarId==="string"?p.avatarId:"",
+    online:p.online!==false
+  }));
+}
 const game=typeof document==="undefined"?null:document.getElementById("game");
 if(game){
   const players=document.getElementById("players"),roster=document.getElementById("roster"),selection=document.getElementById("selection");
   const names=["Minh","Lan","Huy","An","Mai","Khoa","Linh","Dũng","Phương","Quân","Trang","Đức","Ngọc","Hà","Nam","Thảo","Long","Vy","Tuấn","Nhi","Khánh","Tú","Sơn","Oanh","Hùng","Hoa","Bảo","Tâm","Vân","Đạt"];
   // Integration contract: server-filtered public player records only (never role/faction).
-  const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):null;
+  const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
   const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
   const all=supplied?.length?supplied:sample;
   function trustedAvatarUrl(raw){
