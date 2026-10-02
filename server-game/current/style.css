@@ -141,6 +141,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .favorite-shelf{position:relative;margin:0 0 10px;padding:10px;border:1px solid rgba(240,200,108,.34);border-radius:16px;background:linear-gradient(180deg,rgba(49,40,20,.46),rgba(11,27,41,.96));box-shadow:0 10px 28px rgba(0,0,0,.2)}
 .favorite-shelf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:#ffd36b}
 .favorite-shelf-head b{font-size:14px}.favorite-shelf-head small{font-size:10px;color:#a8b8c4}
+.catalog-count-badge{display:inline-flex!important;align-items:center;justify-content:center;min-width:54px;height:26px;padding:0 9px;border-radius:999px;background:linear-gradient(180deg,#c8ff78,#84e84f);border:1px solid rgba(218,255,160,.92);box-shadow:0 0 0 1px rgba(71,146,38,.22),0 5px 14px rgba(96,215,55,.18);color:#0b2a10!important;font-size:11px!important;font-weight:950!important;letter-spacing:.2px}
 .favorite-empty{grid-column:1/-1;min-height:58px;display:grid;place-items:center;color:#71899b;font-size:11px;border:1px dashed rgba(240,200,108,.2);border-radius:11px}
 .editor-bar{position:sticky;top:0;z-index:24;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px;background:linear-gradient(180deg,#06111f 76%,rgba(6,17,31,.88));padding:2px 0 8px}
 .editor-bar .face-switch{grid-column:2}
@@ -379,7 +380,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .member-summary>div{min-height:64px;padding:10px;border-radius:13px;background:linear-gradient(180deg,#0d263c,#071827);border:1px solid rgba(157,224,255,.13)}
 .member-summary small{display:block;color:var(--muted);font-size:9.5px}.member-summary b{display:block;margin-top:5px;font-size:20px;color:#f4fbff}
 
-.member-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:4px;border:1px solid rgba(157,224,255,.13);background:#071827;border-radius:13px;margin-bottom:10px;position:sticky;top:0;z-index:14}
+.member-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:4px;border:1px solid rgba(157,224,255,.13);background:#071827;border-radius:13px;margin-bottom:10px;position:sticky;top:0;z-index:14}
 .member-tabs button{border:0;border-radius:9px;background:transparent;color:#7591a5;min-height:40px;font-size:11.5px;font-weight:900}
 .member-tabs button.active{background:#153c58;color:#fff}
 .member-pane{display:none}.member-pane.active{display:block}
@@ -451,9 +452,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 #serverHealthCard .health-checked{display:block;text-align:right;margin-top:6px;color:#6f8da0;font-size:8px}
 
 /* V2.36 — compact actionable server health + catalog footer + member actions */
-.member-card-actions{grid-template-columns:repeat(3,1fr)!important}
+.member-card-actions{grid-template-columns:repeat(2,1fr)!important}
 .member-card{touch-action:manipulation}
-.catalog-count-bottom{margin:12px 2px 2px;padding:9px 10px;border-radius:10px;background:rgba(5,19,31,.72);border:1px solid rgba(157,224,255,.10);color:#8ea9ba;font-size:10px;font-weight:850;text-align:center}
+ .catalog-count-bottom{display:none;margin:12px 2px 2px;padding:9px 10px;border-radius:10px;background:rgba(5,19,31,.72);border:1px solid rgba(157,224,255,.10);color:#8ea9ba;font-size:10px;font-weight:850;text-align:center}
 #serverHealthCard.health-v236{height:auto!important;min-height:0!important;max-height:none!important;display:block!important;padding:12px!important}
 .health-v236-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .health-v236-head>div{display:flex;align-items:center;gap:8px}.health-v236-head b{font-size:14px}
