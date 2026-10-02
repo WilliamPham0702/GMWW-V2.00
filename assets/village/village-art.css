@@ -27,3 +27,13 @@
 
 .scene{transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--zoom,1));touch-action:none}
 .stage{touch-action:pan-y}
+
+html.embedded,html.embedded body{margin:0;min-height:100%;background:#071426;overflow:hidden}
+html.embedded .game{display:block;min-height:100svh;background:transparent}
+html.embedded .stage{height:100svh;min-height:420px;border-radius:0;box-shadow:none}
+html.embedded .panel,html.embedded .scene-controls{display:none!important}
+html.embedded .hud{padding-top:max(10px,env(safe-area-inset-top));pointer-events:none}
+html.embedded .hud-actions{pointer-events:none}
+html.embedded .hud-actions #mode{display:none!important}
+html.embedded .player{pointer-events:auto}
+html.embedded .player .name{backdrop-filter:blur(5px)}
