@@ -14,6 +14,11 @@ try{
   assert.equal(await page.locator(".player").count(),30);
   const ids=await page.locator(".player").evaluateAll(els=>els.map(e=>e.dataset.playerId));
   assert.equal(new Set(ids).size,30);
+  await page.locator(".player").nth(17).click();
+  assert(await page.locator("#selection").isVisible(),"tapping a player must open selection");
+  assert(await page.locator(".player.selected").count()===1);
+  await page.locator("#clearSelection").click();
+  assert(await page.locator("#selection").isHidden());
   await mkdir("prototype/village/screenshots",{recursive:true});
   await page.screenshot({path:"prototype/village/screenshots/day-30-mobile.png",fullPage:true});
   await page.locator("#mode").click();
