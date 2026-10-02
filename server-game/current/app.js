@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.41';
-const STATE_KEY='GMWW_V241_STATE';
-const PREF_KEY='GMWW_V241_PREFS';
-const OLD_STATE_KEYS=['GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.42';
+const STATE_KEY='GMWW_V242_STATE';
+const PREF_KEY='GMWW_V242_PREFS';
+const OLD_STATE_KEYS=['GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V241_PREFS','GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -987,17 +987,32 @@ function openMemberSheet(mode,m=null){
       '<label>Member ID<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Không dấu, không khoảng trắng"></label>'+
       '<label>Tên hiển thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Tên hiển thị"></label>'+
       (editing?'':'<label>Mật khẩu tạm thời<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label>')+
-      '<div class="member-avatar-picker"><div class="member-form-label">Avatar</div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+      '<div class="member-avatar-picker"><div class="member-form-label">Avatar</div><div class="member-avatar-library-head"><b>🖼 Kho Avatar</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Artwork</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
     renderMemberAvatarPicker();
+    document.getElementById('memberAvatarRefresh').onclick=async()=>{
+      const btn=document.getElementById('memberAvatarRefresh');btn.disabled=true;btn.textContent='Đang đồng bộ…';
+      try{await refreshAvatarLibrary();renderMemberAvatarPicker()}catch(e){alert('Không cập nhật được Kho Avatar: '+e.message)}
+      finally{btn.disabled=false;btn.textContent='↻ Đồng bộ Artwork'}
+    };
     save.textContent=editing?'LƯU THAY ĐỔI':'TẠO THÀNH VIÊN';
   }
   sheet.classList.remove('hidden');
+  refreshAvatarLibrary().then(()=>renderMemberAvatarPicker()).catch(err=>console.warn('Kho Avatar:',err.message));
+}
+async function refreshAvatarLibrary(){
+  const response=await fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('Không tải được Kho Avatar từ server');
+  const data=await response.json();
+  if(Array.isArray(data.avatars))memberAdminState.avatars=data.avatars.map(a=>{const u=String(a.imageUrl||'');return {...a,imageUrl:u.startsWith('/')?GMWW_SERVER_BASE+u:u}});
+  await syncArtworkAvatars();
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=memberAdminState.avatars.length+' ảnh';
 }
 function renderMemberAvatarPicker(){
   const box=document.getElementById('memberAvatarGrid');if(!box)return;box.innerHTML='';
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=memberAdminState.avatars.length+' ảnh';
   for(const a of memberAdminState.avatars){
     const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
-    b.innerHTML='<img alt=""><small></small>';const img=b.querySelector('img');img.src=String(a.imageUrl||memberAvatarUrl(a.id));img.onerror=()=>{img.style.visibility='hidden'};b.querySelector('small').textContent=a.name||a.id;
+    b.innerHTML='<img alt=""><small></small>';const img=b.querySelector('img');img.src=String(a.imageUrl||memberAvatarUrl(a.id));img.onerror=()=>{img.src=memberAvatarUrl(a.id);img.onerror=()=>{img.alt='Ảnh chưa tải được';img.style.opacity='.35'}};b.querySelector('small').textContent=a.name||a.id;
     b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
   }
   if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Kho Avatar.</div>';
