@@ -664,7 +664,7 @@ function pickFile(cb){const i=document.createElement('input');i.type='file';i.ac
 function pickUiSlotFile(themeId,slotId){pickFile(async f=>{await dbPut(uiBlobKey(themeId,slotId),f);objectUrls.delete(uiBlobKey(themeId,slotId));await renderTheme();await applyActiveThemeUi()})}
 async function clearUiSlot(themeId,slotId){const t=themeById(themeId);if(t.ui)delete t.ui[slotId];await dbDelete(uiBlobKey(themeId,slotId)).catch(()=>{});objectUrls.delete(uiBlobKey(themeId,slotId));saveState();await renderTheme();await applyActiveThemeUi()}
 function thumbBlobFromFile(file){return new Promise(resolve=>{const u=URL.createObjectURL(file),im=new Image();const done=v=>{try{URL.revokeObjectURL(u)}catch(_){}resolve(v||file)};im.onload=()=>{try{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');if(!g)return done(file);g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1064,sh=im.naturalHeight||1478,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);c.toBlob(b=>done(b||file),'image/webp',.9)}catch(_){done(file)}};im.onerror=()=>done(file);im.src=u})}
-function pickEntityThemeArtwork(themeId,kind,entityId){pickFile(async f=>{const dk=cardBlobKey(themeId,kind,entityId,'display'),tk=cardBlobKey(themeId,kind,entityId,'thumb');await dbPut(dk,f);await dbPut(tk,await thumbBlobFromFile(f));objectUrls.delete(dk);objectUrls.delete(tk);saveState();await renderTheme();renderEntityGrid(kind)})}
+function pickEntityThemeArtwork(themeId,kind,entityId){pickFile(async f=>{const dk=cardBlobKey(themeId,kind,entityId,'display'),tk=cardBlobKey(themeId,kind,entityId,'thumb');await dbPut(dk,f);await dbPut(tk,await thumbBlobFromFile(f));objectUrls.delete(dk);objectUrls.delete(tk);saveState();memberAdminState.loaded=false;await renderTheme();renderEntityGrid(kind)})}
 async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};delete t.mappings[entityId];for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
 
 function addTheme(){const name=prompt('Tên Chủ Đề mới');if(!String(name||'').trim())return;const id='theme-'+Date.now().toString(36),src=themeById(state.themes.activeId);state.themes.list.push({id,name:String(name).trim(),builtin:false,locked:false,ui:clone(src.ui||{}),mappings:clone(src.mappings||{})});state.themes.selectedEditorId=id;state.themes.activeId=id;saveState();renderTheme()}
@@ -806,6 +806,30 @@ async function gmApi(path,opts={}){
     return data;
   }finally{clearTimeout(timer)}
 }
+async function syncArtworkAvatars(){
+  const catalog=new Map(memberAdminState.avatars.map(a=>[String(a.id),a]));
+  for(const theme of state.themes.list){
+    for(const kind of ['cards','artifacts'])for(const entity of entityList(kind)){
+      const key=cardBlobKey(theme.id,kind,entity.id,'thumb');
+      const rec=await dbGet(key).catch(()=>null);
+      const asset=rec?.blob?rec:await dbGet(cardBlobKey(theme.id,kind,entity.id,'display')).catch(()=>null);
+      if(!asset?.blob)continue;
+      const identity=theme.id+'|'+kind+'|'+entity.id;
+      let hash=2166136261;for(const ch of identity){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
+      const id='artwork-'+(hash>>>0).toString(16),digest=String(asset.updatedAt||0)+'-'+asset.blob.size;
+      const local={id,name:entity.name+' • '+theme.name,imageUrl:await blobUrlFor(rec?.blob?key:cardBlobKey(theme.id,kind,entity.id,'display')),source:'artwork',priority:1000};
+      const previous=catalog.get(id);catalog.set(id,local);
+      if(previous?.digest===digest)continue;
+      try{
+        const img=await imageToThumb(local.imageUrl);
+        if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Thumbnail quá lớn');
+        await gmApi('/api/gm/avatars/upsert',{method:'POST',body:JSON.stringify({id,name:local.name,img,digest,priority:1000,source:kind})});
+        local.digest=digest;
+      }catch(err){console.warn('Không đồng bộ Avatar '+entity.name,err.message)}
+    }
+  }
+  memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0));
+}
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberAvatarUrl(id){return GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(String(id||''))+'/image'}
 function memberDate(v,withTime=false){
@@ -826,10 +850,11 @@ async function loadMembers(force=false){
   try{
     const [dir,avatars]=await Promise.all([
       gmApi('/api/gm/members'),
-      memberAdminState.avatars.length?Promise.resolve({avatars:memberAdminState.avatars}):fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({avatars:[]}))
+      fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({avatars:memberAdminState.avatars}))
     ]);
     memberAdminState.members=Array.isArray(dir?.members)?dir.members:[];
     if(Array.isArray(avatars?.avatars)&&avatars.avatars.length)memberAdminState.avatars=avatars.avatars;
+    await syncArtworkAvatars();
     memberAdminState.loaded=true;
     renderMembersAll();
   }catch(err){
@@ -862,7 +887,6 @@ function renderMemberDirectory(){
       '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
       '<div class="member-flags"></div></div>'+
       '<div class="member-card-actions">'+
-      '<button data-act="history" type="button">Lịch sử</button>'+
       '<button data-act="reset" type="button">Reset MK</button><button data-act="delete" class="danger-mini" type="button">Xoá</button></div>';
     const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
@@ -873,7 +897,6 @@ function renderMemberDirectory(){
     if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU RESET</span>';
     if(m.source)flags.innerHTML+='<span class="member-flag">'+memberEsc(m.source)+'</span>';
     const bindAction=(btn,handler)=>{if(!btn)return;let firedAt=0;const run=e=>{e.preventDefault();e.stopPropagation();const now=Date.now();if(now-firedAt<650)return;firedAt=now;handler()};btn.addEventListener('pointerup',run,{passive:false});btn.addEventListener('click',run)};
-    bindAction(card.querySelector('[data-act="history"]'),()=>{memberAdminState.historyLogin=m.loginId;switchMemberTab('history');renderHistoryMemberOptions();renderMemberHistory()});
     bindAction(card.querySelector('[data-act="reset"]'),()=>resetMemberPassword(m));
     bindAction(card.querySelector('[data-act="delete"]'),()=>deleteMember(m));
     // Edit only by double-tap / double-click on the member card body.
