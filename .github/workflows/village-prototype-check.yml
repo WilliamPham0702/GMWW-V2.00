@@ -1,0 +1,30 @@
+name: Village Prototype Visual Gates
+on:
+  push:
+    branches: [feature/village-scene-prototype-20261002]
+    paths:
+      - "prototype/village/**"
+      - ".github/workflows/village-prototype-check.yml"
+  workflow_dispatch:
+jobs:
+  visual-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check geometry and basic safety
+        run: node prototype/village/village.test.mjs
+      - name: Check local assets and module syntax
+        run: |
+          node --check prototype/village/village.mjs
+          node --check prototype/village/village.test.mjs
+          test -s prototype/village/assets/village-coast.svg
+          test -s prototype/village/assets/avatar-chibi.svg
+          test -s prototype/village/assets/campfire.svg
+          test -s prototype/village/village-art.css
+          grep -q 'village-art.css' prototype/village/index.html
+          grep -q 'GMWW_VILLAGE_PLAYERS' prototype/village/village.mjs
+          ! grep -R 'GM_SYNC_TOKEN' prototype/village/
