@@ -20,9 +20,15 @@
 - Kiểm thử trực quan so sánh concept và nghiệm thu người dùng.
 - Không merge main/deploy cho đến khi có phê duyệt và kiểm thử.
 
+## Gói sẵn sàng tích hợp tĩnh
+- Đã tạo bản sao đồng nhất tại `assets/village/` để Cloudflare Assets có thể phục vụ ở `/village/` **sau khi merge/deploy được phê duyệt**. Hiện chưa merge/deploy, đường dẫn production chưa khả dụng.
+- Test `village-static-sync.test.mjs` ngăn bản tĩnh lệch khỏi nguồn prototype. Test trình duyệt cũng chạy với `/assets/village/` trên local để xác nhận đầy đủ asset tương đối.
+- Đường dẫn độc lập này chưa thay thế màn hình trận Player Web. Muốn tích hợp chính thức phải chốt artwork, bổ sung feature flag và dùng room state sẵn có trong Player Web để không phát sinh phiên truy cập song song.
+
 ## Chạy kiểm thử
 `node prototype/village/village.test.mjs`
 `node prototype/village/village-room.test.mjs`
+`node prototype/village/village-static-sync.test.mjs`
 `python3 -m http.server 8080` (trong repo)
 Browser smoke CI: `node prototype/village/village.browser.test.mjs` sau khi cài Playwright/Chromium.
 
