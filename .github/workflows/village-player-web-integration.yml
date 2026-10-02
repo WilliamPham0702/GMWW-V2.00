@@ -2,7 +2,7 @@ name: Village Player Web Integration
 
 on:
   push:
-    branches: [feature/village-player-web-integration-20261002]
+    branches: [feature/village-player-web-integration-v2-20261002]
     paths:
       - "assets/village/**"
       - "prototype/village/**"
