@@ -39,7 +39,8 @@ if(game){
     });
     document.getElementById("count").textContent=count+"/"+count;
   }
-  if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}\n  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
+  if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
+  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
   document.getElementById("zoom").addEventListener("input",e=>document.getElementById("scene").style.setProperty("--zoom",Number(e.target.value)/100));
   document.getElementById("mode").addEventListener("click",()=>{
     night=!night;game.classList.toggle("night",night);game.classList.toggle("day",!night);
