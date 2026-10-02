@@ -27,7 +27,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/members/presence-internal"&&request.method==="POST")return this.memberPresenceInternal(await safeJson(request));
     if(url.pathname==="/members/record-result"&&request.method==="POST")return this.memberRecordResult(await safeJson(request));
     if(url.pathname==="/members/directory"&&request.method==="GET")return this.memberDirectory();
-    if(url.pathname==="/members/purge"&&request.method==="DELETE")return this.memberPurge(request);
+    if(url.pathname==="/members/admin-reset-ranking"&&request.method==="POST")return this.memberResetRanking(request);
+    if(url.pathname==="/members/admin-clear-history"&&request.method==="DELETE")return this.memberClearHistory(request);
     if(url.pathname==="/members/delete"&&request.method==="DELETE")return this.memberDelete(request,await safeJson(request));
     if(url.pathname==="/admin/reset-939"&&request.method==="GET")return this.adminReset939Status(request);
     if(url.pathname==="/admin/reset-939"&&request.method==="POST")return this.adminReset939Mark(request,await safeJson(request));
@@ -164,7 +165,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminResetPassword(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),newPassword=String(body?.newPassword||""),member=await this.ctx.storage.get("member:"+loginId);
+    const loginId=normalizeLoginId(body?.loginId),newPassword="0000",member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy tài khoản."},404);
     if(newPassword.length<4||newPassword.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu tạm thời không hợp lệ."},400);
     const salt=crypto.getRandomValues(new Uint8Array(16));member.passwordSalt=bytesToBase64(salt);member.passwordHash=await derivePasswordHash(newPassword,salt);member.passwordAlgorithm="PBKDF2-SHA256";member.passwordIterations=PBKDF2_ITERATIONS;member.resetRequestedAt=null;member.passwordResetAt=new Date().toISOString();member.updatedAt=member.passwordResetAt;await this.ctx.storage.put("member:"+loginId,member);
@@ -216,13 +217,17 @@ export class RoomDurableObject extends DurableObject {
     for(const [k,v] of sessions){if(normalizeLoginId(v?.loginId)===loginId){await this.ctx.storage.delete(k);sessionCount++}}
     return j({ok:true,deleted:!!member,loginId,sessionsDeleted:sessionCount,historyDeleted});
   }
-  async memberPurge(request){
+  async memberResetRanking(request){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const members=await this.ctx.storage.list({prefix:"member:"}),sessions=await this.ctx.storage.list({prefix:"session:"});
-    let memberCount=0,sessionCount=0;
-    for(const k of members.keys()){await this.ctx.storage.delete(k);memberCount++}
-    for(const k of sessions.keys()){await this.ctx.storage.delete(k);sessionCount++}
-    return j({ok:true,purged:true,membersDeleted:memberCount,sessionsDeleted:sessionCount});
+    const members=await this.ctx.storage.list({prefix:"member:"});let count=0,historyDeleted=0;
+    for(const [k,m] of members){historyDeleted+=Array.isArray(m?.history)?m.history.length:0;m.stats={wins:0,losses:0};m.history=[];m.updatedAt=new Date().toISOString();await this.ctx.storage.put(k,m);count++}
+    return j({ok:true,reset:true,membersUpdated:count,historyDeleted});
+  }
+  async memberClearHistory(request){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    const members=await this.ctx.storage.list({prefix:"member:"});let count=0,historyDeleted=0;
+    for(const [k,m] of members){historyDeleted+=Array.isArray(m?.history)?m.history.length:0;m.history=[];m.updatedAt=new Date().toISOString();await this.ctx.storage.put(k,m);count++}
+    return j({ok:true,cleared:true,membersUpdated:count,historyDeleted});
   }
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
@@ -521,7 +526,8 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/members/presence"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/presence",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/gm/reset/939"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmReset939(env,request);}
   if(url.pathname==="/api/gm/members"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/members/directory");}
-  if(url.pathname==="/api/gm/members"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/purge",{method:"DELETE",headers:request.headers}));}
+  if(url.pathname==="/api/gm/members/reset-ranking"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset-ranking",{method:"POST",headers:request.headers}));}
+  if(url.pathname==="/api/gm/members/history"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-clear-history",{method:"DELETE",headers:request.headers}));}
   const gmMemberDelete=url.pathname.match(/^\/api\/gm\/members\/([A-Za-z0-9._]+)$/);if(gmMemberDelete&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/delete",{method:"DELETE",headers:request.headers,body:JSON.stringify({loginId:decodeURIComponent(gmMemberDelete[1])})}));}
   if(url.pathname==="/api/gm/rooms"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/directory/rooms/list?includeEnded=1&includeDisabled=1");}
   if(url.pathname==="/api/gm/rooms"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmRoomsPurge(env,request);}

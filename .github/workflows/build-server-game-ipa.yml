@@ -77,6 +77,11 @@ jobs:
           grep -q "/api/gm/members" "$APPDIR/Web/app.js"
           grep -q "renderMemberRanking" "$APPDIR/Web/app.js"
           grep -q "renderMemberHistory" "$APPDIR/Web/app.js"
+          grep -q "resetRanking" "$APPDIR/Web/app.js"
+          grep -q "clearMemberHistory" "$APPDIR/Web/app.js"
+          grep -q "memberResetPassword" "$APPDIR/Web/app.js"
+          ! grep -q "purgeMembers" "$APPDIR/Web/app.js"
+          ! grep -q "Xoá toàn bộ Thành Viên" "$APPDIR/Web/GMWW.html"
 
           # CLEAN BASELINE: only the canonical Settings block may remain.
           grep -q "CLEAN BASELINE: SETTINGS" "$APPDIR/Web/style.css"
@@ -101,6 +106,7 @@ jobs:
           set -euo pipefail
           node --check server-game/current/app.js
           node --check server-game/shared/artwork.js
+          node --check src/index.js
           node - <<'NODE'
           const fs=require('fs');
           const s=fs.readFileSync('server-game/current/app.js','utf8');
