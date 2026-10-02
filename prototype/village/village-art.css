@@ -24,3 +24,6 @@
 .tabs button.active{background:linear-gradient(#226d91,#143d68);border-color:#e0bd74}
 @media(max-width:420px){.fire{width:98px;height:98px}.player .name{max-width:55px}.scene-controls{bottom:5px}.stage{min-height:480px}}
 @media(prefers-reduced-motion:reduce){.fire{animation:none}}
+
+.scene{transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--zoom,1));touch-action:none}
+.stage{touch-action:pan-y}
