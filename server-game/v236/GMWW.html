@@ -79,21 +79,23 @@
         </nav>
 
         <section class="libpane active" id="lib-cards">
-          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="catalog-count-under" id="cardFaceCount">Thường dùng 0 lá • Tổng cộng mở mặt 0 lá</div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
+          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="cards">
             <button class="filter active" data-filter="all">Tất cả</button>
             <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
           </div>
           <div class="card-grid" id="cardGrid"></div>
+          <div class="catalog-count-bottom" id="cardFaceCount">Thường dùng 0 lá • Tổng cộng mở mặt 0 lá</div>
         </section>
 
         <section class="libpane" id="lib-artifacts">
-          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="catalog-count-under" id="artifactFaceCount">Thường dùng 0 • Tổng cộng mở mặt 0</div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
+          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b></div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="artifacts">
             <button class="filter active" data-filter="all">Tất cả</button>
             <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
           </div>
           <div class="card-grid" id="artifactGrid"></div>
+          <div class="catalog-count-bottom" id="artifactFaceCount">Thường dùng 0 • Tổng cộng mở mặt 0</div>
         </section>
 
         <section class="libpane" id="lib-actions">
@@ -255,17 +257,13 @@
     <section class="page" id="settings">
       <div class="settings-page">
         <div class="settings-page-head"><div><h2>⚙ Cài Đặt</h2><small>Quản lý Server Game và kết nối Player Web</small></div></div>
-        <div class="settings-card server-health-card" id="serverHealthCard">
-          <div class="settings-title"><h3>Sức khỏe Server</h3><span class="health-pill checking" id="serverHealthPill">CHƯA KIỂM TRA</span></div>
-          <div class="health-summary compact-health">
-            <span class="health-dot checking" id="serverHealthDot"></span>
-            <div><b id="serverHealthText">Server</b><small id="serverHealthDetail">Nhấn Kiểm tra</small></div>
-            <b class="health-latency" id="healthLatency">—</b>
-          </div>
-          <div class="server-action-grid">
+        <div class="settings-card server-health-card health-v236" id="serverHealthCard">
+          <div class="health-v236-head"><div><span class="health-dot checking" id="serverHealthDot"></span><b>Sức khỏe Server</b></div><span class="health-pill checking" id="serverHealthPill">CHƯA KIỂM TRA</span></div>
+          <div class="health-v236-status"><b id="serverHealthText">Server</b><strong id="healthLatency">—</strong><small id="serverHealthDetail">Nhấn Kiểm tra</small></div>
+          <div class="health-v236-actions">
             <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
-            <button class="settings-action" id="refreshServerData" type="button"><span>⟳</span><b>LÀM MỚI</b></button>
-            <button class="settings-action" id="openPlayerWeb" type="button"><span>↗</span><b>PLAYER WEB</b></button>
+            <button class="settings-action" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+            <button class="settings-action" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
           </div>
           <small class="health-checked" id="healthCheckedAt">—</small>
           <span class="hidden" id="healthPlayerWeb"></span><span class="hidden" id="healthApi"></span><span class="hidden" id="healthVersion"></span>

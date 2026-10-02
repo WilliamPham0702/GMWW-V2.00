@@ -737,10 +737,10 @@ async function checkServerHealth(){
     let body={};try{body=await res.json()}catch{}
     if(!res.ok||body.ok!==true)throw new Error('HTTP '+res.status);
     const level=latency<=800?'ok':'warn';
-    setServerHealthState(level,level==='ok'?'Hoạt động tốt':'Phản hồi chậm','',{web:'Online',api:'Online',latency:latency+' ms',version:body.version||'—'});
+    setServerHealthState(level,level==='ok'?'Hoạt động tốt':'Phản hồi chậm',level==='ok'?'Sẵn sàng':'Nên kiểm tra lại',{web:'Online',api:'Online',latency:latency+' ms',version:body.version||'—'});
   }catch(err){
     const latency=Math.max(1,Math.round(performance.now()-started));
-    setServerHealthState('bad','Mất kết nối','',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
+    setServerHealthState('bad','Mất kết nối','Kiểm tra mạng hoặc thử lại',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
   }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
 }
 const refreshServerData=document.getElementById('refreshServerData');
@@ -837,9 +837,9 @@ function renderMemberDirectory(){
     card.querySelector('[data-act="history"]').onclick=e=>{action(e);memberAdminState.historyLogin=m.loginId;switchMemberTab('history');renderHistoryMemberOptions();renderMemberHistory()};
     card.querySelector('[data-act="reset"]').onclick=e=>{action(e);resetMemberPassword(m)};
     card.querySelector('[data-act="delete"]').onclick=e=>{action(e);deleteMember(m)};
-    card.ondblclick=e=>{if(!e.target.closest('.member-card-actions'))openMemberSheet('edit',m)};
+    card.ondblclick=e=>{if(!e.target.closest('.member-card-actions')){e.preventDefault();openMemberSheet('edit',m)}};
     let lastTap=0;
-    card.addEventListener('touchend',e=>{if(e.target.closest('.member-card-actions'))return;const now=Date.now();if(now-lastTap<420){e.preventDefault();lastTap=0;openMemberSheet('edit',m)}else lastTap=now},{passive:false});
+    card.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||e.target.closest('.member-card-actions'))return;const now=Date.now();if(now-lastTap<450){e.preventDefault();lastTap=0;openMemberSheet('edit',m)}else lastTap=now},{passive:false});
     box.appendChild(card);
   }
 }
@@ -946,9 +946,12 @@ async function saveMemberSheet(){
   finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
 }
 async function resetMemberPassword(m){
-  if(!m||!confirm('Bạn có muốn reset mật khẩu của "'+(m.displayName||m.loginId)+'" về 0000 không?\n\nNhấn OK để xác nhận.'))return;
-  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId})});alert('Đã reset mật khẩu về 0000.');memberAdminState.loaded=false}
-  catch(err){alert(err.message||'Không thể reset mật khẩu.')}finally{setMemberBusy(false)}
+  if(!m)return;
+  const yes=window.confirm('Bạn có muốn RESET mật khẩu của "'+(m.displayName||m.loginId)+'" về 0000 không?\n\nOK = Xác nhận • Hủy = Không reset');
+  if(!yes)return;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId})});memberAdminState.loaded=false;alert('Đã reset mật khẩu về 0000.')}
+  catch(err){alert(err.message||'Không thể reset mật khẩu.');return}
+  finally{setMemberBusy(false)}
   await loadMembers(true);
 }
 async function resetRanking(){
@@ -962,11 +965,14 @@ async function clearMemberHistory(){
   catch(err){alert(err.message||'Không thể xoá lịch sử.')}finally{setMemberBusy(false)}
 }
 async function deleteMember(m){
-  if(!m||!confirm('Bạn có muốn xoá Thành Viên "'+(m.displayName||m.loginId)+'" không?\n\nNhấn OK để xác nhận.'))return;
+  if(!m)return;
+  const yes=window.confirm('Bạn có muốn XOÁ Thành Viên "'+(m.displayName||m.loginId)+'" không?\n\nOK = Xác nhận • Hủy = Không xoá');
+  if(!yes)return;
   let ok=false;
   try{setMemberBusy(true);await gmApi('/api/gm/members/'+encodeURIComponent(m.loginId),{method:'DELETE'});memberAdminState.loaded=false;ok=true}
-  catch(err){alert(err.message||'Không thể xoá Thành Viên.')}finally{setMemberBusy(false)}
-  if(ok)await loadMembers(true);
+  catch(err){alert(err.message||'Không thể xoá Thành Viên.')}
+  finally{setMemberBusy(false)}
+  if(ok){alert('Đã xoá Thành Viên.');await loadMembers(true)}
 }
 const memberTabsEl=document.getElementById('memberTabs');if(memberTabsEl)memberTabsEl.addEventListener('click',e=>{const b=e.target.closest('[data-member-tab]');if(b)switchMemberTab(b.dataset.memberTab)});
 const memberSearchEl=document.getElementById('memberSearch');if(memberSearchEl)memberSearchEl.addEventListener('input',()=>{memberAdminState.query=memberSearchEl.value;renderMemberDirectory()});
