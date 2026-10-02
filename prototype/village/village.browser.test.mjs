@@ -34,7 +34,7 @@ try{
   assert.equal(await page.locator(".player").count(),2);
   assert.deepEqual(await page.locator(".player").evaluateAll(els=>els.map(e=>e.dataset.playerId)),["p1","p2"]);
   assert.equal(await page.locator(".roster").innerText().then(t=>t.includes("wolf")),false);
-  assert(await page.locator(".portrait.has-image").count()===2);
+  await page.waitForFunction(()=>document.querySelectorAll(".portrait.has-image img").length===2);
   await page.screenshot({path:"prototype/village/screenshots/public-room-mobile.png",fullPage:true});
   assert.deepEqual(errors,[],"no browser script errors");
   console.log("Chromium mobile visual smoke: PASS (30 avatars, art, day/night, privacy UI)");
