@@ -1,5 +1,6 @@
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
+import {startVillagePerformanceReporter} from "./village-performance.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count){
@@ -28,10 +29,12 @@ if(game){
   const players=document.getElementById("players"),roster=document.getElementById("roster"),selection=document.getElementById("selection");
   const names=["Minh","Lan","Huy","An","Mai","Khoa","Linh","Dũng","Phương","Quân","Trang","Đức","Ngọc","Hà","Nam","Thảo","Long","Vy","Tuấn","Nhi","Khánh","Tú","Sơn","Oanh","Hùng","Hoa","Bảo","Tâm","Vân","Đạt"];
   // Integration contract: server-filtered public player records only (never role/faction).
+  const params=new URLSearchParams(window.location.search),embedded=params.get("embed")==="1"&&window.parent!==window;
+  if(embedded)document.documentElement.classList.add("embedded");
   const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
   const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
-  let all=supplied?.length?supplied:sample;
-  let liveRoom=false;
+  let all=embedded?[]:(supplied?.length?supplied:sample);
+  let liveRoom=embedded;
   function trustedAvatarUrl(raw){
     if(typeof raw!=="string"||!raw.trim())return "";
     try{const u=new URL(raw,window.location.href);
@@ -58,17 +61,18 @@ if(game){
   if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
   document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selectedId=null;selection.hidden=true;render();});
   installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
-  document.getElementById("mode").addEventListener("click",()=>{
-    night=!night;game.classList.toggle("night",night);game.classList.toggle("day",!night);
+  function applyPhase(nextNight,cycle={}){
+    night=!!nextNight;game.classList.toggle("night",night);game.classList.toggle("day",!night);
+    const n=Number(cycle?.night||0),d=Number(cycle?.day||0),seq=night?n:d;
     document.getElementById("phaseIcon").textContent=night?"🌙":"☀️";
-    document.getElementById("phaseLabel").textContent=night?"Đêm 02":"Ngày 02";
-    document.getElementById("phaseDetail").textContent=night?"Nhóm được thức (minh họa)":"Thảo luận ban ngày";
+    document.getElementById("phaseLabel").textContent=(night?"Đêm ":"Ngày ")+(seq?String(seq).padStart(2,"0"):"");
+    document.getElementById("phaseDetail").textContent=night?"Ban đêm":"Thảo luận ban ngày";
     document.getElementById("mode").textContent=night?"☀️ Ngày":"🌙 Đêm";
-    document.getElementById("chatTitle").textContent=night?"Chat nhóm riêng (mô phỏng)":"Chat chung";
-    document.getElementById("voiceState").textContent=night?"● Không có voice ban đêm":"● Voice đang mở";
+    document.getElementById("chatTitle").textContent=night?"Chat nhóm riêng":"Chat chung";
+    document.getElementById("voiceState").textContent=night?"● Không có voice ban đêm":"● Voice ban ngày";
     document.getElementById("voice").hidden=night;
-    document.getElementById("messages").replaceChildren();
-  });
+  }
+  document.getElementById("mode").addEventListener("click",()=>applyPhase(!night,{}));
   document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{
     document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));
     document.querySelectorAll(".tab").forEach(t=>{t.hidden=t.id!==btn.dataset.tab;t.classList.toggle("active",t.id===btn.dataset.tab)});
@@ -80,8 +84,27 @@ if(game){
   });
   let muted=true,speaker=true;document.getElementById("mic").addEventListener("click",e=>{muted=!muted;e.target.textContent=muted?"🎙️ Micro: Tắt":"🎙️ Micro: Bật (mô phỏng)"});
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
+  function applyExternalState(payload){
+    const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]});
+    all=mergeStableSeats(all.filter(p=>!String(p.id).startsWith("sample-")),incoming);count=all.length;
+    if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
+    const room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
+    if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
+    if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
+    if(count)render();else{players.replaceChildren();roster.replaceChildren();document.getElementById("count").textContent="0/0";}
+  }
+  if(embedded){
+    document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
+    document.getElementById("mode").hidden=true;
+    window.addEventListener("message",event=>{
+      if(event.origin!==window.location.origin||event.source!==window.parent)return;
+      if(event.data?.type==="gmww:village-state")applyExternalState(event.data);
+    });
+    startVillagePerformanceReporter();
+    try{window.parent.postMessage({type:"gmww:village-ready"},window.location.origin)}catch{}
+  }
   // Opt-in live public state only. Never infer a room or credentials from storage.
-  const roomCode=validateRoomCode(window.GMWW_VILLAGE_ROOM_CODE||new URLSearchParams(window.location.search).get("room"));
+  const roomCode=embedded?"":validateRoomCode(window.GMWW_VILLAGE_ROOM_CODE||params.get("room"));
   if(roomCode){
     liveRoom=true;
     document.getElementById("size").hidden=true;
