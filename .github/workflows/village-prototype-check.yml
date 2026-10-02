@@ -17,6 +17,7 @@ jobs:
           node-version: 22
       - name: Check geometry and basic safety
         run: node prototype/village/village.test.mjs
+          node prototype/village/village-room.test.mjs
       - name: Install browser test dependency
         run: |
           npm install --no-save --no-package-lock playwright
@@ -41,6 +42,8 @@ jobs:
       - name: Check local assets and module syntax
         run: |
           node --check prototype/village/village.mjs
+          node --check prototype/village/village-room.mjs
+          node --check prototype/village/village-camera.mjs
           node --check prototype/village/village.test.mjs
           test -s prototype/village/assets/village-coast.svg
           test -s prototype/village/assets/avatar-chibi.svg
