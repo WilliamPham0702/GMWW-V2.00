@@ -18,6 +18,7 @@ jobs:
       - name: Check geometry and basic safety
         run: node prototype/village/village.test.mjs
           node prototype/village/village-room.test.mjs
+          node prototype/village/village-static-sync.test.mjs
       - name: Install browser test dependency
         run: |
           npm install --no-save --no-package-lock playwright
