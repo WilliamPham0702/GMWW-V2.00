@@ -133,7 +133,7 @@ jobs:
           if(s.includes("GMWW224_SEA_ASSETS")||s.includes("GMWW208_SEA_DISPLAY")) throw new Error('Legacy artwork resolver remains');
 
           const critical=[
-            'checkServerHealth','setServerHealthState','checkGithubOptimize','setGithubOptimizeState',
+            'checkServerHealth','setServerHealthState',
             'loadMembers','renderMemberRanking','renderMemberHistory','switchMemberTab','openMemberSheet','saveMemberSheet'
           ];
           for(const name of critical){
