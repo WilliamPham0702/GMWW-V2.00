@@ -13,21 +13,33 @@ const game=typeof document==="undefined"?null:document.getElementById("game");
 if(game){
   const players=document.getElementById("players"),roster=document.getElementById("roster"),selection=document.getElementById("selection");
   const names=["Minh","Lan","Huy","An","Mai","Khoa","Linh","Dũng","Phương","Quân","Trang","Đức","Ngọc","Hà","Nam","Thảo","Long","Vy","Tuấn","Nhi","Khánh","Tú","Sơn","Oanh","Hùng","Hoa","Bảo","Tâm","Vân","Đạt"];
-  const icons=["🧑🏻","👩🏻","🧑🏽","👨🏻","👩🏼","👩🏽","🧑🏼","👨🏽","👩🏻","👨🏼"];
+  // Integration contract: server-filtered public player records only (never role/faction).
+  const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):null;
+  const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
+  const all=supplied?.length?supplied:sample;
+  function trustedAvatarUrl(raw){
+    if(typeof raw!=="string"||!raw.trim())return "";
+    try{const u=new URL(raw,window.location.href);
+      return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
+    }catch{return "";}
+  }
   let night=false,selected=null,count=12;
   function render(){
     const ps=positions(count);players.replaceChildren();roster.replaceChildren();
     ps.forEach((p,i)=>{
-      const button=document.createElement("button");button.type="button";button.className="player"+(selected===i?" selected":"");
+      const data=all[i]||sample[i];const playerName=safeText(data.displayName||data.name||names[i]);
+      const button=document.createElement("button");button.type="button";button.className="player"+(selected===i?" selected":"");button.dataset.style=String(i%5);button.dataset.playerId=safeText(data.id||("sample-"+(i+1)));
       button.style.left=p.x+"%";button.style.top=p.y+"%";button.style.zIndex=String(10+Math.round(p.y));
-      const avatar=document.createElement("span");avatar.className="portrait";avatar.textContent=icons[i%icons.length];
-      const name=document.createElement("span");name.className="name";name.textContent=(i+1)+" · "+names[i];
-      button.append(avatar,name);button.setAttribute("aria-label","Chọn người chơi "+names[i]);button.addEventListener("click",()=>{selected=i;document.getElementById("selectedLabel").textContent="Đã chọn: "+(i+1)+" · "+names[i];selection.hidden=false;render();});
-      players.append(button);const item=document.createElement("span");item.textContent=(i+1)+" · "+names[i];roster.append(item);
+      const avatar=document.createElement("span");avatar.className="portrait";
+      const avatarUrl=trustedAvatarUrl(data.avatarUrl);
+      if(avatarUrl){avatar.classList.add("has-image");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img);}
+      const name=document.createElement("span");name.className="name";name.textContent=(i+1)+" · "+playerName;
+      button.append(avatar,name);button.setAttribute("aria-label","Chọn người chơi "+playerName);button.addEventListener("click",()=>{selected=i;document.getElementById("selectedLabel").textContent="Đã chọn: "+(i+1)+" · "+playerName;selection.hidden=false;render();});
+      players.append(button);const item=document.createElement("span");item.textContent=(i+1)+" · "+playerName;roster.append(item);
     });
     document.getElementById("count").textContent=count+"/"+count;
   }
-  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
+  if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}\n  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
   document.getElementById("zoom").addEventListener("input",e=>document.getElementById("scene").style.setProperty("--zoom",Number(e.target.value)/100));
   document.getElementById("mode").addEventListener("click",()=>{
     night=!night;game.classList.toggle("night",night);game.classList.toggle("day",!night);
