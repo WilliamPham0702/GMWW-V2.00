@@ -1,3 +1,4 @@
+import {installVillageCamera} from "./village-camera.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count){
@@ -54,7 +55,7 @@ if(game){
   }
   if(supplied?.length){count=Math.min(30,supplied.length);document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
   document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selected=null;selection.hidden=true;render();});
-  document.getElementById("zoom").addEventListener("input",e=>document.getElementById("scene").style.setProperty("--zoom",Number(e.target.value)/100));
+  installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
   document.getElementById("mode").addEventListener("click",()=>{
     night=!night;game.classList.toggle("night",night);game.classList.toggle("day",!night);
     document.getElementById("phaseIcon").textContent=night?"🌙":"☀️";
