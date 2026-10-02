@@ -1,0 +1,42 @@
+name: GMWW Local 30-Player Readiness
+
+# Manual-only: never creates test rooms on production or changes gameplay.
+on:
+  workflow_dispatch:
+
+jobs:
+  local-room-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Validate current Worker
+        run: npm run check
+      - name: Start isolated local Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-readiness-wrangler.log 2>&1 &
+          echo $! > /tmp/gmww-readiness-wrangler.pid
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8787/api/health > /tmp/gmww-readiness-health.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/gmww-readiness-wrangler.log
+          exit 1
+      - name: Run isolated 30-player room smoke
+        run: node tools/readiness/local-room-30-smoke.mjs
+        env:
+          GMWW_TEST_BASE: http://127.0.0.1:8787
+          GMWW_TEST_PLAYERS: '30'
+      - name: Capture local Worker logs
+        if: always()
+        run: |
+          if test -f /tmp/gmww-readiness-wrangler.log; then tail -n 120 /tmp/gmww-readiness-wrangler.log; fi
+          if test -f /tmp/gmww-readiness-wrangler.pid; then kill "$(cat /tmp/gmww-readiness-wrangler.pid)" 2>/dev/null || true; fi
