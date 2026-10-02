@@ -100,5 +100,6 @@ if(game){
       onError:()=>{document.getElementById("count").textContent="Mất kết nối";}
     });
   }
-  render();
+  if(!liveRoom)render();
+  else{players.replaceChildren();roster.replaceChildren();document.getElementById("count").textContent="Đang kết nối";}
 }
