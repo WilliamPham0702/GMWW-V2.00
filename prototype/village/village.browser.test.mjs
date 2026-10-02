@@ -21,6 +21,7 @@ try{
   assert(await page.locator("#voice").isHidden(),"no voice at night");
   await page.screenshot({path:"prototype/village/screenshots/night-30-mobile.png",fullPage:true});
   // Verify real public room adapter without hitting production or exposing secret role data.
+  await page.route("**/api/avatars/*/image",route=>route.fulfill({status:200,contentType:"image/svg+xml",body:`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="#4aa"/></svg>`}));
   await page.route("**/api/rooms/AB12",route=>route.fulfill({
     status:200,contentType:"application/json",
     body:JSON.stringify({ok:true,room:{roomName:"Phòng kiểm thử"},players:[
