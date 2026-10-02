@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-label="Ngôi làng ven biển">
+<defs>
+<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#67c7ef"/><stop offset=".65" stop-color="#d2eddf"/><stop offset="1" stop-color="#f8dc9c"/></linearGradient>
+<linearGradient id="sea" x2="0" y2="1"><stop stop-color="#3cb8c9"/><stop offset="1" stop-color="#116a9c"/></linearGradient>
+<linearGradient id="roof" x2=".2" y2="1"><stop stop-color="#173d70"/><stop offset=".6" stop-color="#2c81ab"/><stop offset="1" stop-color="#103252"/></linearGradient>
+<linearGradient id="wall" x2="0" y2="1"><stop stop-color="#ffdf9c"/><stop offset="1" stop-color="#b9824c"/></linearGradient>
+<linearGradient id="grass" x2="0" y2="1"><stop stop-color="#75b66d"/><stop offset="1" stop-color="#356b54"/></linearGradient>
+<pattern id="roofTiles" width="24" height="14" patternUnits="userSpaceOnUse"><path d="M0 13Q12 0 24 13" fill="none" stroke="#b3d7dd" stroke-opacity=".48" stroke-width="2"/></pattern>
+<pattern id="paving" width="45" height="28" patternUnits="userSpaceOnUse"><path d="M0 0H45M0 14H45M22 0V14M0 14V28" stroke="#68533f" stroke-opacity=".45" stroke-width="3" fill="none"/></pattern>
+<filter id="shadow"><feGaussianBlur stdDeviation="8"/></filter>
+<g id="house"><ellipse cx="0" cy="93" rx="130" ry="25" fill="#1e3433" opacity=".25" filter="url(#shadow)"/><path d="M-80 5L-73 88Q0 109 78 88L82 5Z" fill="url(#wall)" stroke="#865d43" stroke-width="5"/><path d="M-113 15L-5 -77L114 15Q40 -1 -5 -4Q-61 -3 -113 15Z" fill="url(#roof)" stroke="#153450" stroke-width="7"/><path d="M-113 15L-5 -77L114 15Q40 -1 -5 -4Q-61 -3 -113 15Z" fill="url(#roofTiles)"/><path d="M-23 96V35Q-22 13 0 14Q22 14 23 35V96" fill="#724331" stroke="#553626" stroke-width="5"/><path d="M-60 35H-32V65H-60Z M34 35H62V65H34Z" fill="#fceaa1" stroke="#85523c" stroke-width="6"/><path d="M-46 35V65M34 50H62" stroke="#a06940" stroke-width="4"/><path d="M-75 12L-5 -56L75 12" fill="none" stroke="#89bcd0" stroke-width="7" opacity=".5"/></g>
+<g id="palm"><path d="M0 95Q8 27 0 -43" stroke="#a56c3d" stroke-width="17" fill="none"/><path d="M0 -42Q-67 -108 -119 -59Q-45 -79 0 -35Q-14 -118 39 -127Q9 -83 0 -35Q55 -106 122 -67Q52 -66 0 -30Q92 -42 101 5Q54 -27 0 -28Q-74 -40 -100 10Q-63 -37 0 -33" fill="#27875b" stroke="#236946" stroke-width="5"/></g>
+</defs>
+<rect width="1200" height="820" fill="url(#sky)"/>
+<circle cx="945" cy="100" r="58" fill="#fff6bc" opacity=".9"/>
+<path d="M0 295Q110 185 200 270Q270 135 380 255Q470 170 550 275Q650 150 770 269Q865 160 985 270Q1100 170 1200 270V430H0Z" fill="#82b4ac"/>
+<path d="M0 325Q140 260 270 324Q385 280 480 332Q600 265 730 332Q865 270 1000 325Q1100 288 1200 325V440H0Z" fill="#477d85"/>
+<path d="M0 344Q300 300 480 346Q760 310 1200 345V470H0Z" fill="url(#sea)"/>
+<g stroke="#c1f7e9" stroke-width="4" opacity=".65"><path d="M50 385q50 -8 110 0m240 -20q60 -8 140 0m330 14q55 -7 130 0m60 -26q30 -4 65 0"/></g>
+<path d="M0 405Q270 366 390 416Q590 392 760 416Q1040 367 1200 420V820H0Z" fill="url(#grass)"/>
+<path d="M0 520Q210 455 400 500Q620 440 810 495Q1000 460 1200 520V820H0Z" fill="#7ca16c"/>
+<path d="M0 590Q300 475 550 550Q820 472 1200 560V820H0Z" fill="#a5a17a" opacity=".55"/>
+<g transform="translate(115 340) scale(.9)"><use href="#house"/></g>
+<g transform="translate(315 305) scale(.8)"><use href="#house"/></g>
+<g transform="translate(900 325) scale(.9)"><use href="#house"/></g>
+<g transform="translate(1100 370) scale(.82)"><use href="#house"/></g>
+<g transform="translate(520 290) scale(.58)"><use href="#house"/></g>
+<g transform="translate(700 282) scale(.62)"><use href="#house"/></g>
+<g transform="translate(52 510) scale(1.05)"><use href="#palm"/></g>
+<g transform="translate(1160 500) scale(1.1)"><use href="#palm"/></g>
+<g transform="translate(115 670) scale(.65)"><use href="#palm"/></g>
+<g transform="translate(1050 685) scale(.7)"><use href="#palm"/></g>
+<path d="M340 450Q600 375 855 460Q1080 540 1000 720Q590 830 200 710Q105 540 340 450Z" fill="#6d6351" opacity=".6"/>
+<ellipse cx="600" cy="579" rx="415" ry="214" fill="#c3a987" stroke="#a68a6a" stroke-width="14"/>
+<ellipse cx="600" cy="579" rx="396" ry="199" fill="url(#paving)" opacity=".5"/>
+<ellipse cx="600" cy="579" rx="290" ry="143" fill="none" stroke="#8f775c" stroke-width="7" opacity=".65"/>
+<ellipse cx="600" cy="579" rx="175" ry="84" fill="none" stroke="#92795f" stroke-width="5" opacity=".55"/>
+<g fill="#ffc76a" stroke="#a36d34" stroke-width="6"><path d="M70 455v40m-9 -30h18m1000 -50v40m-9 -30h18m-175 -20v30m-8 -23h16"/></g>
+<g fill="#fff2b3"><circle cx="70" cy="453" r="11"/><circle cx="1070" cy="412" r="11"/><circle cx="895" cy="405" r="9"/></g>
+</svg>
