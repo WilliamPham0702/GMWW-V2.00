@@ -1,6 +1,10 @@
 # GMWW Tab Chơi 2D — approved implementation contract (2026-10-03)
 
-Status: design specification committed; **NOT** implemented, built, deployed, or IPA-verified. Source branch baseline inspected: feature/approved-roles-v243-20261003 (server-game/current/app.js declares VERSION 2.44). Do not assume it matches the user's V2.45 IPA until verified.
+Status: design specification committed; **NOT** implemented, built, deployed, or IPA-verified.
+
+## SCOPE CORRECTION — USER CONFIRMED
+Implement **GMWW SERVER TAB CHƠI ONLY** as a coherent 2D experience across the ENTIRE approved 8-form flow: Tạo Phòng → Chọn Thành Viên → Chọn Ván → Phân Vai → Phát Vai → Vào Game → Kết thúc ván → phòng chờ. Each stage needs its own scene-integrated 2D panels, animations, and touch-first interaction, not just day/night scene art. **DO NOT build or redesign Player Web in this workstream**: a separate project owns Player Web; document server contracts only, coordinate without overwriting its files. The two-card fan stack is an agreed cross-project visual requirement; implement only its GM-side preview/control where applicable here. Replace Khóa Phòng with Đang Chơi in GM room state and preserve server re-entry compatibility for the separately owned Player Web. Prior sections discussing Player Web are integration requirements, not implementation scope for this branch.
+ Source branch baseline inspected: feature/approved-roles-v243-20261003 (server-game/current/app.js declares VERSION 2.44). Do not assume it matches the user's V2.45 IPA until verified.
 
 ## Non-negotiable safeguards
 - Archive current IPA before major overhaul; verify actual V2.45 source/build and do not overwrite parallel branches.
