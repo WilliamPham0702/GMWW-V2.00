@@ -122,7 +122,8 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberLogin(body){
     const loginId=normalizeLoginId(body?.loginId),password=String(body?.password||""),member=await this.ctx.storage.get("member:"+loginId);
-    if(!member||!(await verifyPassword(password,member)))return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên tài khoản hoặc mật khẩu không đúng."},401);
+    if(!member)return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập hoặc mật khẩu không đúng."},401);
+    if(member.passwordRequired!==false&&!(await verifyPassword(password,member)))return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập hoặc mật khẩu không đúng."},401);
     member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member),...(await this.newSession(member))});
   }
@@ -133,7 +134,7 @@ export class RoomDurableObject extends DurableObject {
     const currentPassword=String(body?.currentPassword||""),newPassword=String(body?.newPassword||"");
     if(!(await verifyPassword(currentPassword,member)))return j({ok:false,error:"INVALID_CURRENT_PASSWORD",message:"Mật khẩu hiện tại không đúng."},400);
     if(newPassword.length<4||newPassword.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu mới phải có ít nhất 4 ký tự."},400);
-    const salt=crypto.getRandomValues(new Uint8Array(16));member.passwordSalt=bytesToBase64(salt);member.passwordHash=await derivePasswordHash(newPassword,salt);member.passwordAlgorithm="PBKDF2-SHA256";member.passwordIterations=PBKDF2_ITERATIONS;member.updatedAt=new Date().toISOString();await this.ctx.storage.put("member:"+member.loginId,member);return j({ok:true});
+    const salt=crypto.getRandomValues(new Uint8Array(16));member.passwordSalt=bytesToBase64(salt);member.passwordHash=await derivePasswordHash(newPassword,salt);member.passwordAlgorithm="PBKDF2-SHA256";member.passwordIterations=PBKDF2_ITERATIONS;member.passwordConfigured=true;member.passwordRequired=true;member.updatedAt=new Date().toISOString();await this.ctx.storage.put("member:"+member.loginId,member);return j({ok:true});
   }
   async memberRequestPasswordReset(body){
     const loginId=normalizeLoginId(body?.loginId),now=new Date().toISOString();
@@ -168,7 +169,7 @@ export class RoomDurableObject extends DurableObject {
     const loginId=normalizeLoginId(body?.loginId),newPassword="0000",member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy tài khoản."},404);
     if(newPassword.length<4||newPassword.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu tạm thời không hợp lệ."},400);
-    const salt=crypto.getRandomValues(new Uint8Array(16));member.passwordSalt=bytesToBase64(salt);member.passwordHash=await derivePasswordHash(newPassword,salt);member.passwordAlgorithm="PBKDF2-SHA256";member.passwordIterations=PBKDF2_ITERATIONS;member.resetRequestedAt=null;member.passwordResetAt=new Date().toISOString();member.updatedAt=member.passwordResetAt;await this.ctx.storage.put("member:"+loginId,member);
+    const salt=crypto.getRandomValues(new Uint8Array(16));member.passwordSalt=bytesToBase64(salt);member.passwordHash=await derivePasswordHash(newPassword,salt);member.passwordAlgorithm="PBKDF2-SHA256";member.passwordIterations=PBKDF2_ITERATIONS;member.passwordConfigured=true;member.passwordRequired=true;member.resetRequestedAt=null;member.passwordResetAt=new Date().toISOString();member.updatedAt=member.passwordResetAt;await this.ctx.storage.put("member:"+loginId,member);
     const sessions=await this.ctx.storage.list({prefix:"session:"}),kill=[];for(const [k,v] of sessions)if(normalizeLoginId(v?.loginId)===loginId)kill.push(k);if(kill.length)await this.ctx.storage.delete(kill);
     return j({ok:true,member:directoryMember(member)});
   }
