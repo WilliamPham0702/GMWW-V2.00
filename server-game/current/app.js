@@ -22,7 +22,7 @@ const THEME_UI_GROUPS=[
     ['ui.exploreDeck','Nút Khám Phá • Bộ Bài'],['ui.exploreMembers','Nút Khám Phá • Thành Viên'],['ui.exploreActions','Nút Khám Phá • Hành Động'],['ui.exploreFactions','Nút Khám Phá • Phe Phái'],['ui.exploreLibrary','Nút Khám Phá • Thư Viện'],['ui.exploreSettings','Nút Khám Phá • Cài Đặt'],['ui.bottomNavArt','Hình Thanh Điều Hướng']
   ]},
   {id:'library',title:'🗂 Giao diện Thư Viện',slots:[
-    ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Lá Bài'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
+    ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Vai Trò'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
   ]},
   {id:'game',title:'🎮 Giao diện Server Game',slots:[
     ['ui.memberPanel','Khung Thành Viên'],['ui.startPanel','Khung Bắt Đầu'],['ui.gamePanel','Khung Điều Khiển Ván'],['ui.nightPanel','Khung Ban Đêm'],['ui.morningPanel','Khung Buổi Sáng'],['ui.summaryPanel','Khung Tổng Kết'],['ui.waitingRoom','Khung Phòng Chờ']
@@ -532,7 +532,7 @@ function ensureAudioPlaceholder(kind,target){
 }
 function createEntity(kind){
   const isCard=kind==='cards',id=uid(isCard?'role':'artifact');
-  const raw={id,name:isCard?'Lá Bài Mới':'ARTIFACT Mới',information:'',lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},functions:[]};
+  const raw={id,name:isCard?'Vai Trò Mới':'ARTIFACT Mới',information:'',lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},functions:[]};
   if(isCard)raw.factionId='village';else raw.artifact={ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:''};
   const e=normalizeEntity(raw,kind);entityList(kind).unshift(e);prefFor(kind,id);ensureAudioPlaceholder(kind,e);saveState();savePrefs();renderEntityGrid(kind);openEntityEditor(kind,id);
 }
@@ -546,7 +546,7 @@ function renderEntityGrid(kind){
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
   let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
   list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
-  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Lá Bài':'Thêm ARTIFACT')+'</b></button>';
+  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Vai Trò':'Thêm ARTIFACT')+'</b></button>';
   grid.innerHTML=add+list.map(e=>entityTileHtml(kind,e)).join('');
   bindEntityTiles(kind,grid,list);
   const addBtn=$('[data-add-entity="'+kind+'"]',grid);if(addBtn)addBtn.onclick=()=>createEntity(kind);
@@ -597,7 +597,7 @@ function functionHtml(fn,index){
 function checkHtml(key,label,checked){return '<label class="check"><input type="checkbox" data-b="'+key+'" '+(checked?'checked':'')+'><span>'+esc(label)+'</span></label>'}
 function renderEntityBack(){
   const e=editDraft;if(!e)return;
-  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Lá Bài':'Cài đặt ARTIFACTS';
+  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Vai Trò':'Cài đặt ARTIFACTS';
   $('#entityName').value=e.name||'';$('#entityInformation').value=e.information||'';
   $('#factionBlock').classList.toggle('hidden',currentKind!=='cards');$('#livesField').classList.toggle('hidden',currentKind!=='cards');
   if(currentKind==='cards')$$('#factionSeg button').forEach(b=>b.classList.toggle('active',b.dataset.faction===e.factionId));
@@ -770,7 +770,7 @@ function auditLocalData(){
   const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
   try{
     const issues=[];
-    const buckets=[['Lá Bài',state.cards],['Artifact',state.artifacts],['Hành Động Lá',state.actions?.role],['Hành Động Artifact',state.actions?.artifacts],['Hiệu Ứng',state.effects]];
+    const buckets=[['Vai Trò',state.cards],['Artifact',state.artifacts],['Hành Động Lá',state.actions?.role],['Hành Động Artifact',state.actions?.artifacts],['Hiệu Ứng',state.effects]];
     for(const [label,list] of buckets){
       if(!Array.isArray(list)){issues.push(label+' lỗi cấu trúc');continue}
       const ids=list.map(x=>String(x?.id||'')).filter(Boolean),dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
@@ -814,6 +814,19 @@ async function gmApi(path,opts={}){
     return data;
   }finally{clearTimeout(timer)}
 }
+
+/* V2.46 — GM Tab Chơi 2D bridge. Player Web remains a separate workstream. */
+window.GMWW2DBridge={
+  getCatalog(){return {cards:clone(state.cards||[]),artifacts:clone(state.artifacts||[]),prefs:clone(prefs||{})}},
+  async artwork(kind,id,assetKind='thumb'){return resolveArtwork(kind,id,assetKind)},
+  async listMembers(){const d=await gmApi('/api/gm/members');return Array.isArray(d?.members)?d.members:[]},
+  async createMember(body){return gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify(body||{})})},
+  async listAvatars(){const r=await fetch(GMWW_SERVER_BASE+'/api/avatars?play2d='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Không tải được Kho Avatar.');const d=await r.json();return Array.isArray(d?.avatars)?d.avatars:[]},
+  async listRooms(){const d=await gmApi('/api/gm/rooms');return Array.isArray(d?.rooms)?d.rooms:(Array.isArray(d)?d:[])},
+  async createRoom(body){const r=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body||{}),cache:'no-store'});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));return d},
+  async roomState(code){return gmApi('/api/gm/rooms/'+encodeURIComponent(code))},
+  async roomAction(code,action,body={}){return gmApi('/api/gm/rooms/'+encodeURIComponent(code)+'/'+action,{method:'POST',body:JSON.stringify(body||{})})}
+};
 async function listStoredArtworkAvatars(){
   const db=await openDb();
   try{
