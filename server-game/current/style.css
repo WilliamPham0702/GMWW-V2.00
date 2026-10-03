@@ -512,3 +512,20 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 #memberDirectoryList .member-card-actions{grid-column:3!important;grid-row:1!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:5px!important;margin:0!important}
 #memberDirectoryList .member-card-actions button{width:100%!important;min-height:26px!important;padding:4px 2px!important;font-size:9px!important;border-radius:7px!important}
 @media(max-width:380px){#memberDirectoryList .member-card{grid-template-columns:46px minmax(0,1fr) 70px!important;gap:6px!important}#memberDirectoryList .member-avatar{width:46px!important;height:46px!important}#memberDirectoryList .member-status{font-size:7px!important}}
+
+/* V2.44 — Member account form + adjustable background readability */
+:root{--gmww-background-dim:.30}
+#stage:before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:rgba(1,8,15,var(--gmww-background-dim))}
+#stage>main,#stage>#bottomNav,#stage>.sheet{position:relative;z-index:1}
+.page{isolation:isolate}
+.member-page,.settings-page{position:relative;z-index:1}
+.member-page-head h2,.member-page-head small,.member-form label,.member-form-label,.settings-page-head h2,.settings-page-head small{color:#f3fbff!important;text-shadow:0 2px 8px rgba(0,0,0,.92)}
+.member-form input::placeholder{color:#a9bdca!important;opacity:1}
+.member-password-optional{display:grid;gap:7px}
+.member-password-toggle{min-height:42px;width:100%;border:1px dashed rgba(79,220,255,.42);border-radius:10px;background:rgba(5,25,40,.92);color:#dff9ff;font-size:11px;font-weight:900;text-align:left;padding:0 11px}
+.member-password-toggle[aria-expanded="true"]{border-style:solid;background:#0b2940}
+.background-dim-card .settings-title{align-items:center}
+.background-dim-card .settings-title h3{margin:0;color:#f3fbff}
+.background-dim-card .settings-title small{display:block;margin-top:3px;color:#c2d5df!important}
+#backgroundDimValue{min-width:44px;text-align:right;color:#f7d38c}
+.background-dim-range{width:100%;height:34px;margin:7px 0 0;accent-color:#45d9f5}
