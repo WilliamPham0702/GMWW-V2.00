@@ -6,6 +6,12 @@ const ROOT_ID='play2dRoot';
 const STEPS=['rooms','members','game','assign','delivery','play'];
 const STEP_LABEL={rooms:'Tạo Phòng',members:'Chọn Thành Viên',game:'Chọn Ván',assign:'Phân Vai',delivery:'Phát Vai',play:'Vào Game',waiting:'Phòng Chờ'};
 const EARLY_ARTIFACTS=['Tráng Gương','Đá Hoán Đổi','Mắt Tiên Tri','Bùa Hộ Mệnh'];
+function earlyArtifactNames(){
+ const flagged=(cache?.catalog?.artifacts||[]).filter(a=>a?.artifact?.callAtGameStart).map(a=>a.name).filter(Boolean);
+ const seen=new Set(),out=[];
+ for(const n of [...EARLY_ARTIFACTS,...flagged])if(flagged.includes(n)&&!seen.has(n)){seen.add(n);out.push(n)}
+ return out;
+}
 const $=(s,r=document)=>r.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=v=>JSON.parse(JSON.stringify(v));
@@ -213,7 +219,7 @@ function playerPositions(){
 function currentCallout(){
  if(st.phase==='day')return 'Ban ngày • theo dõi thảo luận, bỏ phiếu và các Hiệu Ứng đang có.';
  if(st.night===1&&st.playStep==='wolf')return '🐺 Bầy Sói ơi dậy đi nhìn mặt nhau.';
- if(st.night===1&&st.playStep==='early'){const n=EARLY_ARTIFACTS[st.earlyIndex];return '✦ Gọi sử dụng đầu ván: '+(n||'Artifact')+'. Có thể bỏ qua và giữ quyền dùng ở lượt chính.'}
+ if(st.night===1&&st.playStep==='early'){const n=earlyArtifactNames()[st.earlyIndex];return '✦ Gọi sử dụng đầu ván: '+(n||'Artifact')+'. Có thể bỏ qua và giữ quyền dùng ở lượt chính.'}
  if(st.playStep==='summary')return 'Tổng kết Đêm '+st.night+' • chỉ hiển thị danh sách người chết trước khi chuyển sang Ngày.';
  const q=nightQueue(),r=q[st.roleTurn];return r?('🌙 '+r.name+' thức dậy • GM điều khiển, Player Web chỉ thao tác khi chức năng yêu cầu.'):'Hoàn tất các lượt ban đêm.';
 }
@@ -238,7 +244,7 @@ function renderPlay(){
  if(st.phase==='night'){
   const q=nightQueue();html+='<div class="p2-queue" style="margin-top:9px">';
   if(st.night===1)html+='<div class="p2-queue-row '+(st.playStep==='wolf'?'current':'')+'"><span class="p2-order">0</span><div><b>Bầy Sói nhìn mặt nhau</b><small>Chỉ Đêm 1 • gọi một lần trong cả ván</small></div><span>🐺</span></div>';
-  if(st.night===1)EARLY_ARTIFACTS.forEach((n,i)=>{html+='<div class="p2-queue-row '+(st.playStep==='early'&&st.earlyIndex===i?'current':'')+'"><span class="p2-order">'+(i+1)+'</span><div><b>'+esc(n)+'</b><small>Gọi sử dụng đầu ván</small></div><span>✦</span></div>'});
+  if(st.night===1)earlyArtifactNames().forEach((n,i)=>{html+='<div class="p2-queue-row '+(st.playStep==='early'&&st.earlyIndex===i?'current':'')+'"><span class="p2-order">'+(i+1)+'</span><div><b>'+esc(n)+'</b><small>Gọi sử dụng đầu ván</small></div><span>✦</span></div>'});
   q.forEach((r,i)=>{html+='<div class="p2-queue-row '+(st.playStep==='normal'&&st.roleTurn===i?'current':'')+'"><span class="p2-order">'+(i+1+(st.night===1?5:0))+'</span><div><b>'+esc(r.name)+'</b><small>'+esc(factionLabel(r.factionId))+'</small></div><span>🌙</span></div>'});
   html+='</div>';
   if(st.playStep==='summary'){const deaths=[...activeDeaths()];html+='<div class="p2-warning" style="margin-top:8px">'+(deaths.length?('Người chết: '+deaths.map(x=>selectedMemberRows().find(m=>m.loginId===x)?.displayName||x).join(', ')):'Không ghi nhận người chết trong dữ liệu máy chủ.')+'</div>'}
@@ -330,7 +336,7 @@ async function startGame(){
  }catch(e){toast('Không bắt đầu được ván: '+e.message)}
 }
 function nextRelevantEarly(from){
- for(let i=from;i<EARLY_ARTIFACTS.length;i++){const wanted=norm(EARLY_ARTIFACTS[i]);if(st.artifactAssignments.some(x=>norm(artifactById(x.artifactId)?.name)===wanted))return i}
+ const early=earlyArtifactNames();for(let i=from;i<early.length;i++){const wanted=norm(early[i]);if(st.artifactAssignments.some(x=>norm(artifactById(x.artifactId)?.name)===wanted))return i}
  return -1;
 }
 async function advanceNight(){
