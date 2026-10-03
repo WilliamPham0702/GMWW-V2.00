@@ -418,7 +418,12 @@ function applyV226Catalog(s,migrating=false){
   };
   for(const c of DEFAULT_STATE.cards)s.cards=upsert(s.cards,c,['id','legacyId']);
   s.artifacts=Array.isArray(s.artifacts)?s.artifacts:[];
-  for(const a of DEFAULT_STATE.artifacts)s.artifacts=upsert(s.artifacts,a,['id','legacyId']);
+  for(const a of DEFAULT_STATE.artifacts){
+    const existing=(s.artifacts||[]).find(x=>(a.id&&x?.id===a.id)||(a.legacyId&&x?.legacyId===a.legacyId));
+    const savedCall=existing?.artifact?.callAtGameStart;
+    s.artifacts=upsert(s.artifacts,a,['id','legacyId']);
+    if(savedCall!==undefined){const merged=s.artifacts.find(x=>x?.id===a.id);if(merged){merged.artifact=merged.artifact||{};merged.artifact.callAtGameStart=savedCall}}
+  }
   s.actions=s.actions||{role:[],artifacts:[]};
   for(const a of DEFAULT_STATE.actions.role)s.actions.role=upsert(s.actions.role,a,['id','legacyId']);
   s.actions.artifacts=Array.isArray(s.actions.artifacts)?s.actions.artifacts:[];
