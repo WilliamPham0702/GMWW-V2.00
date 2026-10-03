@@ -704,3 +704,24 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
   .play-world{min-height:470px}.play-player-avatar{width:48px;height:48px}.play-player-token{width:62px}
   .play-village-core{width:166px}.play-core-pearl{width:62px;height:62px}.play-card-fan{bottom:20px}
 }
+
+/* V2.46 PLAY SCENE VECTOR ENHANCEMENT */
+.play-world{
+  background:#58a9d4 url("gmww-village-coast.svg") center 52%/cover no-repeat;
+}
+.play-world:before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),transparent 48%,rgba(4,93,119,.14));
+}
+.play-shell[data-phase="night"] .play-world{
+  background-image:linear-gradient(180deg,rgba(4,24,61,.58),rgba(6,27,57,.52) 46%,rgba(5,19,42,.68)),url("gmww-village-coast.svg");
+  background-position:center 52%;background-size:cover;background-blend-mode:multiply,normal;
+}
+.play-shell[data-phase="lobby"] .play-world{
+  background-image:linear-gradient(180deg,rgba(38,199,224,.05),rgba(10,131,164,.08)),url("gmww-village-coast.svg");
+  background-position:center 52%;background-size:cover;
+}
+.play-phase-pill{cursor:pointer}
+.play-player-token{border:0;background:none;color:#fff;padding:0}
+.play-player-token:focus-visible{outline:3px solid #fff4a9;outline-offset:4px;border-radius:14px}
+.play-player-token.is-active small{background:#fff0a8;color:#6d5a13}
