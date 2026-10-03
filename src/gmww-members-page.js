@@ -380,10 +380,35 @@ body:before{display:none!important;background:none!important}
 .screen{background-image:var(--bg)!important;background-color:transparent!important}
 .screen:after,.screen:before{display:none!important;background:none!important;content:none!important}
 
-/* Auth clarity 0.40.16: no dim/glass veil on login/create/reset */
-#login .panel,#create .panel,#reset .panel{background:rgba(255,255,255,.08)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 10px 26px rgba(0,38,65,.18)!important}
-#login,#create,#reset{background-image:var(--bg)!important;background-color:transparent!important}
-#login:before,#login:after,#create:before,#create:after,#reset:before,#reset:after{display:none!important;background:none!important;content:none!important}
+/* Auth clarity 0.40.18: readable sea background + visible auth controls */
+#login,#create,#reset{background-image:var(--bg)!important;background-color:#06253a!important}
+#login:before,#create:before,#reset:before{display:none!important}
+#login:after,#create:after,#reset:after{
+  display:block!important;content:""!important;position:absolute!important;inset:0!important;pointer-events:none!important;
+  background:linear-gradient(180deg,rgba(1,22,38,.28) 0%,rgba(1,24,43,.34) 48%,rgba(1,17,31,.45) 100%)!important;
+  -webkit-backdrop-filter:blur(1.5px)!important;backdrop-filter:blur(1.5px)!important
+}
+#login .panel,#create .panel,#reset .panel{
+  background:linear-gradient(155deg,rgba(2,20,35,.64),rgba(3,25,43,.56))!important;
+  -webkit-backdrop-filter:blur(10px) saturate(1.08)!important;backdrop-filter:blur(10px) saturate(1.08)!important;
+  border-color:rgba(255,209,124,.78)!important;box-shadow:0 12px 34px rgba(0,20,36,.42),inset 0 0 0 1px rgba(255,255,255,.05)!important
+}
+#login .label,#create .label{color:#ffe0a1!important;text-shadow:0 2px 7px rgba(0,20,35,.75)}
+#login .input,#create .input{background:rgba(2,25,45,.78)!important;color:#fff!important;border-color:rgba(178,216,255,.68)!important}
+#login .input::placeholder,#create .input::placeholder{color:rgba(239,248,255,.70)!important;opacity:1}
+.field-help{display:block;margin:5px 2px 0;color:#f4ead8;font-size:10px;line-height:1.35;text-shadow:0 2px 7px rgba(0,18,31,.9)}
+.auth-link{appearance:none;border:0;background:none;color:#ffe09a;font:900 12px/1.35 Arial,Helvetica,sans-serif;text-decoration:underline;text-underline-offset:3px;padding:4px 0;box-shadow:none;text-shadow:0 2px 8px rgba(0,22,38,.9)}
+.auth-link:active{opacity:.75;transform:none}
+.login-links{color:#fff4df!important;font-weight:700}
+.login-links button{color:#ffe09a!important;font-size:13px!important}
+.login-register-guide{display:none;margin-top:12px;padding:11px 12px;border:1px solid rgba(255,211,126,.72);border-radius:12px;background:rgba(2,27,47,.78);color:#fff5e4;font-size:11px;line-height:1.45;text-align:center}
+.login-register-guide.show{display:block}
+.login-register-guide .auth-link{display:inline-block;margin-left:4px}
+.optional-password{margin-top:12px}
+.optional-password-fields{display:none;gap:0}
+.optional-password-fields.open{display:block}
+#create .form-title,#login .form-title{color:#ffd87f!important;text-shadow:0 3px 12px rgba(0,24,43,.88)}
+
 
 /* Profile room actions: Enter Room + Exit on one row */
 .profile-actions-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:stretch;margin-top:18px}
@@ -410,7 +435,7 @@ button,input,select,textarea{font:inherit}
 .screen>*{position:relative;z-index:1}
 </style>
 </head>
-<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.5-username-login">
+<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.6-auth-flow">
 <div class="app">
 
 <!-- 1. ĐĂNG NHẬP -->
@@ -420,8 +445,15 @@ button,input,select,textarea{font:inherit}
     <h1 class="form-title">Đăng Nhập</h1>
     <label class="label">Tên đăng nhập</label>
     <input id="loginUser" class="input" autocomplete="username" placeholder="Tên đăng nhập">
+    <small class="field-help">Vui lòng nhập tên đăng nhập của bạn vào đây.</small>
+    <div id="loginPasswordBlock" class="optional-password-fields">
+      <label class="label">Mật khẩu</label>
+      <input id="loginPass" class="input" type="password" autocomplete="current-password" placeholder="Mật khẩu">
+      <small class="field-help">Tài khoản này đã đặt mật khẩu.</small>
+    </div>
     <button class="primary" style="margin-top:16px" onclick="login()">ĐĂNG NHẬP</button>
-    <div class="linkline login-links"><span>Chưa có tài khoản? <button onclick="go('create')">Tạo tài khoản</button></span></div>
+    <div id="loginRegisterGuide" class="login-register-guide">Tên đăng nhập này chưa có tài khoản.<button class="auth-link" type="button" onclick="openCreateFromLogin()">Tạo tài khoản ngay</button></div>
+    <div class="linkline login-links"><span>Chưa có tài khoản? <button type="button" onclick="openCreateFromLogin()">Tạo tài khoản</button></span></div>
   </div>
 </section>
 
@@ -431,8 +463,12 @@ button,input,select,textarea{font:inherit}
 <div class="panel">
     <div class="kicker">THÀNH VIÊN GMWW</div>
     <h1 class="form-title">Tạo Tài Khoản</h1>
-    <label class="label">Tên tài khoản</label><input id="regUser" class="input" placeholder="williampham0702">
-    <label class="label">Tên hiển thị</label><input id="regDisplay" class="input" placeholder="William Phạm">
+    <label class="label">Tên đăng nhập</label>
+    <input id="regUser" class="input" autocomplete="username" placeholder="Tên đăng nhập">
+    <small class="field-help">Vui lòng nhập tên đăng nhập vào đây.</small>
+    <label class="label">Tên Hiển Thị</label>
+    <input id="regDisplay" class="input" autocomplete="name" placeholder="Tên Hiển Thị">
+    <small class="field-help">Bạn mong muốn người chơi khác thấy tên gì?</small>
     <label class="label">Chọn Avatar</label>
     <div id="avatarSuggestions" class="avatar-picks"></div>
     <div class="avatar-source"><span>Kho Avatar GMWW</span><strong id="avatarSourceState">Đang kết nối…</strong></div>
@@ -441,8 +477,13 @@ button,input,select,textarea{font:inherit}
       <button type="button" onclick="openAvatarLibrary()">Xem tất cả Avatar GMWW</button>
     </div>
     <div id="avatarLoadError" class="avatar-error"></div>
-    <label class="label">Mật khẩu</label><input id="regPass" class="input" type="password" placeholder="Tối thiểu 4 ký tự">
-    <label class="label">Nhập lại mật khẩu</label><input id="regPass2" class="input" type="password" placeholder="Nhập lại mật khẩu">
+    <div class="optional-password">
+      <button id="registrationPasswordToggle" class="auth-link" type="button" onclick="toggleRegistrationPassword()">＋ Đặt mật khẩu cho tài khoản nếu muốn</button>
+      <div id="registrationPasswordFields" class="optional-password-fields">
+        <label class="label">Mật khẩu</label><input id="regPass" class="input" type="password" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự">
+        <label class="label">Nhập lại mật khẩu</label><input id="regPass2" class="input" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu">
+      </div>
+    </div>
     <button class="primary violet" style="margin-top:16px" onclick="createAccount()">TẠO TÀI KHOẢN</button>
   </div>
 </section>
