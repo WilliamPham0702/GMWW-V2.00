@@ -410,7 +410,7 @@ button,input,select,textarea{font:inherit}
 .screen>*{position:relative;z-index:1}
 </style>
 </head>
-<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.4-auth-landing">
+<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.5-username-login">
 <div class="app">
 
 <!-- 1. ĐĂNG NHẬP -->
@@ -418,12 +418,10 @@ button,input,select,textarea{font:inherit}
   <div class="panel login-panel">
     <div class="kicker">GMWW PLAYER</div>
     <h1 class="form-title">Đăng Nhập</h1>
-    <label class="label">Tên tài khoản</label>
-    <input id="loginUser" class="input" autocomplete="username" placeholder="Tên tài khoản">
-    <label class="label">Mật khẩu</label>
-    <input id="loginPass" class="input" type="password" autocomplete="current-password" placeholder="Mật khẩu">
+    <label class="label">Tên đăng nhập</label>
+    <input id="loginUser" class="input" autocomplete="username" placeholder="Tên đăng nhập">
     <button class="primary" style="margin-top:16px" onclick="login()">ĐĂNG NHẬP</button>
-    <div class="linkline login-links"><span>Chưa có tài khoản? <button onclick="go('create')">Tạo tài khoản</button></span><span class="login-link-sep">•</span><button onclick="openReset()">Reset mật khẩu</button></div>
+    <div class="linkline login-links"><span>Chưa có tài khoản? <button onclick="go('create')">Tạo tài khoản</button></span></div>
   </div>
 </section>
 
