@@ -1119,7 +1119,7 @@ let playSceneState=(()=>{
   const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{const saved=Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1165,7 +1165,7 @@ async function playSyncRoom(force=false){
   if(playSceneRuntime.busy&&!force)return null;
   try{
     const data=await playRoomApi('');
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     playSceneState.artifactCount=Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0)));playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);
     if(['running','started','game','playing'].includes(serverPhase)){
@@ -1214,8 +1214,16 @@ function bindPlayModeButtons(){document.querySelectorAll('[data-play-mode]').for
 function renderPlayContext(){
   const k=document.getElementById('playContextKicker'),t=document.getElementById('playContextTitle'),x=document.getElementById('playContextText'),actions=document.getElementById('playContextActions'),step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;
   if(playSceneState.phase==='night'){
-    if(k)k.textContent='ĐÊM '+Math.max(1,playSceneState.night);if(t)t.textContent=playSceneState.night===1?'Bầy Sói ơi dậy đi nhìn mặt nhau':'Thực hiện lượt Ban Đêm';
-    if(x)x.textContent=playSceneState.night===1?'Sau nhận diện Bầy Sói: Tráng Gương → Đá Hoán Đổi → Mắt Tiên Tri → Bùa Hộ Mệnh → các lượt chính.':'Auto GM xử lý theo thứ tự; GM có thể can thiệp mà không đổi phase.';
+    const runtime=playSceneRuntime.nightRuntime,current=runtime&&!runtime.completed?runtime.queue?.[runtime.cursor]:null,total=runtime?.queue?.length||0,done=Math.min(total,Number(runtime?.cursor||0));
+    if(k)k.textContent='ĐÊM '+Math.max(1,playSceneState.night)+(total?' • '+Math.min(done+1,total)+'/'+total:'');
+    if(t)t.textContent=current?.label||(runtime?.completed?'Đã hoàn tất các lượt Ban Đêm':'Đang chuẩn bị thứ tự Đêm');
+    if(x){
+      if(current?.kind==='wolf-introduction')x.textContent='Bầy Sói ơi dậy đi nhìn mặt nhau. Bước này chỉ có ở Đêm 1.';
+      else if(current?.kind==='early-artifact')x.textContent='Lượt Artifact gọi sớm. Nếu dùng tại đây, lượt chính của Artifact này sẽ tự bỏ qua.';
+      else if(current?.kind==='role')x.textContent='Gọi Vai Trò này thực hiện chức năng. Các người chơi cùng Vai Trò được gom chung một lượt.';
+      else if(current?.kind==='artifact-main')x.textContent='Lượt chính của Artifact. Artifact đã dùng ở lượt gọi sớm sẽ không xuất hiện lại.';
+      else x.textContent='Toàn bộ thứ tự đêm đang được server giữ và đồng bộ cho GM.';
+    }
     if(actions)actions.innerHTML='<button class="play-action-chip active" type="button"><span>☾</span><b>Đêm '+Math.max(1,playSceneState.night)+'</b></button><button class="play-action-chip" type="button"><span>✦</span><b>Artifact '+Math.min(3,playSceneState.artifactCount)+'/3</b></button>';
   }else if(playSceneState.phase==='day'){
     if(k)k.textContent='BAN NGÀY';if(t)t.textContent='Công bố người chết → Thảo luận → Bỏ phiếu';if(x)x.textContent='Chỉ hiện kết quả người chết rồi chuyển sang Ngày. Bỏ phiếu điện tử dùng chung cho hai chế độ Online.';
@@ -1265,8 +1273,13 @@ async function advancePlayPhase(){
       await playSetServerCycle('night',1);return;
     }
     if(playSceneState.phase==='lobby'){await playSetServerCycle('night',Math.max(1,playSceneState.night||1))}
-    else if(playSceneState.phase==='night'){await playSetServerCycle('day',Math.max(1,playSceneState.night))}
-    else{await playSetServerCycle('night',Math.max(1,playSceneState.night)+1)}
+    else if(playSceneState.phase==='night'){
+      const runtime=playSceneRuntime.nightRuntime;
+      if(runtime&&!runtime.completed){
+        const data=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next'})});playSceneRuntime.nightRuntime=data?.runtime||runtime;await playSyncRoom(true);return
+      }
+      await playSetServerCycle('day',Math.max(1,playSceneState.night))
+    }else{await playSetServerCycle('night',Math.max(1,playSceneState.night)+1)}
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false)}
 }
@@ -1275,13 +1288,13 @@ function renderPlayScene(){
   const phase=playSceneState.phase,night=Math.max(0,Number(playSceneState.night)||0),put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
   put('playRoomCode',playSceneState.roomCode||'—');put('playArtifactCount',Math.min(3,Math.max(0,Number(playSceneState.artifactCount)||0))+'/3');
   const auto=document.getElementById('playAutoGM');if(auto){auto.classList.toggle('is-on',!!playSceneState.autoGM);auto.setAttribute('aria-pressed',String(!!playSceneState.autoGM))}
-  if(phase==='night'){put('playPhaseOrb','☾');put('playPhaseEyebrow','BAN ĐÊM');put('playPhaseTitle','Đêm '+Math.max(1,night));put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',night===1?'BẦY SÓI GẶP NHAU':'ĐÊM '+Math.max(1,night));put('playCoreHint',night===1?'Nhìn mặt nhau trước khi vào lượt chức năng.':'Theo dõi các lượt và hiệu ứng trong đêm.')}
+  if(phase==='night'){const rt=playSceneRuntime.nightRuntime,cur=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;put('playPhaseOrb','☾');put('playPhaseEyebrow','BAN ĐÊM');put('playPhaseTitle','Đêm '+Math.max(1,night));put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',cur?.kind==='early-artifact'?'ARTIFACT GỌI SỚM':cur?.kind==='artifact-main'?'ARTIFACT':cur?.kind==='role'?'VAI TRÒ':night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',cur?.label||'HOÀN TẤT ĐÊM '+Math.max(1,night));put('playCoreHint',rt?.completed?'Đã xong toàn bộ lượt. Có thể chuyển sang Ban Ngày.':cur?.kind==='wolf-introduction'?'Bầy Sói nhìn mặt nhau trước khi vào lượt chức năng.':'Thực hiện bước hiện tại rồi nhấn Tiếp theo.')}
   else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseEyebrow','BAN NGÀY');put('playPhaseTitle','Ngày '+Math.max(1,night));put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
   else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;put('playPhaseOrb','◌');put('playPhaseEyebrow',isLivePlayRoom()?'PHÒNG '+playSceneState.roomCode:'PHÒNG CHỜ');put('playPhaseTitle',step.t);put('playCycleBadge',isLivePlayRoom()?'PHÒNG '+playSceneState.roomCode:'CHƯA TẠO PHÒNG');put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
   document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur)});
   const primary=document.getElementById('playPrimaryLabel'),icon=document.getElementById('playPrimaryIcon');
-  if(primary){if(phase==='night')primary.textContent='SANG BAN NGÀY';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room).a}
-  if(icon)icon.textContent=phase==='night'?'☀':phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
+  if(primary){if(phase==='night')primary.textContent=playSceneRuntime.nightRuntime?.completed?'SANG BAN NGÀY':'TIẾP THEO';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room).a}
+  if(icon)icon.textContent=phase==='night'?(playSceneRuntime.nightRuntime?.completed?'☀':'›'):phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
   renderPlayContext();renderPlayPlayers();renderPlayCards();
 }
 
