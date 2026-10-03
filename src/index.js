@@ -143,23 +143,27 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminCreate(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),password=String(body?.password||"");
-    if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"ID đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
-    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên hiển thị phải có từ 2 đến 24 ký tự."},400);
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),requestedPassword=String(body?.password||"");
+    if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
+    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
-    if(password.length<4||password.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu tạm thời phải có ít nhất 4 ký tự."},400);
-    const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"LOGIN_ID_TAKEN",message:"ID đăng nhập này đã tồn tại."},409);
-    const salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();
-    const member={loginId,displayName,avatarId,passwordSalt:bytesToBase64(salt),passwordHash:await derivePasswordHash(password,salt),passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,resetRequestedAt:null,passwordResetAt:null,stats:{wins:0,losses:0},history:[]};
+    if(requestedPassword&&(requestedPassword.length<4||requestedPassword.length>128))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu phải có ít nhất 4 ký tự."},400);
+    const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
+    const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
+    if([...rows.values()].some(x=>normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
+    const password=requestedPassword||randomNumericPassword(12),salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();
+    const member={loginId,displayName,avatarId,passwordSalt:bytesToBase64(salt),passwordHash:await derivePasswordHash(password,salt),passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,resetRequestedAt:null,passwordResetAt:null,stats:{wins:0,losses:0},history:[]};
     await this.ctx.storage.put(key,member);
-    return j({ok:true,member:publicMember(member),temporaryPassword:password},201)
+    return j({ok:true,member:publicMember(member)},201)
   }
   async memberAdminEdit(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy Thành Viên."},404);
-    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên hiển thị phải có từ 2 đến 24 ký tự."},400);
+    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
+    const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
+    if([...rows.values()].some(x=>normalizeLoginId(x?.loginId)!==loginId&&normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     member.displayName=displayName;member.avatarId=avatarId;member.updatedAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member)})
