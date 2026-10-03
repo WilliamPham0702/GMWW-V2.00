@@ -1119,7 +1119,7 @@ let playSceneState=(()=>{
   const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{const saved=Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,selectedWinnerFaction:'',busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1165,8 +1165,8 @@ async function playSyncRoom(force=false){
   if(playSceneRuntime.busy&&!force)return null;
   try{
     const data=await playRoomApi('');
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
-    playSceneState.artifactCount=Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0)));playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0))):0;playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);
     if(['running','started','game','playing'].includes(serverPhase)){
       playSceneState.step='battle';
@@ -1428,6 +1428,40 @@ async function playDealRoles(){
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false)}
 }
+
+function selectPlayWinner(faction){
+  const value=String(faction||'');playSceneRuntime.selectedWinnerFaction=value;
+  document.querySelectorAll('[data-play-winner]').forEach(b=>b.classList.toggle('selected',b.dataset.playWinner===value));
+  const confirm=document.getElementById('playEndConfirm');if(confirm)confirm.disabled=!value||playSceneRuntime.busy;
+}
+async function openPlayEndSheet(){
+  if(!isLivePlayRoom()){playFlashError('Chưa có Phòng đang chơi.');return}
+  if(!playSceneRuntime.room)await playSyncRoom(true);
+  const phase=String(playSceneRuntime.room?.phase||'').toLowerCase();
+  if(!['running','started','game','playing'].includes(phase)){playFlashError('Chỉ kết thúc khi ván đang chạy.');return}
+  const sheet=document.getElementById('playEndSheet');if(!sheet)return;
+  const proposal=playSceneRuntime.winProposal;
+  document.getElementById('playEndRoomLabel').textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneRuntime.room?.gameName||playSceneState.gameName||'Ván GMWW');
+  const box=document.getElementById('playWinProposal');box?.classList.toggle('hidden',!proposal);
+  if(proposal){
+    document.getElementById('playWinProposalFaction').textContent=proposal.winnerLabel||proposal.winnerFaction||'—';
+    document.getElementById('playWinProposalReason').textContent=proposal.reason||'Hệ thống phát hiện điều kiện kết thúc cơ bản.';
+  }
+  selectPlayWinner(proposal?.winnerFaction||'');sheet.classList.remove('hidden');
+}
+function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
+async function confirmPlayEndGame(){
+  const winner=String(playSceneRuntime.selectedWinnerFaction||'');if(!winner){playFlashError('Hãy chọn Phe thắng trước khi kết thúc ván.');return}
+  if(playSceneRuntime.busy)return;playSetBusy(true);const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=true;
+  try{
+    const room=playSceneRuntime.room||{},data=await playRoomApi('/end',{method:'POST',body:JSON.stringify({matchId:room.matchId||playSceneState.matchId||'',matchRevision:Number(room.matchRevision||0),winnerFaction:winner,winnerLabel:winner})});
+    playSceneRuntime.room=data.room||room;playSceneRuntime.nightRuntime=null;playSceneRuntime.artifactCycle={count:0,max:3};playSceneRuntime.winProposal=null;playSceneRuntime.selectedWinnerFaction='';
+    playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;playSceneState.step='members';playSceneState.assignmentsPreview=[];playSceneState.activePlayerId='';playSceneState.roleId='';playSceneState.artifactId='';playSceneState.matchId='';savePlayScene();
+    closePlayEndSheet();await playSyncRoom(true);renderPlayScene();
+    playFlashError('Đã kết thúc ván • '+winner+' thắng. Mọi Thành Viên đã về Phòng Chờ và Sẵn sàng.');
+  }catch(err){playFlashError(err.message||'Không kết thúc được ván.')}
+  finally{playSetBusy(false);if(btn)btn.disabled=!playSceneRuntime.selectedWinnerFaction}
+}
 function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
 function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
 async function openPlayRosterSheet(){
@@ -1465,7 +1499,7 @@ function initPlayScene(){
   document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playBack')?.addEventListener('click',()=>{if(playSceneState.phase!=='lobby'){playSyncRoom(true)}else advancePlaySetup(-1)});
-  document.getElementById('playEndGame')?.addEventListener('click',()=>{if(playSceneState.phase==='lobby'&&playSceneState.step!=='battle')return;playFlashError('Kết thúc ván sẽ mở sau bước xác nhận Phe thắng để không ghi sai lịch sử.')});
+  document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
   document.getElementById('playRoomButton')?.addEventListener('click',()=>{if(isLivePlayRoom())playSyncRoom(true);else setPlayStep('room')});
   document.getElementById('playRosterClose')?.addEventListener('click',closePlayRosterSheet);document.getElementById('playRosterCancel')?.addEventListener('click',closePlayRosterSheet);
@@ -1478,6 +1512,11 @@ function initPlayScene(){
   document.getElementById('playGameSuggest')?.addEventListener('click',suggestPlayGameRoles);
   document.getElementById('playGameClear')?.addEventListener('click',()=>{playSceneState.rolePlan={};savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount()});
   document.getElementById('playGameSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playGameSheet'))closePlayGameSheet()});
+  document.querySelectorAll('[data-play-winner]').forEach(b=>b.addEventListener('click',()=>selectPlayWinner(b.dataset.playWinner)));
+  document.getElementById('playUseWinProposal')?.addEventListener('click',()=>selectPlayWinner(playSceneRuntime.winProposal?.winnerFaction||''));
+  document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
+  document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
+  document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
   bindPlayModeButtons();renderPlayScene();if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
   if(!playSceneRuntime.pollTimer)playSceneRuntime.pollTimer=setInterval(()=>{if(document.getElementById('start')?.classList.contains('active')&&isLivePlayRoom())playSyncRoom(false)},4000);
 }
