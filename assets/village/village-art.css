@@ -37,3 +37,12 @@ html.embedded .hud-actions{pointer-events:none}
 html.embedded .hud-actions #mode{display:none!important}
 html.embedded .player{pointer-events:auto}
 html.embedded .player .name{backdrop-filter:blur(5px)}
+
+/* V2.52: same day/night scene bytes as the packaged IPA. */
+.stage{background:#58a9d4 url("../backgrounds/gmww-village-day-v252.webp") center center/cover no-repeat!important}
+.night .stage{background:#102e55 url("../backgrounds/gmww-village-night-v252.webp") center center/cover no-repeat!important}
+.stage::before{background:linear-gradient(180deg,rgba(3,20,35,.20),transparent 24%,transparent 70%,rgba(2,14,25,.44));mix-blend-mode:normal}
+.night .stage::before{background:linear-gradient(180deg,rgba(1,8,24,.20),transparent 24%,transparent 70%,rgba(1,7,18,.48));mix-blend-mode:normal}
+.night .stage::after{display:none!important}
+.fire{display:none!important}
+html.embedded .stage{height:100svh;min-height:100svh}
