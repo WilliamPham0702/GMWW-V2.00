@@ -846,6 +846,7 @@ async function syncArtworkAvatars(){
   memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
+function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
 function memberAvatarUrl(id){return GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(String(id||''))+'/image'}
 function memberDate(v,withTime=false){
   if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
@@ -984,11 +985,13 @@ function openMemberSheet(mode,m=null){
     const editing=mode==='edit';
     title.textContent=editing?'Sửa Thành Viên':'Thêm Thành Viên';
     body.innerHTML='<div class="member-form">'+
-      '<label>Member ID<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Không dấu, không khoảng trắng"></label>'+
-      '<label>Tên hiển thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Tên hiển thị"></label>'+
-      (editing?'':'<label>Mật khẩu tạm thời<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label>')+
+      '<label>Tên đăng nhập<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Vui lòng nhập tên đăng nhập" autocomplete="username"></label>'+
+      '<label>Tên Hiển Thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Bạn mong muốn người chơi khác thấy tên gì?" autocomplete="name"></label>'+
+      (editing?'':'<div class="member-password-optional"><button class="member-password-toggle" id="memberPasswordToggle" type="button" aria-expanded="false">＋ Đặt mật khẩu cho tài khoản nếu muốn</button><label class="hidden" id="memberPasswordWrap">Mật khẩu<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label></div>')+
       '<div class="member-avatar-picker"><div class="member-form-label">Avatar</div><div class="member-avatar-library-head"><b>🖼 Kho Avatar</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Artwork</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
     renderMemberAvatarPicker();
+    if(!editing){const toggle=document.getElementById('memberPasswordToggle'),wrap=document.getElementById('memberPasswordWrap');if(toggle&&wrap)toggle.onclick=()=>{const open=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!open);toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';if(open)setTimeout(()=>document.getElementById('memberPassword')?.focus(),30)}}
+    document.getElementById('memberDisplayName')?.addEventListener('blur',e=>{e.target.value=memberTitleCase(e.target.value)});
     document.getElementById('memberAvatarRefresh').onclick=async()=>{
       const btn=document.getElementById('memberAvatarRefresh');btn.disabled=true;btn.textContent='Đang đồng bộ…';
       try{await refreshAvatarLibrary();renderMemberAvatarPicker()}catch(e){alert('Không cập nhật được Kho Avatar: '+e.message)}
@@ -1024,13 +1027,13 @@ async function saveMemberSheet(){
   try{
     if(btn){btn.disabled=true;btn.classList.add('is-busy')}
     {
-      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=document.getElementById('memberDisplayName')?.value.trim()||'',avatarId=memberAdminState.selectedAvatarId;
-      if(displayName.length<2)throw new Error('Tên hiển thị phải có ít nhất 2 ký tự.');
+      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=memberTitleCase(document.getElementById('memberDisplayName')?.value||''),avatarId=memberAdminState.selectedAvatarId;
+      if(displayName.length<2)throw new Error('Tên Hiển Thị phải có ít nhất 2 ký tự.');
       if(!avatarId)throw new Error('Vui lòng chọn Avatar.');
       if(mode==='edit'){
         await gmApi('/api/gm/members/edit',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId})});
       }else{
-        const password=document.getElementById('memberPassword')?.value||'';if(password.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
+        const password=document.getElementById('memberPassword')?.value||'';if(password&&password.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
         await gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,password})});
       }
     }
