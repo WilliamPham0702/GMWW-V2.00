@@ -725,3 +725,20 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-player-token{border:0;background:none;color:#fff;padding:0}
 .play-player-token:focus-visible{outline:3px solid #fff4a9;outline-offset:4px;border-radius:14px}
 .play-player-token.is-active small{background:#fff0a8;color:#6d5a13}
+
+
+/* V2.46 LIVE ROSTER SHEET */
+.play-roster-sheet-card{max-height:min(82dvh,720px);display:flex;flex-direction:column;overflow:hidden}
+.play-roster-sheet-card .sheet-head{flex:0 0 auto}.play-roster-sheet-card .sheet-head h3{margin:0}.play-roster-sheet-card .sheet-head small{display:block;margin-top:2px;color:var(--muted);font-size:10px}
+.play-roster-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px 7px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.play-roster-toolbar span{font-size:10px;font-weight:900;color:#9deeff}.play-roster-toolbar button{border:1px solid rgba(79,220,255,.22);background:#0c2a40;color:#c9f8ff;border-radius:999px;padding:6px 9px;font-size:9px;font-weight:900}
+.play-roster-list{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:7px;padding:9px 1px 4px;min-height:180px}
+.play-roster-row{width:100%;border:1px solid rgba(157,224,255,.14);background:linear-gradient(180deg,#0d263a,#091d2e);color:#effcff;border-radius:14px;padding:7px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:8px;text-align:left}
+.play-roster-row img,.play-roster-avatar-fallback{width:42px;height:42px;border-radius:50%;object-fit:cover;background:linear-gradient(145deg,#95f1ee,#28a8c7);border:2px solid rgba(255,255,255,.38)}
+.play-roster-avatar-fallback{display:grid;place-items:center;color:#076881;font-weight:1000}
+.play-roster-row b{display:block;font-size:12px}.play-roster-row small{display:block;margin-top:2px;font-size:9px;color:var(--muted)}
+.play-roster-check{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(157,224,255,.28);background:#071b2a;color:transparent;font-size:13px;font-weight:1000}
+.play-roster-row.selected{border-color:rgba(255,226,123,.68);box-shadow:0 0 0 1px rgba(255,226,123,.18),0 7px 18px rgba(0,0,0,.18)}
+.play-roster-row.selected .play-roster-check{background:linear-gradient(145deg,#fff2a8,#eec85b);border-color:#fff6bf;color:#6b5610}
+.play-roster-actions{flex:0 0 auto;padding-top:8px}.play-roster-actions .primary{min-width:0;flex:1}
+.play-live-error{animation:playLivePulse .45s ease 2}@keyframes playLivePulse{50%{filter:brightness(1.28)}}
