@@ -52,12 +52,93 @@
 
       </div>
     </section>
-    <section class="page" id="start"><div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page play-page" id="start">
+      <div class="play-shell" id="playShell" data-phase="lobby">
+        <header class="play-hud">
+          <button class="play-room-chip" id="playRoomButton" type="button" aria-label="Thông tin Phòng">
+            <span>⌁</span><small>PHÒNG</small><b id="playRoomCode">—</b>
+          </button>
+          <div class="play-phase-pill" id="playPhasePill">
+            <span class="play-phase-orb" id="playPhaseOrb">◌</span>
+            <div><small id="playPhaseEyebrow">PHÒNG CHỜ</small><b id="playPhaseTitle">Chuẩn bị vào trận</b></div>
+          </div>
+          <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true">
+            <span class="play-auto-switch"><i></i></span><b>Auto GM</b>
+          </button>
+        </header>
+
+        <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
+          <div class="play-sky-glow"></div>
+          <div class="play-cloud play-cloud-a"></div>
+          <div class="play-cloud play-cloud-b"></div>
+          <div class="play-island-back"></div>
+          <div class="play-island-front"></div>
+          <div class="play-water-ripple play-water-ripple-a"></div>
+          <div class="play-water-ripple play-water-ripple-b"></div>
+
+          <div class="play-world-status">
+            <span class="play-cycle-badge" id="playCycleBadge">CHƯA BẮT ĐẦU</span>
+            <span class="play-artifact-cap"><i>✦</i><b id="playArtifactCount">0/3</b></span>
+          </div>
+
+          <div class="play-player-ring" id="playPlayerRing"></div>
+
+          <div class="play-village-core">
+            <div class="play-core-halo"></div>
+            <div class="play-core-pearl">🐺</div>
+            <small id="playCoreKicker">GMWW • SÂN CHƠI</small>
+            <b id="playCoreTitle">PHÒNG CHỜ</b>
+            <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
+          </div>
+
+          <div class="play-card-fan" id="playCardFan" aria-label="Vai Trò và Artifact">
+            <button class="play-focus-card role-card is-front" id="playRoleCard" data-play-card="role" type="button">
+              <span class="play-card-type">VAI TRÒ</span>
+              <img id="playRoleArtwork" alt="">
+              <b id="playRoleName">Chưa phân Vai Trò</b>
+            </button>
+            <button class="play-focus-card artifact-card" id="playArtifactCard" data-play-card="artifact" type="button">
+              <span class="play-card-type">ARTIFACT</span>
+              <img id="playArtifactArtwork" alt="">
+              <b id="playArtifactName">Chưa có Artifact</b>
+            </button>
+          </div>
+        </section>
+
+        <section class="play-context-panel" id="playContextPanel">
+          <div class="play-context-copy">
+            <small id="playContextKicker">THIẾT LẬP VÁN</small>
+            <b id="playContextTitle">Tạo Phòng → Thành Viên → Ván → Vai Trò → Phát Vai → Vào Trận</b>
+            <span id="playContextText">Hai chế độ dùng chung một sân chơi và cùng dữ liệu phòng.</span>
+          </div>
+          <div class="play-context-actions" id="playContextActions">
+            <button class="play-action-chip active" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button>
+            <button class="play-action-chip" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>
+          </div>
+        </section>
+
+        <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
+          <button class="done" data-play-step="room" type="button"><span>1</span><b>Phòng</b></button>
+          <button class="active" data-play-step="members" type="button"><span>2</span><b>Thành Viên</b></button>
+          <button data-play-step="game" type="button"><span>3</span><b>Ván</b></button>
+          <button data-play-step="roles" type="button"><span>4</span><b>Vai Trò</b></button>
+          <button data-play-step="deal" type="button"><span>5</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>6</span><b>Vào Trận</b></button>
+        </section>
+
+        <footer class="play-control-bar">
+          <button class="play-control-icon" id="playBack" type="button" aria-label="Quay về"><span>‹</span><small>Quay về</small></button>
+          <button class="play-primary-control" id="playPrimaryAction" type="button"><span id="playPrimaryIcon">＋</span><b id="playPrimaryLabel">CHỌN THÀNH VIÊN</b></button>
+          <button class="play-control-icon" id="playNext" type="button" aria-label="Tiếp tục"><span>›</span><small>Tiếp tục</small></button>
+          <button class="play-control-icon play-end-control" id="playEndGame" type="button" aria-label="Kết thúc ván"><span>◇</span><small>Kết thúc</small></button>
+        </footer>
+      </div>
+    </section>
 
     <section class="page" id="library">
       <div id="libraryHome">
         <nav class="library-tabs">
-          <button class="libtab active" data-lib="cards">🃏<b>Lá Bài</b></button>
+          <button class="libtab active" data-lib="cards">🎭<b>VAI TRÒ</b></button>
           <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
           <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
           <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
@@ -85,7 +166,7 @@
 
         <section class="libpane" id="lib-actions">
           <div class="section-tools">
-            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">Lá Bài</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
+            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">VAI TRÒ</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
             <input class="search" id="actionSearch" placeholder="Tìm Hành Động">
           </div>
           <div class="compact-box-grid" id="actionGrid"></div>
@@ -103,7 +184,7 @@
           </div>
           <div id="themeUiSections"></div>
           <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>🃏 Artwork Lá Bài</h3></div>
+            <div class="theme-section-head"><h3>🎭 Artwork Vai Trò</h3></div>
             <div id="themeCardRows"></div>
           </section>
           <section class="theme-section theme-section-pinned">
@@ -276,7 +357,7 @@
   <nav id="bottomNav">
     <button class="nav active" data-page="home"><span>⌂</span><b>Trang Chủ</b></button>
     <button class="nav" data-page="members"><span>♟</span><b>Thành Viên</b></button>
-    <button class="nav start" data-page="start"><i>▶</i><b>Bắt Đầu</b></button>
+    <button class="nav start" data-page="start"><i>▶</i><b>Chơi</b></button>
     <button class="nav" data-page="library"><span>▣</span><b>Thư Viện</b></button>
     <button class="nav" data-page="settings"><span>⚙</span><b>Cài Đặt</b></button>
   </nav>
