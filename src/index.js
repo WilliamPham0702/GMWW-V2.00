@@ -308,12 +308,23 @@ export class RoomDurableObject extends DurableObject {
   }
   async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
+  computeWinProposal(meta,assignments,interactions){
+    if(String(meta?.phase||"").toLowerCase()!=="running")return null;
+    const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||!meta?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean)),byPlayer=new Map();
+    for(const a of Array.isArray(assignments)?assignments:[]){const lid=normalizeLoginId(a?.loginId);if(!lid||dead.has(lid))continue;const row=byPlayer.get(lid)||{loginId:lid,factions:new Set()};row.factions.add(normalizeWinnerFaction(a?.faction||""));byPlayer.set(lid,row)}
+    const alive=[...byPlayer.values()];if(!alive.length)return null;
+    const wolves=alive.filter(p=>p.factions.has("Phe Sói")).length,third=alive.filter(p=>p.factions.has("Phe Ba")).length,others=alive.length-wolves;
+    if(alive.length===1&&third===1)return{winnerFaction:"Phe Ba",winnerLabel:"Phe Ba",reason:"Chỉ còn một Người Chơi Phe Ba còn sống.",confidence:"basic-rule"};
+    if(wolves===0)return{winnerFaction:"Phe Dân",winnerLabel:"Phe Dân",reason:"Không còn Người Chơi Phe Sói còn sống.",confidence:"basic-rule"};
+    if(wolves>=others)return{winnerFaction:"Phe Sói",winnerLabel:"Phe Sói",reason:"Số Người Chơi Phe Sói còn sống đã bằng hoặc nhiều hơn các phe còn lại.",confidence:"basic-rule"};
+    return null
+  }
   async gmState(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
-    const nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null;
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments:(await this.ctx.storage.get("assignments"))||[],interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3,accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-3):[]},nightRuntime,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3,accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-3):[]},nightRuntime,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
