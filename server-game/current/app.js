@@ -1119,7 +1119,7 @@ let playSceneState=(()=>{
   const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{const saved=Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,selectedWinnerFaction:'',busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1127,6 +1127,25 @@ function playLiveMembers(){
   const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[],wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
   if(wanted.size)return rows.filter(m=>wanted.has(String(m.loginId)));
   return [];
+}
+function playPlayerEffect(loginId){
+  const rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false),types=new Set(rows.map(x=>String(x?.type||'')));
+  if(types.has('dead'))return'dead';if(types.has('frozen'))return'frozen';if(types.has('expelled'))return'expelled';return'alive'
+}
+function playDeliveryLabel(member){
+  const a=(playSceneRuntime.assignments||[]).find(x=>String(x?.loginId||'')===String(member?.loginId||''));if(!member?.online)return'MẤT KẾT NỐI';if(!a)return playSceneState.step==='deal'||playSceneState.step==='battle'?'CHƯA PHÁT':(member?.ready?'SẴN SÀNG':'ONLINE');
+  if(a.viewedAt&&(!a.artifactId||a.artifactViewedAt))return'ĐÃ XEM';if(a.viewedAt&&a.artifactId)return'ĐÃ XEM VAI';return'ĐÃ PHÁT'
+}
+async function applyPlayPlayerState(type){
+  const loginId=String(playSceneState.activePlayerId||'');if(!loginId){playFlashError('Hãy chọn Người Chơi trên sân trước.');return}
+  const member=playLiveMembers().find(x=>String(x?.loginId||'')===loginId),label=member?.displayName||loginId;
+  if((type==='dead'||type==='expelled')&&!confirm((type==='dead'?'Đánh dấu '+label+' đã chết?':'Đuổi '+label+' khỏi làng?')))return;
+  playSetBusy(true);try{
+    await playRoomApi('/interaction',{method:'POST',body:JSON.stringify({loginId,type,matchId:playSceneRuntime.room?.matchId||playSceneState.matchId||'',night:Number(playSceneState.night||0),cycleKey:playSceneRuntime.room?.cycleKey||''})});await playSyncRoom(true)
+  }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+}
+function bindPlayPlayerStateActions(){
+  document.querySelectorAll('[data-play-player-state]').forEach(b=>b.onclick=()=>applyPlayPlayerState(String(b.dataset.playPlayerState||'')))
 }
 function playSeatPositions(count){
   const n=Math.max(1,Math.min(30,Number(count)||1)),out=[];
@@ -1165,7 +1184,7 @@ async function playSyncRoom(force=false){
   if(playSceneRuntime.busy&&!force)return null;
   try{
     const data=await playRoomApi('');
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0))):0;playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);
     if(['running','started','game','playing'].includes(serverPhase)){
@@ -1191,10 +1210,10 @@ function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const members=playLiveMembers(),count=Math.min(30,members.length||8),positions=playSeatPositions(count);ring.innerHTML='';
   for(let i=0;i<count;i++){
-    const m=members[i]||null,pos=positions[i]||[50,24],el=document.createElement('button');el.type='button';el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'');
+    const m=members[i]||null,pos=positions[i]||[50,24],el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive';el.type='button';el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(effect!=='alive'?' is-'+effect:'');
     el.style.left=pos[0]+'%';el.style.top=pos[1]+'%';
     const name=m?.displayName||('Chỗ '+(i+1)),initial=(name.trim().charAt(0)||'•').toUpperCase(),online=!!m?.online,ready=!!m?.ready;
-    el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span>'+playEsc(initial)+'</span>')+'</div><b>'+playEsc(name)+'</b><small>'+(m?(online?'ONLINE':ready?'SẴN SÀNG':'OFFLINE'):'TRỐNG')+'</small>';
+    const effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(effectLabel||playDeliveryLabel(m)):'TRỐNG';el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span>'+playEsc(initial)+'</span>')+'</div><b>'+playEsc(name)+'</b><small>'+playEsc(statusLabel)+'</small>';
     if(m){const im=el.querySelector('img');im.src=memberAvatarUrl(m.avatarId);im.onerror=()=>{im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};el.onclick=()=>{playSceneState.activePlayerId=String(m.loginId||'');savePlayScene();renderPlayScene()}}
     ring.appendChild(el);
   }
@@ -1246,6 +1265,12 @@ function renderPlayContext(){
       }else actions.innerHTML='<button class="play-action-chip '+(playSceneState.mode==='support'?'active':'')+'" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button><button class="play-action-chip '+(playSceneState.mode==='full'?'active':'')+'" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>';
     }
     bindPlayModeButtons();
+  }
+  if(actions&&playSceneState.step==='battle'&&playSceneState.activePlayerId){
+    const m=playLiveMembers().find(p=>String(p?.loginId||'')===String(playSceneState.activePlayerId)),stateLabel=playPlayerEffect(playSceneState.activePlayerId);
+    actions.insertAdjacentHTML('beforeend','<button class="play-action-chip play-state-chip '+(stateLabel==='frozen'?'active':'')+'" data-play-player-state="frozen" type="button"><span>❄</span><b>Đóng băng</b></button><button class="play-action-chip play-state-chip '+(stateLabel==='expelled'?'active':'')+'" data-play-player-state="expelled" type="button"><span>↗</span><b>Đuổi</b></button><button class="play-action-chip play-state-chip '+(stateLabel==='dead'?'active':'')+'" data-play-player-state="dead" type="button"><span>✕</span><b>Chết</b></button><button class="play-action-chip play-state-chip" data-play-player-state="clear_state" type="button"><span>↺</span><b>Gỡ trạng thái</b></button>');
+    if(t&&m)t.textContent=m.displayName+' • '+(stateLabel==='alive'?'Đang sống':stateLabel==='frozen'?'Đóng băng':stateLabel==='expelled'?'Bị đuổi':'Đã chết');
+    bindPlayPlayerStateActions()
   }
 }
 function setPlayStep(step){if(!PLAY_STEPS.includes(step))return;playSceneState.step=step;if(step!=='battle'){playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0}savePlayScene();renderPlayScene()}
@@ -1492,13 +1517,20 @@ async function savePlayRoster(){
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false);if(save)save.disabled=false}
 }
+async function backPlayPhase(){
+  if(playSceneRuntime.busy)return;
+  if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime&&Number(playSceneRuntime.nightRuntime.cursor||0)>0){
+    playSetBusy(true);try{const d=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'back'})});playSceneRuntime.nightRuntime=d?.runtime||playSceneRuntime.nightRuntime;await playSyncRoom(true)}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}return
+  }
+  if(playSceneState.phase!=='lobby'){await playSyncRoom(true);return}advancePlaySetup(-1)
+}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
   document.getElementById('playAutoGM')?.addEventListener('click',()=>{playSceneState.autoGM=!playSceneState.autoGM;savePlayScene();renderPlayScene()});
   document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
-  document.getElementById('playBack')?.addEventListener('click',()=>{if(playSceneState.phase!=='lobby'){playSyncRoom(true)}else advancePlaySetup(-1)});
+  document.getElementById('playBack')?.addEventListener('click',backPlayPhase);
   document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
   document.getElementById('playRoomButton')?.addEventListener('click',()=>{if(isLivePlayRoom())playSyncRoom(true);else setPlayStep('room')});
