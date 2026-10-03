@@ -1,0 +1,105 @@
+{
+  "schema": "gmww.approved-role-overlay.v1",
+  "baseline": {
+    "version": "2.43",
+    "commit": "4d4abb0c385bf40bc112931aed0ad3fc206e4342"
+  },
+  "status": "approved-data-not-runtime-integrated",
+  "notes": [
+    "Keep original V1.08 actions/effects/limits; these records capture approved additions, not complete engine definitions.",
+    "Do not deploy until unresolved Già Làng bell cost and Cô Bé Ti Hí Player Web text are resolved."
+  ],
+  "roles": [
+    {
+      "id": "source-39",
+      "name": "Ông Già",
+      "faction": "Dân",
+      "baseRule": "Đêm chết bằng số người phe Sói lúc bắt đầu ván cộng 1; xuyên Bảo Vệ và Bất Tử Ban Đêm; có thể Hồi Sinh.",
+      "approvedSupplement": "Sau hồi sinh không chết lại do tuổi già."
+    },
+    {
+      "id": "source-40",
+      "name": "Người Yêu Hòa Bình",
+      "faction": "Dân",
+      "baseRule": "Trong mọi phiên bỏ phiếu ban ngày chỉ được chọn CỨU.",
+      "approvedSupplement": "Ghi phiếu CỨU riêng, không cộng vào phiếu Treo Cổ."
+    },
+    {
+      "id": "source-41",
+      "name": "Hồn Ma",
+      "faction": "Dân",
+      "baseRule": "Sau khi chết mỗi ngày gửi một từ gợi ý, không nêu tên người chơi; vi phạm mất quyền đến hết ván.",
+      "approvedSupplement": "Nhập từ trên Player Web, GM duyệt trước công bố."
+    },
+    {
+      "id": "source-42",
+      "name": "Bác Sỹ Điên",
+      "faction": "Dân",
+      "baseRule": "Một Bình Cứu mỗi ván để giải trạng thái Bị Bệnh, được tự chọn.",
+      "approvedSupplement": "Sử dụng vào ban đêm."
+    },
+    {
+      "id": "source-45",
+      "name": "Sói Quỷ",
+      "faction": "Sói",
+      "baseRule": "Tối đa ba lần mỗi ván thay Sói Cắn bằng Cắn Chuyển Hóa; mục tiêu giữ vai trò, chuyển phe đêm sau.",
+      "approvedSupplement": "Sói Quỷ kích hoạt Player Web; GM xác nhận và thay Sói Cắn chung."
+    },
+    {
+      "id": "source-47",
+      "name": "Sói Lửa",
+      "faction": "Sói",
+      "baseRule": "Cắn cùng đàn; khi là Sói sống duy nhất, Lửa Lan gây chết nạn nhân phụ vào sáng hai ngày sau.",
+      "approvedSupplement": "GM chọn người sát trái/phải theo vị trí; nếu không hợp lệ hủy Lửa Lan."
+    },
+    {
+      "id": "source-48",
+      "name": "Lang Huynh Đệ",
+      "faction": "Sói",
+      "baseRule": "Cắn cùng đàn; khi là Sói duy nhất, người bị Cắn sống và chuyển sang phe Sói đêm kế.",
+      "approvedSupplement": "Thông báo riêng khi bắt đầu đêm chuyển phe."
+    },
+    {
+      "id": "source-52",
+      "name": "Lycan",
+      "faction": "Sói",
+      "baseRule": "Không thức cùng đàn cho đến khi các Sói khác chết hết; Tiên Tri soi ra Dân.",
+      "approvedSupplement": "Bắt đầu hoạt động từ đêm tiếp theo."
+    },
+    {
+      "id": "source-53",
+      "name": "Người Sói",
+      "faction": "Dân",
+      "baseRule": "Thắng cùng Dân nhưng Tiên Tri thông thường soi ra Sói.",
+      "approvedSupplement": "Không áp dụng kết quả giả cho loại Tiên Tri khác."
+    },
+    {
+      "id": "source-55",
+      "name": "Sói Lạc Bầy",
+      "faction": "Sói",
+      "baseRule": "Không tham gia đàn trong đêm 1–2; từ đêm 3 Cắn cùng đàn; Tiên Tri luôn soi ra Sói.",
+      "approvedSupplement": "Đêm 3 hai phía nhận biết nhau trước khi Cắn."
+    },
+    {
+      "id": "source-56",
+      "name": "Sói Đá",
+      "faction": "Sói",
+      "baseRule": "Cắn cùng đàn; chặn một lần tác động thực sự gây chết, ngoại trừ Treo Cổ.",
+      "approvedSupplement": "Chặn cả tác động xuyên Bảo Vệ."
+    },
+    {
+      "id": "source-57",
+      "name": "Con Hoang",
+      "faction": "Dân",
+      "baseRule": "Đầu ván chọn một Hình Tượng; khi Hình Tượng chết, lập tức đổi sang phe Sói và giữ vai trò.",
+      "approvedSupplement": "Nếu chuyển phe trong đêm, Cắn từ đêm kế."
+    },
+    {
+      "id": "source-58",
+      "name": "Sói Lai",
+      "faction": "Sói",
+      "baseRule": "Ban đầu Cắn cùng đàn; nếu phe Sói chưa thắng thì đầu đêm 5 chuyển sang Dân, rời đàn và quên thông tin đàn.",
+      "approvedSupplement": "Chuyển phe trước khi đàn thức dậy đêm 5."
+    }
+  ]
+}
