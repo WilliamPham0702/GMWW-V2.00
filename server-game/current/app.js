@@ -1,4 +1,4 @@
-(()=>{'use strict';
+(window.GMWW_ARTIFACT_SEED_READY||Promise.resolve()).then(()=>{(()=>{'use strict';
 
 const VERSION='2.44';
 const STATE_KEY='GMWW_V243_STATE';
@@ -252,6 +252,13 @@ const DEFAULT_STATE={
     ]
   }
 };
+/* V2.46: preserve the verified 44-Artifact V2.45 catalog without changing legacy storage keys. */
+{
+  const seed=window.GMWW_V245_ARTIFACT_SEED||{artifacts:[],actions:[],effects:[]};
+  DEFAULT_STATE.artifacts=JSON.parse(JSON.stringify(seed.artifacts||[]));
+  DEFAULT_STATE.actions.artifacts=JSON.parse(JSON.stringify(seed.actions||[]));
+  for(const e of (seed.effects||[]))if(!DEFAULT_STATE.effects.some(x=>x&&x.id===e.id))DEFAULT_STATE.effects.push(JSON.parse(JSON.stringify(e)));
+}
 const DEFAULT_PREFS={
   cards:{
     /* V243_MISSING_35_PREFS */
@@ -409,9 +416,11 @@ function applyV226Catalog(s,migrating=false){
   };
   for(const c of DEFAULT_STATE.cards)s.cards=upsert(s.cards,c,['id','legacyId']);
   s.artifacts=Array.isArray(s.artifacts)?s.artifacts:[];
+  for(const a of DEFAULT_STATE.artifacts)s.artifacts=upsert(s.artifacts,a,['id','legacyId']);
   s.actions=s.actions||{role:[],artifacts:[]};
   for(const a of DEFAULT_STATE.actions.role)s.actions.role=upsert(s.actions.role,a,['id','legacyId']);
   s.actions.artifacts=Array.isArray(s.actions.artifacts)?s.actions.artifacts:[];
+  for(const a of DEFAULT_STATE.actions.artifacts)s.actions.artifacts=upsert(s.actions.artifacts,a,['id','legacyId']);
   s.effects=Array.isArray(s.effects)?s.effects:[];
   for(const e of DEFAULT_STATE.effects)s.effects=upsert(s.effects,e,['id']);
   s.audio=s.audio||{cards:[],artifacts:[],actions:[],system:[]};
@@ -562,7 +571,7 @@ async function renderEntityFront(){
   $('#playerInformation').textContent=formatInformation(e.information||'');
   $('#playerDisplay').src=await resolveArtwork(currentKind,e.id,'display');
 }
-function actionOptions(selected){const k=currentKind==='artifacts'?'artifacts':'role';return actionList(k).map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(selected)?'selected':'')+'>'+esc(a.name)+'</option>').join('')}
+function actionOptions(selected){const list=currentKind==='artifacts'?[...state.actions.role,...state.actions.artifacts]:state.actions.role;return list.map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(selected)?'selected':'')+'>'+esc(a.name)+'</option>').join('')}
 function functionHtml(fn,index){
   const to=fn.toNight===null||fn.toNight===''?'end':String(fn.toNight);
   return '<div class="function-card" data-fn-index="'+index+'"><div class="function-head"><b>Hành Động #'+(index+1)+'</b><button data-remove-fn="'+index+'" aria-label="Xoá">×</button></div>'+
@@ -1104,4 +1113,4 @@ const memberSheetSave=document.getElementById('memberSheetSave');if(memberSheetS
 const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSheet.addEventListener('click',e=>{if(e.target===memberSheet)closeMemberSheet()});
 document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
 
-})();
+})();});
