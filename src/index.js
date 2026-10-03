@@ -107,22 +107,26 @@ export class RoomDurableObject extends DurableObject {
     return !!(await this.ctx.storage.get("customAvatar:"+id));
   }
   async memberRegister(body){
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),password=String(body?.password||"");
-    if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên tài khoản phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
-    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên hiển thị phải có từ 2 đến 24 ký tự."},400);
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),requestedPassword=String(body?.password||"");
+    if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
+    if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Vui lòng chọn Avatar từ Kho Avatar GMWW."},400);
-    if(password.length<4||password.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu phải có ít nhất 4 ký tự."},400);
-    const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"LOGIN_ID_TAKEN",message:"Tên tài khoản này đã được sử dụng. Vui lòng chọn tên khác."},409);
-    const salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();let passwordHash;
+    if(requestedPassword&&(requestedPassword.length<4||requestedPassword.length>128))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu phải có ít nhất 4 ký tự."},400);
+    const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"LOGIN_ID_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
+    const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
+    if([...rows.values()].some(x=>normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"DISPLAY_NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
+    const password=requestedPassword||randomNumericPassword(12),salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();let passwordHash;
     try{passwordHash=await derivePasswordHash(password,salt)}catch(e){console.error("GMWW_MEMBER_HASH_FAILED",e);return j({ok:false,error:"MEMBER_HASH_FAILED",message:"Không thể xử lý mật khẩu thành viên."},500)}
-    const member={loginId,displayName,avatarId,passwordSalt:bytesToBase64(salt),passwordHash,passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,source:"WEB",createdAt:now,updatedAt:now,presenceAt:Date.now(),lastSeenAt:now,currentRoomCode:null,ready:false};
+    const member={loginId,displayName,avatarId,passwordSalt:bytesToBase64(salt),passwordHash,passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"WEB",createdAt:now,updatedAt:now,presenceAt:Date.now(),lastSeenAt:now,currentRoomCode:null,ready:false};
     try{await this.ctx.storage.put(key,member)}catch(e){console.error("GMWW_MEMBER_STORE_FAILED",e);return j({ok:false,error:"MEMBER_STORE_FAILED",message:"Không thể lưu dữ liệu thành viên."},500)}
     let session;try{session=await this.newSession(member)}catch(e){console.error("GMWW_MEMBER_SESSION_FAILED",e);return j({ok:false,error:"MEMBER_SESSION_FAILED",message:"Đã lưu thành viên nhưng không thể tạo phiên đăng nhập."},500)}
     return j({ok:true,member:publicMember(member),...session},201);
   }
   async memberLogin(body){
-    const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);
-    if(!member)return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập không đúng."},401);
+    const loginId=normalizeLoginId(body?.loginId),password=String(body?.password||""),member=await this.ctx.storage.get("member:"+loginId);
+    if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Tên đăng nhập này chưa có tài khoản."},404);
+    if(member.passwordRequired===true&&!password)return j({ok:false,error:"PASSWORD_REQUIRED",message:"Tài khoản này có mật khẩu. Vui lòng nhập mật khẩu."},401);
+    if(member.passwordRequired===true&&!(await verifyPassword(password,member)))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu không đúng."},401);
     member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member),...(await this.newSession(member))});
   }
