@@ -1334,7 +1334,6 @@ async function savePlayGame(){
   const need=playLiveMembers().length,total=playRolePlanTotal();if(!need){playFlashError('Chưa có Thành Viên trong Phòng.');return}if(total!==need){playFlashError('Số Vai Trò phải đúng bằng '+need+' Thành Viên. Hiện đang chọn '+total+'.');return}
   const artifactToggle=document.getElementById('playArtifactsEnabled');playSceneState.artifactsEnabled=!!artifactToggle?.checked;
   const artifactPool=playFavoriteArtifacts();if(playSceneState.artifactsEnabled&&!artifactPool.length){playFlashError('Artifact đang bật nhưng chưa có Artifact nào được đánh ★ trong Thư Viện.');return}
-  if(playSceneState.artifactsEnabled&&artifactPool.length<need){playFlashError('Cần ít nhất '+need+' Artifact ★ để phát riêng cho '+need+' Thành Viên. Hiện có '+artifactPool.length+'.');return}
   const roles=playSortedRoles(),chosen=roles.filter(r=>Number(playSceneState.rolePlan?.[r.id])>0),gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),matchId='match-'+Date.now().toString(36);
   const cfg={id:'game-'+Date.now().toString(36),name:gameName,playerCount:need,roles:chosen.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),description:r.information||'',count:Number(playSceneState.rolePlan[r.id])||1,order:i+1})),artifacts:playSceneState.artifactsEnabled?artifactPool.map((a,i)=>({artifactId:a.id,order:i+1})):[]};
   playSetBusy(true);const save=document.getElementById('playGameSave');if(save)save.disabled=true;
@@ -1349,13 +1348,9 @@ function playShuffle(items){const a=items.slice();for(let i=a.length-1;i>0;i--){
 function playAssignArtifactsToRows(rows,{preserve=false}={}){
   if(!playSceneState.artifactsEnabled)return rows.map(r=>({...r,artifactId:'',artifactName:''}));
   const pool=playFavoriteArtifacts();if(!pool.length)throw new Error('Artifact đang bật nhưng chưa có Artifact ★.');
-  if(pool.length<rows.length)throw new Error('Cần ít nhất '+rows.length+' Artifact ★ để mỗi Thành Viên nhận 1 Artifact riêng.');
-  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r])),used=new Set(),shuffled=playShuffle(pool);
+  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r])),shuffled=playShuffle(pool);
   return rows.map((r,i)=>{
-    const keep=preserve?old.get(String(r.loginId)):null;
-    let artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)&&!used.has(String(a.id))):null;
-    if(!artifact)artifact=shuffled.find(a=>!used.has(String(a.id)))||null;
-    if(artifact)used.add(String(artifact.id));
+    const keep=preserve?old.get(String(r.loginId)):null,artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)):(shuffled[i%shuffled.length]||pool[i%pool.length]);
     return {...r,artifactId:artifact?.id||'',artifactName:artifact?.name||''};
   });
 }
