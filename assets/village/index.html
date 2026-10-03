@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GMWW V2 · Ngôi làng</title><link rel="stylesheet" href="./village.css"><link rel="stylesheet" href="./village-art.css"></head>
+<body>
+<main class="game day" id="game">
+  <section class="stage" aria-label="Quảng trường ngôi làng">
+    <div class="sky"></div><div class="houses" aria-hidden="true">
+      <div class="house h1"><i></i><b></b></div><div class="house h2"><i></i><b></b></div><div class="house h3"><i></i><b></b></div><div class="house h4"><i></i><b></b></div><div class="house h5"><i></i><b></b></div>
+    </div>
+    <div class="scene" id="scene"><div class="plaza"><div class="rings"></div></div><div class="fire" aria-hidden="true"><span>🔥</span></div><div id="players" class="players"></div></div>
+    <header class="hud">
+      <div><span id="phaseIcon">☀️</span> <strong id="phaseLabel">Ngày 02</strong><small id="phaseDetail">Thảo luận ban ngày</small><strong class="clock" id="clock">08:35</strong></div>
+      <div class="hud-actions"><span id="count">12/12</span><button id="mode" type="button">🌙 Đêm</button></div>
+    </header>
+    <div class="scene-controls"><label for="zoom">Thu phóng</label><input id="zoom" type="range" min="70" max="155" value="100" aria-label="Thu phóng ngôi làng"><label for="size">Số người</label><select id="size"><option>6</option><option selected>12</option><option>18</option><option>24</option><option>30</option></select></div>
+  </section>
+  <section class="panel">
+    <nav class="tabs" aria-label="Khu vực trận"><button class="active" data-tab="discussion">Thảo luận</button><button data-tab="people">Người chơi</button><button data-tab="role">Vai trò</button></nav>
+    <section id="discussion" class="tab active"><div class="panel-title"><strong id="chatTitle">Chat chung</strong><span id="voiceState">● Voice đang mở</span></div>
+      <div class="messages" id="messages" aria-live="polite"><p><b>Minh:</b> Mọi người nghĩ sao về người số 5?</p><p><b>Lan:</b> Mình muốn nghe thêm ý kiến.</p></div>
+      <form id="chatForm" class="chat-input"><input id="chatText" maxlength="300" placeholder="Nhập tin nhắn (bản mô phỏng)" aria-label="Tin nhắn"><button type="submit">Gửi</button></form>
+      <div class="voice" id="voice"><button type="button" id="mic">🎙️ Micro: Tắt</button><button type="button" id="speaker">🔊 Loa: Bật</button><small>Minh họa giao diện — chưa kết nối voice/chat thật</small></div>
+    </section>
+    <section id="people" class="tab" hidden><strong>Người chơi</strong><div id="roster" class="roster"></div></section>
+    <section id="role" class="tab" hidden><strong>Lá Chức Năng</strong><p>Bản thử nghiệm đồ họa. Vai trò và quyền tương tác sẽ lấy từ máy chủ sau khi hoàn tất Lá Chức Năng và Artifact.</p></section>
+    <div class="selection" id="selection" hidden><span id="selectedLabel"></span><button type="button" id="clearSelection">Bỏ chọn</button></div>
+  </section>
+</main><script type="module" src="./village.mjs"></script></body></html>
