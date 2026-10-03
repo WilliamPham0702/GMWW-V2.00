@@ -534,7 +534,7 @@ function renderEntityGrid(kind){
   const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
   const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
   const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' Vai Trò, tổng '+visibleTotal+' Vai Trò':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
-  favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
+  favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Vai Trò được đánh ★</div>';
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
   let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
   list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
@@ -589,7 +589,7 @@ function functionHtml(fn,index){
 function checkHtml(key,label,checked){return '<label class="check"><input type="checkbox" data-b="'+key+'" '+(checked?'checked':'')+'><span>'+esc(label)+'</span></label>'}
 function renderEntityBack(){
   const e=editDraft;if(!e)return;
-  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Lá Bài':'Cài đặt ARTIFACTS';
+  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Vai Trò':'Cài đặt ARTIFACTS';
   $('#entityName').value=e.name||'';$('#entityInformation').value=e.information||'';
   $('#factionBlock').classList.toggle('hidden',currentKind!=='cards');$('#livesField').classList.toggle('hidden',currentKind!=='cards');
   if(currentKind==='cards')$$('#factionSeg button').forEach(b=>b.classList.toggle('active',b.dataset.faction===e.factionId));
@@ -1127,20 +1127,23 @@ function playMemberRows(){
   return rows.filter(m=>m.online).slice(0,10);
 }
 function playSeatPositions(count){
-  const presets={
-    1:[[50,22]],2:[[33,26],[67,26]],3:[[23,31],[50,20],[77,31]],
-    4:[[19,31],[38,18],[62,18],[81,31]],5:[[16,34],[32,20],[50,16],[68,20],[84,34]],
-    6:[[14,35],[28,21],[43,16],[57,16],[72,21],[86,35]]
-  };
-  if(presets[count])return presets[count];
-  const n=Math.max(8,Math.min(12,count||8)),out=[];
-  for(let i=0;i<n;i++){const a=(-150+(300/(n-1))*i)*Math.PI/180;out.push([50+40*Math.sin(a),47-31*Math.cos(a)])}
-  return out;
+  const n=Math.max(1,Math.min(30,Number(count)||1)),out=[];
+  const ringSizes=n<=12?[n]:n<=24?[Math.ceil(n/2),Math.floor(n/2)]:[10,10,n-20];
+  const ringDefs=[[42,31,48],[34,24,48],[26,17,48]];
+  let seat=0;
+  ringSizes.forEach((size,ringIndex)=>{
+    const [rx,ry,cy]=ringDefs[ringIndex]||ringDefs[ringDefs.length-1];
+    for(let i=0;i<size;i++){
+      const a=(-Math.PI/2)+(Math.PI*2*i/Math.max(1,size))+(ringIndex%2?Math.PI/Math.max(1,size):0);
+      out.push([50+rx*Math.cos(a),cy+ry*Math.sin(a)]);seat++;
+    }
+  });
+  return out.slice(0,n);
 }
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
-  const members=playMemberRows(),count=members.length||8,positions=playSeatPositions(count);
+  const members=playMemberRows(),count=Math.min(30,members.length||8),positions=playSeatPositions(count);
   ring.innerHTML='';
   for(let i=0;i<count;i++){
     const m=members[i]||null,pos=positions[i]||positions[positions.length-1]||[50,24],el=document.createElement('button');
