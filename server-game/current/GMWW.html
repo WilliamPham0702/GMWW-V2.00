@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>GMWW V2.43</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="play2d.css">
 </head>
 <body>
 <div id="app">
@@ -52,12 +53,12 @@
 
       </div>
     </section>
-    <section class="page" id="start"><div class="placeholder"><span>▶</span><b>Bắt Đầu</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page" id="start"><div id="play2dRoot" class="play2d-root" aria-live="polite"><div class="play2d-loading">Đang chuẩn bị Tab Chơi 2D…</div></div></section>
 
     <section class="page" id="library">
       <div id="libraryHome">
         <nav class="library-tabs">
-          <button class="libtab active" data-lib="cards">🃏<b>Lá Bài</b></button>
+          <button class="libtab active" data-lib="cards">🃏<b>Vai Trò</b></button>
           <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
           <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
           <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
@@ -85,7 +86,7 @@
 
         <section class="libpane" id="lib-actions">
           <div class="section-tools">
-            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">Lá Bài</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
+            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">Vai Trò</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
             <input class="search" id="actionSearch" placeholder="Tìm Hành Động">
           </div>
           <div class="compact-box-grid" id="actionGrid"></div>
@@ -103,7 +104,7 @@
           </div>
           <div id="themeUiSections"></div>
           <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>🃏 Artwork Lá Bài</h3></div>
+            <div class="theme-section-head"><h3>🃏 Artwork Vai Trò</h3></div>
             <div id="themeCardRows"></div>
           </section>
           <section class="theme-section theme-section-pinned">
@@ -114,7 +115,7 @@
 
         <section class="libpane" id="lib-audio">
           <div class="seg audio-seg" id="audioKindSeg">
-            <button class="active" data-audio-kind="cards">Lá Bài</button>
+            <button class="active" data-audio-kind="cards">Vai Trò</button>
             <button data-audio-kind="artifacts">ARTIFACTS</button>
             <button data-audio-kind="actions">Hành Động</button>
             <button data-audio-kind="system">Hệ Thống</button>
@@ -142,7 +143,7 @@
 
         <div class="face" id="entityBack">
           <div class="settings-card">
-            <h3 id="entitySettingsTitle">Cài đặt Lá Bài</h3>
+            <h3 id="entitySettingsTitle">Cài đặt Vai Trò</h3>
             <div class="form-grid">
               <label class="full">Tên<input id="entityName"></label>
               <div class="full field-block" id="factionBlock"><span>Phe mặc định</span><div class="faction-seg" id="factionSeg">
@@ -271,7 +272,7 @@
   <nav id="bottomNav">
     <button class="nav active" data-page="home"><span>⌂</span><b>Trang Chủ</b></button>
     <button class="nav" data-page="members"><span>♟</span><b>Thành Viên</b></button>
-    <button class="nav start" data-page="start"><i>▶</i><b>Bắt Đầu</b></button>
+    <button class="nav start" data-page="start"><i>▶</i><b>Chơi</b></button>
     <button class="nav" data-page="library"><span>▣</span><b>Thư Viện</b></button>
     <button class="nav" data-page="settings"><span>⚙</span><b>Cài Đặt</b></button>
   </nav>
@@ -293,5 +294,6 @@
 </div>
 
 <script src="app.js"></script>
+<script src="play2d.js"></script>
 </body>
 </html>
