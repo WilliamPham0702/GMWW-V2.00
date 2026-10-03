@@ -1119,7 +1119,7 @@ let playSceneState=(()=>{
   const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{const saved=Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1165,8 +1165,8 @@ async function playSyncRoom(force=false){
   if(playSceneRuntime.busy&&!force)return null;
   try{
     const data=await playRoomApi('');
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
-    playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneState.artifactCount=Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0)));playSceneState.selectedMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);
     if(['running','started','game','playing'].includes(serverPhase)){
       playSceneState.step='battle';
@@ -1256,7 +1256,8 @@ async function advancePlayPhase(){
   if(playSceneState.step!=='battle'){advancePlaySetup(1);return}
   playSetBusy(true);
   try{
-    const room=playSceneRuntime.room||await playSyncRoom(true)?.then?.(d=>d?.room);
+    let room=playSceneRuntime.room;
+    if(!room){const synced=await playSyncRoom(true);room=synced?.room||null}
     const serverPhase=String(playSceneRuntime.room?.phase||room?.phase||'').toLowerCase();
     if(!['running','started','game','playing'].includes(serverPhase)){
       if(!playSceneRuntime.assignments.length)throw new Error('Hãy Phân Vai và Phát Vai trước khi Bắt Đầu Đêm 1.');
@@ -1333,6 +1334,7 @@ async function savePlayGame(){
   const need=playLiveMembers().length,total=playRolePlanTotal();if(!need){playFlashError('Chưa có Thành Viên trong Phòng.');return}if(total!==need){playFlashError('Số Vai Trò phải đúng bằng '+need+' Thành Viên. Hiện đang chọn '+total+'.');return}
   const artifactToggle=document.getElementById('playArtifactsEnabled');playSceneState.artifactsEnabled=!!artifactToggle?.checked;
   const artifactPool=playFavoriteArtifacts();if(playSceneState.artifactsEnabled&&!artifactPool.length){playFlashError('Artifact đang bật nhưng chưa có Artifact nào được đánh ★ trong Thư Viện.');return}
+  if(playSceneState.artifactsEnabled&&artifactPool.length<need){playFlashError('Cần ít nhất '+need+' Artifact ★ để phát riêng cho '+need+' Thành Viên. Hiện có '+artifactPool.length+'.');return}
   const roles=playSortedRoles(),chosen=roles.filter(r=>Number(playSceneState.rolePlan?.[r.id])>0),gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),matchId='match-'+Date.now().toString(36);
   const cfg={id:'game-'+Date.now().toString(36),name:gameName,playerCount:need,roles:chosen.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),description:r.information||'',count:Number(playSceneState.rolePlan[r.id])||1,order:i+1})),artifacts:playSceneState.artifactsEnabled?artifactPool.map((a,i)=>({artifactId:a.id,order:i+1})):[]};
   playSetBusy(true);const save=document.getElementById('playGameSave');if(save)save.disabled=true;
@@ -1347,10 +1349,13 @@ function playShuffle(items){const a=items.slice();for(let i=a.length-1;i>0;i--){
 function playAssignArtifactsToRows(rows,{preserve=false}={}){
   if(!playSceneState.artifactsEnabled)return rows.map(r=>({...r,artifactId:'',artifactName:''}));
   const pool=playFavoriteArtifacts();if(!pool.length)throw new Error('Artifact đang bật nhưng chưa có Artifact ★.');
-  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r]));
-  const shuffled=playShuffle(pool);
+  if(pool.length<rows.length)throw new Error('Cần ít nhất '+rows.length+' Artifact ★ để mỗi Thành Viên nhận 1 Artifact riêng.');
+  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r])),used=new Set(),shuffled=playShuffle(pool);
   return rows.map((r,i)=>{
-    const keep=preserve?old.get(String(r.loginId)):null,artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)):(shuffled[i%shuffled.length]||pool[i%pool.length]);
+    const keep=preserve?old.get(String(r.loginId)):null;
+    let artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)&&!used.has(String(a.id))):null;
+    if(!artifact)artifact=shuffled.find(a=>!used.has(String(a.id)))||null;
+    if(artifact)used.add(String(artifact.id));
     return {...r,artifactId:artifact?.id||'',artifactName:artifact?.name||''};
   });
 }
@@ -1377,7 +1382,7 @@ function playRoleCardPayload(role){
 }
 function playArtifactCardPayload(artifact){
   const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null}});
-  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
+  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:artifact?.singleUse===true||artifact?.artifact?.singleUse===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
 }
 async function playArtifactArtworkData(artifact){
   try{
@@ -1399,16 +1404,15 @@ async function playDealRoles(){
     const packages=[];
     for(const role of roles){const roleCard=playRoleCardPayload(role),imageDataUrl=await playRoleArtworkData(role);packages.push({roleId:role.id,roleName:role.name,faction:playFactionLabel(role),description:role.information||'',artworkAssetId:'role:'+role.id,roleCard,...(imageDataUrl?{imageDataUrl}:{})})}
     if(packages.length)await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify({roles:packages})});
-    const pkgById=new Map(packages.map(p=>[String(p.roleId),p])),artifactById=new Map(),artifactImageById=new Map();
-    for(const artifact of artifacts){artifactById.set(String(artifact.id),artifact);artifactImageById.set(String(artifact.id),await playArtifactArtworkData(artifact))}
-    const sentArtifactImage=new Set();
+    const pkgById=new Map(packages.map(p=>[String(p.roleId),p])),artifactById=new Map(),artifactAssetPackages=[];
+    for(const artifact of artifacts){
+      const aid=String(artifact.id),imageDataUrl=await playArtifactArtworkData(artifact);artifactById.set(aid,artifact);
+      artifactAssetPackages.push({roleId:'artifact:'+aid,roleName:artifact.name||'Artifact',artworkAssetId:'artifact:'+aid,roleCard:{version:7,name:artifact.name||'Artifact',information:artifact.information||'',artworkAssetId:'artifact:'+aid,artworkId:'artifact:'+aid},...(imageDataUrl?{imageDataUrl}:{})});
+    }
+    for(let i=0;i<artifactAssetPackages.length;i+=3){const batch=artifactAssetPackages.slice(i,i+3);if(batch.length)await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify({roles:batch})})}
     const assignments=rows.map(r=>{
       const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId)),artifact=artifactById.get(String(r.artifactId||''))||null;
-      let artifactPayload=null;
-      if(artifact){
-        const aid=String(artifact.id),imageDataUrl=artifactImageById.get(aid)||null,includeImage=imageDataUrl&&!sentArtifactImage.has(aid);if(includeImage)sentArtifactImage.add(aid);
-        artifactPayload={artifactId:aid,artifactName:artifact.name,artworkAssetId:'artifact:'+aid,artifactCard:playArtifactCardPayload(artifact),...(includeImage?{imageDataUrl}:{})};
-      }
+      const artifactPayload=artifact?{artifactId:String(artifact.id),artifactName:artifact.name,artworkAssetId:'artifact:'+artifact.id,artifactCard:playArtifactCardPayload(artifact)}:null;
       return{loginId:r.loginId,roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,artworkAssetId:'role:'+r.roleId,roleCard:p.roleCard||playRoleCardPayload(role||r),...(artifactPayload?{artifact:artifactPayload}:{})};
     });
     const data=await playRoomApi('/assignments',{method:'POST',body:JSON.stringify({assignments,multiAssign:false,matchId:playSceneState.matchId||('match-'+Date.now().toString(36)),matchRevision:Number(playSceneRuntime.room?.matchRevision||1),deliveryVersion:Number(playSceneRuntime.room?.deliveryVersion||0)+1})});
