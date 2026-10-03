@@ -715,7 +715,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 const GMWW_BACKGROUND_DIM_KEY='GMWW_BACKGROUND_DIM_V1';
 function applyBackgroundDim(value){
   const n=Math.max(0,Math.min(100,Number(value)||0));
-  document.documentElement.style.setProperty('--gmww-background-dim',(n/100).toFixed(2));
+  document.documentElement?.style?.setProperty('--gmww-background-dim',(n/100).toFixed(2));
   const range=document.getElementById('backgroundDimRange'),out=document.getElementById('backgroundDimValue');
   if(range&&Number(range.value)!==n)range.value=String(n);
   if(out)out.textContent=n+'%';
