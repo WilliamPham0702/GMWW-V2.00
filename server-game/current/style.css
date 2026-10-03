@@ -758,3 +758,12 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-role-stepper{display:grid;grid-template-columns:27px 28px 27px;align-items:center;border-radius:999px;overflow:hidden;border:1px solid rgba(124,219,239,.18);background:#071a28}
 .play-role-stepper button{height:30px;border:0;background:#0b2a3d;color:#c8f7ff;font-weight:1000;font-size:16px}.play-role-stepper output{text-align:center;color:#fff1a5;font-size:11px;font-weight:1000}
 .play-game-role-row.has-count{border-color:rgba(255,225,118,.46);box-shadow:inset 0 0 0 1px rgba(255,225,118,.08)}
+
+/* V2.46 ARTIFACT GAME TOGGLE */
+.play-artifact-toggle{display:grid;grid-template-columns:22px minmax(0,1fr) 34px;gap:8px;align-items:center;margin-top:8px;padding:9px 10px;border:1px solid rgba(122,221,240,.16);border-radius:13px;background:linear-gradient(180deg,#0c2940,#081d2e);cursor:pointer}
+.play-artifact-toggle input{position:absolute;opacity:0;pointer-events:none}
+.play-artifact-toggle span{display:grid}.play-artifact-toggle b{font-size:10px;color:#f2feff}.play-artifact-toggle small{margin-top:2px;font-size:8px;color:var(--muted)}
+.play-artifact-toggle i{position:relative;width:34px;height:20px;border-radius:999px;background:#061724;border:1px solid rgba(150,221,235,.25);transition:.18s}
+.play-artifact-toggle i:after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#86a7b5;transition:.18s}
+.play-artifact-toggle input:checked~i{background:linear-gradient(90deg,#158aa6,#34d2c5);border-color:#8dfff0}.play-artifact-toggle input:checked~i:after{left:16px;background:#fff7ba}
+.play-artifact-toggle:has(input:focus-visible){outline:2px solid #fff0a2;outline-offset:2px}
