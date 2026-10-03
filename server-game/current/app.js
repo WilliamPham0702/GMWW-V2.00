@@ -1,10 +1,10 @@
 (()=>{'use strict';
 
-const VERSION='2.44';
-const STATE_KEY='GMWW_V244_STATE';
-const PREF_KEY='GMWW_V244_PREFS';
-const OLD_STATE_KEYS=['GMWW_V243_STATE','GMWW_V242_STATE','GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V243_PREFS','GMWW_V242_PREFS','GMWW_V241_PREFS','GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.46';
+const STATE_KEY='GMWW_V246_STATE';
+const PREF_KEY='GMWW_V246_PREFS';
+const OLD_STATE_KEYS=['GMWW_V245_STATE','GMWW_V244_STATE','GMWW_V243_STATE','GMWW_V242_STATE','GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
+const OLD_PREF_KEYS=['GMWW_V245_PREFS','GMWW_V244_PREFS','GMWW_V243_PREFS','GMWW_V242_PREFS','GMWW_V241_PREFS','GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
 
@@ -1225,5 +1225,95 @@ function initPlayScene(){
 }
 document.querySelectorAll('[data-page="start"]').forEach(el=>el.addEventListener('click',()=>setTimeout(async()=>{try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}renderPlayScene()},40)));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initPlayScene,{once:true});else initPlayScene();
+
+
+/* V2.46 — GM PLAY SCENE CONTROLLER */
+const GMWW_PLAY_PREVIEW_NAMES=['An','Bình','Chi','Duy','Hà','Khôi','Lan','Minh','Nam','Phương','Quân','Vy'];
+const gmwwPlayPreview={step:1,night:false,selected:null,mode:'support',players:[]};
+const GMWW_PLAY_STEPS=[
+  null,
+  {key:'room',kicker:'TẠO PHÒNG',title:'Tạo Phòng',text:'Chọn chế độ Online ngay khi tạo Phòng.',primary:'TẠO PHÒNG'},
+  {key:'members',kicker:'CHỌN THÀNH VIÊN',title:'Chọn Thành Viên tham dự',text:'Người chơi sẽ đứng quanh quảng trường theo vị trí cố định.',primary:'CHỌN THÀNH VIÊN'},
+  {key:'game',kicker:'CHỌN VÁN',title:'Chọn Ván Mẫu',text:'Vai Trò, Artifact và thứ tự đêm sẽ lấy từ Ván đã chọn.',primary:'CHỌN VÁN'},
+  {key:'roles',kicker:'PHÂN VAI',title:'Phân Vai Trò',text:'Xem trước phân bổ trước khi phát cho Người Chơi.',primary:'PHÂN VAI'},
+  {key:'deal',kicker:'PHÁT VAI',title:'Phát Vai Trò + Artifact',text:'Theo dõi trạng thái đã nhận và đã xem của từng Người Chơi.',primary:'PHÁT VAI'},
+  {key:'battle',kicker:'VÀO TRẬN',title:'Sẵn sàng bắt đầu Đêm 1',text:'Trang Chơi 2D chuyển sang điều khiển trận tại cùng một màn hình.',primary:'BẮT ĐẦU ĐÊM 1'}
+];
+function gmwwPlaySetText(id,value){const el=document.getElementById(id);if(el)el.textContent=String(value??'')}
+function gmwwPlayDemoRows(){
+  return GMWW_PLAY_PREVIEW_NAMES.map((displayName,i)=>({id:'preview-'+(i+1),displayName,seat:i+1,state:'alive',online:true}));
+}
+function gmwwPlaySeat(i,total){
+  const a=(-Math.PI/2)+(Math.PI*2*i/Math.max(total,1));
+  return {left:50+Math.cos(a)*43,top:48+Math.sin(a)*33};
+}
+function gmwwPlayRenderPlayers(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  ring.replaceChildren();
+  gmwwPlayPreview.players.forEach((p,i)=>{
+    const pos=gmwwPlaySeat(i,gmwwPlayPreview.players.length),btn=document.createElement('button');
+    btn.type='button';btn.className='play-player-token'+(gmwwPlayPreview.selected===p.id?' is-active':'')+(p.state==='dead'?' is-dead':'');
+    btn.style.left=pos.left+'%';btn.style.top=pos.top+'%';btn.dataset.playerId=p.id;
+    const avatar=document.createElement('span');avatar.className='play-player-avatar';
+    const face=document.createElement('span');face.textContent=String(p.displayName||'?').trim().slice(0,1).toLocaleUpperCase('vi-VN');avatar.append(face);
+    const name=document.createElement('b');name.textContent=(p.seat<10?'0':'')+p.seat+' · '+p.displayName;
+    const status=document.createElement('small');status.textContent=p.state==='dead'?'ĐÃ CHẾT':p.online?'ONLINE':'OFFLINE';
+    btn.append(avatar,name,status);btn.onclick=()=>gmwwPlaySelect(p.id);ring.append(btn);
+  });
+}
+function gmwwPlaySelect(id){
+  gmwwPlayPreview.selected=id;gmwwPlayRenderPlayers();
+  const p=gmwwPlayPreview.players.find(x=>x.id===id);if(!p)return;
+  gmwwPlaySetText('playCoreKicker','NGƯỜI CHƠI '+String(p.seat).padStart(2,'0'));
+  gmwwPlaySetText('playCoreTitle',p.displayName);
+  gmwwPlaySetText('playCoreHint',(p.state==='dead'?'Đã chết':'Đang sống')+' • '+(p.online?'Online':'Offline'));
+}
+function gmwwPlayPhase(night){
+  gmwwPlayPreview.night=!!night;
+  const shell=document.getElementById('playShell');if(!shell)return;
+  shell.dataset.phase=gmwwPlayPreview.night?'night':'day';
+  gmwwPlaySetText('playPhaseOrb',gmwwPlayPreview.night?'☾':'☀');
+  gmwwPlaySetText('playPhaseEyebrow',gmwwPlayPreview.night?'ĐÊM 01':'NGÀY 01');
+  gmwwPlaySetText('playPhaseTitle',gmwwPlayPreview.night?'Ban đêm':'Ban ngày');
+  gmwwPlaySetText('playCycleBadge',gmwwPlayPreview.night?'ĐÊM 01':'NGÀY 01');
+  gmwwPlaySetText('playCoreKicker',gmwwPlayPreview.night?'ĐÊM ĐẦU TIÊN':'BUỔI SÁNG');
+  gmwwPlaySetText('playCoreTitle',gmwwPlayPreview.night?'BẦY SÓI THỨC DẬY':'NGÔI LÀNG THỨC DẬY');
+  gmwwPlaySetText('playCoreHint',gmwwPlayPreview.night?'Bầy Sói ơi dậy đi nhìn mặt nhau.':'Công bố kết quả đêm và bắt đầu thảo luận.');
+  gmwwPlaySetText('playPrimaryLabel',gmwwPlayPreview.night?'KẾT THÚC ĐÊM':'BẮT ĐẦU ĐÊM');
+  gmwwPlaySetText('playPrimaryIcon',gmwwPlayPreview.night?'☀':'☾');
+}
+function gmwwPlayApplyStep(step){
+  const next=Math.max(1,Math.min(6,Number(step)||1));gmwwPlayPreview.step=next;
+  const cfg=GMWW_PLAY_STEPS[next],shell=document.getElementById('playShell');if(!cfg||!shell)return;
+  shell.dataset.phase=next===6?(gmwwPlayPreview.night?'night':'day'):'lobby';
+  gmwwPlaySetText('playContextKicker',cfg.kicker);gmwwPlaySetText('playContextTitle',cfg.title);gmwwPlaySetText('playContextText',cfg.text);
+  gmwwPlaySetText('playPrimaryLabel',cfg.primary);gmwwPlaySetText('playPrimaryIcon',next===6?'☾':'＋');
+  gmwwPlaySetText('playCycleBadge',next===6?'NGÀY 01':'CHƯA BẮT ĐẦU');
+  gmwwPlaySetText('playPhaseEyebrow',next===6?'NGÀY 01':'PHÒNG CHỜ');gmwwPlaySetText('playPhaseTitle',next===6?'Sẵn sàng vào trận':'Chuẩn bị vào trận');
+  gmwwPlaySetText('playPhaseOrb',next===6?'☀':'◌');
+  gmwwPlaySetText('playCoreKicker',cfg.kicker);gmwwPlaySetText('playCoreTitle',cfg.title.toLocaleUpperCase('vi-VN'));gmwwPlaySetText('playCoreHint',cfg.text);
+  document.querySelectorAll('[data-play-step]').forEach((b,i)=>{const n=i+1;b.classList.toggle('active',n===next);b.classList.toggle('done',n<next)});
+}
+function gmwwPlayAdvance(delta){
+  if(gmwwPlayPreview.step===6&&delta>0){gmwwPlayPhase(!gmwwPlayPreview.night);return}
+  gmwwPlayApplyStep(gmwwPlayPreview.step+delta);
+}
+function initGMWWPlayScene(){
+  const shell=document.getElementById('playShell');if(!shell||shell.dataset.bound==='1')return;shell.dataset.bound='1';
+  gmwwPlayPreview.players=gmwwPlayDemoRows();gmwwPlayRenderPlayers();gmwwPlayApplyStep(2);
+  const roleImg=document.getElementById('playRoleArtwork'),artifactImg=document.getElementById('playArtifactArtwork');
+  if(roleImg){roleImg.src='default-artwork.webp';roleImg.onerror=()=>{roleImg.style.opacity='.25'}}
+  if(artifactImg){artifactImg.src='default-artwork.webp';artifactImg.onerror=()=>{artifactImg.style.opacity='.25'}}
+  document.getElementById('playAutoGM')?.addEventListener('click',e=>{const b=e.currentTarget,on=!b.classList.contains('is-on');b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on))});
+  document.querySelectorAll('[data-play-mode]').forEach(b=>b.addEventListener('click',()=>{gmwwPlayPreview.mode=b.dataset.playMode||'support';document.querySelectorAll('[data-play-mode]').forEach(x=>x.classList.toggle('active',x===b))}));
+  document.querySelectorAll('[data-play-step]').forEach((b,i)=>b.addEventListener('click',()=>gmwwPlayApplyStep(i+1)));
+  document.getElementById('playBack')?.addEventListener('click',()=>gmwwPlayAdvance(-1));
+  document.getElementById('playNext')?.addEventListener('click',()=>gmwwPlayAdvance(1));
+  document.getElementById('playPrimaryAction')?.addEventListener('click',()=>gmwwPlayAdvance(1));
+  document.getElementById('playPhasePill')?.addEventListener('click',()=>{if(gmwwPlayPreview.step===6)gmwwPlayPhase(!gmwwPlayPreview.night)});
+  document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))));
+  document.getElementById('playEndGame')?.addEventListener('click',()=>{if(confirm('Kết thúc phần xem trước Trang Chơi?')){gmwwPlayPreview.night=false;gmwwPlayPreview.selected=null;gmwwPlayApplyStep(2);gmwwPlayRenderPlayers()}});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initGMWWPlayScene,{once:true});else setTimeout(initGMWWPlayScene,0);
 
 })();
