@@ -1116,7 +1116,7 @@ const PLAY_STEP_COPY={
   battle:{k:'VÀO TRẬN',t:'Sân chơi đã sẵn sàng',x:'Đêm 1 chỉ bắt đầu khi GM chủ động nhấn Bắt Đầu Đêm 1.',a:'BẮT ĐẦU ĐÊM 1'}
 };
 let playSceneState=(()=>{
-  const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:''};
+  const base={step:'room',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{const saved=Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
 const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
@@ -1202,7 +1202,7 @@ function renderPlayPlayers(){
 async function renderPlayCards(){
   const selected=(playSceneRuntime.assignments.length?playSceneRuntime.assignments:(Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[])).find(a=>String(a?.loginId||'')===String(playSceneState.activePlayerId||'')),selectedRoleId=String(selected?.roleId||playSceneState.roleId||'');
   const role=state.cards?.find(x=>String(x.id)===selectedRoleId)||state.cards?.find(x=>String(x.legacyId)===selectedRoleId)||state.cards?.find(x=>String(x.id)===String(playSceneState.roleId))||state.cards?.[0]||null;
-  const artifact=state.artifacts?.find(x=>String(x.id)===String(playSceneState.artifactId))||state.artifacts?.[0]||null;
+  const selectedArtifactId=String(selected?.artifactId||playSceneState.artifactId||''),artifact=state.artifacts?.find(x=>String(x.id)===selectedArtifactId)||state.artifacts?.find(x=>String(x.legacyId)===selectedArtifactId)||null;
   const roleName=document.getElementById('playRoleName'),artifactName=document.getElementById('playArtifactName'),roleImg=document.getElementById('playRoleArtwork'),artifactImg=document.getElementById('playArtifactArtwork');
   const stageIndex=PLAY_STEPS.indexOf(playSceneState.step),roleVisible=stageIndex>=PLAY_STEPS.indexOf('roles');
   if(roleName)roleName.textContent=roleVisible&&(selected?.roleName||role)?(selected?.roleName||role?.name||'Vai Trò'):'Chưa phân Vai Trò';
@@ -1229,7 +1229,14 @@ function renderPlayContext(){
       else if(playSceneState.step==='deal')x.textContent=(playSceneState.assignmentsPreview?.length||0)+'/'+playLiveMembers().length+' Thành Viên đã được phân. Nhấn PHÁT VAI để gửi lên Player Web.';
       else x.textContent=playSceneRuntime.lastError||step.x;
     }
-    if(actions)actions.innerHTML='<button class="play-action-chip '+(playSceneState.mode==='support'?'active':'')+'" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button><button class="play-action-chip '+(playSceneState.mode==='full'?'active':'')+'" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>';
+    if(actions){
+      if(playSceneState.step==='deal'&&(playSceneState.assignmentsPreview?.length||0)){
+        actions.innerHTML='<button class="play-action-chip" data-play-reroll-role type="button"><span>↻</span><b>Vai Trò</b></button><button class="play-action-chip" data-play-reroll-artifact type="button"><span>✦</span><b>Artifact</b></button><button class="play-action-chip" data-play-cycle-artifact type="button"><span>⇄</span><b>Đổi Artifact</b></button>';
+        actions.querySelector('[data-play-reroll-role]')?.addEventListener('click',()=>playBuildAssignments({preserveArtifacts:true}));
+        actions.querySelector('[data-play-reroll-artifact]')?.addEventListener('click',playRerollArtifacts);
+        actions.querySelector('[data-play-cycle-artifact]')?.addEventListener('click',playCycleActiveArtifact);
+      }else actions.innerHTML='<button class="play-action-chip '+(playSceneState.mode==='support'?'active':'')+'" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button><button class="play-action-chip '+(playSceneState.mode==='full'?'active':'')+'" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>';
+    }
     bindPlayModeButtons();
   }
 }
@@ -1285,6 +1292,14 @@ function playSortedRoles(){
     return sa-sb||String(a.name||'').localeCompare(String(b.name||''),'vi');
   });
 }
+function playFavoriteArtifacts(){
+  return [...(state.artifacts||[])].filter(a=>prefs.artifacts?.[a.id]?.starred).sort((a,b)=>(Number(prefs.artifacts?.[a.id]?.starOrder||9999)-Number(prefs.artifacts?.[b.id]?.starOrder||9999))||String(a.name||'').localeCompare(String(b.name||''),'vi'));
+}
+function updatePlayArtifactToggle(){
+  const box=document.getElementById('playArtifactsEnabled'),hint=document.getElementById('playArtifactPoolHint'),pool=playFavoriteArtifacts();
+  if(box)box.checked=!!playSceneState.artifactsEnabled;
+  if(hint)hint.textContent=pool.length?pool.length+' Artifact ★ sẽ được dùng để phân phát':'Chưa có Artifact nào được đánh ★ trong Thư Viện';
+}
 async function renderPlayGameRoles(){
   const list=document.getElementById('playGameRoleList');if(!list)return;list.innerHTML='';
   const roles=playSortedRoles();
@@ -1306,7 +1321,7 @@ async function openPlayGameSheet(){
   const sheet=document.getElementById('playGameSheet');if(!sheet)return;
   const roomLabel=document.getElementById('playGameRoomLabel');if(roomLabel)roomLabel.textContent='Phòng '+playSceneState.roomCode+' • '+playLiveMembers().length+' Thành Viên';
   const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName||'Ván GMWW';
-  sheet.classList.remove('hidden');await renderPlayGameRoles();updatePlayGameRoleCount();
+  updatePlayArtifactToggle();sheet.classList.remove('hidden');await renderPlayGameRoles();updatePlayGameRoleCount();
 }
 function closePlayGameSheet(){document.getElementById('playGameSheet')?.classList.add('hidden')}
 function suggestPlayGameRoles(){
@@ -1316,8 +1331,10 @@ function suggestPlayGameRoles(){
 }
 async function savePlayGame(){
   const need=playLiveMembers().length,total=playRolePlanTotal();if(!need){playFlashError('Chưa có Thành Viên trong Phòng.');return}if(total!==need){playFlashError('Số Vai Trò phải đúng bằng '+need+' Thành Viên. Hiện đang chọn '+total+'.');return}
+  const artifactToggle=document.getElementById('playArtifactsEnabled');playSceneState.artifactsEnabled=!!artifactToggle?.checked;
+  const artifactPool=playFavoriteArtifacts();if(playSceneState.artifactsEnabled&&!artifactPool.length){playFlashError('Artifact đang bật nhưng chưa có Artifact nào được đánh ★ trong Thư Viện.');return}
   const roles=playSortedRoles(),chosen=roles.filter(r=>Number(playSceneState.rolePlan?.[r.id])>0),gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),matchId='match-'+Date.now().toString(36);
-  const cfg={id:'game-'+Date.now().toString(36),name:gameName,playerCount:need,roles:chosen.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),description:r.information||'',count:Number(playSceneState.rolePlan[r.id])||1,order:i+1})),artifacts:[]};
+  const cfg={id:'game-'+Date.now().toString(36),name:gameName,playerCount:need,roles:chosen.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),description:r.information||'',count:Number(playSceneState.rolePlan[r.id])||1,order:i+1})),artifacts:playSceneState.artifactsEnabled?artifactPool.map((a,i)=>({artifactId:a.id,order:i+1})):[]};
   playSetBusy(true);const save=document.getElementById('playGameSave');if(save)save.disabled=true;
   try{
     const data=await playRoomApi('/config',{method:'POST',body:JSON.stringify({gameConfig:cfg,matchId,matchRevision:Number(playSceneRuntime.room?.matchRevision||0)+1})});
@@ -1327,16 +1344,46 @@ async function savePlayGame(){
 }
 function playRandomInt(max){if(max<=1)return 0;if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1),limit=Math.floor(0x100000000/max)*max;let n;do{crypto.getRandomValues(a);n=a[0]}while(n>=limit);return n%max}return Math.floor(Math.random()*max)}
 function playShuffle(items){const a=items.slice();for(let i=a.length-1;i>0;i--){const j=playRandomInt(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
-function playBuildAssignments(){
+function playAssignArtifactsToRows(rows,{preserve=false}={}){
+  if(!playSceneState.artifactsEnabled)return rows.map(r=>({...r,artifactId:'',artifactName:''}));
+  const pool=playFavoriteArtifacts();if(!pool.length)throw new Error('Artifact đang bật nhưng chưa có Artifact ★.');
+  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r]));
+  const shuffled=playShuffle(pool);
+  return rows.map((r,i)=>{
+    const keep=preserve?old.get(String(r.loginId)):null,artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)):(shuffled[i%shuffled.length]||pool[i%pool.length]);
+    return {...r,artifactId:artifact?.id||'',artifactName:artifact?.name||''};
+  });
+}
+function playBuildAssignments(opts={}){
   const members=playLiveMembers(),rolesById=new Map((state.cards||[]).map(r=>[String(r.id),r])),deck=[];
   for(const [roleId,countRaw] of Object.entries(playSceneState.rolePlan||{})){const role=rolesById.get(String(roleId)),count=Math.max(0,Number(countRaw)||0);if(!role)continue;for(let i=0;i<count;i++)deck.push(role)}
   if(deck.length!==members.length)throw new Error('Số Vai Trò không khớp số Thành Viên. Hãy quay lại Chọn Ván.');
-  const shuffled=playShuffle(deck),rows=members.map((m,i)=>({loginId:m.loginId,displayName:m.displayName,roleId:shuffled[i].id,roleName:shuffled[i].name,faction:playFactionLabel(shuffled[i]),description:shuffled[i].information||''}));
-  playSceneState.assignmentsPreview=rows;playSceneState.step='deal';if(rows[0]){playSceneState.activePlayerId=rows[0].loginId;playSceneState.roleId=rows[0].roleId}savePlayScene();renderPlayScene();return rows;
+  const shuffled=playShuffle(deck),baseRows=members.map((m,i)=>({loginId:m.loginId,displayName:m.displayName,roleId:shuffled[i].id,roleName:shuffled[i].name,faction:playFactionLabel(shuffled[i]),description:shuffled[i].information||''})),rows=playAssignArtifactsToRows(baseRows,{preserve:opts.preserveArtifacts===true});
+  playSceneState.assignmentsPreview=rows;playSceneState.step='deal';if(rows[0]){playSceneState.activePlayerId=rows[0].loginId;playSceneState.roleId=rows[0].roleId;playSceneState.artifactId=rows[0].artifactId||''}savePlayScene();renderPlayScene();return rows;
+}
+function playRerollArtifacts(){
+  if(!playSceneState.artifactsEnabled){playFlashError('Artifact đang tắt trong Ván này.');return}
+  const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];if(!rows.length)return;
+  playSceneState.assignmentsPreview=playAssignArtifactsToRows(rows,{preserve:false});const active=playSceneState.assignmentsPreview.find(r=>String(r.loginId)===String(playSceneState.activePlayerId));playSceneState.artifactId=active?.artifactId||'';savePlayScene();renderPlayScene();
+}
+function playCycleActiveArtifact(){
+  if(!playSceneState.artifactsEnabled){playFlashError('Artifact đang tắt trong Ván này.');return}
+  const pool=playFavoriteArtifacts(),rows=playSceneState.assignmentsPreview||[],idx=rows.findIndex(r=>String(r.loginId)===String(playSceneState.activePlayerId));if(idx<0||!pool.length){playFlashError('Hãy chọn Người Chơi trước.');return}
+  const current=String(rows[idx].artifactId||''),p=Math.max(-1,pool.findIndex(a=>String(a.id)===current)),next=pool[(p+1)%pool.length];rows[idx]={...rows[idx],artifactId:next.id,artifactName:next.name};playSceneState.assignmentsPreview=rows;playSceneState.artifactId=next.id;savePlayScene();renderPlayScene();
 }
 function playRoleCardPayload(role){
   const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
   return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};
+}
+function playArtifactCardPayload(artifact){
+  const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null}});
+  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
+}
+async function playArtifactArtworkData(artifact){
+  try{
+    const src=await resolveArtwork('artifacts',artifact.id,'full');if(!src)return null;if(String(src).startsWith('data:image/'))return src.length<1900000?src:null;
+    const res=await fetch(src);if(!res.ok)return null;const blob=await res.blob();if(!blob.type.startsWith('image/')||blob.size>1300000)return null;const data=await playBlobDataUrl(blob);return data.length<1900000?data:null;
+  }catch{return null}
 }
 function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}
 async function playRoleArtworkData(role){
@@ -1347,13 +1394,23 @@ async function playRoleArtworkData(role){
 }
 async function playDealRoles(){
   const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];if(!rows.length){playBuildAssignments();return}
-  const uniqueIds=[...new Set(rows.map(r=>String(r.roleId)))],roles=uniqueIds.map(id=>(state.cards||[]).find(r=>String(r.id)===id)).filter(Boolean);playSetBusy(true);
+  const uniqueIds=[...new Set(rows.map(r=>String(r.roleId)))],roles=uniqueIds.map(id=>(state.cards||[]).find(r=>String(r.id)===id)).filter(Boolean),artifactIds=[...new Set(rows.map(r=>String(r.artifactId||'')).filter(Boolean))],artifacts=artifactIds.map(id=>(state.artifacts||[]).find(a=>String(a.id)===id)).filter(Boolean);playSetBusy(true);
   try{
     const packages=[];
     for(const role of roles){const roleCard=playRoleCardPayload(role),imageDataUrl=await playRoleArtworkData(role);packages.push({roleId:role.id,roleName:role.name,faction:playFactionLabel(role),description:role.information||'',artworkAssetId:'role:'+role.id,roleCard,...(imageDataUrl?{imageDataUrl}:{})})}
     if(packages.length)await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify({roles:packages})});
-    const pkgById=new Map(packages.map(p=>[String(p.roleId),p]));
-    const assignments=rows.map(r=>{const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId));return{loginId:r.loginId,roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,artworkAssetId:'role:'+r.roleId,roleCard:p.roleCard||playRoleCardPayload(role||r)}});
+    const pkgById=new Map(packages.map(p=>[String(p.roleId),p])),artifactById=new Map(),artifactImageById=new Map();
+    for(const artifact of artifacts){artifactById.set(String(artifact.id),artifact);artifactImageById.set(String(artifact.id),await playArtifactArtworkData(artifact))}
+    const sentArtifactImage=new Set();
+    const assignments=rows.map(r=>{
+      const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId)),artifact=artifactById.get(String(r.artifactId||''))||null;
+      let artifactPayload=null;
+      if(artifact){
+        const aid=String(artifact.id),imageDataUrl=artifactImageById.get(aid)||null,includeImage=imageDataUrl&&!sentArtifactImage.has(aid);if(includeImage)sentArtifactImage.add(aid);
+        artifactPayload={artifactId:aid,artifactName:artifact.name,artworkAssetId:'artifact:'+aid,artifactCard:playArtifactCardPayload(artifact),...(includeImage?{imageDataUrl}:{})};
+      }
+      return{loginId:r.loginId,roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,artworkAssetId:'role:'+r.roleId,roleCard:p.roleCard||playRoleCardPayload(role||r),...(artifactPayload?{artifact:artifactPayload}:{})};
+    });
     const data=await playRoomApi('/assignments',{method:'POST',body:JSON.stringify({assignments,multiAssign:false,matchId:playSceneState.matchId||('match-'+Date.now().toString(36)),matchRevision:Number(playSceneRuntime.room?.matchRevision||1),deliveryVersion:Number(playSceneRuntime.room?.deliveryVersion||0)+1})});
     playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:assignments;playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.step='battle';savePlayScene();await playSyncRoom(true);renderPlayScene();
   }catch(err){playFlashError(err.message)}
@@ -1405,6 +1462,7 @@ function initPlayScene(){
   document.getElementById('playRosterSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playRosterSheet'))closePlayRosterSheet()});
   document.getElementById('playGameClose')?.addEventListener('click',closePlayGameSheet);document.getElementById('playGameCancel')?.addEventListener('click',closePlayGameSheet);
   document.getElementById('playGameSave')?.addEventListener('click',savePlayGame);
+  document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{playSceneState.artifactsEnabled=!!e.currentTarget.checked;savePlayScene();updatePlayArtifactToggle()});
   document.getElementById('playGameSuggest')?.addEventListener('click',suggestPlayGameRoles);
   document.getElementById('playGameClear')?.addEventListener('click',()=>{playSceneState.rolePlan={};savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount()});
   document.getElementById('playGameSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playGameSheet'))closePlayGameSheet()});
