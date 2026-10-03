@@ -838,7 +838,7 @@ window.GMWW2DBridge={
   async uiSlot(slotId){const themeId=state.themes.activeId||'theme-sea';return (await resolveUiSlot(themeId,slotId))||(slotId!=='bg.play'?await resolveUiSlot(themeId,'bg.play'):'')},
   async listMembers(){const d=await gmApi('/api/gm/members');return Array.isArray(d?.members)?d.members:[]},
   async createMember(body){return gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify(body||{})})},
-  async listAvatars(){const r=await fetch(GMWW_SERVER_BASE+'/api/avatars?play2d='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Không tải được Kho Avatar.');const d=await r.json();return Array.isArray(d?.avatars)?d.avatars:[]},
+  async listAvatars(){const r=await fetch(GMWW_SERVER_BASE+'/api/avatars?play2d='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Không tải được Kho Avatar.');const d=await r.json();return Array.isArray(d?.avatars)?d.avatars.map(a=>({...a,imageUrl:String(a.imageUrl||'').startsWith('/')?GMWW_SERVER_BASE+a.imageUrl:a.imageUrl})):[]},
   async listRooms(){const d=await gmApi('/api/gm/rooms');return Array.isArray(d?.rooms)?d.rooms:(Array.isArray(d)?d:[])},
   async createRoom(body){const r=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body||{}),cache:'no-store'});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));return d},
   async roomState(code){return gmApi('/api/gm/rooms/'+encodeURIComponent(code))},
