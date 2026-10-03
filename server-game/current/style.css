@@ -783,3 +783,11 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-winner-grid button span{font-size:22px}.play-winner-grid button b{font-size:11px}
 .play-winner-grid button.selected{border-color:#ffe690;background:linear-gradient(145deg,#167e91,#0b526b);box-shadow:0 0 0 1px rgba(255,230,144,.24) inset,0 8px 20px rgba(0,0,0,.2);color:#fff6ce}
 #playEndConfirm:disabled{opacity:.45;filter:grayscale(.45)}
+
+/* V2.46 LIVE PLAYER STATES */
+.play-player-token.is-frozen .play-player-avatar{filter:saturate(.65) brightness(1.1);box-shadow:0 0 0 3px rgba(111,232,255,.75),0 0 20px rgba(64,205,255,.72)}
+.play-player-token.is-frozen .play-player-avatar:after{content:"❄";position:absolute;inset:0;display:grid;place-items:center;border-radius:50%;background:rgba(77,213,255,.22);color:#e8fbff;font-size:21px;text-shadow:0 0 8px #43d9ff}
+.play-player-token.is-expelled{opacity:.52}.play-player-token.is-expelled .play-player-avatar{filter:grayscale(.45)}.play-player-token.is-expelled b{text-decoration:line-through}
+.play-player-token.is-dead .play-player-avatar:after{content:"✕";position:absolute;inset:0;display:grid;place-items:center;border-radius:50%;background:rgba(12,21,29,.42);color:#e1e7e9;font-size:22px;font-weight:1000}
+.play-player-avatar{position:relative}
+.play-context-actions .play-state-chip{min-width:72px}
