@@ -48,7 +48,7 @@ async function boot(){
  let tries=0;while(!bridge()&&tries<40){await new Promise(r=>setTimeout(r,80));tries++}
  if(!bridge()){root.innerHTML='<div class="play2d-loading">Không khởi tạo được Tab Chơi 2D.</div>';return}
  cache.catalog=bridge().getCatalog();
- render();await refreshRooms(true);
+ refreshAvatars();render();await refreshRooms(true);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&st.screen==='delivery')refreshRoomState()});
 }
 function sceneHtml(){
@@ -68,7 +68,7 @@ function render(){
  clearInterval(pollTimer);pollTimer=0;
  const tone=st.screen==='play'&&st.phase==='night'?'night':'day';
  root.innerHTML='<div class="play2d '+tone+'">'+sceneHtml()+hudHtml()+'<div class="p2-content">'+renderScreen()+'</div></div>';
- bindEvents();hydrateArt();
+ bindEvents();hydrateArt();hydrateScene();
  if(st.screen==='rooms'&&Date.now()-cache.roomsAt>8000)refreshRooms();
  if(st.screen==='members'&&Date.now()-cache.membersAt>8000)refreshMembers();
  if(st.screen==='delivery'&&st.mode==='online'){refreshRoomState();pollTimer=setInterval(refreshRoomState,4500)}
@@ -234,7 +234,7 @@ function activeDeaths(){
 function renderArena(){
  const dead=activeDeaths();
  let h='<div class="p2-arena"><div class="p2-avatar-ring">';
- for(const o of playerPositions())h+='<div class="p2-avatar '+(dead.has(o.m.loginId)?'dead':'')+'" style="left:'+o.x+'vw;top:'+o.y+'px;transform:translate(-50%,-50%)"><div class="p2-avatar-dot">♟</div><b>'+esc(o.m.displayName||o.m.loginId)+'</b>'+(dead.has(o.m.loginId)?'<i>💀</i>':'')+'</div>';
+ for(const o of playerPositions())h+='<div class="p2-avatar '+(dead.has(o.m.loginId)?'dead':'')+'" style="left:'+o.x+'vw;top:'+o.y+'px;transform:translate(-50%,-50%)"><div class="p2-avatar-dot">'+(memberAvatarUrl(o.m)?'<img src="'+esc(memberAvatarUrl(o.m))+'" alt="">':'♟')+'</div><b>'+esc(o.m.displayName||o.m.loginId)+'</b>'+(dead.has(o.m.loginId)?'<i>💀</i>':'')+'</div>';
  h+='</div><div class="p2-callout">'+esc(currentCallout())+'</div></div>';return h;
 }
 function renderPlay(){
@@ -264,6 +264,12 @@ function renderWaiting(){
  html+='</div><div class="p2-footer"><button class="p2-secondary" data-p2-action="rooms-home">Danh sách phòng</button><button class="p2-primary" data-p2-action="new-match">Chuẩn bị ván mới</button></div></div>';
  return html;
 }
+async function hydrateScene(){
+ const scene=root?.querySelector('.p2-scene');if(!scene||!bridge()?.uiSlot)return;
+ try{const slot=st.screen==='play'&&st.phase==='night'?'ui.playSceneNight':'ui.playSceneDay';const src=await bridge().uiSlot(slot);if(src){scene.style.backgroundImage='linear-gradient(180deg,rgba(2,35,55,.12),rgba(1,18,32,.42)),url("'+String(src).replace(/"/g,'\\"')+'")';scene.style.backgroundSize='cover';scene.style.backgroundPosition='center'}}
+ catch(_){}
+}
+function memberAvatarUrl(m){const a=(cache.avatars||[]).find(x=>String(x.id)===String(m?.avatarId));return a?.imageUrl||''}
 async function hydrateArt(){
  const b=bridge();if(!b)return;
  const imgs=[...root.querySelectorAll('[data-p2-art-kind][data-p2-art-id]')];
