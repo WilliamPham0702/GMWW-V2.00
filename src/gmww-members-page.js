@@ -172,10 +172,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-2;background:radial-gradi
 .avatar-library-head h3{font:900 21px var(--head);color:#ffd27b;margin:0}
 .avatar-library-head button{width:36px;height:36px;border-radius:50%;border:1px solid #a97034;background:#25151b;color:#ffd27b;font-size:20px}
 .avatar-library-count{font-size:9px;color:#bdb2ba;margin:-5px 0 12px}
-.avatar-library-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.avatar-library-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;padding-bottom:88px}
 .avatar-library-grid button{position:relative;padding:3px;border:1px solid #98652e;border-radius:50%;background:#0b111e}
 .avatar-library-grid button.selected{border-color:#ffe2a0;box-shadow:0 0 0 2px #cf8435,0 0 18px rgba(237,139,49,.45)}
 .avatar-library-grid img{display:block;width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover}
+.avatar-library-footer{position:sticky;bottom:0;z-index:3;margin:14px -14px -22px;padding:12px 14px max(14px,env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,10,18,.12),#070a12 28%);border-top:1px solid rgba(189,128,57,.65)}
+.avatar-confirm-btn{width:100%;min-height:50px;border:1px solid #ffd27b;border-radius:13px;background:linear-gradient(180deg,#e79d43,#9e5720);color:#fffaf0;font-size:14px;font-weight:1000;letter-spacing:.04em;box-shadow:0 8px 20px #0008}
+.avatar-confirm-btn:disabled{opacity:.48;filter:grayscale(.35)}
 .avatar-error{display:none;margin-top:8px;padding:8px 10px;border:1px solid #7d4d4d;border-radius:9px;background:#260e12bb;color:#ffb4b4;font-size:9px;line-height:1.4}
 
 
@@ -435,7 +438,7 @@ button,input,select,textarea{font:inherit}
 .screen>*{position:relative;z-index:1}
 </style>
 </head>
-<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.6-auth-flow">
+<body data-target-room="__GMWW_TARGET_ROOM__" data-build="0.15.7-avatar-confirm">
 <div class="app">
 
 <!-- 1. ĐĂNG NHẬP -->
@@ -516,6 +519,9 @@ button,input,select,textarea{font:inherit}
     </div>
     <div id="avatarLibraryCount" class="avatar-library-count">Đang tải Avatar…</div>
     <div id="avatarLibraryGrid" class="avatar-library-grid"></div>
+    <div class="avatar-library-footer">
+      <button id="avatarConfirmButton" class="avatar-confirm-btn" type="button" onclick="confirmAvatarSelection()">XÁC NHẬN AVATAR</button>
+    </div>
   </div>
 </div>
 
