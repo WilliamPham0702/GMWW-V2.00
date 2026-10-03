@@ -767,3 +767,19 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-artifact-toggle i:after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#86a7b5;transition:.18s}
 .play-artifact-toggle input:checked~i{background:linear-gradient(90deg,#158aa6,#34d2c5);border-color:#8dfff0}.play-artifact-toggle input:checked~i:after{left:16px;background:#fff7ba}
 .play-artifact-toggle:has(input:focus-visible){outline:2px solid #fff0a2;outline-offset:2px}
+
+
+/* V2.46 END GAME SHEET */
+.play-end-sheet-card{max-height:min(82dvh,680px);overflow:auto}
+.play-end-warning{margin:9px 0;padding:10px 11px;border-radius:13px;border:1px solid rgba(255,231,143,.22);background:rgba(94,71,15,.22);color:#d9eef3;font-size:10px;line-height:1.42}
+.play-end-warning b{color:#fff1a5}
+.play-win-proposal{display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;margin:8px 0;padding:10px 11px;border-radius:14px;border:1px solid rgba(79,220,255,.25);background:linear-gradient(145deg,rgba(10,52,74,.94),rgba(8,35,55,.94))}
+.play-win-proposal.hidden{display:none}
+.play-win-proposal small{grid-column:1/-1;color:#7ce7ef;font-size:8px;font-weight:1000;letter-spacing:.12em}
+.play-win-proposal b{color:#fff0a8;font-size:14px}.play-win-proposal span{grid-column:1/-1;color:#acd5df;font-size:9px;line-height:1.35}
+.play-win-proposal button{grid-column:2;grid-row:2;border:1px solid rgba(255,238,166,.5);background:#0e6681;color:#efffff;border-radius:999px;padding:6px 8px;font-size:8px;font-weight:1000}
+.play-winner-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+.play-winner-grid button{min-height:72px;border-radius:15px;border:1px solid rgba(142,226,239,.18);background:linear-gradient(180deg,#0e2a3f,#091c2c);color:#e9fbff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.play-winner-grid button span{font-size:22px}.play-winner-grid button b{font-size:11px}
+.play-winner-grid button.selected{border-color:#ffe690;background:linear-gradient(145deg,#167e91,#0b526b);box-shadow:0 0 0 1px rgba(255,230,144,.24) inset,0 8px 20px rgba(0,0,0,.2);color:#fff6ce}
+#playEndConfirm:disabled{opacity:.45;filter:grayscale(.45)}
