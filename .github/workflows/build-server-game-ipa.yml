@@ -63,7 +63,7 @@ jobs:
           # Core catalog / theme / audio / member capabilities must remain present.
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
           grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
-          grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
+          grep -q "Thêm Vai Trò" "$APPDIR/Web/app.js"
           grep -q "pickEntityThemeArtwork" "$APPDIR/Web/app.js"
           grep -q "audio_card_role_wolf" "$APPDIR/Web/app.js"
           grep -q "theme-card-row-simple" "$APPDIR/Web/style.css"
