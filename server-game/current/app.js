@@ -25,7 +25,7 @@ const THEME_UI_GROUPS=[
     ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Vai Trò'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
   ]},
   {id:'game',title:'🎮 Giao diện Server Game',slots:[
-    ['ui.memberPanel','Khung Thành Viên'],['ui.startPanel','Khung Bắt Đầu'],['ui.gamePanel','Khung Điều Khiển Ván'],['ui.nightPanel','Khung Ban Đêm'],['ui.morningPanel','Khung Buổi Sáng'],['ui.summaryPanel','Khung Tổng Kết'],['ui.waitingRoom','Khung Phòng Chờ']
+    ['ui.playSceneDay','Cảnh 2D Ban Ngày'],['ui.playSceneNight','Cảnh 2D Ban Đêm'],['ui.memberPanel','Khung Thành Viên'],['ui.startPanel','Khung Bắt Đầu'],['ui.gamePanel','Khung Điều Khiển Ván'],['ui.nightPanel','Khung Ban Đêm'],['ui.morningPanel','Khung Buổi Sáng'],['ui.summaryPanel','Khung Tổng Kết'],['ui.waitingRoom','Khung Phòng Chờ']
   ]}
 ];
 
@@ -835,6 +835,7 @@ async function gmApi(path,opts={}){
 window.GMWW2DBridge={
   getCatalog(){return {cards:clone(state.cards||[]),artifacts:clone(state.artifacts||[]),prefs:clone(prefs||{})}},
   async artwork(kind,id,assetKind='thumb'){return resolveArtwork(kind,id,assetKind)},
+  async uiSlot(slotId){const themeId=state.themes.activeId||'theme-sea';return (await resolveUiSlot(themeId,slotId))||(slotId!=='bg.play'?await resolveUiSlot(themeId,'bg.play'):'')},
   async listMembers(){const d=await gmApi('/api/gm/members');return Array.isArray(d?.members)?d.members:[]},
   async createMember(body){return gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify(body||{})})},
   async listAvatars(){const r=await fetch(GMWW_SERVER_BASE+'/api/avatars?play2d='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Không tải được Kho Avatar.');const d=await r.json();return Array.isArray(d?.avatars)?d.avatars:[]},
