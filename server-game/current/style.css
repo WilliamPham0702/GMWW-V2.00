@@ -742,3 +742,19 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-roster-row.selected .play-roster-check{background:linear-gradient(145deg,#fff2a8,#eec85b);border-color:#fff6bf;color:#6b5610}
 .play-roster-actions{flex:0 0 auto;padding-top:8px}.play-roster-actions .primary{min-width:0;flex:1}
 .play-live-error{animation:playLivePulse .45s ease 2}@keyframes playLivePulse{50%{filter:brightness(1.28)}}
+
+
+/* V2.46 GAME PLAN SHEET */
+.play-game-sheet-card{max-height:min(86dvh,760px);display:flex;flex-direction:column;overflow:hidden}
+.play-game-name-label{display:grid;gap:5px;color:#a9deeb;font-size:9px;font-weight:900;letter-spacing:.04em;padding-top:7px}
+.play-game-name-label input{width:100%;border:1px solid rgba(126,224,245,.18);background:#071d2d;color:#f4feff;border-radius:12px;padding:10px 11px;outline:none}
+.play-game-summary{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:5px;padding:8px 1px 7px;border-bottom:1px solid var(--line)}
+.play-game-summary span{font-size:10px;font-weight:1000;color:#9deeff}.play-game-summary button{border:1px solid rgba(79,220,255,.2);background:#0c2a40;color:#c9f8ff;border-radius:999px;padding:6px 8px;font-size:8.5px;font-weight:900}
+.play-game-role-list{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:6px;padding:8px 1px 4px;min-height:220px}
+.play-game-role-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(157,224,255,.12);border-radius:13px;padding:6px;background:linear-gradient(180deg,#0d263a,#091d2e)}
+.play-game-role-row img,.play-game-role-fallback{width:40px;height:48px;object-fit:cover;border-radius:9px;background:linear-gradient(145deg,#83e7ed,#177ea9);border:1px solid rgba(255,255,255,.3)}
+.play-game-role-fallback{display:grid;place-items:center;font-weight:1000;color:#eaffff}
+.play-game-role-copy{min-width:0}.play-game-role-copy b{display:block;color:#f4fdff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.play-game-role-copy small{display:block;margin-top:2px;color:var(--muted);font-size:8.5px}
+.play-role-stepper{display:grid;grid-template-columns:27px 28px 27px;align-items:center;border-radius:999px;overflow:hidden;border:1px solid rgba(124,219,239,.18);background:#071a28}
+.play-role-stepper button{height:30px;border:0;background:#0b2a3d;color:#c8f7ff;font-weight:1000;font-size:16px}.play-role-stepper output{text-align:center;color:#fff1a5;font-size:11px;font-weight:1000}
+.play-game-role-row.has-count{border-color:rgba(255,225,118,.46);box-shadow:inset 0 0 0 1px rgba(255,225,118,.08)}
