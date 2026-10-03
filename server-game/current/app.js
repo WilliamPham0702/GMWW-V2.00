@@ -22,7 +22,7 @@ const THEME_UI_GROUPS=[
     ['ui.exploreDeck','Nút Khám Phá • Bộ Bài'],['ui.exploreMembers','Nút Khám Phá • Thành Viên'],['ui.exploreActions','Nút Khám Phá • Hành Động'],['ui.exploreFactions','Nút Khám Phá • Phe Phái'],['ui.exploreLibrary','Nút Khám Phá • Thư Viện'],['ui.exploreSettings','Nút Khám Phá • Cài Đặt'],['ui.bottomNavArt','Hình Thanh Điều Hướng']
   ]},
   {id:'library',title:'🗂 Giao diện Thư Viện',slots:[
-    ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Lá Bài'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
+    ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Vai Trò'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
   ]},
   {id:'game',title:'🎮 Giao diện Server Game',slots:[
     ['ui.memberPanel','Khung Thành Viên'],['ui.startPanel','Khung Bắt Đầu'],['ui.gamePanel','Khung Điều Khiển Ván'],['ui.nightPanel','Khung Ban Đêm'],['ui.morningPanel','Khung Buổi Sáng'],['ui.summaryPanel','Khung Tổng Kết'],['ui.waitingRoom','Khung Phòng Chờ']
@@ -524,7 +524,7 @@ function ensureAudioPlaceholder(kind,target){
 }
 function createEntity(kind){
   const isCard=kind==='cards',id=uid(isCard?'role':'artifact');
-  const raw={id,name:isCard?'Lá Bài Mới':'ARTIFACT Mới',information:'',lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},functions:[]};
+  const raw={id,name:isCard?'Vai Trò Mới':'ARTIFACT Mới',information:'',lives:1,flags:{useDay:false,useNight:true,nightImmune:false,allowMultipleActions:false,passive:false,soloWolfOnly:false},winCondition:'',passiveRule:{enabled:false,type:'stake_survive'},groupActionGate:{enabled:false,actionId:'',scope:'self',blockOn:[]},functions:[]};
   if(isCard)raw.factionId='village';else raw.artifact={ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:''};
   const e=normalizeEntity(raw,kind);entityList(kind).unshift(e);prefFor(kind,id);ensureAudioPlaceholder(kind,e);saveState();savePrefs();renderEntityGrid(kind);openEntityEditor(kind,id);
 }
@@ -533,12 +533,12 @@ function renderEntityGrid(kind){
   const all=entityList(kind);
   const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
   const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
-  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' lá, tổng '+visibleTotal+' lá':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
+  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' Vai Trò, tổng '+visibleTotal+' Vai Trò':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
   favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Lá được đánh ★</div>';
   if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
   let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
   list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
-  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Lá Bài':'Thêm ARTIFACT')+'</b></button>';
+  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Vai Trò':'Thêm ARTIFACT')+'</b></button>';
   grid.innerHTML=add+list.map(e=>entityTileHtml(kind,e)).join('');
   bindEntityTiles(kind,grid,list);
   const addBtn=$('[data-add-entity="'+kind+'"]',grid);if(addBtn)addBtn.onclick=()=>createEntity(kind);
@@ -779,7 +779,7 @@ function auditLocalData(){
   const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
   try{
     const issues=[];
-    const buckets=[['Lá Bài',state.cards],['Artifact',state.artifacts],['Hành Động Lá',state.actions?.role],['Hành Động Artifact',state.actions?.artifacts],['Hiệu Ứng',state.effects]];
+    const buckets=[['Vai Trò',state.cards],['Artifact',state.artifacts],['Hành Động Vai Trò',state.actions?.role],['Hành Động Artifact',state.actions?.artifacts],['Hiệu Ứng',state.effects]];
     for(const [label,list] of buckets){
       if(!Array.isArray(list)){issues.push(label+' lỗi cấu trúc');continue}
       const ids=list.map(x=>String(x?.id||'')).filter(Boolean),dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
@@ -1102,5 +1102,128 @@ const memberSheetCancel=document.getElementById('memberSheetCancel');if(memberSh
 const memberSheetSave=document.getElementById('memberSheetSave');if(memberSheetSave)memberSheetSave.addEventListener('click',saveMemberSheet);
 const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSheet.addEventListener('click',e=>{if(e.target===memberSheet)closeMemberSheet()});
 document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
+
+
+/* GMWW V2.46 — 2D Play Scene */
+const GMWW_PLAY_SCENE_KEY='GMWW_V246_PLAY_SCENE';
+const PLAY_STEPS=['room','members','game','roles','deal','battle'];
+const PLAY_STEP_COPY={
+  room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn Hỗ trợ Online hoặc Online 100%. Không dùng Khóa Phòng.',a:'TẠO PHÒNG'},
+  members:{k:'CHỌN THÀNH VIÊN',t:'Chọn Thành Viên tham dự',x:'Danh sách tham dự được giữ xuyên suốt luồng thiết lập.',a:'CHỌN THÀNH VIÊN'},
+  game:{k:'CHỌN VÁN',t:'Chọn Ván Mẫu',x:'Luật, thời gian và cấu hình dùng chung cho cả hai chế độ Online.',a:'CHỌN VÁN'},
+  roles:{k:'PHÂN VAI',t:'Phân Vai Trò + Artifact',x:'Vai Trò và Artifact được phân trước khi Phát Vai.',a:'PHÂN VAI'},
+  deal:{k:'PHÁT VAI',t:'Phát Vai cho Người Chơi',x:'Player Web nhận đúng Vai Trò/Artifact trước khi vào trận.',a:'PHÁT VAI'},
+  battle:{k:'VÀO TRẬN',t:'Sân chơi đã sẵn sàng',x:'Đêm 1 chỉ bắt đầu khi GM chủ động nhấn Bắt Đầu Đêm 1.',a:'BẮT ĐẦU ĐÊM 1'}
+};
+let playSceneState=(()=>{
+  const base={step:'members',mode:'support',autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:''};
+  try{return Object.assign(base,JSON.parse(localStorage.getItem(GMWW_PLAY_SCENE_KEY)||'{}'))}catch{return base}
+})();
+function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
+function playMemberRows(){
+  const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[];
+  const wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  if(wanted.size)return rows.filter(m=>wanted.has(String(m.loginId)));
+  return rows.filter(m=>m.online).slice(0,10);
+}
+function playSeatPositions(count){
+  const presets={
+    1:[[50,22]],2:[[33,26],[67,26]],3:[[23,31],[50,20],[77,31]],
+    4:[[19,31],[38,18],[62,18],[81,31]],5:[[16,34],[32,20],[50,16],[68,20],[84,34]],
+    6:[[14,35],[28,21],[43,16],[57,16],[72,21],[86,35]]
+  };
+  if(presets[count])return presets[count];
+  const n=Math.max(8,Math.min(12,count||8)),out=[];
+  for(let i=0;i<n;i++){const a=(-150+(300/(n-1))*i)*Math.PI/180;out.push([50+40*Math.sin(a),47-31*Math.cos(a)])}
+  return out;
+}
+function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
+function renderPlayPlayers(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  const members=playMemberRows(),count=members.length||8,positions=playSeatPositions(count);
+  ring.innerHTML='';
+  for(let i=0;i<count;i++){
+    const m=members[i]||null,pos=positions[i]||positions[positions.length-1]||[50,24],el=document.createElement('button');
+    el.type='button';el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'');
+    el.style.left=pos[0]+'%';el.style.top=pos[1]+'%';
+    const name=m?.displayName||('Chỗ '+(i+1)),initial=(name.trim().charAt(0)||'•').toUpperCase();
+    el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span>'+playEsc(initial)+'</span>')+'</div><b>'+playEsc(name)+'</b><small>'+(m?(m.online?'ONLINE':'SẴN SÀNG'):'TRỐNG')+'</small>';
+    if(m){const im=el.querySelector('img');im.src=memberAvatarUrl(m.avatarId);im.onerror=()=>{im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};el.onclick=()=>{playSceneState.activePlayerId=String(m.loginId);savePlayScene();renderPlayScene()}}
+    ring.appendChild(el);
+  }
+}
+async function renderPlayCards(){
+  const role=state.cards?.find(x=>String(x.id)===String(playSceneState.roleId))||state.cards?.[0]||null;
+  const artifact=state.artifacts?.find(x=>String(x.id)===String(playSceneState.artifactId))||state.artifacts?.[0]||null;
+  const roleName=document.getElementById('playRoleName'),artifactName=document.getElementById('playArtifactName'),roleImg=document.getElementById('playRoleArtwork'),artifactImg=document.getElementById('playArtifactArtwork');
+  const stageIndex=PLAY_STEPS.indexOf(playSceneState.step),roleVisible=stageIndex>=PLAY_STEPS.indexOf('roles');
+  if(roleName)roleName.textContent=roleVisible&&role?(role.name||'Vai Trò'):'Chưa phân Vai Trò';
+  if(artifactName)artifactName.textContent=roleVisible&&artifact?(artifact.name||'Artifact'):'Chưa có Artifact';
+  if(roleImg){roleImg.style.opacity=roleVisible&&role?'1':'.28';roleImg.src=role?await resolveArtwork('cards',role.id,'thumb'):'default-artwork.webp'}
+  if(artifactImg){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
+}
+function bindPlayModeButtons(){
+  document.querySelectorAll('[data-play-mode]').forEach(b=>b.onclick=()=>{playSceneState.mode=b.dataset.playMode==='full'?'full':'support';savePlayScene();renderPlayScene()});
+}
+function renderPlayContext(){
+  const k=document.getElementById('playContextKicker'),t=document.getElementById('playContextTitle'),x=document.getElementById('playContextText'),actions=document.getElementById('playContextActions');
+  const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.members;
+  if(playSceneState.phase==='night'){
+    if(k)k.textContent='ĐÊM '+Math.max(1,playSceneState.night);
+    if(t)t.textContent=playSceneState.night===1?'Bầy Sói ơi dậy đi nhìn mặt nhau':'Thực hiện lượt Ban Đêm';
+    if(x)x.textContent=playSceneState.night===1?'Sau nhận diện Bầy Sói: Tráng Gương → Đá Hoán Đổi → Mắt Tiên Tri → Bùa Hộ Mệnh → các lượt chính.':'Auto GM xử lý theo thứ tự; GM có thể can thiệp mà không đổi phase.';
+    if(actions)actions.innerHTML='<button class="play-action-chip active" type="button"><span>☾</span><b>Đêm '+Math.max(1,playSceneState.night)+'</b></button><button class="play-action-chip" type="button"><span>✦</span><b>Artifact '+Math.min(3,playSceneState.artifactCount)+'/3</b></button>';
+  }else if(playSceneState.phase==='day'){
+    if(k)k.textContent='BAN NGÀY';
+    if(t)t.textContent='Công bố người chết → Thảo luận → Bỏ phiếu';
+    if(x)x.textContent='Chỉ hiện kết quả người chết rồi chuyển sang Ngày. Bỏ phiếu điện tử dùng chung cho hai chế độ Online.';
+    if(actions)actions.innerHTML='<button class="play-action-chip active" type="button"><span>☀</span><b>Ban Ngày</b></button><button class="play-action-chip" type="button"><span>✓</span><b>Bỏ phiếu</b></button>';
+  }else{
+    if(k)k.textContent=step.k;if(t)t.textContent=step.t;if(x)x.textContent=step.x;
+    if(actions)actions.innerHTML='<button class="play-action-chip '+(playSceneState.mode==='support'?'active':'')+'" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button><button class="play-action-chip '+(playSceneState.mode==='full'?'active':'')+'" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>';
+    bindPlayModeButtons();
+  }
+}
+function setPlayStep(step){
+  if(!PLAY_STEPS.includes(step))return;playSceneState.step=step;if(step!=='battle'){playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0}savePlayScene();renderPlayScene();
+}
+function advancePlaySetup(dir=1){
+  const i=PLAY_STEPS.indexOf(playSceneState.step),next=Math.max(0,Math.min(PLAY_STEPS.length-1,i+dir));setPlayStep(PLAY_STEPS[next]);
+}
+function advancePlayPhase(){
+  if(playSceneState.step!=='battle'){advancePlaySetup(1);return}
+  if(playSceneState.phase==='lobby'){playSceneState.phase='night';playSceneState.night=1;playSceneState.artifactCount=0}
+  else if(playSceneState.phase==='night'){playSceneState.phase='day'}
+  else{playSceneState.phase='night';playSceneState.night=Math.max(1,playSceneState.night)+1;playSceneState.artifactCount=0}
+  savePlayScene();renderPlayScene();
+}
+function renderPlayScene(){
+  const shell=document.getElementById('playShell');if(!shell)return;
+  shell.dataset.phase=playSceneState.phase;
+  const phase=playSceneState.phase,night=Math.max(0,Number(playSceneState.night)||0),put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
+  put('playRoomCode',playSceneState.roomCode||'—');put('playArtifactCount',Math.min(3,Math.max(0,Number(playSceneState.artifactCount)||0))+'/3');
+  const auto=document.getElementById('playAutoGM');if(auto){auto.classList.toggle('is-on',!!playSceneState.autoGM);auto.setAttribute('aria-pressed',String(!!playSceneState.autoGM))}
+  if(phase==='night'){put('playPhaseOrb','☾');put('playPhaseEyebrow','BAN ĐÊM');put('playPhaseTitle','Đêm '+Math.max(1,night));put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',night===1?'BẦY SÓI GẶP NHAU':'ĐÊM '+Math.max(1,night));put('playCoreHint',night===1?'Nhìn mặt nhau trước khi vào lượt chức năng.':'Theo dõi các lượt và hiệu ứng trong đêm.')}
+  else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseEyebrow','BAN NGÀY');put('playPhaseTitle','Ngày '+Math.max(1,night));put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
+  else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.members;put('playPhaseOrb','◌');put('playPhaseEyebrow','PHÒNG CHỜ');put('playPhaseTitle',step.t);put('playCycleBadge','CHƯA BẮT ĐẦU');put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
+  document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur)});
+  const primary=document.getElementById('playPrimaryLabel'),icon=document.getElementById('playPrimaryIcon');
+  if(primary){if(phase==='night')primary.textContent='SANG BAN NGÀY';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.members).a}
+  if(icon)icon.textContent=phase==='night'?'☀':phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
+  renderPlayContext();renderPlayPlayers();renderPlayCards();
+}
+function initPlayScene(){
+  const shell=document.getElementById('playShell');if(!shell)return;
+  document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
+  document.getElementById('playAutoGM')?.addEventListener('click',()=>{playSceneState.autoGM=!playSceneState.autoGM;savePlayScene();renderPlayScene()});
+  document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
+  document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
+  document.getElementById('playBack')?.addEventListener('click',()=>{if(playSceneState.phase!=='lobby'){playSceneState.phase='lobby';playSceneState.night=0;savePlayScene();renderPlayScene()}else advancePlaySetup(-1)});
+  document.getElementById('playEndGame')?.addEventListener('click',()=>{if(playSceneState.phase==='lobby'&&playSceneState.step!=='battle')return;if(!confirm('Kết thúc ván và đưa mọi người về Phòng Chờ ở trạng thái Sẵn sàng?'))return;playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;playSceneState.step='members';savePlayScene();renderPlayScene()});
+  document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
+  bindPlayModeButtons();renderPlayScene();
+}
+document.querySelectorAll('[data-page="start"]').forEach(el=>el.addEventListener('click',()=>setTimeout(async()=>{try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}renderPlayScene()},40)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initPlayScene,{once:true});else initPlayScene();
 
 })();
