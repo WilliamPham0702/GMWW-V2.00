@@ -17,6 +17,7 @@ export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
 export function artifactCycleKey(matchId,night){return String(matchId)+":night:"+Math.max(1,Number(night)||1)}
 export function reserveArtifactActivation(state,{requestId,playerId,artifactId,cycleKey,eligible}){
   // Call only within a single serialized Durable Object transaction/turn.
+  if(state?.cycleKey && state.cycleKey!==cycleKey)return {ok:false,error:"CYCLE_MISMATCH",state};
   const previous=Array.isArray(state?.accepted)?state.accepted:[];
   if(previous.some(x=>x.requestId===requestId))return {ok:true,idempotent:true,state};
   if(!eligible)return {ok:false,error:"ARTIFACT_NOT_ELIGIBLE",state};
