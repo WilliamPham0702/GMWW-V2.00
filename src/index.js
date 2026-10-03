@@ -121,9 +121,8 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,member:publicMember(member),...session},201);
   }
   async memberLogin(body){
-    const loginId=normalizeLoginId(body?.loginId),password=String(body?.password||""),member=await this.ctx.storage.get("member:"+loginId);
-    if(!member)return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập hoặc mật khẩu không đúng."},401);
-    if(member.passwordRequired!==false&&!(await verifyPassword(password,member)))return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập hoặc mật khẩu không đúng."},401);
+    const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);
+    if(!member)return j({ok:false,error:"INVALID_CREDENTIALS",message:"Tên đăng nhập không đúng."},401);
     member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member),...(await this.newSession(member))});
   }
