@@ -41,6 +41,8 @@ jobs:
           cp server-game/current/GMWW.html "$APPDIR/Web/GMWW.html"
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
+          cp server-game/current/play2d.css "$APPDIR/Web/play2d.css"
+          cp server-game/current/play2d.js "$APPDIR/Web/play2d.js"
 
           node - <<'NODE'
           const fs=require('fs');
@@ -53,6 +55,8 @@ jobs:
           test -s "$APPDIR/Web/GMWW.html"
           test -s "$APPDIR/Web/style.css"
           test -s "$APPDIR/Web/app.js"
+          test -s "$APPDIR/Web/play2d.css"
+          test -s "$APPDIR/Web/play2d.js"
           test -s "$APPDIR/Web/default-artwork.webp"
 
           grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
@@ -63,7 +67,7 @@ jobs:
           # Core catalog / theme / audio / member capabilities must remain present.
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
           grep -q "default-artwork.webp" "$APPDIR/Web/app.js"
-          grep -q "Thêm Lá Bài" "$APPDIR/Web/app.js"
+          grep -q "Thêm Vai Trò" "$APPDIR/Web/app.js"
           grep -q "pickEntityThemeArtwork" "$APPDIR/Web/app.js"
           grep -q "audio_card_role_wolf" "$APPDIR/Web/app.js"
           grep -q "theme-card-row-simple" "$APPDIR/Web/style.css"
