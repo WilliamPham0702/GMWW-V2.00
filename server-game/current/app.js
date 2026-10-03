@@ -711,6 +711,23 @@ async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:sou
 async function boot(){bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 
+/* V2.44 — Background readability */
+const GMWW_BACKGROUND_DIM_KEY='GMWW_BACKGROUND_DIM_V1';
+function applyBackgroundDim(value){
+  const n=Math.max(0,Math.min(100,Number(value)||0));
+  document.documentElement.style.setProperty('--gmww-background-dim',(n/100).toFixed(2));
+  const range=document.getElementById('backgroundDimRange'),out=document.getElementById('backgroundDimValue');
+  if(range&&Number(range.value)!==n)range.value=String(n);
+  if(out)out.textContent=n+'%';
+  try{localStorage.setItem(GMWW_BACKGROUND_DIM_KEY,String(n))}catch{}
+}
+function initBackgroundDim(){
+  let value=30;try{const saved=localStorage.getItem(GMWW_BACKGROUND_DIM_KEY);if(saved!==null)value=Number(saved)}catch{}
+  const range=document.getElementById('backgroundDimRange');if(range)range.addEventListener('input',()=>applyBackgroundDim(range.value));
+  applyBackgroundDim(Number.isFinite(value)?value:30);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initBackgroundDim,{once:true});else initBackgroundDim();
+
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
