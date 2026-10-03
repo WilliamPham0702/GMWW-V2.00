@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
-import { artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
+import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V2.46",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
@@ -58,6 +58,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/cycle"&&request.method==="POST")return this.gmCycle(request,await safeJson(request));
+    if(url.pathname==="/gm/turn"&&request.method==="POST")return this.gmTurn(request,await safeJson(request));
     if(url.pathname==="/gm/enabled"&&request.method==="POST")return this.gmEnabled(request,await safeJson(request));
     if(url.pathname==="/gm/lock"&&request.method==="POST")return this.gmLock(request,await safeJson(request));
     if(url.pathname==="/gm/kick"&&request.method==="POST")return this.gmKick(request,await safeJson(request));
@@ -307,7 +308,13 @@ export class RoomDurableObject extends DurableObject {
   }
   async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
-  async gmState(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{cycleKey:artifactCycleKey,accepted:[]};return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments:(await this.ctx.storage.get("assignments"))||[],interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3,accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-3):[]},connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
+  async gmState(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
+    const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
+    const nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null;
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments:(await this.ctx.storage.get("assignments"))||[],interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3,accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-3):[]},nightRuntime,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+  }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,rows=Array.isArray(body?.roles)?body.roles:[];
@@ -427,6 +434,63 @@ export class RoomDurableObject extends DurableObject {
     const publicPlayers=Object.values(players).map(publicPlayer),room=publicRoom(meta);this.broadcast({type:"room_state",room,players:publicPlayers,rosterUpdated:true});
     return j({ok:true,room,players:publicPlayers,selectedCount:wanted.size,removedPlayers})
   }
+  nightRuntimeKey(meta,night){return "nightRuntime:"+String(meta?.matchId||"match")+":"+Math.max(1,Number(night)||1)}
+  async getNightRuntime(meta,night,create=false){
+    const key=this.nightRuntimeKey(meta,night);let runtime=await this.ctx.storage.get(key);
+    if(!runtime&&create)runtime=await this.buildNightRuntime(meta,night);
+    return runtime||null
+  }
+  async buildNightRuntime(meta,night){
+    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[];
+    if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy Sói ơi dậy đi nhìn mặt nhau",status:"pending"});
+    const artifactRows=assignments.filter(a=>a?.artifactId).map((a,index)=>({...a,_index:index,_nameKey:gameLabelKey(a.artifactName)}));
+    if(n===1){
+      for(const artifactName of EARLY_ARTIFACTS){
+        const key=gameLabelKey(artifactName);
+        for(const row of artifactRows.filter(a=>a._nameKey===key))queue.push({id:"early:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"early-artifact",label:String(row.artifactName||artifactName),artifactId:String(row.artifactId),artifactName:String(row.artifactName||artifactName),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),status:"pending"});
+      }
+    }
+    const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
+    for(const a of assignments){
+      const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);
+      if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(a?.order||roleOrder.get(rid)||9999),loginIds:[],playerIds:[],status:"pending"};groups.set(rid,g)}
+      const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}
+    }
+    for(const g of [...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi")))queue.push(g);
+    const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
+    artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
+    for(const row of artifactRows)queue.push({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),skipIfEarlyUsed:n===1&&EARLY_ARTIFACTS.some(x=>gameLabelKey(x)===row._nameKey),status:"pending"});
+    const runtime={matchId:String(meta?.matchId||""),night:n,queue,cursor:0,completed:queue.length===0,currentId:queue[0]?.id||null,createdAt:now,updatedAt:now};
+    await this.ctx.storage.put(this.nightRuntimeKey(meta,n),runtime);return runtime
+  }
+  async artifactUsedInNight(meta,step){
+    if(!step?.artifactId||!step?.playerId)return false;
+    const key=currentArtifactCycleKey(meta),cycle=(await this.ctx.storage.get("artifactCycle:"+key))||{accepted:[]};
+    return (Array.isArray(cycle.accepted)?cycle.accepted:[]).some(x=>String(x?.artifactId||"")===String(step.artifactId)&&String(x?.playerId||("member:"+normalizeLoginId(x?.loginId)))===String(step.playerId))
+  }
+  async gmTurn(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
+    if(String(meta.phase||"").toLowerCase()!=="running"||String(meta.cyclePhase||"").toLowerCase()!=="night")return j({ok:false,error:"NOT_NIGHT_TURN",message:"Chỉ chuyển lượt khi đang ở Ban Đêm."},409);
+    const night=Math.max(1,Number(meta.cycleNight||1)),runtime=await this.getNightRuntime(meta,night,true),action=String(body?.action||"next").toLowerCase(),now=new Date().toISOString();
+    if(action==="back"){
+      if(runtime.cursor>0){runtime.cursor--;while(runtime.cursor>0&&runtime.queue[runtime.cursor]?.status==="skipped")runtime.cursor--;const step=runtime.queue[runtime.cursor];if(step&&step.status==="completed")step.status="pending";runtime.completed=false;runtime.currentId=step?.id||null}
+    }else{
+      const current=runtime.queue[runtime.cursor];
+      if(current&&current.status!=="skipped"){
+        if(current.kind==="early-artifact"){const used=await this.artifactUsedInNight(meta,current);current.status="completed";current.result=used?"used":"skipped";current.completedAt=now}
+        else{current.status="completed";current.completedAt=now}
+      }
+      runtime.cursor=Math.min(runtime.queue.length,runtime.cursor+1);
+      while(runtime.cursor<runtime.queue.length){
+        const next=runtime.queue[runtime.cursor];
+        if(next?.kind==="artifact-main"&&next.skipIfEarlyUsed&&await this.artifactUsedInNight(meta,next)){next.status="skipped";next.skippedReason="EARLY_ARTIFACT_USED";next.completedAt=now;runtime.cursor++;continue}
+        break
+      }
+      runtime.completed=runtime.cursor>=runtime.queue.length;runtime.currentId=runtime.completed?null:(runtime.queue[runtime.cursor]?.id||null)
+    }
+    runtime.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);meta.currentNightTurnId=runtime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);
+    this.broadcast({type:"night_turn",night,runtime});return j({ok:true,night,runtime})
+  }
   async gmCycle(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,now=new Date().toISOString(),rawPhase=String(body?.phase||body?.period||"").trim().toLowerCase(),phase=rawPhase==="day"?"morning":rawPhase,night=Math.max(0,Number(body?.night??body?.nightIndex??body?.roundIndex??0)||0),cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??((phase&&night)?(phase+"-"+night):("cycle-"+Date.now()))).slice(0,160);
@@ -444,7 +508,7 @@ export class RoomDurableObject extends DurableObject {
       }
       if(shouldExpire){x.effectActive=false;x.expiredAt=now;x.expiredReason=reason;expired.push({id:x.id,type,loginId:x.loginId,night:effectNight,reason})}
     }
-    await this.ctx.storage.put("interactions",rows.slice(-100));this.broadcast({type:"room_cycle",cycleKey,phase,night,matchId:String(meta.matchId||""),expired});return j({ok:true,cycleKey,phase,night,expired,matchId:String(meta.matchId||"")})
+    await this.ctx.storage.put("interactions",rows.slice(-100));const nightRuntime=phase==="night"&&night>0?await this.getNightRuntime(meta,night,true):null;this.broadcast({type:"room_cycle",cycleKey,phase,night,matchId:String(meta.matchId||""),expired,nightRuntime});return j({ok:true,cycleKey,phase,night,expired,matchId:String(meta.matchId||""),nightRuntime})
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -494,7 +558,7 @@ export class RoomDurableObject extends DurableObject {
     const oldPlayers=(await this.ctx.storage.get("players"))||{},removedPlayers=Object.values(oldPlayers).map(publicPlayer),nextVersion=currentVersion+1;
     await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
     await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");
-    for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
+    for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
     meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.enabled=true;meta.gameName="";meta.playerCount=0;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("reset-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
     await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
     const room=publicRoom(meta),ack={ok:true,reset:true,hardReset:true,transactionId:meta.lastResetTransactionId,resetVersion:nextVersion,phase:room.phase,locked:room.locked,playersCount:0,assignmentsCount:0,room,players:[],removedPlayers};
@@ -503,8 +567,8 @@ export class RoomDurableObject extends DurableObject {
     return j(ack)
   }
   async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=true;p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",rows.slice(-100));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});return j({ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true})}
-  async alarm(){try{const meta=await this.ctx.storage.get("meta");if(!meta)return;let phase=String(meta.phase||"").toLowerCase();if(phase==="deleted")return;meta.reopenAt=null;await this.ctx.storage.put("meta",meta);phase=String(meta.phase||"").toLowerCase();const times=[meta.lastUsedAt,meta.updatedAt,meta.createdAt].map(x=>Date.parse(x||"")).filter(Number.isFinite),last=times.length?Math.max(...times):Date.now(),due=last+ROOM_IDLE_TTL;if(Date.now()<due){await this.ctx.storage.setAlarm(due);return}const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}}catch(e){console.error("GMWW_ROOM_EXPIRY",e);try{await this.ctx.storage.setAlarm(Date.now()+60*60*1000)}catch(_){}}}
-  async gmDelete(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{};meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=new Date().toISOString();meta.updatedAt=meta.deletedAt;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}this.broadcast({type:"room_deleted",room:publicRoom(meta)});for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_DELETED")}catch{}return j({ok:true,deleted:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
+  async alarm(){try{const meta=await this.ctx.storage.get("meta");if(!meta)return;let phase=String(meta.phase||"").toLowerCase();if(phase==="deleted")return;meta.reopenAt=null;await this.ctx.storage.put("meta",meta);phase=String(meta.phase||"").toLowerCase();const times=[meta.lastUsedAt,meta.updatedAt,meta.createdAt].map(x=>Date.parse(x||"")).filter(Number.isFinite),last=times.length?Math.max(...times):Date.now(),due=last+ROOM_IDLE_TTL;if(Date.now()<due){await this.ctx.storage.setAlarm(due);return}const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}}catch(e){console.error("GMWW_ROOM_EXPIRY",e);try{await this.ctx.storage.setAlarm(Date.now()+60*60*1000)}catch(_){}}}
+  async gmDelete(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{};meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=new Date().toISOString();meta.updatedAt=meta.deletedAt;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}this.broadcast({type:"room_deleted",room:publicRoom(meta)});for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_DELETED")}catch{}return j({ok:true,deleted:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
 
   async playerState(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
@@ -544,6 +608,7 @@ export class RoomDurableObject extends DurableObject {
     const result=await this.ctx.storage.transaction(async txn=>{
       const artifact=await txn.get("artifact:"+loginId);
       if(!artifact)return{ok:false,status:404,error:"ARTIFACT_NOT_FOUND"};
+      const targetId=String(body?.targetId||body?.originalTargetId||"").slice(0,160);if(targetId){const players=(await txn.get("players"))||{};if(!players[targetId])return{ok:false,status:400,error:"INVALID_ARTIFACT_TARGET"}}
       if(meta.matchId&&artifact.matchId&&String(meta.matchId)!==String(artifact.matchId))return{ok:false,status:409,error:"STALE_ARTIFACT"};
       const artifactId=String(artifact.artifactId||""),playerId="member:"+loginId,useKey="artifactUse:"+loginId+":"+artifactId,oldUse=await txn.get(useKey),cycle=(await txn.get("artifactCycle:"+cycleKey))||{cycleKey,accepted:[]};
       if(artifact.singleUse===true&&oldUse)return{ok:false,status:409,error:"ARTIFACT_ALREADY_USED"};
@@ -651,6 +716,7 @@ export default {async fetch(request,env){
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmCycle=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/cycle$/);if(gmCycle&&request.method==="POST")return roomProxy(env,gmCycle[1],"/gm/cycle",request);
+  const gmTurn=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/turn$/);if(gmTurn&&request.method==="POST")return roomProxy(env,gmTurn[1],"/gm/turn",request);
   const gmEnabled=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/enabled$/);if(gmEnabled&&request.method==="POST")return gmRoomEnabled(env,gmEnabled[1],request);
   const gmLock=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/lock$/);if(gmLock&&request.method==="POST")return gmRoomLock(env,gmLock[1],request);
   const gmKick=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/kick$/);if(gmKick&&request.method==="POST")return gmRoomKick(env,gmKick[1],request);
@@ -739,6 +805,7 @@ function sanitizePlayerArtifactCard(v){
 }
 function privateArtifact(a){return{matchId:a.matchId||null,matchRevision:Number(a.matchRevision||0),artifactId:a.artifactId,artifactName:a.artifactName,description:a.description,artifactImage:a.artifactImage||null,artworkAssetId:a.artworkAssetId||a.artworkId||null,artworkId:a.artworkAssetId||a.artworkId||null,artworkAvailable:a.artworkAvailable!==false,artifactCard:a.artifactCard||null,singleUse:a.singleUse===true,deliveredAt:a.deliveredAt||null,viewedAt:a.viewedAt||null,usedAt:a.usedAt||null,lastActivation:a.lastActivation||null}}
 function currentArtifactCycleKey(meta){return artifactCycleKey(meta?.matchId||"match",Math.max(1,Number(meta?.cycleNight||1)))}
+function gameLabelKey(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function sanitizePlayerRoleCard(v){
   const x=(v&&typeof v==="object")?v:{};
   const actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null})):[];
