@@ -385,6 +385,29 @@
   </div>
 </div>
 
+<div class="sheet hidden" id="playEndSheet">
+  <div class="sheet-card play-end-sheet-card">
+    <div class="sheet-head"><div><h3>Kết thúc ván</h3><small id="playEndRoomLabel">Phòng —</small></div><button id="playEndClose" type="button">×</button></div>
+    <div class="play-win-proposal hidden" id="playWinProposal">
+      <small>HỆ THỐNG GỢI Ý</small>
+      <b id="playWinProposalFaction">—</b>
+      <span id="playWinProposalReason"></span>
+      <button id="playUseWinProposal" type="button">Dùng gợi ý này</button>
+    </div>
+    <div class="play-end-warning">GM xác nhận Phe thắng trước khi kết thúc. Kết quả sẽ gửi đến Player Web và toàn bộ Thành Viên trở về Phòng Chờ với trạng thái <b>Sẵn sàng</b>.</div>
+    <div class="play-winner-grid" id="playWinnerGrid">
+      <button type="button" data-play-winner="Phe Dân"><span>🏡</span><b>Phe Dân</b></button>
+      <button type="button" data-play-winner="Phe Sói"><span>🐺</span><b>Phe Sói</b></button>
+      <button type="button" data-play-winner="Phe Ba"><span>✦</span><b>Phe Ba</b></button>
+      <button type="button" data-play-winner="Phe Khác"><span>◇</span><b>Phe Khác</b></button>
+    </div>
+    <div class="button-row play-roster-actions">
+      <button class="secondary" id="playEndCancel" type="button">Hủy</button>
+      <button class="primary" id="playEndConfirm" type="button" disabled>XÁC NHẬN KẾT THÚC</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet hidden" id="playRosterSheet">
   <div class="sheet-card play-roster-sheet-card">
     <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
