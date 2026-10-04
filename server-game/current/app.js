@@ -1,12 +1,13 @@
 (()=>{'use strict';
 
-const VERSION='2.57';
-const STATE_KEY='GMWW_V257_STATE';
-const PREF_KEY='GMWW_V257_PREFS';
-const OLD_STATE_KEYS=['GMWW_V256_STATE','GMWW_V255_STATE','GMWW_V254_STATE','GMWW_V253_STATE','GMWW_V252_STATE','GMWW_V251_STATE','GMWW_V250_STATE','GMWW_V247_STATE','GMWW_V246_STATE','GMWW_V245_STATE','GMWW_V244_STATE','GMWW_V243_STATE','GMWW_V242_STATE','GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE'];
-const OLD_PREF_KEYS=['GMWW_V256_PREFS','GMWW_V255_PREFS','GMWW_V254_PREFS','GMWW_V253_PREFS','GMWW_V252_PREFS','GMWW_V251_PREFS','GMWW_V250_PREFS','GMWW_V247_PREFS','GMWW_V246_PREFS','GMWW_V245_PREFS','GMWW_V244_PREFS','GMWW_V243_PREFS','GMWW_V242_PREFS','GMWW_V241_PREFS','GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS'];
+const VERSION='2.58';
+const STATE_KEY='GMWW_V258_STATE';
+const PREF_KEY='GMWW_V258_PREFS';
+const OLD_STATE_KEYS=['GMWW_V257_STATE','GMWW_V256_STATE','GMWW_V255_STATE','GMWW_V254_STATE','GMWW_V253_STATE','GMWW_V252_STATE','GMWW_V251_STATE','GMWW_V250_STATE','GMWW_V247_STATE','GMWW_V246_STATE','GMWW_V245_STATE','GMWW_V244_STATE','GMWW_V243_STATE','GMWW_V242_STATE','GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE','GMWW_V109_STATE','GMWW_V1_09_STATE','GMWW_V108_STATE'];
+const OLD_PREF_KEYS=['GMWW_V257_PREFS','GMWW_V256_PREFS','GMWW_V255_PREFS','GMWW_V254_PREFS','GMWW_V253_PREFS','GMWW_V252_PREFS','GMWW_V251_PREFS','GMWW_V250_PREFS','GMWW_V247_PREFS','GMWW_V246_PREFS','GMWW_V245_PREFS','GMWW_V244_PREFS','GMWW_V243_PREFS','GMWW_V242_PREFS','GMWW_V241_PREFS','GMWW_V240_PREFS','GMWW_V239_PREFS','GMWW_V238_PREFS','GMWW_V237_PREFS','GMWW_V236_PREFS','GMWW_V235_PREFS','GMWW_V234_PREFS','GMWW_V233_PREFS','GMWW_V232_PREFS','GMWW_V231_PREFS','GMWW_V230_PREFS','GMWW_V229_PREFS','GMWW_V228_PREFS','GMWW_V227_PREFS','GMWW_V226_PREFS','GMWW_V225_PREFS','GMWW_V224_PREFS','GMWW_V223_PREFS','GMWW_V222_PREFS','GMWW_V221_PREFS','GMWW_V220_PREFS','GMWW_V219_PREFS','GMWW_V218_PREFS','GMWW_V217_PREFS','GMWW_V216_PREFS','GMWW_V215_PREFS','GMWW_V214_PREFS','GMWW_V213_PREFS','GMWW_V212_PREFS','GMWW_V211_PREFS','GMWW_V210_PREFS','GMWW_V209_PREFS','GMWW_V208_PREFS','GMWW_V207_PREFS','GMWW_V206_PREFS','GMWW_V205_PREFS','GMWW_V109_PREFS','GMWW_V1_09_PREFS','GMWW_V108_PREFS'];
 const DB_NAME='GMWW_V208_THEME_ASSETS';
 const DB_STORE='assets';
+const LEGACY_V1_ASSET_DBS=['GMWW_ASSETS_921','GMWW_THEME_ASSETS_946','GMWW_THEME_UI_987','GMWW_MATCH_CACHE_933','GMWW_AUDIO_LIBRARY'];
 
 const THEME_UI_GROUPS=[
   {id:'background',title:'🌌 Hình nền',slots:[
@@ -483,6 +484,14 @@ function openDb(){return new Promise((resolve,reject)=>{const q=indexedDB.open(D
 async function dbPut(key,blob){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({key,blob,updatedAt:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
 async function dbGet(key){const db=await openDb();const out=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const q=tx.objectStore(DB_STORE).get(key);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});db.close();return out}
 async function dbDelete(key){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+async function migrateLegacyV1Assets(){
+  const marker='GMWW_V1_ASSET_MIGRATION_V258';if(localStorage.getItem(marker)==='done'||typeof indexedDB?.databases!=='function')return;
+  const names=new Set((await indexedDB.databases()).map(x=>String(x?.name||'')));let copied=0;
+  for(const name of LEGACY_V1_ASSET_DBS){if(!names.has(name))continue;let legacy;
+    try{legacy=await new Promise((resolve,reject)=>{const q=indexedDB.open(name);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});for(const storeName of Array.from(legacy.objectStoreNames)){const rows=await new Promise((resolve,reject)=>{const tx=legacy.transaction(storeName,'readonly'),store=tx.objectStore(storeName),values=store.getAll(),keys=store.getAllKeys();tx.oncomplete=()=>resolve({values:values.result||[],keys:keys.result||[]});tx.onerror=()=>reject(tx.error)});for(let i=0;i<rows.values.length;i++){const value=rows.values[i],key=String(value?.key??rows.keys[i]??'');const blob=value instanceof Blob?value:value?.blob instanceof Blob?value.blob:null;if(key&&blob&&!(await dbGet(key))){await dbPut(key,blob);copied++}}}}catch(e){console.warn('V1 asset migration skipped',name,e)}finally{try{legacy?.close()}catch(_){}}
+  }
+  localStorage.setItem(marker,'done');localStorage.setItem(marker+'_COUNT',String(copied));
+}
 function cardBlobKey(themeId,kind,id,assetKind){return 'v225|'+themeId+'|'+kind+'|'+id+'|'+assetKind}
 function uiBlobKey(themeId,slotId){return themeId+'|ui|'+slotId}
 async function blobUrlFor(key){if(objectUrls.has(key))return objectUrls.get(key);try{const rec=await dbGet(key);if(rec&&rec.blob){const u=URL.createObjectURL(rec.blob);objectUrls.set(key,u);return u}}catch(_){}return''}
@@ -730,7 +739,7 @@ function bindCore(){
   $$('#audioKindSeg button').forEach(b=>b.onclick=()=>{$$('#audioKindSeg button').forEach(x=>x.classList.toggle('active',x===b));audioKind=b.dataset.audioKind;renderAudio()});
 }
 async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch'),stamp='V1.08|ROLE:source-18|'+a.base64.length;if(localStorage.getItem('GMWW_V1_AUDIO_SEED_SOURCE18')===stamp&&await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}));localStorage.setItem('GMWW_V1_AUDIO_SEED_SOURCE18',stamp)}catch(e){console.warn('V1 audio seed failed',e)}}
-async function boot(){bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
+async function boot(){try{await migrateLegacyV1Assets()}catch(e){console.warn('V1 settings migration failed',e)}bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 
 /* V2.44 — Background readability */
@@ -1624,17 +1633,10 @@ async function moveSelectedPlayerToSeat(seatId,occupant){
 }
 async function releaseSelectedPlayerSeat(){const selected=selectedPlayPlayer();if(!selected?.seatId)return;if(!confirm('Giải phóng Seat '+selected.seatId+' của '+selected.displayName+'?'))return;await updateSelectedPlayerSeat({seatId:null})}
 async function playRandomSeatRemaining(){
-  if(!isLivePlayRoom())return;const members=playLiveMembers(),stats=playSeatStats(),used=new Set(members.map(m=>Number(m?.seatId||0)).filter(Boolean)),free=[];for(let i=1;i<=stats.seatCount;i++)if(!used.has(i))free.push(i);
-  const remaining=members.filter(m=>!Number(m?.seatId||0));if(!remaining.length){playFlashError('Tất cả Người Chơi đã có ghế.');return}
-  if(free.length<remaining.length){playFlashError('Không đủ ghế trống cho Người Chơi còn lại.');return}
+  if(!isLivePlayRoom())return;const remaining=playLiveMembers().filter(m=>!Number(m?.seatId||0));if(!remaining.length){playFlashError('Tất cả Người Chơi đã có ghế.');return}
   playSetBusy(true);
   try{
-    const seats=playShuffle(free);
-    for(let i=0;i<remaining.length;i++){
-      const m=remaining[i],data=await playRoomApi('/seat',{method:'POST',body:JSON.stringify({participantId:m.participantId||('member:'+m.loginId),seatId:seats[i]})});
-      playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players
-    }
-    renderPlayScene()
+    const data=await playRoomApi('/seats/randomize-remaining',{method:'POST',body:'{}'});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;savePlayScene();renderPlayScene()
   }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
 async function playSetSeatLock(locked=true){

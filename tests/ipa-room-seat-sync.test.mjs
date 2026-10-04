@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.57 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\.57'/);
-  assert.match(html,/GMWW V2\.57/);
+test('IPA V2.58 creates offline/online rooms with a fixed seat count',()=>{
+  assert.match(app,/const VERSION='2\.58'/);
+  assert.match(html,/GMWW V2\.58/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
@@ -82,8 +82,13 @@ test('GM Play is an immersive seven-stage village flow',()=>{
 });
 
 test('chair stage preserves occupied seats, supports swap/random remainder and seat lock',()=>{
-  assert.match(app,/remaining=members\.filter\(m=>!Number\(m\?\.seatId\|\|0\)\)/);
+  assert.match(app,/remaining=playLiveMembers\(\)\.filter\(m=>!Number\(m\?\.seatId\|\|0\)\)/);
   assert.match(app,/updateSelectedPlayerSeat\(\{seatId:Number\(m\.seatId\),swap:true\}\)/);
+  assert.match(app,/\/seats\/randomize-remaining/);
+  assert.match(server,/async gmRandomizeRemainingSeats\(request\)/);
+  assert.match(server,/remaining=entries\.filter\(\(\[,player\]\)=>!normalizeSeatId\(player\?\.seatId,seatCount\)\)/);
+  assert.match(server,/gmRandomSeatsRoute/);
+  assert.match(server,/seatsRandomized:true/);
   assert.match(app,/\/seat-lock/);
   assert.match(server,/async gmSeatLock\(/);
   assert.match(server,/meta\.seatsLocked/);
@@ -106,8 +111,13 @@ test('saved game templates are precompiled on server but remain GM-only until ro
 });
 
 test('V1.09 preservation contract keeps existing engine and local settings while changing Play flow',()=>{
-  assert.match(app,/OLD_STATE_KEYS=\['GMWW_V256_STATE','GMWW_V255_STATE'/);
+  assert.match(app,/OLD_STATE_KEYS=\['GMWW_V257_STATE','GMWW_V256_STATE'/);
+  assert.match(app,/GMWW_V109_STATE/);
+  assert.match(app,/GMWW_V1_09_PREFS/);
   assert.match(app,/DB_NAME='GMWW_V208_THEME_ASSETS'/);
+  assert.match(app,/LEGACY_V1_ASSET_DBS=\['GMWW_ASSETS_921','GMWW_THEME_ASSETS_946','GMWW_THEME_UI_987','GMWW_MATCH_CACHE_933','GMWW_AUDIO_LIBRARY'\]/);
+  assert.match(app,/async function migrateLegacyV1Assets\(\)/);
+  assert.match(app,/await migrateLegacyV1Assets\(\)/);
   assert.match(app,/auditLocalData/);
   assert.match(app,/clearSafeRuntimeCache/);
   assert.match(app,/applyActiveThemeUi/);

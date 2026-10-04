@@ -5,7 +5,7 @@ import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.57",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.58",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -63,6 +63,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
     if(url.pathname==="/gm/seat"&&request.method==="POST")return this.gmSeat(request,await safeJson(request));
+    if(url.pathname==="/gm/seats/randomize-remaining"&&request.method==="POST")return this.gmRandomizeRemainingSeats(request);
     if(url.pathname==="/gm/seat-lock"&&request.method==="POST")return this.gmSeatLock(request,await safeJson(request));
     if(url.pathname==="/gm/cycle"&&request.method==="POST")return this.gmCycle(request,await safeJson(request));
     if(url.pathname==="/gm/turn"&&request.method==="POST")return this.gmTurn(request,await safeJson(request));
@@ -507,6 +508,26 @@ export class RoomDurableObject extends DurableObject {
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatUpdated:participantId});
     return j({ok:true,room,player:publicPlayer(player),displaced,players:publicPlayers})
   }
+  async gmRandomizeRemainingSeats(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,phase=String(meta.phase||"lobby").toLowerCase();
+    if(meta.seatsLocked)return j({ok:false,error:"SEATS_LOCKED",message:"Ghế đã được GM khóa."},409);
+    if(["running","started","game","playing"].includes(phase))return j({ok:false,error:"SEAT_LOCKED_IN_MATCH",message:"Chỉ phân ghế tại khu chuẩn bị vào trận."},409);
+    const players=(await this.ctx.storage.get("players"))||{},entries=Object.entries(players),seatCount=normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12),used=new Set();
+    for(const [,player] of entries){const seatId=normalizeSeatId(player?.seatId,seatCount);if(seatId)used.add(seatId)}
+    const remaining=entries.filter(([,player])=>!normalizeSeatId(player?.seatId,seatCount)),free=[];
+    for(let seatId=1;seatId<=seatCount;seatId++)if(!used.has(seatId))free.push(seatId);
+    if(!remaining.length)return j({ok:true,unchanged:true,assigned:[],room:publicRoom(meta),players:entries.map(([,player])=>publicPlayer(player))});
+    if(free.length<remaining.length)return j({ok:false,error:"NOT_ENOUGH_FREE_SEATS",message:"Không đủ ghế trống cho Người Chơi còn lại.",remaining:remaining.length,available:free.length},409);
+    const shuffled=secureShuffle(free),assigned=[];
+    for(let index=0;index<remaining.length;index++){
+      const [participantId,player]=remaining[index],seatId=shuffled[index];
+      player.seatId=seatId;player.ready=false;clearPlayerMovement(player);players[participantId]=player;assigned.push({participantId,seatId});
+    }
+    await this.ctx.storage.put("players",players);meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
+    const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatsRandomized:true,assigned});
+    return j({ok:true,room,players:publicPlayers,assigned})
+  }
   nightRuntimeKey(meta,night){return "nightRuntime:"+String(meta?.matchId||"match")+":"+Math.max(1,Number(night)||1)}
   async getNightRuntime(meta,night,create=false){
     const key=this.nightRuntimeKey(meta,night);let runtime=await this.ctx.storage.get(key);
@@ -856,6 +877,7 @@ export default {async fetch(request,env){
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
   const gmSeatRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat$/);if(gmSeatRoute&&request.method==="POST")return roomProxy(env,gmSeatRoute[1],"/gm/seat",request);
+  const gmRandomSeatsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seats\/randomize-remaining$/);if(gmRandomSeatsRoute&&request.method==="POST")return roomProxy(env,gmRandomSeatsRoute[1],"/gm/seats/randomize-remaining",request);
   const gmSeatLockRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat-lock$/);if(gmSeatLockRoute&&request.method==="POST")return roomProxy(env,gmSeatLockRoute[1],"/gm/seat-lock",request);
   const gmCycle=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/cycle$/);if(gmCycle&&request.method==="POST")return roomProxy(env,gmCycle[1],"/gm/cycle",request);
   const gmTurn=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/turn$/);if(gmTurn&&request.method==="POST")return roomProxy(env,gmTurn[1],"/gm/turn",request);
@@ -928,7 +950,7 @@ async function publicRoomState(env,raw,request){const c=normalizeRoomCode(raw);i
 async function gmRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const res=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(res.ok)await syncRoomDirectory(env,c);return res}
 function playerPage(code){return new Response(gmwwMembersPage(code),{headers:{...corsHeaders(),"content-type":"text/html; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0"}})}
 function avatarImage(id){const a=GMWW_MEMBER_AVATARS.find(x=>x.id===id);if(!a)return new Response("Not found",{status:404});const m=a.img.match(/^data:(image\/[^;]+);base64,(.+)$/);if(!m)return new Response("Invalid asset",{status:500});const bin=atob(m[2]);return new Response(Uint8Array.from(bin,c=>c.charCodeAt(0)),{headers:{"content-type":m[1],"cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}
-function roomStub(env,c){return env.ROOMS.get(env.ROOMS.idFromName(c))}function memberStore(env){return env.ROOMS.get(env.ROOMS.idFromName(MEMBER_STORE_NAME))}function generateRoomCode(){const b=new Uint8Array(ROOM_CODE_LENGTH);crypto.getRandomValues(b);let c="";for(const x of b)c+=ROOM_ALPHABET[x%ROOM_ALPHABET.length];return c}function normalizeRoomCode(v){return String(v||"").trim().toUpperCase()}function isValidRoomCode(c){return new RegExp(`^[${ROOM_ALPHABET}]{${ROOM_CODE_LENGTH}}$`).test(c)}
+function roomStub(env,c){return env.ROOMS.get(env.ROOMS.idFromName(c))}function memberStore(env){return env.ROOMS.get(env.ROOMS.idFromName(MEMBER_STORE_NAME))}function generateRoomCode(){const b=new Uint8Array(ROOM_CODE_LENGTH);crypto.getRandomValues(b);let c="";for(const x of b)c+=ROOM_ALPHABET[x%ROOM_ALPHABET.length];return c}function secureShuffle(values){const out=[...values];for(let i=out.length-1;i>0;i--){const limit=Math.floor(0x100000000/(i+1))*(i+1);let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0]}while(n>=limit);const j=n%(i+1),tmp=out[i];out[i]=out[j];out[j]=tmp}return out}function normalizeRoomCode(v){return String(v||"").trim().toUpperCase()}function isValidRoomCode(c){return new RegExp(`^[${ROOM_ALPHABET}]{${ROOM_CODE_LENGTH}}$`).test(c)}
 function sanitizeGameConfig(v){
   if(!v||typeof v!=="object")return null;
   const clampSec=x=>Math.max(0,Math.min(3600,Math.trunc(Number(x)||0))),defaultActionSec=clampSec(v?.timing?.defaultActionSec??v?.defaultActionSec??45);
