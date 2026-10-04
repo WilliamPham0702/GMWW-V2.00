@@ -488,11 +488,20 @@ function uiBlobKey(themeId,slotId){return themeId+'|ui|'+slotId}
 async function blobUrlFor(key){if(objectUrls.has(key))return objectUrls.get(key);try{const rec=await dbGet(key);if(rec&&rec.blob){const u=URL.createObjectURL(rec.blob);objectUrls.set(key,u);return u}}catch(_){}return''}
 function imageToThumb(src){return new Promise(resolve=>{const im=new Image();im.onload=()=>{const sw=im.naturalWidth||1024,sh=im.naturalHeight||936,tries=[[300,275,.72],[260,238,.66],[220,202,.58],[180,165,.52]];let last='';for(const [w,h,q] of tries){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,w,h);const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(w-dw)/2,(h-dh)/2,dw,dh);last=c.toDataURL('image/webp',q);if(last.length<=100000){resolve(last);return}}resolve(last)};im.onerror=()=>resolve('');im.src=src})}
 async function ensureDefaultThumb(){if(defaultThumb)return defaultThumb;defaultThumb='default-artwork.webp';return defaultThumb}
+function builtinRoleArtwork(id,assetKind){
+  const item=window.GMWW_BUILTIN_ROLE_ARTWORK?.[String(id)];
+  if(!item)return '';
+  if(assetKind==='thumb')return item.thumb;
+  if(assetKind==='delivery')return item.delivery||item.display;
+  return item.display;
+}
 async function resolveArtwork(kind,id,assetKind){
+  const builtIn=kind==='cards'?builtinRoleArtwork(id,assetKind):'';
+  if(builtIn)return builtIn;
   const active=state.themes.activeId||'theme-sea';
   if(active!=='theme-default'){
     const local=await blobUrlFor(cardBlobKey(active,kind,id,assetKind));if(local)return local;
-    if(assetKind==='thumb'){
+    if(assetKind==='thumb'||assetKind==='full'){
       const displayLocal=await blobUrlFor(cardBlobKey(active,kind,id,'display'));if(displayLocal)return displayLocal;
     }
   }
@@ -553,6 +562,19 @@ async function renderEntityFront(){
   if(currentKind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon+' '+f.label}else badge.textContent='✦ ARTIFACTS';
   $('#playerInformation').textContent=formatInformation(e.information||'');
   $('#playerDisplay').src=await resolveArtwork(currentKind,e.id,'display');
+  fitPlayerCardTitle();fitPlayerCardInformation();
+}
+function fitPlayerCardTitle(){
+  const title=$('#playerName');if(!title)return;
+  title.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  requestAnimationFrame(()=>{let size=25;while(size>18&&title.scrollWidth>title.clientWidth+1){size=Math.max(18,size-.5);title.style.fontSize=size+'px'}});
+}
+function fitPlayerCardInformation(){
+  const box=$('#playerInformation');if(!box)return;
+  box.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  requestAnimationFrame(()=>{let size=14.5;while(size>12&&box.scrollHeight>box.clientHeight+1){size=Math.max(12,size-.5);box.style.fontSize=size+'px'}});
 }
 function actionOptions(selected){const k=currentKind==='artifacts'?'artifacts':'role';return actionList(k).map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(selected)?'selected':'')+'>'+esc(a.name)+'</option>').join('')}
 function functionHtml(fn,index){
