@@ -1322,10 +1322,11 @@ function renderPlayContext(){
       else if(current?.kind==='role')x.textContent='Gọi Vai Trò này thực hiện chức năng. Các người chơi cùng Vai Trò được gom chung một lượt.';
       else if(current?.kind==='artifact-main')x.textContent='Lượt chính của Artifact. Artifact đã dùng ở lượt gọi sớm sẽ không xuất hiện lại.';
       else x.textContent='Toàn bộ thứ tự đêm đang được server giữ và đồng bộ cho GM.';
+      const deadline=Date.parse(runtime?.deadlineAt||'')||0;if(deadline>0&&!runtime?.completed){const remain=Math.max(0,Math.ceil((deadline-Date.now())/1000));x.textContent+=(x.textContent?' • ':'')+remain+' giây'}
     }
     if(actions)actions.innerHTML='<button class="play-action-chip active" type="button"><span>☾</span><b>Đêm '+Math.max(1,playSceneState.night)+'</b></button><button class="play-action-chip" type="button"><span>✦</span><b>Artifact '+Math.min(3,playSceneState.artifactCount)+'/3</b></button>';
   }else if(playSceneState.phase==='day'){
-    if(k)k.textContent='BAN NGÀY';if(t)t.textContent='Công bố người chết → Thảo luận → Bỏ phiếu';if(x)x.textContent='Chỉ hiện kết quả người chết rồi chuyển sang Ngày. Bỏ phiếu điện tử dùng chung cho hai chế độ Online.';
+    if(k)k.textContent='BAN NGÀY';if(t)t.textContent='Công bố người chết → Thảo luận → Bỏ phiếu';if(x){x.textContent='Chỉ hiện kết quả người chết rồi chuyển sang Ngày. Bỏ phiếu điện tử dùng chung cho hai chế độ Online.';const sec=Math.max(0,Number((playSceneRuntime.gameConfig?.timing||playSceneState.gameTiming||{}).villageDiscussionSec)||0),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'')||0;if(sec&&started){const remain=Math.max(0,Math.ceil((started+sec*1000-Date.now())/1000));x.textContent+=' • '+remain+' giây'}};
     if(actions)actions.innerHTML='<button class="play-action-chip active" type="button"><span>☀</span><b>Ban Ngày</b></button><button class="play-action-chip" type="button"><span>✓</span><b>Bỏ phiếu</b></button>';
   }else{
     if(k)k.textContent=step.k;if(t)t.textContent=step.t;
