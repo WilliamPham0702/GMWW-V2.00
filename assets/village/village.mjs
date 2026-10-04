@@ -23,6 +23,11 @@ export function mapPublicPlayers(state){
     avatarId:typeof p.avatarId==="string"?p.avatarId:"",
     gameCharacterId:typeof p.gameCharacterId==="string"?p.gameCharacterId:"",
     seatId:Number(p.seatId||0)||null,
+    positionX:p.positionX==null?null:Number(p.positionX),positionY:p.positionY==null?null:Number(p.positionY),
+    movementStatus:p.movementStatus==="moving"?"moving":"idle",moveId:String(p.moveId||""),
+    moveFromX:p.moveFromX==null?null:Number(p.moveFromX),moveFromY:p.moveFromY==null?null:Number(p.moveFromY),
+    moveToX:p.moveToX==null?null:Number(p.moveToX),moveToY:p.moveToY==null?null:Number(p.moveToY),
+    moveStartedAt:Number(p.moveStartedAt||0)||null,moveDurationMs:Number(p.moveDurationMs||0)||null,moveTargetSeatId:Number(p.moveTargetSeatId||0)||null,
     ready:!!p.ready,setupComplete:!!p.setupComplete,online:p.online!==false
   }));
 }
@@ -43,36 +48,61 @@ if(game){
       return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
     }catch{return "";}
   }
-  let night=false,selectedId=null,count=12,setupState={enabled:false,selectedSeatId:null,viewerParticipantId:""};
+  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""},moveFrame=0,arrivalNotified=new Set();
+  function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+  function spawnPosition(id){let h=0;for(const ch of String(id||""))h=(h*31+ch.charCodeAt(0))>>>0;return{x:18+(h%6400)/100,y:69+((h>>>8)%1700)/100}}
+  function movementPosition(data,seatPos=null,now=Date.now()){
+    if(data?.movementStatus==="moving"&&data?.moveStartedAt&&data?.moveDurationMs&&Number.isFinite(Number(data?.moveFromX))&&Number.isFinite(Number(data?.moveToX))){
+      const t=Math.max(0,Math.min(1,(now-Number(data.moveStartedAt))/Math.max(1,Number(data.moveDurationMs)))),e=easeMove(t);
+      return{x:Number(data.moveFromX)+(Number(data.moveToX)-Number(data.moveFromX))*e,y:Number(data.moveFromY)+(Number(data.moveToY)-Number(data.moveFromY))*e,progress:t,moving:t<1}
+    }
+    if(seatPos)return{x:seatPos.x,y:seatPos.y,progress:1,moving:false};
+    const fallback=spawnPosition(data?.id);return{x:Number.isFinite(Number(data?.positionX))?Number(data.positionX):fallback.x,y:Number.isFinite(Number(data?.positionY))?Number(data.positionY):fallback.y,progress:1,moving:false}
+  }
+  function makePlayerButton(data,position,seatId=null,index=0){
+    const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
+    button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(data.movementStatus==="moving"?" moving":"")+(actualSeat?" seated":" roaming");
+    button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
+    button.style.left=position.x+"%";button.style.top=position.y+"%";button.style.zIndex=String(10+Math.round(position.y));
+    const avatar=document.createElement("span");avatar.className="portrait";
+    const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
+    const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
+    const characterUrl=characterId?("/api/game-characters/"+encodeURIComponent(characterId)+"/image"):"";
+    const avatarUrl=trustedAvatarUrl(data.avatarUrl||characterUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
+    if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img)}
+    const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
+    const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=data.movementStatus==="moving"?"➜":data.ready?"✓":data.online?"●":"○";
+    button.append(avatar,stateTag,name);button.setAttribute("aria-label",(actualSeat?("Ghế "+actualSeat+" · "):"")+" "+playerName);
+    button.addEventListener("click",e=>{e.stopPropagation();selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Ghế "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
+    return button
+  }
   function render(){
-    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map();
-    for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item)}
+    cancelAnimationFrame(moveFrame);moveFrame=0;
+    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
+    for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     players.replaceChildren();roster.replaceChildren();
     ps.forEach((p,i)=>{
       const seatId=i+1,data=seatMap.get(seatId)||(!liveRoom&&!embedded?(all[i]||sample[i]):null);
       if(!data){
-        const empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"");empty.dataset.seatId=String(seatId);empty.style.left=p.x+"%";empty.style.top=p.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot"></span><b>Ghế '+seatId+'</b>';
-        empty.setAttribute("aria-label","Ghế "+seatId+" đang trống");
-        if(embedded&&setupState.enabled)empty.addEventListener("click",()=>{try{window.parent.postMessage({type:"gmww:seat-click",seatId},window.location.origin)}catch{}});
-        else empty.disabled=true;
-        players.append(empty);return;
+        const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);empty.style.left=p.x+"%";empty.style.top=p.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot"></span><b>'+(reserved?'Đang tới ':'Ghế ')+seatId+'</b>';
+        empty.setAttribute("aria-label","Ghế "+seatId+(reserved?" đang được chọn":" đang trống"));
+        if(embedded&&setupState.enabled&&!reserved)empty.addEventListener("click",e=>{e.stopPropagation();try{window.parent.postMessage({type:"gmww:seat-click",seatId,x:p.x,y:p.y},window.location.origin)}catch{}});
+        else empty.disabled=true;players.append(empty);return
       }
-      const playerName=safeText(data.displayName||data.name||names[i]),actualSeat=Number(data.seatId||seatId)||seatId;
-      const button=document.createElement("button");button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"");button.dataset.style=String((actualSeat-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+actualSeat));button.dataset.seatId=String(actualSeat);
-      button.style.left=p.x+"%";button.style.top=p.y+"%";button.style.zIndex=String(10+Math.round(p.y));
-      const avatar=document.createElement("span");avatar.className="portrait";
-      const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
-      const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
-      const characterUrl=characterId?("/api/game-characters/"+encodeURIComponent(characterId)+"/image"):"";
-      const avatarUrl=trustedAvatarUrl(data.avatarUrl||characterUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
-      if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img);}
-      const name=document.createElement("span");name.className="name";name.textContent=actualSeat+" · "+playerName;
-      const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=data.ready?"✓":data.online?"●":"○";
-      button.append(avatar,stateTag,name);button.setAttribute("aria-label","Ghế "+actualSeat+" · "+playerName);
-      button.addEventListener("click",()=>{selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: Ghế "+actualSeat+" · "+playerName;selection.hidden=false;render();});
-      players.append(button);const item=document.createElement("span");item.textContent=actualSeat+" · "+playerName+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item);
+      const pos=movementPosition(data,p),button=makePlayerButton(data,pos,seatId,i);players.append(button);const item=document.createElement("span");item.textContent=seatId+" · "+safeText(data.displayName)+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item)
     });
+    for(const data of unseated){const pos=movementPosition(data,null),button=makePlayerButton(data,pos,null,all.indexOf(data));players.append(button);const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     document.getElementById("count").textContent=all.filter(x=>Number(x?.seatId||0)>0).length+"/"+seatCount;
+    if(all.some(x=>x?.movementStatus==="moving"))moveFrame=requestAnimationFrame(animateMovementFrame)
+  }
+  function animateMovementFrame(now){
+    let active=false;
+    for(const data of all){
+      if(data?.movementStatus!=="moving"||!data.moveId)continue;const el=players.querySelector('[data-player-id="'+CSS.escape(String(data.id))+'"]');if(!el)continue;
+      const pos=movementPosition(data,null,Date.now());el.style.left=pos.x+"%";el.style.top=pos.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
+      if(!pos.moving&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
+    }
+    if(active)moveFrame=requestAnimationFrame(animateMovementFrame);else moveFrame=0
   }
   if(supplied?.length){count=Math.min(30,Math.max(supplied.length,...supplied.map(x=>Number(x?.seatId||0)||0)));document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
   document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selectedId=null;selection.hidden=true;render();});
@@ -102,7 +132,7 @@ if(game){
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
-    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,selectedSeatId:null,viewerParticipantId:""};
+    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""};
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
@@ -111,9 +141,12 @@ if(game){
   if(embedded){
     document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
     document.getElementById("mode").hidden=true;
+    const stage=document.querySelector(".stage");stage.addEventListener("click",event=>{if(!setupState.enabled||!setupState.walkEnabled)return;if(event.target.closest(".player,.seat-empty,.hud,.scene-controls"))return;const r=stage.getBoundingClientRect(),x=Math.max(6,Math.min(94,(event.clientX-r.left)/Math.max(1,r.width)*100)),y=Math.max(24,Math.min(90,(event.clientY-r.top)/Math.max(1,r.height)*100));try{window.parent.postMessage({type:"gmww:ground-click",x,y},window.location.origin)}catch{}});
+
     window.addEventListener("message",event=>{
       if(event.origin!==window.location.origin||event.source!==window.parent)return;
       if(event.data?.type==="gmww:village-state")applyExternalState(event.data);
+      else if(event.data?.type==="gmww:seat-position-request"){const seatId=Number(event.data.seatId||0),ps=positions(Math.max(1,Math.min(30,Number(count)||12))),p=ps[seatId-1];if(p)try{window.parent.postMessage({type:"gmww:seat-position",seatId,x:p.x,y:p.y},window.location.origin)}catch{}}
     });
     startVillagePerformanceReporter();
     try{window.parent.postMessage({type:"gmww:village-ready"},window.location.origin)}catch{}
