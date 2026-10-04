@@ -1,19 +1,11 @@
+import "./village-layout.js";
+const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
 import {startVillagePerformanceReporter} from "./village-performance.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
-export function normalizeVillagePoint(x,y,fallbackX=50,fallbackY=76){
-  const rawY=Number(y),fy=Number(fallbackY),py=Math.max(34,Math.min(86,Number.isFinite(rawY)?rawY:(Number.isFinite(fy)?fy:76)));
-  const half=py<44?30+(py-34)*1.2:py>76?42-(py-76)*.8:42,rawX=Number(x),fx=Number(fallbackX),px=Math.max(50-half,Math.min(50+half,Number.isFinite(rawX)?rawX:(Number.isFinite(fx)?fx:50)));
-  return{x:Math.round(px*100)/100,y:Math.round(py*100)/100};
-}
-export function positions(count){
-  if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");
-  const ringSizes=count<=12?[count]:[Math.ceil(count/2),Math.floor(count/2)],defs=count<=12?[[Math.min(34,18+count*1.35),16,52]]:[[36,18,52],[26,12,52]],out=[];
-  ringSizes.forEach((n,r)=>{const [rx,ry,cy]=defs[r]||defs[defs.length-1];for(let i=0;i<n;i++){const angle=2*Math.PI*(i/n)+(r===1?Math.PI/n:0)-Math.PI/2;const p=normalizeVillagePoint(50+rx*Math.cos(angle),cy+ry*Math.sin(angle));out.push({...p,ring:r});}});
-  return out;
-}
+export function positions(count){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count)}
 export function safeText(v){return String(v??"").slice(0,80)}
 export function mapPublicPlayers(state){
   const players=Array.isArray(state?.players)?state.players:[];
@@ -53,21 +45,17 @@ if(game){
   }
   let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""},moveFrame=0,arrivalNotified=new Set();
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
-  function spawnPosition(id){let h=0;for(const ch of String(id||""))h=(h*31+ch.charCodeAt(0))>>>0;return normalizeVillagePoint(18+(h%6400)/100,69+((h>>>8)%1700)/100)}
+  function spawnPosition(id){return layout.spawn(id)}
   function movementPosition(data,seatPos=null,now=Date.now()){
-    const validCoord=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
-    if(data?.movementStatus==="moving"&&data?.moveStartedAt&&data?.moveDurationMs&&[data?.moveFromX,data?.moveFromY,data?.moveToX,data?.moveToY].every(validCoord)){
-      const t=Math.max(0,Math.min(1,(now-Number(data.moveStartedAt))/Math.max(1,Number(data.moveDurationMs)))),e=easeMove(t),p=normalizeVillagePoint(Number(data.moveFromX)+(Number(data.moveToX)-Number(data.moveFromX))*e,Number(data.moveFromY)+(Number(data.moveToY)-Number(data.moveFromY))*e);
-      return{...p,progress:t,moving:t<1}
-    }
-    if(seatPos){const p=normalizeVillagePoint(seatPos.x,seatPos.y);return{...p,progress:1,moving:false}}
-    const fallback=spawnPosition(data?.id),p=normalizeVillagePoint(validCoord(data?.positionX)?Number(data.positionX):fallback.x,validCoord(data?.positionY)?Number(data.positionY):fallback.y,fallback.x,fallback.y);return{...p,progress:1,moving:false}
+    const pos=data?.movementStatus==='moving'?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1))));
+    return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1};
   }
+  function screenPoint(p){const stage=document.querySelector('.stage');return layout.toScreen(p,stage.clientWidth||864,stage.clientHeight||1536)}
   function makePlayerButton(data,position,seatId=null,index=0){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(data.movementStatus==="moving"?" moving":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
-    button.style.left=position.x+"%";button.style.top=position.y+"%";button.style.zIndex=String(10+Math.round(position.y));
+    const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));
     const avatar=document.createElement("span");avatar.className="portrait";
     const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
@@ -77,7 +65,7 @@ if(game){
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=data.movementStatus==="moving"?"➜":data.ready?"✓":data.online?"●":"○";
     button.append(avatar,stateTag,name);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
-    button.addEventListener("click",e=>{e.stopPropagation();selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
+    button.addEventListener("click",e=>{e.stopPropagation();if(embedded){window.parent.postMessage({type:"gmww:player-click",participantId:data.id,seatId:actualSeat},window.location.origin);return}selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
     return button
   }
   function render(){
@@ -85,10 +73,10 @@ if(game){
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     players.replaceChildren();roster.replaceChildren();
-    ps.forEach((p,i)=>{
+    (setupState.showSeats===false?[]:ps).forEach((p,i)=>{
       const seatId=i+1,data=seatMap.get(seatId)||(!liveRoom&&!embedded?(all[i]||sample[i]):null);
       if(!data){
-        const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);empty.style.left=p.x+"%";empty.style.top=p.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot" aria-hidden="true">＋</span><b>'+(reserved?'Đang tới ':'Vị trí ')+seatId+'</b>';
+        const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);const display=screenPoint(p);empty.style.left=display.x+"%";empty.style.top=display.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot"></span><b>'+(reserved?'Đang tới ':'Vị trí ')+seatId+'</b>';
         empty.setAttribute("aria-label","Vị trí "+seatId+(reserved?" đang được chọn":" đang trống"));
         if(embedded&&setupState.enabled&&!reserved)empty.addEventListener("click",e=>{e.stopPropagation();try{window.parent.postMessage({type:"gmww:seat-click",seatId,x:p.x,y:p.y},window.location.origin)}catch{}});
         else empty.disabled=true;players.append(empty);return
@@ -103,14 +91,14 @@ if(game){
     let active=false;
     for(const data of all){
       if(data?.movementStatus!=="moving"||!data.moveId)continue;const el=players.querySelector('[data-player-id="'+CSS.escape(String(data.id))+'"]');if(!el)continue;
-      const pos=movementPosition(data,null,Date.now());el.style.left=pos.x+"%";el.style.top=pos.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
+      const pos=movementPosition(data,null,Date.now());const display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
       if(!pos.moving&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
     }
     if(active)moveFrame=requestAnimationFrame(animateMovementFrame);else moveFrame=0
   }
   if(supplied?.length){count=Math.min(30,Math.max(supplied.length,...supplied.map(x=>Number(x?.seatId||0)||0)));document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
   document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selectedId=null;selection.hidden=true;render();});
-  installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
+  if(!embedded)installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
   function applyPhase(nextNight,cycle={}){
     night=!!nextNight;game.classList.toggle("night",night);game.classList.toggle("day",!night);
     const n=Number(cycle?.night||0),d=Number(cycle?.day||0),seq=night?n:d;
@@ -140,12 +128,16 @@ if(game){
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
+    const fire=document.querySelector('.fire'),point=screenPoint(layout.fire);if(fire){fire.style.left=point.x+'%';fire.style.top=point.y+'%';}
     render();
   }
   if(embedded){
     document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
     document.getElementById("mode").hidden=true;
-    const stage=document.querySelector(".stage");stage.addEventListener("click",event=>{if(!setupState.enabled||!setupState.walkEnabled)return;if(event.target.closest(".player,.seat-empty,.hud,.scene-controls"))return;const r=stage.getBoundingClientRect(),p=normalizeVillagePoint((event.clientX-r.left)/Math.max(1,r.width)*100,(event.clientY-r.top)/Math.max(1,r.height)*100);try{window.parent.postMessage({type:"gmww:ground-click",x:p.x,y:p.y},window.location.origin)}catch{}});
+    const stage=document.querySelector('.stage');stage.addEventListener('click',event=>{if(!setupState.walkEnabled)return;if(event.target.closest('.player,.seat-empty,.hud,.scene-controls,.fire'))return;const r=stage.getBoundingClientRect(),raw=layout.fromScreen(event.clientX-r.left,event.clientY-r.top,r.width,r.height);if(!layout.inside(raw.x,raw.y))return;const point=layout.clampPoint(raw.x,raw.y);window.parent.postMessage({type:'gmww:ground-click',...point},window.location.origin)});
+    document.querySelector('.fire')?.addEventListener('click',()=>window.parent.postMessage({type:'gmww:fire-click'},window.location.origin));
+    window.addEventListener('resize',()=>{render();const f=document.querySelector('.fire'),p=screenPoint(layout.fire);if(f){f.style.left=p.x+'%';f.style.top=p.y+'%';}});
+
 
     window.addEventListener("message",event=>{
       if(event.origin!==window.location.origin||event.source!==window.parent)return;

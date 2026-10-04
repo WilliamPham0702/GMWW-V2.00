@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.59</title>
+<title>GMWW V2.60</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -65,7 +65,7 @@
           <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true">
             <span class="play-auto-switch"><i></i></span><b>Auto GM</b>
           </button>
-        </header>
+        <button class="play-user-avatar" id="playUserAvatar" type="button" aria-label="Thông tin quản trò">GM</button></header>
 
         <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
           <div class="play-sky-glow"></div>
@@ -85,7 +85,7 @@
 
           <div class="play-village-core">
             <div class="play-core-halo"></div>
-            <div class="play-core-pearl" aria-label="Đống lửa">🔥</div>
+            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Tạo Phòng"></button>
             <small id="playCoreKicker">GMWW • SÂN CHƠI</small>
             <b id="playCoreTitle">PHÒNG CHỜ</b>
             <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
@@ -123,8 +123,8 @@
         <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="done" data-play-step="room" type="button"><span>1</span><b>Phòng</b></button>
           <button class="active" data-play-step="members" type="button"><span>2</span><b>Người Chơi</b></button>
-          <button data-play-step="game" type="button"><span>3</span><b>Ván Mẫu</b></button>
-          <button data-play-step="seats" type="button"><span>4</span><b>Chỗ Ngồi</b></button>
+          <button data-play-step="seats" type="button"><span>3</span><b>Vị trí</b></button>
+          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
           <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
           <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
           <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
@@ -437,8 +437,8 @@
 
 <div class="sheet hidden" id="playSeatSheet">
   <div class="sheet-card play-seat-sheet-card">
-    <div class="sheet-head"><div><h3>Quản lý ghế</h3><small id="playSeatPlayerLabel">Chọn Người Chơi trên Làng</small></div><button id="playSeatClose" type="button">×</button></div>
-    <div class="play-seat-summary" id="playSeatSummary">0/0 ghế có người</div>
+    <div class="sheet-head"><div><h3>Quản lý vị trí</h3><small id="playSeatPlayerLabel">Chọn Người Chơi trên Làng</small></div><button id="playSeatClose" type="button">×</button></div>
+    <div class="play-seat-summary" id="playSeatSummary">0/0 vị trí có người</div>
     <div class="play-seat-grid" id="playSeatGrid"></div>
     <div class="button-row play-roster-actions">
       <button class="danger" id="playSeatRelease" type="button">GIẢI PHÓNG GHẾ</button>
@@ -458,6 +458,8 @@
   </div>
 </div>
 
+<div class="sheet hidden" id="playCreateRoomSheet"><div class="sheet-card"><div class="sheet-head"><h3>Tạo Phòng</h3><button id="playCreateRoomClose" type="button">×</button></div><label>Tên Phòng<input id="playCreateRoomName" maxlength="40" value="Phòng GMWW"></label><label>Số người tối đa<input id="playCreateRoomCapacity" type="number" min="1" max="30" value="12"></label><div class="button-row"><button data-play-room-mode="online" type="button">ONLINE</button><button data-play-room-mode="offline" type="button">OFFLINE</button></div><button class="primary" id="playCreateRoomConfirm" type="button">TẠO PHÒNG</button></div></div>
+<script src="village-layout.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
