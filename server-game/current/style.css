@@ -808,3 +808,90 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-player-token.is-moving small{color:#fff0a8}
 @keyframes gmwwChibiWalk{to{transform:translateY(-4px) rotate(1deg)}}
 @media(prefers-reduced-motion:reduce){.play-player-token.is-moving .play-player-avatar{animation:none}.play-player-token.is-moving{transition:none}}
+
+
+/* GM 2D IMMERSIVE VILLAGE */
+body.play-immersive{overflow:hidden;overscroll-behavior:none}
+body.play-immersive #bottomNav{display:none!important}
+body.play-immersive #start.play-page.active{
+  position:fixed;inset:0;z-index:1000;display:block!important;
+  padding:0!important;margin:0!important;overflow:hidden!important;background:#071827;
+}
+body.play-immersive #start .play-shell{
+  width:100%;height:100dvh;min-height:100dvh;margin:0;display:block;position:relative;overflow:hidden;color:#fff;
+}
+body.play-immersive #start .play-world{
+  position:absolute;inset:0;width:100%;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;background-position:center center;
+}
+body.play-immersive #start .play-hud{
+  position:absolute;z-index:40;top:calc(env(safe-area-inset-top) + 8px);left:72px;right:10px;min-height:46px;
+  grid-template-columns:64px minmax(0,1fr) 70px;pointer-events:auto;
+}
+.play-exit-village{
+  display:none;position:absolute;z-index:55;top:calc(env(safe-area-inset-top) + 12px);left:12px;
+  min-width:50px;height:38px;padding:0 11px;border-radius:15px;border:1px solid rgba(255,255,255,.65);
+  background:rgba(4,40,61,.78);color:#fff;font-size:11px;font-weight:950;letter-spacing:.02em;
+}
+body.play-immersive .play-exit-village{display:block}
+body.play-immersive .play-setup-strip{display:none!important}
+body.play-immersive .play-context-panel{
+  position:absolute;z-index:42;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 74px);
+  max-height:27dvh;overflow:auto;margin:0;padding:8px 9px;border-radius:18px;
+  background:rgba(3,40,58,.86);color:#eafbff;border-color:rgba(255,255,255,.34);box-shadow:0 8px 28px rgba(0,0,0,.25);
+}
+body.play-immersive .play-context-copy small{color:#92edff}
+body.play-immersive .play-context-copy b{color:#fff;font-size:12px}
+body.play-immersive .play-context-copy span{color:#d8f6ff;font-size:9px}
+body.play-immersive .play-context-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:6px}
+body.play-immersive .play-action-chip{min-height:32px;background:rgba(1,61,81,.78);color:#dffaff;border-color:rgba(255,255,255,.22)}
+body.play-immersive .play-action-chip.active{background:linear-gradient(135deg,#16bcd3,#4ed8c8);color:#fff}
+body.play-immersive .play-control-bar{
+  position:absolute;z-index:45;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px);
+  grid-template-columns:48px minmax(0,1fr) 48px 48px;padding:5px;border-radius:18px;
+}
+body.play-immersive .play-control-icon,body.play-immersive .play-primary-control{min-height:48px}
+body.play-immersive .play-card-fan{bottom:calc(env(safe-area-inset-bottom) + 132px)}
+.play-shell[data-step="room"] .play-card-fan,
+.play-shell[data-step="members"] .play-card-fan,
+.play-shell[data-step="game"] .play-card-fan,
+.play-shell[data-step="seats"] .play-card-fan{display:none}
+.play-shell[data-step="room"] .play-village-core small,.play-shell[data-step="room"] .play-village-core b,.play-shell[data-step="room"] .play-village-core span,
+.play-shell[data-step="members"] .play-village-core small,.play-shell[data-step="members"] .play-village-core b,.play-shell[data-step="members"] .play-village-core span,
+.play-shell[data-step="game"] .play-village-core small,.play-shell[data-step="game"] .play-village-core b,.play-shell[data-step="game"] .play-village-core span,
+.play-shell[data-step="seats"] .play-village-core small,.play-shell[data-step="seats"] .play-village-core b,.play-shell[data-step="seats"] .play-village-core span{display:none}
+body.play-immersive .play-village-core{top:57%;width:88px}
+body.play-immersive .play-core-halo{inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(255,174,56,.24),rgba(255,99,19,.08) 42%,transparent 72%)}
+body.play-immersive .play-core-pearl{
+  width:64px;height:64px;border:0;background:transparent;box-shadow:none;font-size:44px;
+  transform-origin:50% 90%;animation:gmwwCampfireFlicker .52s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 7px rgba(255,160,30,.7)) drop-shadow(0 4px 5px rgba(35,15,0,.4));
+}
+@keyframes gmwwCampfireFlicker{0%{transform:scale(.94) rotate(-1deg);filter:drop-shadow(0 0 5px rgba(255,125,20,.65))}100%{transform:scale(1.08) rotate(1deg);filter:drop-shadow(0 0 12px rgba(255,208,75,.9))}}
+body.play-immersive .play-player-ring{z-index:20}
+body.play-immersive .play-player-token{width:58px}
+body.play-immersive .play-player-avatar{width:46px;height:46px}
+.play-player-token.is-roster-selected .play-player-avatar{box-shadow:0 0 0 4px #7bffcf,0 8px 18px rgba(0,0,0,.28)}
+.play-player-token.is-roster-selected small{background:#75efc9;color:#073f42}
+.play-player-token.is-chair .play-player-avatar{background:rgba(253,246,207,.82);border:1px solid rgba(255,226,116,.9);box-shadow:0 5px 12px rgba(30,22,0,.22)}
+.play-chair-icon{font-size:27px!important;background:transparent!important;color:inherit!important}
+.play-player-token.is-chair b{background:rgba(7,73,85,.78)}
+.play-player-ring.is-seating .play-player-token{z-index:22}
+
+/* Ván Mẫu timing + server preload */
+.play-timing-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
+.play-timing-grid label{display:grid;gap:4px;color:#8eaabd;font-size:10.5px;font-weight:850}
+.play-timing-grid input,.play-game-name-label select{width:100%;border:1px solid rgba(157,224,255,.16);background:#061725;color:#fff;border-radius:9px;padding:8px;font-size:12px}
+.play-auto-advance-field{display:flex!important;align-items:center;gap:7px;padding-top:16px}
+.play-auto-advance-field input{width:18px!important;height:18px}
+.play-template-preload-note{display:block;margin:-1px 0 8px;color:#7da5b8;font-size:9.5px;line-height:1.35}
+.play-game-role-row{grid-template-columns:42px minmax(0,1fr) 68px auto!important}
+.play-role-duration{display:flex;align-items:center;gap:3px;color:#83a2b4;font-size:9px}
+.play-role-duration input{width:48px;border:1px solid rgba(157,224,255,.15);background:#061725;color:#fff;border-radius:7px;padding:5px;font-size:10px;text-align:center}
+
+@media(max-width:380px){
+  body.play-immersive #start .play-hud{left:66px;right:7px;grid-template-columns:58px minmax(0,1fr) 62px}
+  body.play-immersive .play-context-panel{left:7px;right:7px;bottom:calc(env(safe-area-inset-bottom) + 70px)}
+  body.play-immersive .play-control-bar{left:7px;right:7px}
+  .play-timing-grid{grid-template-columns:1fr}
+  .play-game-role-row{grid-template-columns:38px minmax(0,1fr) 60px auto!important}
+}
