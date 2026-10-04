@@ -1143,7 +1143,7 @@ let playSceneState=(()=>{
   const base={step:'room',roomMode:'online',seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:45,autoAdvance:true},matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY);if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw)break}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1379,6 +1379,22 @@ async function playSetServerCycle(phase,night){
   const serverPhase=phase==='day'?'morning':'night',n=Math.max(1,Number(night)||1),cycleKey=serverPhase+'-'+n;
   await playRoomApi('/cycle',{method:'POST',body:JSON.stringify({phase:serverPhase,night:n,cycleKey})});await playSyncRoom(true);
 }
+function syncPlayAutoAdvance(){
+  if(playSceneRuntime.autoTurnTimer){clearTimeout(playSceneRuntime.autoTurnTimer);playSceneRuntime.autoTurnTimer=0}
+  if(!isLivePlayRoom()||playSceneRuntime.busy)return;
+  const cfg=playSceneRuntime.gameConfig||{},timing=cfg.timing||playSceneState.gameTiming||{};if(timing.autoAdvance===false)return;
+  let deadline=0,key='',run=null;
+  if(playSceneState.phase==='night'){
+    const rt=playSceneRuntime.nightRuntime;if(!rt||rt.completed||rt.autoAdvance===false||!rt.deadlineAt)return;
+    deadline=Date.parse(rt.deadlineAt)||0;key='night:'+String(rt.night||playSceneState.night)+':'+String(rt.currentId||'');run=async()=>{const d=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',source:'timer'})});playSceneRuntime.nightRuntime=d?.runtime||playSceneRuntime.nightRuntime;await playSyncRoom(true)}
+  }else if(playSceneState.phase==='day'){
+    const sec=Math.max(0,Number(timing.villageDiscussionSec)||0),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'')||0;if(!sec||!started)return;
+    deadline=started+sec*1000;key='day:'+String(playSceneState.night||1)+':'+String(started);run=async()=>playSetServerCycle('night',Math.max(1,Number(playSceneState.night)||1)+1)
+  }else return;
+  if(!deadline||!run)return;
+  const wait=Math.max(50,deadline-Date.now());
+  playSceneRuntime.autoTurnKey=key;playSceneRuntime.autoTurnTimer=setTimeout(async()=>{if(playSceneRuntime.autoTurnKey!==key)return;try{await run()}catch(err){playFlashError(err.message)}},wait)
+}
 async function advancePlayPhase(){
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='room'){if(isLivePlayRoom()){playSceneState.step='members';savePlayScene();renderPlayScene()}else await playCreateRoom();return}
@@ -1421,7 +1437,7 @@ function renderPlayScene(){
   const primary=document.getElementById('playPrimaryLabel'),icon=document.getElementById('playPrimaryIcon');
   if(primary){if(phase==='night')primary.textContent=playSceneRuntime.nightRuntime?.completed?'SANG BAN NGÀY':'TIẾP THEO';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room).a}
   if(icon)icon.textContent=phase==='night'?(playSceneRuntime.nightRuntime?.completed?'☀':'›'):phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
-  renderPlayContext();renderPlayPlayers();renderPlayCards();
+  renderPlayContext();renderPlayPlayers();renderPlayCards();syncPlayAutoAdvance();
 }
 
 function playFactionLabel(role){const f=String(role?.factionId||role?.faction||'').toLowerCase();if(f==='wolf'||f.includes('sói')||f.includes('soi'))return'Phe Sói';if(f==='third'||f.includes('ba')||f.includes('third'))return'Phe Ba';return'Phe Dân'}
