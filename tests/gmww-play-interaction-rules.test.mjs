@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {CHARACTER_IDS,validCharacterId,interactionScreen,validateTargetSubmission} from '../src/gmww-play-interaction-rules.js';
+const fixture=()=>({request:{requestId:'r1',matchId:'m1',cycleKey:'n1',turnId:'t1',targetIds:['p2']},session:{playerId:'p1'},turn:{id:'t1',actorIds:['p1'],eligibleTargetIds:['p2'],deadline:200},players:[{id:'p1'},{id:'p2'}],matchId:'m1',cycleKey:'n1',now:100});
+test('42 unique public identities, not roles',()=>{assert.equal(CHARACTER_IDS.length,42);assert.equal(new Set(CHARACTER_IDS).size,42);assert.equal(validCharacterId('wolf'),false)});
+test('night screens respect alive and blocked state',()=>{assert.equal(interactionScreen({phase:'night'}),'sleep');assert.equal(interactionScreen({phase:'night',alive:false}),'spectator');assert.equal(interactionScreen({phase:'night',blocked:true,turn:{kind:'role'}}),'sleep')});
+test('accept authorized eligible target',()=>assert.equal(validateTargetSubmission(fixture()).ok,true));
+test('reject spoofed actor and stale turn',()=>{let f=fixture();f.session.playerId='p2';assert.equal(validateTargetSubmission(f).error,'NOT_YOUR_TURN');f=fixture();f.request.cycleKey='n0';assert.equal(validateTargetSubmission(f).error,'STALE_TURN')});
+test('reject expired turn and invalid target',()=>{let f=fixture();f.now=200;assert.equal(validateTargetSubmission(f).error,'TURN_EXPIRED');f=fixture();f.request.targetIds=['p1'];assert.equal(validateTargetSubmission(f).error,'INVALID_TARGET')});
+test('support zero and multiple targets, reject duplicates',()=>{let f=fixture();f.request.targetIds=[];f.turn.minTargets=0;f.turn.maxTargets=0;assert.equal(validateTargetSubmission(f).ok,true);f=fixture();f.request.targetIds=['p2','p3'];f.turn.eligibleTargetIds=['p2','p3'];f.turn.minTargets=2;f.turn.maxTargets=2;f.players.push({id:'p3'});assert.equal(validateTargetSubmission(f).ok,true);f.request.targetIds=['p2','p2'];assert.equal(validateTargetSubmission(f).error,'DUPLICATE_TARGET')});

@@ -61,7 +61,7 @@ if(game){
       const button=document.createElement("button");button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"");button.dataset.style=String((actualSeat-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+actualSeat));button.dataset.seatId=String(actualSeat);
       button.style.left=p.x+"%";button.style.top=p.y+"%";button.style.zIndex=String(10+Math.round(p.y));
       const avatar=document.createElement("span");avatar.className="portrait";
-      const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[12][0-9]|30)$/.test(data.gameCharacterId)?data.gameCharacterId:"";
+      const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
       const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
       const characterUrl=characterId?("/api/game-characters/"+encodeURIComponent(characterId)+"/image"):"";
       const avatarUrl=trustedAvatarUrl(data.avatarUrl||characterUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
