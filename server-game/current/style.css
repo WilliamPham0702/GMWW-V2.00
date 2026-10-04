@@ -802,7 +802,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-seat-sheet-card .danger{background:#632b31;color:#fff;border:1px solid #a94d55;border-radius:12px;font-weight:900}.play-seat-sheet-card .danger:disabled{opacity:.45}
 #start.play-page .play-shell,#start.play-page .play-shell *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
-/* V2.56 CHIBI MOVEMENT */
+/* V2.57 CHIBI MOVEMENT */
 .play-player-token.is-moving{transition:left .22s linear,top .22s linear;z-index:30!important}
 .play-player-token.is-moving .play-player-avatar{animation:gmwwChibiWalk .34s ease-in-out infinite alternate;filter:drop-shadow(0 8px 5px rgba(0,0,0,.34))}
 .play-player-token.is-moving small{color:#fff0a8}
