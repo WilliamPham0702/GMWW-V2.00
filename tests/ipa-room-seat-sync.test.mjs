@@ -57,3 +57,15 @@ test('2D play surface disables blur without replacing the legacy village asset',
   assert.match(workflow,/cp server-game\/current\/gmww-village-coast\.svg/);
   assert.match(workflow,/test -s "\$APP\/Web\/gmww-village-coast\.svg"/);
 });
+
+test('Player Web card preview keeps V2.52 art-title-info layout and compact faction badge',()=>{
+  const art=html.indexOf('card-zone card-zone-art');
+  const head=html.indexOf('card-zone card-zone-head');
+  const info=html.indexOf('card-zone card-zone-info');
+  assert.ok(art>=0&&head>art&&info>head);
+  assert.match(html,/id="playerDisplay" width="3072" height="2560"/);
+  assert.match(css,/grid-template-rows:8fr 1fr 3fr/);
+  assert.match(css,/\.player-faction-badge\{[^}]*width:34px;[^}]*height:34px/s);
+  assert.match(app,/badge\.textContent=f\.icon;badge\.setAttribute\('aria-label',f\.label\)/);
+  assert.doesNotMatch(app,/badge\.textContent=f\.icon\+' '\+f\.label/);
+});
