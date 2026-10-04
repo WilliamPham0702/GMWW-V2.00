@@ -21,7 +21,7 @@ test('IPA V2.56 creates offline/online rooms with a fixed seat count',()=>{
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
-  assert.match(app,/bySeat=new Map\(members\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
+  assert.match(app,/bySeat=new Map\(playLiveMembers\(\)\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
   assert.match(app,/S'\+seatId\+' · '/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
   assert.match(app,/memberAvatarUrl\(m\.avatarId\)/);
