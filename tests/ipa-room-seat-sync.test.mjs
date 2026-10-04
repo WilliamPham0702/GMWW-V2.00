@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.59 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\.59'/);
-  assert.match(html,/GMWW V2\.59/);
+test('IPA V2.60 creates offline/online rooms with a fixed seat count',()=>{
+  assert.match(app,/const VERSION='2\.60'/);
+  assert.match(html,/GMWW V2\.60/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
@@ -56,8 +56,8 @@ test('2D play surface uses detailed day/night assets bundled with every characte
   assert.doesNotMatch(css,/\.play-cloud[^\n]*filter:blur/);
   assert.match(workflow,/cp server-game\/current\/gmww-village-coast\.svg/);
   assert.match(workflow,/test -s "\$APP\/Web\/gmww-village-coast\.svg"/);
-  assert.match(css,/url\("gmww-village-day-v252\.webp"\)/);
-  assert.match(css,/url\("gmww-village-night-v252\.webp"\)/);
+  assert.match(css,/url\("gmww-village-day-v260\.webp"\)/);
+  assert.match(css,/url\("gmww-village-night-v260\.webp"\)/);
   assert.match(workflow,/cp assets\/characters\/v253\/chibi-\*\.webp/);
   assert.match(css,/#start \.play-island-back[^}]+display:none/s);
   assert.match(css,/object-fit:contain;border-radius:0;background:none/);
@@ -77,7 +77,7 @@ test('Player Web card preview keeps V2.52 art-title-info layout and compact fact
 
 
 test('GM Play is an immersive seven-stage village flow',()=>{
-  assert.match(app,/PLAY_STEPS=\['room','members','game','seats','roles','deal','battle'\]/);
+  assert.match(app,/PLAY_STEPS=\['room','members','seats','game','roles','deal','battle'\]/);
   assert.match(html,/id="playExitVillage"/);
   assert.match(html,/data-play-step="seats"/);
   assert.match(css,/body\.play-immersive #bottomNav\{display:none!important\}/);
@@ -91,7 +91,7 @@ test('position stage preserves occupied positions, supports swap/random remainde
   assert.match(app,/updateSelectedPlayerSeat\(\{seatId:Number\(m\.seatId\),swap:true\}\)/);
   assert.match(app,/\/seats\/randomize-remaining/);
   assert.match(server,/async gmRandomizeRemainingSeats\(request\)/);
-  assert.match(server,/remaining=entries\.filter\(\(\[,player\]\)=>!normalizeSeatId\(player\?\.seatId,seatCount\)\)/);
+  assert.match(server,/remaining=entries\.filter\(\(\[,player\]\)=>!normalizeSeatId\(player\?\.seatId,seatCount\)&&!player\?\.moveTargetSeatId\)/);
   assert.match(server,/gmRandomSeatsRoute/);
   assert.match(server,/seatsRandomized:true/);
   assert.match(app,/\/seat-lock/);

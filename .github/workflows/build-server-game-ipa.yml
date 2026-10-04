@@ -46,8 +46,9 @@ jobs:
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
           cp server-game/current/gmww-village-coast.svg "$APPDIR/Web/gmww-village-coast.svg"
-          cp assets/backgrounds/gmww-village-day-v252.webp "$APPDIR/Web/"
-          cp assets/backgrounds/gmww-village-night-v252.webp "$APPDIR/Web/"
+          cp assets/backgrounds/gmww-village-day-v260.webp "$APPDIR/Web/"
+          cp assets/backgrounds/gmww-village-night-v260.webp "$APPDIR/Web/"
+          cp assets/village/village-layout.js "$APPDIR/Web/village-layout.js"
           mkdir -p "$APPDIR/Web/game-characters"
           cp assets/characters/v253/chibi-*.webp "$APPDIR/Web/game-characters/"
 
@@ -169,6 +170,7 @@ jobs:
           const ctx={document:doc,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},window:{},CSS:{escape:s=>String(s)},navigator:{onLine:true},console,Blob,Uint8Array,atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64'),performance:{now:()=>0},fetch:async()=>({ok:true,json:async()=>({})}),AbortController:class{constructor(){this.signal={}}abort(){}},setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},confirm(){return true},alert(){},URL:{createObjectURL(){return''},revokeObjectURL(){}},indexedDB:{open(){return{}}},Image:class{},FileReader:class{},Audio:class{play(){return Promise.resolve()}pause(){}}};
           ctx.window=ctx;ctx.window.addEventListener=()=>{};ctx.window.location={assign(){}};ctx.window.GMWW_THEME_ARTWORK={};
           vm.createContext(ctx);
+          vm.runInContext(fs.readFileSync('assets/village/village-layout.js','utf8'),ctx,{filename:'village-layout.js'});
           vm.runInContext(s,ctx,{filename:'app.js'});
           console.log('Runtime smoke test passed');
           if(s.includes("GMWW224_SEA_ASSETS")||s.includes("GMWW208_SEA_DISPLAY")) throw new Error('Legacy artwork resolver remains');
@@ -239,8 +241,8 @@ jobs:
           test -s "$APP/Web/app.js"
           test -s "$APP/Web/style.css"
           test -s "$APP/Web/gmww-village-coast.svg"
-          test -s "$APP/Web/gmww-village-day-v252.webp"
-          test -s "$APP/Web/gmww-village-night-v252.webp"
+          test -s "$APP/Web/gmww-village-day-v260.webp"
+          test -s "$APP/Web/gmww-village-night-v260.webp"
           test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -eq 42
           test -s "$APP/Web/default-artwork.webp"
           ! test -e "$APP/Web/v1-audio.js"
@@ -252,7 +254,8 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q "^$VERSION$"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q "^$BUILD$"
 
-          cmp -s server-game/current/GMWW.html "$APP/Web/GMWW.html"
+          cmp -s server-game/GMWW-Server/Web/GMWW.html "$APP/Web/GMWW.html"
+          cmp -s assets/village/village-layout.js "$APP/Web/village-layout.js"
           cmp -s server-game/current/app.js "$APP/Web/app.js"
           cmp -s server-game/current/style.css "$APP/Web/style.css"
           cmp -s server-game/current/gmww-village-coast.svg "$APP/Web/gmww-village-coast.svg"

@@ -42,10 +42,28 @@ html.embedded .player{pointer-events:auto}
 html.embedded .player .name{backdrop-filter:blur(5px)}
 
 /* V2.52: same day/night scene bytes as the packaged IPA. */
-.stage{background:#58a9d4 url("../backgrounds/gmww-village-day-v252.webp?v=253") center center/cover no-repeat!important}
-.night .stage{background:#102e55 url("../backgrounds/gmww-village-night-v252.webp?v=253") center center/cover no-repeat!important}
+.stage{background:#58a9d4 url("../backgrounds/gmww-village-day-v260.webp?v=260") center center/cover no-repeat!important}
+.night .stage{background:#102e55 url("../backgrounds/gmww-village-night-v260.webp?v=260") center center/cover no-repeat!important}
 .stage::before{background:linear-gradient(180deg,rgba(3,20,35,.20),transparent 24%,transparent 70%,rgba(2,14,25,.44));mix-blend-mode:normal}
 .night .stage::before{background:linear-gradient(180deg,rgba(1,8,24,.20),transparent 24%,transparent 70%,rgba(1,7,18,.48));mix-blend-mode:normal}
 .night .stage::after{display:none!important}
 .fire{display:block!important;left:50%!important;top:57%!important;transform:translate(-50%,-50%)!important;width:clamp(88px,24vw,132px)!important;height:clamp(88px,24vw,132px)!important;background:url("./assets/campfire.svg") center/contain no-repeat!important;filter:drop-shadow(0 0 24px rgba(255,166,61,.95))!important;z-index:3!important}
 html.embedded .stage{height:100svh;min-height:100svh}
+
+/* V2.60 — the flame is already in the approved night artwork. */
+.fire{display:block!important;width:80px!important;height:70px!important;left:50%;top:49.7%;background:none!important;filter:none!important;animation:none!important;z-index:4;pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%)!important}
+.fire:after{content:"";display:none;position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(ellipse,#ffbd423d,transparent 72%);pointer-events:none}
+.night .fire:after{display:block;animation:villageFireGlow 1.5s ease-in-out infinite alternate}
+.player{transform:translate(-50%,-100%)!important}
+.player .portrait.game-character{background:none;border:0;border-radius:0;width:clamp(40px,12vw,64px);height:clamp(56px,17vw,86px);overflow:visible;filter:drop-shadow(0 4px 2px #0018)}
+.player .portrait.game-character img{object-fit:contain;border-radius:0;transform-origin:50% 95%;animation:villageIdle 2.6s ease-in-out infinite alternate}
+.player.moving .portrait.game-character img{animation:villageWalk .3s ease-in-out infinite alternate}
+.player:nth-child(3n) .portrait img{animation-delay:-.7s}.player:nth-child(3n+1) .portrait img{animation-delay:-1.4s}
+.seat-empty{transform:translate(-50%,-50%);min-width:44px;min-height:44px}
+.seat-dot{background:none!important;border:1px solid #ffe6a5;border-radius:50%;width:34px!important;height:34px!important;color:#fff4cc;box-shadow:0 2px 6px #0018}
+.seat-dot:before{content:"＋";font-size:28px;line-height:32px}.seat-dot:after{display:none!important}
+html.embedded .hud{display:none!important}
+@keyframes villageIdle{to{transform:rotate(1.5deg) translateY(-1px)}}
+@keyframes villageWalk{to{transform:rotate(3deg) translateY(-4px)}}
+@keyframes villageFireGlow{to{opacity:.4;transform:scale(.9)}}
+@media(prefers-reduced-motion:reduce){.player .portrait.game-character img,.night .fire:after{animation:none}}

@@ -34,7 +34,7 @@ test('confirmed End sends selected winner once and retains seat data',async()=>{
   assert.equal(requests.length,1);assert.equal(requests[0].path,'/end');assert.equal(requests[0].body.winnerFaction,'Phe Sói');assert.equal(ctx.playSceneState.step,'members');assert.equal(players[0].seatId,9);
 });
 test('fixed seats use stable, distinct positions for every room size',()=>{
-  const ctx={};vm.createContext(ctx);vm.runInContext(section('function playSeatPositions(count)','function playEsc(v)'),ctx);
+  const ctx={};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8'),ctx);vm.runInContext(section('function playSeatPositions(count)','function playEsc(v)'),ctx);
   for(let n=1;n<=30;n++){
     const points=ctx.playSeatPositions(n);assert.equal(points.length,n);assert.equal(new Set(points.map(p=>p.map(v=>v.toFixed(2)).join(','))).size,n);
     for(const [x,y] of points){assert.ok(x>=14&&x<=86);assert.ok(y>=32&&y<=70)}

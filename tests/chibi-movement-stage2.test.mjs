@@ -46,7 +46,7 @@ test('server exposes authenticated movement, arrival and optional seat mode',()=
   assert.match(server,/MOVE_NOT_ARRIVED/);
   assert.match(server,/SEAT_TAKEN/);
   assert.match(server,/movementStatus="moving"/);
-  assert.match(server,/normalizeVillagePoint/);
+  assert.match(server,/villageLayout\.clampPoint/);
 });
 
 test('Player Web supports free roaming, walk-to-seat, reconnect completion and direct-seat fallback',()=>{
@@ -62,8 +62,10 @@ test('Player Web supports free roaming, walk-to-seat, reconnect completion and d
 test('null movement coordinates never become zero-zero movement',()=>{
   assert.match(live,/validCoord=v=>v!==null&&v!==undefined&&v!==''/);
   assert.match(live,/x===null\|\|x===undefined\|\|x===''\|\|y===null/);
-  assert.match(village,/const validCoord=v=>v!==null&&v!==undefined&&v!==""/);
-  assert.match(gm,/vals\.some\(v=>v===null\|\|v===undefined\|\|v===''\|\|!Number\.isFinite/);
+  const layout=readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8');
+  assert.match(village,/layout\.interpolate/);
+  assert.match(gm,/GMWW_VILLAGE_LAYOUT\.interpolate/);
+  assert.match(layout,/v==null\|\|v===''\|\|!Number\.isFinite/);
 });
 
 test('village animates chibi and reports arrival to parent',()=>{
@@ -73,8 +75,8 @@ test('village animates chibi and reports arrival to parent',()=>{
   assert.match(village,/gmww:seat-click/);
   assert.match(village,/gmww:ground-click/);
   assert.match(village,/moveTargetSeatId/);
-  assert.match(village,/normalizeVillagePoint/);
-  assert.match(village,/aria-hidden="true">＋/);
+  assert.match(village,/layout\.clampPoint/);
+  assert.match(village,/class="seat-dot"/);
 });
 
 test('GM IPA exposes the movement option and renders moving players',()=>{
@@ -82,7 +84,7 @@ test('GM IPA exposes the movement option and renders moving players',()=>{
   assert.match(gm,/data-play-seat-move="walk"/);
   assert.match(gm,/playMovementPoint/);
   assert.match(gm,/is-moving/);
-  assert.match(gm,/playSafeVillagePoint/);
+  assert.match(gm,/GMWW_VILLAGE_LAYOUT\.clampPoint/);
   assert.match(gm,/play-position-plus/);
   assert.doesNotMatch(gm,/🪑/);
 });
