@@ -1638,17 +1638,21 @@ async function openPlayRosterSheet(){
   sheet.classList.remove('hidden');updatePlayRosterCount();
 }
 function closePlayRosterSheet(){document.getElementById('playRosterSheet')?.classList.add('hidden')}
-async function savePlayRoster(){
-  if(playSceneRuntime.busy)return;const ids=playRosterSelectedIds();if(!ids.length){playFlashError('Hãy chọn ít nhất 1 Thành Viên.');return}
-  const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),chosen=(memberAdminState.members||[]).filter(m=>ids.includes(String(m.loginId))).map(m=>({loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,seatId:existing.get(String(m.loginId))?.seatId||null}));
-  playSetBusy(true);
-  const save=document.getElementById('playRosterSave');if(save)save.disabled=true;
+async function savePlayRosterIds(ids){
+  if(playSceneRuntime.busy)return;ids=[...new Set((ids||[]).map(String).filter(Boolean))];if(!ids.length){playFlashError('Hãy chọn ít nhất 1 Người Chơi.');return}
+  const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=memberAdminState.members||[],chosen=source.filter(m=>ids.includes(String(m.loginId))).map(m=>({loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,seatId:existing.get(String(m.loginId))?.seatId||null}));
+  if(playSceneState.roomMode==='online'){
+    const offline=chosen.filter(m=>!source.find(x=>String(x.loginId)===String(m.loginId))?.online);if(offline.length){playFlashError('Chế độ ONLINE chỉ chọn Người Chơi đang Online.');return}
+  }
+  playSetBusy(true);const save=document.getElementById('playRosterSave');if(save)save.disabled=true;
   try{
     const data=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
-    playSceneState.selectedMemberIds=ids;playSceneState.step='game';playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;savePlayScene();closePlayRosterSheet();await playSyncRoom(true);renderPlayScene();
+    playSceneState.selectedMemberIds=ids;playSceneState.step='game';playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;savePlayScene();closePlayRosterSheet();await playSyncRoom(true);renderPlayScene()
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false);if(save)save.disabled=false}
 }
+async function savePlayRoster(){return savePlayRosterIds(playRosterSelectedIds())}
+
 async function backPlayPhase(){
   if(playSceneRuntime.busy)return;
   if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime&&Number(playSceneRuntime.nightRuntime.cursor||0)>0){
