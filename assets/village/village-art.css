@@ -39,10 +39,10 @@ html.embedded .player{pointer-events:auto}
 html.embedded .player .name{backdrop-filter:blur(5px)}
 
 /* V2.52: same day/night scene bytes as the packaged IPA. */
-.stage{background:#58a9d4 url("../backgrounds/gmww-village-day-v252.webp") center center/cover no-repeat!important}
-.night .stage{background:#102e55 url("../backgrounds/gmww-village-night-v252.webp") center center/cover no-repeat!important}
+.stage{background:#58a9d4 url("../backgrounds/gmww-village-day-v252.webp?v=253") center center/cover no-repeat!important}
+.night .stage{background:#102e55 url("../backgrounds/gmww-village-night-v252.webp?v=253") center center/cover no-repeat!important}
 .stage::before{background:linear-gradient(180deg,rgba(3,20,35,.20),transparent 24%,transparent 70%,rgba(2,14,25,.44));mix-blend-mode:normal}
 .night .stage::before{background:linear-gradient(180deg,rgba(1,8,24,.20),transparent 24%,transparent 70%,rgba(1,7,18,.48));mix-blend-mode:normal}
 .night .stage::after{display:none!important}
-.fire{display:none!important}
+.fire{display:block!important;left:50%!important;top:57%!important;transform:translate(-50%,-50%)!important;width:clamp(88px,24vw,132px)!important;height:clamp(88px,24vw,132px)!important;background:url("./assets/campfire.svg") center/contain no-repeat!important;filter:drop-shadow(0 0 24px rgba(255,166,61,.95))!important;z-index:3!important}
 html.embedded .stage{height:100svh;min-height:100svh}
