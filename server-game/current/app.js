@@ -559,7 +559,7 @@ async function renderEntityFront(){
   const e=editDraft;if(!e)return;const card=$('#playerCard'),badge=$('#playerFactionBadge');
   card.className='player-card '+(currentKind==='artifacts'?'artifact':(e.factionId||'village'));
   $('#playerName').textContent=(e.name||'').toUpperCase();
-  if(currentKind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon+' '+f.label}else badge.textContent='✦ ARTIFACTS';
+  if(currentKind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon;badge.setAttribute('aria-label',f.label)}else{badge.textContent='✦';badge.setAttribute('aria-label','Artifacts')}
   $('#playerInformation').textContent=formatInformation(e.information||'');
   $('#playerDisplay').src=await resolveArtwork(currentKind,e.id,'display');
   fitPlayerCardTitle();fitPlayerCardInformation();
