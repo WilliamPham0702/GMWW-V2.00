@@ -1152,6 +1152,20 @@ function playLiveMembers(){
   if(wanted.size)return rows.filter(m=>wanted.has(String(m.loginId)));
   return [];
 }
+function playVillageMembers(){
+  const live=playLiveMembers(),byId=new Map(live.map(m=>[String(m.loginId),m]));
+  if((playSceneState.step==='room'||playSceneState.step==='members')&&playSceneState.roomMode==='online'){
+    for(const m of (memberAdminState.members||[]).filter(x=>x?.online&&x?.loginId)){
+      const id=String(m.loginId),old=byId.get(id)||{};
+      byId.set(id,{...m,...old,kind:'member',loginId:id,online:true});
+    }
+  }
+  return [...byId.values()];
+}
+function playRoamPoint(id,index=0){
+  let h=2166136261;for(const ch of String(id||index)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}
+  return[32+(h%3600)/100,43+((h>>>8)%2500)/100]
+}
 function playPlayerEffect(loginId){
   const rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false),types=new Set(rows.map(x=>String(x?.type||'')));
   if(types.has('dead'))return'dead';if(types.has('frozen'))return'frozen';if(types.has('expelled'))return'expelled';return'alive'
@@ -1173,7 +1187,7 @@ function bindPlayPlayerStateActions(){
 }
 function playSeatPositions(count){
   const n=Math.max(1,Math.min(30,Number(count)||1)),out=[];
-  const ringSizes=n<=12?[n]:n<=24?[Math.ceil(n/2),Math.floor(n/2)]:[10,10,n-20],ringDefs=[[42,31,48],[34,24,48],[26,17,48]];
+  const ringSizes=n<=12?[n]:n<=24?[Math.ceil(n/2),Math.floor(n/2)]:[10,10,n-20],ringDefs=[[28,19,57],[23,15,57],[18,11,57]];
   ringSizes.forEach((size,ringIndex)=>{const [rx,ry,cy]=ringDefs[ringIndex]||ringDefs[ringDefs.length-1];for(let i=0;i<size;i++){const a=(-Math.PI/2)+(Math.PI*2*i/Math.max(1,size))+(ringIndex%2?Math.PI/Math.max(1,size):0);out.push([50+rx*Math.cos(a),cy+ry*Math.sin(a)])}});
   return out.slice(0,n);
 }
@@ -1204,7 +1218,7 @@ async function playCreateRoom(){
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.roomCode)throw new Error(data?.message||data?.error||'Không tạo được Phòng.');
     playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.selectedMemberIds=[];playSceneState.step='members';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();
-    await playSyncRoom(true);renderPlayScene();openPlayRosterSheet();
+    await playSyncRoom(true);try{memberAdminState.loaded=false;await loadMembers(false)}catch{}renderPlayScene();if(playSceneState.roomMode==='offline')openPlayRosterSheet();
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false)}
 }
@@ -1243,17 +1257,38 @@ function syncPlayMovementTicker(){
 }
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
-  const members=playLiveMembers(),{seatCount}=playSeatStats(),positions=playSeatPositions(seatCount),bySeat=new Map(members.filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),unseated=members.filter(m=>!Number(m?.seatId||0));ring.innerHTML='';ring.classList.toggle('is-dense',seatCount>16);
+  const seating=playSceneState.step==='seats',members=playVillageMembers(),{seatCount}=playSeatStats(),positions=playSeatPositions(seatCount),bySeat=new Map(playLiveMembers().filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  ring.innerHTML='';ring.classList.toggle('is-dense',seating&&seatCount>16);ring.classList.toggle('is-seating',seating);
   const make=(m,pos,seatId=null)=>{
-    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=m?.movementStatus==='moving';el.type='button';if(seatId)el.dataset.seatId=String(seatId);el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty':'')+(moving?' is-moving':'');
+    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=m?.movementStatus==='moving',isOnlinePick=m&&playSceneState.step==='members'&&playSceneState.roomMode==='online';
+    el.type='button';if(seatId)el.dataset.seatId=String(seatId);
+    el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-chair':'')+(moving?' is-moving':'');
     const pt=moving?playMovementPoint(m,pos):pos;el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';
-    const name=m?.displayName||(seatId?('Ghế '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(moving?'ĐANG DI CHUYỂN':(effectLabel||((m.online?'ONLINE':'OFFLINE')+' • '+(m.ready?'READY':'CHƯA READY')))):'TRỐNG';
-    el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span>'+seatId+'</span>')+'</div><b>'+(m?((seatId?'S'+seatId+' · ':'')+playEsc(name)):playEsc(name))+'</b><small>'+playEsc(statusLabel)+'</small>';
-    if(m){const im=el.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);im.src=characterSrc||memberAvatarUrl(m.avatarId);im.onerror=()=>{if(characterSrc&&im.src!==memberAvatarUrl(m.avatarId)){im.src=memberAvatarUrl(m.avatarId);return}im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};el.onclick=()=>{playSceneState.activePlayerId=String(m.loginId||'');savePlayScene();renderPlayScene()}}
+    const name=m?.displayName||(seatId?('Ghế '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(isOnlinePick?(selectedIds.has(String(m.loginId))?'ĐÃ CHỌN':'ONLINE'):(moving?'ĐANG DI CHUYỂN':(effectLabel||((m.online?'ONLINE':'OFFLINE')+' • '+(m.ready?'READY':'CHƯA READY'))))):'TRỐNG';
+    el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span class="play-chair-icon">🪑</span>')+'</div><b>'+(m?((seatId?'S'+seatId+' · ':'')+playEsc(name)):('Ghế '+seatId))+'</b><small>'+playEsc(statusLabel)+'</small>';
+    if(m){
+      const im=el.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);im.src=characterSrc||memberAvatarUrl(m.avatarId);im.onerror=()=>{if(characterSrc&&im.src!==memberAvatarUrl(m.avatarId)){im.src=memberAvatarUrl(m.avatarId);return}im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};
+      el.onclick=async()=>{
+        const lid=String(m.loginId||'');
+        if(isOnlinePick){
+          const ids=new Set((playSceneState.selectedMemberIds||[]).map(String));if(ids.has(lid))ids.delete(lid);else ids.add(lid);playSceneState.selectedMemberIds=[...ids];savePlayScene();renderPlayScene();return
+        }
+        if(seating&&playSceneState.activePlayerId&&String(playSceneState.activePlayerId)!==lid&&Number(m.seatId||0)>0){
+          const selected=selectedPlayPlayer();if(selected&&String(selected.loginId)!==lid){await updateSelectedPlayerSeat({seatId:Number(m.seatId),swap:true});return}
+        }
+        playSceneState.activePlayerId=lid;savePlayScene();renderPlayScene()
+      }
+    }else if(seating){
+      el.onclick=async()=>{if(!selectedPlayPlayer()){playFlashError('Chạm một Người Chơi trước rồi chọn ghế 🪑.');return}await updateSelectedPlayerSeat({seatId})}
+    }
     ring.appendChild(el)
   };
-  for(let i=0;i<seatCount;i++){const seatId=i+1,m=bySeat.get(seatId)||null,pos=positions[i]||[50,24];make(m,pos,seatId)}
-  for(const m of unseated){const x=Number(m?.moveToX??m?.positionX??50)||50,y=Number(m?.moveToY??m?.positionY??78)||78;make(m,[x,y],null)}
+  if(seating){
+    for(let i=0;i<seatCount;i++){const seatId=i+1,m=bySeat.get(seatId)||null,pos=positions[i]||[50,57];make(m,pos,seatId)}
+    for(const [i,m] of playLiveMembers().filter(m=>!Number(m?.seatId||0)).entries())make(m,playRoamPoint(m.loginId,i),null)
+  }else{
+    members.forEach((m,i)=>{const savedX=Number(m?.moveToX??m?.positionX),savedY=Number(m?.moveToY??m?.positionY),pos=(Number.isFinite(savedX)&&savedX>=25&&savedX<=75&&Number.isFinite(savedY)&&savedY>=38&&savedY<=74)?[savedX,savedY]:playRoamPoint(m.loginId,i);make(m,pos,null)})
+  }
   syncPlayMovementTicker();
 }
 async function renderPlayCards(){
