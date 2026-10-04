@@ -1,6 +1,7 @@
 {
   "name": "gmww-v2-00",
-  "version": "2.60.0",
+  "version": "2.61.0",
+  "type": "module",
   "private": true,
   "description": "GMWW V2 Player Web and Cloudflare realtime gateway",
   "scripts": {

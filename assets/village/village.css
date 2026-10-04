@@ -53,3 +53,5 @@ html.embedded .stage.setup-walk{cursor:crosshair}
 .seat-empty .seat-dot{display:grid;place-items:center;font-size:24px;font-weight:1000;line-height:1;color:#eaffff}
 html.embedded .seat-empty b{display:none!important}
 .fire{display:none!important}
+/* V2.61: invisible circular interaction hotspot; never expose the browser button box. */
+html.embedded .fire{display:block!important;inset:auto!important;width:84px!important;height:84px!important;transform:translate(-50%,-50%)!important;padding:0!important;border:0!important;border-radius:50%!important;outline:0!important;background:transparent!important;box-shadow:none!important;color:transparent!important;font-size:0!important;opacity:0!important;appearance:none!important;-webkit-appearance:none!important;filter:none!important;animation:none!important;touch-action:manipulation}
