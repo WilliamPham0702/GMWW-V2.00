@@ -131,6 +131,20 @@ jobs:
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
 
+      - name: Guard against incomplete legacy artwork package
+        run: |
+          set -euo pipefail
+          # V2.52 contains 63 roles, each with original/delivery/thumb WebP.
+          # Never publish another tiny IPA that silently discards these assets.
+          SOURCE="server-game/legacy-assets/v252"
+          test -s "$SOURCE/role-artwork-v251.js" || { echo "ERROR: V2.52 artwork manifest missing; release blocked"; exit 1; }
+          COUNT=$(find "$SOURCE/assets/role-artwork-v251" -type f -name '*.webp' | wc -l | tr -d ' ')
+          test "$COUNT" -ge 189 || { echo "ERROR: expected 189 V2.52 artwork images; found $COUNT"; exit 1; }
+          cp "$SOURCE/role-artwork-v251.js" server-game/GMWW-Server/Web/
+          cp -R "$SOURCE/assets" server-game/GMWW-Server/Web/
+          sed -i '' 's@<script src="app.js">@<script src="role-artwork-v251.js"></script>\n<script src="app.js">@' server-game/GMWW-Server/Web/GMWW.html
+          grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
+
       - name: Validate JavaScript and baseline structure
         run: |
           set -euo pipefail
@@ -247,7 +261,7 @@ jobs:
 
           IPA_BYTES=$(stat -f%z "$IPA")
           echo "IPA bytes: $IPA_BYTES"
-          test "$IPA_BYTES" -lt 5000000
+          test "$IPA_BYTES" -gt 50000000
           shasum -a 256 "$IPA"
 
       - name: Upload IPA
