@@ -106,7 +106,7 @@ test('saved game templates are precompiled on server but remain GM-only until ro
 });
 
 test('V1.09 preservation contract keeps existing engine and local settings while changing Play flow',()=>{
-  assert.match(app,/OLD_STATE_KEYS=\['GMWW_V255_STATE'/);
+  assert.match(app,/OLD_STATE_KEYS=\['GMWW_V256_STATE','GMWW_V255_STATE'/);
   assert.match(app,/DB_NAME='GMWW_V208_THEME_ASSETS'/);
   assert.match(app,/auditLocalData/);
   assert.match(app,/clearSafeRuntimeCache/);
