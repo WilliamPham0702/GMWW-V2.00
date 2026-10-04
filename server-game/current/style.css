@@ -614,13 +614,13 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 
 .play-player-ring{position:absolute;inset:0;z-index:3;pointer-events:none}
 .play-player-token{
-  position:absolute;width:58px;transform:translate(-50%,-50%);text-align:center;pointer-events:auto;transition:.25s transform,.25s opacity;
+  position:absolute;width:72px;transform:translate(-50%,-50%);text-align:center;pointer-events:auto;transition:.25s transform,.25s opacity;
 }
 .play-player-avatar{
-  width:44px;height:44px;margin:auto;border-radius:50%;padding:2px;background:linear-gradient(145deg,#fff8c3,#ffffff 38%,#59e4ee 70%,#159ec2);
-  box-shadow:0 6px 14px rgba(3,86,118,.27),0 0 0 2px rgba(255,255,255,.2);
+  width:56px;height:74px;margin:auto;border-radius:0;padding:0;background:transparent;
+  box-shadow:none;
 }
-.play-player-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;background:linear-gradient(145deg,#86ecf0,#2aabc9)}
+.play-player-avatar img{width:100%;height:100%;object-fit:contain;border-radius:0;display:block;background:transparent;filter:drop-shadow(0 7px 5px rgba(0,0,0,.38))}
 .play-player-avatar span{width:100%;height:100%;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#d8fff8,#53d2e1);color:#087896;font-weight:1000;font-size:14px}
 .play-player-token b{display:block;margin-top:2px;padding:2px 4px;border-radius:7px;background:rgba(4,99,126,.68);font-size:8.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 8px rgba(0,82,107,.13)}
 .play-player-token small{display:inline-flex;margin-top:1px;min-height:12px;align-items:center;border-radius:999px;padding:1px 4px;background:rgba(243,255,255,.9);color:#0c7793;font-size:7px;font-weight:950}
@@ -804,9 +804,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 
 /* V2.57 CHIBI MOVEMENT */
 .play-player-token.is-moving{transition:left .22s linear,top .22s linear;z-index:30!important}
-.play-player-token.is-moving .play-player-avatar{animation:gmwwChibiWalk .34s ease-in-out infinite alternate;filter:drop-shadow(0 8px 5px rgba(0,0,0,.34))}
+.play-player-token.is-moving .play-player-avatar{animation:gmwwChibiWalk .30s ease-in-out infinite alternate;transform-origin:50% 100%}
 .play-player-token.is-moving small{color:#fff0a8}
-@keyframes gmwwChibiWalk{to{transform:translateY(-4px) rotate(1deg)}}
+@keyframes gmwwChibiWalk{0%{transform:translateY(1px) rotate(-2deg) scaleX(.985)}100%{transform:translateY(-5px) rotate(2deg) scaleX(1.015)}}
 @media(prefers-reduced-motion:reduce){.play-player-token.is-moving .play-player-avatar{animation:none}.play-player-token.is-moving{transition:none}}
 
 

@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.60 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\.60'/);
-  assert.match(html,/GMWW V2\.60/);
+test('IPA V2.62 creates offline/online rooms with a fixed seat count',()=>{
+  assert.match(app,/const VERSION='2\.62'/);
+  assert.match(html,/GMWW V2\.62/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
@@ -60,7 +60,7 @@ test('2D play surface uses detailed day/night assets bundled with every characte
   assert.match(css,/url\("gmww-village-night-v260\.webp"\)/);
   assert.match(workflow,/cp assets\/characters\/v253\/chibi-\*\.webp/);
   assert.match(css,/#start \.play-island-back[^}]+display:none/s);
-  assert.match(css,/object-fit:contain;border-radius:0;background:none/);
+  assert.match(css,/object-fit:contain;border-radius:0;display:block;background:transparent/);
 });
 
 test('Player Web card preview keeps V2.52 art-title-info layout and compact faction badge',()=>{
