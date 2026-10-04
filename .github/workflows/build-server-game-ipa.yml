@@ -46,6 +46,10 @@ jobs:
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
           cp server-game/current/gmww-village-coast.svg "$APPDIR/Web/gmww-village-coast.svg"
+          cp assets/backgrounds/gmww-village-day-v252.webp "$APPDIR/Web/"
+          cp assets/backgrounds/gmww-village-night-v252.webp "$APPDIR/Web/"
+          mkdir -p "$APPDIR/Web/game-characters"
+          cp assets/characters/v253/chibi-*.webp "$APPDIR/Web/game-characters/"
 
           node - <<'NODE'
           const fs=require('fs');
@@ -63,8 +67,9 @@ jobs:
 
           grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
           grep -q "const VERSION='$VERSION'" "$APPDIR/Web/app.js"
-          grep -q "GMWW_V${BUILD}_STATE" "$APPDIR/Web/app.js"
-          grep -q "GMWW_V${BUILD}_PREFS" "$APPDIR/Web/app.js"
+          # Presentation-only updates keep the prior storage keys intentionally.
+          grep -q "const STATE_KEY='GMWW_V258_STATE'" "$APPDIR/Web/app.js"
+          grep -q "const PREF_KEY='GMWW_V258_PREFS'" "$APPDIR/Web/app.js"
           grep -q 'gmww-village-coast.svg' "$APPDIR/Web/style.css"
           grep -q 'data-play-room-mode="offline"' "$APPDIR/Web/GMWW.html"
           grep -q 'id="playSeatSheet"' "$APPDIR/Web/GMWW.html"
@@ -234,6 +239,9 @@ jobs:
           test -s "$APP/Web/app.js"
           test -s "$APP/Web/style.css"
           test -s "$APP/Web/gmww-village-coast.svg"
+          test -s "$APP/Web/gmww-village-day-v252.webp"
+          test -s "$APP/Web/gmww-village-night-v252.webp"
+          test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -eq 42
           test -s "$APP/Web/default-artwork.webp"
           ! test -e "$APP/Web/v1-audio.js"
           ! test -e "$APP/Web/sea-artwork.js"

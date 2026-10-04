@@ -895,3 +895,55 @@ body.play-immersive .play-player-avatar{width:46px;height:46px}
   .play-timing-grid{grid-template-columns:1fr}
   .play-game-role-row{grid-template-columns:38px minmax(0,1fr) 60px auto!important}
 }
+
+/* V2.59 — use the approved detailed village assets, not the old island mockup. */
+#start .play-world,
+#start .play-shell[data-phase="lobby"] .play-world,
+#start .play-shell[data-phase="day"] .play-world{
+  background:#287b9b url("gmww-village-day-v252.webp") center/cover no-repeat;
+}
+#start .play-shell[data-phase="night"] .play-world{
+  background:#092336 url("gmww-village-night-v252.webp") center/cover no-repeat;
+  background-blend-mode:normal;
+}
+#start .play-island-back,#start .play-island-front,#start .play-water-ripple,
+#start .play-cloud,#start .play-sky-glow{display:none}
+#start .play-world:before,#start .play-world:after{display:none}
+body.play-immersive #start .play-hud{left:10px;right:10px;grid-template-columns:64px minmax(0,1fr) 64px}
+#start .play-room-chip,#start .play-phase-pill,#start .play-auto-gm{
+  background:rgba(5,24,41,.91);border:1px solid #cba455;border-radius:13px;color:#fff3d2;box-shadow:0 3px 10px #0005;
+}
+#start .play-world-status{top:calc(env(safe-area-inset-top) + 66px)}
+#start .play-cycle-badge,#start .play-artifact-cap{background:rgba(5,24,41,.88);border-color:#cba455}
+body.play-immersive #start .play-village-core{top:51%;width:58px}
+#start .play-village-core small,#start .play-village-core b,#start .play-village-core span{display:none}
+body.play-immersive #start .play-core-pearl{width:38px;height:38px;font-size:26px;opacity:.8}
+body.play-immersive #start .play-player-token{width:76px;transform:translate(-50%,-66%)}
+body.play-immersive #start .play-player-token.is-active{transform:translate(-50%,-66%) scale(1.08)}
+body.play-immersive #start .play-player-avatar{
+  width:68px;height:86px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+  filter:drop-shadow(0 5px 3px #0005);
+}
+body.play-immersive #start .play-player-avatar img{width:100%;height:100%;object-fit:contain;border-radius:0;background:none}
+#start .play-player-token b{font-size:10px;line-height:1.25;background:rgba(3,19,31,.92);border:1px solid #dfc17b70;color:#fff4d7}
+#start .play-player-token small{font-size:8px;line-height:1.25;white-space:nowrap;background:rgba(3,19,31,.9);color:#bedcdb;padding:2px 5px}
+#start .play-player-token.is-active .play-player-avatar{box-shadow:none;filter:drop-shadow(0 0 5px #ffee79)}
+#start .play-player-token.is-roster-selected .play-player-avatar{box-shadow:none;filter:drop-shadow(0 0 5px #75efc9)}
+body.play-immersive #start .play-player-token.is-chair .play-player-avatar{width:40px;height:42px;background:none;filter:drop-shadow(0 3px 2px #0006)}
+body.play-immersive #start .play-player-ring.is-dense .play-player-token{width:58px}
+body.play-immersive #start .play-player-ring.is-dense .play-player-avatar{width:46px;height:60px}
+#start .play-player-ring.is-dense .play-player-token b{font-size:8px}
+#start .play-player-ring.is-dense .play-player-token small{display:none}
+body.play-immersive #start .play-context-panel{background:rgba(5,24,41,.93);border-color:#cba455;max-height:23dvh}
+body.play-immersive #start .play-context-copy span{font-size:11px;line-height:1.35}
+body.play-immersive #start .play-control-bar{
+  grid-template-columns:42px 46px minmax(0,1fr) 46px 52px;gap:4px;
+  background:rgba(5,24,41,.96);border-color:#cba455;border-radius:15px;
+}
+body.play-immersive #start .play-control-icon{background:#173849;color:#fff3d2;border-radius:10px}
+body.play-immersive #start .play-control-icon small{font-size:8px}
+body.play-immersive #start .play-primary-control{background:linear-gradient(#266b90,#15456b);border:1px solid #67b8d8;border-radius:10px;gap:4px;padding:4px}
+body.play-immersive #start .play-primary-control b{font-size:10px;letter-spacing:0;line-height:1.2}
+body.play-immersive #start .play-exit-control{background:#532d32;color:#ffe4dd}
+body.play-immersive #start .play-end-control{background:#574320;color:#fff0be}
+@media(prefers-reduced-motion:reduce){#start .play-core-pearl{animation:none}}

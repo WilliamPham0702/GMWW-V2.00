@@ -1,6 +1,7 @@
 (()=>{'use strict';
 
-const VERSION='2.58';
+const VERSION='2.59';
+// Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
 const OLD_STATE_KEYS=['GMWW_V257_STATE','GMWW_V256_STATE','GMWW_V255_STATE','GMWW_V254_STATE','GMWW_V253_STATE','GMWW_V252_STATE','GMWW_V251_STATE','GMWW_V250_STATE','GMWW_V247_STATE','GMWW_V246_STATE','GMWW_V245_STATE','GMWW_V244_STATE','GMWW_V243_STATE','GMWW_V242_STATE','GMWW_V241_STATE','GMWW_V240_STATE','GMWW_V239_STATE','GMWW_V238_STATE','GMWW_V237_STATE','GMWW_V236_STATE','GMWW_V235_STATE','GMWW_V234_STATE','GMWW_V233_STATE','GMWW_V232_STATE','GMWW_V231_STATE','GMWW_V230_STATE','GMWW_V229_STATE','GMWW_V228_STATE','GMWW_V227_STATE','GMWW_V226_STATE','GMWW_V225_STATE','GMWW_V224_STATE','GMWW_V223_STATE','GMWW_V222_STATE','GMWW_V221_STATE','GMWW_V220_STATE','GMWW_V219_STATE','GMWW_V218_STATE','GMWW_V217_STATE','GMWW_V216_STATE','GMWW_V215_STATE','GMWW_V214_STATE','GMWW_V213_STATE','GMWW_V212_STATE','GMWW_V211_STATE','GMWW_V210_STATE','GMWW_V209_STATE','GMWW_V208_STATE','GMWW_V207_STATE','GMWW_V206_STATE','GMWW_V205_STATE','GMWW_V109_STATE','GMWW_V1_09_STATE','GMWW_V108_STATE'];
@@ -1172,9 +1173,9 @@ function playVillageMembers(){
   }
   return [...byId.values()];
 }
-function playRoamPoint(id,index=0){
-  let h=2166136261;for(const ch of String(id||index)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}
-  return[32+(h%3600)/100,43+((h>>>8)%2500)/100]
+function playRoamPoint(id,index=0,count=1){
+  // Distribute unseated members, instead of hashing everybody into the centre.
+  return playSeatPositions(Math.max(1,count))[index%Math.max(1,count)]||[50,32]
 }
 function playPlayerEffect(loginId){
   const rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false),types=new Set(rows.map(x=>String(x?.type||'')));
@@ -1197,19 +1198,19 @@ function bindPlayPlayerStateActions(){
 }
 function playSeatPositions(count){
   const n=Math.max(1,Math.min(30,Number(count)||1)),out=[];
-  const ringSizes=n<=12?[n]:n<=24?[Math.ceil(n/2),Math.floor(n/2)]:[10,10,n-20],ringDefs=[[28,19,57],[23,15,57],[18,11,57]];
+  const ringSizes=n<=12?[n]:[Math.ceil(n/2),Math.floor(n/2)],ringDefs=[[36,19,51],[25,13,51]];
   ringSizes.forEach((size,ringIndex)=>{const [rx,ry,cy]=ringDefs[ringIndex]||ringDefs[ringDefs.length-1];for(let i=0;i<size;i++){const a=(-Math.PI/2)+(Math.PI*2*i/Math.max(1,size))+(ringIndex%2?Math.PI/Math.max(1,size):0);out.push([50+rx*Math.cos(a),cy+ry*Math.sin(a)])}});
   return out.slice(0,n);
 }
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
-function playCharacterUrl(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image':''}
+function playCharacterUrl(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?'game-characters/chibi-'+id.slice(-2)+'.webp':''}
 function playSeatStats(){
   const seatCount=Math.max(1,Math.min(30,Number(playSceneRuntime.room?.seatCount||playSceneState.seatCount)||12)),players=playLiveMembers(),occupied=new Set(players.map(p=>Number(p?.seatId||0)).filter(n=>n>=1&&n<=seatCount));
   return{seatCount,occupied:occupied.size,available:Math.max(0,seatCount-occupied.size)}
 }
 function playSetBusy(on){
   playSceneRuntime.busy=!!on;
-  for(const id of ['playPrimaryAction','playNext','playBack','playEndGame']){const el=document.getElementById(id);if(el)el.disabled=!!on}
+  for(const id of ['playPrimaryAction','playNext','playBack','playEndGame','playExitVillage']){const el=document.getElementById(id);if(el)el.disabled=!!on}
 }
 function playFlashError(message){
   playSceneRuntime.lastError=String(message||'Không thể thực hiện thao tác.');
@@ -1268,16 +1269,20 @@ function syncPlayMovementTicker(){
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const seating=playSceneState.step==='seats',members=playVillageMembers(),{seatCount}=playSeatStats(),positions=playSeatPositions(seatCount),bySeat=new Map(playLiveMembers().filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
-  ring.innerHTML='';ring.classList.toggle('is-dense',seating&&seatCount>16);ring.classList.toggle('is-seating',seating);
+  ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);
   const make=(m,pos,seatId=null)=>{
     const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=m?.movementStatus==='moving',isOnlinePick=m&&playSceneState.step==='members'&&playSceneState.roomMode==='online';
     el.type='button';if(seatId)el.dataset.seatId=String(seatId);
     el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-chair':'')+(moving?' is-moving':'');
-    const pt=moving?playMovementPoint(m,pos):pos;el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';
+    const pt=moving?playMovementPoint(m,pos):pos;el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Ghế '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(isOnlinePick?(selectedIds.has(String(m.loginId))?'ĐÃ CHỌN':'ONLINE'):(moving?'ĐANG DI CHUYỂN':(effectLabel||((m.online?'ONLINE':'OFFLINE')+' • '+(m.ready?'READY':'CHƯA READY'))))):'TRỐNG';
     el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span class="play-chair-icon">🪑</span>')+'</div><b>'+(m?((seatId?'S'+seatId+' · ':'')+playEsc(name)):('Ghế '+seatId))+'</b><small>'+playEsc(statusLabel)+'</small>';
+    el.setAttribute('aria-label',name+' • '+statusLabel);el.title=name+' • '+statusLabel;
     if(m){
-      const im=el.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);im.src=characterSrc||memberAvatarUrl(m.avatarId);im.onerror=()=>{if(characterSrc&&im.src!==memberAvatarUrl(m.avatarId)){im.src=memberAvatarUrl(m.avatarId);return}im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};
+      const im=el.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);im.src=characterSrc||'game-characters/chibi-01.webp';im.decoding='async';
+      // A neutral preview does not assign/change the account's fixed character.
+      if(!characterSrc){el.classList.add('is-character-preview');el.querySelector('small').textContent='CHƯA CHỌN NHÂN VẬT'}
+      im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};
       el.onclick=async()=>{
         const lid=String(m.loginId||'');
         if(isOnlinePick){
@@ -1295,9 +1300,12 @@ function renderPlayPlayers(){
   };
   if(seating){
     for(let i=0;i<seatCount;i++){const seatId=i+1,m=bySeat.get(seatId)||null,pos=positions[i]||[50,57];make(m,pos,seatId)}
-    for(const [i,m] of playLiveMembers().filter(m=>!Number(m?.seatId||0)).entries())make(m,playRoamPoint(m.loginId,i),null)
+    const waiting=playLiveMembers().filter(m=>!Number(m?.seatId||0));for(const [i,m] of waiting.entries())make(m,[16+68*(i+.5)/Math.max(1,waiting.length),24],null)
   }else{
-    members.forEach((m,i)=>{const savedX=Number(m?.moveToX??m?.positionX),savedY=Number(m?.moveToY??m?.positionY),pos=(Number.isFinite(savedX)&&savedX>=25&&savedX<=75&&Number.isFinite(savedY)&&savedY>=38&&savedY<=74)?[savedX,savedY]:playRoamPoint(m.loginId,i);make(m,pos,null)})
+    members.sort((a,b)=>String(a.loginId).localeCompare(String(b.loginId))).forEach((m,i)=>{
+      const sid=Number(m?.seatId||0),x=m?.positionX,y=m?.positionY,valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+      const pos=sid>=1&&sid<=seatCount?positions[sid-1]:valid(x)&&valid(y)?[Math.max(10,Math.min(90,Number(x))),Math.max(22,Math.min(72,Number(y)))]:playRoamPoint(m.loginId,i,members.length);make(m,pos,sid||null)
+    })
   }
   syncPlayMovementTicker();
 }
@@ -1665,7 +1673,9 @@ async function openPlayEndSheet(){
 function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
 async function confirmPlayEndGame(){
   const winner=String(playSceneRuntime.selectedWinnerFaction||'');if(!winner){playFlashError('Hãy chọn Phe thắng trước khi kết thúc ván.');return}
-  if(playSceneRuntime.busy)return;playSetBusy(true);const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=true;
+  if(playSceneRuntime.busy)return;
+  if(!confirm('Kết thúc ván tại Phòng '+playSceneState.roomCode+'?\nPhe thắng: '+winner+'.\nKết quả sẽ được ghi nhận và người chơi trở về Phòng Chờ. Vị trí ghế được giữ nguyên.'))return;
+  playSetBusy(true);const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=true;
   try{
     const room=playSceneRuntime.room||{},data=await playRoomApi('/end',{method:'POST',body:JSON.stringify({matchId:room.matchId||playSceneState.matchId||'',matchRevision:Number(room.matchRevision||0),winnerFaction:winner,winnerLabel:winner})});
     playSceneRuntime.room=data.room||room;playSceneRuntime.nightRuntime=null;playSceneRuntime.artifactCycle={count:0,max:3};playSceneRuntime.winProposal=null;playSceneRuntime.selectedWinnerFaction='';
@@ -1722,6 +1732,8 @@ async function enterPlayImmersive(){
   if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
 }
 function exitPlayImmersive(){
+  if(playSceneRuntime.busy)return;
+  if(!confirm('Thoát về Trang Chủ?\nPhòng, ghế và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
   document.body.classList.remove('play-immersive');
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));

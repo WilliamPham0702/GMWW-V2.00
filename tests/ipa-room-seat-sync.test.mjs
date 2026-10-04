@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.58 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\.58'/);
-  assert.match(html,/GMWW V2\.58/);
+test('IPA V2.59 creates offline/online rooms with a fixed seat count',()=>{
+  assert.match(app,/const VERSION='2\.59'/);
+  assert.match(html,/GMWW V2\.59/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
@@ -49,13 +49,18 @@ test('Server keeps compatibility fields and room directory settings',()=>{
   assert.match(server,/for\(const p of Object\.values\(players\)\)\{p\.ready=playerSetupComplete\(meta,p\);p\.reservedByGM=true\}/);
 });
 
-test('2D play surface disables blur without replacing the legacy village asset',()=>{
+test('2D play surface uses detailed day/night assets bundled with every character',()=>{
   assert.match(css,/#start\.play-page \.play-shell,#start\.play-page \.play-shell \*\{backdrop-filter:none!important/);
   assert.match(css,/url\("gmww-village-coast\.svg"\)/);
   assert.doesNotMatch(css,/\.play-sky-glow[^\n]*filter:blur/);
   assert.doesNotMatch(css,/\.play-cloud[^\n]*filter:blur/);
   assert.match(workflow,/cp server-game\/current\/gmww-village-coast\.svg/);
   assert.match(workflow,/test -s "\$APP\/Web\/gmww-village-coast\.svg"/);
+  assert.match(css,/url\("gmww-village-day-v252\.webp"\)/);
+  assert.match(css,/url\("gmww-village-night-v252\.webp"\)/);
+  assert.match(workflow,/cp assets\/characters\/v253\/chibi-\*\.webp/);
+  assert.match(css,/#start \.play-island-back[^}]+display:none/s);
+  assert.match(css,/object-fit:contain;border-radius:0;background:none/);
 });
 
 test('Player Web card preview keeps V2.52 art-title-info layout and compact faction badge',()=>{
