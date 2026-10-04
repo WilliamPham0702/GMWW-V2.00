@@ -24,3 +24,17 @@ html.embedded .player .name{font-size:9px}
   .player .portrait.game-character{width:50px;height:67px}
   .seat-empty .seat-dot{width:29px;height:29px}.seat-empty b{font-size:8px}
 }
+
+
+/* GAME ONLINE seat plus controls */
+.seat-empty{z-index:6!important;min-width:54px!important;opacity:1!important;pointer-events:none}
+.seat-empty .seat-dot{position:relative!important;width:42px!important;height:42px!important;border:2px solid rgba(222,250,255,.88)!important;background:rgba(4,49,67,.70)!important;box-shadow:0 5px 15px rgba(0,0,0,.38),0 0 0 3px rgba(255,255,255,.06)!important}
+.seat-empty .seat-dot::before{content:"+";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:1000 30px/1 system-ui;text-shadow:0 2px 7px rgba(0,0,0,.48)}
+.seat-empty:not(:disabled){pointer-events:auto;cursor:pointer}
+.seat-empty:not(:disabled) .seat-dot{border-color:#8ff6ee!important;background:rgba(4,92,104,.78)!important;box-shadow:0 0 0 4px rgba(77,241,232,.16),0 4px 16px rgba(0,0,0,.38)!important}
+.seat-empty:not(:disabled) b{color:#dffffb}
+.seat-empty.selected .seat-dot{border-color:#ffe58c!important;background:rgba(170,118,19,.78)!important;box-shadow:0 0 0 5px rgba(255,229,140,.20),0 0 28px rgba(255,224,113,.72)!important}
+.seat-empty.selected .seat-dot::before{content:"✓";font-size:23px;color:#fff6ca}
+.seat-empty b{font-size:9px!important;background:rgba(3,24,34,.82)!important;border:1px solid rgba(255,255,255,.14)}
+html.embedded .fire{display:block!important}
+@media(max-width:390px){.seat-empty .seat-dot{width:36px!important;height:36px!important}.seat-empty .seat-dot::before{font-size:27px}.seat-empty{min-width:46px!important}}
