@@ -11,7 +11,7 @@ const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.
 test('IPA V2.55 creates offline/online rooms with a fixed seat count',()=>{
   assert.match(app,/const VERSION='2\.55'/);
   assert.match(html,/GMWW V2\.55/);
-  assert.match(app,/roomMode:playSceneState\.roomMode,seatCount:playSceneState\.seatCount/);
+  assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
   assert.match(html,/id="playSeatCount"/);
@@ -21,7 +21,7 @@ test('IPA V2.55 creates offline/online rooms with a fixed seat count',()=>{
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
-  assert.match(app,/bySeat=new Map\(members\.map\(m=>\[Number\(m\?\.seatId\|\|0\),m\]\)\)/);
+  assert.match(app,/bySeat=new Map\(members\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
   assert.match(app,/S'\+seatId\+' · '/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
   assert.match(app,/memberAvatarUrl\(m\.avatarId\)/);
