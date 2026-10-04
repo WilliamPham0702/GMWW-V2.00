@@ -45,7 +45,7 @@ test('server exposes authenticated movement, arrival and optional seat mode',()=
   assert.match(server,/\/player\/move-complete/);
   assert.match(server,/MOVE_NOT_ARRIVED/);
   assert.match(server,/SEAT_TAKEN/);
-  assert.match(server,/movementStatus:"moving"/);
+  assert.match(server,/movementStatus="moving"/);
 });
 
 test('Player Web supports free roaming, walk-to-seat, reconnect completion and direct-seat fallback',()=>{
