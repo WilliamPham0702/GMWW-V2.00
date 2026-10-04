@@ -1369,8 +1369,9 @@ async function playSetServerCycle(phase,night){
 async function advancePlayPhase(){
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='room'){if(isLivePlayRoom()){playSceneState.step='members';savePlayScene();renderPlayScene()}else await playCreateRoom();return}
-  if(playSceneState.step==='members'){openPlayRosterSheet();return}
+  if(playSceneState.step==='members'){if(playSceneState.roomMode==='online')await savePlayRosterIds(playSceneState.selectedMemberIds||[]);else openPlayRosterSheet();return}
   if(playSceneState.step==='game'){openPlayGameSheet();return}
+  if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){try{playBuildAssignments()}catch(err){playFlashError(err.message)}return}
   if(playSceneState.step==='deal'){await playDealRoles();return}
   if(playSceneState.step!=='battle'){advancePlaySetup(1);return}
@@ -1591,6 +1592,28 @@ async function moveSelectedPlayerToSeat(seatId,occupant){
   await updateSelectedPlayerSeat({seatId,swap:!!occupant})
 }
 async function releaseSelectedPlayerSeat(){const selected=selectedPlayPlayer();if(!selected?.seatId)return;if(!confirm('Giải phóng Seat '+selected.seatId+' của '+selected.displayName+'?'))return;await updateSelectedPlayerSeat({seatId:null})}
+async function playRandomSeatRemaining(){
+  if(!isLivePlayRoom())return;const members=playLiveMembers(),stats=playSeatStats(),used=new Set(members.map(m=>Number(m?.seatId||0)).filter(Boolean)),free=[];for(let i=1;i<=stats.seatCount;i++)if(!used.has(i))free.push(i);
+  const remaining=members.filter(m=>!Number(m?.seatId||0));if(!remaining.length){playFlashError('Tất cả Người Chơi đã có ghế.');return}
+  if(free.length<remaining.length){playFlashError('Không đủ ghế trống cho Người Chơi còn lại.');return}
+  playSetBusy(true);
+  try{
+    const seats=playShuffle(free);
+    for(let i=0;i<remaining.length;i++){
+      const m=remaining[i],data=await playRoomApi('/seat',{method:'POST',body:JSON.stringify({participantId:m.participantId||('member:'+m.loginId),seatId:seats[i]})});
+      playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players
+    }
+    renderPlayScene()
+  }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+}
+async function playSetSeatLock(locked=true){
+  if(!isLivePlayRoom())return false;
+  try{const data=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:locked!==false})});playSceneRuntime.room=data.room||playSceneRuntime.room;renderPlayScene();return !!data.seatsLocked}catch(err){playFlashError(err.message);return false}
+}
+async function playFinishSeating(){
+  const members=playLiveMembers(),missing=members.filter(m=>!Number(m?.seatId||0));if(missing.length){playFlashError('Còn '+missing.length+' Người Chơi chưa có ghế. Dùng “Phân ghế còn lại” hoặc chọn từng người.');return}
+  const locked=await playSetSeatLock(true);if(locked){playSceneState.step='roles';playSceneState.activePlayerId='';savePlayScene();renderPlayScene()}
+}
 async function openPlayEndSheet(){
   if(!isLivePlayRoom()){playFlashError('Chưa có Phòng đang chơi.');return}
   if(!playSceneRuntime.room)await playSyncRoom(true);
