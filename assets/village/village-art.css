@@ -13,10 +13,13 @@
 .player .portrait{background:#284c63 url("./assets/avatar-chibi.svg") center center / 100% 100% no-repeat;border-radius:45% 45% 40% 40%;width:clamp(36px,11vw,57px);height:clamp(42px,13vw,67px);border:0;filter:drop-shadow(0 3px 2px #0008);box-shadow:none;display:block}
 .player .portrait.has-image{background:#234760;border:2px solid #dfbe73;border-radius:50%;object-fit:cover;overflow:hidden}
 .player .portrait.has-image img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%;border:0}
-.player[data-style="1"] .portrait{filter:hue-rotate(65deg) drop-shadow(0 3px 2px #0008)}
-.player[data-style="2"] .portrait{filter:hue-rotate(145deg) drop-shadow(0 3px 2px #0008)}
-.player[data-style="3"] .portrait{filter:hue-rotate(215deg) drop-shadow(0 3px 2px #0008)}
-.player[data-style="4"] .portrait{filter:hue-rotate(285deg) drop-shadow(0 3px 2px #0008)}
+.player .portrait.is-character{width:clamp(54px,15vw,78px);height:clamp(64px,18vw,92px);overflow:visible;background:none;border:0;border-radius:0}
+.player .portrait.is-character img{width:100%;height:100%;object-fit:contain;border:0;border-radius:0;filter:drop-shadow(0 4px 3px #001c)}
+.player.selected .portrait.is-character{outline:0;filter:drop-shadow(0 0 7px #53fff1) drop-shadow(0 0 12px #53fff1)}
+.player[data-style="1"] .portrait:not(.is-character){filter:hue-rotate(65deg) drop-shadow(0 3px 2px #0008)}
+.player[data-style="2"] .portrait:not(.is-character){filter:hue-rotate(145deg) drop-shadow(0 3px 2px #0008)}
+.player[data-style="3"] .portrait:not(.is-character){filter:hue-rotate(215deg) drop-shadow(0 3px 2px #0008)}
+.player[data-style="4"] .portrait:not(.is-character){filter:hue-rotate(285deg) drop-shadow(0 3px 2px #0008)}
 .player.selected .portrait{outline:3px solid #53fff1;outline-offset:3px}
 .player{min-width:44px;min-height:44px}
 .player .name{font-size:clamp(9px,2.7vw,12px);max-width:80px;overflow:hidden;text-overflow:ellipsis;background:linear-gradient(#071927f5,#0a2d43ee);border:1px solid #c9a66b}

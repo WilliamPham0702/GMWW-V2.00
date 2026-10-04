@@ -21,6 +21,7 @@ export function mapPublicPlayers(state){
   }).map(p=>({
     id:String(p.participantId||p.id),displayName:safeText(p.displayName||"Người chơi"),
     avatarId:typeof p.avatarId==="string"?p.avatarId:"",
+    characterId:/^chibi-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(p.characterId)?p.characterId:"",
     online:p.online!==false
   }));
 }
@@ -32,7 +33,7 @@ if(game){
   const params=new URLSearchParams(window.location.search),embedded=params.get("embed")==="1"&&window.parent!==window;
   if(embedded)document.documentElement.classList.add("embedded");
   const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
-  const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
+  const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:"",characterId:"chibi-"+String(i%42+1).padStart(2,"0")}));
   let all=embedded?[]:(supplied?.length?supplied:sample);
   let liveRoom=embedded;
   function trustedAvatarUrl(raw){
@@ -49,9 +50,11 @@ if(game){
       const button=document.createElement("button");button.type="button";button.className="player"+(selectedId===data.id?" selected":"");button.dataset.style=String(i%5);button.dataset.playerId=safeText(data.id||("sample-"+(i+1)));
       button.style.left=p.x+"%";button.style.top=p.y+"%";button.style.zIndex=String(10+Math.round(p.y));
       const avatar=document.createElement("span");avatar.className="portrait";
+      const characterId=/^chibi-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.characterId)?data.characterId:"";
       const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
       const avatarUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
-      if(avatarUrl){avatar.classList.add("has-image");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img);}
+      if(characterId){avatar.classList.add("has-image","is-character");const img=document.createElement("img");img.src="/characters/v253/"+characterId+".webp";img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image","is-character")});avatar.append(img);}
+      else if(avatarUrl){avatar.classList.add("has-image");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img);}
       const name=document.createElement("span");name.className="name";name.textContent=(i+1)+" · "+playerName;
       button.append(avatar,name);button.setAttribute("aria-label","Chọn người chơi "+playerName);button.addEventListener("click",()=>{selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(i+1)+" · "+playerName;selection.hidden=false;render();});
       players.append(button);const item=document.createElement("span");item.textContent=(i+1)+" · "+playerName+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item);
