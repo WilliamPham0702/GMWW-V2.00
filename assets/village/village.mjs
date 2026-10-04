@@ -10,7 +10,7 @@ export function normalizeVillagePoint(x,y,fallbackX=50,fallbackY=76){
 }
 export function positions(count){
   if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");
-  const ringSizes=count<=12?[count]:[Math.ceil(count/2),Math.floor(count/2)],defs=count<=12?[[Math.min(34,18+count*1.35),16,52]]:[[38,18,52],[26,12,52]],out=[];
+  const ringSizes=count<=12?[count]:[Math.ceil(count/2),Math.floor(count/2)],defs=count<=12?[[Math.min(34,18+count*1.35),16,52]]:[[36,18,52],[26,12,52]],out=[];
   ringSizes.forEach((n,r)=>{const [rx,ry,cy]=defs[r]||defs[defs.length-1];for(let i=0;i<n;i++){const angle=2*Math.PI*(i/n)+(r===1?Math.PI/n:0)-Math.PI/2;const p=normalizeVillagePoint(50+rx*Math.cos(angle),cy+ry*Math.sin(angle));out.push({...p,ring:r});}});
   return out;
 }

@@ -1201,7 +1201,7 @@ function playSafeVillagePoint(x,y,fallbackX=50,fallbackY=76){
   return[Math.round(px*100)/100,Math.round(py*100)/100]
 }
 function playSeatPositions(count){
-  const n=Math.max(1,Math.min(30,Number(count)||1)),out=[],ringSizes=n<=12?[n]:[Math.ceil(n/2),Math.floor(n/2)],ringDefs=n<=12?[[Math.min(34,18+n*1.35),16,52]]:[[38,18,52],[26,12,52]],safe=(x,y)=>{const py=Math.max(34,Math.min(86,Number(y)||52)),half=py<44?30+(py-34)*1.2:py>76?42-(py-76)*.8:42,px=Math.max(50-half,Math.min(50+half,Number(x)||50));return[Math.round(px*100)/100,Math.round(py*100)/100]};
+  const n=Math.max(1,Math.min(30,Number(count)||1)),out=[],ringSizes=n<=12?[n]:[Math.ceil(n/2),Math.floor(n/2)],ringDefs=n<=12?[[Math.min(34,18+n*1.35),16,52]]:[[36,18,52],[26,12,52]],safe=(x,y)=>{const py=Math.max(34,Math.min(86,Number(y)||52)),half=py<44?30+(py-34)*1.2:py>76?42-(py-76)*.8:42,px=Math.max(50-half,Math.min(50+half,Number(x)||50));return[Math.round(px*100)/100,Math.round(py*100)/100]};
   ringSizes.forEach((size,ringIndex)=>{const [rx,ry,cy]=ringDefs[ringIndex]||ringDefs[ringDefs.length-1];for(let i=0;i<size;i++){const a=(-Math.PI/2)+(Math.PI*2*i/Math.max(1,size))+(ringIndex%2?Math.PI/Math.max(1,size):0),p=safe(50+rx*Math.cos(a),cy+ry*Math.sin(a));out.push(p)}});
   return out.slice(0,n);
 }
