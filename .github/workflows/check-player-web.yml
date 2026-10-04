@@ -6,6 +6,8 @@ on:
     paths:
       - "src/**"
       - "assets/**"
+      - "server-game/current/**"
+      - "tests/**"
       - "wrangler.jsonc"
       - "package.json"
       - ".github/workflows/check-player-web.yml"
