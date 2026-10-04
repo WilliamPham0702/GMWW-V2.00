@@ -1153,10 +1153,11 @@ function playLiveMembers(){
   return [];
 }
 function playVillageMembers(){
-  const live=playLiveMembers(),byId=new Map(live.map(m=>[String(m.loginId),m]));
-  if((playSceneState.step==='room'||playSceneState.step==='members')&&playSceneState.roomMode==='online'){
+  const live=playLiveMembers(),onlineSelection=(playSceneState.step==='room'||playSceneState.step==='members')&&playSceneState.roomMode==='online',byId=new Map(onlineSelection?[]:live.map(m=>[String(m.loginId),m]));
+  if(onlineSelection){
+    const liveById=new Map(live.map(m=>[String(m.loginId),m]));
     for(const m of (memberAdminState.members||[]).filter(x=>x?.online&&x?.loginId)){
-      const id=String(m.loginId),old=byId.get(id)||{};
+      const id=String(m.loginId),old=liveById.get(id)||{};
       byId.set(id,{...m,...old,kind:'member',loginId:id,online:true});
     }
   }
