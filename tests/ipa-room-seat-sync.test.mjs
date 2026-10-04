@@ -9,8 +9,8 @@ const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
 test('IPA V2.56 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\\.56'/);
-  assert.match(html,/GMWW V2\\.56/);
+  assert.match(app,/const VERSION='2\.56'/);
+  assert.match(html,/GMWW V2\.56/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
@@ -68,4 +68,48 @@ test('Player Web card preview keeps V2.52 art-title-info layout and compact fact
   assert.match(css,/\.player-faction-badge\{[^}]*width:34px;[^}]*height:34px/s);
   assert.match(app,/badge\.textContent=f\.icon;badge\.setAttribute\('aria-label',f\.label\)/);
   assert.doesNotMatch(app,/badge\.textContent=f\.icon\+' '\+f\.label/);
+});
+
+
+test('GM Play is an immersive seven-stage village flow',()=>{
+  assert.match(app,/PLAY_STEPS=\['room','members','game','seats','roles','deal','battle'\]/);
+  assert.match(html,/id="playExitVillage"/);
+  assert.match(html,/data-play-step="seats"/);
+  assert.match(css,/body\.play-immersive #bottomNav\{display:none!important\}/);
+  assert.match(css,/gmwwCampfireFlicker/);
+  assert.match(app,/playVillageMembers/);
+  assert.match(app,/playRandomSeatRemaining/);
+});
+
+test('chair stage preserves occupied seats, supports swap/random remainder and seat lock',()=>{
+  assert.match(app,/remaining=members\.filter\(m=>!Number\(m\?\.seatId\|\|0\)\)/);
+  assert.match(app,/updateSelectedPlayerSeat\(\{seatId:Number\(m\.seatId\),swap:true\}\)/);
+  assert.match(app,/\/seat-lock/);
+  assert.match(server,/async gmSeatLock\(/);
+  assert.match(server,/meta\.seatsLocked/);
+  assert.match(server,/error:"SEATS_LOCKED"/);
+});
+
+test('saved game templates are precompiled on server but remain GM-only until role delivery',()=>{
+  assert.match(server,/gameTemplateUpsert/);
+  assert.match(server,/gameTemplateList/);
+  assert.match(server,/\/api\/gm\/game-templates/);
+  assert.match(server,/preloadedAt/);
+  assert.match(server,/defaultActionSec/);
+  assert.match(server,/actionDurationSec/);
+  assert.match(app,/\/api\/gm\/game-templates/);
+  assert.match(html,/playVillageDiscussionSec/);
+  assert.match(html,/playWolfDiscussionSec/);
+  assert.match(html,/playDefaultActionSec/);
+  const start=server.indexOf('async publicState()'),end=server.indexOf('async gmAuthorized',start),publicState=server.slice(start,end);
+  assert.doesNotMatch(publicState,/gameConfig|gameTemplate/);
+});
+
+test('V1.09 preservation contract keeps existing engine and local settings while changing Play flow',()=>{
+  assert.match(app,/OLD_STATE_KEYS=\['GMWW_V255_STATE'/);
+  assert.match(app,/DB_NAME='GMWW_V208_THEME_ASSETS'/);
+  assert.match(app,/auditLocalData/);
+  assert.match(app,/clearSafeRuntimeCache/);
+  assert.match(app,/applyActiveThemeUi/);
+  assert.match(app,/audio_card_role_wolf/);
 });
