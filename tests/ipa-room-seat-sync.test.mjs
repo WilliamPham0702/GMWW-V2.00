@@ -8,13 +8,16 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.50 creates offline/online rooms with a fixed seat count',()=>{
-  assert.match(app,/const VERSION='2\.50'/);
-  assert.match(html,/GMWW V2\.50/);
+test('IPA V2.55 creates offline/online rooms with a fixed seat count',()=>{
+  assert.match(app,/const VERSION='2\.55'/);
+  assert.match(html,/GMWW V2\.55/);
   assert.match(app,/roomMode:playSceneState\.roomMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
   assert.match(html,/id="playSeatCount"/);
+  assert.match(html,/data-play-seat-move="instant"/);
+  assert.match(html,/data-play-seat-move="walk"/);
+  assert.match(app,/seatMoveMode:playSceneState\.seatMoveMode/);
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
@@ -33,6 +36,10 @@ test('Server preserves disconnected seats and exposes GM seat control',()=>{
   assert.match(server,/body\?\.swap===true/);
   assert.match(server,/body\?\.replace===true/);
   assert.match(server,/gmSeatRoute/);
+  assert.match(server,/async playerMove\(body\)/);
+  assert.match(server,/async playerMoveComplete\(body\)/);
+  assert.match(server,/moveTargetSeatId/);
+  assert.match(server,/seatClaimConflict/);
 });
 
 test('Server keeps compatibility fields and room directory settings',()=>{
