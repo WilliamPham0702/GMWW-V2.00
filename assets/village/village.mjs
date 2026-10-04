@@ -52,12 +52,13 @@ if(game){
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){let h=0;for(const ch of String(id||""))h=(h*31+ch.charCodeAt(0))>>>0;return{x:18+(h%6400)/100,y:69+((h>>>8)%1700)/100}}
   function movementPosition(data,seatPos=null,now=Date.now()){
-    if(data?.movementStatus==="moving"&&data?.moveStartedAt&&data?.moveDurationMs&&Number.isFinite(Number(data?.moveFromX))&&Number.isFinite(Number(data?.moveToX))){
+    const validCoord=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
+    if(data?.movementStatus==="moving"&&data?.moveStartedAt&&data?.moveDurationMs&&[data?.moveFromX,data?.moveFromY,data?.moveToX,data?.moveToY].every(validCoord)){
       const t=Math.max(0,Math.min(1,(now-Number(data.moveStartedAt))/Math.max(1,Number(data.moveDurationMs)))),e=easeMove(t);
       return{x:Number(data.moveFromX)+(Number(data.moveToX)-Number(data.moveFromX))*e,y:Number(data.moveFromY)+(Number(data.moveToY)-Number(data.moveFromY))*e,progress:t,moving:t<1}
     }
     if(seatPos)return{x:seatPos.x,y:seatPos.y,progress:1,moving:false};
-    const fallback=spawnPosition(data?.id);return{x:Number.isFinite(Number(data?.positionX))?Number(data.positionX):fallback.x,y:Number.isFinite(Number(data?.positionY))?Number(data.positionY):fallback.y,progress:1,moving:false}
+    const fallback=spawnPosition(data?.id);return{x:validCoord(data?.positionX)?Number(data.positionX):fallback.x,y:validCoord(data?.positionY)?Number(data.positionY):fallback.y,progress:1,moving:false}
   }
   function makePlayerButton(data,position,seatId=null,index=0){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
