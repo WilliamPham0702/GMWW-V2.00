@@ -67,20 +67,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .face-switch button.active{background:#173d58;color:#fff}.face{display:none}.face.active{display:block}
 
 .player-card{
-  --faction:#4fdcff;--factionSoft:rgba(79,220,255,.18);
-  max-width:390px;margin:0 auto;border:2px solid var(--faction);border-radius:22px;overflow:hidden;
-  background:linear-gradient(180deg,#071729,#040c16);box-shadow:0 0 0 1px rgba(255,255,255,.04),0 16px 42px rgba(0,0,0,.42),0 0 24px var(--factionSoft)
+  --faction:#bc92ff;
+  width:min(100%,390px);aspect-ratio:4/5;margin:0 auto;border:3px solid var(--faction);border-radius:18px;overflow:hidden;display:grid;grid-template-rows:8fr 1fr 3fr;
+  background:#f4eddc;box-shadow:0 18px 44px rgba(0,0,0,.38),0 0 22px color-mix(in srgb,var(--faction) 30%,transparent),inset 0 0 0 1px rgba(255,244,202,.82)
 }
-.player-card.village{--faction:#54d6a0;--factionSoft:rgba(84,214,160,.18)}
-.player-card.wolf{--faction:#ff5d66;--factionSoft:rgba(255,93,102,.18)}
-.player-card.third{--faction:#f0c86c;--factionSoft:rgba(240,200,108,.18)}
-.player-card.artifact{--faction:#bc92ff;--factionSoft:rgba(188,146,255,.18)}
-.card-zone{border-bottom:1px solid color-mix(in srgb,var(--faction) 55%,transparent)}.card-zone:last-child{border-bottom:0}
-.card-zone-head{min-height:54px;padding:9px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:linear-gradient(180deg,var(--factionSoft),rgba(7,20,32,.94))}
-.player-title{font-family:Georgia,"Times New Roman",serif;font-weight:950;font-size:24px;line-height:1.04;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.6);overflow:hidden;text-overflow:ellipsis}
-.player-faction-badge{border:1px solid var(--faction);background:rgba(4,12,20,.72);border-radius:999px;padding:6px 9px;color:var(--faction);font-size:12px;font-weight:900;white-space:nowrap}
-.card-zone-art{width:100%;height:auto;aspect-ratio:auto;background:#030810;overflow:hidden;display:block}.card-zone-art img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center}
-.card-zone-info{padding:12px 13px 14px;color:#f4f8fb;font-size:14.5px;line-height:1.28;white-space:pre-line;text-align:justify;text-align-last:left;word-spacing:normal;min-height:84px;background:linear-gradient(180deg,rgba(7,22,34,.96),rgba(3,11,18,.98))}
+.player-card.village{--faction:#35c779}.player-card.wolf{--faction:#ef5555}.player-card.third{--faction:#f0a332}.player-card.artifact{--faction:#bc92ff}
+.card-zone{border-bottom:1px solid color-mix(in srgb,var(--faction) 52%,transparent)}.card-zone:last-child{border-bottom:0}
+.card-zone-head{position:relative;min-height:0;padding:7px 50px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fbf6e9,#f1e7d1)}
+.player-title{min-width:0;width:100%;font-family:Georgia,"Times New Roman",serif;font-weight:950;font-size:25px;line-height:1.04;color:#98691f;text-align:center;text-shadow:0 1px 0 #fff;overflow:visible;text-overflow:clip;white-space:nowrap}
+.player-faction-badge{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:34px;height:34px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--faction) 72%,#2b1e10);background:var(--faction);border-radius:8px;padding:0;color:#fff;font-size:18px;line-height:1;font-weight:900;white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 2px 6px rgba(0,0,0,.16)}
+.card-zone-art{width:100%;height:100%;aspect-ratio:6/5;background:#05070c;overflow:hidden;display:block}.card-zone-art img{display:block;width:100%;height:100%;max-height:none;object-fit:contain;object-position:center}
+.card-zone-info{padding:11px 15px 14px;color:#263b40;font-size:14px;line-height:1.32;white-space:pre-line;text-align:left;word-spacing:normal;min-height:0;overflow:auto;background:linear-gradient(180deg,#f7f0df,#eee3ca)}
 
 .settings-card{border:1px solid rgba(157,224,255,.15);background:linear-gradient(180deg,#0d263c,#071827);border-radius:16px;padding:11px;margin-bottom:9px}
 .settings-card h3{font-size:16px;margin:0 0 9px;color:#f0d089}.settings-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.settings-title h3{margin:0}
