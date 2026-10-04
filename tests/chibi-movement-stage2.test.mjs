@@ -58,6 +58,13 @@ test('Player Web supports free roaming, walk-to-seat, reconnect completion and d
   assert.match(live,/ĐỔI GHẾ/);
 });
 
+test('null movement coordinates never become zero-zero movement',()=>{
+  assert.match(live,/validCoord=v=>v!==null&&v!==undefined&&v!==''/);
+  assert.match(live,/x===null\|\|x===undefined\|\|x===''\|\|y===null/);
+  assert.match(village,/const validCoord=v=>v!==null&&v!==undefined&&v!==""/);
+  assert.match(gm,/vals\.some\(v=>v===null\|\|v===undefined\|\|v===''\|\|!Number\.isFinite/);
+});
+
 test('village animates chibi and reports arrival to parent',()=>{
   assert.match(village,/movementPosition/);
   assert.match(village,/requestAnimationFrame\(animateMovementFrame\)/);
