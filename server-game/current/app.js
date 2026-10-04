@@ -1331,8 +1331,9 @@ function renderPlayContext(){
     if(k)k.textContent=step.k;if(t)t.textContent=step.t;
     if(x){
       if(isLivePlayRoom()&&(playSceneState.step==='room'||playSceneState.step==='members')){const s=playSeatStats();x.textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneState.roomMode==='offline'?'OFFLINE':'ONLINE')+' • '+s.occupied+'/'+s.seatCount+' ghế có người • '+s.available+' ghế trống.'}
-      else if(playSceneState.step==='game')x.textContent=(playSceneRuntime.gameConfig?.name||playSceneState.gameName||'Chưa chọn Ván')+' • '+playRolePlanTotal()+'/'+playLiveMembers().length+' Vai Trò.';
-      else if(playSceneState.step==='roles')x.textContent='Đã cấu hình '+playRolePlanTotal()+' Vai Trò. Nhấn PHÂN VAI để chia ngẫu nhiên cho roster.';
+      else if(playSceneState.step==='game')x.textContent=(playSceneRuntime.gameConfig?.name||playSceneState.gameName||'Chưa chọn Ván Mẫu')+' • '+playRolePlanTotal()+'/'+playLiveMembers().length+' Vai Trò.';
+      else if(playSceneState.step==='seats'){const st=playSeatStats();x.textContent=st.occupied+'/'+st.seatCount+' ghế đã có người • '+st.available+' ghế còn trống'+(playSceneRuntime.room?.seatsLocked?' • ĐÃ KHÓA GHẾ':'');}
+      else if(playSceneState.step==='roles')x.textContent='Đã cấu hình '+playRolePlanTotal()+' Vai Trò. Nhấn PHÂN VAI để chia ngẫu nhiên; chưa gửi xuống Player Web.';
       else if(playSceneState.step==='deal')x.textContent=(playSceneState.assignmentsPreview?.length||0)+'/'+playLiveMembers().length+' Thành Viên đã được phân. Nhấn PHÁT VAI để gửi lên Player Web.';
       else x.textContent=playSceneRuntime.lastError||step.x;
     }
@@ -1342,12 +1343,24 @@ function renderPlayContext(){
         actions.querySelector('[data-play-reroll-role]')?.addEventListener('click',()=>playBuildAssignments({preserveArtifacts:true}));
         actions.querySelector('[data-play-reroll-artifact]')?.addEventListener('click',playRerollArtifacts);
         actions.querySelector('[data-play-cycle-artifact]')?.addEventListener('click',playCycleActiveArtifact);
-      }else{
-        const s=playSeatStats(),live=isLivePlayRoom();actions.innerHTML='<button class="play-action-chip '+(playSceneState.roomMode==='offline'?'active':'')+'" data-play-room-mode="offline" type="button"><span>◉</span><b>OFFLINE</b></button><button class="play-action-chip '+(playSceneState.roomMode==='online'?'active':'')+'" data-play-room-mode="online" type="button"><span>◎</span><b>ONLINE</b></button><button class="play-action-chip '+(playSceneState.seatMoveMode==='instant'?'active':'')+'" data-play-seat-move="instant" type="button"><span>＋</span><b>CHỌN GHẾ NGAY</b></button><button class="play-action-chip '+(playSceneState.seatMoveMode==='walk'?'active':'')+'" data-play-seat-move="walk" type="button"><span>➜</span><b>CHIBI ĐI TỚI GHẾ</b></button>'+(live?'<button class="play-action-chip play-seat-total" type="button" disabled><span>◌</span><b>'+s.occupied+'/'+s.seatCount+' ghế</b></button><button class="play-action-chip" data-play-add-seat type="button"><span>＋</span><b>Thêm ghế</b></button>':'<label class="play-slot-picker"><span>SỐ GHẾ</span><input id="playSeatCount" type="number" min="1" max="30" step="1" value="'+s.seatCount+'"></label>');
-        actions.querySelector('[data-play-add-seat]')?.addEventListener('click',playAddSeat);const input=actions.querySelector('#playSeatCount');if(input)input.addEventListener('change',()=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(input.value)||12));input.value=String(playSceneState.seatCount);savePlayScene();renderPlayPlayers()})
-      }
+      }else if(playSceneState.step==='room'){
+        const st=playSeatStats();actions.innerHTML='<button class="play-action-chip '+(playSceneState.roomMode==='online'?'active':'')+'" data-play-room-mode="online" type="button"><span>◎</span><b>ONLINE</b></button><button class="play-action-chip '+(playSceneState.roomMode==='offline'?'active':'')+'" data-play-room-mode="offline" type="button"><span>◉</span><b>OFFLINE</b></button>'+(isLivePlayRoom()?'<button class="play-action-chip play-seat-total" disabled><span>⌁</span><b>'+playEsc(playSceneState.roomCode)+'</b></button>':'<label class="play-slot-picker"><span>SỐ GHẾ</span><input id="playSeatCount" type="number" min="1" max="30" step="1" value="'+st.seatCount+'"></label>');
+        const input=actions.querySelector('#playSeatCount');if(input)input.addEventListener('change',()=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(input.value)||12));input.value=String(playSceneState.seatCount);savePlayScene()});
+        bindPlayRoomModeButtons()
+      }else if(playSceneState.step==='members'){
+        const chosen=(playSceneState.selectedMemberIds||[]).length,online=(memberAdminState.members||[]).filter(m=>m?.online).length;
+        actions.innerHTML=playSceneState.roomMode==='online'?'<button class="play-action-chip active" disabled><span>●</span><b>'+chosen+' đã chọn / '+online+' Online</b></button>':'<button class="play-action-chip active" data-play-open-roster type="button"><span>☰</span><b>Danh sách Người Chơi</b></button>';
+        actions.querySelector('[data-play-open-roster]')?.addEventListener('click',openPlayRosterSheet)
+      }else if(playSceneState.step==='game'){
+        actions.innerHTML='<button class="play-action-chip active" type="button" disabled><span>▣</span><b>'+playEsc(playSceneState.gameName||'Ván Mẫu')+'</b></button>'
+      }else if(playSceneState.step==='seats'){
+        const st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
+        actions.innerHTML='<button class="play-action-chip '+(playSceneState.seatMoveMode==='instant'?'active':'')+'" data-play-seat-move="instant" type="button"><span>＋</span><b>CHỌN GHẾ</b></button><button class="play-action-chip '+(playSceneState.seatMoveMode==='walk'?'active':'')+'" data-play-seat-move="walk" type="button"><span>➜</span><b>ĐI TỚI GHẾ</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>PHÂN GHẾ CÒN LẠI</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA GHẾ':'KHÓA GHẾ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>🪑</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
+        actions.querySelector('[data-play-random-seats]')?.addEventListener('click',playRandomSeatRemaining);
+        actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>playSetSeatLock(!locked));
+        bindPlaySeatMoveButtons()
+      }else actions.innerHTML='';
     }
-    bindPlayRoomModeButtons();bindPlaySeatMoveButtons();
   }
   if(actions&&playSceneState.step==='battle'&&playSceneState.activePlayerId){
     const m=playLiveMembers().find(p=>String(p?.loginId||'')===String(playSceneState.activePlayerId)),stateLabel=playPlayerEffect(playSceneState.activePlayerId);
