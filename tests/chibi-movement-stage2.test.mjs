@@ -46,6 +46,7 @@ test('server exposes authenticated movement, arrival and optional seat mode',()=
   assert.match(server,/MOVE_NOT_ARRIVED/);
   assert.match(server,/SEAT_TAKEN/);
   assert.match(server,/movementStatus="moving"/);
+  assert.match(server,/normalizeVillagePoint/);
 });
 
 test('Player Web supports free roaming, walk-to-seat, reconnect completion and direct-seat fallback',()=>{
@@ -55,7 +56,7 @@ test('Player Web supports free roaming, walk-to-seat, reconnect completion and d
   assert.match(live,/scheduleMovementCompletion/);
   assert.match(live,/move\/complete/);
   assert.match(live,/seatMoveMode\|\|'instant'/);
-  assert.match(live,/ĐỔI GHẾ/);
+  assert.match(live,/ĐỔI VỊ TRÍ/);
 });
 
 test('null movement coordinates never become zero-zero movement',()=>{
@@ -72,6 +73,8 @@ test('village animates chibi and reports arrival to parent',()=>{
   assert.match(village,/gmww:seat-click/);
   assert.match(village,/gmww:ground-click/);
   assert.match(village,/moveTargetSeatId/);
+  assert.match(village,/normalizeVillagePoint/);
+  assert.match(village,/aria-hidden="true">＋/);
 });
 
 test('GM IPA exposes the movement option and renders moving players',()=>{
@@ -79,4 +82,7 @@ test('GM IPA exposes the movement option and renders moving players',()=>{
   assert.match(gm,/data-play-seat-move="walk"/);
   assert.match(gm,/playMovementPoint/);
   assert.match(gm,/is-moving/);
+  assert.match(gm,/playSafeVillagePoint/);
+  assert.match(gm,/play-position-plus/);
+  assert.doesNotMatch(gm,/🪑/);
 });

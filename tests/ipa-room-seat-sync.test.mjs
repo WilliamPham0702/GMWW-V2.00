@@ -22,7 +22,7 @@ test('IPA V2.59 creates offline/online rooms with a fixed seat count',()=>{
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
   assert.match(app,/bySeat=new Map\(playLiveMembers\(\)\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
-  assert.match(app,/S'\+seatId\+' · '/);
+  assert.match(app,/V'\+seatId\+' · '/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
   assert.match(app,/memberAvatarUrl\(m\.avatarId\)/);
   assert.match(html,/id="playSeatSheet"/);
@@ -86,7 +86,7 @@ test('GM Play is an immersive seven-stage village flow',()=>{
   assert.match(app,/playRandomSeatRemaining/);
 });
 
-test('chair stage preserves occupied seats, supports swap/random remainder and seat lock',()=>{
+test('position stage preserves occupied positions, supports swap/random remainder and position lock',()=>{
   assert.match(app,/remaining=playLiveMembers\(\)\.filter\(m=>!Number\(m\?\.seatId\|\|0\)\)/);
   assert.match(app,/updateSelectedPlayerSeat\(\{seatId:Number\(m\.seatId\),swap:true\}\)/);
   assert.match(app,/\/seats\/randomize-remaining/);
@@ -95,6 +95,8 @@ test('chair stage preserves occupied seats, supports swap/random remainder and s
   assert.match(server,/gmRandomSeatsRoute/);
   assert.match(server,/seatsRandomized:true/);
   assert.match(app,/\/seat-lock/);
+  assert.match(app,/play-position-plus/);
+  assert.doesNotMatch(app,/🪑/);
   assert.match(server,/async gmSeatLock\(/);
   assert.match(server,/meta\.seatsLocked/);
   assert.match(server,/error:"SEATS_LOCKED"/);

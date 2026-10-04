@@ -872,9 +872,9 @@ body.play-immersive .play-player-token{width:58px}
 body.play-immersive .play-player-avatar{width:46px;height:46px}
 .play-player-token.is-roster-selected .play-player-avatar{box-shadow:0 0 0 4px #7bffcf,0 8px 18px rgba(0,0,0,.28)}
 .play-player-token.is-roster-selected small{background:#75efc9;color:#073f42}
-.play-player-token.is-chair .play-player-avatar{background:rgba(253,246,207,.82);border:1px solid rgba(255,226,116,.9);box-shadow:0 5px 12px rgba(30,22,0,.22)}
-.play-chair-icon{font-size:27px!important;background:transparent!important;color:inherit!important}
-.play-player-token.is-chair b{background:rgba(7,73,85,.78)}
+.play-player-token.is-position .play-player-avatar{background:rgba(253,246,207,.82);border:1px solid rgba(255,226,116,.9);box-shadow:0 5px 12px rgba(30,22,0,.22)}
+.play-position-plus{font-size:27px!important;background:transparent!important;color:inherit!important}
+.play-player-token.is-position b{background:rgba(7,73,85,.78)}
 .play-player-ring.is-seating .play-player-token{z-index:22}
 
 /* Ván Mẫu timing + server preload */
@@ -929,7 +929,7 @@ body.play-immersive #start .play-player-avatar img{width:100%;height:100%;object
 #start .play-player-token small{font-size:8px;line-height:1.25;white-space:nowrap;background:rgba(3,19,31,.9);color:#bedcdb;padding:2px 5px}
 #start .play-player-token.is-active .play-player-avatar{box-shadow:none;filter:drop-shadow(0 0 5px #ffee79)}
 #start .play-player-token.is-roster-selected .play-player-avatar{box-shadow:none;filter:drop-shadow(0 0 5px #75efc9)}
-body.play-immersive #start .play-player-token.is-chair .play-player-avatar{width:40px;height:42px;background:none;filter:drop-shadow(0 3px 2px #0006)}
+body.play-immersive #start .play-player-token.is-position .play-player-avatar{width:40px;height:42px;background:none;filter:drop-shadow(0 3px 2px #0006)}
 body.play-immersive #start .play-player-ring.is-dense .play-player-token{width:58px}
 body.play-immersive #start .play-player-ring.is-dense .play-player-avatar{width:46px;height:60px}
 #start .play-player-ring.is-dense .play-player-token b{font-size:8px}
@@ -947,3 +947,8 @@ body.play-immersive #start .play-primary-control b{font-size:10px;letter-spacing
 body.play-immersive #start .play-exit-control{background:#532d32;color:#ffe4dd}
 body.play-immersive #start .play-end-control{background:#574320;color:#fff0be}
 @media(prefers-reduced-motion:reduce){#start .play-core-pearl{animation:none}}
+
+/* V2.59 courtyard slots: no chair objects; flame belongs to the approved night artwork only. */
+.play-position-plus{font-size:30px!important;font-weight:1000!important;line-height:1!important;color:#075f7a!important;background:transparent!important}
+.play-player-token.is-position .play-player-avatar{display:grid;place-items:center;border-radius:50%;background:rgba(232,255,250,.78);border:2px dashed rgba(18,164,183,.72);box-shadow:0 0 0 4px rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.18)}
+body.play-immersive #start .play-core-pearl{display:none!important}

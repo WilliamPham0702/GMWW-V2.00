@@ -48,3 +48,8 @@ html.embedded .fire{display:block!important}
 @keyframes gmwwVillageWalk{to{transform:translateY(-5px) rotate(1deg)}}
 html.embedded .stage.setup-walk{cursor:crosshair}
 @media(prefers-reduced-motion:reduce){.player.moving .portrait.game-character{animation:none!important}}
+
+/* V2.59 courtyard position markers. */
+.seat-empty .seat-dot{display:grid;place-items:center;font-size:24px;font-weight:1000;line-height:1;color:#eaffff}
+html.embedded .seat-empty b{display:none!important}
+.fire{display:none!important}

@@ -3,13 +3,16 @@ import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./villag
 import {startVillagePerformanceReporter} from "./village-performance.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
+export function normalizeVillagePoint(x,y,fallbackX=50,fallbackY=76){
+  const rawY=Number(y),fy=Number(fallbackY),py=Math.max(34,Math.min(86,Number.isFinite(rawY)?rawY:(Number.isFinite(fy)?fy:76)));
+  const half=py<44?30+(py-34)*1.2:py>76?42-(py-76)*.8:42,rawX=Number(x),fx=Number(fallbackX),px=Math.max(50-half,Math.min(50+half,Number.isFinite(rawX)?rawX:(Number.isFinite(fx)?fx:50)));
+  return{x:Math.round(px*100)/100,y:Math.round(py*100)/100};
+}
 export function positions(count){
   if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");
-  const rings=count<=12?[count]:[Math.min(12,count),count-12],out=[];
-  rings.forEach((n,r)=>{const radius=rings.length===1?Math.min(34,12+count*1.9):r===0?25:42;
-    for(let i=0;i<n;i++){const angle=2*Math.PI*(i/n)+(r===1?Math.PI/n:0)-Math.PI/2;
-      out.push({x:50+radius*Math.cos(angle),y:57+radius*.68*Math.sin(angle),ring:r});}
-  });return out;
+  const ringSizes=count<=12?[count]:[Math.ceil(count/2),Math.floor(count/2)],defs=count<=12?[[Math.min(34,18+count*1.35),16,52]]:[[38,18,52],[26,12,52]],out=[];
+  ringSizes.forEach((n,r)=>{const [rx,ry,cy]=defs[r]||defs[defs.length-1];for(let i=0;i<n;i++){const angle=2*Math.PI*(i/n)+(r===1?Math.PI/n:0)-Math.PI/2;const p=normalizeVillagePoint(50+rx*Math.cos(angle),cy+ry*Math.sin(angle));out.push({...p,ring:r});}});
+  return out;
 }
 export function safeText(v){return String(v??"").slice(0,80)}
 export function mapPublicPlayers(state){
@@ -50,15 +53,15 @@ if(game){
   }
   let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""},moveFrame=0,arrivalNotified=new Set();
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
-  function spawnPosition(id){let h=0;for(const ch of String(id||""))h=(h*31+ch.charCodeAt(0))>>>0;return{x:18+(h%6400)/100,y:69+((h>>>8)%1700)/100}}
+  function spawnPosition(id){let h=0;for(const ch of String(id||""))h=(h*31+ch.charCodeAt(0))>>>0;return normalizeVillagePoint(18+(h%6400)/100,69+((h>>>8)%1700)/100)}
   function movementPosition(data,seatPos=null,now=Date.now()){
     const validCoord=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
     if(data?.movementStatus==="moving"&&data?.moveStartedAt&&data?.moveDurationMs&&[data?.moveFromX,data?.moveFromY,data?.moveToX,data?.moveToY].every(validCoord)){
-      const t=Math.max(0,Math.min(1,(now-Number(data.moveStartedAt))/Math.max(1,Number(data.moveDurationMs)))),e=easeMove(t);
-      return{x:Number(data.moveFromX)+(Number(data.moveToX)-Number(data.moveFromX))*e,y:Number(data.moveFromY)+(Number(data.moveToY)-Number(data.moveFromY))*e,progress:t,moving:t<1}
+      const t=Math.max(0,Math.min(1,(now-Number(data.moveStartedAt))/Math.max(1,Number(data.moveDurationMs)))),e=easeMove(t),p=normalizeVillagePoint(Number(data.moveFromX)+(Number(data.moveToX)-Number(data.moveFromX))*e,Number(data.moveFromY)+(Number(data.moveToY)-Number(data.moveFromY))*e);
+      return{...p,progress:t,moving:t<1}
     }
-    if(seatPos)return{x:seatPos.x,y:seatPos.y,progress:1,moving:false};
-    const fallback=spawnPosition(data?.id);return{x:validCoord(data?.positionX)?Number(data.positionX):fallback.x,y:validCoord(data?.positionY)?Number(data.positionY):fallback.y,progress:1,moving:false}
+    if(seatPos){const p=normalizeVillagePoint(seatPos.x,seatPos.y);return{...p,progress:1,moving:false}}
+    const fallback=spawnPosition(data?.id),p=normalizeVillagePoint(validCoord(data?.positionX)?Number(data.positionX):fallback.x,validCoord(data?.positionY)?Number(data.positionY):fallback.y,fallback.x,fallback.y);return{...p,progress:1,moving:false}
   }
   function makePlayerButton(data,position,seatId=null,index=0){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
@@ -73,8 +76,8 @@ if(game){
     if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img)}
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=data.movementStatus==="moving"?"➜":data.ready?"✓":data.online?"●":"○";
-    button.append(avatar,stateTag,name);button.setAttribute("aria-label",(actualSeat?("Ghế "+actualSeat+" · "):"")+" "+playerName);
-    button.addEventListener("click",e=>{e.stopPropagation();selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Ghế "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
+    button.append(avatar,stateTag,name);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
+    button.addEventListener("click",e=>{e.stopPropagation();selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
     return button
   }
   function render(){
@@ -85,8 +88,8 @@ if(game){
     ps.forEach((p,i)=>{
       const seatId=i+1,data=seatMap.get(seatId)||(!liveRoom&&!embedded?(all[i]||sample[i]):null);
       if(!data){
-        const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);empty.style.left=p.x+"%";empty.style.top=p.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot"></span><b>'+(reserved?'Đang tới ':'Ghế ')+seatId+'</b>';
-        empty.setAttribute("aria-label","Ghế "+seatId+(reserved?" đang được chọn":" đang trống"));
+        const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);empty.style.left=p.x+"%";empty.style.top=p.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot" aria-hidden="true">＋</span><b>'+(reserved?'Đang tới ':'Vị trí ')+seatId+'</b>';
+        empty.setAttribute("aria-label","Vị trí "+seatId+(reserved?" đang được chọn":" đang trống"));
         if(embedded&&setupState.enabled&&!reserved)empty.addEventListener("click",e=>{e.stopPropagation();try{window.parent.postMessage({type:"gmww:seat-click",seatId,x:p.x,y:p.y},window.location.origin)}catch{}});
         else empty.disabled=true;players.append(empty);return
       }
@@ -142,7 +145,7 @@ if(game){
   if(embedded){
     document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
     document.getElementById("mode").hidden=true;
-    const stage=document.querySelector(".stage");stage.addEventListener("click",event=>{if(!setupState.enabled||!setupState.walkEnabled)return;if(event.target.closest(".player,.seat-empty,.hud,.scene-controls"))return;const r=stage.getBoundingClientRect(),x=Math.max(6,Math.min(94,(event.clientX-r.left)/Math.max(1,r.width)*100)),y=Math.max(24,Math.min(90,(event.clientY-r.top)/Math.max(1,r.height)*100));try{window.parent.postMessage({type:"gmww:ground-click",x,y},window.location.origin)}catch{}});
+    const stage=document.querySelector(".stage");stage.addEventListener("click",event=>{if(!setupState.enabled||!setupState.walkEnabled)return;if(event.target.closest(".player,.seat-empty,.hud,.scene-controls"))return;const r=stage.getBoundingClientRect(),p=normalizeVillagePoint((event.clientX-r.left)/Math.max(1,r.width)*100,(event.clientY-r.top)/Math.max(1,r.height)*100);try{window.parent.postMessage({type:"gmww:ground-click",x:p.x,y:p.y},window.location.origin)}catch{}});
 
     window.addEventListener("message",event=>{
       if(event.origin!==window.location.origin||event.source!==window.parent)return;
