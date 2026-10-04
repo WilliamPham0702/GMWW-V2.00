@@ -1120,7 +1120,7 @@ let playSceneState=(()=>{
   const base={step:'room',roomMode:'offline',seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY);if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw)break}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1213,6 +1213,11 @@ async function playSyncRoom(force=false){
   }
 }
 function playMovementPoint(m,pos){if(m?.movementStatus!=='moving'||!m?.moveStartedAt||!m?.moveDurationMs)return pos;const t=Math.max(0,Math.min(1,(Date.now()-Number(m.moveStartedAt))/Math.max(1,Number(m.moveDurationMs)))),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return[Number(m.moveFromX)+(Number(m.moveToX)-Number(m.moveFromX))*e,Number(m.moveFromY)+(Number(m.moveToY)-Number(m.moveFromY))*e]}
+function syncPlayMovementTicker(){
+  const moving=playLiveMembers().some(p=>p?.movementStatus==='moving');
+  if(moving&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=setInterval(()=>{if(!playLiveMembers().some(p=>p?.movementStatus==='moving')){clearInterval(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0;return}renderPlayPlayers()},100);
+  else if(!moving&&playSceneRuntime.moveTicker){clearInterval(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}
+}
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const members=playLiveMembers(),{seatCount}=playSeatStats(),positions=playSeatPositions(seatCount),bySeat=new Map(members.filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),unseated=members.filter(m=>!Number(m?.seatId||0));ring.innerHTML='';ring.classList.toggle('is-dense',seatCount>16);
@@ -1226,6 +1231,7 @@ function renderPlayPlayers(){
   };
   for(let i=0;i<seatCount;i++){const seatId=i+1,m=bySeat.get(seatId)||null,pos=positions[i]||[50,24];make(m,pos,seatId)}
   for(const m of unseated){const x=Number(m?.moveToX??m?.positionX??50)||50,y=Number(m?.moveToY??m?.positionY??78)||78;make(m,[x,y],null)}
+  syncPlayMovementTicker();
 }
 async function renderPlayCards(){
   const selected=(playSceneRuntime.assignments.length?playSceneRuntime.assignments:(Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[])).find(a=>String(a?.loginId||'')===String(playSceneState.activePlayerId||'')),selectedRoleId=String(selected?.roleId||playSceneState.roleId||'');
@@ -1597,7 +1603,7 @@ function initPlayScene(){
   document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
-  bindPlayRoomModeButtons();renderPlayScene();if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
+  bindPlayRoomModeButtons();bindPlaySeatMoveButtons();renderPlayScene();if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
   if(!playSceneRuntime.pollTimer)playSceneRuntime.pollTimer=setInterval(()=>{if(document.getElementById('start')?.classList.contains('active')&&isLivePlayRoom())playSyncRoom(false)},4000);
 }
 document.querySelectorAll('[data-page="start"]').forEach(el=>el.addEventListener('click',()=>setTimeout(async()=>{try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()},40)));
