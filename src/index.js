@@ -3,6 +3,7 @@ import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
+import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V2.55",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
@@ -708,10 +709,7 @@ export class RoomDurableObject extends DurableObject {
     if(!targetSeatId&&normalizeSeatId(p.seatId,seatCount))return j({ok:false,error:"SEATED_MOVE_REQUIRES_TARGET",message:"Đã ngồi ghế. Hãy chọn ghế mới để đổi chỗ."},409);
     if(targetSeatId){
       if(Number(p.seatId||0)===targetSeatId)return j({ok:true,already:true,room:publicRoom(meta),player:publicPlayer(p),players:Object.values(players).map(publicPlayer)});
-      for(const [otherId,other] of Object.entries(players)){
-        if(otherId===id)continue;
-        if(Number(other?.seatId||0)===targetSeatId||Number(other?.moveTargetSeatId||0)===targetSeatId)return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+targetSeatId+" đã có người chọn.",seatId:targetSeatId,occupant:publicPlayer(other)},409);
-      }
+      const conflict=seatClaimConflict(players,id,targetSeatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+targetSeatId+" đã có người chọn.",seatId:targetSeatId,occupant:publicPlayer(conflict.player)},409);
     }
     const now=Date.now(),from=currentMovementPosition(p,now,body?.fromX,body?.fromY),to={x:normalizeVillageCoord(body?.x,from.x),y:normalizeVillageCoord(body?.y,from.y)},distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(450,Math.min(4200,Math.trunc(Number(body?.durationMs)||distance*42||650))),moveId=String(body?.moveId||crypto.randomUUID()).slice(0,120);
     p.positionX=from.x;p.positionY=from.y;p.moveId=moveId;p.moveFromX=from.x;p.moveFromY=from.y;p.moveToX=to.x;p.moveToY=to.y;p.moveStartedAt=now;p.moveDurationMs=duration;p.moveTargetSeatId=targetSeatId;p.movementStatus="moving";p.ready=false;p.lastHeartbeatAt=now;p.lastSeenAt=new Date(now).toISOString();players[id]=p;
@@ -725,10 +723,10 @@ export class RoomDurableObject extends DurableObject {
     const moveId=String(body?.moveId||"");
     if(!p.moveId||p.movementStatus!=="moving"){if(moveId&&String(p.lastMoveId||"")===moveId)return j({ok:true,idempotent:true,room:publicRoom(meta),player:publicPlayer(p),players:Object.values(players).map(publicPlayer)});return j({ok:false,error:"MOVE_NOT_ACTIVE"},409)}
     if(moveId!==String(p.moveId))return j({ok:false,error:"MOVE_MISMATCH"},409);
-    const now=Date.now(),started=Number(p.moveStartedAt||0),duration=Math.max(1,Number(p.moveDurationMs||1));if(started&&now<started+duration*.62)return j({ok:false,error:"MOVE_NOT_ARRIVED",remainingMs:Math.max(1,Math.ceil(started+duration*.62-now))},409);
+    const now=Date.now();if(!movementArrivalReady(p,now,.62))return j({ok:false,error:"MOVE_NOT_ARRIVED",remainingMs:Math.max(1,movementRemainingMs(p,now,.62))},409);
     const targetSeatId=normalizeSeatId(p.moveTargetSeatId,meta.seatCount);
     if(targetSeatId){
-      for(const [otherId,other] of Object.entries(players))if(otherId!==id&&Number(other?.seatId||0)===targetSeatId){clearPlayerMovement(p);players[id]=p;await this.ctx.storage.put("players",players);return j({ok:false,error:"SEAT_TAKEN",message:"Ghế đã có người ngồi trước khi bạn tới.",seatId:targetSeatId},409)}
+      const conflict=seatClaimConflict(players,id,targetSeatId);if(conflict){clearPlayerMovement(p);players[id]=p;await this.ctx.storage.put("players",players);return j({ok:false,error:"SEAT_TAKEN",message:"Ghế đã có người ngồi trước khi bạn tới.",seatId:targetSeatId},409)}
       p.seatId=targetSeatId;
     }
     p.positionX=normalizeVillageCoord(p.moveToX,p.positionX);p.positionY=normalizeVillageCoord(p.moveToY,p.positionY);p.lastMoveId=String(p.moveId);clearPlayerMovement(p,{keepPosition:true});p.ready=false;p.lastHeartbeatAt=now;p.lastSeenAt=new Date(now).toISOString();players[id]=p;
