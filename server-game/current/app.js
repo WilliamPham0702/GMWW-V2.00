@@ -1234,7 +1234,7 @@ async function playSyncRoom(force=false){
     return null;
   }
 }
-function playMovementPoint(m,pos){if(m?.movementStatus!=='moving'||!m?.moveStartedAt||!m?.moveDurationMs)return pos;const t=Math.max(0,Math.min(1,(Date.now()-Number(m.moveStartedAt))/Math.max(1,Number(m.moveDurationMs)))),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return[Number(m.moveFromX)+(Number(m.moveToX)-Number(m.moveFromX))*e,Number(m.moveFromY)+(Number(m.moveToY)-Number(m.moveFromY))*e]}
+function playMovementPoint(m,pos){if(m?.movementStatus!=='moving'||!m?.moveStartedAt||!m?.moveDurationMs)return pos;const vals=[m.moveFromX,m.moveFromY,m.moveToX,m.moveToY];if(vals.some(v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))))return pos;const [fx,fy,tx,ty]=vals.map(Number),t=Math.max(0,Math.min(1,(Date.now()-Number(m.moveStartedAt))/Math.max(1,Number(m.moveDurationMs)))),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return[fx+(tx-fx)*e,fy+(ty-fy)*e]}
 function syncPlayMovementTicker(){
   const moving=playLiveMembers().some(p=>p?.movementStatus==='moving');
   if(moving&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=setInterval(()=>{if(!playLiveMembers().some(p=>p?.movementStatus==='moving')){clearInterval(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0;return}renderPlayPlayers()},100);
