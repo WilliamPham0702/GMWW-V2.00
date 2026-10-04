@@ -1410,7 +1410,7 @@ async function advancePlayPhase(){
   finally{playSetBusy(false)}
 }
 function renderPlayScene(){
-  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;
+  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;
   const phase=playSceneState.phase,night=Math.max(0,Number(playSceneState.night)||0),put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
   put('playRoomCode',playSceneState.roomCode||'—');put('playArtifactCount',Math.min(3,Math.max(0,Number(playSceneState.artifactCount)||0))+'/3');
   const auto=document.getElementById('playAutoGM');if(auto){auto.classList.toggle('is-on',!!playSceneState.autoGM);auto.setAttribute('aria-pressed',String(!!playSceneState.autoGM))}
@@ -1481,7 +1481,7 @@ async function openPlayGameSheet(){
   const roomLabel=document.getElementById('playGameRoomLabel');if(roomLabel)roomLabel.textContent='Phòng '+playSceneState.roomCode+' • '+playLiveMembers().length+' Người Chơi';
   const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName||'Ván GMWW';
   const timing=playSceneState.gameTiming||{};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=Number(timing.villageDiscussionSec??180);if(w)w.value=Number(timing.wolfDiscussionSec??60);if(d)d.value=Number(timing.defaultActionSec??45);if(a)a.checked=timing.autoAdvance!==false;
-  updatePlayArtifactToggle();sheet.classList.remove('hidden');await loadPlayGameTemplates();document.getElementById('playGameTemplateSelect')?.addEventListener('change',e=>applyPlayGameTemplate(e.target.value),{once:true});await renderPlayGameRoles();updatePlayGameRoleCount();
+  updatePlayArtifactToggle();sheet.classList.remove('hidden');await loadPlayGameTemplates();const templateSelect=document.getElementById('playGameTemplateSelect');if(templateSelect)templateSelect.onchange=e=>applyPlayGameTemplate(e.target.value);await renderPlayGameRoles();updatePlayGameRoleCount();
 }
 function closePlayGameSheet(){document.getElementById('playGameSheet')?.classList.add('hidden')}
 function suggestPlayGameRoles(){
@@ -1696,9 +1696,22 @@ async function backPlayPhase(){
   }
   if(playSceneState.phase!=='lobby'){await playSyncRoom(true);return}advancePlaySetup(-1)
 }
+async function enterPlayImmersive(){
+  document.body.classList.add('play-immersive');
+  try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
+  if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
+}
+function exitPlayImmersive(){
+  document.body.classList.remove('play-immersive');
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
+  const home=document.getElementById('home');if(home)home.scrollTop=0
+}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
+  document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
+  document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
   document.getElementById('playAutoGM')?.addEventListener('click',()=>{playSceneState.autoGM=!playSceneState.autoGM;savePlayScene();renderPlayScene()});
   document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
