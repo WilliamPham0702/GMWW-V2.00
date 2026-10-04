@@ -4,7 +4,7 @@ import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.53",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.54",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -58,6 +58,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
+    if(url.pathname==="/gm/seat"&&request.method==="POST")return this.gmSeat(request,await safeJson(request));
     if(url.pathname==="/gm/cycle"&&request.method==="POST")return this.gmCycle(request,await safeJson(request));
     if(url.pathname==="/gm/turn"&&request.method==="POST")return this.gmTurn(request,await safeJson(request));
     if(url.pathname==="/gm/enabled"&&request.method==="POST")return this.gmEnabled(request,await safeJson(request));
@@ -154,7 +155,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminCreate(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),requestedPassword=String(body?.password||"");
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId),requestedPassword=String(body?.password||"");
     if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
@@ -163,19 +164,21 @@ export class RoomDurableObject extends DurableObject {
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     const password=requestedPassword||randomNumericPassword(12),salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();
-    const member={loginId,displayName,avatarId,passwordSalt:bytesToBase64(salt),passwordHash:await derivePasswordHash(password,salt),passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,resetRequestedAt:null,passwordResetAt:null,stats:{wins:0,losses:0},history:[]};
+    const member={loginId,displayName,avatarId,gameCharacterId:gameCharacterId||null,passwordSalt:bytesToBase64(salt),passwordHash:await derivePasswordHash(password,salt),passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,resetRequestedAt:null,passwordResetAt:null,stats:{wins:0,losses:0},history:[]};
     await this.ctx.storage.put(key,member);
     return j({ok:true,member:publicMember(member)},201)
   }
   async memberAdminEdit(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),member=await this.ctx.storage.get("member:"+loginId);
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),requestedCharacter=normalizeGameCharacterId(body?.gameCharacterId),member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy Thành Viên."},404);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeLoginId(x?.loginId)!==loginId&&normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
-    member.displayName=displayName;member.avatarId=avatarId;member.updatedAt=new Date().toISOString();
+    if(body&&Object.prototype.hasOwnProperty.call(body,"gameCharacterId")&&!requestedCharacter)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Nhân Vật game không hợp lệ."},400);
+    if(normalizeGameCharacterId(member.gameCharacterId)&&requestedCharacter&&requestedCharacter!==normalizeGameCharacterId(member.gameCharacterId))return j({ok:false,error:"GAME_CHARACTER_LOCKED",message:"Nhân Vật game đã được cố định cho tài khoản này."},409);
+    member.displayName=displayName;member.avatarId=avatarId;if(!member.gameCharacterId&&requestedCharacter)member.gameCharacterId=requestedCharacter;member.updatedAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member)})
   }
@@ -276,7 +279,7 @@ export class RoomDurableObject extends DurableObject {
     const code=normalizeRoomCode(body?.code);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
     const key="roomdir:"+code,old=await this.ctx.storage.get(key),incomingResetVersion=Math.max(0,Number(body?.resetVersion||0)),oldResetVersion=Math.max(0,Number(old?.resetVersion||0));
     if(old&&incomingResetVersion<oldResetVersion)return j({ok:true,staleIgnored:true,room:old});
-    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
+    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
     await this.ctx.storage.put(key,rec);return j({ok:true,room:rec});
   }
   async roomDirectoryList(url){
@@ -291,25 +294,10 @@ export class RoomDurableObject extends DurableObject {
   }
   async newSession(member){const token=randomToken(32),expiresAt=Date.now()+SESSION_TTL;await this.ctx.storage.put("session:"+await sha256(token),{loginId:member.loginId,expiresAt});return{token,expiresAt}}
   async pruneOfflinePlayers(meta,players){
-    const phase=String(meta?.phase||"lobby").toLowerCase(),running=["running","started","game","playing"].includes(phase);
-    if(meta?.locked&&!["ended","deleted","closed","archived"].includes(phase))return{players:players||{},removed:[]};
-    if(!["lobby","waiting","role_delivery","running","started","game","playing"].includes(phase))return{players:players||{},removed:[]};
-    const nowMs=Date.now(),removed=[];
-    for(const [id,p] of Object.entries(players||{})){
-      if(p?.reservedByGM===true)continue;
-      const hb=Number(p?.lastHeartbeatAt||0)||Date.parse(p?.lastSeenAt||p?.joinedAt||"")||0;
-      if(hb>0&&nowMs-hb<=ROOM_PLAYER_TTL)continue;
-      removed.push({...publicPlayer(p),participantId:id});
-      delete players[id];
-      if(!running&&p?.loginId){const lid=normalizeLoginId(p.loginId);await this.ctx.storage.delete("role:"+lid);await this.ctx.storage.delete("roles:"+lid)}
-      for(const ws of this.ctx.getWebSockets())try{if(ws.deserializeAttachment()?.participantId===id)ws.close(1000,"PLAYER_OFFLINE_KICKED")}catch{}
-    }
-    if(!removed.length)return{players,removed};
-    await this.ctx.storage.put("players",players);
-    if(!running){const removedLogins=new Set(removed.map(p=>normalizeLoginId(p?.loginId)).filter(Boolean)),assignments=(await this.ctx.storage.get("assignments"))||[],nextAssignments=assignments.filter(a=>!removedLogins.has(normalizeLoginId(a?.loginId)));if(nextAssignments.length!==assignments.length)await this.ctx.storage.put("assignments",nextAssignments)}
-    const now=new Date().toISOString();meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
-    this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),kicked:removed.map(p=>p.participantId),reason:"OFFLINE_TIMEOUT"});
-    return{players,removed};
+    // A disconnected player keeps the same fixed seat until explicit Leave,
+    // GM release/kick, Hard Reset, or room deletion. Presence is represented
+    // by publicPlayer().online instead of deleting the roster entry.
+    return{players:players||{},removed:[]};
   }
   async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
@@ -441,8 +429,10 @@ export class RoomDurableObject extends DurableObject {
     }
     for(const m of wanted.values()){
       const id="member:"+m.loginId,old=players[id]||{};
-      players[id]={...old,participantId:id,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId||old.avatarId||"",gameCharacterId:m.gameCharacterId||old.gameCharacterId||null,seatId:m.seatId||old.seatId||null,ready:playerSetupComplete(meta,{...old,...m})?true:false,reservedByGM:true,joinedAt:old.joinedAt||now,lastSeenAt:old.lastSeenAt||null,lastHeartbeatAt:Number(old.lastHeartbeatAt||0)||null};
+      const merged={...old,...m};
+      players[id]={...old,participantId:id,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId||old.avatarId||"",gameCharacterId:m.gameCharacterId||old.gameCharacterId||null,seatId:m.seatId||old.seatId||null,ready:playerSetupComplete(meta,merged)?!!old.ready:false,reservedByGM:true,joinedAt:old.joinedAt||now,lastSeenAt:old.lastSeenAt||null,lastHeartbeatAt:Number(old.lastHeartbeatAt||0)||null};
     }
+    enforceUniqueSeatClaims(players,meta.seatCount);
     await this.ctx.storage.put("players",players);
     const selected=new Set(wanted.keys()),assignments=(await this.ctx.storage.get("assignments"))||[],nextAssignments=assignments.filter(a=>selected.has(normalizeLoginId(a?.loginId)));
     if(nextAssignments.length!==assignments.length)await this.ctx.storage.put("assignments",nextAssignments);
@@ -461,6 +451,29 @@ export class RoomDurableObject extends DurableObject {
     meta.roomMode=roomMode;meta.seatCount=requested;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers});
     return j({ok:true,room,players:publicPlayers})
+  }
+  async gmSeat(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,phase=String(meta.phase||"lobby").toLowerCase();
+    if(["running","started","game","playing"].includes(phase))return j({ok:false,error:"SEAT_LOCKED_IN_MATCH",message:"Chỉ đổi ghế tại khu chuẩn bị vào trận."},409);
+    const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),participantId=String(body?.participantId||(loginId?("member:"+loginId):"")),player=players[participantId];
+    if(!participantId||!player)return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Không tìm thấy Người Chơi trong Phòng."},404);
+    const hasSeat=body&&Object.prototype.hasOwnProperty.call(body,"seatId"),seatId=hasSeat&&body.seatId!=null?normalizeSeatId(body.seatId,meta.seatCount):null;
+    if(hasSeat&&body.seatId!=null&&!seatId)return j({ok:false,error:"INVALID_SEAT",message:"Ghế không tồn tại trong Phòng."},400);
+    let displaced=null;
+    if(seatId){
+      const occupiedEntry=Object.entries(players).find(([id,p])=>id!==participantId&&Number(p?.seatId||0)===seatId);
+      if(occupiedEntry){
+        const [occupiedId,occupied]=occupiedEntry;
+        if(body?.swap===true){const oldSeat=normalizeSeatId(player.seatId,meta.seatCount);occupied.seatId=oldSeat;occupied.ready=false;players[occupiedId]=occupied;displaced=publicPlayer(occupied)}
+        else if(body?.replace===true){occupied.seatId=null;occupied.ready=false;players[occupiedId]=occupied;displaced=publicPlayer(occupied)}
+        else return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+seatId+" đã có "+String(occupied.displayName||"người khác")+". Chọn đổi chỗ hoặc giải phóng ghế trước.",seatId,occupant:publicPlayer(occupied)},409);
+      }
+    }
+    player.seatId=seatId;player.ready=false;players[participantId]=player;await this.ctx.storage.put("players",players);
+    meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
+    const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatUpdated:participantId});
+    return j({ok:true,room,player:publicPlayer(player),displaced,players:publicPlayers})
   }
   nightRuntimeKey(meta,night){return "nightRuntime:"+String(meta?.matchId||"match")+":"+Math.max(1,Number(night)||1)}
   async getNightRuntime(meta,night,create=false){
@@ -572,7 +585,7 @@ export class RoomDurableObject extends DurableObject {
     const softPostGame=body?.postGame===true&&body?.preserveParticipants===true;
     if(softPostGame){
       const players=(await this.ctx.storage.get("players"))||{},nextVersion=currentVersion+1;
-      for(const p of Object.values(players)){p.ready=true;p.lastHeartbeatAt=Date.now();p.lastSeenAt=now}
+      for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.lastSeenAt=now}
       await this.ctx.storage.put("players",players);await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
       for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
       meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.enabled=true;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("postgame-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
@@ -608,9 +621,9 @@ export class RoomDurableObject extends DurableObject {
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
     const phase=String(meta?.phase||"lobby").toLowerCase(),key="member:"+loginId,member=body?.member&&typeof body.member==="object"?body.member:null;let players=(await this.ctx.storage.get("players"))||{},p=players[key];
     const canRestore=!!member&&normalizeLoginId(member.loginId)===loginId&&normalizeRoomCode(member.currentRoomCode||"")===normalizeRoomCode(meta.code||"")&&!["deleted","closed","archived"].includes(phase);
-    if(!p&&canRestore){const now=new Date().toISOString();p={participantId:key,kind:"member",loginId,displayName:normalizeDisplayName(member.displayName||loginId),avatarId:String(member.avatarId||""),gameCharacterId:null,seatId:null,ready:false,joinedAt:now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:now};players[key]=p;await this.ctx.storage.put("players",players);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),resumed:loginId})}
+    if(!p&&canRestore){const now=new Date().toISOString();p={participantId:key,kind:"member",loginId,displayName:normalizeDisplayName(member.displayName||loginId),avatarId:String(member.avatarId||""),gameCharacterId:normalizeGameCharacterId(member.gameCharacterId)||null,seatId:null,ready:false,joinedAt:now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:now};players[key]=p;await this.ctx.storage.put("players",players);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),resumed:loginId})}
     if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn chưa ở trong phòng này."},403);
-    p.lastSeenAt=new Date().toISOString();p.lastHeartbeatAt=Date.now();if(member){p.displayName=normalizeDisplayName(member.displayName||p.displayName||loginId);p.avatarId=String(member.avatarId||p.avatarId||"")}players[key]=p;await this.ctx.storage.put("players",players);
+    p.lastSeenAt=new Date().toISOString();p.lastHeartbeatAt=Date.now();if(member){p.displayName=normalizeDisplayName(member.displayName||p.displayName||loginId);p.avatarId=String(member.avatarId||p.avatarId||"");p.gameCharacterId=normalizeGameCharacterId(member.gameCharacterId)||normalizeGameCharacterId(p.gameCharacterId)||null}players[key]=p;await this.ctx.storage.put("players",players);
     const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),roleRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)).slice(-10),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest);
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=storedArtifact?privateArtifact(storedArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
     return j({ok:true,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
@@ -766,6 +779,7 @@ export default {async fetch(request,env){
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
+  const gmSeatRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat$/);if(gmSeatRoute&&request.method==="POST")return roomProxy(env,gmSeatRoute[1],"/gm/seat",request);
   const gmCycle=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/cycle$/);if(gmCycle&&request.method==="POST")return roomProxy(env,gmCycle[1],"/gm/cycle",request);
   const gmTurn=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/turn$/);if(gmTurn&&request.method==="POST")return roomProxy(env,gmTurn[1],"/gm/turn",request);
   const gmEnabled=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/enabled$/);if(gmEnabled&&request.method==="POST")return gmRoomEnabled(env,gmEnabled[1],request);
@@ -884,6 +898,7 @@ function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^char
 function gameCharacterCatalog(){return Array.from({length:GAME_CHARACTER_COUNT},(_,i)=>{const n=String(i+1).padStart(2,"0"),fallback=GMWW_MEMBER_AVATARS[i%GMWW_MEMBER_AVATARS.length];return{id:"character-"+n,name:"Nhân vật "+n,imageUrl:"/api/game-characters/character-"+n+"/image",fallbackAvatarId:fallback?.id||null}})}
 async function gameCharacterImage(env,id,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/);if(!m)return new Response("Not found",{status:404});if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}const index=Number(m[1])-1,fallback=GMWW_MEMBER_AVATARS[index%GMWW_MEMBER_AVATARS.length];return fallback?avatarImage(fallback.id):new Response("Not found",{status:404})}
 function firstFreeSeat(players,seatCount,excludeId=""){const used=new Set(Object.entries(players||{}).filter(([id])=>id!==excludeId).map(([,p])=>Number(p?.seatId||0)).filter(n=>n>=1));for(let n=1;n<=normalizeSeatCount(seatCount);n++)if(!used.has(n))return n;return null}
+function enforceUniqueSeatClaims(players,seatCount){const claimed=new Set();for(const p of Object.values(players||{})){const seatId=normalizeSeatId(p?.seatId,seatCount);if(!seatId||claimed.has(seatId)){if(p){p.seatId=null;p.ready=false}continue}claimed.add(seatId);p.seatId=seatId}return players}
 function playerSetupComplete(meta,p){return !!normalizeGameCharacterId(p?.gameCharacterId)&&!!normalizeSeatId(p?.seatId,meta?.seatCount)}
 function normalizeLoginId(v){return String(v||"").trim().toLowerCase()}function normalizeDisplayName(v){return titleCaseDisplayName(String(v||"").trim().replace(/\s+/g," "))}function titleCaseDisplayName(v){return String(v||"").split(" ").map(w=>w?w.charAt(0).toLocaleUpperCase("vi-VN")+w.slice(1):w).join(" ")}function randomNumericPassword(n=12){const a=new Uint32Array(n);crypto.getRandomValues(a);return Array.from(a,x=>String(x%10)).join("")}function normalizeRoomName(v){return String(v||"").trim().replace(/\s+/g," ").slice(0,40)}function publicMember(m){return{loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||null,source:m.source,createdAt:m.createdAt,updatedAt:m.updatedAt,currentRoomCode:m.currentRoomCode||null,ready:!!m.ready,stats:m.stats||{wins:0,losses:0},history:Array.isArray(m.history)?m.history:[]}}function directoryMember(m){const presenceAt=Number(m?.presenceAt||0),online=presenceAt>0&&(Date.now()-presenceAt)<=PRESENCE_TTL,stats=m?.stats&&typeof m.stats==="object"?{wins:Number(m.stats.wins||0),losses:Number(m.stats.losses||0)}:{wins:0,losses:0},history=Array.isArray(m?.history)?m.history.slice(0,50).map(x=>({matchId:String(x?.matchId||""),result:x?.result==="win"?"win":"loss",roomCode:String(x?.roomCode||""),roomName:String(x?.roomName||""),gameName:String(x?.gameName||""),roleName:String(x?.roleName||""),faction:String(x?.faction||""),winnerFaction:String(x?.winnerFaction||""),playedAt:x?.playedAt||null})):[];return{loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||null,source:m.source||"WEB",createdAt:m.createdAt,updatedAt:m.updatedAt,lastSeenAt:m.lastSeenAt||null,online,currentRoomCode:online?(m.currentRoomCode||null):null,ready:online?!!m.ready:false,resetRequestedAt:m.resetRequestedAt||null,passwordResetAt:m.passwordResetAt||null,stats,history}}function publicRoom(m){return{code:m.code,roomName:m.roomName||("Phòng "+m.code),matchId:m.matchId||null,matchRevision:Number(m.matchRevision||0),deliveryVersion:Number(m.deliveryVersion||0),resetVersion:Number(m.resetVersion||0),status:m.status,phase:m.phase||"lobby",locked:!!m.locked,enabled:m.enabled!==false,roomMode:normalizeRoomMode(m.roomMode),seatCount:normalizeSeatCount(m.seatCount,Number(m.playerCount||0)||12),gameName:m.gameName||"",playerCount:Number(m.playerCount||0),cycleKey:m.cycleKey||null,cyclePhase:m.cyclePhase||null,cycleNight:Number(m.cycleNight||0),roleDeliveredAt:m.roleDeliveredAt||null,startedAt:m.startedAt||null,endedAt:m.endedAt||null,winnerFaction:m.winnerFaction||null,winnerLabel:m.winnerLabel||null,resultVersion:Number(m.resultVersion||0),deletedAt:m.deletedAt||null,createdAt:m.createdAt,updatedAt:m.updatedAt}}function publicPlayer(p){const hb=Number(p?.lastHeartbeatAt||0)||Date.parse(p?.lastSeenAt||"")||0,online=hb>0&&(Date.now()-hb)<=ROOM_PLAYER_TTL;return{participantId:p.participantId,kind:p.kind,loginId:p.loginId||null,displayName:p.displayName,avatarId:p.avatarId,gameCharacterId:normalizeGameCharacterId(p.gameCharacterId)||null,seatId:Number(p.seatId||0)||null,setupComplete:!!normalizeGameCharacterId(p.gameCharacterId)&&Number(p.seatId||0)>0,online,ready:!!p.ready,reservedByGM:p.reservedByGM===true,joinedAt:p.joinedAt,lastSeenAt:p.lastSeenAt,lastHeartbeatAt:hb||null}}
 async function derivePasswordHash(password,salt,iterations=PBKDF2_ITERATIONS){const count=Number(iterations);if(!Number.isSafeInteger(count)||count<1)throw new Error("INVALID_PASSWORD_ITERATIONS");const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),{name:"PBKDF2"},false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:count},key,256);return bytesToBase64(new Uint8Array(bits))}async function verifyPassword(password,m){const iterations=Number(m?.passwordIterations)||PBKDF2_ITERATIONS;return timingSafeEqual(await derivePasswordHash(password,base64ToBytes(m.passwordSalt),iterations),m.passwordHash)}async function sha256(v){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));return[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")}

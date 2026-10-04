@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.47</title>
+<title>GMWW V2.50</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -112,8 +112,9 @@
             <span id="playContextText">Hai chế độ dùng chung một sân chơi và cùng dữ liệu phòng.</span>
           </div>
           <div class="play-context-actions" id="playContextActions">
-            <button class="play-action-chip active" data-play-mode="support" type="button"><span>◉</span><b>Hỗ trợ Online</b></button>
-            <button class="play-action-chip" data-play-mode="full" type="button"><span>◎</span><b>Online 100%</b></button>
+            <button class="play-action-chip active" data-play-room-mode="offline" type="button"><span>◉</span><b>OFFLINE</b></button>
+            <button class="play-action-chip" data-play-room-mode="online" type="button"><span>◎</span><b>ONLINE</b></button>
+            <label class="play-slot-picker"><span>SỐ GHẾ</span><input id="playSeatCount" type="number" min="1" max="30" step="1" value="12"></label>
           </div>
         </section>
 
@@ -416,6 +417,18 @@
     <div class="button-row play-roster-actions">
       <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
       <button class="primary" id="playRosterSave" type="button">XÁC NHẬN THÀNH VIÊN</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playSeatSheet">
+  <div class="sheet-card play-seat-sheet-card">
+    <div class="sheet-head"><div><h3>Quản lý ghế</h3><small id="playSeatPlayerLabel">Chọn Người Chơi trên Làng</small></div><button id="playSeatClose" type="button">×</button></div>
+    <div class="play-seat-summary" id="playSeatSummary">0/0 ghế có người</div>
+    <div class="play-seat-grid" id="playSeatGrid"></div>
+    <div class="button-row play-roster-actions">
+      <button class="danger" id="playSeatRelease" type="button">GIẢI PHÓNG GHẾ</button>
+      <button class="secondary" id="playSeatCancel" type="button">ĐÓNG</button>
     </div>
   </div>
 </div>

@@ -45,6 +45,7 @@ jobs:
           cp server-game/current/GMWW.html "$APPDIR/Web/GMWW.html"
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
+          cp server-game/current/gmww-village-coast.svg "$APPDIR/Web/gmww-village-coast.svg"
 
           node - <<'NODE'
           const fs=require('fs');
@@ -57,12 +58,18 @@ jobs:
           test -s "$APPDIR/Web/GMWW.html"
           test -s "$APPDIR/Web/style.css"
           test -s "$APPDIR/Web/app.js"
+          test -s "$APPDIR/Web/gmww-village-coast.svg"
           test -s "$APPDIR/Web/default-artwork.webp"
 
           grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
           grep -q "const VERSION='$VERSION'" "$APPDIR/Web/app.js"
           grep -q "GMWW_V${BUILD}_STATE" "$APPDIR/Web/app.js"
           grep -q "GMWW_V${BUILD}_PREFS" "$APPDIR/Web/app.js"
+          grep -q 'gmww-village-coast.svg' "$APPDIR/Web/style.css"
+          grep -q 'data-play-room-mode="offline"' "$APPDIR/Web/GMWW.html"
+          grep -q 'id="playSeatSheet"' "$APPDIR/Web/GMWW.html"
+          grep -q "gameCharacterId" "$APPDIR/Web/app.js"
+          grep -q "playUpdateRoomSettings" "$APPDIR/Web/app.js"
 
           # Core catalog / theme / audio / member capabilities must remain present.
           grep -q "applyV226Catalog" "$APPDIR/Web/app.js"
@@ -208,6 +215,7 @@ jobs:
           test -s "$APP/Web/GMWW.html"
           test -s "$APP/Web/app.js"
           test -s "$APP/Web/style.css"
+          test -s "$APP/Web/gmww-village-coast.svg"
           test -s "$APP/Web/default-artwork.webp"
           ! test -e "$APP/Web/v1-audio.js"
           ! test -e "$APP/Web/sea-artwork.js"
@@ -221,6 +229,7 @@ jobs:
           cmp -s server-game/current/GMWW.html "$APP/Web/GMWW.html"
           cmp -s server-game/current/app.js "$APP/Web/app.js"
           cmp -s server-game/current/style.css "$APP/Web/style.css"
+          cmp -s server-game/current/gmww-village-coast.svg "$APP/Web/gmww-village-coast.svg"
 
           rm -rf Payload
           mkdir -p Payload
@@ -228,6 +237,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent Payload "$IPA"
           unzip -t "$IPA" >/dev/null
           unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
+          unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/gmww-village-coast.svg'
           ! unzip -l "$IPA" | grep -q 'phu-thuy-gia-sea-display'
           ! unzip -l "$IPA" | grep -q 'v1-audio.js'
 
