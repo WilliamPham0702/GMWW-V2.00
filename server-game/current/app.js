@@ -1129,20 +1129,21 @@ document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListen
 /* GMWW V2.56 — 2D Play Scene + optional chibi movement */
 const GMWW_PLAY_SCENE_KEY='GMWW_V256_PLAY_SCENE';
 const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
-const PLAY_STEPS=['room','members','game','roles','deal','battle'];
+const PLAY_STEPS=['room','members','game','seats','roles','deal','battle'];
 const PLAY_STEP_COPY={
-  room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn OFFLINE/ONLINE và số ghế cố định trước khi mở Phòng.',a:'TẠO PHÒNG'},
-  members:{k:'CHỌN THÀNH VIÊN',t:'Chọn Thành Viên tham dự',x:'Danh sách tham dự được giữ xuyên suốt luồng thiết lập và khi mất kết nối.',a:'CHỌN THÀNH VIÊN'},
-  game:{k:'CHỌN VÁN',t:'Chọn Ván Mẫu',x:'Luật, thời gian và cấu hình dùng chung cho cả hai chế độ Online.',a:'CHỌN VÁN'},
-  roles:{k:'PHÂN VAI',t:'Phân Vai Trò + Artifact',x:'Vai Trò và Artifact được phân trước khi Phát Vai.',a:'PHÂN VAI'},
-  deal:{k:'PHÁT VAI',t:'Phát Vai cho Người Chơi',x:'Player Web nhận đúng Vai Trò/Artifact trước khi vào trận.',a:'PHÁT VAI'},
-  battle:{k:'VÀO TRẬN',t:'Sân chơi đã sẵn sàng',x:'Đêm 1 chỉ bắt đầu khi GM chủ động nhấn Bắt Đầu Đêm 1.',a:'BẮT ĐẦU ĐÊM 1'}
+  room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
+  members:{k:'CHỌN NGƯỜI CHƠI',t:'Chọn Người Chơi',x:'ONLINE: chạm trực tiếp chibi đang Online trong Làng. OFFLINE: chọn danh sách hỗ trợ.',a:'XÁC NHẬN NGƯỜI CHƠI'},
+  game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
+  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'Ghế xuất hiện quanh đống lửa. Giữ ghế người đã chọn, phân ngẫu nhiên phần còn lại rồi khóa ghế.',a:'KHÓA GHẾ'},
+  roles:{k:'PHÂN VAI',t:'Phân Vai',x:'Vai Trò và Artifact được phân nội bộ, chưa gửi xuống Player Web.',a:'PHÂN VAI'},
+  deal:{k:'PHÁT VAI',t:'Phát Vai',x:'Chỉ tại bước này Server mới gửi Vai Trò/Artifact riêng xuống Player Web.',a:'PHÁT VAI'},
+  battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
 };
 let playSceneState=(()=>{
-  const base={step:'room',roomMode:'offline',seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',matchId:'',artifactsEnabled:false};
+  const base={step:'room',roomMode:'online',seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:45,autoAdvance:true},matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY);if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw)break}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,lastSyncAt:0,lastError:''};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,lastSyncAt:0,lastError:''};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
