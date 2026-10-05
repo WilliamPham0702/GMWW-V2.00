@@ -38,3 +38,11 @@ test('Native shell contains updater bridge and SHA-256 verification',()=>{
   assert.match(swift,/downloadIPA/);
   assert.match(swift,/installRuntime/);
 });
+
+
+test('Update channel never downgrades a native release on same-version follow-up commits',()=>{
+  const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  assert.match(script,/typeRank=\{server_only:0,runtime:1,native:2\}/);
+  assert.match(script,/previousManifest\?\.releaseVersion===version/);
+  assert.match(script,/previousType/);
+});
