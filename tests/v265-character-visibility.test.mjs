@@ -23,7 +23,9 @@ test('legacy character IDs 21-42 are accepted by frame route and mapped onto act
   const index=read('src/index.js');
   assert.ok(index.includes('function activeGameCharacterId(v,seed="")'));
   assert.ok(index.includes('((n-1)%GAME_CHARACTER_COUNT)+1'));
-  assert.ok(index.includes('character-(?:0[1-9]|[1-3][0-9]|4[0-2]))/frame/([1-6])'));
+  assert.ok(index.includes('gameCharacterFrameRoute'));
+  assert.ok(index.includes('character-(?:0[1-9]|[1-3][0-9]|4[0-2])'));
+  assert.ok(index.includes('/frame\\/([1-6])'));
   assert.ok(index.includes('const source=String(((Number(m[1])-1)%GAME_CHARACTER_COUNT)+1).padStart(2,"0")'));
 });
 
