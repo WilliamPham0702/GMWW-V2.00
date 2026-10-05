@@ -898,7 +898,7 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
-  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript,{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
+  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,webVersion:VERSION,runtimeVersion:VERSION,shellVersion:VERSION});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
