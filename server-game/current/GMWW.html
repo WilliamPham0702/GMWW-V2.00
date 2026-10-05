@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.75</title>
+<title>GMWW V2.76</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -365,8 +365,15 @@
         </div>
 
         <div class="settings-card character-scale-card" id="characterScaleCard">
-          <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Áp dụng đồng bộ cho Làng 2D trên GM và Player Web</small></div><b id="characterScaleValue">120%</b></div>
-          <input id="characterScaleRange" class="character-scale-range" type="range" min="80" max="160" step="5" value="120" aria-label="Kích thước nhân vật">
+          <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
+          <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
+            <button type="button" data-character-scale="75">75%</button>
+            <button type="button" data-character-scale="100">100%</button>
+            <button type="button" data-character-scale="125">125%</button>
+            <button type="button" data-character-scale="150">150%</button>
+            <button type="button" data-character-scale="175">175%</button>
+            <button type="button" data-character-scale="200">200%</button>
+          </div>
         </div>
 
         <div class="settings-card quick-maintenance-card" id="quickMaintenanceCard">
