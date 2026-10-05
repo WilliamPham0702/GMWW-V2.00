@@ -1,21 +1,72 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const app=fs.readFileSync('server-game/current/app.js','utf8');
-const css=fs.readFileSync('server-game/current/style.css','utf8');
-test('V2.83 GM lobby keeps one-second realtime fallback alongside websocket',()=>{assert.match(app,/ensurePlayRealtimePoll/);assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&\!playSceneRuntime\.busy\)playSyncRoom\(false\)\},1000\)/);assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/)});
-test('GM player labels show status and large name above character and role below',()=>{assert.match(app,/play-player-over/);assert.match(app,/play-player-role/);assert.match(app,/assignment\?\.roleName/);assert.match(css,/\.play-player-over b\{[^}]*font-size:12px/);assert.match(css,/\.play-player-role\{/)});
-test('Lobby header is clean and setup panels are closable centered popups',()=>{assert.match(css,/data-phase="lobby"\] \.play-room-chip/);assert.match(css,/data-phase="lobby"\] \.play-phase-pill/);assert.match(css,/\.play-context-panel\.is-setup-popup\{position:fixed!important;left:50%!important;top:50%!important/);assert.match(app,/play-context-close/);assert.match(app,/setupPopupClosed=true/);assert.match(css,/\.play-setup-strip\{display:none!important\}/)});
-test('GM touch targets are enlarged',()=>{assert.match(css,/\.play-control-icon,\.play-primary-control\{min-height:56px\}/);assert.match(css,/\.play-action-chip\{min-height:42px/)});
 
+const read=p=>fs.readFileSync(p,'utf8');
+const app=read('server-game/current/app.js');
+const css=read('server-game/current/style.css');
+const html=read('server-game/current/GMWW.html');
+const server=read('src/index.js');
+const live=read('src/gmww-members-live.js');
+const village=read('assets/village/village.mjs');
+const villageCss=read('assets/village/village.css');
 
-test('V2.84 lobby keeps only Auto GM in top HUD and doubles lower operation panel',()=>{
-  const css=read('server-game/current/style.css');
-  assert.ok(css.includes('V2.84 — GM village layout'));
-  assert.ok(css.includes('.play-shell[data-phase="lobby"] .play-room-chip'));
-  assert.ok(css.includes('.play-shell[data-phase="lobby"] .play-phase-pill'));
-  assert.ok(css.includes('width:112px!important'));
-  assert.ok(css.includes('height:min(32svh,300px)!important'));
-  assert.ok(css.includes('min-height:210px!important'));
-  assert.ok(css.includes('grid-template-columns:1fr!important'));
+test('V2.85 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
+  assert.match(app,/ensurePlayRealtimePoll/);
+  assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&\!playSceneRuntime\.busy\)playSyncRoom\(false\)\},1000\)/);
+  assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
+});
+
+test('official GM header is GM, contextual player/info, Auto GM',()=>{
+  assert.match(html,/id="playRoomButton"[^>]*aria-label="Quyền Quản Trò"/);
+  assert.match(html,/>GM<\/span><small>QUẢN TRÒ<\/small>/);
+  assert.match(html,/id="playPhasePill"/);
+  assert.match(html,/id="playAutoGM"/);
+  assert.match(app,/active\?\.displayName\|\|\(isLivePlayRoom\(\)\?\('Phòng '/);
+});
+
+test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
+  assert.match(app,/<div class="play-player-over"><b>'\+playEsc\(name\)\+'<\/b><small>'\+playEsc\(statusLabel\)/);
+  assert.match(app,/play-player-role/);
+  assert.match(css,/\.play-player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/\.play-player-role\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/play-player-avatar img\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+});
+
+test('bottom menu is enlarged and pre-game panels are centered closable popups',()=>{
+  assert.match(css,/V2\.85 — OFFICIAL GM village layout/);
+  assert.match(css,/play-control-icon,[^\n]*play-primary-control\{min-height:64px!important/);
+  assert.match(css,/play-context-panel\.is-setup-popup\{[\s\S]*left:50%!important;[\s\S]*top:50%!important;[\s\S]*translate\(-50%,-50%\)/);
+  assert.match(app,/play-context-close/);
+  assert.match(app,/setupPopupClosed=true/);
+});
+
+test('GM sheet exposes immediate Kill and Revive and server implements revive',()=>{
+  assert.match(html,/id="playGMSheet"/);
+  assert.match(html,/id="playGMRevive"/);
+  assert.match(html,/id="playGMKill"/);
+  assert.match(app,/applyPlayPlayerState\('revive'\)/);
+  assert.match(app,/applyPlayPlayerState\('dead'\)/);
+  assert.match(server,/if\(type==="revive"\)/);
+  assert.match(server,/expiredReason="GM_REVIVE"/);
+  assert.match(server,/type:"player_revived"/);
+});
+
+test('room presence is websocket-authoritative with realtime heartbeat and disconnect state',()=>{
+  assert.match(server,/ROOM_PLAYER_TTL=70\*1000/);
+  assert.match(server,/async webSocketMessage\(ws,message\)/);
+  assert.match(server,/presenceChanged:true/);
+  assert.match(server,/async markSocketDisconnected\(ws\)/);
+  assert.match(server,/lastHeartbeatAt=0/);
+  assert.match(live,/wsPingTimer=setInterval/);
+  assert.match(live,/JSON\.stringify\(\{type:'ping'/);
+});
+
+test('Player Web mirrors scalable name/status above character and own role below',()=>{
+  assert.match(village,/statusLabel:safeText\(p\.statusLabel/);
+  assert.match(village,/roleName:safeText\(p\.roleName/);
+  assert.match(village,/className="player-over"/);
+  assert.match(village,/className="player-role"/);
+  assert.match(villageCss,/\.player \.player-over[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
+  assert.match(villageCss,/\.player \.player-role[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
 });
