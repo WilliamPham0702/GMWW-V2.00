@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.85</title>
+<title>GMWW V2.86</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -55,15 +55,15 @@
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
         <header class="play-hud">
-          <button class="play-room-chip" id="playRoomButton" type="button" aria-label="Quyền Quản Trò">
-            <span>GM</span><small>QUẢN TRÒ</small>
+          <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true">
+            <span class="play-auto-switch"><i></i></span><b>Auto GM</b>
           </button>
           <div class="play-phase-pill" id="playPhasePill">
             <span class="play-phase-orb" id="playPhaseOrb">◉</span>
             <div><small id="playPhaseEyebrow">THÔNG TIN</small><b id="playPhaseTitle">Chọn Nhân Vật</b></div>
           </div>
-          <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true">
-            <span class="play-auto-switch"><i></i></span><b>Auto GM</b>
+          <button class="play-refresh-server" id="playRefreshServer" type="button" aria-label="Làm mới realtime từ server" title="Refresh server">
+            <span>↻</span><small>SERVER</small>
           </button>
         </header>
 
@@ -80,6 +80,10 @@
             <span class="play-cycle-badge" id="playCycleBadge">CHƯA BẮT ĐẦU</span>
             <span class="play-artifact-cap"><i>✦</i><b id="playArtifactCount">0/3</b></span>
           </div>
+
+          <button class="play-gm-float" id="playRoomButton" type="button" aria-label="GM - kéo để di chuyển, chạm để mở quyền Quản Trò">
+            <span>GM</span><small>KÉO • CHẠM</small>
+          </button>
 
           <div class="play-player-ring" id="playPlayerRing"></div>
 
