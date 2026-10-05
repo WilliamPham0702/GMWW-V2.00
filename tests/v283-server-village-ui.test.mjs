@@ -11,18 +11,20 @@ const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 
-test('V2.86 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
+test('V2.87 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
   assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&\!playSceneRuntime\.busy\)playSyncRoom\(false\)\},1000\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('official GM header is Auto GM, contextual info, realtime refresh with separate draggable GM',()=>{
-  const auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"');
-  assert.ok(auto>=0&&info>auto&&refresh>info);
-  assert.match(html,/class="play-gm-float" id="playRoomButton"/);
-  assert.match(app,/function initDraggablePlayGM\(\)/);
-  assert.match(app,/PLAY_GM_FLOAT_POS_KEY/);
+test('official GM header is Auto icon, contextual info, GM, realtime refresh',()=>{
+  const auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),gm=html.indexOf('id="playRoomButton"'),refresh=html.indexOf('id="playRefreshServer"');
+  assert.ok(auto>=0&&info>auto&&gm>info&&refresh>gm);
+  assert.match(html,/class="play-auto-spinner"/);
+  assert.match(html,/class="play-gm-top" id="playRoomButton"/);
+  assert.doesNotMatch(html,/class="play-gm-float"/);
+  assert.match(css,/play-auto-gm\.is-on \.play-auto-spinner[\s\S]*animation:gmwwAutoSpin/);
+  assert.match(css,/@keyframes gmwwAutoSpin/);
   assert.match(app,/function refreshPlayServerRealtime\(\)/);
   assert.match(app,/playSyncRoom\(true\);connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
