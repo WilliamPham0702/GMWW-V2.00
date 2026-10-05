@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.78';
+const VERSION='2.79';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
