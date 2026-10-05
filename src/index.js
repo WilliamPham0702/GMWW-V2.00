@@ -7,7 +7,7 @@ import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.71",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.72",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -54,8 +54,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
     if(url.pathname==="/global-assets/card-back"&&request.method==="GET")return this.globalAssetGet("globalAsset:cardBack","image/webp");
     if(url.pathname==="/global-assets/card-back"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:cardBack","image/webp",125000);
-    if(url.pathname==="/global-settings/web-veil"&&request.method==="GET")return this.globalWebVeilGet();
-    if(url.pathname==="/global-settings/web-veil"&&request.method==="PUT")return this.globalWebVeilPut(await safeJson(request));
+    if(url.pathname==="/global-settings/ui"&&request.method==="GET")return this.globalUiSettingsGet();
+    if(url.pathname==="/global-settings/ui"&&request.method==="PUT")return this.globalUiSettingsPut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
       const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Phòng Online"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,enabled:true,autoGM:true,roomMode,seatMoveMode,seatCount,gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
@@ -299,14 +299,14 @@ export class RoomDurableObject extends DurableObject {
   }
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
-  async globalWebVeilGet(){
-    const rec=await this.ctx.storage.get("globalSetting:webVeil"),raw=Number(rec?.level),level=Number.isFinite(raw)?Math.max(0,Math.min(100,Math.round(raw))):50;
-    return j({ok:true,level,updatedAt:rec?.updatedAt||null});
+  async globalUiSettingsGet(){
+    const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=Number.isFinite(raw)?Math.max(80,Math.min(160,Math.round(raw/5)*5)):120;
+    return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
   }
-  async globalWebVeilPut(body){
-    const raw=Number(body?.level);if(!Number.isFinite(raw))return j({ok:false,error:"INVALID_LEVEL"},400);
-    const level=Math.max(0,Math.min(100,Math.round(raw))),rec={level,updatedAt:new Date().toISOString()};
-    await this.ctx.storage.put("globalSetting:webVeil",rec);return j({ok:true,...rec});
+  async globalUiSettingsPut(body){
+    const raw=Number(body?.characterScale);if(!Number.isFinite(raw))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
+    const characterScale=Math.max(80,Math.min(160,Math.round(raw/5)*5)),rec={characterScale,backgroundDim:0,updatedAt:new Date().toISOString()};
+    await this.ctx.storage.put("globalSetting:ui",rec);await this.ctx.storage.delete("globalSetting:webVeil");return j({ok:true,...rec});
   }
 
   async globalAssetGet(key,contentType){
@@ -904,8 +904,8 @@ export default {async fetch(request,env){
   if((url.pathname==="/gmww-sea-background.png"||url.pathname==="/gmww-sea-background.webp")&&request.method==="GET"){if(!env.ASSETS)return new Response("Background asset unavailable",{status:503});const assetUrl=new URL(request.url);assetUrl.pathname="/backgrounds/gmww-village-day-v260.webp";const asset=await env.ASSETS.fetch(new Request(assetUrl,request));if(!asset.ok)return new Response("Player Web background not found",{status:404});return new Response(asset.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}});}
   if(url.pathname==="/api/assets/victory-audio"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-assets/victory");
   if(url.pathname==="/api/assets/role-card-back"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-assets/card-back");
-  if(url.pathname==="/api/ui-settings"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/web-veil");
-  if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/web-veil",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
+  if(url.pathname==="/api/ui-settings"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/ui");
+  if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/ui",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
   if(url.pathname==="/api/gm/assets/victory-audio"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/victory",{method:"PUT",headers:{"content-type":"audio/mpeg"},body:request.body}));}
   if(url.pathname==="/api/gm/assets/role-card-back"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/card-back",{method:"PUT",headers:{"content-type":"image/webp"},body:request.body}));}
   if(url.pathname==="/api/avatars"&&request.method==="GET"){
