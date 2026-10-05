@@ -25,7 +25,7 @@ struct GameWebView: UIViewRepresentable {
         // A freshly installed IPA contains a complete runtime with the same version.
         // Do not let a stale Application Support runtime from an older install override it.
         if let active = UserDefaults.standard.string(forKey: "GMWWActiveRuntimeVersion"),
-           active.compare(shellVersion, options: .numeric) == .orderedAscending {
+           active.compare(shellVersion, options: .numeric) != .orderedSame {
             UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
         }
         let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;"
