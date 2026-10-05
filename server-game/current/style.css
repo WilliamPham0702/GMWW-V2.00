@@ -1339,3 +1339,111 @@ body.play-immersive #start .play-player-over small{font-size:8px!important}
   body.play-immersive #start .play-control-bar{grid-template-columns:64px minmax(0,1fr) 64px 64px!important;gap:6px!important}
   body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:60px!important}
 }
+
+
+/* V2.86 — refined lightweight game HUD */
+body.play-immersive #start .play-hud{
+  left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
+  width:auto!important;height:48px!important;min-height:48px!important;
+  display:grid!important;grid-template-columns:88px minmax(0,1fr) 48px!important;gap:6px!important;
+  align-items:center!important;background:transparent!important;border:0!important;box-shadow:none!important;
+}
+body.play-immersive #start .play-hud>*{min-height:46px!important;height:46px!important}
+body.play-immersive #start .play-auto-gm{
+  grid-column:1!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;
+  gap:7px!important;width:auto!important;margin:0!important;padding:0 9px!important;border-radius:15px!important;
+  border:1px solid rgba(240,207,132,.58)!important;background:linear-gradient(180deg,rgba(8,51,70,.86),rgba(4,34,50,.82))!important;
+  box-shadow:0 5px 14px rgba(0,24,38,.18)!important;color:#fff7dc!important;
+}
+body.play-immersive #start .play-auto-gm b{font-size:9px!important;white-space:nowrap!important}
+body.play-immersive #start .play-auto-switch{width:32px!important;height:16px!important;min-height:16px!important;flex:0 0 auto!important}
+body.play-immersive #start .play-auto-switch i{width:12px!important;height:12px!important}
+body.play-immersive #start .play-auto-gm.is-on .play-auto-switch i{transform:translateX(16px)!important}
+
+body.play-immersive #start .play-phase-pill{
+  grid-column:2!important;display:flex!important;height:46px!important;min-height:46px!important;padding:4px 10px!important;
+  border-radius:15px!important;border:1px solid rgba(240,207,132,.46)!important;
+  background:linear-gradient(180deg,rgba(9,52,71,.82),rgba(5,36,52,.76))!important;
+  box-shadow:0 5px 14px rgba(0,24,38,.16)!important;color:#fff8df!important;
+}
+body.play-immersive #start .play-phase-orb{width:27px!important;height:27px!important;min-width:27px!important;font-size:12px!important}
+body.play-immersive #start .play-phase-pill small{display:none!important}
+body.play-immersive #start .play-phase-pill b{font-size:11px!important;line-height:1.1!important;text-align:left!important}
+
+body.play-immersive #start .play-refresh-server{
+  grid-column:3!important;width:46px!important;height:46px!important;min-height:46px!important;padding:0!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:0!important;
+  border-radius:15px!important;border:1px solid rgba(240,207,132,.52)!important;
+  background:linear-gradient(180deg,rgba(8,51,70,.86),rgba(4,34,50,.82))!important;color:#fff7dc!important;
+  box-shadow:0 5px 14px rgba(0,24,38,.18)!important;
+}
+body.play-immersive #start .play-refresh-server span{font-size:21px!important;line-height:18px!important}
+body.play-immersive #start .play-refresh-server small{font-size:5.5px!important;letter-spacing:.09em!important;font-weight:900!important}
+body.play-immersive #start .play-refresh-server.is-syncing span{animation:gmwwServerSpin .62s linear infinite}
+body.play-immersive #start .play-refresh-server.is-ok{border-color:#78f0c6!important;box-shadow:0 0 0 2px rgba(120,240,198,.16),0 5px 14px rgba(0,24,38,.18)!important}
+body.play-immersive #start .play-refresh-server.is-error{border-color:#ff9f9f!important}
+@keyframes gmwwServerSpin{to{transform:rotate(360deg)}}
+
+body.play-immersive #start .play-gm-float{
+  position:absolute;left:12px;top:112px;z-index:78;width:64px;height:44px;padding:3px 6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  border-radius:14px;border:1px solid rgba(255,221,145,.72);
+  background:linear-gradient(180deg,rgba(16,71,89,.92),rgba(5,40,57,.88));color:#fff6d3;
+  box-shadow:0 8px 18px rgba(0,26,40,.24),inset 0 1px 0 rgba(255,255,255,.12);
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+}
+body.play-immersive #start .play-gm-float span{font-size:15px;font-weight:1000;line-height:17px}
+body.play-immersive #start .play-gm-float small{font-size:5.5px;font-weight:900;letter-spacing:.08em;opacity:.72;white-space:nowrap}
+body.play-immersive #start .play-gm-float.is-dragging{cursor:grabbing;transform:scale(1.05);box-shadow:0 10px 22px rgba(0,26,40,.3),0 0 0 2px rgba(255,224,151,.18)}
+
+body.play-immersive #start .play-context-panel.is-setup-popup{
+  left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;
+  width:min(82vw,360px)!important;max-height:56svh!important;min-height:0!important;height:auto!important;
+  transform:translate(-50%,-50%)!important;padding:14px!important;border-radius:18px!important;
+  background:linear-gradient(180deg,rgba(8,48,64,.90),rgba(5,34,49,.88))!important;
+  border:1px solid rgba(243,211,142,.56)!important;box-shadow:0 14px 34px rgba(0,22,34,.28)!important;overflow:auto!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup:before{display:none!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy{padding-right:36px!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy small{font-size:7px!important;letter-spacing:.12em!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy b{font-size:13px!important;line-height:1.15!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy span{font-size:9px!important;line-height:1.3!important;opacity:.82!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-actions{grid-template-columns:1fr 1fr!important;gap:7px!important;margin-top:9px!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-action-chip,
+body.play-immersive #start .play-context-panel.is-setup-popup .play-slot-picker{min-height:42px!important;height:42px!important;border-radius:12px!important;font-size:9.5px!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-close{
+  width:30px!important;height:30px!important;right:9px!important;top:8px!important;font-size:20px!important;
+  background:rgba(239,251,251,.94)!important;color:#075b70!important;border:1px solid rgba(255,255,255,.4)!important;
+}
+
+body.play-immersive #start .play-control-bar{
+  grid-template-columns:52px 52px minmax(0,1fr) 52px 56px!important;gap:6px!important;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom))!important;
+  background:linear-gradient(180deg,rgba(3,34,48,.08),rgba(3,30,44,.82))!important;
+  border:0!important;box-shadow:none!important;
+}
+body.play-immersive #start .play-control-icon,
+body.play-immersive #start .play-primary-control{
+  min-height:54px!important;height:54px!important;border-radius:15px!important;
+  border:1px solid rgba(232,205,143,.42)!important;background:rgba(7,48,65,.82)!important;
+  box-shadow:0 5px 14px rgba(0,20,32,.16)!important;min-width:0!important;
+}
+body.play-immersive #start .play-primary-control{
+  background:linear-gradient(180deg,rgba(21,131,161,.94),rgba(8,84,116,.92))!important;border-color:rgba(125,231,244,.58)!important;
+}
+body.play-immersive #start .play-primary-control b{font-size:10.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.play-immersive #start .play-control-icon small{font-size:7px!important}
+body.play-immersive #start .play-control-icon span{font-size:17px!important}
+body.play-immersive #start .play-end-control{background:rgba(82,63,25,.78)!important}
+body.play-immersive #start .play-exit-control{background:rgba(89,40,47,.78)!important}
+
+.play-gm-sheet-card{border-radius:20px!important;background:linear-gradient(180deg,#0a3044,#071f31)!important;border:1px solid rgba(240,207,132,.45)!important}
+.play-gm-target{background:rgba(7,53,70,.72)!important;border:1px solid rgba(125,226,240,.18)!important}
+.play-gm-actions button{min-height:50px!important;border-radius:13px!important}
+
+@media(max-width:390px){
+  body.play-immersive #start .play-hud{grid-template-columns:82px minmax(0,1fr) 44px!important;gap:5px!important}
+  body.play-immersive #start .play-refresh-server{width:44px!important}
+  body.play-immersive #start .play-control-bar{grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;gap:5px!important}
+  body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:52px!important;height:52px!important}
+}
