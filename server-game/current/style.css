@@ -1447,3 +1447,69 @@ body.play-immersive #start .play-exit-control{background:rgba(89,40,47,.78)!impo
   body.play-immersive #start .play-control-bar{grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;gap:5px!important}
   body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:52px!important;height:52px!important}
 }
+
+
+/* V2.87 — polished four-item top game HUD */
+body.play-immersive #start .play-hud{
+  left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
+  width:auto!important;height:44px!important;min-height:44px!important;
+  display:grid!important;grid-template-columns:42px minmax(0,1fr) 48px 42px!important;gap:6px!important;
+  align-items:center!important;background:transparent!important;border:0!important;box-shadow:none!important;
+}
+body.play-immersive #start .play-hud>*{height:42px!important;min-height:42px!important}
+
+body.play-immersive #start .play-auto-gm{
+  grid-column:1!important;width:42px!important;min-width:42px!important;margin:0!important;padding:0!important;
+  display:grid!important;place-items:center!important;border-radius:50%!important;
+  border:1px solid rgba(242,214,151,.60)!important;
+  background:linear-gradient(180deg,rgba(8,61,78,.88),rgba(4,37,52,.84))!important;
+  color:#78efe0!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
+}
+body.play-immersive #start .play-auto-spinner{
+  display:block!important;font-size:24px!important;line-height:1!important;font-weight:800!important;
+  transform-origin:50% 50%!important;opacity:.48!important;
+}
+body.play-immersive #start .play-auto-gm.is-on .play-auto-spinner{
+  opacity:1!important;animation:gmwwAutoSpin 1.45s linear infinite!important;
+  text-shadow:0 0 10px rgba(87,242,221,.48)!important;
+}
+@keyframes gmwwAutoSpin{to{transform:rotate(360deg)}}
+
+body.play-immersive #start .play-phase-pill{
+  grid-column:2!important;height:42px!important;min-height:42px!important;padding:3px 10px!important;
+  border-radius:15px!important;border:1px solid rgba(240,207,132,.44)!important;
+  background:linear-gradient(180deg,rgba(9,55,72,.80),rgba(5,38,53,.74))!important;
+  box-shadow:0 5px 14px rgba(0,24,38,.14)!important;color:#fff8df!important;
+}
+body.play-immersive #start .play-phase-orb{width:25px!important;height:25px!important;min-width:25px!important;font-size:11px!important}
+body.play-immersive #start .play-phase-pill small{display:none!important}
+body.play-immersive #start .play-phase-pill b{font-size:10.5px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+
+body.play-immersive #start .play-gm-top{
+  grid-column:3!important;width:48px!important;min-width:48px!important;padding:0!important;
+  display:grid!important;place-items:center!important;border-radius:14px!important;
+  border:1px solid rgba(242,214,151,.60)!important;
+  background:linear-gradient(180deg,rgba(12,68,86,.88),rgba(5,42,59,.84))!important;
+  color:#fff5ce!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
+}
+body.play-immersive #start .play-gm-top span{font-size:15px!important;font-weight:1000!important;letter-spacing:.04em!important}
+
+body.play-immersive #start .play-refresh-server{
+  grid-column:4!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;
+  display:grid!important;place-items:center!important;border-radius:50%!important;
+  border:1px solid rgba(242,214,151,.60)!important;
+  background:linear-gradient(180deg,rgba(8,61,78,.88),rgba(4,37,52,.84))!important;
+  color:#fff7dc!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
+}
+body.play-immersive #start .play-refresh-server span{font-size:22px!important;line-height:1!important}
+body.play-immersive #start .play-refresh-server small{display:none!important}
+body.play-immersive #start .play-refresh-server.is-syncing span{animation:gmwwServerSpin .62s linear infinite!important}
+
+/* V2.87 removes the floating GM chip; GM now lives in the top HUD. */
+body.play-immersive #start .play-gm-float{display:none!important}
+
+@media(max-width:390px){
+  body.play-immersive #start .play-hud{grid-template-columns:40px minmax(0,1fr) 46px 40px!important;gap:5px!important}
+  body.play-immersive #start .play-auto-gm,body.play-immersive #start .play-refresh-server{width:40px!important;min-width:40px!important}
+  body.play-immersive #start .play-gm-top{width:46px!important;min-width:46px!important}
+}
