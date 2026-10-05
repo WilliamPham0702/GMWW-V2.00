@@ -40,9 +40,9 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V2.82 build request produces the final IPA and keeps full legacy artwork and 240 walk frames',()=>{
+test('V2.81 native build request remains the shell while V2.82 is runtime-only',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
-  assert.ok(request.includes('GMWW V2.82'));
+  assert.ok(request.includes('GMWW V2.81'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
