@@ -40,6 +40,9 @@ test('fixed seats use stable, distinct positions for every room size',()=>{
     for(const [x,y] of points){assert.ok(x>=14&&x<=86);assert.ok(y>=32&&y<=70)}
   }
 });
-test('presentation update preserves existing local state, preferences and scene keys',()=>{
-  assert.match(app,/const STATE_KEY='GMWW_V258_STATE'/);assert.match(app,/const PREF_KEY='GMWW_V258_PREFS'/);assert.match(app,/GMWW_PLAY_SCENE_KEY='GMWW_V257_PLAY_SCENE'/);
+test('V2.63 preserves persistent state/preferences and safely migrates the play scene key',()=>{
+  assert.match(app,/const STATE_KEY='GMWW_V258_STATE'/);
+  assert.match(app,/const PREF_KEY='GMWW_V258_PREFS'/);
+  assert.match(app,/GMWW_PLAY_SCENE_KEY='GMWW_V263_PLAY_SCENE'/);
+  assert.match(app,/GMWW_OLD_PLAY_SCENE_KEYS=\['GMWW_V257_PLAY_SCENE'/);
 });

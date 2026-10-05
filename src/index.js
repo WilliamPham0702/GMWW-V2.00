@@ -7,7 +7,7 @@ import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.62",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.63",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -196,8 +196,7 @@ export class RoomDurableObject extends DurableObject {
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeLoginId(x?.loginId)!==loginId&&normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     if(body&&Object.prototype.hasOwnProperty.call(body,"gameCharacterId")&&!requestedCharacter)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Nhân Vật game không hợp lệ."},400);
-    if(normalizeGameCharacterId(member.gameCharacterId)&&requestedCharacter&&requestedCharacter!==normalizeGameCharacterId(member.gameCharacterId))return j({ok:false,error:"GAME_CHARACTER_LOCKED",message:"Nhân Vật game đã được cố định cho tài khoản này."},409);
-    member.displayName=displayName;member.avatarId=avatarId;if(!member.gameCharacterId&&requestedCharacter)member.gameCharacterId=requestedCharacter;member.updatedAt=new Date().toISOString();
+    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter){member.gameCharacterId=requestedCharacter;const charIndex=Math.max(0,Number(String(requestedCharacter).slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length];if(fallbackAvatar?.id)member.avatarId=fallbackAvatar.id}member.updatedAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member)})
   }
@@ -218,8 +217,7 @@ export class RoomDurableObject extends DurableObject {
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên hiển thị phải có từ 2 đến 24 ký tự."},400);
     if(hasAvatar&&!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar tương thích không hợp lệ."},400);
     if(hasCharacter&&!requestedCharacter)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Nhân Vật game không hợp lệ."},400);
-    if(normalizeGameCharacterId(member.gameCharacterId)&&hasCharacter&&requestedCharacter!==normalizeGameCharacterId(member.gameCharacterId))return j({ok:false,error:"GAME_CHARACTER_LOCKED",message:"Nhân Vật game đã được cố định cho tài khoản này."},409);
-    member.displayName=displayName;member.avatarId=avatarId;if(!member.gameCharacterId&&requestedCharacter){member.gameCharacterId=requestedCharacter;const charIndex=Math.max(0,Number(String(requestedCharacter).slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length];if(fallbackAvatar?.id)member.avatarId=fallbackAvatar.id}member.updatedAt=new Date().toISOString();member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
+    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter){member.gameCharacterId=requestedCharacter;const charIndex=Math.max(0,Number(String(requestedCharacter).slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length];if(fallbackAvatar?.id)member.avatarId=fallbackAvatar.id}member.updatedAt=new Date().toISOString();member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+member.loginId,member);return j({ok:true,member:publicMember(member)});
   }
   async memberSession(request){
@@ -898,7 +896,8 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/village"&&request.method==="GET")return memberStore(env).fetch('https://member.internal/village/state');
   if(url.pathname==="/api/village/move"&&request.method==="POST")return memberStore(env).fetch(new Request('https://member.internal/village/move',{method:'POST',headers:request.headers,body:JSON.stringify(await safeJson(request)||{})}));
   const seatSwapRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/seat-swap$/);if(seatSwapRoute&&request.method==='POST')return playerSeatSwapApi(env,seatSwapRoute[1],request);
-  if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,characters:gameCharacterCatalog()});
+  if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,frameCount:6,characters:gameCharacterCatalog()});
+  const gameCharacterFrameRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|1[0-9]|20))\/frame\/([1-6])$/);if(gameCharacterFrameRoute&&request.method==="GET")return gameCharacterFrame(env,gameCharacterFrameRoute[1],Number(gameCharacterFrameRoute[2]),request);
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return gameCharacterImage(env,gameCharacterImageRoute[1],request);
   if(url.pathname==="/api/rooms"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/directory/rooms/list");
   if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);
@@ -1064,8 +1063,9 @@ function clearPlayerMovement(p,{keepPosition=false}={}){if(!p)return p;if(!keepP
 function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
 function normalizeSeatId(v,seatCount){const n=Math.trunc(Number(v));return Number.isFinite(n)&&n>=1&&n<=normalizeSeatCount(seatCount)?n:null}
 function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:""}
-function gameCharacterCatalog(){return Array.from({length:GAME_CHARACTER_COUNT},(_,i)=>{const n=String(i+1).padStart(2,"0");return{id:"character-"+n,name:"Nhân vật "+n,imageUrl:"/api/game-characters/character-"+n+"/image"}})}
-async function gameCharacterImage(env,id,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/);if(!m)return new Response("Not found",{status:404});if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Chibi not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+function gameCharacterCatalog(){return Array.from({length:GAME_CHARACTER_COUNT},(_,i)=>{const n=String(i+1).padStart(2,"0"),id="character-"+n;return{id,name:"Nhân vật "+n,frameCount:6,imageUrl:"/api/game-characters/"+id+"/frame/1",frameUrl:"/api/game-characters/"+id+"/frame/{frame}"}})}
+async function gameCharacterFrame(env,id,frame,request){const m=String(id||"").match(/^character-(0[1-9]|1[0-9]|20)$/),f=Math.max(1,Math.min(6,Number(frame)||1));if(!m)return new Response("Not found",{status:404});if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/walk-v263/character-"+m[1]+"/frame-"+String(f).padStart(2,"0")+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Walk frame not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+async function gameCharacterImage(env,id,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/);if(!m)return new Response("Not found",{status:404});if(Number(m[1])<=20)return gameCharacterFrame(env,id,1,request);if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Chibi not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
 function firstFreeSeat(players,seatCount,excludeId=""){const used=new Set(Object.entries(players||{}).filter(([id])=>id!==excludeId).map(([,p])=>Number(p?.seatId||0)).filter(n=>n>=1));for(let n=1;n<=normalizeSeatCount(seatCount);n++)if(!used.has(n))return n;return null}
 function enforceUniqueSeatClaims(players,seatCount){const claimed=new Set();for(const p of Object.values(players||{})){const seatId=normalizeSeatId(p?.seatId,seatCount);if(!seatId||claimed.has(seatId)){if(p){p.seatId=null;p.ready=false}continue}claimed.add(seatId);p.seatId=seatId}return players}
 function playerSetupComplete(meta,p){return !!normalizeGameCharacterId(p?.gameCharacterId)&&!!normalizeSeatId(p?.seatId,meta?.seatCount)}

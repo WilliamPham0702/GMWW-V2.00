@@ -802,14 +802,6 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-seat-sheet-card .danger{background:#632b31;color:#fff;border:1px solid #a94d55;border-radius:12px;font-weight:900}.play-seat-sheet-card .danger:disabled{opacity:.45}
 #start.play-page .play-shell,#start.play-page .play-shell *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
-/* V2.57 CHIBI MOVEMENT */
-.play-player-token.is-moving{transition:left .22s linear,top .22s linear;z-index:30!important}
-.play-player-token.is-moving .play-player-avatar{animation:gmwwChibiWalk .30s ease-in-out infinite alternate;transform-origin:50% 100%}
-.play-player-token.is-moving small{color:#fff0a8}
-@keyframes gmwwChibiWalk{0%{transform:translateY(1px) rotate(-2deg) scaleX(.985)}100%{transform:translateY(-5px) rotate(2deg) scaleX(1.015)}}
-@media(prefers-reduced-motion:reduce){.play-player-token.is-moving .play-player-avatar{animation:none}.play-player-token.is-moving{transition:none}}
-
-
 /* GM 2D IMMERSIVE VILLAGE */
 body.play-immersive{overflow:hidden;overscroll-behavior:none}
 body.play-immersive #bottomNav{display:none!important}
@@ -966,3 +958,59 @@ body.play-immersive #start .play-auto-gm{margin-right:48px}body.play-immersive #
 @keyframes gmwwVillageIdle{to{transform:rotate(1.5deg) translateY(-1px)}}
 @keyframes gmwwFireGlow{to{opacity:.4;transform:scale(.9)}}
 @media(prefers-reduced-motion:reduce){.play-player-token .play-player-avatar img,.play-shell[data-phase="night"] .play-core-pearl:after{animation:none!important}}
+
+
+/* V2.63 — real 6-frame characters, compact immersive UI, overlays above village */
+.play-player-token.is-moving .play-player-avatar{animation:none!important;transform:none!important}
+.play-player-token.is-moving{transition:left .10s linear,top .10s linear!important}
+@media(prefers-reduced-motion:reduce){.play-player-token.is-moving{transition:none!important}}
+body.play-immersive #playUserAvatar{display:none!important}
+body.play-immersive #start .play-hud{
+  top:calc(env(safe-area-inset-top) + 5px)!important;
+  left:62px!important;right:7px!important;min-height:34px!important;
+  grid-template-columns:minmax(0,1fr) 62px!important;gap:5px!important;
+  padding:4px 6px!important;border-radius:13px!important;
+}
+body.play-immersive #start .play-hud>*{min-height:30px!important}
+body.play-immersive .play-world-status{display:none!important}
+body.play-immersive .play-exit-village{
+  top:calc(env(safe-area-inset-top) + 7px)!important;left:8px!important;
+  min-width:46px!important;height:34px!important;padding:0 8px!important;border-radius:12px!important;
+}
+body.play-immersive .play-context-panel{
+  left:8px!important;right:8px!important;
+  bottom:calc(env(safe-area-inset-bottom) + 58px)!important;
+  max-height:21dvh!important;padding:6px 8px!important;border-radius:14px!important;
+}
+body.play-immersive .play-context-copy b{font-size:10px!important}
+body.play-immersive .play-context-copy span{font-size:8px!important}
+body.play-immersive .play-context-actions{gap:4px!important;margin-top:4px!important}
+body.play-immersive .play-action-chip{min-height:28px!important;font-size:8px!important}
+body.play-immersive .play-control-bar{
+  left:8px!important;right:8px!important;bottom:calc(env(safe-area-inset-bottom) + 1px)!important;
+  padding:4px!important;border-radius:15px!important;
+  grid-template-columns:42px minmax(0,1fr) 42px 42px!important;gap:4px!important;
+}
+body.play-immersive .play-control-icon,body.play-immersive .play-primary-control{min-height:43px!important}
+body.play-immersive .play-card-fan{bottom:calc(env(safe-area-inset-bottom) + 104px)!important}
+body.play-immersive .play-player-avatar{width:56px!important;height:74px!important}
+body.play-immersive .play-player-token{width:72px!important}
+.sheet{z-index:2200!important}
+.sheet .sheet-card{position:relative;z-index:2201}
+.sheet-head{position:relative;padding-right:42px}
+.sheet-head>button:last-child{
+  position:absolute!important;right:0!important;top:0!important;width:34px!important;height:34px!important;
+  border-radius:50%!important;padding:0!important;font-size:22px!important;line-height:1!important;
+}
+.play-game-sheet-card[data-mode="play"] .play-game-name-label:nth-of-type(2),
+.play-game-sheet-card[data-mode="play"] .play-timing-grid,
+.play-game-sheet-card[data-mode="play"] .play-template-preload-note,
+.play-game-sheet-card[data-mode="play"] .play-artifact-toggle,
+.play-game-sheet-card[data-mode="play"] .play-game-summary,
+.play-game-sheet-card[data-mode="play"] .play-game-role-list{display:none!important}
+.template-library-wrap{display:grid;gap:10px;padding:10px 0 24px}
+.template-library-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.template-library-head button{border:1px solid rgba(52,196,221,.3);background:#0d7791;color:#fff;border-radius:12px;padding:9px 12px;font-weight:900}
+.template-library-list{display:grid;gap:8px}
+.template-library-item{border:1px solid rgba(69,190,216,.22);background:rgba(5,57,79,.78);color:#eaffff;border-radius:14px;padding:11px;text-align:left}
+.template-library-item b,.template-library-item small{display:block}.template-library-item small{margin-top:3px;color:#9ce5ec}

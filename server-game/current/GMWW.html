@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.62</title>
+<title>GMWW V2.63</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -149,6 +149,7 @@
           <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
           <button class="libtab" data-lib="themes">🌊<b>Chủ Đề</b></button>
           <button class="libtab" data-lib="audio">🔊<b>Âm Thanh</b></button>
+          <button class="libtab" data-lib="templates">▦<b>Ván Mẫu</b></button>
         </nav>
 
         <section class="libpane active" id="lib-cards">
@@ -207,11 +208,18 @@
           </div>
           <div class="audio-list" id="audioGrid"></div>
         </section>
+
+        <section class="libpane" id="lib-templates">
+          <div class="template-library-wrap">
+            <div class="template-library-head"><div><b>VÁN MẪU</b><small>Tạo trước tại Thư Viện • khi chơi chỉ chọn Ván Mẫu</small></div><button id="addGameTemplate" type="button">＋ TẠO VÁN MẪU</button></div>
+            <div class="template-library-list" id="gameTemplateLibraryList"><div class="member-empty">Đang tải Ván Mẫu…</div></div>
+          </div>
+        </section>
       </div>
 
       <div id="entityEditor" class="card-editor hidden">
         <div class="editor-bar">
-          <button class="editor-back" id="topBackEntity" aria-label="Quay về">‹</button>
+          <button class="editor-back" id="topBackEntity" aria-label="Đóng">×</button>
           <div class="face-switch"><button class="active" data-face="front">Mặt Player Web</button><button data-face="back">Cài đặt</button></div>
         </div>
 
@@ -373,7 +381,7 @@
 </div>
 
 <div class="sheet hidden" id="playGameSheet">
-  <div class="sheet-card play-game-sheet-card">
+  <div class="sheet-card play-game-sheet-card" data-mode="play">
     <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameClose" type="button">×</button></div>
     <label class="play-game-name-label">Ván Mẫu đã lưu
       <select id="playGameTemplateSelect"><option value="">Tạo Ván Mẫu mới</option></select>
