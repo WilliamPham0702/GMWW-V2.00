@@ -80,6 +80,15 @@ test('Game Templates live in Library and V1.09 templates are migrated once',()=>
   assert.match(app,/openLibraryGameTemplate/);
 });
 
+
+test('V2.63 migrates old play cache without resurrecting deleted players',()=>{
+  const app=read('server-game/current/app.js');
+  assert.match(app,/GMWW_PLAY_SCENE_KEY='GMWW_V263_PLAY_SCENE'/);
+  assert.match(app,/GMWW_OLD_PLAY_SCENE_KEYS=\['GMWW_V257_PLAY_SCENE'/);
+  assert.match(app,/if\(migratedFrom\)\{saved\.selectedMemberIds=\[\];saved\.assignmentsPreview=\[\];saved\.activePlayerId='';saved\.roleId='';saved\.artifactId=''\}/);
+  assert.match(app,/if\(Number\(err\?\.status\)===404\)\{clearStalePlayRoom\(\)/);
+});
+
 test('IPA version and build are V2.63 / 263',()=>{
   const app=read('server-game/current/app.js');
   const html=read('server-game/current/GMWW.html');
