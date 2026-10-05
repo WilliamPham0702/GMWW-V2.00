@@ -43,7 +43,7 @@ if(game){
       return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
     }catch{return "";}
   }
-  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0},moveFrame=0,arrivalNotified=new Set();
+  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:120},moveFrame=0,arrivalNotified=new Set();
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){return layout.spawn(id)}
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
@@ -66,7 +66,7 @@ if(game){
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
     const direction=position?.moving?walkDirection(data):"right",characterUrl=trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction)),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
     const sources=[characterUrl,legacyUrl,safeDefault].filter((u,i,a)=>u&&a.indexOf(u)===i);
-    if(sources.length){avatar.classList.add("has-image","game-character");const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkDir=direction;img.dataset.walkFrame=String(walkFrameFor(data));img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character")});avatar.append(img)}
+    if(sources.length){avatar.classList.add("has-image","game-character");const scale=Math.max(.8,Math.min(1.6,Number(setupState.characterScale||120)/100)),compact=window.innerWidth<=390,baseW=compact?50:62,baseH=compact?67:82;avatar.style.width=(baseW*scale).toFixed(1)+"px";avatar.style.height=(baseH*scale).toFixed(1)+"px";button.style.minWidth=Math.max(52,baseW*scale+10).toFixed(1)+"px";const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkDir=direction;img.dataset.walkFrame=String(walkFrameFor(data));img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character")});avatar.append(img)}
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=position?.moving?"➜":data.ready?"✓":data.online?"●":"○";
     const meta=document.createElement("span");meta.className="player-meta";meta.append(name,stateTag);button.append(avatar,meta);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
@@ -129,7 +129,7 @@ if(game){
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
-    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0};
+    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:120};setupState.characterScale=Math.max(80,Math.min(160,Number(setupState.characterScale)||120));
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
