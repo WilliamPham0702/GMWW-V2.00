@@ -1251,3 +1251,91 @@ body.play-immersive #start .play-context-panel.is-setup-popup .play-slot-picker{
     min-height:200px!important;
   }
 }
+
+
+/* V2.85 — OFFICIAL GM village layout */
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-hud{
+  left:10px!important;right:10px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
+  width:auto!important;height:60px!important;min-height:60px!important;
+  display:grid!important;grid-template-columns:84px minmax(0,1fr) 92px!important;gap:8px!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-room-chip,
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-phase-pill{
+  display:flex!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-room-chip{
+  width:auto!important;height:58px!important;min-height:58px!important;padding:4px 8px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-room-chip>span{font-size:16px!important;font-weight:1000!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-room-chip>small{font-size:7px!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-phase-pill{
+  height:58px!important;min-height:58px!important;padding:5px 9px!important;justify-content:flex-start!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-phase-pill b{font-size:11px!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-phase-pill small{display:block!important;font-size:7px!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-gm{
+  grid-column:auto!important;width:auto!important;height:58px!important;min-height:58px!important;
+  margin:0!important;padding:5px 6px!important;border-radius:14px!important;
+}
+body.play-immersive #start .play-user-avatar{display:none!important}
+
+body.play-immersive #start .play-context-panel.is-setup-popup{
+  position:fixed!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;
+  width:min(88vw,430px)!important;height:auto!important;min-height:0!important;max-height:68svh!important;
+  transform:translate(-50%,-50%)!important;padding:18px 16px 16px!important;border-radius:22px!important;overflow:auto!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup:before{
+  display:block!important;content:""!important;position:fixed!important;inset:0!important;
+  background:rgba(2,24,35,.38)!important;z-index:-1!important;pointer-events:none!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-actions{
+  grid-template-columns:1fr 1fr!important;gap:9px!important;margin-top:10px!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-action-chip,
+body.play-immersive #start .play-context-panel.is-setup-popup .play-slot-picker{
+  min-height:48px!important;height:auto!important;font-size:11px!important;
+}
+
+body.play-immersive #start .play-control-bar{
+  grid-template-columns:70px minmax(0,1fr) 70px 70px!important;gap:9px!important;padding:9px!important;
+}
+body.play-immersive #start .play-control-icon,
+body.play-immersive #start .play-primary-control{min-height:64px!important}
+body.play-immersive #start .play-primary-control b{font-size:13px!important}
+body.play-immersive #start .play-control-icon small{font-size:9px!important}
+
+body.play-immersive #start .play-player-token{
+  width:92px!important;overflow:visible!important;
+}
+body.play-immersive #start .play-player-avatar{
+  width:62px!important;height:82px!important;overflow:visible!important;
+}
+body.play-immersive #start .play-player-token:not(.is-empty) .play-player-avatar img{
+  transform:scale(var(--gmww-character-scale,1))!important;
+  transform-origin:50% 95%!important;
+}
+body.play-immersive #start .play-player-over{
+  bottom:calc(100% + 3px)!important;
+  transform:translateX(-50%) scale(var(--gmww-character-scale,1))!important;
+  transform-origin:50% 100%!important;
+}
+body.play-immersive #start .play-player-role{
+  margin-top:4px!important;
+  transform:scale(var(--gmww-character-scale,1))!important;
+  transform-origin:50% 0!important;
+}
+body.play-immersive #start .play-player-over b{font-size:12px!important}
+body.play-immersive #start .play-player-over small{font-size:8px!important}
+
+.play-gm-sheet-card{width:min(90vw,430px)}
+.play-gm-target{margin:4px 0 12px;padding:10px 12px;border-radius:12px;background:#0b2a40;color:#eaffff;font-weight:900;text-align:center}
+.play-gm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.play-gm-actions button{min-height:56px;border-radius:14px;font-weight:1000}
+.play-gm-actions .danger{background:#742d35;color:#fff;border:1px solid #b65360}
+.play-gm-actions .revive{background:#155b50;color:#eafff8;border:1px solid #46c8ac}
+@media(max-width:390px){
+  body.play-immersive #start .play-shell[data-phase="lobby"] .play-hud{grid-template-columns:76px minmax(0,1fr) 84px!important;gap:6px!important}
+  body.play-immersive #start .play-control-bar{grid-template-columns:64px minmax(0,1fr) 64px 64px!important;gap:6px!important}
+  body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:60px!important}
+}
