@@ -22,10 +22,11 @@ struct GameWebView: UIViewRepresentable {
 
         let shellVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
         let escapedVersion = shellVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
-        // A freshly installed IPA contains a complete runtime with the same version.
-        // Do not let a stale Application Support runtime from an older install override it.
+        // A freshly installed IPA contains the complete bundled runtime for this shell.
+        // Any runtime whose version differs from the installed shell is stale for this launch
+        // (including an accidentally higher marker left by a previous broken update).
         if let active = UserDefaults.standard.string(forKey: "GMWWActiveRuntimeVersion"),
-           active.compare(shellVersion, options: .numeric) == .orderedAscending {
+           active.compare(shellVersion, options: .numeric) != .orderedSame {
             UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
         }
         let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;"
