@@ -7,7 +7,7 @@ import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.75",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.76",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -135,28 +135,23 @@ export class RoomDurableObject extends DurableObject {
     return !!(await this.ctx.storage.get("customAvatar:"+id));
   }
   async memberRegister(body){
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId),requestedPassword=String(body?.password||""),charIndex=Math.max(0,Number(String(gameCharacterId||"").slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length],avatarId=String(body?.avatarId||fallbackAvatar?.id||"");
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId),charIndex=Math.max(0,Number(String(gameCharacterId||"").slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length],avatarId=String(body?.avatarId||fallbackAvatar?.id||"");
     if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!gameCharacterId)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Vui lòng chọn Nhân Vật game khi tạo tài khoản."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Không thể tạo ảnh tương thích cho Nhân Vật đã chọn."},400);
-    if(requestedPassword&&(requestedPassword.length<4||requestedPassword.length>128))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu phải có ít nhất 4 ký tự."},400);
     const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"LOGIN_ID_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"DISPLAY_NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
-    const password=requestedPassword||randomNumericPassword(12),salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();let passwordHash;
-    try{passwordHash=await derivePasswordHash(password,salt)}catch(e){console.error("GMWW_MEMBER_HASH_FAILED",e);return j({ok:false,error:"MEMBER_HASH_FAILED",message:"Không thể xử lý mật khẩu thành viên."},500)}
-    const member={loginId,displayName,avatarId,gameCharacterId,passwordSalt:bytesToBase64(salt),passwordHash,passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"WEB",createdAt:now,updatedAt:now,presenceAt:Date.now(),lastSeenAt:now,currentRoomCode:null,ready:false};
+    const now=new Date().toISOString(),member={loginId,displayName,avatarId,gameCharacterId,passwordConfigured:false,passwordRequired:false,source:"WEB",createdAt:now,updatedAt:now,presenceAt:Date.now(),lastSeenAt:now,currentRoomCode:null,ready:false,stats:{wins:0,losses:0},history:[]};
     try{await this.ctx.storage.put(key,member)}catch(e){console.error("GMWW_MEMBER_STORE_FAILED",e);return j({ok:false,error:"MEMBER_STORE_FAILED",message:"Không thể lưu dữ liệu thành viên."},500)}
     let session;try{session=await this.newSession(member)}catch(e){console.error("GMWW_MEMBER_SESSION_FAILED",e);return j({ok:false,error:"MEMBER_SESSION_FAILED",message:"Đã lưu thành viên nhưng không thể tạo phiên đăng nhập."},500)}
     return j({ok:true,member:publicMember(member),...session},201);
   }
   async memberLogin(body){
-    const loginId=normalizeLoginId(body?.loginId),password=String(body?.password||""),member=await this.ctx.storage.get("member:"+loginId);
+    const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Tên đăng nhập này chưa có tài khoản."},404);
-    if(member.passwordRequired===true&&!password)return j({ok:false,error:"PASSWORD_REQUIRED",message:"Tài khoản này có mật khẩu. Vui lòng nhập mật khẩu."},401);
-    if(member.passwordRequired===true&&!(await verifyPassword(password,member)))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu không đúng."},401);
-    member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+loginId,member);
+    disableMemberPassword(member);member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();member.updatedAt=member.updatedAt||member.lastSeenAt;await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member),...(await this.newSession(member))});
   }
   async memberChangePassword(request,body){
@@ -175,16 +170,14 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminCreate(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId),requestedPassword=String(body?.password||"");
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId);
     if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
-    if(requestedPassword&&(requestedPassword.length<4||requestedPassword.length>128))return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu phải có ít nhất 4 ký tự."},400);
     const key="member:"+loginId;if(await this.ctx.storage.get(key))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
-    const password=requestedPassword||randomNumericPassword(12),salt=crypto.getRandomValues(new Uint8Array(16)),now=new Date().toISOString();
-    const member={loginId,displayName,avatarId,gameCharacterId:gameCharacterId||null,passwordSalt:bytesToBase64(salt),passwordHash:await derivePasswordHash(password,salt),passwordAlgorithm:"PBKDF2-SHA256",passwordIterations:PBKDF2_ITERATIONS,passwordConfigured:!!requestedPassword,passwordRequired:!!requestedPassword,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,resetRequestedAt:null,passwordResetAt:null,stats:{wins:0,losses:0},history:[]};
+    const now=new Date().toISOString(),member={loginId,displayName,avatarId,gameCharacterId:gameCharacterId||null,passwordConfigured:false,passwordRequired:false,source:"GM",createdAt:now,updatedAt:now,presenceAt:0,lastSeenAt:null,currentRoomCode:null,ready:false,stats:{wins:0,losses:0},history:[]};
     await this.ctx.storage.put(key,member);
     return j({ok:true,member:publicMember(member)},201)
   }
@@ -197,7 +190,7 @@ export class RoomDurableObject extends DurableObject {
     const rows=await this.ctx.storage.list({prefix:"member:"}),displayKey=displayName.toLocaleLowerCase("vi-VN");
     if([...rows.values()].some(x=>normalizeLoginId(x?.loginId)!==loginId&&normalizeDisplayName(x?.displayName).toLocaleLowerCase("vi-VN")===displayKey))return j({ok:false,error:"NAME_TAKEN",message:"Tên bạn chọn đã trùng, vui lòng chọn tên khác."},409);
     if(body&&Object.prototype.hasOwnProperty.call(body,"gameCharacterId")&&!requestedCharacter)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Nhân Vật game không hợp lệ."},400);
-    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter){member.gameCharacterId=requestedCharacter;const charIndex=Math.max(0,Number(String(requestedCharacter).slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length];if(fallbackAvatar?.id)member.avatarId=fallbackAvatar.id}member.updatedAt=new Date().toISOString();
+    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter)member.gameCharacterId=requestedCharacter;disableMemberPassword(member);member.updatedAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+loginId,member);
     return j({ok:true,member:publicMember(member)})
   }
@@ -218,14 +211,14 @@ export class RoomDurableObject extends DurableObject {
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên hiển thị phải có từ 2 đến 24 ký tự."},400);
     if(hasAvatar&&!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar tương thích không hợp lệ."},400);
     if(hasCharacter&&!requestedCharacter)return j({ok:false,error:"INVALID_GAME_CHARACTER",message:"Nhân Vật game không hợp lệ."},400);
-    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter){member.gameCharacterId=requestedCharacter;const charIndex=Math.max(0,Number(String(requestedCharacter).slice(-2))-1),fallbackAvatar=GMWW_MEMBER_AVATARS[charIndex%GMWW_MEMBER_AVATARS.length];if(fallbackAvatar?.id)member.avatarId=fallbackAvatar.id}member.updatedAt=new Date().toISOString();member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
+    member.displayName=displayName;member.avatarId=avatarId;if(requestedCharacter)member.gameCharacterId=requestedCharacter;disableMemberPassword(member);member.updatedAt=new Date().toISOString();member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
     await this.ctx.storage.put("member:"+member.loginId,member);return j({ok:true,member:publicMember(member)});
   }
   async memberSession(request){
     const token=bearer(request);if(!token)return j({ok:false,error:"UNAUTHORIZED"},401);const key="session:"+await sha256(token),ses=await this.ctx.storage.get(key);
     if(!ses||ses.expiresAt<=Date.now()){if(ses)await this.ctx.storage.delete(key);return j({ok:false,error:"SESSION_EXPIRED"},401)}
     const member=await this.ctx.storage.get("member:"+ses.loginId);if(!member)return j({ok:false,error:"UNAUTHORIZED"},401);
-    member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+ses.loginId,member);
+    disableMemberPassword(member);member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+ses.loginId,member);
     return j({ok:true,member:publicMember(member),expiresAt:ses.expiresAt});
   }
   async memberPresence(request,body){
@@ -300,12 +293,12 @@ export class RoomDurableObject extends DurableObject {
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
   async globalUiSettingsGet(){
-    const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=Number.isFinite(raw)?Math.max(80,Math.min(160,Math.round(raw/5)*5)):120;
+    const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
     return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
   }
   async globalUiSettingsPut(body){
     const raw=Number(body?.characterScale);if(!Number.isFinite(raw))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
-    const characterScale=Math.max(80,Math.min(160,Math.round(raw/5)*5)),rec={characterScale,backgroundDim:0,updatedAt:new Date().toISOString()};
+    const characterScale=normalizeCharacterScale(raw,100),rec={characterScale,backgroundDim:0,updatedAt:new Date().toISOString()};
     await this.ctx.storage.put("globalSetting:ui",rec);await this.ctx.storage.delete("globalSetting:webVeil");return j({ok:true,...rec});
   }
 
@@ -1129,6 +1122,9 @@ function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return 
 function normalizeSeatId(v,seatCount){const n=Math.trunc(Number(v));return Number.isFinite(n)&&n>=1&&n<=normalizeSeatCount(seatCount)?n:null}
 function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:""}
 function activeGameCharacterId(v,seed=""){const id=normalizeGameCharacterId(v);if(id){const n=Number(id.slice(-2));return"character-"+String(((n-1)%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}const text=String(seed||"");let h=0;for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))>>>0;return"character-"+String((h%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}
+const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200];
+function normalizeCharacterScale(v,fallback=100){const n=Number(v);if(!Number.isFinite(n))return fallback;return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALE_OPTIONS[0])}
+function disableMemberPassword(m){if(!m||typeof m!=="object")return m;delete m.passwordSalt;delete m.passwordHash;delete m.passwordAlgorithm;delete m.passwordIterations;delete m.resetRequestedAt;delete m.passwordResetAt;m.passwordConfigured=false;m.passwordRequired=false;return m}
 function gameCharacterCatalog(){return Array.from({length:GAME_CHARACTER_COUNT},(_,i)=>{const n=String(i+1).padStart(2,"0"),id="character-"+n;return{id,name:"Nhân vật "+n,frameCount:6,imageUrl:"/api/game-characters/"+id+"/frame/1",frameUrl:"/api/game-characters/"+id+"/frame/{frame}"}})}
 async function gameCharacterFrame(env,id,frame,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));if(!m)return new Response("Not found",{status:404});const source=String(((Number(m[1])-1)%GAME_CHARACTER_COUNT)+1).padStart(2,"0");if(env.ASSETS){try{const u=new URL(request.url),left=u.searchParams.get("dir")==="left";u.pathname=(left?"/characters/walk-v266-left/":"/characters/walk-v263/")+"character-"+source+"/frame-"+String(f).padStart(2,"0")+".webp";u.search="";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Walk frame not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
 async function gameCharacterImage(env,id,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/);if(!m)return new Response("Not found",{status:404});if(Number(m[1])<=20)return gameCharacterFrame(env,id,1,request);if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Chibi not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}

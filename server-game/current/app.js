@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.75';
+const VERSION='2.76';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -744,16 +744,21 @@ async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:sou
 async function boot(){try{await migrateLegacyV1Assets()}catch(e){console.warn('V1 settings migration failed',e)}bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 
-/* V2.72 — Server-controlled 2D character size; background dim removed */
+/* V2.76 — discrete actor-only character scale; UI geometry stays fixed */
+const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200];
+function normalizeCharacterScale(value,fallback=100){
+  const n=Number(value);if(!Number.isFinite(n))return fallback;
+  return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALE_OPTIONS[0])
+}
 function applyCharacterScale(value){
-  const n=Math.max(80,Math.min(160,Math.round((Number(value)||120)/5)*5)),ratio=n/100,root=document.documentElement;
+  const n=normalizeCharacterScale(value,100),root=document.documentElement;
   root?.style?.setProperty('--gmww-background-dim','0');
-  root?.style?.setProperty('--gmww-character-width',(56*ratio).toFixed(1)+'px');
-  root?.style?.setProperty('--gmww-character-height',(74*ratio).toFixed(1)+'px');
-  root?.style?.setProperty('--gmww-character-token-width',(72*ratio).toFixed(1)+'px');
-  const range=document.getElementById('characterScaleRange'),out=document.getElementById('characterScaleValue');
-  if(range&&Number(range.value)!==n)range.value=String(n);
-  if(out)out.textContent=n+'%';
+  root?.style?.setProperty('--gmww-character-scale',String(n/100));
+  document.querySelectorAll('[data-character-scale]').forEach(btn=>{
+    const active=Number(btn.dataset.characterScale)===n;
+    btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',active?'true':'false')
+  });
+  const out=document.getElementById('characterScaleValue');if(out)out.textContent=n+'%';
   return n
 }
 async function saveCharacterScale(value){
@@ -764,12 +769,11 @@ async function saveCharacterScale(value){
   }catch(err){console.warn('GMWW_CHARACTER_SCALE_SAVE',err)}
 }
 async function initCharacterScaleSetting(){
-  const range=document.getElementById('characterScaleRange');if(!range)return;
-  let n=120;
+  const choices=document.getElementById('characterScaleChoices');if(!choices)return;
+  let n=100;
   try{const res=await fetch(GMWW_SERVER_BASE+'/api/ui-settings?ts='+Date.now(),{cache:'no-store'}),d=await res.json();if(res.ok&&Number.isFinite(Number(d?.characterScale)))n=Number(d.characterScale)}catch(err){console.warn('GMWW_CHARACTER_SCALE_LOAD',err)}
   applyCharacterScale(n);
-  range.addEventListener('input',()=>applyCharacterScale(range.value));
-  range.addEventListener('change',()=>saveCharacterScale(range.value));
+  choices.addEventListener('click',event=>{const btn=event.target.closest('[data-character-scale]');if(btn)saveCharacterScale(btn.dataset.characterScale)});
 }
 setTimeout(initCharacterScaleSetting,0);
 

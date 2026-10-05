@@ -511,7 +511,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 @media(max-width:380px){#memberDirectoryList .member-card{grid-template-columns:46px minmax(0,1fr) 70px!important;gap:6px!important}#memberDirectoryList .member-avatar{width:46px!important;height:46px!important}#memberDirectoryList .member-status{font-size:7px!important}}
 
 /* V2.72 — no background veil; server-controlled character size */
-:root{--gmww-background-dim:0;--gmww-character-width:67.2px;--gmww-character-height:88.8px;--gmww-character-token-width:86.4px}
+:root{--gmww-background-dim:0;--gmww-character-scale:1}
 .page:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:transparent!important}
 .page{isolation:isolate}
 .member-page,.settings-page{position:relative;z-index:1}
@@ -524,7 +524,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .character-scale-card .settings-title h3{margin:0;color:#f3fbff}
 .character-scale-card .settings-title small{display:block;margin-top:3px;color:#c2d5df!important}
 #characterScaleValue{min-width:52px;text-align:right;color:#f7d38c}
-.character-scale-range{width:100%;height:34px;margin:7px 0 0;accent-color:#45d9f5}
+.character-scale-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}
+.character-scale-choices button{min-height:42px;border:1px solid rgba(157,224,255,.24);border-radius:10px;background:#071827;color:#dff9ff;font-size:12px;font-weight:900}
+.character-scale-choices button.active{border-color:#f0c86c;background:linear-gradient(180deg,#1f4d65,#10354d);color:#ffe5a4;box-shadow:inset 0 0 0 1px rgba(240,200,108,.16)}
 
 
 /* GMWW V2.46 PLAY SCENE */
@@ -1107,9 +1109,10 @@ body.play-immersive .play-card-fan{bottom:calc(env(safe-area-inset-bottom) + 96p
 .play-player-token.is-moving .play-player-avatar img,
 .play-player-token:not(.is-moving):not(.is-empty) .play-player-avatar img{animation:none!important;transform:none!important}
 
-/* V2.72 — scale GM village characters from server setting */
-body.play-immersive #start .play-player-avatar{width:var(--gmww-character-width)!important;height:var(--gmww-character-height)!important}
-body.play-immersive #start .play-player-token{width:var(--gmww-character-token-width)!important}
+/* V2.76 — character scale affects image only; player boxes stay fixed */
+body.play-immersive #start .play-player-avatar{width:56px!important;height:74px!important;overflow:visible!important}
+body.play-immersive #start .play-player-token{width:72px!important}
+body.play-immersive #start .play-player-token:not(.is-empty) .play-player-avatar img{transform:scale(var(--gmww-character-scale,1))!important;transform-origin:50% 95%!important}
 
 
 /* UPDATE MANAGER V1 — prepared off-main */

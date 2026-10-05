@@ -60,9 +60,12 @@ jobs:
           curl -fsS http://127.0.0.1:8787/api/members/me -H "Authorization: Bearer $TOKEN" > /tmp/me.json
           grep -q '"loginId":"ciuser1"' /tmp/me.json
 
-          # Password-protected account must request password first and accept the correct password.
-          curl -fsS -X POST http://127.0.0.1:8787/api/members/register             -H 'content-type: application/json'             --data '{"loginId":"cipass1","displayName":"CI Pass","gameCharacterId":"character-02","password":"1234"}' > /tmp/register-pass.json
-          test "$(curl -sS -o /tmp/pass-required.json -w '%{http_code}' -X POST http://127.0.0.1:8787/api/members/login             -H 'content-type: application/json'             --data '{"loginId":"cipass1","password":""}')" = "401"
-          grep -q '"error":"PASSWORD_REQUIRED"' /tmp/pass-required.json
-          curl -fsS -X POST http://127.0.0.1:8787/api/members/login             -H 'content-type: application/json'             --data '{"loginId":"cipass1","password":"1234"}' > /tmp/login-pass.json
-          grep -q '"ok":true' /tmp/login-pass.json
+          # Password fields are intentionally ignored in V2.76; accounts are password-free.
+          curl -fsS -X POST http://127.0.0.1:8787/api/members/register \
+            -H 'content-type: application/json' \
+            --data '{"loginId":"ciuser2","displayName":"CI User 2","gameCharacterId":"character-02","password":"legacy-ignored"}' > /tmp/register-2.json
+          grep -q '"ok":true' /tmp/register-2.json
+          curl -fsS -X POST http://127.0.0.1:8787/api/members/login \
+            -H 'content-type: application/json' \
+            --data '{"loginId":"ciuser2"}' > /tmp/login-2.json
+          grep -q '"ok":true' /tmp/login-2.json

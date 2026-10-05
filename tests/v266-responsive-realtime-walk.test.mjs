@@ -64,14 +64,14 @@ test('server movement broadcasts include server time for shared interpolation cl
   assert.ok(server.includes('type:"player_move_complete",room,player:publicPlayer(p),players:publicPlayers,seatUpdated:targetSeatId?id:null,serverTime:Date.now()'));
 });
 
-test('profile is compact, shows actual stats/history and keeps the 20-character picker interactive',()=>{
+test('profile is compact, keeps stats and exposes the 20-character picker',()=>{
   const live=read('src/gmww-members-live.js');
-  assert.ok(live.includes("#profile .change-pass,#profile .meta,#profile>.kicker,#profile>.page-title,#profile>.page-sub,#profile .profile-actions-row{display:none!important}"));
+  assert.ok(live.includes("#profile .change-pass,#profile .history-fold,#profile .profile-enter-room{display:none!important}"));
   assert.ok(live.includes("const wins=Math.max(0,Number(m?.stats?.wins||0))"));
-  assert.ok(live.includes("const historyBox=$('#profile .history')"));
   assert.ok(live.includes("if(state.gameCharacters.length!==20){state.gameCharacters=[];await loadGameCharacters()}"));
   assert.ok(live.includes('#avatarLibraryModal.open{display:flex!important;pointer-events:auto!important}'));
-  assert.ok(live.includes('Nhấn LƯU THÔNG TIN để áp dụng.'));
+  assert.ok(live.includes("summary.textContent='✎ THAY ĐỔI AVATAR'"));
+  assert.ok(live.includes("$('#profile .profile-exit-btn,#profile .linkline button').forEach"));
 });
 
 test('IPA workflow bundles and verifies all 240 walk frames',()=>{
@@ -81,12 +81,12 @@ test('IPA workflow bundles and verifies all 240 walk frames',()=>{
   assert.ok(workflow.includes('$APP/Web/game-characters/walk-v266-left'));
 });
 
-test('V2.66 movement contract remains packaged in the V2.75 app',()=>{
+test('V2.66 movement contract remains packaged in the V2.76 app',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.75"'));
-  assert.ok(app.includes("const VERSION='2.75';"));
-  assert.ok(html.includes('GMWW V2.75'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 275;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.75;'));
-  assert.equal(pkg.version,'2.75.0');
+  assert.ok(server.includes('VERSION="V2.76"'));
+  assert.ok(app.includes("const VERSION='2.76';"));
+  assert.ok(html.includes('GMWW V2.76'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 276;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.76;'));
+  assert.equal(pkg.version,'2.76.0');
 });
