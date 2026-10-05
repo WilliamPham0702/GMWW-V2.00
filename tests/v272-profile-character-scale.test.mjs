@@ -42,14 +42,17 @@ test('Player tapping their own character no longer opens information',()=>{
   assert.ok(village.includes('if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage'));
 });
 
-test('Player profile is compact, password-free and keeps animated avatar, stats and logout',()=>{
+test('Player profile is compact, password-free, keeps stats and exposes collapsible history',()=>{
   const live=read('src/gmww-members-live.js'),server=read('src/index.js');
   assert.ok(live.includes('#loginPasswordBlock,#registrationPasswordToggle,#registrationPasswordFields,#reset{display:none!important}'));
-  assert.ok(live.includes('#profile .change-pass,#profile .history-fold,#profile .profile-enter-room{display:none!important}'));
+  assert.ok(live.includes('#profile .change-pass,#profile .profile-enter-room{display:none!important}'));
+  assert.ok(live.includes('#profile .history-fold{display:block!important'));
+  assert.ok(live.includes('height:auto!important;min-height:0!important;max-height:min(76svh,560px)!important'));
+  assert.ok(live.includes("const h=$('#profile .history-fold');if(h)h.open=false"));
   assert.ok(live.includes("summary.textContent='✎ THAY ĐỔI AVATAR'"));
-  assert.ok(live.includes("$$('#profile .stats .stat strong').forEach"));
-  assert.ok(live.includes("$$('#profile .profile-exit-btn,#profile .linkline button').forEach"));
-  assert.ok(live.includes("$$('img[data-gmww-walk-character]').forEach"));
+  assert.ok(live.includes("$('#profile .stats .stat strong').forEach"));
+  assert.ok(live.includes("$('#profile .profile-exit-btn,#profile .linkline button').forEach"));
+  assert.ok(live.includes("$('img[data-gmww-walk-character]').forEach"));
   assert.ok(server.includes('disableMemberPassword(member)'));
   const loginStart=server.indexOf('async memberLogin(body)'),loginEnd=server.indexOf('async memberChangePassword',loginStart),login=server.slice(loginStart,loginEnd);
   assert.doesNotMatch(login,/verifyPassword|PASSWORD_REQUIRED/);
@@ -82,4 +85,22 @@ test('V2.77 runtime metadata is aligned while native shell stays V2.76',()=>{
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 276;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.76;'));
   assert.equal(pkg.version,'2.77.0');
+});
+
+
+test('Profile avatar button opens the 20 animated-character picker and saves immediately',()=>{
+  const live=read('src/gmww-members-live.js');
+  assert.ok(live.includes("#profileEditPanel>summary,[data-gmww-avatar]"));
+  assert.ok(live.includes("t.matches?.('#profileEditPanel>summary')"));
+  assert.ok(live.includes("if(state.gameCharacters.length!==20){toast('Chưa tải được 20 Avatar động."));
+  assert.ok(live.includes("closeAvatarLibrary();await saveProfile();return"));
+  assert.ok(live.includes("catalog=state.gameCharacters"));
+});
+
+test('Session restore stays in the village and prewarms the village view',()=>{
+  const live=read('src/gmww-members-live.js');
+  assert.ok(live.includes('async function autoResumeActiveRoom({stayInVillage=false}={})'));
+  assert.ok(live.includes('if(stayInVillage){await enterVillage();return true}'));
+  assert.ok(live.includes('applyRoleCardBack();ensureVillageGameView();'));
+  assert.ok(live.includes('await autoResumeActiveRoom({stayInVillage:true})'));
 });
