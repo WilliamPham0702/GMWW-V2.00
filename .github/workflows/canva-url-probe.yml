@@ -1,0 +1,30 @@
+name: Canva URL Probe
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/canva-url-probe.yml"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download full-size staged artwork
+        shell: bash
+        env:
+          ASSET_URL: 'https://media.canva.com/v2/image-resize/format:PNG/height:1145/quality:100/uri:ifs%3A%2F%2FM%2Fb285d2b0-25c4-4139-a711-b6577f97e19a/watermark:F/width:1374?csig=AAAAAAAAAAAAAAAAAAAAACtpTb3WusDk1xVgCrnIcIgj-fifogVNQQ-tnFcEoITm&exp=1791256452&osig=AAAAAAAAAAAAAAAAAAAAAA2ocmQDTcG7Nzvxwt8jGiC2dtggwXKCCL3lrurp4CK3&signer=media-rpc&token=AAIAAU0AJGIyODVkMmIwLTI1YzQtNDEzOS1hNzExLWI2NTc3Zjk3ZTE5YQAAAAABoQ80W6BQAXlFZhLqR2HDHZYWxALee17XJJcBYcNxxL7PMy5IaA&x-canva-quality=thumbnail'
+        run: |
+          set -euo pipefail
+          curl -fL --retry 2 "$ASSET_URL" -o /tmp/artifact.png
+          python3 - <<'PY'
+          import struct
+          p='/tmp/artifact.png'
+          d=open(p,'rb').read(32)
+          assert d[:8]==b'\x89PNG\r\n\x1a\n', d[:8]
+          w,h=struct.unpack('>II',d[16:24])
+          print(f"ARTIFACT_DIMENSIONS={w}x{h}")
+          if (w,h)!=(1374,1145):
+              raise SystemExit(f"unexpected dimensions: {w}x{h}")
+          PY
+          ls -lh /tmp/artifact.png
