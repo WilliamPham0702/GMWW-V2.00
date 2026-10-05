@@ -1,3 +1,4 @@
 GMWW V2.81
-Requested: 2026-10-05
-Purpose: update notification popup, correct latest IPA download, preserve V2.80 features, build 281
+Build: 281
+Reason: rebuild IPA so V2.81 clears persisted V2.77 runtime and loads bundled V2.81 runtime
+Requested: 2026-10-06
