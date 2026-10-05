@@ -34,7 +34,7 @@ test('Player Web receives the server scale and renders larger 2D characters',()=
 test('Player can always find and open character information from the village',()=>{
   const live=read('src/gmww-members-live.js');
   assert.ok(live.includes('id=\\"gmwwVillageProfileButton\\"'));
-  assert.ok(live.includes("aria-label=\\"Thông tin nhân vật\\""));
+  assert.ok(live.includes('aria-label=\\"Thông tin nhân vật\\"'));
   assert.ok(live.includes('function openVillageProfile()'));
   assert.ok(live.includes('profileButton.onclick=openVillageProfile'));
   assert.ok(live.includes('if(id===selfId)openVillageProfile()'));
