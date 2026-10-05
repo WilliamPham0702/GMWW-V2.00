@@ -62,7 +62,7 @@ test('Update channel never downgrades a native release on same-version follow-up
 });
 
 
-test('V2.80 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
+test('V2.81 update actions stay visible and IPA download never falls back to an old shell',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   const js=fs.readFileSync('server-game/current/app.js','utf8');
@@ -70,9 +70,10 @@ test('V2.80 update actions stay visible in one three-column row and IPA has shel
   assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(html,/id="installRuntimeUpdate"[^>]*hidden/);
   assert.doesNotMatch(html,/id="downloadNewIPA"[^>]*hidden/);
-  assert.match(js,/fallbackVersion/);
-  assert.match(js,/GMWW-V'\+fallbackVersion\+'\.ipa/);
-  assert.match(js,/setTimeout\(\(\)=>checkAppUpdate\(\{notify:false\}\),1400\)/);
+  assert.match(js,/manifestIpa\.version/);
+  assert.match(js,/Server chưa công bố file IPA mới để tải/);
+  assert.doesNotMatch(js,/fallbackVersion|fallbackUrl/);
+  assert.match(js,/setTimeout\(\(\)=>checkAppUpdate\(\{notify:true\}\),1400\)/);
 });
 
 
@@ -83,4 +84,23 @@ test('Production deploy verifies exact runtime, manifest and web-sync endpoint',
   assert.match(workflow,/api\/update\/manifest/);
   assert.match(workflow,/releaseVersion.*\$EXPECTED/);
   assert.match(workflow,/api\/web-sync/);
+});
+
+
+test('Every new version can notify the GM with the required action',()=>{
+  const js=fs.readFileSync('server-game/current/app.js','utf8');
+  assert.match(js,/Vui lòng CẬP NHẬT/);
+  assert.match(js,/cần cài lại IPA mới/);
+  assert.match(js,/Vui lòng ĐỒNG BỘ/);
+  assert.match(js,/visibilitychange/);
+  assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
+});
+
+test('Update manifest always advertises an exact native IPA version and URL',()=>{
+  const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const workflow=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
+  assert.match(script,/version:isNative\?version:shell/);
+  assert.match(script,/GMWW-V\$\{isNative\?version:shell\}\.ipa/);
+  assert.match(workflow,/push:/);
+  assert.match(workflow,/server-game\/BUILD_IPA_REQUEST/);
 });
