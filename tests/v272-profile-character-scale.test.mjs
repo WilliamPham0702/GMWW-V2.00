@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.72 removes the background-dim control and exposes server character size instead',()=>{
+test('V2.75 removes the background-dim control and exposes server character size instead',()=>{
   const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
   assert.ok(html.includes('id="characterScaleRange"'));
   assert.ok(html.includes('Kích thước nhân vật'));
@@ -48,12 +48,12 @@ test('Recovered post-login navigation no longer shows a false error toast',()=>{
   assert.ok(segment.includes("Đã đăng nhập nhưng chưa mở được Làng"));
 });
 
-test('V2.72 metadata is aligned',()=>{
+test('V2.75 metadata is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.72"'));
-  assert.ok(app.includes("const VERSION='2.72';"));
-  assert.ok(html.includes('GMWW V2.72'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 272;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.72;'));
-  assert.equal(pkg.version,'2.72.0');
+  assert.ok(server.includes('VERSION="V2.75"'));
+  assert.ok(app.includes("const VERSION='2.75';"));
+  assert.ok(html.includes('GMWW V2.75'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 275;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.75;'));
+  assert.equal(pkg.version,'2.75.0');
 });

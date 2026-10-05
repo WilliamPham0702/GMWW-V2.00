@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.72 keeps authentication errors separate and suppresses recovered post-login warnings',()=>{
+test('V2.75 keeps authentication errors separate and suppresses recovered post-login warnings',()=>{
   const live=read('src/gmww-members-live.js');
   const start=live.indexOf('async function login()'),end=live.indexOf('window.login=login',start),segment=live.slice(start,end);
   assert.ok(segment.includes("let d;"));
@@ -28,12 +28,12 @@ test('CI smoke covers passwordless and password-protected member login plus sess
   assert.ok(workflow.includes('"loginId":"cipass1"'));
 });
 
-test('V2.72 metadata is aligned',()=>{
+test('V2.75 metadata is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.72"'));
-  assert.ok(app.includes("const VERSION='2.72';"));
-  assert.ok(html.includes('GMWW V2.72'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 272;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.72;'));
-  assert.equal(pkg.version,'2.72.0');
+  assert.ok(server.includes('VERSION="V2.75"'));
+  assert.ok(app.includes("const VERSION='2.75';"));
+  assert.ok(html.includes('GMWW V2.75'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 275;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.75;'));
+  assert.equal(pkg.version,'2.75.0');
 });
