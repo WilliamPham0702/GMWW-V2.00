@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.62 exposes 20 selectable chibi while retaining legacy account character IDs',()=>{
+test('V2.63 exposes 20 selectable chibi while retaining legacy account character IDs',()=>{
   const index=read('src/index.js');
   assert.match(index,/VERSION="V2\.62"/);
   assert.match(index,/const GAME_CHARACTER_COUNT=20;/);
@@ -24,7 +24,7 @@ test('Player Web picker and village animate characters only while moving',()=>{
   assert.match(css,/\.player \.player-meta/);
 });
 
-test('GM IPA V2.62 renders full-body chibi and carries build 262',()=>{
+test('GM IPA V2.63 renders full-body chibi and carries build 262',()=>{
   const app=read('server-game/current/app.js');
   const css=read('server-game/current/style.css');
   const html=read('server-game/current/GMWW.html');
@@ -33,6 +33,6 @@ test('GM IPA V2.62 renders full-body chibi and carries build 262',()=>{
   assert.match(css,/\.play-player-token\.is-moving \.play-player-avatar/);
   assert.match(css,/@keyframes gmwwChibiWalk/);
   assert.match(html,/GMWW V2\.62/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 262;/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 263;/);
   assert.match(project,/MARKETING_VERSION = 2\.62;/);
 });
