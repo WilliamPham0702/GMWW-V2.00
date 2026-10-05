@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.77';
+const VERSION='2.78';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -837,28 +837,36 @@ async function updateDataNow(){
 }
 async function syncPlayerWebUpdate(){
   const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
-  setUpdateUi('checking','ĐANG ĐỒNG BỘ WEB','Đang kiểm tra Player Web Production…','');
+  setUpdateUi('checking','ĐANG ĐỒNG BỘ','Đang gửi tín hiệu đồng bộ tới Player Web…','');
   try{
-    const stamp=Date.now(),responses=await Promise.all([
-      fetch(GMWW_SERVER_BASE+'/api/health?websync='+stamp,{cache:'no-store'}),
-      fetch(GMWW_SERVER_BASE+'/?websync='+stamp,{cache:'reload'}),
-      fetch(GMWW_SERVER_BASE+'/gmww-members-live.js?websync='+stamp,{cache:'reload'})
-    ]);
-    if(!responses.every(r=>r.ok))throw new Error('Player Web chưa phản hồi đầy đủ.');
-    const health=await responses[0].json(),webVersion=String(health.webVersion||health.version||'').replace(/^V/i,'');
-    setUpdateAction('server_only');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web Production đang chạy V'+(webVersion||'—')+'.','Người chơi đang mở bản cũ sẽ được yêu cầu tải lại trang.');
-  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);setUpdateUi('bad','ĐỒNG BỘ WEB LỖI','Không xác nhận được Player Web Production.',String(e?.message||'Vui lòng thử lại.'))}
+    const stamp=Date.now();
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/web-sync?ts='+stamp,{
+      method:'POST',
+      headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},
+      body:JSON.stringify({source:'GM_APP',runtimeVersion:gmwwRuntimeVersion()}),
+      cache:'no-store'
+    });
+    let d={};try{d=await res.json()}catch{}
+    if(!res.ok||d.ok!==true)throw new Error(d.message||d.error||('HTTP '+res.status));
+    const webVersion=String(d.webVersion||d.version||'').replace(/^V/i,'');
+    const serverEl=document.getElementById('updateServerVersion');if(serverEl&&webVersion)serverEl.textContent='V'+webVersion;
+    setUpdateAction('server_only');setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
+  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
   finally{if(btn)btn.disabled=false}
 }
 async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return;
   setUpdateUi('checking','ĐANG KIỂM TRA','Đang kiểm tra phiên bản mới…','');
   try{
-    const res=await fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+Date.now(),{cache:'no-store'});
+    const stamp=Date.now(),[res,healthRes]=await Promise.all([
+      fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp,{cache:'no-store'}),
+      fetch(GMWW_SERVER_BASE+'/api/health?update='+stamp,{cache:'no-store'})
+    ]);
     const d=await res.json();if(!res.ok||d.ok!==true)throw new Error(d.error||('HTTP '+res.status));
+    let health={};try{if(healthRes.ok)health=await healthRes.json()}catch{}
     gmwwUpdateManifest=d;
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,'');
-    const server=String(d.serverVersion||latest||'—').replace(/^V/i,'');
+    const server=String(health.serverVersion||health.version||d.serverVersion||latest||'—').replace(/^V/i,'');
     const serverEl=document.getElementById('updateServerVersion');if(serverEl)serverEl.textContent=server==='—'?'V—':'V'+server;
     const type=String(d.releaseType||'server_only').toLowerCase();
     const newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
