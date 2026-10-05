@@ -59,11 +59,13 @@ if(game){
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
     const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving){const dx=Number(data?.moveToX)-Number(data?.moveFromX);if(Number.isFinite(dx)&&Math.abs(dx)>.01)button.dataset.walkDir=dx<0?"left":"right"}
     const avatar=document.createElement("span");avatar.className="portrait";
-    const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
+    const rawCharacterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
+    const legacyIndex=rawCharacterId?Number(rawCharacterId.slice(-2)):0,seed=String(data.id||data.participantId||data.displayName||index),seedHash=[...seed].reduce((h,ch)=>((h*31)+ch.charCodeAt(0))>>>0,0);
+    const characterId=rawCharacterId?"character-"+String(((legacyIndex-1)%20)+1).padStart(2,"0"):"character-"+String((seedHash%20)+1).padStart(2,"0");
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
-    const characterUrl=characterId?walkFrameUrl(characterId,walkFrameFor(data)):"";
-    const avatarUrl=trustedAvatarUrl(data.avatarUrl||characterUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
-    if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="eager";img.decoding="async";if(characterId){img.dataset.walkCharacter=characterId;img.dataset.walkFrame=String(walkFrameFor(data))}img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img)}
+    const characterUrl=trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
+    const sources=[characterUrl,legacyUrl,safeDefault].filter((u,i,a)=>u&&a.indexOf(u)===i);
+    if(sources.length){avatar.classList.add("has-image","game-character");const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkFrame=String(walkFrameFor(data));img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character")});avatar.append(img)}
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=position?.moving?"➜":data.ready?"✓":data.online?"●":"○";
     const meta=document.createElement("span");meta.className="player-meta";meta.append(name,stateTag);button.append(avatar,meta);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
