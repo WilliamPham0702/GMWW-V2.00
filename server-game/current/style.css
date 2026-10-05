@@ -1110,3 +1110,25 @@ body.play-immersive .play-card-fan{bottom:calc(env(safe-area-inset-bottom) + 96p
 /* V2.72 — scale GM village characters from server setting */
 body.play-immersive #start .play-player-avatar{width:var(--gmww-character-width)!important;height:var(--gmww-character-height)!important}
 body.play-immersive #start .play-player-token{width:var(--gmww-character-token-width)!important}
+
+
+/* UPDATE MANAGER V1 — prepared off-main */
+.update-manager-card{display:grid!important;gap:10px!important}
+.update-version-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.update-version-grid>div{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.045)}
+.update-version-grid small{font-size:9px;opacity:.72;text-transform:uppercase;letter-spacing:.05em}
+.update-version-grid b{font-size:13px;line-height:1.1}
+.update-message{margin:0;padding:10px 11px;border-radius:12px;background:rgba(0,0,0,.16);font-size:11px;line-height:1.4}
+.update-detail{display:block;min-height:16px;font-size:9px;line-height:1.35;opacity:.72}
+.update-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:7px;background:#8b98a8;box-shadow:0 0 0 3px rgba(139,152,168,.12)}
+.update-dot.ok{background:#51c78b;box-shadow:0 0 0 3px rgba(81,199,139,.14)}
+.update-dot.warn{background:#f0b44d;box-shadow:0 0 0 3px rgba(240,180,77,.14)}
+.update-dot.bad{background:#ea6571;box-shadow:0 0 0 3px rgba(234,101,113,.14)}
+.update-dot.checking{animation:gmwwUpdatePulse 1.1s ease-in-out infinite}
+.update-pill{font-size:8px;font-weight:900;letter-spacing:.05em;padding:5px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
+.update-pill.ok{color:#8de3b2;border-color:rgba(81,199,139,.45)}
+.update-pill.warn{color:#ffd487;border-color:rgba(240,180,77,.5)}
+.update-pill.bad{color:#ff9ca5;border-color:rgba(234,101,113,.5)}
+.update-pill.checking{color:#d8e3ee}
+.update-actions .settings-action.hidden{display:none!important}
+@keyframes gmwwUpdatePulse{50%{opacity:.35;transform:scale(.82)}}
