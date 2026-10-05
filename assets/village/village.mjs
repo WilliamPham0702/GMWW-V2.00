@@ -43,7 +43,8 @@ if(game){
       return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
     }catch{return "";}
   }
-  const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};\n  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
+  const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
+  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){return layout.spawn(id)}
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
