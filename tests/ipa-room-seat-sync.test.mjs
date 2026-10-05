@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('V2.85 runtime keeps offline/online room flow on the V2.85 native shell',()=>{
-  assert.ok(app.includes("const VERSION='2.85';"));
-  assert.ok(html.includes('GMWW V2.85'));
+test('V2.86 runtime keeps offline/online room flow on the V2.86 native shell',()=>{
+  assert.ok(app.includes("const VERSION='2.86';"));
+  assert.ok(html.includes('GMWW V2.86'));
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
