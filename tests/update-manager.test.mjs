@@ -104,3 +104,14 @@ test('Update manifest always advertises an exact native IPA version and URL',()=
   assert.match(workflow,/push:/);
   assert.match(workflow,/server-game\/BUILD_IPA_REQUEST/);
 });
+
+
+test('V2.81 notifies on startup/resume, refuses stale IPA fallback, and newer IPA clears older runtime',()=>{
+  const js=read('server-game/current/app.js'),swift=read('server-game/GMWW-Server/GameView.swift');
+  assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
+  assert.match(js,/visibilitychange/);
+  assert.match(js,/CHƯA CÓ IPA/);
+  assert.doesNotMatch(js,/fallbackUrl=.*releases\/download/);
+  assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) == \.orderedAscending/);
+  assert.match(swift,/removeObject\(forKey: "GMWWActiveRuntimeVersion"\)/);
+});
