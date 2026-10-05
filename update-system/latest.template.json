@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "releaseVersion": "2.76",
+  "releaseType": "runtime",
+  "shellVersion": "2.75",
+  "minimumShellVersion": "2.75",
+  "runtimeVersion": "2.76",
+  "webVersion": "2.76",
+  "serverVersion": "2.76",
+  "required": false,
+  "restartRequired": true,
+  "message": "Có phiên bản GMWW mới.",
+  "runtime": {
+    "files": []
+  },
+  "ipa": null
+}

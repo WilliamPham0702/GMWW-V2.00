@@ -9,6 +9,9 @@ on:
     paths:
       - "server-game/BUILD_IPA_REQUEST"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -316,3 +319,17 @@ jobs:
           path: GMWW-V${{ steps.meta.outputs.version }}.ipa
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish IPA for in-app download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="gmww-v$VERSION"
+          IPA="GMWW-V$VERSION.ipa"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" "$IPA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "Verified GMWW IPA V$VERSION / build $BUILD"
+          else
+            gh release upload "$TAG" "$IPA" --repo "$GITHUB_REPOSITORY" --clobber
+          fi

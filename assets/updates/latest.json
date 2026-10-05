@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "releaseVersion": "2.75",
+  "releaseType": "native",
+  "shellVersion": "2.75",
+  "minimumShellVersion": "2.75",
+  "runtimeVersion": "2.75",
+  "webVersion": "2.75",
+  "serverVersion": "2.75",
+  "required": false,
+  "restartRequired": false,
+  "message": "GMWW V2.75 yêu cầu cài IPA mới để kích hoạt Update Manager.",
+  "runtime": {
+    "files": []
+  },
+  "ipa": {
+    "fileName": "GMWW-V2.75.ipa",
+    "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v2.75/GMWW-V2.75.ipa"
+  }
+}
