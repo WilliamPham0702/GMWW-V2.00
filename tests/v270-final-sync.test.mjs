@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.85 runtime is aligned while V2.85 native shell remains the updater host',()=>{
+test('V2.86 runtime is aligned while V2.86 native shell remains the updater host',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.85"'));
-  assert.ok(app.includes("const VERSION='2.85';"));
-  assert.ok(html.includes('GMWW V2.85'));
+  assert.ok(server.includes('VERSION="V2.86"'));
+  assert.ok(app.includes("const VERSION='2.86';"));
+  assert.ok(html.includes('GMWW V2.86'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 285;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.85;'));
-  assert.equal(pkg.version,'2.85.0');
+  assert.ok(project.includes('MARKETING_VERSION = 2.86;'));
+  assert.equal(pkg.version,'2.86.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
@@ -40,9 +40,9 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V2.85 native build request is the official distributable shell',()=>{
+test('V2.86 native build request is the official distributable shell',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
-  assert.ok(request.includes('GMWW V2.85'));
+  assert.ok(request.includes('GMWW V2.86'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
