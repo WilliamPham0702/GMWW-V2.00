@@ -115,3 +115,17 @@ test('V2.81 notifies on startup/resume, refuses stale IPA fallback, and newer IP
   assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) == \.orderedAscending/);
   assert.match(swift,/removeObject\(forKey: "GMWWActiveRuntimeVersion"\)/);
 });
+
+
+test('Fresh IPA discards any runtime marker that differs from installed shell',()=>{
+  const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
+  assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) != \.orderedSame/);
+});
+
+test('Installed shell does not repeatedly ask for the same native IPA',()=>{
+  const js=fs.readFileSync('server-game/current/app.js','utf8');
+  assert.match(js,/shellCurrent=gmwwVersionCompare\(shell,latest\)>=0/);
+  assert.match(js,/type==='native'&&shellCurrent/);
+  assert.match(js,/ĐÃ CÀI IPA/);
+  assert.match(js,/CẦN KHỞI ĐỘNG LẠI/);
+});
