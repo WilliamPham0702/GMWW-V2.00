@@ -11,18 +11,20 @@ const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 
-test('V2.85 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
+test('V2.86 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
   assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&\!playSceneRuntime\.busy\)playSyncRoom\(false\)\},1000\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('official GM header is GM, contextual player/info, Auto GM',()=>{
-  assert.match(html,/id="playRoomButton"[^>]*aria-label="Quyền Quản Trò"/);
-  assert.match(html,/>GM<\/span><small>QUẢN TRÒ<\/small>/);
-  assert.match(html,/id="playPhasePill"/);
-  assert.match(html,/id="playAutoGM"/);
-  assert.match(app,/active\?\.displayName\|\|\(isLivePlayRoom\(\)\?\('Phòng '/);
+test('official GM header is Auto GM, contextual info, realtime refresh with separate draggable GM',()=>{
+  const auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"');
+  assert.ok(auto>=0&&info>auto&&refresh>info);
+  assert.match(html,/class="play-gm-float" id="playRoomButton"/);
+  assert.match(app,/function initDraggablePlayGM\(\)/);
+  assert.match(app,/PLAY_GM_FLOAT_POS_KEY/);
+  assert.match(app,/function refreshPlayServerRealtime\(\)/);
+  assert.match(app,/playSyncRoom\(true\);connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
 test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
@@ -33,9 +35,9 @@ test('GM player labels keep name and status above character, role below, all sca
   assert.match(css,/play-player-avatar img\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
 
-test('bottom menu is enlarged and pre-game panels are centered closable popups',()=>{
-  assert.match(css,/V2\.85 — OFFICIAL GM village layout/);
-  assert.match(css,/play-control-icon,[\s\S]*play-primary-control\{min-height:64px!important/);
+test('bottom menu is a five-control game bar and pre-game panels are centered closable popups',()=>{
+  assert.match(css,/V2\.86 — refined lightweight game HUD/);
+  assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
   assert.match(css,/play-context-panel\.is-setup-popup\{[\s\S]*left:50%!important;[\s\S]*top:50%!important;[\s\S]*translate\(-50%,-50%\)/);
   assert.match(app,/play-context-close/);
   assert.match(app,/setupPopupClosed=true/);
