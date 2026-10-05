@@ -22,7 +22,7 @@ test('Update Manager JS has runtime and IPA paths',()=>{
   assert.match(js,/function updateDataNow/);
   assert.match(js,/function syncPlayerWebUpdate/);
   assert.match(js,/gmwwUpdater/);
-  assert.match(js,/gmww-v2-00\.williampham0702\.workers\.dev\/gmww-members-live\.js/);
+  assert.match(js,/GMWW_SERVER_BASE\+'\/gmww-members-live\.js\?websync='/);
 });
 
 test('Player Web has new-version reload notification',()=>{
