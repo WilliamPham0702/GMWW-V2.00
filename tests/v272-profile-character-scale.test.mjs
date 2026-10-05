@@ -86,7 +86,7 @@ test('V2.86 runtime metadata is aligned while native shell is V2.86',()=>{
   assert.ok(server.includes('VERSION="V2.86"'));
   assert.ok(app.includes("const VERSION='2.86';"));
   assert.ok(html.includes('GMWW V2.86'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 285;'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 286;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.86;'));
   assert.equal(pkg.version,'2.86.0');
 });
