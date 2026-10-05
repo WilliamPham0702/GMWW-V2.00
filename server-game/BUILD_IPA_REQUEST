@@ -1,4 +1,3 @@
-GMWW V2.81
-Build: 281
-Reason: rebuild IPA so V2.81 clears persisted V2.77 runtime and loads bundled V2.81 runtime
+GMWW V2.81 hotfix rebuild
 Requested: 2026-10-06
+Reason: bundle corrected GameView runtime reset and same-version IPA reinstall guard into the distributable IPA.
