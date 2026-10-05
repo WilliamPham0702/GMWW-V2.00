@@ -63,3 +63,17 @@ html.embedded .player .portrait.game-character img{image-rendering:auto;transfor
 .player.moving[data-walk-dir="left"] .portrait.game-character img,
 .player.moving[data-walk-dir="right"] .portrait.game-character img{transform:none!important}
 .player.moving{transition:none!important;will-change:left,top}
+
+/* V2.82 — seated characters stay alive with a subtle idle sway; they do not roam. */
+@keyframes gmww-seated-idle-sway{
+  0%,100%{transform:translateY(0) rotate(-1deg)}
+  50%{transform:translateY(-3px) rotate(1deg)}
+}
+.player.seated:not(.moving) .portrait.game-character{
+  animation:gmww-seated-idle-sway 2.4s ease-in-out infinite!important;
+  transform-origin:50% 100%!important;
+  will-change:transform;
+}
+.player.seated:not(.moving):nth-child(3n+2) .portrait.game-character{animation-delay:-.8s!important}
+.player.seated:not(.moving):nth-child(3n) .portrait.game-character{animation-delay:-1.6s!important}
+@media(prefers-reduced-motion:reduce){.player.seated:not(.moving) .portrait.game-character{animation:none!important}}
