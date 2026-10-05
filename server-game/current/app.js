@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.80';
+const VERSION='2.81';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -817,11 +817,14 @@ async function installRuntimeUpdate(){
   return true
 }
 function downloadUpdateIPA(){
-  const manifestIpa=gmwwUpdateManifest?.ipa||{},shell=gmwwShellVersion(),fallbackVersion=String(manifestIpa.version||gmwwUpdateManifest?.shellVersion||shell||gmwwRuntimeVersion()).replace(/^V/i,'');
-  const fallbackUrl='https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v'+fallbackVersion+'/GMWW-V'+fallbackVersion+'.ipa';
-  const url=String(manifestIpa.url||fallbackUrl).trim(),fileName=String(manifestIpa.fileName||('GMWW-V'+fallbackVersion+'.ipa'));
-  setUpdateUi('checking','ĐANG TẢI IPA','Đang chuẩn bị file IPA…','File sẽ mở bảng chia sẻ trên iPhone.');
-  if(!gmwwNativePost('downloadIPA',{url,fileName}))window.location.assign(url);
+  const manifestIpa=gmwwUpdateManifest?.ipa||{},version=String(manifestIpa.version||'').replace(/^V/i,''),url=String(manifestIpa.url||'').trim(),fileName=String(manifestIpa.fileName||'').trim();
+  if(!version||!url||!fileName){
+    setUpdateUi('warn','CHƯA CÓ IPA','Server chưa công bố file IPA mới để tải.','Không tải lại IPA cũ trong máy.');
+    return false;
+  }
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải GMWW V'+version+'…','File sẽ mở bảng chia sẻ trên iPhone.');
+  if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
+  return true;
 }
 async function updateDataNow(){
   const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
@@ -881,13 +884,17 @@ async function checkAppUpdate({notify=false}={}){
     }else{
       setUpdateAction('none');setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
     }
-    if(notify&&(type==='runtime'||type==='native')){
+    if(notify&&newer){
       const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
       if(!sessionStorage.getItem(key)){
         sessionStorage.setItem(key,'1');
         if(type==='runtime'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nCó thể cập nhật trực tiếp, không cần cài lại ứng dụng.\n\nCập nhật ngay?'))installRuntimeUpdate();
-        }else if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nPhiên bản này cần cài IPA mới.\n\nTải IPA ngay?'))downloadUpdateIPA();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nVui lòng CẬP NHẬT để nhận phiên bản mới.\n\nCập nhật ngay?'))installRuntimeUpdate();
+        }else if(type==='native'){
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nPhiên bản này cần cài lại IPA mới.\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+        }else{
+          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\n\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+        }
       }
     }
     return d
@@ -950,9 +957,10 @@ if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',updateDataNow);
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
-setTimeout(()=>checkAppUpdate({notify:false}),1400);
+setTimeout(()=>checkAppUpdate({notify:true}),1400);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120)}));
-window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
+window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>checkAppUpdate({notify:true}),250)});
 
 function setMaintenanceState(kind,text,detail){
   const pill=document.getElementById('maintenanceStatus'),dot=document.getElementById('maintenanceDot'),msg=document.getElementById('maintenanceDetail');

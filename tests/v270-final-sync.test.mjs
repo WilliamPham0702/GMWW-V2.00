@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.80 runtime is aligned while V2.76 native shell remains the updater host',()=>{
+test('V2.81 runtime is aligned while V2.81 native shell remains the updater host',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.80"'));
-  assert.ok(app.includes("const VERSION='2.80';"));
-  assert.ok(html.includes('GMWW V2.80'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 276;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.76;'));
-  assert.equal(pkg.version,'2.80.0');
+  assert.ok(server.includes('VERSION="V2.81"'));
+  assert.ok(app.includes("const VERSION='2.81';"));
+  assert.ok(html.includes('GMWW V2.81'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 281;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.81;'));
+  assert.equal(pkg.version,'2.81.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
@@ -40,11 +40,12 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V2.76 build request produces the final IPA and keeps full legacy artwork and 240 walk frames',()=>{
+test('V2.81 build request produces the final IPA and keeps full legacy artwork and 240 walk frames',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
-  assert.ok(request.includes('GMWW V2.76'));
+  assert.ok(request.includes('GMWW V2.81'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
   assert.ok(workflow.includes('walk-v266-left'));
+  assert.ok(workflow.includes('server-game/BUILD_IPA_REQUEST'));
 });

@@ -81,10 +81,11 @@ const manifest={
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
-  ipa:isNative?{
-    fileName:`GMWW-V${version}.ipa`,
-    url:`https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v${version}/GMWW-V${version}.ipa`
-  }:null
+  ipa:{
+    version:isNative?version:shell,
+    fileName:`GMWW-V${isNative?version:shell}.ipa`,
+    url:`https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v${isNative?version:shell}/GMWW-V${isNative?version:shell}.ipa`
+  }
 };
 fs.mkdirSync(path.join('assets','updates'),{recursive:true});
 fs.writeFileSync(path.join('assets','updates','latest.json'),JSON.stringify(manifest,null,2)+'\n');
