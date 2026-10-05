@@ -3,6 +3,8 @@ name: Check Player Web Worker
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
     paths:
       - "src/**"
       - "assets/**"
