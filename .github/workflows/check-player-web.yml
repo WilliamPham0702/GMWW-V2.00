@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: player-web-check-${{ github.ref }}
+  group: player-web-check-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
