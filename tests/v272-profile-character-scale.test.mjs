@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.81 keeps six discrete character sizes and removes the slider',()=>{
+test('V2.82 keeps six discrete character sizes and removes the slider',()=>{
   const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
   assert.ok(html.includes('id="characterScaleChoices"'));
   for(const n of [75,100,125,150,175,200]) assert.ok(html.includes('data-character-scale="'+n+'"'));
@@ -77,14 +77,14 @@ test('Manual login enters the village directly with no intermediate room restore
   assert.doesNotMatch(segment,/fallbackError|GMWW post-login/);
 });
 
-test('V2.81 runtime metadata is aligned while native shell is V2.81',()=>{
+test('V2.82 runtime metadata is aligned while native shell is V2.82',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.81"'));
-  assert.ok(app.includes("const VERSION='2.81';"));
-  assert.ok(html.includes('GMWW V2.81'));
+  assert.ok(server.includes('VERSION="V2.82"'));
+  assert.ok(app.includes("const VERSION='2.82';"));
+  assert.ok(html.includes('GMWW V2.82'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 281;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.81;'));
-  assert.equal(pkg.version,'2.81.0');
+  assert.equal(pkg.version,'2.82.0');
 });
 
 
