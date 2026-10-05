@@ -62,7 +62,7 @@ test('Update channel never downgrades a native release on same-version follow-up
 });
 
 
-test('V2.79 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
+test('V2.80 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   const js=fs.readFileSync('server-game/current/app.js','utf8');
