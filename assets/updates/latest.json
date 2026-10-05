@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "releaseVersion": "2.81",
-  "releaseType": "native",
+  "releaseVersion": "2.82",
+  "releaseType": "runtime",
   "shellVersion": "2.81",
   "minimumShellVersion": "2.81",
-  "runtimeVersion": "2.81",
-  "webVersion": "2.81",
-  "serverVersion": "2.81",
+  "runtimeVersion": "2.82",
+  "webVersion": "2.82",
+  "serverVersion": "2.82",
   "required": false,
-  "restartRequired": false,
-  "message": "Có GMWW V2.81. Phiên bản này cần cài IPA mới.",
+  "restartRequired": true,
+  "message": "Có GMWW V2.82. Có thể cập nhật trực tiếp, không cần cài lại IPA.",
   "runtime": {
     "files": []
   },
