@@ -1394,7 +1394,7 @@ function initDraggablePlayGM(){
     btn.style.left=x+'px';btn.style.top=y+'px';btn.style.right='auto';btn.style.bottom='auto';
     if(persist)try{localStorage.setItem(PLAY_GM_FLOAT_POS_KEY,JSON.stringify({x,y}))}catch{}
   };
-  requestAnimationFrame(()=>{let saved=null;try{saved=JSON.parse(localStorage.getItem(PLAY_GM_FLOAT_POS_KEY)||'null')}catch{};place(saved?.x??12,saved?.y??112,false)});
+  setTimeout(()=>{let saved=null;try{saved=JSON.parse(localStorage.getItem(PLAY_GM_FLOAT_POS_KEY)||'null')}catch{};place(saved?.x??12,saved?.y??112,false)},0);
   btn.addEventListener('pointerdown',e=>{
     if(e.button!==undefined&&e.button!==0)return;const br=btn.getBoundingClientRect();
     drag={id:e.pointerId,dx:e.clientX-br.left,dy:e.clientY-br.top,startX:e.clientX,startY:e.clientY,moved:false};
