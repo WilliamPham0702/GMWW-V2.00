@@ -19,8 +19,8 @@ test('V2.85 keeps six discrete character sizes and removes the slider',()=>{
   assert.doesNotMatch(server,/globalWebVeilGet|globalWebVeilPut|global-settings\/web-veil/);
 });
 
-test('Player Web scales actor artwork only and keeps layout containers fixed',()=>{
-  const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs'),art=read('assets/village/village-art.css');
+test('Player Web scales actor artwork and official labels together while keeping the seat container fixed',()=>{
+  const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs'),art=read('assets/village/village-art.css'),css=read('assets/village/village.css');
   assert.ok(live.includes('GMWW_CHARACTER_SCALES=[75,100,125,150,175,200]'));
   assert.ok(live.includes("api('/api/ui-settings')"));
   assert.ok(live.includes('characterScale:Number(state.characterScale||100)'));
@@ -28,8 +28,12 @@ test('Player Web scales actor artwork only and keeps layout containers fixed',()
   assert.ok(village.includes('avatar.style.width=baseW+"px"'));
   assert.ok(village.includes('avatar.style.height=baseH+"px"'));
   assert.ok(village.includes('button.style.minWidth=Math.max(52,baseW+10)+"px"'));
-  assert.ok(village.includes('avatar.style.setProperty("--gmww-character-scale",String(scale))'));
+  assert.ok(village.includes('button.style.setProperty("--gmww-character-scale",String(scale))'));
   assert.ok(art.includes('scale(var(--gmww-character-scale,1))'));
+  assert.ok(css.includes('.player .player-over'));
+  assert.ok(css.includes('.player .player-role'));
+  assert.match(css,/player-over[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
+  assert.match(css,/player-role[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
 });
 
 test('Player tapping their own character no longer opens information',()=>{
