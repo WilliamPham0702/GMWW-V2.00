@@ -872,9 +872,18 @@ async function checkAppUpdate({notify=false}={}){
     const server=String(health.serverVersion||health.version||d.serverVersion||latest||'—').replace(/^V/i,'');
     const serverEl=document.getElementById('updateServerVersion');if(serverEl)serverEl.textContent=server==='—'?'V—':'V'+server;
     const type=String(d.releaseType||'server_only').toLowerCase();
-    const newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
+    const runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion(),newer=gmwwVersionCompare(latest,runtime)>0;
+    const shellCurrent=gmwwVersionCompare(shell,latest)>=0;
+    if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
+      setUpdateAction('none');setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime cũ V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
+      return d
+    }
     if(!newer){
       setUpdateAction('none');setUpdateUi('ok','MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Không cần cập nhật.');
+      return d
+    }
+    if(type==='native'&&shellCurrent){
+      setUpdateAction('none');setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
       return d
     }
     if(type==='native'){
