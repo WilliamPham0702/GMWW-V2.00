@@ -1384,32 +1384,6 @@ async function refreshPlayServerRealtime(){
   }catch(err){btn.classList.add('is-error');playFlashError('Không cập nhật được realtime từ server. '+(err?.message||''));setTimeout(()=>btn.classList.remove('is-error'),1100)}
   finally{delete btn.dataset.syncing;btn.classList.remove('is-syncing')}
 }
-function initDraggablePlayGM(){
-  const btn=document.getElementById('playRoomButton'),world=document.getElementById('playWorld');if(!btn||!world||btn.dataset.dragReady==='1')return;
-  btn.dataset.dragReady='1';let drag=null;
-  const place=(left,top,persist=false)=>{
-    const wr=world.getBoundingClientRect(),bw=btn.offsetWidth||64,bh=btn.offsetHeight||44,maxX=Math.max(8,wr.width-bw-8),maxY=Math.max(86,wr.height-bh-92);
-    const x=Math.max(8,Math.min(maxX,Number(left)||8)),y=Math.max(86,Math.min(maxY,Number(top)||86));
-    btn.style.left=x+'px';btn.style.top=y+'px';btn.style.right='auto';btn.style.bottom='auto';
-    if(persist)try{localStorage.setItem(PLAY_GM_FLOAT_POS_KEY,JSON.stringify({x,y}))}catch{}
-  };
-  setTimeout(()=>{let saved=null;try{saved=JSON.parse(localStorage.getItem(PLAY_GM_FLOAT_POS_KEY)||'null')}catch{};place(saved?.x??12,saved?.y??112,false)},0);
-  btn.addEventListener('pointerdown',e=>{
-    if(e.button!==undefined&&e.button!==0)return;const br=btn.getBoundingClientRect();
-    drag={id:e.pointerId,dx:e.clientX-br.left,dy:e.clientY-br.top,startX:e.clientX,startY:e.clientY,moved:false};
-    btn.setPointerCapture?.(e.pointerId);btn.classList.add('is-dragging')
-  });
-  btn.addEventListener('pointermove',e=>{
-    if(!drag||drag.id!==e.pointerId)return;const wr=world.getBoundingClientRect();
-    if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>5)drag.moved=true;
-    place(e.clientX-wr.left-drag.dx,e.clientY-wr.top-drag.dy,false);if(drag.moved)e.preventDefault()
-  });
-  const finish=e=>{
-    if(!drag||drag.id!==e.pointerId)return;const moved=drag.moved;drag=null;btn.classList.remove('is-dragging');btn.dataset.dragged=moved?'1':'0';
-    const wr=world.getBoundingClientRect(),br=btn.getBoundingClientRect();place(br.left-wr.left,br.top-wr.top,true)
-  };
-  btn.addEventListener('pointerup',finish);btn.addEventListener('pointercancel',finish)
-}
 function playSeatPositions(count){return globalThis.GMWW_VILLAGE_LAYOUT.positions(count).map(p=>[p.x,p.y])}
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||''),n=Number(id.slice(-2));return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)&&Number.isFinite(n)?'character-'+String(((n-1)%20)+1).padStart(2,'0'):'character-01'}
