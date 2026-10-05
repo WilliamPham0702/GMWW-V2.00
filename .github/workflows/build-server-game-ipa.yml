@@ -51,6 +51,9 @@ jobs:
           cp assets/village/village-layout.js "$APPDIR/Web/village-layout.js"
           mkdir -p "$APPDIR/Web/game-characters"
           cp assets/characters/v253/chibi-*.webp "$APPDIR/Web/game-characters/"
+          mkdir -p "$APPDIR/Web/game-characters/walk-v263"
+          cp -R assets/characters/walk-v263/character-* "$APPDIR/Web/game-characters/walk-v263/"
+          test "$(find "$APPDIR/Web/game-characters/walk-v263" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
 
           node - <<'NODE'
           const fs=require('fs');
@@ -270,6 +273,7 @@ jobs:
           test -s "$APP/Web/gmww-village-day-v260.webp"
           test -s "$APP/Web/gmww-village-night-v260.webp"
           test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -eq 42
+          test "$(find "$APP/Web/game-characters/walk-v263" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
           test -s "$APP/Web/default-artwork.webp"
           ! test -e "$APP/Web/v1-audio.js"
           ! test -e "$APP/Web/sea-artwork.js"
