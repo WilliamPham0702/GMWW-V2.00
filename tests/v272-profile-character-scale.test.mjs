@@ -121,3 +121,18 @@ test('History row uses a single clean border without an inner summary frame',()=
   assert.ok(live.includes("border:1px solid #d7b775!important"));
   assert.ok(live.includes("border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important"));
 });
+
+
+test('Player session survives transient restore failures and only clears on auth rejection',()=>{
+  const live=read('src/gmww-members-live.js');
+  assert.ok(live.includes("if(e?.status===401||e?.status===403)"));
+  assert.ok(live.includes("const cached=JSON.parse(localStorage.getItem('gmww_member')||'null')"));
+  assert.ok(live.includes("setTimeout(()=>restore(),2500)"));
+});
+
+test('Seated characters keep a subtle idle sway without roaming',()=>{
+  const css=read('assets/village/village.css');
+  assert.ok(css.includes('@keyframes gmww-seated-idle-sway'));
+  assert.ok(css.includes('.player.seated:not(.moving) .portrait.game-character'));
+  assert.ok(css.includes('2.4s ease-in-out infinite'));
+});
