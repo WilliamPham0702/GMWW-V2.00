@@ -4,10 +4,6 @@ name: Build Quản Trò Ma Sói V2 IPA
 # Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "server-game/BUILD_IPA_REQUEST"
 
 permissions:
   contents: write
