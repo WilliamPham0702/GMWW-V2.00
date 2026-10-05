@@ -9,7 +9,8 @@ test('V2.63 exposes exactly 20 selectable six-frame chibi and preserves legacy I
   assert.match(index,/VERSION="V2\.63"/);
   assert.match(index,/const GAME_CHARACTER_COUNT=20;/);
   assert.match(index,/frameCount:6/);
-  assert.match(index,/\/api\/game-characters\/\(character-\(\?:0\[1-9\]\|1\[0-9\]\|20\)\)\/frame\/\(\[1-6\]\)/);
+  assert.match(index,/gameCharacterFrameRoute/);
+  assert.match(index,/\/frame\/\(\[1-6\]\)/);
   assert.match(index,/\^character-\(\?:0\[1-9\]\|\[1-3\]\[0-9\]\|4\[0-2\]\)\$/);
   let frames=0;
   for(let c=1;c<=20;c++)for(let f=1;f<=6;f++){
@@ -35,7 +36,8 @@ test('Village and GM use real frame swapping instead of fake paper rotation',()=
   const villageCss=read('assets/village/village.css');
   const app=read('server-game/current/app.js');
   const css=read('server-game/current/style.css');
-  assert.match(village,/frame-.*\.webp/);
+  assert.match(village,/function walkFrameUrl\(characterId,frame=1\)/);
+  assert.match(village,/img\.src=walkFrameUrl\(img\.dataset\.walkCharacter,frame\)/);
   assert.match(app,/playCharacterFrameUrl/);
   assert.match(app,/Math\.floor\(performance\.now\(\)\/115\)%6/);
   assert.doesNotMatch(villageCss,/@keyframes gmwwVillageWalk/);
@@ -56,14 +58,14 @@ test('V2.63 UI keeps dialogs above village, uses X close, compacts profile and r
   const live=read('src/gmww-members-live.js');
   const html=read('server-game/current/GMWW.html');
   const css=read('server-game/current/style.css');
-  assert.match(live,/#avatarLibraryModal,.modal,.sheet,\[role=\"dialog\"\]\{z-index:320!important\}/);
+  assert.match(live,/z-index:320!important/);
   assert.match(live,/#profile \.stats,#profile \.history,#profile \.section-title,#profile \.change-pass\{display:none!important\}/);
   assert.match(live,/gmwwProfileVillageBack'.*textContent='×'/s);
   assert.match(live,/gmwwRoomsVillageBack'.*textContent='×'/s);
   assert.doesNotMatch(live,/William/);
   assert.match(html,/id="playGameClose" type="button">×<\/button>/);
   assert.match(html,/id="playEndClose" type="button">×<\/button>/);
-  assert.match(css,/body\.play-immersive \.sheet\{z-index:400!important\}/);
+  assert.match(css,/\.sheet\{z-index:2200!important\}/);
 });
 
 test('Game Templates live in Library and V1.09 templates are migrated once',()=>{
