@@ -32,9 +32,9 @@ jobs:
           set -euo pipefail
           SRC=$(find /tmp/v262/ipa/Payload -path '*/Web/game-characters' -type d | head -1)
           test -n "$SRC"
-          python - <<'PY'
-          import hashlib, pathlib, shutil
-          src=pathlib.Path("""$SRC""")
+          SRC="$SRC" python - <<'PY'
+          import os, hashlib, pathlib, shutil
+          src=pathlib.Path(os.environ["SRC"])
           dst=pathlib.Path("assets/characters/v253")
           expected={
             "chibi-01.webp":"0c6eb1b5ae052197f12a5599334c77056cc093a41e62f0f49b33b03b49038951",
