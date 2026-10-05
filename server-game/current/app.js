@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.65';
+const VERSION='2.66';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -1154,7 +1154,7 @@ let playSceneState=(()=>{
   const base={step:'room',roomMode:'online',seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:45,autoAdvance:true},matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='room';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',lastSyncAt:0,lastError:'',socket:null,socketRoomCode:'',socketReconnect:0};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1197,9 +1197,12 @@ function bindPlayPlayerStateActions(){
 }
 function playSeatPositions(count){return globalThis.GMWW_VILLAGE_LAYOUT.positions(count).map(p=>[p.x,p.y])}
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
-function playCharacterFrameUrl(gameCharacterId,frame=1){const id=String(gameCharacterId||''),n=Number(id.slice(-2)),f=Math.max(1,Math.min(6,Number(frame)||1));if(/^character-(?:0[1-9]|1[0-9]|20)$/.test(id))return 'game-characters/walk-v263/'+id+'/frame-'+String(f).padStart(2,'0')+'.webp';return /^character-(?:[2-3][0-9]|4[0-2])$/.test(id)?'game-characters/chibi-'+id.slice(-2)+'.webp':''}
-function playCharacterUrl(gameCharacterId){return playCharacterFrameUrl(gameCharacterId,1)}
-function playWalkFrame(member,now=Date.now()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
+function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||''),n=Number(id.slice(-2));return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)&&Number.isFinite(n)?'character-'+String(((n-1)%20)+1).padStart(2,'0'):'character-01'}
+function playWalkDirection(member){const dx=Number(member?.moveToX)-Number(member?.moveFromX);return Number.isFinite(dx)&&dx<-.01?'left':'right'}
+function playCharacterFrameUrl(gameCharacterId,frame=1,direction='right'){const id=playActiveCharacterId(gameCharacterId),f=Math.max(1,Math.min(6,Number(frame)||1)),folder=direction==='left'?'walk-v266-left':'walk-v263';return 'game-characters/'+folder+'/'+id+'/frame-'+String(f).padStart(2,'0')+'.webp'}
+function playCharacterUrl(gameCharacterId){return playCharacterFrameUrl(gameCharacterId,1,'right')}
+function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
+function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
   const seatCount=Math.max(1,Math.min(30,Number(playSceneRuntime.room?.seatCount||playSceneState.seatCount)||12)),players=playLiveMembers(),occupied=new Set(players.map(p=>Number(p?.seatId||0)).filter(n=>n>=1&&n<=seatCount));
   return{seatCount,occupied:occupied.size,available:Math.max(0,seatCount-occupied.size)}
@@ -1223,7 +1226,7 @@ function connectPlaySocket(){
   const code=String(playSceneState.roomCode);if(playSceneRuntime.socket&&playSceneRuntime.socketRoomCode===code&&[WebSocket.OPEN,WebSocket.CONNECTING].includes(playSceneRuntime.socket.readyState))return;
   disconnectPlaySocket();const base=String(GMWW_SERVER_BASE||'').replace(/^http:/,'ws:').replace(/^https:/,'wss:').replace(/\/$/,'');let ws;
   try{ws=new WebSocket(base+'/ws/'+encodeURIComponent(code))}catch{return}playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
-  ws.onmessage=e=>{try{const d=JSON.parse(e.data||'{}');if(d.type!=='room_state'||String(playSceneState.roomCode)!==code)return;playSceneRuntime.room=d.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(d.players)?d.players:playSceneRuntime.players;playSceneRuntime.lastSyncAt=Date.now();renderPlayScene()}catch{}};
+  ws.onmessage=e=>{try{const d=JSON.parse(e.data||'{}'),movementEvent=d.type==='player_move'||d.type==='player_move_complete';if(!['room_state','player_move','player_move_complete'].includes(d.type)||String(playSceneState.roomCode)!==code)return;if(movementEvent&&Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();playSceneRuntime.room=d.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(d.players)?d.players:playSceneRuntime.players;playSceneRuntime.lastSyncAt=Date.now();if(movementEvent){renderPlayPlayers();syncPlayMovementTicker()}else renderPlayScene()}catch{}};
   ws.onclose=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';if(isLivePlayRoom()&&String(playSceneState.roomCode)===code)playSceneRuntime.socketReconnect=setTimeout(connectPlaySocket,900)}};
   ws.onerror=()=>{};
 }
@@ -1269,11 +1272,24 @@ async function playSyncRoom(force=false){
     return null;
   }
 }
-function playMovementPoint(m,pos){if(m?.movementStatus!=='moving')return pos;const p=globalThis.GMWW_VILLAGE_LAYOUT.interpolate(m);return[p.x,p.y]}
+function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')return pos;const p=globalThis.GMWW_VILLAGE_LAYOUT.interpolate(m,now);return[p.x,p.y]}
+function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
+function playMovementFrame(){
+  const moving=playVillageMembers().filter(p=>p?.movementStatus==='moving');
+  if(!moving.length){playSceneRuntime.moveTicker=0;return}
+  const now=playNow(),ring=document.getElementById('playPlayerRing');if(!ring){playSceneRuntime.moveTicker=0;return}
+  for(const m of moving){
+    const id=String(m?.loginId||m?.participantId||''),el=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');if(!el)continue;
+    const point=playMovementPoint(m,null,now),pt=playMapDisplay(point[0],point[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
+    const im=el.querySelector('img'),direction=playWalkDirection(m),frame=playWalkFrame(m,now),src=playCharacterFrameUrl(m.gameCharacterId,frame,direction),key=direction+':'+frame;
+    el.dataset.walkDir=direction;if(im&&im.dataset.walkKey!==key){im.dataset.walkKey=key;im.src=src}
+  }
+  playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame)
+}
 function syncPlayMovementTicker(){
   const moving=playVillageMembers().some(p=>p?.movementStatus==='moving');
-  if(moving&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=setInterval(()=>{if(!playVillageMembers().some(p=>p?.movementStatus==='moving')){clearInterval(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0;return}renderPlayPlayers()},100);
-  else if(!moving&&playSceneRuntime.moveTicker){clearInterval(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}
+  if(moving&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
+  else if(!moving)stopPlayMovementTicker()
 }
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
@@ -1281,14 +1297,14 @@ function renderPlayPlayers(){
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);
   const make=(m,pos,seatId=null)=>{
     const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=m?.movementStatus==='moving',isOnlinePick=m&&playSceneState.step==='members'&&playSceneState.roomMode==='online';
-    el.type='button';if(seatId)el.dataset.seatId=String(seatId);
+    el.type='button';if(seatId)el.dataset.seatId=String(seatId);if(m)el.dataset.playPlayerId=String(m.loginId||m.participantId||'');
     el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-position':'')+(moving?' is-moving':'');
-    const mapPoint=moving?playMovementPoint(m,pos):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
+    const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(isOnlinePick?(selectedIds.has(String(m.loginId))?'ĐÃ CHỌN':'ONLINE'):(moving?'ĐANG DI CHUYỂN':(effectLabel||((m.online?'ONLINE':'OFFLINE')+' • '+(m.ready?'READY':'CHƯA READY'))))):'TRỐNG';
     el.innerHTML='<div class="play-player-avatar">'+(m?'<img alt="">':'<span class="play-position-plus">＋</span>')+'</div><b>'+(m?((seatId?'V'+seatId+' · ':'')+playEsc(name)):('Vị trí '+seatId))+'</b><small>'+playEsc(statusLabel)+'</small>';
     el.setAttribute('aria-label',name+' • '+statusLabel);el.title=name+' • '+statusLabel;
     if(m){
-      const im=el.querySelector('img'),characterSrc=playCharacterFrameUrl(m.gameCharacterId,moving?playWalkFrame(m):1);im.src=characterSrc||playCharacterFrameUrl('character-01',1);im.decoding='async';
+      const im=el.querySelector('img'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterFrameUrl(m.gameCharacterId,frame,direction);im.src=characterSrc;im.dataset.walkKey=direction+':'+frame;el.dataset.walkDir=direction;im.decoding='async';
       // A neutral preview does not assign/change the account's fixed character.
       if(!characterSrc){el.classList.add('is-character-preview');el.querySelector('small').textContent='CHƯA CHỌN NHÂN VẬT'}
       im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};

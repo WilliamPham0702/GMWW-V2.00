@@ -41,8 +41,7 @@ html.embedded .fire{display:block!important}
 
 /* V2.55 roaming chibi */
 .player.moving{transition:none!important;will-change:left,top}
-.player.moving .portrait.game-character{animation:none!important}.player.moving[data-walk-dir="left"] .portrait.game-character img{transform:scaleX(-1)}
-.player.roaming .name{background:rgba(5,57,73,.86);border:1px solid rgba(103,235,230,.25)}
+.player.moving .portrait.game-character{animation:none!important}.player.roaming .name{background:rgba(5,57,73,.86);border:1px solid rgba(103,235,230,.25)}
 .seat-empty.reserved .seat-dot{border-color:#ffd97a!important;background:rgba(125,92,17,.72)!important;animation:none!important}
 .seat-empty.reserved .seat-dot::before{content:"➜"!important;color:#fff1b8!important;font-size:22px!important}
 html.embedded .stage.setup-walk{cursor:crosshair}
@@ -58,3 +57,9 @@ html.embedded .fire{display:block!important;inset:auto!important;width:84px!impo
 /* V2.63 real-frame 2D walking + embedded overlay cleanup */
 html.embedded .selection{display:none!important}
 html.embedded .player .portrait.game-character img{image-rendering:auto;transform-origin:50% 100%}
+
+
+/* V2.66 — reverse walking uses dedicated raster frames, never runtime scaleX flipping. */
+.player.moving[data-walk-dir="left"] .portrait.game-character img,
+.player.moving[data-walk-dir="right"] .portrait.game-character img{transform:none!important}
+.player.moving{transition:none!important;will-change:left,top}

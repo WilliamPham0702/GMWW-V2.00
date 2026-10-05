@@ -4,9 +4,9 @@ export function installVillageCamera(stage,scene,zoomInput){
   let zoom=1,panX=0,panY=0,active=null,originX=0,originY=0,initialX=0,initialY=0;
   const apply=()=>{
     panX=Math.max(-160,Math.min(160,panX));panY=Math.max(-120,Math.min(120,panY));
-    scene.style.setProperty("--zoom",String(zoom));
-    scene.style.setProperty("--pan-x",panX+"px");
-    scene.style.setProperty("--pan-y",panY+"px");
+    stage.style.setProperty("--zoom",String(zoom));
+    stage.style.setProperty("--pan-x",panX+"px");
+    stage.style.setProperty("--pan-y",panY+"px");
   };
   const onZoom=()=>{zoom=Math.max(.7,Math.min(1.55,Number(zoomInput.value)/100));apply()};
   const down=e=>{

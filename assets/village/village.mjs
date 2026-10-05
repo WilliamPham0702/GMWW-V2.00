@@ -43,29 +43,30 @@ if(game){
       return u.origin===window.location.origin&&["http:","https:"].includes(u.protocol)?u.href:"";
     }catch{return "";}
   }
-  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""},moveFrame=0,arrivalNotified=new Set();
+  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0},moveFrame=0,arrivalNotified=new Set();
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){return layout.spawn(id)}
-  function movementPosition(data,seatPos=null,now=Date.now()){
+  function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     const pos=data?.movementStatus==='moving'?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1))));
     return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1};
   }
   function screenPoint(p){const stage=document.querySelector('.stage');return layout.toScreen(p,stage.clientWidth||864,stage.clientHeight||1536)}
-  function walkFrameUrl(characterId,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f}
-  function walkFrameFor(data,now=Date.now()){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
+  function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
+  function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?dir=left":"";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
+  function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
   function makePlayerButton(data,position,seatId=null,index=0){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
-    const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving){const dx=Number(data?.moveToX)-Number(data?.moveFromX);if(Number.isFinite(dx)&&Math.abs(dx)>.01)button.dataset.walkDir=dx<0?"left":"right"}
+    const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving)button.dataset.walkDir=walkDirection(data)
     const avatar=document.createElement("span");avatar.className="portrait";
     const rawCharacterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
     const legacyIndex=rawCharacterId?Number(rawCharacterId.slice(-2)):0,seed=String(data.id||data.participantId||data.displayName||index),seedHash=[...seed].reduce((h,ch)=>((h*31)+ch.charCodeAt(0))>>>0,0);
     const characterId=rawCharacterId?"character-"+String(((legacyIndex-1)%20)+1).padStart(2,"0"):"character-"+String((seedHash%20)+1).padStart(2,"0");
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
-    const characterUrl=trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
+    const direction=position?.moving?walkDirection(data):"right",characterUrl=trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction)),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
     const sources=[characterUrl,legacyUrl,safeDefault].filter((u,i,a)=>u&&a.indexOf(u)===i);
-    if(sources.length){avatar.classList.add("has-image","game-character");const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkFrame=String(walkFrameFor(data));img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character")});avatar.append(img)}
+    if(sources.length){avatar.classList.add("has-image","game-character");const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkDir=direction;img.dataset.walkFrame=String(walkFrameFor(data));img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character")});avatar.append(img)}
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=position?.moving?"➜":data.ready?"✓":data.online?"●":"○";
     const meta=document.createElement("span");meta.className="player-meta";meta.append(name,stateTag);button.append(avatar,meta);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
@@ -95,7 +96,7 @@ if(game){
     let active=false;
     for(const data of all){
       if(data?.movementStatus!=="moving"||!data.moveId)continue;const el=players.querySelector('[data-player-id="'+CSS.escape(String(data.id))+'"]');if(!el)continue;
-      const nowMs=Date.now(),pos=movementPosition(data,null,nowMs),display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;const img=el.querySelector("img[data-walk-character]");if(img){const frame=pos.moving?walkFrameFor(data,nowMs):1;if(img.dataset.walkFrame!==String(frame)){img.dataset.walkFrame=String(frame);img.src=walkFrameUrl(img.dataset.walkCharacter,frame)}}el.classList.toggle("moving",!!pos.moving);
+      const nowMs=Date.now()+Number(setupState.clockOffsetMs||0),pos=movementPosition(data,null,nowMs),display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;const img=el.querySelector("img[data-walk-character]");if(img){const frame=pos.moving?walkFrameFor(data,nowMs):1,direction=pos.moving?walkDirection(data):"right",key=direction+":"+frame;if(img.dataset.walkFrame!==key){img.dataset.walkFrame=key;img.dataset.walkDir=direction;img.src=walkFrameUrl(img.dataset.walkCharacter,frame,direction)}}el.dataset.walkDir=pos.moving?walkDirection(data):"right";el.classList.toggle("moving",!!pos.moving);
       if(!pos.moving&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
     }
     if(active)moveFrame=requestAnimationFrame(animateMovementFrame);else moveFrame=0
@@ -128,7 +129,7 @@ if(game){
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
-    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:""};
+    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0};
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);

@@ -1100,3 +1100,9 @@ body.play-immersive .play-card-fan{bottom:calc(env(safe-area-inset-bottom) + 96p
 .editor-back{grid-column:3!important;justify-self:end!important}
 .sheet-head>button:last-child{right:0!important;left:auto!important}
 #gmwwProfileVillageBack,#gmwwRoomsVillageBack{right:8px!important;left:auto!important}
+
+
+/* V2.66 — animation is driven by requestAnimationFrame + real direction frames. */
+.play-player-token.is-moving{transition:none!important;will-change:left,top!important}
+.play-player-token.is-moving .play-player-avatar img,
+.play-player-token:not(.is-moving):not(.is-empty) .play-player-avatar img{animation:none!important;transform:none!important}
