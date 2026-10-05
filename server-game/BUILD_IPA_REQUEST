@@ -1,3 +1,3 @@
-GMWW V2.72
+GMWW V2.75
 Requested: 2026-10-05
-Purpose: remove background dim control, add server-synced character size, fix false login warning, expose profile from village, build 272
+Purpose: integrate Update Manager V1, automatic Server/Runtime/Native classification, Player Web update notification, runtime SHA-256 staging/fallback and in-app IPA download, build 275
