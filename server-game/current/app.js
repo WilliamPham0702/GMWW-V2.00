@@ -817,7 +817,7 @@ async function installRuntimeUpdate(){
   return true
 }
 function downloadUpdateIPA(){
-  const manifestIpa=gmwwUpdateManifest?.ipa||{},shell=gmwwShellVersion(),fallbackVersion=String(manifestIpa.version||shell||gmwwRuntimeVersion()).replace(/^V/i,'');
+  const manifestIpa=gmwwUpdateManifest?.ipa||{},shell=gmwwShellVersion(),fallbackVersion=String(manifestIpa.version||gmwwUpdateManifest?.shellVersion||shell||gmwwRuntimeVersion()).replace(/^V/i,'');
   const fallbackUrl='https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v'+fallbackVersion+'/GMWW-V'+fallbackVersion+'.ipa';
   const url=String(manifestIpa.url||fallbackUrl).trim(),fileName=String(manifestIpa.fileName||('GMWW-V'+fallbackVersion+'.ipa'));
   setUpdateUi('checking','ĐANG TẢI IPA','Đang chuẩn bị file IPA…','File sẽ mở bảng chia sẻ trên iPhone.');
