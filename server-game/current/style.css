@@ -1133,5 +1133,10 @@ body.play-immersive #start .play-player-token:not(.is-empty) .play-player-avatar
 .update-pill.warn{color:#ffd487;border-color:rgba(240,180,77,.5)}
 .update-pill.bad{color:#ff9ca5;border-color:rgba(234,101,113,.5)}
 .update-pill.checking{color:#d8e3ee}
-.update-actions .settings-action.hidden{display:none!important}
+.update-actions-three{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+.update-actions-three .settings-action{width:100%!important;min-width:0!important;height:48px!important;padding:0 4px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:3px!important}
+.update-actions-three .settings-action span{font-size:14px!important;flex:0 0 auto}
+.update-actions-three .settings-action b{font-size:8.5px!important;line-height:1.05!important;white-space:normal!important;text-align:center!important}
+.update-actions-three .settings-action.recommended{border-color:#f0c86c!important;box-shadow:0 0 0 1px rgba(240,200,108,.34),0 7px 16px rgba(0,0,0,.22)!important}
+@media(max-width:370px){.update-actions-three{gap:4px!important}.update-actions-three .settings-action{padding:0 2px!important}.update-actions-three .settings-action b{font-size:7.7px!important}}
 @keyframes gmwwUpdatePulse{50%{opacity:.35;transform:scale(.82)}}
