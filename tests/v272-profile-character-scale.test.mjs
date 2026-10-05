@@ -59,7 +59,7 @@ test('Avatar selection persists and 20 animated characters load independently of
   const live=read('src/gmww-members-live.js'),server=read('src/index.js');
   const loadStart=live.indexOf('async function loadAvatars()'),loadEnd=live.indexOf('function shuffleAvatarSuggestions',loadStart),load=live.slice(loadStart,loadEnd);
   assert.ok(load.includes('await loadGameCharacters()'));
-  assert.ok(load.includes('20 Nhân Vật động GMWW'));
+  assert.ok(load.includes("state.gameCharacters.length+' Nhân vật động GMWW'"));
   assert.ok(live.includes("const selfId=String(state.participantId||('member:'+state.member?.loginId))"));
   const profileStart=server.indexOf('async memberUpdateProfile'),profileEnd=server.indexOf('async memberSession',profileStart),profile=server.slice(profileStart,profileEnd);
   assert.ok(profile.includes('member.gameCharacterId=requestedCharacter'));
