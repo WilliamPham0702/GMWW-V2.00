@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.66';
+const VERSION='2.67';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -1226,7 +1226,7 @@ function connectPlaySocket(){
   const code=String(playSceneState.roomCode);if(playSceneRuntime.socket&&playSceneRuntime.socketRoomCode===code&&[WebSocket.OPEN,WebSocket.CONNECTING].includes(playSceneRuntime.socket.readyState))return;
   disconnectPlaySocket();const base=String(GMWW_SERVER_BASE||'').replace(/^http:/,'ws:').replace(/^https:/,'wss:').replace(/\/$/,'');let ws;
   try{ws=new WebSocket(base+'/ws/'+encodeURIComponent(code))}catch{return}playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
-  ws.onmessage=e=>{try{const d=JSON.parse(e.data||'{}'),movementEvent=d.type==='player_move'||d.type==='player_move_complete';if(!['room_state','player_move','player_move_complete'].includes(d.type)||String(playSceneState.roomCode)!==code)return;if(movementEvent&&Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();playSceneRuntime.room=d.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(d.players)?d.players:playSceneRuntime.players;playSceneRuntime.lastSyncAt=Date.now();if(movementEvent){renderPlayPlayers();syncPlayMovementTicker()}else renderPlayScene()}catch{}};
+  ws.onmessage=e=>{try{const d=JSON.parse(e.data||'{}'),movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm'].includes(d.type)||String(playSceneState.roomCode)!==code)return;if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();if(gameEvent){playSyncRoom(true);return}playSceneRuntime.room=d.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(d.players)?d.players:playSceneRuntime.players;playSceneRuntime.lastSyncAt=Date.now();if(d.room&&Object.prototype.hasOwnProperty.call(d.room,'autoGM'))playSceneState.autoGM=d.room.autoGM!==false;if(movementEvent){renderPlayPlayers();syncPlayMovementTicker()}else renderPlayScene()}catch{}};
   ws.onclose=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';if(isLivePlayRoom()&&String(playSceneState.roomCode)===code)playSceneRuntime.socketReconnect=setTimeout(connectPlaySocket,900)}};
   ws.onerror=()=>{};
 }
@@ -1251,7 +1251,7 @@ async function playSyncRoom(force=false){
     const data=await playRoomApi('');
     playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max||3),Number(playSceneRuntime.artifactCycle?.count||0))):0;const serverMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));if(serverMemberIds.length||playSceneState.step!=='members'||playSceneState.roomMode!=='online')playSceneState.selectedMemberIds=serverMemberIds;
-    const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);playSceneState.roomMode=room.roomMode==='offline'?'offline':'online';playSceneState.seatMoveMode=room.seatMoveMode==='walk'?'walk':'instant';playSceneState.seatCount=Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12));
+    const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);playSceneState.autoGM=room.autoGM!==false;playSceneState.roomMode=room.roomMode==='offline'?'offline':'online';playSceneState.seatMoveMode=room.seatMoveMode==='walk'?'walk':'instant';playSceneState.seatCount=Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12));
     if(['running','started','game','playing'].includes(serverPhase)){
       playSceneState.step='battle';
       if(cyclePhase==='night'){playSceneState.phase='night';playSceneState.night=Math.max(1,cycleNight)}
@@ -1424,20 +1424,21 @@ async function playSetServerCycle(phase,night){
   await playRoomApi('/cycle',{method:'POST',body:JSON.stringify({phase:serverPhase,night:n,cycleKey})});await playSyncRoom(true);
 }
 function syncPlayAutoAdvance(){
+  // V2.67: live-room Auto GM is authoritative on the Cloudflare Durable Object.
+  // The IPA only renders the server deadline; it never owns the transition timer.
   if(playSceneRuntime.autoTurnTimer){clearTimeout(playSceneRuntime.autoTurnTimer);playSceneRuntime.autoTurnTimer=0}
-  if(!isLivePlayRoom()||playSceneRuntime.busy)return;
-  const cfg=playSceneRuntime.gameConfig||{},timing=cfg.timing||playSceneState.gameTiming||{};if(timing.autoAdvance===false)return;
-  let deadline=0,key='',run=null;
-  if(playSceneState.phase==='night'){
-    const rt=playSceneRuntime.nightRuntime;if(!rt||rt.completed||rt.autoAdvance===false||!rt.deadlineAt)return;
-    deadline=Date.parse(rt.deadlineAt)||0;key='night:'+String(rt.night||playSceneState.night)+':'+String(rt.currentId||'');run=async()=>{const d=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',source:'timer'})});playSceneRuntime.nightRuntime=d?.runtime||playSceneRuntime.nightRuntime;await playSyncRoom(true)}
-  }else if(playSceneState.phase==='day'){
-    const sec=Math.max(0,Number(timing.villageDiscussionSec)||0),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'')||0;if(!sec||!started)return;
-    deadline=started+sec*1000;key='day:'+String(playSceneState.night||1)+':'+String(started);run=async()=>playSetServerCycle('night',Math.max(1,Number(playSceneState.night)||1)+1)
-  }else return;
-  if(!deadline||!run)return;
-  const wait=Math.max(50,deadline-Date.now());
-  playSceneRuntime.autoTurnKey=key;playSceneRuntime.autoTurnTimer=setTimeout(async()=>{if(playSceneRuntime.autoTurnKey!==key)return;try{await run()}catch(err){playFlashError(err.message)}},wait)
+  playSceneRuntime.autoTurnKey='';
+}
+async function togglePlayAutoGM(){
+  if(playSceneRuntime.busy)return;
+  const enabled=!playSceneState.autoGM;
+  if(!isLivePlayRoom()){playSceneState.autoGM=enabled;savePlayScene();renderPlayScene();return}
+  playSetBusy(true);
+  try{
+    const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled})});
+    playSceneRuntime.room=data?.room||playSceneRuntime.room;playSceneState.autoGM=data?.room?.autoGM!==false;savePlayScene();renderPlayScene()
+  }catch(err){playFlashError(err.message)}
+  finally{playSetBusy(false)}
 }
 async function advancePlayPhase(){
   if(playSceneRuntime.busy)return;
@@ -1782,7 +1783,7 @@ function initPlayScene(){
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
   document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
   document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
-  document.getElementById('playAutoGM')?.addEventListener('click',()=>{playSceneState.autoGM=!playSceneState.autoGM;savePlayScene();renderPlayScene()});
+  document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
   document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playBack')?.addEventListener('click',backPlayPhase);

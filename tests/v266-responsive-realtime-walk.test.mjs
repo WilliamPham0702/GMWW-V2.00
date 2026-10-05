@@ -81,12 +81,12 @@ test('IPA workflow bundles and verifies all 240 walk frames',()=>{
   assert.ok(workflow.includes('$APP/Web/game-characters/walk-v266-left'));
 });
 
-test('V2.66 metadata is consistent',()=>{
+test('V2.66 movement contract remains packaged in the V2.67 app',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.66"'));
-  assert.ok(app.includes("const VERSION='2.66';"));
-  assert.ok(html.includes('GMWW V2.66'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 266;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.66;'));
-  assert.equal(pkg.version,'2.66.0');
+  assert.ok(server.includes('VERSION="V2.67"'));
+  assert.ok(app.includes("const VERSION='2.67';"));
+  assert.ok(html.includes('GMWW V2.67'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 267;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.67;'));
+  assert.equal(pkg.version,'2.67.0');
 });
