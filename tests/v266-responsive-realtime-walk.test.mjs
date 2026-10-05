@@ -66,7 +66,8 @@ test('server movement broadcasts include server time for shared interpolation cl
 
 test('profile is compact, keeps stats and exposes the 20-character picker',()=>{
   const live=read('src/gmww-members-live.js');
-  assert.ok(live.includes("#profile .change-pass,#profile .history-fold,#profile .profile-enter-room{display:none!important}"));
+  assert.ok(live.includes("#profile .change-pass,#profile .profile-enter-room{display:none!important}"));
+  assert.ok(live.includes("#profile .history-fold{display:block!important"));
   assert.ok(live.includes("const wins=Math.max(0,Number(m?.stats?.wins||0))"));
   assert.ok(live.includes("if(state.gameCharacters.length!==20){state.gameCharacters=[];await loadGameCharacters()}"));
   assert.ok(live.includes('#avatarLibraryModal.open{display:flex!important;pointer-events:auto!important}'));
