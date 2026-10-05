@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "releaseVersion": "2.72",
+  "releaseType": "server_only",
+  "shellVersion": "2.72",
+  "minimumShellVersion": "2.72",
+  "runtimeVersion": "2.72",
+  "webVersion": "2.72",
+  "serverVersion": "2.72",
+  "required": false,
+  "restartRequired": false,
+  "message": "Đã là phiên bản mới nhất.",
+  "runtime": {
+    "files": []
+  },
+  "ipa": null
+}
