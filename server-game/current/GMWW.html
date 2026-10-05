@@ -55,17 +55,17 @@
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
         <header class="play-hud">
-          <button class="play-room-chip" id="playRoomButton" type="button" aria-label="Thông tin Phòng">
-            <span>⌁</span><small>PHÒNG</small><b id="playRoomCode">—</b>
+          <button class="play-room-chip" id="playRoomButton" type="button" aria-label="Quyền Quản Trò">
+            <span>GM</span><small>QUẢN TRÒ</small>
           </button>
           <div class="play-phase-pill" id="playPhasePill">
-            <span class="play-phase-orb" id="playPhaseOrb">◌</span>
-            <div><small id="playPhaseEyebrow">PHÒNG CHỜ</small><b id="playPhaseTitle">Chuẩn bị vào trận</b></div>
+            <span class="play-phase-orb" id="playPhaseOrb">◉</span>
+            <div><small id="playPhaseEyebrow">THÔNG TIN</small><b id="playPhaseTitle">Chọn Nhân Vật</b></div>
           </div>
           <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true">
             <span class="play-auto-switch"><i></i></span><b>Auto GM</b>
           </button>
-        <button class="play-user-avatar" id="playUserAvatar" type="button" aria-label="Thông tin quản trò">GM</button></header>
+        </header>
 
         <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
           <div class="play-sky-glow"></div>
@@ -485,6 +485,17 @@
     <div class="button-row member-sheet-actions">
       <button class="secondary" id="memberSheetCancel" type="button">Hủy</button>
       <button class="primary" id="memberSheetSave" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playGMSheet">
+  <div class="sheet-card play-gm-sheet-card">
+    <div class="sheet-head"><div><h3>GM</h3><small>Quyền can thiệp trực tiếp</small></div><button id="playGMClose" type="button">×</button></div>
+    <div class="play-gm-target" id="playGMTarget">Hãy chọn một Người Chơi trên sân.</div>
+    <div class="play-gm-actions">
+      <button class="revive" id="playGMRevive" type="button">✨ HỒI SINH</button>
+      <button class="danger" id="playGMKill" type="button">☠ GIẾT</button>
     </div>
   </div>
 </div>
