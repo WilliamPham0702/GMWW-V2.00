@@ -27,7 +27,7 @@ test('Profile exposes a default-on lobby movement switch and persists it per mem
   const live=read('src/gmww-members-live.js'),server=read('src/index.js');
   assert.ok(live.includes('Di chuyển trong sảnh'));
   assert.ok(live.includes('Tự đi quanh Làng, nghỉ quanh đống lửa 3 phút rồi đi tiếp.'));
-  assert.ok(live.includes("role=\"switch\""));
+  assert.ok(live.includes('role=\\\"switch\\\"'));
   assert.ok(live.includes("body:JSON.stringify({lobbyMotionEnabled:enabled})"));
   assert.ok(server.includes('lobbyMotionEnabled:true'));
   assert.ok(server.includes('lobbyMotionEnabled:m.lobbyMotionEnabled!==false'));
