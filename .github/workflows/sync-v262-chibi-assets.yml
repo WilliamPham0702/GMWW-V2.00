@@ -2,10 +2,14 @@ name: Sync V2.62 Chibi Assets
 
 on:
   workflow_dispatch:
+    inputs:
+      bundle_url:
+        description: Fresh signed URL to base64 text containing v262-muscle-chibi-01-12.zip
+        required: true
+        type: string
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
   sync:
@@ -17,25 +21,23 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Download verified V2.62 IPA artifact
+      - name: Download and verify muscle chibi bundle
         env:
-          GH_TOKEN: ${{ github.token }}
+          BUNDLE_URL: ${{ inputs.bundle_url }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/v262
-          gh run download 37246522553             --name GMWW-V2.62             --dir /tmp/v262             --repo "$GITHUB_REPOSITORY"
-          test -s /tmp/v262/GMWW-V2.62.ipa
-          unzip -q /tmp/v262/GMWW-V2.62.ipa -d /tmp/v262/ipa
-
-      - name: Verify and sync chibi 01-12
-        run: |
-          set -euo pipefail
-          SRC=$(find /tmp/v262/ipa/Payload -path '*/Web/game-characters' -type d | head -1)
-          test -n "$SRC"
-          SRC="$SRC" python - <<'PY'
-          import os, hashlib, pathlib, shutil
-          src=pathlib.Path(os.environ["SRC"])
-          dst=pathlib.Path("assets/characters/v253")
+          python - <<'PY'
+          import os, urllib.request, base64, hashlib, zipfile, pathlib
+          req=urllib.request.Request(os.environ["BUNDLE_URL"],headers={"User-Agent":"GMWW-GitHub-Actions"})
+          with urllib.request.urlopen(req,timeout=120) as r:
+              encoded=r.read()
+          raw=base64.b64decode(encoded)
+          bundle=pathlib.Path("/tmp/v262-muscle-chibi-01-12.zip")
+          bundle.write_bytes(raw)
+          digest=hashlib.sha256(raw).hexdigest()
+          expected_bundle="2ec467e3974eb376ec0d3e879c2f1dafbf122115f059e4f9293e8d5a219baae2"
+          if digest!=expected_bundle:
+              raise SystemExit(f"Bundle SHA mismatch: {digest} != {expected_bundle}")
           expected={
             "chibi-01.webp":"0c6eb1b5ae052197f12a5599334c77056cc093a41e62f0f49b33b03b49038951",
             "chibi-02.webp":"ef4a808000fd98d76831a5038350eca7f3f9b78af76c8b90384570ba49072ea7",
@@ -50,15 +52,21 @@ jobs:
             "chibi-11.webp":"737f6def3e417b49d557be3117888484f35dc64b0e90b017d30d28a867ae8bdd",
             "chibi-12.webp":"3bf52d02daeeac03b1c50f28917675dd2414c44782eafcf90f67242b4c0ad121",
           }
-          dst.mkdir(parents=True,exist_ok=True)
-          for name,want in expected.items():
-            p=src/name
-            data=p.read_bytes()
-            got=hashlib.sha256(data).hexdigest()
-            if got!=want:
-              raise SystemExit(f"{name}: {got} != {want}")
-            shutil.copy2(p,dst/name)
-            print(name,len(data),got)
+          dest=pathlib.Path("assets/characters/v253")
+          dest.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(bundle) as z:
+              if z.testzip() is not None:
+                  raise SystemExit("Corrupt chibi bundle")
+              names=set(z.namelist())
+              if names!=set(expected):
+                  raise SystemExit(f"Unexpected bundle members: {sorted(names)}")
+              for name,want in expected.items():
+                  data=z.read(name)
+                  got=hashlib.sha256(data).hexdigest()
+                  if got!=want:
+                      raise SystemExit(f"{name}: {got} != {want}")
+                  (dest/name).write_bytes(data)
+                  print(name,len(data),got)
           PY
 
       - name: Commit synchronized chibi assets
