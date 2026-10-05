@@ -898,8 +898,21 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
-  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript,{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
-  if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION});
+  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
+  if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,webVersion:VERSION,runtimeVersion:VERSION,shellVersion:VERSION});
+  if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
+    if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
+    try{
+      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="";
+      const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
+      if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
+      const manifest=await res.json();
+      return j({ok:true,...manifest,checkedAt:new Date().toISOString()});
+    }catch(e){
+      console.error("GMWW_UPDATE_MANIFEST",e);
+      return j({ok:false,error:"UPDATE_MANIFEST_INVALID"},500);
+    }
+  }
   if((url.pathname==="/favicon.svg"||url.pathname==="/favicon.ico")&&request.method==="GET")return new Response(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#101816" d="M7 7l16 11 9-3 9 3L57 7l-4 23 4 8-9 3-3 11-13 8-13-8-3-11-9-3 4-8L7 7z"/><path fill="#74cdb5" d="M13 14l11 9 8-3 8 3 11-9-3 16 4 5-9 2-2 11-9 6-9-6-2-11-9-2 4-5-3-16z"/><path fill="#101816" d="M17 29l10 2-5 6-6-3zm30 0l-10 2 5 6 6-3zM26 41l6-4 6 4-2 5h-8l-2-5zm2 7h8l-4 6z"/></svg>`,{headers:{"content-type":"image/svg+xml; charset=UTF-8","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
   if((url.pathname==="/gmww-sea-background.png"||url.pathname==="/gmww-sea-background.webp")&&request.method==="GET"){if(!env.ASSETS)return new Response("Background asset unavailable",{status:503});const assetUrl=new URL(request.url);assetUrl.pathname="/backgrounds/gmww-village-day-v260.webp";const asset=await env.ASSETS.fetch(new Request(assetUrl,request));if(!asset.ok)return new Response("Player Web background not found",{status:404});return new Response(asset.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}});}
   if(url.pathname==="/api/assets/victory-audio"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-assets/victory");
