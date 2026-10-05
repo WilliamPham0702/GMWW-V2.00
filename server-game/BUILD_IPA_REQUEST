@@ -1,4 +1,4 @@
-GMWW V2.86 refined game HUD build
+GMWW V2.87 polished top HUD build
 Requested: 2026-10-06
-Revision: final-v286-r2
-Reason: lightweight game-like village UI, draggable GM floating control, top Auto GM / info / realtime server refresh, centered compact setup popup, corrected five-button bottom control layout, and runtime-smoke-safe drag initialization.
+Revision: official-v287
+Reason: keep the approved bottom menu unchanged; redesign the top HUD as Auto rotating icon (spins only when enabled), contextual Info box, GM button, and realtime Refresh icon.
