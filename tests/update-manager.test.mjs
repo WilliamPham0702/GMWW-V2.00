@@ -74,3 +74,13 @@ test('V2.78 update actions stay visible in one three-column row and IPA has shel
   assert.match(js,/GMWW-V'\+fallbackVersion\+'\.ipa/);
   assert.match(js,/setTimeout\(\(\)=>checkAppUpdate\(\{notify:false\}\),1400\)/);
 });
+
+
+test('Production deploy verifies exact runtime, manifest and web-sync endpoint',()=>{
+  const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(workflow,/EXPECTED=.*package\.json/);
+  assert.match(workflow,/version.*V\$EXPECTED/);
+  assert.match(workflow,/api\/update\/manifest/);
+  assert.match(workflow,/releaseVersion.*\$EXPECTED/);
+  assert.match(workflow,/api\/web-sync/);
+});
