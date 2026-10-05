@@ -1,3 +1,3 @@
-GMWW V2.70
+GMWW V2.71
 Requested: 2026-10-05
-Purpose: final server-authoritative Auto GM pause/resume, realtime WebSocket sync hardening, Player Web + GM IPA parity, build 270
+Purpose: login-flow hotfix, end-to-end authentication smoke, synchronized Player Web + server + GM IPA, build 271
