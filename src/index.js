@@ -7,7 +7,7 @@ import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.68",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.70",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=5*60*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 
@@ -439,17 +439,31 @@ export class RoomDurableObject extends DurableObject {
 
   async gmAuto(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,enabled=body?.enabled!==false,now=new Date().toISOString();
-    meta.autoGM=enabled;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
-    if(String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0){
-      const runtime=await this.getNightRuntime(meta,Number(meta.cycleNight),false);
-      if(runtime){runtime.autoAdvance=enabled;runtime.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,Number(meta.cycleNight)),runtime)}
+    const meta=auth.meta,enabled=body?.enabled!==false,wasEnabled=meta.autoGM!==false,nowMs=Date.now(),now=new Date(nowMs).toISOString(),phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(0,Number(meta.cycleNight||0)),runtimeKey=night>0?this.nightRuntimeKey(meta,night):"",runtime=phase==="night"&&night>0?await this.getNightRuntime(meta,night,false):null;
+    if(wasEnabled&&!enabled){
+      if(runtime&&!runtime.completed){
+        const deadline=Date.parse(runtime.deadlineAt||""),active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0;
+        runtime.autoPausedRemainingMs=Number.isFinite(deadline)?Math.max(0,deadline-nowMs):fallback;runtime.deadlineAt=null;runtime.autoAdvance=false;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
+      }else if(phase==="morning"||phase==="day"){
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,started=Date.parse(meta.cycleStartedAt||""),due=Number.isFinite(started)?started+totalMs:NaN;
+        meta.autoPausedRemainingMs=totalMs>0?(Number.isFinite(due)?Math.max(0,due-nowMs):totalMs):0
+      }
+    }else if(!wasEnabled&&enabled){
+      if(runtime&&!runtime.completed){
+        const active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0,stored=Number(runtime.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,stored):fallback;
+        runtime.deadlineAt=remaining>0?new Date(nowMs+Math.max(100,remaining)).toISOString():null;runtime.autoPausedRemainingMs=0;runtime.autoAdvance=true;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
+      }else if(phase==="morning"||phase==="day"){
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,stored=Number(meta.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,Math.min(totalMs,stored)):totalMs;
+        if(totalMs>0)meta.cycleStartedAt=new Date(nowMs-Math.max(0,totalMs-remaining)).toISOString();meta.autoPausedRemainingMs=null
+      }
     }
+    meta.autoGM=enabled;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
+    if(runtime){runtime.autoAdvance=enabled;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)}
     await this.scheduleRoomAlarm(meta);
     const players=(await this.ctx.storage.get("players"))||{},room=publicRoom(meta);
-    this.broadcast({type:"auto_gm",enabled,room,players:Object.values(players).map(publicPlayer),at:now,serverTime:Date.now()});
+    this.broadcast({type:"auto_gm",enabled,room,players:Object.values(players).map(publicPlayer),nightRuntime:runtime||null,at:now,serverTime:Date.now()});
     this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),serverTime:Date.now()});
-    return j({ok:true,autoGM:enabled,room})
+    return j({ok:true,autoGM:enabled,room,nightRuntime:runtime||null})
   }
   async gmEnabled(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -589,7 +603,8 @@ export class RoomDurableObject extends DurableObject {
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
     for(const row of artifactRows)queue.push({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),skipIfEarlyUsed:n===1&&EARLY_ARTIFACTS.some(x=>gameLabelKey(x)===row._nameKey),durationSec:defaultActionSec,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
-    const runtime={matchId:String(meta?.matchId||""),night:n,queue,cursor:0,completed:queue.length===0,currentId:first?.id||null,autoAdvance:meta?.autoGM!==false,startedAt:now,deadlineAt:first&&Number(first.durationSec)>0?new Date(Date.parse(now)+Number(first.durationSec)*1000).toISOString():null,createdAt:now,updatedAt:now};
+    const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
+    const runtime={matchId:String(meta?.matchId||""),night:n,queue,cursor:0,completed:queue.length===0,currentId:first?.id||null,autoAdvance:autoEnabled,startedAt:now,deadlineAt:autoEnabled&&firstDurationMs>0?new Date(Date.parse(now)+firstDurationMs).toISOString():null,autoPausedRemainingMs:!autoEnabled&&firstDurationMs>0?firstDurationMs:0,createdAt:now,updatedAt:now};
     await this.ctx.storage.put(this.nightRuntimeKey(meta,n),runtime);return runtime
   }
   async artifactUsedInNight(meta,step){
@@ -607,13 +622,13 @@ export class RoomDurableObject extends DurableObject {
       while(runtime.cursor<runtime.queue.length){const next=runtime.queue[runtime.cursor];if(next?.kind==="artifact-main"&&next.skipIfEarlyUsed&&await this.artifactUsedInNight(meta,next)){next.status="skipped";next.skippedReason="EARLY_ARTIFACT_USED";next.completedAt=now;runtime.cursor++;continue}break}
       runtime.completed=runtime.cursor>=runtime.queue.length;runtime.currentId=runtime.completed?null:(runtime.queue[runtime.cursor]?.id||null)
     }
-    const active=runtime.completed?null:runtime.queue[runtime.cursor];if(active){active.startedAt=now;runtime.deadlineAt=Number(active.durationSec)>0?new Date(Date.parse(now)+Number(active.durationSec)*1000).toISOString():null}else runtime.deadlineAt=null;
+    const active=runtime.completed?null:runtime.queue[runtime.cursor];if(active){active.startedAt=now;const durationMs=Number(active.durationSec)>0?Number(active.durationSec)*1000:0;if(meta.autoGM===false){runtime.deadlineAt=null;runtime.autoPausedRemainingMs=durationMs}else{runtime.deadlineAt=durationMs>0?new Date(Date.parse(now)+durationMs).toISOString():null;runtime.autoPausedRemainingMs=0}}else{runtime.deadlineAt=null;runtime.autoPausedRemainingMs=0}
     runtime.autoAdvance=meta.autoGM!==false;runtime.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);meta.currentNightTurnId=runtime.currentId;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     this.broadcast({type:"night_turn",night,runtime,source,room:publicRoom(meta),serverTime:Date.now()});return runtime
   }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
-    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
+    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[],expired=[];
     for(const x of rows){const type=String(x?.type||""),sameMatch=!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId);if(!sameMatch||x?.effectActive===false||!["frozen","expelled"].includes(type))continue;const effectNight=Math.max(0,Number(x?.night||0)||0);let shouldExpire=false,reason="";if(type==="frozen"){if(p==="morning"&&(effectNight===0||n===0||n>=effectNight)){shouldExpire=true;reason="MORNING_START"}else if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_SELF_HEAL"}}else if(type==="expelled"){if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_START"}else if(p==="night"&&effectNight===0&&x?.cycleKey&&String(x.cycleKey)!==key){shouldExpire=true;reason="NEXT_CYCLE_FALLBACK"}}if(shouldExpire){x.effectActive=false;x.expiredAt=now;x.expiredReason=reason;expired.push({id:x.id,type,loginId:x.loginId,night:effectNight,reason})}}
     await this.ctx.storage.put("interactions",rows.slice(-100));
@@ -876,7 +891,7 @@ export class RoomDurableObject extends DurableObject {
   async ready(body){const id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},404);if(!!body.ready&&!playerSetupComplete(meta,players[id]))return j({ok:false,error:"SETUP_REQUIRED",message:"Hãy chọn Nhân Vật và vị trí ngồi trước khi Sẵn Sàng."},409);players[id].ready=!!body.ready;players[id].lastHeartbeatAt=Date.now();players[id].lastSeenAt=new Date().toISOString();await this.ctx.storage.put("players",players);meta.updatedAt=players[id].lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,player:publicPlayer(players[id])})}
   async heartbeat(body){const id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},404);const now=new Date().toISOString();players[id].lastHeartbeatAt=Date.now();players[id].lastSeenAt=now;if(body&&Object.prototype.hasOwnProperty.call(body,"ready"))players[id].ready=!!body.ready;await this.ctx.storage.put("players",players);meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}return j({ok:true,player:publicPlayer(players[id]),room:publicRoom(meta)})}
   async leave(body){const players=(await this.ctx.storage.get("players"))||{},id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn không còn ở trong phòng."},404);delete players[id];await this.ctx.storage.put("players",players);if(meta){meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta)}for(const ws of this.ctx.getWebSockets()){try{if(ws.deserializeAttachment()?.participantId===id)ws.close(1000,"PLAYER_LEFT_ROOM")}catch{}}this.broadcast({type:"room_state",room:meta?publicRoom(meta):null,players:Object.values(players).map(publicPlayer)});return j({ok:true,left:true})}
-  async websocket(request,url){if(request.headers.get("Upgrade")?.toLowerCase()!=="websocket")return new Response("Expected WebSocket upgrade",{status:426});const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);const participantId=url.searchParams.get("participantId")||null;let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(participantId&&!players[participantId])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},403);const pair=new WebSocketPair(),[client,server]=Object.values(pair);this.ctx.acceptWebSocket(server);server.serializeAttachment({participantId,connectedAt:new Date().toISOString()});server.send(JSON.stringify({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)}));return new Response(null,{status:101,webSocket:client})}
+  async websocket(request,url){if(request.headers.get("Upgrade")?.toLowerCase()!=="websocket")return new Response("Expected WebSocket upgrade",{status:426});const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);const participantId=url.searchParams.get("participantId")||null;let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(participantId&&!players[participantId])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},403);const pair=new WebSocketPair(),[client,server]=Object.values(pair);this.ctx.acceptWebSocket(server);server.serializeAttachment({participantId,connectedAt:new Date().toISOString()});server.send(JSON.stringify({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()}));return new Response(null,{status:101,webSocket:client})}
   webSocketMessage(ws,message){let d;try{d=JSON.parse(typeof message==="string"?message:new TextDecoder().decode(message))}catch{return}if(d?.type==="ping")ws.send(JSON.stringify({type:"pong",at:new Date().toISOString()}))}
   webSocketClose(){this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length})} webSocketError(){this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length})} broadcast(payload){const e=JSON.stringify(payload);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}}
 }
