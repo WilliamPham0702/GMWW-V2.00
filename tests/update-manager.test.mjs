@@ -53,6 +53,7 @@ test('Update channel never downgrades a native release on same-version follow-up
   assert.match(script,/typeRank=\{server_only:0,runtime:1,native:2\}/);
   assert.match(script,/previousManifest\?\.releaseVersion===version/);
   assert.match(script,/previousType/);
+  assert.match(script,/releaseType==='server_only'&&version!==shell/);
 });
 
 
