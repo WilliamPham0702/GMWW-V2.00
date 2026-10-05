@@ -1,4 +1,4 @@
-name: Canva URL Probe
+name: Asset Bridge Probe
 on:
   push:
     branches: [main]
@@ -10,21 +10,19 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Download full-size staged artwork
+      - name: Probe staged artwork URL
         shell: bash
         env:
-          ASSET_URL: 'https://media.canva.com/v2/image-resize/format:PNG/height:1145/quality:100/uri:ifs%3A%2F%2FM%2Fb285d2b0-25c4-4139-a711-b6577f97e19a/watermark:F/width:1374?csig=AAAAAAAAAAAAAAAAAAAAACtpTb3WusDk1xVgCrnIcIgj-fifogVNQQ-tnFcEoITm&exp=1791256452&osig=AAAAAAAAAAAAAAAAAAAAAA2ocmQDTcG7Nzvxwt8jGiC2dtggwXKCCL3lrurp4CK3&signer=media-rpc&token=AAIAAU0AJGIyODVkMmIwLTI1YzQtNDEzOS1hNzExLWI2NTc3Zjk3ZTE5YQAAAAABoQ80W6BQAXlFZhLqR2HDHZYWxALee17XJJcBYcNxxL7PMy5IaA&x-canva-quality=thumbnail'
+          ASSET_URL: 'https://storage.googleapis.com/xi-backend/database/workspace/2822a31654d2444aae847725a4f19686/content_generation/content_asset/RQu96IM0AUkRFCRcP63K/thumbnail.webp?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=xi-backend-prod%40xi-labs.iam.gserviceaccount.com%2F20261005%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20261005T222100Z&X-Goog-Expires=7200&X-Goog-SignedHeaders=host&X-Goog-Signature=302d572426a3db7a47824ef6f5fb74f3e7027db73c5ceab5b8f7edecf94578b1029f4d6935f771be21ad17e465e3d2ef745d0ee7482748789777641371f051e26000cf118778184eda56ed79c4a337c967b3462b559ce5dc172456cd3ba268ff622ef411c83f7a8550dac973555e8bce7c5a7051b1804cfc61bbd05ade3bec86e326177cef858c72c26ca93ae8fd8adf92b86467c7b6379d521d51bdcabfc42429f6724ac60a332fe3bd87e7183a3cc8267ae536e76adcc51f01667fed1da98d1bc75f19a07a13ba9e4e75155f5b9ac502273a2817aa90a49131016ba6f57b9c5041846d99108d9fb81a5555b62cd522bd6111bf007e1731fbee49e6491ad7b5'
         run: |
           set -euo pipefail
-          curl -fL --retry 2 "$ASSET_URL" -o /tmp/artifact.png
+          curl -fL --retry 2 "$ASSET_URL" -o /tmp/artifact.webp
+          ls -lh /tmp/artifact.webp
+          file /tmp/artifact.webp
+          python3 -m pip -q install Pillow
           python3 - <<'PY'
-          import struct
-          p='/tmp/artifact.png'
-          d=open(p,'rb').read(32)
-          assert d[:8]==b'\x89PNG\r\n\x1a\n', d[:8]
-          w,h=struct.unpack('>II',d[16:24])
-          print(f"ARTIFACT_DIMENSIONS={w}x{h}")
-          if (w,h)!=(1374,1145):
-              raise SystemExit(f"unexpected dimensions: {w}x{h}")
+          from PIL import Image
+          im=Image.open('/tmp/artifact.webp')
+          print('ARTIFACT_DIMENSIONS=%dx%d'%im.size)
+          print('ARTIFACT_FORMAT=%s'%im.format)
           PY
-          ls -lh /tmp/artifact.png
