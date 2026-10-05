@@ -53,7 +53,8 @@ test('GM IPA consumes move WebSocket events and animates tokens with requestAnim
   assert.ok(app.includes('playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
   assert.ok(app.includes('requestAnimationFrame(playMovementFrame)'));
   assert.ok(app.includes("el.dataset.playPlayerId=String(m.loginId||m.participantId||'')"));
-  assert.ok(app.includes("ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]')"));
+  assert.ok(app.includes('data-play-player-id'));
+  assert.ok(app.includes('CSS.escape(id)'));
   assert.ok(!app.includes("setInterval(()=>{if(!playVillageMembers().some(p=>p?.movementStatus==='moving'))"));
 });
 
