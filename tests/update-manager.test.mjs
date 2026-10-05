@@ -7,6 +7,11 @@ test('Update Manager settings UI is present',()=>{
   assert.match(html,/id="updateManagerCard"/);
   assert.match(html,/id="installRuntimeUpdate"/);
   assert.match(html,/id="downloadNewIPA"/);
+  assert.match(html,/id="syncPlayerWebUpdate"/);
+  assert.match(html,/CẬP NHẬT DỮ LIỆU/);
+  assert.match(html,/TẢI FILE IPA/);
+  assert.match(html,/ĐỒNG BỘ WEB/);
+  assert.match(html,/update-actions-three/);
 });
 
 test('Update Manager JS has runtime and IPA paths',()=>{
@@ -14,7 +19,10 @@ test('Update Manager JS has runtime and IPA paths',()=>{
   assert.match(js,/function checkAppUpdate/);
   assert.match(js,/function installRuntimeUpdate/);
   assert.match(js,/function downloadUpdateIPA/);
+  assert.match(js,/function updateDataNow/);
+  assert.match(js,/function syncPlayerWebUpdate/);
   assert.match(js,/gmwwUpdater/);
+  assert.match(js,/gmww-v2-00\.williampham0702\.workers\.dev\/gmww-members-live\.js/);
 });
 
 test('Player Web has new-version reload notification',()=>{
@@ -45,4 +53,18 @@ test('Update channel never downgrades a native release on same-version follow-up
   assert.match(script,/typeRank=\{server_only:0,runtime:1,native:2\}/);
   assert.match(script,/previousManifest\?\.releaseVersion===version/);
   assert.match(script,/previousType/);
+});
+
+
+test('V2.77 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  const js=fs.readFileSync('server-game/current/app.js','utf8');
+  assert.match(html,/update-actions-three/);
+  assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.doesNotMatch(html,/id="installRuntimeUpdate"[^>]*hidden/);
+  assert.doesNotMatch(html,/id="downloadNewIPA"[^>]*hidden/);
+  assert.match(js,/fallbackVersion/);
+  assert.match(js,/GMWW-V'\+fallbackVersion\+'\.ipa/);
+  assert.match(js,/setTimeout\(\(\)=>checkAppUpdate\(\{notify:false\}\),1400\)/);
 });
