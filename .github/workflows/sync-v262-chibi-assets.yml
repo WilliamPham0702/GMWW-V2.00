@@ -1,0 +1,73 @@
+name: Sync V2.62 Chibi Assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download verified V2.62 IPA artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v262
+          gh run download 37246522553             --name GMWW-V2.62             --dir /tmp/v262             --repo "$GITHUB_REPOSITORY"
+          test -s /tmp/v262/GMWW-V2.62.ipa
+          unzip -q /tmp/v262/GMWW-V2.62.ipa -d /tmp/v262/ipa
+
+      - name: Verify and sync chibi 01-12
+        run: |
+          set -euo pipefail
+          SRC=$(find /tmp/v262/ipa/Payload -path '*/Web/game-characters' -type d | head -1)
+          test -n "$SRC"
+          python - <<'PY'
+          import hashlib, pathlib, shutil
+          src=pathlib.Path("""$SRC""")
+          dst=pathlib.Path("assets/characters/v253")
+          expected={
+            "chibi-01.webp":"0c6eb1b5ae052197f12a5599334c77056cc093a41e62f0f49b33b03b49038951",
+            "chibi-02.webp":"ef4a808000fd98d76831a5038350eca7f3f9b78af76c8b90384570ba49072ea7",
+            "chibi-03.webp":"57adf9d3b615cd7f8852995bc2c6a6c4dfe43400d0ae3e853182ce802e233473",
+            "chibi-04.webp":"59366b39d95a7ea7f81de458bd82fa425dfbd9e4f46172a118b3d9b930ba9c8e",
+            "chibi-05.webp":"88f33791ce623f1dbed7a6a965d7281e4ecb1e1c8f439165cc9eb810388ea303",
+            "chibi-06.webp":"7140041d7e362a748748c3632b5c11517d955d7a218ddaefc233d520ea437fa5",
+            "chibi-07.webp":"f41a6442701aac6a02d4dfa401e583ee9de5205867949ebc3ba26d263959192c",
+            "chibi-08.webp":"e8e57da56125675a4998cdf66d15ee8e0235f68409bc3e8482488b4c98456d33",
+            "chibi-09.webp":"1c20d6037558bf85c64bd9fddb00d1d7879035b0d6ba4151861366134d0a39e6",
+            "chibi-10.webp":"18091d9ba49eeeb52f2da1cd11b2eece83990ec574cc217311b06a202ea42fa3",
+            "chibi-11.webp":"737f6def3e417b49d557be3117888484f35dc64b0e90b017d30d28a867ae8bdd",
+            "chibi-12.webp":"3bf52d02daeeac03b1c50f28917675dd2414c44782eafcf90f67242b4c0ad121",
+          }
+          dst.mkdir(parents=True,exist_ok=True)
+          for name,want in expected.items():
+            p=src/name
+            data=p.read_bytes()
+            got=hashlib.sha256(data).hexdigest()
+            if got!=want:
+              raise SystemExit(f"{name}: {got} != {want}")
+            shutil.copy2(p,dst/name)
+            print(name,len(data),got)
+          PY
+
+      - name: Commit synchronized chibi assets
+        run: |
+          set -euo pipefail
+          CHANGED=$(git status --short -- assets/characters/v253/chibi-{01..12}.webp | wc -l | tr -d ' ')
+          test "$CHANGED" -eq 12
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/characters/v253/chibi-{01..12}.webp
+          git commit -m "V2.62: sync 12 muscle chibi assets from verified IPA"
+          git push origin HEAD:main
