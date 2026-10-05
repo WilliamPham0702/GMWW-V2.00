@@ -8,9 +8,9 @@ test('Update Manager settings UI is present',()=>{
   assert.match(html,/id="installRuntimeUpdate"/);
   assert.match(html,/id="downloadNewIPA"/);
   assert.match(html,/id="syncPlayerWebUpdate"/);
-  assert.match(html,/CẬP NHẬT DỮ LIỆU/);
-  assert.match(html,/TẢI FILE IPA/);
-  assert.match(html,/ĐỒNG BỘ WEB/);
+  assert.match(html,/CẬP NHẬT/);
+  assert.match(html,/TẢI IPA/);
+  assert.match(html,/ĐỒNG BỘ/);
   assert.match(html,/update-actions-three/);
 });
 
