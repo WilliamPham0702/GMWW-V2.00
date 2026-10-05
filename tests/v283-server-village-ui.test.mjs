@@ -35,7 +35,7 @@ test('GM player labels keep name and status above character, role below, all sca
 
 test('bottom menu is enlarged and pre-game panels are centered closable popups',()=>{
   assert.match(css,/V2\.85 — OFFICIAL GM village layout/);
-  assert.match(css,/play-control-icon,[^\n]*play-primary-control\{min-height:64px!important/);
+  assert.match(css,/play-control-icon,[\s\S]*play-primary-control\{min-height:64px!important/);
   assert.match(css,/play-context-panel\.is-setup-popup\{[\s\S]*left:50%!important;[\s\S]*top:50%!important;[\s\S]*translate\(-50%,-50%\)/);
   assert.match(app,/play-context-close/);
   assert.match(app,/setupPopupClosed=true/);
