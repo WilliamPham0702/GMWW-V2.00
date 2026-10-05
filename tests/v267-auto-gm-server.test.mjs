@@ -43,12 +43,12 @@ test('GM IPA no longer owns live Auto GM timing and syncs the authoritative serv
   assert.ok(app.includes("['night_turn','room_cycle','auto_gm'].includes(d.type)"));
 });
 
-test('V2.67 metadata is consistent',()=>{
+test('V2.68 metadata is consistent',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.67"'));
-  assert.ok(app.includes("const VERSION='2.67';"));
-  assert.ok(html.includes('GMWW V2.67'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 267;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.67;'));
-  assert.equal(pkg.version,'2.67.0');
+  assert.ok(server.includes('VERSION="V2.68"'));
+  assert.ok(app.includes("const VERSION='2.68';"));
+  assert.ok(html.includes('GMWW V2.68'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 268;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.68;'));
+  assert.equal(pkg.version,'2.68.0');
 });

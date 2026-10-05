@@ -8,9 +8,9 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('IPA V2.67 creates offline/online rooms with a fixed seat count',()=>{
-  assert.ok(app.includes("const VERSION='2.67';"));
-  assert.ok(html.includes('GMWW V2.67'));
+test('IPA V2.68 creates offline/online rooms with a fixed seat count',()=>{
+  assert.ok(app.includes("const VERSION='2.68';"));
+  assert.ok(html.includes('GMWW V2.68'));
   assert.match(app,/roomMode:playSceneState\.roomMode,seatMoveMode:playSceneState\.seatMoveMode,seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
