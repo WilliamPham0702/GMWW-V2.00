@@ -22,7 +22,8 @@ test('V2.83 runtime keeps offline/online room flow on the V2.83 native shell',()
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
   assert.match(app,/bySeat=new Map\(playLiveMembers\(\)\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
-  assert.match(app,/V'\+seatId\+' · '/);
+  assert.match(app,/play-player-over/);
+  assert.match(app,/play-player-role/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
   assert.match(app,/memberAvatarUrl\(m\.avatarId\)/);
   assert.match(html,/id="playSeatSheet"/);
