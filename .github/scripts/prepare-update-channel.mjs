@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const releaseType=(process.argv[2]||process.env.GMWW_RELEASE_TYPE||'server_only').trim();
+const classifiedReleaseType=(process.argv[2]||process.env.GMWW_RELEASE_TYPE||'server_only').trim();
+const typeRank={server_only:0,runtime:1,native:2};
+let previousManifest=null;
+try{previousManifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'))}catch{}
+let releaseType=classifiedReleaseType;
 const worker='https://gmww-v2-00.williampham0702.workers.dev';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const version=(app.match(/const VERSION='([^']+)'/)?.[1]||'').replace(/^V/i,'');
@@ -53,6 +57,10 @@ const files=[...new Set(copied)].sort().map(rel=>({
   sha256:sha(path.join(outRoot,rel))
 }));
 
+if(previousManifest?.releaseVersion===version){
+  const previousType=String(previousManifest.releaseType||'server_only');
+  if((typeRank[previousType]??0)>(typeRank[releaseType]??0)) releaseType=previousType;
+}
 const shell=(fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8').match(/MARKETING_VERSION = ([^;]+);/)?.[1]||version).trim();
 const isNative=releaseType==='native';
 const manifest={
@@ -76,4 +84,4 @@ const manifest={
 };
 fs.mkdirSync(path.join('assets','updates'),{recursive:true});
 fs.writeFileSync(path.join('assets','updates','latest.json'),JSON.stringify(manifest,null,2)+'\n');
-console.log(JSON.stringify({version,releaseType,files:files.length,manifest},null,2));
+console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));
