@@ -906,7 +906,7 @@ if(openPlayerWeb)openPlayerWeb.addEventListener('click',()=>window.location.assi
 const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 const checkUpdateNow=document.getElementById('checkUpdateNow');if(checkUpdateNow)checkUpdateNow.addEventListener('click',()=>checkAppUpdate({notify:false}));
-const installRuntimeUpdate=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdate)installRuntimeUpdate.addEventListener('click',installRuntimeUpdate);
+const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',installRuntimeUpdate);
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120)}));
