@@ -104,3 +104,20 @@ test('Session restore stays in the village and prewarms the village view',()=>{
   assert.ok(live.includes('applyRoleCardBack();ensureVillageGameView();'));
   assert.ok(live.includes('await autoResumeActiveRoom({stayInVillage:true})'));
 });
+
+
+test('Profile animated avatar is not overwritten by the legacy static image observer',()=>{
+  const page=read('src/gmww-members-page.js'),live=read('src/gmww-members-live.js');
+  assert.doesNotMatch(page,/game-characters\/['\"]?\+encodeURIComponent\(id\)\+['\"]?\/image/);
+  assert.ok(page.includes("image.dataset.gmwwWalkCharacter=id"));
+  assert.ok(page.includes("'/frame/1'"));
+  assert.ok(page.includes("attributeFilter:['class']"));
+  assert.ok(live.includes("main.dataset.gmwwWalkCharacter=editing?draftCharacter:currentCharacter"));
+});
+
+test('History row uses a single clean border without an inner summary frame',()=>{
+  const live=read('src/gmww-members-live.js');
+  assert.ok(live.includes("#profile .history-fold{display:block!important"));
+  assert.ok(live.includes("border:1px solid #d7b775!important"));
+  assert.ok(live.includes("border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important"));
+});
