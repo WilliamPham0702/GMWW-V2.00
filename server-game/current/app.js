@@ -858,11 +858,15 @@ async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return;
   setUpdateUi('checking','ĐANG KIỂM TRA','Đang kiểm tra phiên bản mới…','');
   try{
-    const res=await fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+Date.now(),{cache:'no-store'});
+    const stamp=Date.now(),[res,healthRes]=await Promise.all([
+      fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp,{cache:'no-store'}),
+      fetch(GMWW_SERVER_BASE+'/api/health?update='+stamp,{cache:'no-store'})
+    ]);
     const d=await res.json();if(!res.ok||d.ok!==true)throw new Error(d.error||('HTTP '+res.status));
+    let health={};try{if(healthRes.ok)health=await healthRes.json()}catch{}
     gmwwUpdateManifest=d;
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,'');
-    const server=String(d.serverVersion||latest||'—').replace(/^V/i,'');
+    const server=String(health.serverVersion||health.version||d.serverVersion||latest||'—').replace(/^V/i,'');
     const serverEl=document.getElementById('updateServerVersion');if(serverEl)serverEl.textContent=server==='—'?'V—':'V'+server;
     const type=String(d.releaseType||'server_only').toLowerCase();
     const newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
