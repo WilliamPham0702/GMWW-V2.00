@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.76';
+const VERSION='2.77';
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
 const PREF_KEY='GMWW_V258_PREFS';
@@ -800,28 +800,58 @@ function setUpdateUi(kind,status,message,detail=''){
   put('updateRuntimeVersion','V'+gmwwRuntimeVersion());
 }
 function setUpdateAction(kind){
-  const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA');
-  runtime?.classList.toggle('hidden',kind!=='runtime');
-  ipa?.classList.toggle('hidden',kind!=='native');
+  const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
+  [runtime,ipa,web].forEach(x=>x?.classList.remove('recommended'));
+  if(kind==='runtime')runtime?.classList.add('recommended');
+  else if(kind==='native')ipa?.classList.add('recommended');
+  else if(kind==='server_only')web?.classList.add('recommended');
 }
 async function installRuntimeUpdate(){
-  if(gmwwUpdateBusy||!gmwwUpdateManifest)return;
+  if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
   const files=gmwwUpdateManifest?.runtime?.files;
-  if(!Array.isArray(files)||!files.length){alert('Gói cập nhật chưa sẵn sàng. Vui lòng thử lại sau.');return}
-  gmwwUpdateBusy=true;setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra bản cập nhật…','Không tắt ứng dụng trong lúc cập nhật.');
+  if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
+  gmwwUpdateBusy=true;setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
   if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
-    gmwwUpdateBusy=false;setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Cần cài IPA mới có Update Manager.');
+    gmwwUpdateBusy=false;setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
   }
+  return true
 }
 function downloadUpdateIPA(){
-  const ipa=gmwwUpdateManifest?.ipa||{},url=String(ipa.url||'').trim();if(!url){alert('File IPA chưa sẵn sàng. Vui lòng thử lại sau.');return}
-  if(!gmwwNativePost('downloadIPA',{url,fileName:String(ipa.fileName||('GMWW-V'+gmwwUpdateManifest.releaseVersion+'.ipa'))})){
-    window.location.assign(url);
-  }
+  const manifestIpa=gmwwUpdateManifest?.ipa||{},shell=gmwwShellVersion(),fallbackVersion=String(manifestIpa.version||shell||gmwwRuntimeVersion()).replace(/^V/i,'');
+  const fallbackUrl='https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v'+fallbackVersion+'/GMWW-V'+fallbackVersion+'.ipa';
+  const url=String(manifestIpa.url||fallbackUrl).trim(),fileName=String(manifestIpa.fileName||('GMWW-V'+fallbackVersion+'.ipa'));
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang chuẩn bị file IPA…','File sẽ mở bảng chia sẻ trên iPhone.');
+  if(!gmwwNativePost('downloadIPA',{url,fileName}))window.location.assign(url);
+}
+async function updateDataNow(){
+  const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
+  try{
+    const d=await checkAppUpdate({notify:false});if(!d)return;
+    const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
+    if(newer&&type==='runtime'){await installRuntimeUpdate();return}
+    if(newer&&type==='native'){setUpdateAction('native');setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
+    memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth();
+    setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
+  }catch(e){console.warn('GMWW_UPDATE_DATA',e);setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn&&!gmwwUpdateBusy)btn.disabled=false}
+}
+async function syncPlayerWebUpdate(){
+  const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
+  setUpdateUi('checking','ĐANG ĐỒNG BỘ WEB','Đang kiểm tra Player Web Production…','');
+  try{
+    const stamp=Date.now(),responses=await Promise.all([
+      fetch(GMWW_SERVER_BASE+'/api/health?websync='+stamp,{cache:'no-store'}),
+      fetch(GMWW_SERVER_BASE+'/?websync='+stamp,{cache:'reload'}),
+      fetch(GMWW_SERVER_BASE+'/gmww-members-live.js?websync='+stamp,{cache:'reload'})
+    ]);
+    if(!responses.every(r=>r.ok))throw new Error('Player Web chưa phản hồi đầy đủ.');
+    const health=await responses[0].json(),webVersion=String(health.webVersion||health.version||'').replace(/^V/i,'');
+    setUpdateAction('server_only');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web Production đang chạy V'+(webVersion||'—')+'.','Người chơi đang mở bản cũ sẽ được yêu cầu tải lại trang.');
+  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);setUpdateUi('bad','ĐỒNG BỘ WEB LỖI','Không xác nhận được Player Web Production.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn)btn.disabled=false}
 }
 async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return;
-  const btn=document.getElementById('checkUpdateNow');if(btn)btn.disabled=true;
   setUpdateUi('checking','ĐANG KIỂM TRA','Đang kiểm tra phiên bản mới…','');
   try{
     const res=await fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+Date.now(),{cache:'no-store'});
@@ -855,7 +885,7 @@ async function checkAppUpdate({notify=false}={}){
     return d
   }catch(e){
     console.warn('GMWW_UPDATE_CHECK',e);setUpdateAction('none');setUpdateUi('bad','KHÔNG KIỂM TRA ĐƯỢC','Không thể kiểm tra bản cập nhật.','Game vẫn tiếp tục hoạt động bình thường.');
-  }finally{if(btn)btn.disabled=false}
+  }finally{}
 }
 window.GMWWUpdateNative={
   onResult(result={}){
@@ -909,10 +939,10 @@ const openPlayerWeb=document.getElementById('openPlayerWeb');
 if(openPlayerWeb)openPlayerWeb.addEventListener('click',()=>window.location.assign(GMWW_SERVER_BASE+'/'));
 const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
-const checkUpdateNow=document.getElementById('checkUpdateNow');if(checkUpdateNow)checkUpdateNow.addEventListener('click',()=>checkAppUpdate({notify:false}));
-const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',installRuntimeUpdate);
+const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',updateDataNow);
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
-setTimeout(()=>checkAppUpdate({notify:true}),1400);
+const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
+setTimeout(()=>checkAppUpdate({notify:false}),1400);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120)}));
 window.addEventListener('online',()=>{if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
 
