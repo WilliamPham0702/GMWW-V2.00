@@ -22,7 +22,8 @@ test('Update Manager JS has runtime and IPA paths',()=>{
   assert.match(js,/function updateDataNow/);
   assert.match(js,/function syncPlayerWebUpdate/);
   assert.match(js,/gmwwUpdater/);
-  assert.match(js,/GMWW_SERVER_BASE\+'\/gmww-members-live\.js\?websync='/);
+  assert.match(js,/\/api\/gm\/web-sync\?ts=/);
+  assert.match(js,/Authorization:'Bearer '\+GMWW_GM_AUTH/);
 });
 
 test('Player Web has new-version reload notification',()=>{
@@ -30,12 +31,16 @@ test('Player Web has new-version reload notification',()=>{
   assert.match(live,/GMWW_WEB_VERSION/);
   assert.match(live,/Có cập nhật mới trên Player Web/);
   assert.match(live,/checkWebUpdate/);
+  assert.match(live,/GMWW_WEB_SYNC_KEY/);
+  assert.match(live,/\/api\/web-sync\?webUpdate=/);
 });
 
 test('Worker exposes update manifest endpoint',()=>{
   const worker=fs.readFileSync('src/index.js','utf8');
   assert.match(worker,/\/api\/update\/manifest/);
   assert.match(worker,/webVersion:VERSION/);
+  assert.match(worker,/\/api\/gm\/web-sync/);
+  assert.match(worker,/\/api\/web-sync/);
 });
 
 test('Native shell contains updater bridge and SHA-256 verification',()=>{
@@ -57,7 +62,7 @@ test('Update channel never downgrades a native release on same-version follow-up
 });
 
 
-test('V2.77 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
+test('V2.78 update actions stay visible in one three-column row and IPA has shell fallback',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   const js=fs.readFileSync('server-game/current/app.js','utf8');
