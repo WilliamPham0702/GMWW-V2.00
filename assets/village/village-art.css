@@ -56,15 +56,15 @@ html.embedded .stage{height:100svh;min-height:100svh}
 .night .fire:after{display:block;animation:villageFireGlow 1.5s ease-in-out infinite alternate}
 .player{transform:translate(-50%,-100%)!important}
 .player .portrait.game-character{background:none;border:0;border-radius:0;width:clamp(40px,12vw,64px);height:clamp(56px,17vw,86px);overflow:visible;filter:drop-shadow(0 4px 2px #0018)}
-.player .portrait.game-character img{object-fit:contain;border-radius:0;transform-origin:50% 95%;animation:villageIdle 2.6s ease-in-out infinite alternate}
+.player .portrait.game-character img{object-fit:contain;border-radius:0;transform-origin:50% 95%;transform:scale(var(--gmww-character-scale,1));animation:villageIdle 2.6s ease-in-out infinite alternate}
 .player.moving .portrait.game-character img{animation:villageWalk .3s ease-in-out infinite alternate}
 .player:nth-child(3n) .portrait img{animation-delay:-.7s}.player:nth-child(3n+1) .portrait img{animation-delay:-1.4s}
 .seat-empty{transform:translate(-50%,-50%);min-width:44px;min-height:44px}
 .seat-dot{background:none!important;border:1px solid #ffe6a5;border-radius:50%;width:34px!important;height:34px!important;color:#fff4cc;box-shadow:0 2px 6px #0018}
 .seat-dot:before{content:"＋";font-size:28px;line-height:32px}.seat-dot:after{display:none!important}
 html.embedded .hud{display:none!important}
-@keyframes villageIdle{to{transform:rotate(1.5deg) translateY(-1px)}}
-@keyframes villageWalk{to{transform:rotate(3deg) translateY(-4px)}}
+@keyframes villageIdle{from{transform:scale(var(--gmww-character-scale,1)) rotate(0deg) translateY(0)}to{transform:scale(var(--gmww-character-scale,1)) rotate(1.5deg) translateY(-1px)}}
+@keyframes villageWalk{from{transform:scale(var(--gmww-character-scale,1)) rotate(-2deg) translateY(0)}to{transform:scale(var(--gmww-character-scale,1)) rotate(3deg) translateY(-4px)}}
 @keyframes villageFireGlow{to{opacity:.4;transform:scale(.9)}}
 @media(prefers-reduced-motion:reduce){.player .portrait.game-character img,.night .fire:after{animation:none}}
 
