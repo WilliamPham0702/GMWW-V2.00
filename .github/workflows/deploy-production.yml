@@ -77,11 +77,23 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://gmww-v2-00.williampham0702.workers.dev"
-          for i in $(seq 1 20); do
-            if curl -fsS "$URL/api/health" > /tmp/health.json; then break; fi
+          EXPECTED=$(node -e "const p=require('./package.json');process.stdout.write(String(p.version).replace(/\.0$/,''))")
+          OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/health?verify=$i" > /tmp/health.json &&
+               grep -q '"project":"GMWW-V2.00"' /tmp/health.json &&
+               grep -q "\"version\":\"V$EXPECTED\"" /tmp/health.json; then
+              OK=1
+              break
+            fi
             sleep 3
           done
           cat /tmp/health.json
-          grep -q '"project":"GMWW-V2.00"' /tmp/health.json
+          test "$OK" = "1"
+          curl -fsS "$URL/api/update/manifest?verify=$(date +%s)" > /tmp/manifest.json
+          cat /tmp/manifest.json
+          grep -q "\"releaseVersion\":\"$EXPECTED\"" /tmp/manifest.json
+          curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
+          grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/" > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
