@@ -41,11 +41,10 @@ html.embedded .fire{display:block!important}
 
 /* V2.55 roaming chibi */
 .player.moving{transition:none!important;will-change:left,top}
-.player.moving .portrait.game-character{animation:gmwwVillageWalk .30s ease-in-out infinite alternate;transform-origin:50% 100%}.player.moving[data-walk-dir="left"] .portrait.game-character img{transform:scaleX(-1)}
+.player.moving .portrait.game-character{animation:none!important}.player.moving[data-walk-dir="left"] .portrait.game-character img{transform:scaleX(-1)}
 .player.roaming .name{background:rgba(5,57,73,.86);border:1px solid rgba(103,235,230,.25)}
 .seat-empty.reserved .seat-dot{border-color:#ffd97a!important;background:rgba(125,92,17,.72)!important;animation:none!important}
 .seat-empty.reserved .seat-dot::before{content:"➜"!important;color:#fff1b8!important;font-size:22px!important}
-@keyframes gmwwVillageWalk{0%{transform:translateY(1px) rotate(-2deg) scaleX(.985)}100%{transform:translateY(-5px) rotate(2deg) scaleX(1.015)}}
 html.embedded .stage.setup-walk{cursor:crosshair}
 @media(prefers-reduced-motion:reduce){.player.moving .portrait.game-character{animation:none!important}}
 
@@ -55,3 +54,7 @@ html.embedded .seat-empty b{display:none!important}
 .fire{display:none!important}
 /* V2.61: invisible circular interaction hotspot; never expose the browser button box. */
 html.embedded .fire{display:block!important;inset:auto!important;width:84px!important;height:84px!important;transform:translate(-50%,-50%)!important;padding:0!important;border:0!important;border-radius:50%!important;outline:0!important;background:transparent!important;box-shadow:none!important;color:transparent!important;font-size:0!important;opacity:0!important;appearance:none!important;-webkit-appearance:none!important;filter:none!important;animation:none!important;touch-action:manipulation}
+
+/* V2.63 real-frame 2D walking + embedded overlay cleanup */
+html.embedded .selection{display:none!important}
+html.embedded .player .portrait.game-character img{image-rendering:auto;transform-origin:50% 100%}
