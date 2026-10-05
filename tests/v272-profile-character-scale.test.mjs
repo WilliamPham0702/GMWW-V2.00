@@ -4,56 +4,82 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.75 removes the background-dim control and exposes server character size instead',()=>{
+test('V2.76 exposes six discrete character sizes and removes the slider',()=>{
   const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
-  assert.ok(html.includes('id="characterScaleRange"'));
-  assert.ok(html.includes('Kích thước nhân vật'));
-  assert.doesNotMatch(html,/backgroundDimRange|Độ mờ hình nền/);
-  assert.ok(app.includes("fetch(GMWW_SERVER_BASE+'/api/gm/ui-settings'"));
-  assert.ok(app.includes("characterScale:n"));
-  assert.ok(css.includes('--gmww-background-dim:0'));
-  assert.ok(css.includes('background:transparent!important'));
-  assert.ok(server.includes('async globalUiSettingsGet()'));
-  assert.ok(server.includes('async globalUiSettingsPut(body)'));
-  assert.ok(server.includes('characterScale'));
-  assert.ok(server.includes('backgroundDim:0'));
+  assert.ok(html.includes('id="characterScaleChoices"'));
+  for(const n of [75,100,125,150,175,200]) assert.ok(html.includes('data-character-scale="'+n+'"'));
+  assert.doesNotMatch(html,/characterScaleRange|type="range"/);
+  assert.ok(app.includes('const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200]'));
+  assert.ok(app.includes("--gmww-character-scale"));
+  assert.ok(css.includes('--gmww-character-scale:1'));
+  assert.ok(css.includes('width:56px!important;height:74px!important'));
+  assert.ok(css.includes('transform:scale(var(--gmww-character-scale,1))'));
+  assert.ok(server.includes('const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200]'));
+  assert.ok(server.includes('normalizeCharacterScale(raw,100)'));
   assert.doesNotMatch(server,/globalWebVeilGet|globalWebVeilPut|global-settings\/web-veil/);
 });
 
-test('Player Web receives the server scale and renders larger 2D characters',()=>{
-  const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs');
-  assert.ok(live.includes("async function loadUiSettings(force=false)"));
+test('Player Web scales actor artwork only and keeps layout containers fixed',()=>{
+  const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs'),art=read('assets/village/village-art.css');
+  assert.ok(live.includes('GMWW_CHARACTER_SCALES=[75,100,125,150,175,200]'));
   assert.ok(live.includes("api('/api/ui-settings')"));
-  assert.ok(live.includes("characterScale:Number(state.characterScale||120)"));
-  assert.ok(village.includes('characterScale:120'));
-  assert.ok(village.includes('Number(setupState.characterScale||120)/100'));
-  assert.ok(village.includes('avatar.style.width='));
-  assert.ok(village.includes('avatar.style.height='));
+  assert.ok(live.includes('characterScale:Number(state.characterScale||100)'));
+  assert.ok(village.includes('CHARACTER_SCALES=[75,100,125,150,175,200]'));
+  assert.ok(village.includes('avatar.style.width=baseW+"px"'));
+  assert.ok(village.includes('avatar.style.height=baseH+"px"'));
+  assert.ok(village.includes('button.style.minWidth=Math.max(52,baseW+10)+"px"'));
+  assert.ok(village.includes('avatar.style.setProperty("--gmww-character-scale",String(scale))'));
+  assert.ok(art.includes('scale(var(--gmww-character-scale,1))'));
 });
 
-test('Player can always find and open character information from the village',()=>{
-  const live=read('src/gmww-members-live.js');
+test('Player tapping their own character no longer opens information',()=>{
+  const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs');
   assert.ok(live.includes('id=\\"gmwwVillageProfileButton\\"'));
-  assert.ok(live.includes('aria-label=\\"Thông tin nhân vật\\"'));
-  assert.ok(live.includes('function openVillageProfile()'));
+  assert.ok(live.includes('id=\\"gmwwVillageProfileAvatar\\"'));
   assert.ok(live.includes('profileButton.onclick=openVillageProfile'));
-  assert.ok(live.includes('if(id===selfId)openVillageProfile()'));
+  assert.ok(live.includes("if(id&&id!==selfId)showPlayerSeatChoice(id)"));
+  assert.doesNotMatch(live,/if\(id===selfId\)openVillageProfile\(\)/);
+  assert.ok(village.includes('if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage'));
 });
 
-test('Recovered post-login navigation no longer shows a false error toast',()=>{
+test('Player profile is compact, password-free and keeps animated avatar, stats and logout',()=>{
+  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  assert.ok(live.includes('#loginPasswordBlock,#registrationPasswordToggle,#registrationPasswordFields,#reset{display:none!important}'));
+  assert.ok(live.includes('#profile .change-pass,#profile .history-fold,#profile .profile-enter-room{display:none!important}'));
+  assert.ok(live.includes("summary.textContent='✎ THAY ĐỔI AVATAR'"));
+  assert.ok(live.includes("$$('#profile .stats .stat strong').forEach"));
+  assert.ok(live.includes("$$('#profile .profile-exit-btn,#profile .linkline button').forEach"));
+  assert.ok(live.includes("$$('img[data-gmww-walk-character]').forEach"));
+  assert.ok(server.includes('disableMemberPassword(member)'));
+  const loginStart=server.indexOf('async memberLogin(body)'),loginEnd=server.indexOf('async memberChangePassword',loginStart),login=server.slice(loginStart,loginEnd);
+  assert.doesNotMatch(login,/verifyPassword|PASSWORD_REQUIRED/);
+});
+
+test('Avatar selection persists and 20 animated characters load independently of legacy avatar API',()=>{
+  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  const loadStart=live.indexOf('async function loadAvatars()'),loadEnd=live.indexOf('function shuffleAvatarSuggestions',loadStart),load=live.slice(loadStart,loadEnd);
+  assert.ok(load.includes('await loadGameCharacters()'));
+  assert.ok(load.includes('20 Nhân Vật động GMWW'));
+  assert.ok(live.includes("const selfId=String(state.participantId||('member:'+state.member?.loginId))"));
+  const profileStart=server.indexOf('async memberUpdateProfile'),profileEnd=server.indexOf('async memberSession',profileStart),profile=server.slice(profileStart,profileEnd);
+  assert.ok(profile.includes('member.gameCharacterId=requestedCharacter'));
+  assert.doesNotMatch(profile,/fallbackAvatar|member\.avatarId=fallbackAvatar/);
+});
+
+test('Manual login enters the village directly with no intermediate room restore layer',()=>{
   const live=read('src/gmww-members-live.js');
   const start=live.indexOf('async function login()'),end=live.indexOf('window.login=login',start),segment=live.slice(start,end);
-  assert.doesNotMatch(segment,/Đã đăng nhập\. Có lỗi khi khôi phục màn hình trước/);
-  assert.ok(segment.includes("catch(fallbackError)"));
-  assert.ok(segment.includes("Đã đăng nhập nhưng chưa mở được Làng"));
+  assert.ok(segment.includes("saveSession(d);state.roomNavigationAuthorized=false;await enterVillage()"));
+  assert.doesNotMatch(segment,/autoResumeActiveRoom/);
+  assert.doesNotMatch(segment,/fallbackError|GMWW post-login/);
 });
 
-test('V2.75 metadata is aligned',()=>{
+test('V2.76 metadata is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.75"'));
-  assert.ok(app.includes("const VERSION='2.75';"));
-  assert.ok(html.includes('GMWW V2.75'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 275;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.75;'));
-  assert.equal(pkg.version,'2.75.0');
+  assert.ok(server.includes('VERSION="V2.76"'));
+  assert.ok(app.includes("const VERSION='2.76';"));
+  assert.ok(html.includes('GMWW V2.76'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 276;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.76;'));
+  assert.equal(pkg.version,'2.76.0');
 });
