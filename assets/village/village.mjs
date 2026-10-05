@@ -51,6 +51,8 @@ if(game){
     return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1};
   }
   function screenPoint(p){const stage=document.querySelector('.stage');return layout.toScreen(p,stage.clientWidth||864,stage.clientHeight||1536)}
+  function walkFrameUrl(characterId,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f}
+  function walkFrameFor(data,now=Date.now()){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
   function makePlayerButton(data,position,seatId=null,index=0){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(actualSeat?" seated":" roaming");
@@ -59,9 +61,9 @@ if(game){
     const avatar=document.createElement("span");avatar.className="portrait";
     const characterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
-    const characterUrl=characterId?("/api/game-characters/"+encodeURIComponent(characterId)+"/image"):"";
+    const characterUrl=characterId?walkFrameUrl(characterId,walkFrameFor(data)):"";
     const avatarUrl=trustedAvatarUrl(data.avatarUrl||characterUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":""));
-    if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img)}
+    if(avatarUrl){avatar.classList.add("has-image",characterId?"game-character":"avatar-fallback");const img=document.createElement("img");img.src=avatarUrl;img.alt="";img.loading="eager";img.decoding="async";if(characterId){img.dataset.walkCharacter=characterId;img.dataset.walkFrame=String(walkFrameFor(data))}img.addEventListener("error",()=>{img.remove();avatar.classList.remove("has-image")});avatar.append(img)}
     const name=document.createElement("span");name.className="name";name.textContent=actualSeat?(actualSeat+" · "+playerName):playerName;
     const stateTag=document.createElement("span");stateTag.className="player-state";stateTag.textContent=position?.moving?"➜":data.ready?"✓":data.online?"●":"○";
     const meta=document.createElement("span");meta.className="player-meta";meta.append(name,stateTag);button.append(avatar,meta);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+" "+playerName);
@@ -91,7 +93,7 @@ if(game){
     let active=false;
     for(const data of all){
       if(data?.movementStatus!=="moving"||!data.moveId)continue;const el=players.querySelector('[data-player-id="'+CSS.escape(String(data.id))+'"]');if(!el)continue;
-      const pos=movementPosition(data,null,Date.now());const display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
+      const nowMs=Date.now(),pos=movementPosition(data,null,nowMs),display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;const img=el.querySelector("img[data-walk-character]");if(img){const frame=pos.moving?walkFrameFor(data,nowMs):1;if(img.dataset.walkFrame!==String(frame)){img.dataset.walkFrame=String(frame);img.src=walkFrameUrl(img.dataset.walkCharacter,frame)}}el.classList.toggle("moving",!!pos.moving);
       if(!pos.moving&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
     }
     if(active)moveFrame=requestAnimationFrame(animateMovementFrame);else moveFrame=0
