@@ -1,9 +1,13 @@
 name: Build Quản Trò Ma Sói V2 IPA
 
-# IPA is intentionally manual-only.
-# Routine source/Player Web/Cloudflare commits must never trigger an expensive IPA build.
+# Routine source/Player Web/Cloudflare commits do not build IPA.
+# An explicit BUILD_IPA_REQUEST change is the automated release trigger.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "server-game/BUILD_IPA_REQUEST"
 
 permissions:
   contents: write
