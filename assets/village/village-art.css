@@ -67,3 +67,27 @@ html.embedded .hud{display:none!important}
 @keyframes villageWalk{to{transform:rotate(3deg) translateY(-4px)}}
 @keyframes villageFireGlow{to{opacity:.4;transform:scale(.9)}}
 @media(prefers-reduced-motion:reduce){.player .portrait.game-character img,.night .fire:after{animation:none}}
+
+
+/* V2.66 — one camera for approved village artwork + 2D actors; desktop shows the full village. */
+.stage{background:#071426!important;--zoom:1;--pan-x:0px;--pan-y:0px}
+.stage::after{
+  content:""!important;display:block!important;position:absolute!important;inset:0!important;
+  z-index:0!important;clip-path:none!important;opacity:1!important;filter:none!important;pointer-events:none!important;
+  background:#58a9d4 url("../backgrounds/gmww-village-day-v260.webp?v=266") center center/cover no-repeat!important;
+  transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--zoom,1))!important;
+  transform-origin:50% 60%!important;transition:transform .16s ease-out!important;
+}
+.night .stage::after{
+  background:#102e55 url("../backgrounds/gmww-village-night-v260.webp?v=266") center center/cover no-repeat!important;
+}
+.stage::before{z-index:1!important}
+.stage>.sky,.stage>.houses,.scene>.plaza{display:none!important}
+.scene{
+  z-index:2!important;
+  transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--zoom,1))!important;
+  transform-origin:50% 60%!important;transition:transform .16s ease-out!important;
+}
+@media (min-aspect-ratio:18/25){
+  .stage::after{background-size:contain!important}
+}
