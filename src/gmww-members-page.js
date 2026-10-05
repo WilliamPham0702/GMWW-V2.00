@@ -676,14 +676,16 @@ button,input,select,textarea{font:inherit}
     const syncChibi=()=>{
       let member=null;try{member=JSON.parse(localStorage.getItem('gmww_member')||'null')}catch{}
       const id=String(member?.gameCharacterId||'');
-      if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)){
-        const src='/api/game-characters/'+encodeURIComponent(id)+'/image';
-        for(const image of document.querySelectorAll('#profileAvatar,#profileEditAvatar'))if(image.getAttribute('src')!==src)image.src=src;
+      if(/^character-(?:0[1-9]|1[0-9]|20)$/.test(id)){
+        for(const image of document.querySelectorAll('#profileAvatar,#profileEditAvatar')){
+          image.dataset.gmwwWalkCharacter=id;
+          if(image.dataset.gmwwProfileCharacter!==id){image.dataset.gmwwProfileCharacter=id;image.src='/api/game-characters/'+encodeURIComponent(id)+'/frame/1'}
+        }
       }
       const rooms=document.querySelector('#gmwwVillageHud .rooms'),status=document.querySelector('#gmwwVillageHud .status small');
       if(rooms&&!rooms.hidden&&status&&status.textContent!=='Sảnh chờ')status.textContent='Sảnh chờ';
     };
-    syncChibi();new MutationObserver(syncChibi).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','src']});
+    syncChibi();new MutationObserver(syncChibi).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
