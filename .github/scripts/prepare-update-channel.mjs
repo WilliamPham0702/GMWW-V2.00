@@ -62,6 +62,10 @@ if(previousManifest?.releaseVersion===version){
   if((typeRank[previousType]??0)>(typeRank[releaseType]??0)) releaseType=previousType;
 }
 const shell=(fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8').match(/MARKETING_VERSION = ([^;]+);/)?.[1]||version).trim();
+// A newer runtime running on an older native shell must stay a runtime update even
+// when the latest commit only touches tests/server files. Otherwise an incidental
+// follow-up commit would hide the downloadable runtime package from installed apps.
+if(releaseType==='server_only'&&version!==shell) releaseType='runtime';
 const isNative=releaseType==='native';
 const manifest={
   schema:1,
