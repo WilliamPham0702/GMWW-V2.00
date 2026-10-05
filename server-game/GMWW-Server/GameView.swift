@@ -60,6 +60,7 @@ struct GameWebView: UIViewRepresentable {
             let releaseVersion: String?
             let runtimeVersion: String?
             let runtime: RuntimePackage?
+            let delete: [String]?
         }
 
         private func runtimeRoot() throws -> URL {
@@ -159,7 +160,26 @@ struct GameWebView: UIViewRepresentable {
                     let root = try runtimeRoot()
                     let temp = root.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
                     staging = temp
-                    try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+
+                    if let active = activeRuntimeHTML()?.deletingLastPathComponent() {
+                        try FileManager.default.copyItem(at: active, to: temp)
+                    } else if let resources = Bundle.main.resourceURL {
+                        let bundledWeb = resources.appendingPathComponent("Web", isDirectory: true)
+                        guard FileManager.default.fileExists(atPath: bundledWeb.path) else {
+                            throw NSError(domain: "GMWWUpdater", code: 7, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy Web runtime gốc trong IPA."])
+                        }
+                        try FileManager.default.copyItem(at: bundledWeb, to: temp)
+                    } else {
+                        throw NSError(domain: "GMWWUpdater", code: 8, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy tài nguyên ứng dụng."])
+                    }
+
+                    for path in manifest.delete ?? [] {
+                        guard safeRelativePath(path) else { continue }
+                        let target = temp.appendingPathComponent(path)
+                        if FileManager.default.fileExists(atPath: target.path) {
+                            try FileManager.default.removeItem(at: target)
+                        }
+                    }
 
                     for item in runtime.files {
                         guard safeRelativePath(item.path),
