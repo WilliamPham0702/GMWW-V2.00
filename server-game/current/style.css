@@ -1177,3 +1177,77 @@ body.play-immersive #start .play-player-token:not(.is-empty) .play-player-avatar
  .play-player-token{width:82px}.play-player-avatar{width:56px;height:74px}
  .play-player-over b{font-size:11px}
 }
+
+
+/* V2.84 — GM village layout: only Auto GM on top; taller lower operation panel */
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-hud{
+  left:auto!important;
+  right:12px!important;
+  top:calc(env(safe-area-inset-top) + 8px)!important;
+  width:112px!important;
+  height:52px!important;
+  min-height:52px!important;
+  display:block!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-room-chip,
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-phase-pill{
+  display:none!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-gm{
+  width:112px!important;
+  height:52px!important;
+  min-height:52px!important;
+  margin:0!important;
+  padding:5px 8px!important;
+  border-radius:14px!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-switch{
+  width:38px!important;height:18px!important;min-height:18px!important;
+}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-switch i{width:14px!important;height:14px!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-gm.is-on .play-auto-switch i{transform:translateX(20px)!important}
+body.play-immersive #start .play-shell[data-phase="lobby"] .play-auto-gm b{font-size:9px!important}
+
+body.play-immersive #start .play-context-panel.is-setup-popup{
+  position:fixed!important;
+  left:8px!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:calc(env(safe-area-inset-bottom) + 64px)!important;
+  width:min(52vw,390px)!important;
+  height:min(32svh,300px)!important;
+  min-height:210px!important;
+  max-height:min(32svh,300px)!important;
+  transform:none!important;
+  padding:12px 12px 14px!important;
+  border-radius:18px!important;
+  overflow:auto!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup:before{display:none!important}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy{
+  min-height:40px!important;
+  padding-right:40px!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-copy b{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  font-size:11px!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-context-actions{
+  grid-template-columns:1fr!important;
+  align-content:start!important;
+  gap:7px!important;
+  margin-top:8px!important;
+}
+body.play-immersive #start .play-context-panel.is-setup-popup .play-action-chip,
+body.play-immersive #start .play-context-panel.is-setup-popup .play-slot-picker{
+  min-height:40px!important;height:40px!important;font-size:10px!important;
+}
+@media(max-width:390px){
+  body.play-immersive #start .play-context-panel.is-setup-popup{
+    width:min(58vw,360px)!important;
+    height:min(32svh,270px)!important;
+    min-height:200px!important;
+  }
+}
