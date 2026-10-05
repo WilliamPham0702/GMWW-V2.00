@@ -77,3 +77,39 @@ html.embedded .player .portrait.game-character img{image-rendering:auto;transfor
 .player.seated:not(.moving):nth-child(3n+2) .portrait.game-character{animation-delay:-.8s!important}
 .player.seated:not(.moving):nth-child(3n) .portrait.game-character{animation-delay:-1.6s!important}
 @media(prefers-reduced-motion:reduce){.player.seated:not(.moving) .portrait.game-character{animation:none!important}}
+
+
+/* V2.85 official Player Web labels */
+.player{min-width:92px!important;overflow:visible!important;gap:0!important}
+.player .portrait.game-character{overflow:visible!important}
+.player .portrait.game-character img{
+  transform:scale(var(--gmww-character-scale,1))!important;
+  transform-origin:50% 95%!important;
+}
+.player .player-over{
+  position:absolute;left:50%;bottom:calc(100% - 3px);z-index:4;
+  width:max-content;max-width:132px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  transform:translateX(-50%) scale(var(--gmww-character-scale,1));
+  transform-origin:50% 100%;pointer-events:none;
+}
+.player .player-over .name{
+  display:block;max-width:132px;padding:3px 7px;border-radius:8px;
+  background:rgba(3,36,48,.88);color:#fff;font-size:12px;font-weight:900;line-height:1.05;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 9px rgba(0,0,0,.28);
+}
+.player .player-status{
+  display:inline-flex;min-height:16px;align-items:center;padding:2px 6px;border-radius:999px;
+  background:rgba(255,248,207,.94);color:#075f76;font-size:8px;font-weight:1000;white-space:nowrap;
+}
+.player .player-role{
+  display:block;width:max-content;max-width:120px;margin:4px auto 0;padding:2px 6px;border-radius:7px;
+  background:rgba(3,42,55,.84);color:#ffe9a3;font-size:8px;font-weight:950;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;transform:scale(var(--gmww-character-scale,1));transform-origin:50% 0;
+}
+.player .player-role[hidden]{display:none!important}
+html.embedded .player .player-over .name{font-size:11px}
+@media(max-width:390px){
+  .player{min-width:82px!important}
+  .player .player-over .name{font-size:10px}
+  .player .player-status,.player .player-role{font-size:7px}
+}
