@@ -137,6 +137,32 @@ jobs:
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-display.webp"
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
 
+      - name: Restore stable legacy artwork package
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="$RUNNER_TEMP/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+
+          CURRENT_COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251"; then
+            CURRENT_COUNT=$(find "$SOURCE/assets/role-artwork-v251" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$CURRENT_COUNT" -ne 189; then
+            echo "Restoring canonical V2.52 legacy artwork package from GitHub Release..."
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED_SHA  $ARCHIVE" | shasum -a 256 -c -
+            unzip -q "$ARCHIVE" -d .
+          fi
+
+          test -s "$SOURCE/role-artwork-v251.js"
+          RESTORED_COUNT=$(find "$SOURCE/assets/role-artwork-v251" -type f -name '*.webp' | wc -l | tr -d ' ')
+          test "$RESTORED_COUNT" -eq 189
+          echo "Legacy artwork ready: $RESTORED_COUNT WebP files"
+
       - name: Guard against incomplete legacy artwork package
         run: |
           set -euo pipefail
