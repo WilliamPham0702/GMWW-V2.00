@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.99';
+const VERSION='3.00';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -834,12 +834,18 @@ function setUpdateUi(kind,status,message,detail=''){
   put('updateShellVersion','V'+gmwwShellVersion());
   put('updateRuntimeVersion','V'+gmwwRuntimeVersion());
 }
-function setUpdateAction(kind){
+function setUpdateAction(kind,context={}){
   const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
-  [runtime,ipa,web].forEach(x=>x?.classList.remove('recommended'));
-  if(kind==='runtime')runtime?.classList.add('recommended');
-  else if(kind==='native')ipa?.classList.add('recommended');
-  else if(kind==='server_only')web?.classList.add('recommended');
+  const title=document.getElementById('updateDecisionTitle'),hint=document.getElementById('updateDecisionHint');
+  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=true;x.setAttribute('aria-disabled','true')});
+  const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
+  const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
+  if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
+  else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
+  else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
+  else if(kind==='compatible'){if(title)title.textContent='Không cần làm gì';if(hint)hint.textContent='Ứng dụng V'+shell+' vẫn tương thích. Runtime/Server đã ở V'+runtimeV+'. Không tải lại IPA V'+(ipaV||shell)+'.'}
+  else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else {if(title)title.textContent='Không cần làm gì';if(hint)hint.textContent='Hệ thống đang ở trạng thái phù hợp.'}
 }
 async function installRuntimeUpdate(){
   if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
@@ -867,7 +873,7 @@ async function updateDataNow(){
     const d=await checkAppUpdate({notify:false});if(!d)return;
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
     if(newer&&type==='runtime'){await installRuntimeUpdate();return}
-    if(newer&&type==='native'){setUpdateAction('native');setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
+    if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
     memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth();
     setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
   }catch(e){console.warn('GMWW_UPDATE_DATA',e);setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
@@ -888,7 +894,7 @@ async function syncPlayerWebUpdate(){
     if(!res.ok||d.ok!==true)throw new Error(d.message||d.error||('HTTP '+res.status));
     const webVersion=String(d.webVersion||d.version||'').replace(/^V/i,'');
     const serverEl=document.getElementById('updateServerVersion');if(serverEl&&webVersion)serverEl.textContent='V'+webVersion;
-    setUpdateAction('server_only');setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
+    setUpdateAction('none');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
   }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
   finally{if(btn)btn.disabled=false}
 }
@@ -909,23 +915,23 @@ async function checkAppUpdate({notify=false}={}){
     const type=String(d.releaseType||'server_only').toLowerCase();
     const runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion(),newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
     if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
-      setUpdateAction('none');setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
+      setUpdateAction('restart',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
       return d
     }
     if(!newer){
-      setUpdateAction('none');setUpdateUi('ok','MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Không cần cập nhật.');
+      setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok',gmwwVersionCompare(shell,runtime)<0?'RUNTIME MỚI NHẤT':'MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Không cần cập nhật.');
       return d
     }
     if(type==='native'&&shellCurrent){
-      setUpdateAction('none');setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
+      setUpdateAction('none',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
       return d
     }
     if(type==='native'){
-      setUpdateAction('native');setUpdateUi('warn','CẦN IPA MỚI','Có GMWW V'+latest+' — phiên bản này cần cài ứng dụng mới.','Nhấn TẢI IPA để lưu file trực tiếp trên iPhone.');
+      setUpdateAction('native',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CẦN IPA MỚI','Có GMWW V'+latest+' — phiên bản này cần cài ứng dụng mới.','Nhấn TẢI IPA để lưu file trực tiếp trên iPhone.');
     }else if(type==='runtime'){
-      setUpdateAction('runtime');setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — có thể cập nhật trực tiếp.','Không cần cài lại IPA.');
+      setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — có thể cập nhật trực tiếp.','Không cần cài lại IPA.');
     }else{
-      setUpdateAction('none');setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
+      setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
     }
     if(notify&&newer){
       const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;

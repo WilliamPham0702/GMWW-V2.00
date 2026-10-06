@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.99</title>
-<link rel="stylesheet" href="style.css?v=2.99">
+<title>GMWW V3.00</title>
+<link rel="stylesheet" href="style.css?v=3.00">
 </head>
 <body>
 <div id="app">
@@ -362,12 +362,13 @@
             <div><small>Server</small><b id="updateServerVersion">V—</b></div>
           </div>
           <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
+          <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
           <div class="health-v236-actions update-actions update-actions-three">
-            <button class="settings-action settings-action-server" id="installRuntimeUpdate" type="button"><span>⬇</span><b>CẬP NHẬT</b></button>
+            <button class="settings-action settings-action-server" id="installRuntimeUpdate" type="button"><span>⬇</span><b>CẬP NHẬT RUNTIME</b></button>
             <button class="settings-action settings-action-server" id="downloadNewIPA" type="button"><span>📦</span><b>TẢI IPA</b></button>
-            <button class="settings-action settings-action-server" id="syncPlayerWebUpdate" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+            <button class="settings-action settings-action-server" id="syncPlayerWebUpdate" type="button"><span>⟳</span><b>ĐỒNG BỘ WEB</b></button>
           </div>
-          <small class="update-detail" id="updateDetail">Chọn đúng 1 trong 3 thao tác cần dùng.</small>
+          <small class="update-detail" id="updateDetail">Chỉ nút cần thiết mới được bật.</small>
         </div>
 
         <div class="settings-card quick-maintenance-card" id="quickMaintenanceCard">

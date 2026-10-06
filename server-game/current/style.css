@@ -1646,3 +1646,9 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 .play-player-token.is-gm-rider.is-moving .gm-wolf-leg-b{animation:gmWolfLongRearStride .56s cubic-bezier(.3,0,.55,1) infinite}
 .play-player-token.is-gm-rider .gm-wolf-head{animation:gmWolfHeadLife 8.8s ease-in-out infinite}
 .play-player-token.is-gm-rider.is-moving .gm-wolf-head{animation:gmWolfHeadLife 6.8s ease-in-out infinite}
+
+/* V3.00 — update manager is a decision surface, not three competing actions */
+.update-decision{margin:12px 0 10px;padding:12px 14px;border:1px solid rgba(130,202,236,.22);border-radius:15px;background:rgba(3,19,34,.42);display:flex;flex-direction:column;gap:4px}
+.update-decision b{font-size:14px;color:#f3f8ff}.update-decision small{font-size:12px;color:#aebdce;line-height:1.35}
+.update-actions .settings-action:disabled{opacity:.34;filter:saturate(.35);pointer-events:none;box-shadow:none}
+.update-actions .settings-action.recommended{opacity:1;filter:none}
