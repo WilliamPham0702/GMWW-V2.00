@@ -124,14 +124,15 @@ test('V2.81 fresh IPA uses bundled runtime and does not request same IPA again',
   assert.match(js,/ĐÃ CÀI IPA/);
 });
 
-test('V3.00 Update Manager enables only the action actually required',()=>{
+test('V3.03 Update Manager keeps all actions available and highlights the recommendation',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const js=fs.readFileSync('server-game/current/app.js','utf8');
  assert.match(html,/id="updateDecisionTitle"/);
  assert.match(html,/id="updateDecisionHint"/);
- assert.match(js,/x\.disabled=true/);
+ assert.match(js,/x\.disabled=false/);
+ assert.doesNotMatch(js,/x\.disabled=true/);
+ assert.match(js,/classList\.add\('recommended'\)/);
  assert.match(js,/kind==='compatible'/);
- assert.match(js,/Không tải lại IPA V/);
  assert.match(js,/Không cần tải IPA mới/);
  assert.match(js,/Bắt buộc cài IPA V/);
  assert.match(js,/Chỉ Player Web\/Server cần đồng bộ/);
