@@ -17,7 +17,7 @@ test('V2.87 runtime keeps offline/online room flow on the V2.87 native shell',()
   assert.match(html,/id="playSeatCount"/);
   assert.match(html,/data-play-seat-move="instant"/);
   assert.match(html,/data-play-seat-move="walk"/);
-  assert.match(app,/seatMoveMode:playSceneState\.seatMoveMode/);
+  assert.match(app,/seatMoveMode:'walk'/);
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
