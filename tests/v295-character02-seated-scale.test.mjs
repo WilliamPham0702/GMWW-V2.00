@@ -10,8 +10,8 @@ const worker=fs.readFileSync("src/index.js","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 
 test("Character-02 patch wires Character-02 seated asset on Player Web and GM",()=>{
-  assert.match(village,/character-02.*seated-v295\/character-02\/front\.webp/s);
-  assert.match(app,/character-02.*seated-v295\/character-02\/front\.webp/s);
+  assert.match(village,/character-02.*seated-v296\/character-02\/front\.webp/s);
+  assert.match(app,/character-02.*seated-v296\/character-02\/front\.webp/s);
   assert.doesNotMatch(village,/NGỒI XẾP BẰNG •/);
   assert.doesNotMatch(app,/NGỒI XẾP BẰNG •/);
 });
