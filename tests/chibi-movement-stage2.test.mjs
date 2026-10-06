@@ -55,8 +55,8 @@ test('Player Web supports free roaming while seat assignment is GM-only',()=>{
   assert.match(live,/releaseMySeat/);
   assert.match(live,/scheduleMovementCompletion/);
   assert.match(live,/move\/complete/);
-  assert.match(live,/seatMoveMode\|\|'instant'/);
-  assert.match(live,/ĐỔI VỊ TRÍ/);
+  assert.match(live,/GM xếp/);
+  assert.match(live,/RỜI GHẾ/);
 });
 
 test('null movement coordinates never become zero-zero movement',()=>{
@@ -80,8 +80,8 @@ test('village animates chibi and reports arrival to parent',()=>{
 });
 
 test('GM IPA exposes the movement option and renders moving players',()=>{
-  assert.match(gm,/data-play-seat-move="instant"/);
-  assert.match(gm,/data-play-seat-move="walk"/);
+  assert.match(gm,/THỦ CÔNG/);
+  assert.match(gm,/NGẪU NHIÊN/);
   assert.match(gm,/playMovementPoint/);
   assert.match(gm,/is-moving/);
   assert.match(gm,/GMWW_VILLAGE_LAYOUT\.clampPoint/);
