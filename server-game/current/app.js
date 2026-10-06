@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.90';
+const VERSION='2.91';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1384,7 +1384,7 @@ function setPlayRealtimeState(state='idle'){
 }
 function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)==='1'}catch{return false}}
 function applyPlayAudioState(){
-  const muted=playAudioMuted(),btn=document.getElementById('playAudioTop'),glyph=btn?.querySelector('.play-audio-glyph');
+  const muted=playAudioMuted(),btn=document.getElementById('playAudioTop'),glyph=btn?.querySelector('.gm-top-icon-audio-v291');
   document.querySelectorAll('audio').forEach(a=>{a.muted=muted});
   if(btn){btn.classList.toggle('is-muted',muted);btn.setAttribute('aria-pressed',String(!muted));btn.setAttribute('aria-label',muted?'Âm thanh đang tắt':'Âm thanh đang bật');btn.title=muted?'Audio: Tắt':'Audio: Bật'}
   if(glyph)glyph.textContent=muted?'🔇':'🔊';
