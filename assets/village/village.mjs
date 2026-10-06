@@ -9,10 +9,11 @@ export function positions(count){if(!Number.isInteger(count)||count<1||count>30)
 export function safeText(v){return String(v??"").slice(0,80)}
 export function mapPublicPlayers(state){
   const players=Array.isArray(state?.players)?state.players:[];
-  const ids=new Set();
-  return players.slice(0,30).filter(p=>{
-    const id=String(p?.participantId||p?.id||"");
-    if(!id||ids.has(id))return false;ids.add(id);return true;
+  const ids=new Set();let regularCount=0,gmIncluded=false;
+  return players.filter(p=>{
+    const id=String(p?.participantId||p?.id||"");if(!id||ids.has(id))return false;
+    const gm=p?.isGM===true||p?.kind==="gm";if(gm){if(gmIncluded)return false;gmIncluded=true}else{if(regularCount>=30)return false;regularCount++}
+    ids.add(id);return true;
   }).map(p=>({
     id:String(p.participantId||p.id),displayName:safeText(p.displayName||"Người chơi"),kind:p?.kind==="gm"?"gm":safeText(p?.kind||""),isGM:p?.isGM===true||p?.kind==="gm",avatarUrl:typeof p.avatarUrl==="string"?p.avatarUrl:"",
     avatarId:typeof p.avatarId==="string"?p.avatarId:"",

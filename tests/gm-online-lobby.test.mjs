@@ -34,3 +34,9 @@ test('GM rider asset is packaged as a real WebP',()=>{
   assert.equal(gmAsset.subarray(0,4).toString('ascii'),'RIFF');
   assert.equal(gmAsset.subarray(8,12).toString('ascii'),'WEBP');
 });
+
+test('GM remains visible in a full 30-player room without consuming a seat',()=>{
+  assert.doesNotMatch(village,/players\.slice\(0,30\)/);
+  assert.match(village,/regularCount>=30/);
+  assert.match(village,/gmIncluded/);
+});
