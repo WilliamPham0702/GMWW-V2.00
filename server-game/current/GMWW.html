@@ -347,8 +347,8 @@
           <div class="health-v236-status"><b id="serverHealthText">Server</b><strong id="healthLatency">—</strong><small id="serverHealthDetail">Nhấn Kiểm tra</small></div>
           <div class="health-v236-actions">
             <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
-            <button class="settings-action" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
-            <button class="settings-action" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
+            <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+            <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
           </div>
           <small class="health-checked" id="healthCheckedAt">—</small>
           <span class="hidden" id="healthPlayerWeb"></span><span class="hidden" id="healthApi"></span><span class="hidden" id="healthVersion"></span>
@@ -370,6 +370,37 @@
           <small class="update-detail" id="updateDetail">Chọn đúng 1 trong 3 thao tác cần dùng.</small>
         </div>
 
+        <div class="settings-card quick-maintenance-card" id="quickMaintenanceCard">
+          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
+          <div class="health-v236-actions maintenance-actions">
+            <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
+            <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
+            <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
+          </div>
+          <small class="maintenance-detail" id="maintenanceDetail">Không xoá dữ liệu game.</small>
+        </div>
+
+        <div class="settings-card diagnostics-card" id="systemDiagnosticsCard">
+          <div class="health-v236-head"><div><span class="diagnostic-dot" id="diagnosticDot"></span><b>Tự chẩn đoán hệ thống</b></div><span class="diagnostic-pill" id="diagnosticStatus">SẴN SÀNG</span></div>
+          <div class="diagnostic-summary">
+            <b id="diagnosticSummary">Chưa quét hệ thống</b>
+            <small id="diagnosticHint">Tự kiểm tra Server, Player Web, cập nhật và dữ liệu nền.</small>
+          </div>
+          <div class="diagnostic-list" id="diagnosticList">
+            <div data-diagnostic="server"><span>Server API</span><b>—</b></div>
+            <div data-diagnostic="player"><span>Player Web</span><b>—</b></div>
+            <div data-diagnostic="update"><span>Kênh cập nhật</span><b>—</b></div>
+            <div data-diagnostic="characters"><span>Kho nhân vật</span><b>—</b></div>
+            <div data-diagnostic="settings"><span>Dữ liệu cài đặt</span><b>—</b></div>
+          </div>
+          <div class="health-v236-actions diagnostic-actions">
+            <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
+            <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
+            <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
+          </div>
+          <small class="diagnostic-detail" id="diagnosticDetail">Tự chạy khi mở Cài Đặt và khi ứng dụng trở lại Online.</small>
+        </div>
+
         <div class="settings-card character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
@@ -380,16 +411,6 @@
             <button type="button" data-character-scale="175">175%</button>
             <button type="button" data-character-scale="200">200%</button>
           </div>
-        </div>
-
-        <div class="settings-card quick-maintenance-card" id="quickMaintenanceCard">
-          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
-          <div class="health-v236-actions maintenance-actions">
-            <button class="settings-action" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
-            <button class="settings-action" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
-            <button class="settings-action" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
-          </div>
-          <small class="maintenance-detail" id="maintenanceDetail">Không xoá dữ liệu game.</small>
         </div>
 
       </div>
