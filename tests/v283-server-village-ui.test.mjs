@@ -12,7 +12,7 @@ const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 const membersPage=read('src/gmww-members-page.js');
 
-test('V2.89 GM lobby uses websocket-first realtime with fallback polling',()=>{
+test('V2.90 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
   assert.match(app,/playSceneRuntime\.socket\.readyState!==WebSocket\.OPEN\)\)playSyncRoom\(false\)\},750\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);

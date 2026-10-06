@@ -1,5 +1,5 @@
-GMWW V2.89 final menu build
+GMWW V2.90 official build
 Requested: 2026-10-06
-Revision: final-v289-five-box-menu
-Source: main @ f47ab209a916e3eb68ea49e2a69d8fc1d67ce49c
-Reason: rebuild IPA from current main so the final five-box top HUD matches the approved layout exactly: Auto / GM / Information / Realtime / Audio.
+Revision: v290-final-five-box-menu
+Source: main
+Reason: force a new native build so iOS cannot reuse the earlier V2.89 package/cache. Top HUD is locked to the exact approved bottom-menu geometry in the order Auto / GM / Information / Realtime / Audio. CSS and JS use V2.90 cache-busting URLs.

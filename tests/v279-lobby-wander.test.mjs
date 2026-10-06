@@ -36,10 +36,10 @@ test('Profile exposes a default-on lobby movement switch and persists it per mem
 
 test('V2.87 runtime metadata stays aligned on the V2.87 native shell',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.89"'));
-  assert.ok(app.includes("const VERSION='2.89';"));
-  assert.ok(html.includes('GMWW V2.89'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 289;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.89;'));
-  assert.equal(pkg.version,'2.89.0');
+  assert.ok(server.includes('VERSION="V2.90"'));
+  assert.ok(app.includes("const VERSION='2.90';"));
+  assert.ok(html.includes('GMWW V2.90'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 290;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.90;'));
+  assert.equal(pkg.version,'2.90.0');
 });
