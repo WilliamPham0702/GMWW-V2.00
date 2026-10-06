@@ -1592,8 +1592,10 @@ function playSetBusy(on){
 }
 function playFlashError(message){
   playSceneRuntime.lastError=String(message||'Không thể thực hiện thao tác.');
-  const panel=document.getElementById('playContextPanel');if(panel){panel.classList.remove('play-live-error');void panel.offsetWidth;panel.classList.add('play-live-error')}
-  const text=document.getElementById('playContextText');if(text)text.textContent=playSceneRuntime.lastError;
+  const eye=document.getElementById('playPhaseEyebrow'),title=document.getElementById('playPhaseTitle');
+  if(eye)eye.textContent='THÔNG BÁO';
+  if(title)title.textContent=playSceneRuntime.lastError;
+  setTimeout(()=>renderPlayRealtimeHeader(),1800);
 }
 async function playRoomApi(path='',opts={}){
   if(!isLivePlayRoom())throw new Error('Chưa có Phòng Online.');
@@ -1976,10 +1978,10 @@ function renderPlayScene(){
   else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room,active=playLiveMembers().find(p=>String(p?.loginId||'')===String(playSceneState.activePlayerId||''));put('playPhaseOrb',active?'●':'◉');put('playPhaseEyebrow',active?'NGƯỜI CHƠI':'THÔNG TIN');put('playPhaseTitle',active?.displayName||(isLivePlayRoom()?('Phòng '+playSceneState.roomCode):'Chọn Nhân Vật'));put('playCycleBadge',isLivePlayRoom()?'PHÒNG '+playSceneState.roomCode:'CHƯA TẠO PHÒNG');put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
   document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur)});
   const primary=document.getElementById('playPrimaryLabel'),icon=document.getElementById('playPrimaryIcon');
-  if(primary){if(phase==='night')primary.textContent=playSceneRuntime.nightRuntime?.completed?'SANG BAN NGÀY':'TIẾP THEO';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room).a}
-  if(icon)icon.textContent=phase==='night'?(playSceneRuntime.nightRuntime?.completed?'☀':'›'):phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
+  if(primary)primary.textContent='THÔNG TIN';
+  if(icon)icon.textContent='◉';
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
-  renderPlayContext();const context=document.getElementById('playContextPanel');if(context){context.classList.toggle('is-setup-popup',playSceneState.phase==='lobby');context.classList.toggle('is-popup-closed',playSceneState.phase==='lobby'&&playSceneRuntime.setupPopupClosed);let close=context.querySelector('.play-context-close');if(!close){close=document.createElement('button');close.type='button';close.className='play-context-close';close.textContent='×';close.setAttribute('aria-label','Đóng');close.onclick=()=>{playSceneRuntime.setupPopupClosed=true;context.classList.add('is-popup-closed')};context.appendChild(close)}}renderPlayPlayers();renderPlayCards();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
+  renderPlayPlayers();renderPlayCards();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 
 function playFactionLabel(role){const f=String(role?.factionId||role?.faction||'').toLowerCase();if(f==='wolf'||f.includes('sói')||f.includes('soi'))return'Phe Sói';if(f==='third'||f.includes('ba')||f.includes('third'))return'Phe Ba';return'Phe Dân'}
@@ -2314,7 +2316,6 @@ function initPlayScene(){
   document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
   document.getElementById('playRefreshServer')?.addEventListener('click',refreshPlayServerRealtime);
   document.getElementById('playAudioTop')?.addEventListener('click',togglePlayAudio);
-  document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playBack')?.addEventListener('click',backPlayPhase);
   document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
