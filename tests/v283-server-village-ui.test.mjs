@@ -12,27 +12,32 @@ const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 const membersPage=read('src/gmww-members-page.js');
 
-test('V2.90 GM lobby uses websocket-first realtime with fallback polling',()=>{
+test('V2.91 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
   assert.match(app,/playSceneRuntime\.socket\.readyState!==WebSocket\.OPEN\)\)playSyncRoom\(false\)\},750\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('official GM header is Auto, GM, Info, Realtime, Audio with bottom-menu proportions',()=>{
+test('V2.91 top menu is rebuilt from zero with isolated small-small-large-small-small geometry',()=>{
   const auto=html.indexOf('id="playAutoGM"'),gm=html.indexOf('id="playRoomButton"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"'),audio=html.indexOf('id="playAudioTop"');
   assert.ok(auto>=0&&gm>auto&&info>gm&&refresh>info&&audio>refresh);
-  assert.match(html,/class="play-auto-spinner"/);
-  assert.match(html,/class="play-top-control play-gm-top" id="playRoomButton"/);
-  assert.match(html,/class="play-top-control play-audio-top" id="playAudioTop"/);
-  assert.match(css,/V2\.90 FINAL TOP HUD LOCK — mirror approved bottom menu exactly/);
+  assert.match(html,/id="gmTopMenu"/);
+  assert.match(html,/class="gm-top-menu-v291"/);
+  assert.match(html,/gm-top-auto-v291/);
+  assert.match(html,/gm-top-gm-v291/);
+  assert.match(html,/gm-top-info-v291/);
+  assert.match(html,/gm-top-realtime-v291/);
+  assert.match(html,/gm-top-audio-v291/);
+  assert.doesNotMatch(html,/class="play-hud"/);
+  assert.doesNotMatch(html,/class="play-top-control/);
+  assert.match(css,/V2\.91 TOP MENU — rebuilt from zero/);
   assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
-  assert.match(css,/play-auto-gm\.is-on \.play-auto-spinner[\s\S]*animation:gmwwAutoSpin/);
-  assert.match(css,/play-refresh-server\.is-live \.play-live-dot/);
+  assert.match(css,/#gmTopMenu \.gm-top-auto-v291\.is-on \.gm-top-icon-auto-v291/);
+  assert.match(css,/#gmTopMenu \.gm-top-realtime-v291\.is-live \.gm-top-live-dot-v291/);
   assert.match(app,/function refreshPlayServerRealtime\(\)/);
   assert.match(app,/function togglePlayAudio\(\)/);
-  assert.match(app,/renderPlayPlayers\(\);syncPlayMovementTicker\(\);renderPlayRealtimeHeader\(\)/);
+  assert.match(app,/querySelector\('\.gm-top-icon-audio-v291'\)/);
 });
-
 test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
   assert.match(app,/<div class="play-player-over"><b>'\+playEsc\(name\)\+'<\/b><small>'\+playEsc\(statusLabel\)/);
   assert.match(app,/play-player-role/);
