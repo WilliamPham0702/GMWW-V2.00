@@ -172,17 +172,37 @@ jobs:
           test "$RESTORED_COUNT" -eq 189
           echo "Legacy artwork ready: $RESTORED_COUNT WebP files"
 
-      - name: Guard against incomplete legacy artwork package
+      - name: Package clean 63-role artwork only
         run: |
           set -euo pipefail
-          # V2.52 contains 63 roles, each with original/delivery/thumb WebP.
-          # Never publish another tiny IPA that silently discards these assets.
+          # Keep one clean, high-resolution artwork per role. Do not package old
+          # delivery/thumb duplicates; the app resolves every size to the clean source.
           SOURCE="server-game/legacy-assets/v252"
-          test -s "$SOURCE/role-artwork-v251.js" || { echo "ERROR: V2.52 artwork manifest missing; release blocked"; exit 1; }
-          COUNT=$(find "$SOURCE/assets/role-artwork-v251" -type f -name '*.webp' | wc -l | tr -d ' ')
-          test "$COUNT" -ge 189 || { echo "ERROR: expected 189 V2.52 artwork images; found $COUNT"; exit 1; }
-          cp "$SOURCE/role-artwork-v251.js" server-game/GMWW-Server/Web/
-          cp -R "$SOURCE/assets" server-game/GMWW-Server/Web/
+          ORIGINAL="$SOURCE/assets/role-artwork-v251/original"
+          test -s "$SOURCE/role-artwork-v251.js" || { echo "ERROR: role artwork manifest missing; release blocked"; exit 1; }
+          COUNT=$(find "$ORIGINAL" -type f -name '*.webp' | wc -l | tr -d ' ')
+          test "$COUNT" -eq 63 || { echo "ERROR: expected 63 clean role artworks; found $COUNT"; exit 1; }
+
+          DEST="server-game/GMWW-Server/Web/assets/role-artwork-v251/original"
+          mkdir -p "$DEST"
+          cp "$ORIGINAL"/*.webp "$DEST/"
+
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          const ctx={window:{}};vm.createContext(ctx);
+          vm.runInContext(fs.readFileSync('server-game/legacy-assets/v252/role-artwork-v251.js','utf8'),ctx);
+          const src=ctx.window.GMWW_BUILTIN_ROLE_ARTWORK||{},out={};
+          for(const [id,row] of Object.entries(src)){
+            const p='assets/role-artwork-v251/original/'+id+'.webp';
+            out[id]={...row,display:p,delivery:p,thumb:p,width:3072,height:2560,deliveryWidth:3072,deliveryHeight:2560};
+          }
+          if(Object.keys(out).length!==63)throw new Error('Expected 63 role mappings, found '+Object.keys(out).length);
+          fs.writeFileSync('server-game/GMWW-Server/Web/role-artwork-v251.js','window.GMWW_BUILTIN_ROLE_ARTWORK='+JSON.stringify(out)+';\n');
+          NODE
+
+          test "$(find server-game/GMWW-Server/Web/assets/role-artwork-v251 -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+          ! test -d server-game/GMWW-Server/Web/assets/role-artwork-v251/delivery
+          ! test -d server-game/GMWW-Server/Web/assets/role-artwork-v251/thumb
           sed -i '' 's@<script src="app.js">@<script src="role-artwork-v251.js"></script>\n<script src="app.js">@' server-game/GMWW-Server/Web/GMWW.html
           grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
 
@@ -282,6 +302,9 @@ jobs:
           test "$(find "$APP/Web/game-characters/walk-v263" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
           test "$(find "$APP/Web/game-characters/walk-v266-left" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
           test -s "$APP/Web/default-artwork.webp"
+          test "$(find "$APP/Web/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+          ! test -d "$APP/Web/assets/role-artwork-v251/delivery"
+          ! test -d "$APP/Web/assets/role-artwork-v251/thumb"
           ! test -e "$APP/Web/v1-audio.js"
           ! test -e "$APP/Web/sea-artwork.js"
           ! test -e "$APP/Web/phu-thuy-gia-sea-display.webp"
