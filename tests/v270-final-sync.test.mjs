@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.87 runtime is aligned while V2.87 native shell remains the updater host',()=>{
+test('V2.89 runtime is aligned while V2.89 native shell remains the updater host',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assert.ok(server.includes('VERSION="V2.89"'));
   assert.ok(app.includes("const VERSION='2.89';"));
@@ -30,7 +30,7 @@ test('GM IPA applies WebSocket game snapshots immediately and rejects stale REST
   assert.ok(app.includes('if(syncSerial!==playSceneRuntime.syncSerial)return data'));
   assert.ok(app.includes('if(d.runtime)playSceneRuntime.nightRuntime=d.runtime'));
   assert.ok(app.includes('playSceneRuntime.roomSyncTimer=setTimeout'));
-  assert.ok(app.includes('renderPlayScene();if(playSceneRuntime.roomSyncTimer)clearTimeout'));
+  assert.match(app,/renderPlayScene\(\);\s*if\(playSceneRuntime\.roomSyncTimer\)clearTimeout/);
 });
 
 test('Player Web consumes authoritative cycle, turn and Auto GM events with server clock',()=>{
@@ -40,7 +40,7 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V2.87 native build request is the official distributable shell',()=>{
+test('V2.89 native build request is the official distributable shell',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
   assert.ok(request.includes('GMWW V2.89'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
