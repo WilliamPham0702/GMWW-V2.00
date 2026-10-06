@@ -58,12 +58,12 @@ test('V3.01 removes Mystery Portal completely',()=>{
   assert.doesNotMatch(live,/CỔNG BÍ CẢNH/);
   assert.doesNotMatch(live,/enterOpenRoomPortal/);
   assert.doesNotMatch(village,/gmww:portal-click/);
-  assert.match(village,/function renderPortal\(\)\{document\.getElementById\('gmwwPortal'\)\?\.remove/);
+  assert.match(village,/function renderPortal\(\)\{document\.getElementById\('gmwwPortal'\)\?\.remove\(\)/);
 });
 
 test('V3.01 uses clean circular plus markers and assigned players remain seated',()=>{
   assert.match(appCss,/\.play-player-token\.is-empty \.play-player-avatar\{[\s\S]*width:44px!important;height:44px!important;[\s\S]*border:0!important;border-radius:50%!important/);
   assert.match(villageCss,/\.seat-empty \.seat-dot\{[\s\S]*width:44px!important;height:44px!important;border:0!important;border-radius:50%!important/);
-  assert.match(village,/function sittingNow\([^)]*\)\{return Number\(data\?\.seatId\|\|0\)>0/);
+  assert.match(village,/return Number\(data\?\.seatId\|\|0\)>0\|\|/);
   assert.match(app,/function playCharacterSitting\([^)]*\)[\s\S]*Number\(member\?\.seatId\|\|0\)>0/);
 });
