@@ -2316,6 +2316,7 @@ function initPlayScene(){
   document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
   document.getElementById('playRefreshServer')?.addEventListener('click',refreshPlayServerRealtime);
   document.getElementById('playAudioTop')?.addEventListener('click',togglePlayAudio);
+  document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
   document.getElementById('playBack')?.addEventListener('click',backPlayPhase);
   document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
