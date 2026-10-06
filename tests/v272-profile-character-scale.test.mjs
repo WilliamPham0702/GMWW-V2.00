@@ -42,7 +42,7 @@ test('Player tapping their own character no longer opens information',()=>{
   assert.ok(live.includes('id=\\"gmwwVillageProfileButton\\"'));
   assert.ok(live.includes('id=\\"gmwwVillageProfileAvatar\\"'));
   assert.ok(live.includes('profileButton.onclick=openVillageProfile'));
-  assert.ok(live.includes("if(id&&id!==selfId)showPlayerSeatChoice(id)"));
+  assert.doesNotMatch(live,/showPlayerSeatChoice/);
   assert.doesNotMatch(live,/if\(id===selfId\)openVillageProfile\(\)/);
   assert.ok(village.includes('if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage'));
 });
@@ -84,12 +84,12 @@ test('Manual login enters the village directly with no intermediate room restore
 
 test('V2.87 runtime metadata is aligned while native shell is V2.96',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V3.00"'));
-  assert.ok(app.includes("const VERSION='3.00';"));
-  assert.ok(html.includes('GMWW V3.00'));
+  assert.ok(server.includes('VERSION="V3.01"'));
+  assert.ok(app.includes("const VERSION='3.01';"));
+  assert.ok(html.includes('GMWW V3.01'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 296;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.96;'));
-  assert.equal(pkg.version,'3.00.0');
+  assert.equal(pkg.version,'3.01.0');
 });
 
 
