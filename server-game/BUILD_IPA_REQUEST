@@ -1,5 +1,7 @@
 GMWW V2.91 official build
 Requested: 2026-10-06
-Revision: v291-rebuild-top-menu-from-zero
+Revision: v291-rebuild-top-menu-from-zero-retry-1
 Source: main
 Reason: remove the previous five top-menu boxes and rebuild the component from zero with an isolated namespace. Final geometry: AUTO small / GM small / INFORMATION large / REALTIME small / AUDIO small.
+
+Retry: runtime smoke fixed; rebuild the verified V2.91 native package.
