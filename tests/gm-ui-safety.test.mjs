@@ -6,10 +6,15 @@ import vm from 'node:vm';
 const app=readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
 function section(first,next){return app.slice(app.indexOf(first),app.indexOf(next,app.indexOf(first)))}
-test('Exit is immediately before Back, and exists only once',()=>{
-  const footer=html.slice(html.indexOf('<footer class="play-control-bar">'),html.indexOf('</footer>',html.indexOf('<footer class="play-control-bar">')));
-  assert.ok(footer.indexOf('id="playExitVillage"')<footer.indexOf('id="playBack"'));
+test('top menu owns Exit and End while bottom menu is Back, Info, Continue only',()=>{
+  const top=html.slice(html.indexOf('<nav class="gm-top-menu-v293"'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293"')));
+  const footer=html.slice(html.indexOf('<footer class="play-control-bar'),html.indexOf('</footer>',html.indexOf('<footer class="play-control-bar')));
+  const exit=top.indexOf('id="playExitVillage"'),auto=top.indexOf('id="playAutoGM"'),info=top.indexOf('id="playPhasePill"'),audio=top.indexOf('id="playAudioTop"'),end=top.indexOf('id="playEndGame"');
+  assert.ok(exit>=0&&auto>exit&&info>auto&&audio>info&&end>audio);
   assert.equal((html.match(/id="playExitVillage"/g)||[]).length,1);
+  assert.equal((html.match(/id="playEndGame"/g)||[]).length,1);
+  assert.doesNotMatch(footer,/playExitVillage|playEndGame/);
+  assert.match(footer,/id="playBack"/);assert.match(footer,/id="playPrimaryAction"/);assert.match(footer,/id="playNext"/);
 });
 test('cancel Exit leaves village and local room data untouched',()=>{
   let changes=0;const code=section('function exitPlayImmersive()','function initPlayScene()');
