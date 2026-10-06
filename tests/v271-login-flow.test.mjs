@@ -31,10 +31,10 @@ test('Server disables legacy password enforcement when a member logs in',()=>{
 
 test('V2.87 runtime metadata is aligned on the V2.96 native shell',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.99"'));
+  assert.ok(server.includes('VERSION="V3.00"'));
   assert.ok(app.includes("const VERSION='2.99';"));
-  assert.ok(html.includes('GMWW V2.99'));
+  assert.ok(html.includes('GMWW V3.00'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 296;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.96;'));
-  assert.equal(pkg.version,'2.99.0');
+  assert.equal(pkg.version,'3.00.0');
 });
