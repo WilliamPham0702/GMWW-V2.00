@@ -1597,3 +1597,35 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 .play-player-token.is-gm-rider .play-player-avatar,
 .play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 .play-player-token.is-gm-rider .gm-wolf-shadow{border-radius:50%!important}
+
+
+/* V2.97 — unified Settings actions + self diagnostics */
+#serverHealthCard .settings-action,
+#quickMaintenanceCard .settings-action,
+#systemDiagnosticsCard .settings-action{
+  background:linear-gradient(180deg,#2dd8f4,#1288b8)!important;
+  color:#03141c!important;
+  border-color:rgba(130,239,255,.72)!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.28)!important
+}
+#serverHealthCard .settings-action:active,
+#quickMaintenanceCard .settings-action:active,
+#systemDiagnosticsCard .settings-action:active{filter:brightness(.91)!important}
+.diagnostics-card{display:grid!important;gap:10px!important;margin-top:8px!important;padding:12px!important}
+.diagnostic-summary{display:grid;gap:3px;padding:10px 11px;border-radius:12px;background:#071b2b;border:1px solid rgba(157,224,255,.10)}
+.diagnostic-summary b{font-size:12px;color:#f4fbff}.diagnostic-summary small{font-size:9px;line-height:1.35;color:#8faaba}
+.diagnostic-list{display:grid;gap:5px}
+.diagnostic-list>div{min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-radius:9px;background:rgba(4,22,35,.72);border:1px solid rgba(157,224,255,.09)}
+.diagnostic-list span{font-size:9.5px;color:#b8ceda;font-weight:800}.diagnostic-list b{font-size:8.5px;padding:3px 7px;border-radius:999px;color:#9fb7c5;background:rgba(110,139,156,.12);white-space:nowrap}
+.diagnostic-list>div.ok b{color:#9af1bd;background:rgba(40,176,104,.15)}
+.diagnostic-list>div.warn b{color:#ffe09b;background:rgba(207,151,35,.16)}
+.diagnostic-list>div.bad b{color:#ffadb4;background:rgba(209,62,77,.16)}
+.diagnostic-pill{flex:0 0 auto;border-radius:999px;padding:6px 9px;font-size:8.5px;font-weight:950;border:1px solid rgba(157,224,255,.15);color:#bcecff;background:rgba(50,143,190,.12)}
+.diagnostic-pill.ok{color:#a9ffd2;border-color:rgba(83,231,151,.35);background:rgba(30,160,94,.14)}
+.diagnostic-pill.warn{color:#ffe4a1;border-color:rgba(255,205,92,.34);background:rgba(210,151,32,.12)}
+.diagnostic-pill.bad{color:#ffc0c4;border-color:rgba(255,100,112,.34);background:rgba(210,55,66,.14)}
+.diagnostic-pill.checking{color:#bcecff;border-color:rgba(92,202,255,.28);background:rgba(50,143,190,.14)}
+.diagnostic-dot{width:10px;height:10px;border-radius:50%;background:#55798e;display:inline-block}
+.diagnostic-dot.ok{background:#46dc91}.diagnostic-dot.warn{background:#f0bd4f}.diagnostic-dot.bad{background:#ff6470}.diagnostic-dot.checking{background:#4fdcff;animation:gmwwUpdatePulse 1.1s ease-in-out infinite}
+.diagnostic-detail{display:block;color:#6f8da0;font-size:8.8px;line-height:1.35;text-align:right}
+.character-scale-card{margin-top:8px!important;margin-bottom:8px!important}
