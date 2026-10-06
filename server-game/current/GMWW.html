@@ -536,17 +536,9 @@
     </div>
     <div class="play-room-page-body">
       <label class="play-room-field">
-        <span>MÃ PHÒNG</span>
-        <input id="playCreateRoomCode" value="TỰ TẠO" readonly>
-      </label>
-      <label class="play-room-field">
         <span>TÊN PHÒNG</span>
         <input id="playCreateRoomName" maxlength="40" value="Phòng GMWW">
       </label>
-      <div class="play-room-danger-row">
-        <button id="playCreateRoomReset" type="button">↻ RESET</button>
-        <button id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
-      </div>
       <div class="play-room-section">
         <small>CHẾ ĐỘ</small>
         <div class="play-room-segment">
@@ -554,11 +546,19 @@
           <button data-play-room-mode="offline" type="button">OFFLINE</button>
         </div>
       </div>
+      <label class="play-room-field play-room-seat-count">
+        <span>SỐ LƯỢNG GHẾ NGỒI</span>
+        <input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12">
+      </label>
       <div class="play-room-live-row">
         <div><small>TRẠNG THÁI PHÒNG</small><b id="playCreateRoomLiveLabel">ĐANG TẮT</b></div>
         <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
       </div>
-      <button class="primary play-room-next" id="playCreateRoomNext" type="button">TIẾP ›</button>
+      <div class="play-room-danger-row">
+        <button id="playCreateRoomReset" type="button">↻ RESET</button>
+        <button id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
+      </div>
+      <button class="primary play-room-next" id="playCreateRoomNext" type="button">TẠO PHÒNG & XẾP CHỖ ›</button>
     </div>
   </div>
 </div>
