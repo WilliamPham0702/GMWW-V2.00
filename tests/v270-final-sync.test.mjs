@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.94 runtime is aligned while V2.94 native shell remains the updater host',()=>{
+test('V2.95 runtime is aligned while V2.94 native shell remains the updater host',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.94"'));
-  assert.ok(app.includes("const VERSION='2.94';"));
+  assert.ok(server.includes('VERSION="V2.95"'));
+  assert.ok(app.includes("const VERSION='2.95';"));
   assert.ok(html.includes('GMWW V2.94'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 294;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.94;'));
-  assert.equal(pkg.version,'2.94.0');
+  assert.equal(pkg.version,'2.95.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
