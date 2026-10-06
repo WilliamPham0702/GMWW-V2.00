@@ -56,7 +56,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V2.97 keeps GM rider at normal character size and animates wolf legs',()=>{
+test('V2.98 keeps GM rider at normal character size and animates wolf legs',()=>{
   assert.match(app,/const VERSION='2\.97'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
@@ -95,15 +95,15 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
   assert.match(css,/scaleY\(1\.5\)/);
 });
 
-test('V2.97 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
+test('V2.98 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-297"/);
+  assert.match(server,/UPDATE_CHANNEL_REV="runtime-298"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);
 });
 
-test('V2.97 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
+test('V2.98 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(app.includes('villagePollTimer:0'));
   assert.ok(app.includes('/api/village?ts='));
   assert.ok(app.includes('playSyncGlobalVillageMotion'));
