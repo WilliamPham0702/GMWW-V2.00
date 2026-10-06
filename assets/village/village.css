@@ -256,3 +256,20 @@ html.embedded .player .player-over .name{font-size:11px}
 .player.gm.moving .gm-wolf-leg-a{animation:gmWolfLongFrontStrideV300 .56s cubic-bezier(.3,0,.55,1) infinite}
 .player.gm.moving .gm-wolf-leg-b{animation:gmWolfLongRearStrideV300 .56s cubic-bezier(.3,0,.55,1) infinite}
 .player.gm.moving .gm-wolf-head{animation:gmWolfHeadLifeV300 6.8s ease-in-out infinite}
+
+/* V3.01 GM-authoritative seating markers */
+.seat-empty{width:44px!important;min-width:44px!important;height:44px!important;gap:0!important;pointer-events:none!important}
+.seat-empty .seat-dot{
+  width:44px!important;height:44px!important;border:0!important;border-radius:50%!important;
+  background:rgba(89,231,224,.38)!important;box-shadow:0 5px 16px rgba(0,47,62,.22)!important;
+}
+.seat-empty .seat-dot::before{content:"+"!important;color:#087b94!important;font-size:25px!important;text-shadow:none!important}
+.seat-empty b{display:none!important}
+.seat-empty.selected .seat-dot,.seat-empty.reserved .seat-dot{
+  border:0!important;background:rgba(89,231,224,.38)!important;box-shadow:0 5px 16px rgba(0,47,62,.22)!important
+}
+@media(max-width:390px){
+  .seat-empty{width:38px!important;min-width:38px!important;height:38px!important}
+  .seat-empty .seat-dot{width:38px!important;height:38px!important}
+}
+.gmww-portal,.gmww-portal-notice{display:none!important}
