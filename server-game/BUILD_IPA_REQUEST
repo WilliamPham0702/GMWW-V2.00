@@ -10,3 +10,4 @@ Rebuild: exact 3-column GM bottom menu, Quay ve 20 / Thong Tin 60 / Tiep tuc 20;
 Release V3.04 build 304: exact GM bottom menu 20/60/20 and latest source.
 V3.04 rebuild: restore THONG TIN center button to current create-game/setup flow; keep bottom 20/60/20.
 Release V3.05 build 305: versioned delivery; publish IPA for in-game Settings update channel.
+V3.05 final rebuild: bottom center is live create-game flow; remove info orbs; all sheet cards draggable by touch.
