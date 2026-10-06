@@ -1,22 +1,22 @@
 {
   "schema": 1,
-  "releaseVersion": "2.93",
+  "releaseVersion": "2.94",
   "releaseType": "native",
-  "shellVersion": "2.93",
-  "minimumShellVersion": "2.93",
-  "runtimeVersion": "2.93",
-  "webVersion": "2.93",
-  "serverVersion": "2.93",
+  "shellVersion": "2.94",
+  "minimumShellVersion": "2.94",
+  "runtimeVersion": "2.94",
+  "webVersion": "2.94",
+  "serverVersion": "2.94",
   "required": false,
   "restartRequired": false,
-  "message": "Có GMWW V2.93. Vui lòng cài IPA mới.",
+  "message": "Có GMWW V2.94. Vui lòng cài IPA mới.",
   "runtime": {
     "files": []
   },
   "ipa": {
-    "version": "2.93",
-    "fileName": "GMWW-V2.93.ipa",
-    "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v2.93/GMWW-V2.93.ipa"
+    "version": "2.94",
+    "fileName": "GMWW-V2.94.ipa",
+    "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v2.94/GMWW-V2.94.ipa"
   },
   "delete": []
 }
