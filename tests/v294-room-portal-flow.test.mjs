@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-
 const read=p=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
 const app=read('server-game/current/app.js');
@@ -10,83 +9,61 @@ const server=read('src/index.js');
 const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
-const villageHtml=read('assets/village/index.html');
 
-test('V2.94 Create Room is a centered closable page with the approved fields and controls',()=>{
+test('V3.01 has one centered Create Room page and hides generated room code',()=>{
   assert.match(html,/id="playCreateRoomSheet"/);
-  assert.match(html,/class="sheet hidden play-center-sheet"/);
-  assert.match(html,/id="playCreateRoomClose"/);
-  assert.match(html,/id="playCreateRoomCode"/);
+  assert.equal((html.match(/id="playCreateRoomSheet"/g)||[]).length,1);
+  assert.doesNotMatch(html,/id="playCreateRoomCode"/);
   assert.match(html,/id="playCreateRoomName"/);
+  assert.match(html,/id="playCreateRoomSeatCount"/);
   assert.match(html,/id="playCreateRoomReset"/);
   assert.match(html,/id="playCreateRoomDelete"/);
   assert.match(html,/data-play-room-mode="online"/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/id="playCreateRoomEnabled"/);
-  assert.match(html,/id="playCreateRoomNext"/);
-  assert.doesNotMatch(html,/id="playCreateRoomCapacity"/);
+  assert.match(html,/TẠO PHÒNG & XẾP CHỖ/);
   assert.match(appCss,/\.play-center-sheet\{[\s\S]*align-items:center!important;[\s\S]*justify-content:center!important/);
-  assert.match(appCss,/#playCreateRoomSheet \.play-room-page-card/);
 });
 
-test('V2.94 GM Create Room uses real Live, rename, reset, delete and next APIs',()=>{
-  assert.match(app,/roomEnabled:false/);
-  assert.match(app,/function renderPlayCreateRoomSheet\(\)/);
-  assert.match(app,/async function playToggleRoomEnabled\(\)/);
-  assert.match(app,/playRoomApi\('\/enabled'/);
-  assert.match(app,/playRoomApi\('\/rename'/);
-  assert.match(app,/playRoomApi\('\/reset'/);
-  assert.match(app,/playRoomApi\('\/delete'/);
-  assert.match(app,/enabled:playSceneState\.roomEnabled===true/);
-  assert.match(app,/seatMoveMode:'walk'/);
-  assert.match(app,/playSceneState\.step='members'/);
-  assert.match(app,/document\.getElementById\('playCreateRoomNext'\).*playCreateRoomNext/);
+test('V3.01 goes from Create Room directly to GM seating',()=>{
+  assert.match(app,/playSceneState\.step='seats';playSceneState\.activePlayerId=''/);
+  assert.match(app,/seatMoveMode:'instant'/);
+  assert.match(app,/THỦ CÔNG/);
+  assert.match(app,/NGẪU NHIÊN/);
+  assert.match(app,/Chọn một Người Chơi rồi chạm dấu \+ để xếp chỗ/);
+  assert.match(app,/playRoomApi\('\/seats\/randomize-remaining'/);
+  assert.match(app,/playRoomApi\('\/seat'/);
 });
 
-test('V2.94 server only publishes enabled rooms and gives new joiners a portal-arrival walk',()=>{
-  assert.match(server,/enabled=b&&Object\.prototype\.hasOwnProperty\.call\(b,"enabled"\)\?b\.enabled!==false:true/);
-  assert.match(server,/enabled:Object\.prototype\.hasOwnProperty\.call\(body,"enabled"\)\?body\.enabled!==false:true/);
-  assert.match(server,/if\(!includeDisabled&&r\?\.enabled===false\)continue/);
-  assert.match(server,/roomWasEnabled=meta\.enabled!==false/);
-  assert.match(server,/meta\.enabled=roomWasEnabled/);
-  assert.match(server,/const portalNow=Date\.now\(\),from=\{x:50,y:12\},to=\{x:50,y:23\}/);
-  assert.match(server,/player\.villageActivity="portal_arrival"/);
+test('V3.01 only GM can assign seats',()=>{
+  assert.match(server,/GM_SEAT_ASSIGNMENT_REQUIRED/);
+  assert.match(server,/Người chơi không thể tự đăng ký ghế/);
+  assert.match(server,/Ghế chỉ do GM phân phối/);
+  assert.match(server,/async gmSeat\(/);
+  assert.match(server,/async gmRandomizeRemainingSeats\(/);
+  assert.doesNotMatch(live,/claimVillageSeat/);
+  assert.doesNotMatch(live,/gmww:portal-click/);
 });
 
-test('V2.94 Player Web discovers Live rooms and enters by walking into the Mystery Portal',()=>{
-  assert.match(live,/Promise\.all\(\[api\('\/api\/village'\),api\('\/api\/rooms'\)\]\)/);
-  assert.match(live,/portalPendingRoomCode/);
-  assert.match(live,/async function enterOpenRoomPortal\(/);
-  assert.match(live,/Bí cảnh đã mở • Đang đi vào cổng/);
-  assert.match(live,/mode:'join'/);
-  assert.match(live,/label:'BÍ CẢNH ĐÃ MỞ'/);
-  assert.match(live,/mode:'arrival'/);
-  assert.match(live,/label:'CỔNG BÍ CẢNH'/);
-  assert.match(live,/gmww:portal-click/);
-  assert.match(live,/joinRoom\(code\)/);
-  assert.match(live,/iframe\.src='\/village\/\?embed=1&v=294'/);
-  assert.doesNotMatch(live,/if\(d\.setupRequired\|\|!d\.player\?\.setupComplete\)await openRoomSetup\(\)/);
+test('V3.01 Player Web has Ready and Leave Seat only after GM assigns a seat',()=>{
+  assert.match(live,/RỜI GHẾ/);
+  assert.match(live,/SẴN SÀNG/);
+  assert.match(live,/async function releaseMySeat\(/);
+  assert.match(live,/rb\.hidden=!seated;sb\.hidden=!seated/);
+  assert.match(live,/Chờ GM xếp chỗ trước khi Sẵn Sàng/);
 });
 
-test('V2.94 tapping a plus selects the seat and makes the player Ready automatically',()=>{
-  assert.match(villageCss,/\.seat-empty \.seat-dot::before\{content:"\+"/);
-  assert.match(live,/function showSeatChoice\(seatId,x,y\)\{[\s\S]*startSeatWalk\(seatId,x,y\)[\s\S]*claimVillageSeat\(seatId\)/);
-  assert.match(live,/async function readyAfterSeat\(\)/);
-  assert.match(live,/ready:true/);
-  assert.match(live,/await readyAfterSeat\(\)/);
-  assert.match(live,/Đã chọn vị trí '\+next\.seatId\+' • SẴN SÀNG/);
-  assert.match(live,/d\.querySelector\('\.seat'\)\.hidden=true;d\.querySelector\('\.ready'\)\.hidden=true/);
+test('V3.01 removes Mystery Portal completely',()=>{
+  assert.doesNotMatch(live,/BÍ CẢNH/);
+  assert.doesNotMatch(live,/CỔNG BÍ CẢNH/);
+  assert.doesNotMatch(live,/enterOpenRoomPortal/);
+  assert.doesNotMatch(village,/gmww:portal-click/);
+  assert.match(village,/function renderPortal\(\)\{document\.getElementById\('gmwwPortal'\)\?\.remove/);
 });
 
-test('V2.94 village renders a cyan-gold Mystery Portal at fire and an arrival portal at the stairs',()=>{
-  assert.match(village,/function renderPortal\(\)/);
-  assert.match(village,/join\?layout\.fire:layout\.clampPoint/);
-  assert.match(village,/window\.parent\.postMessage\(\{type:"gmww:portal-click"/);
-  assert.match(village,/BÍ CẢNH ĐÃ MỞ/);
-  assert.match(village,/gmww-portal-notice/);
-  assert.match(villageCss,/V2\.94 Mystery Portal/);
-  assert.match(villageCss,/\.gmww-portal \.portal-ring-a/);
-  assert.match(villageCss,/rgba\(255,224,126,\.72\)/);
-  assert.match(villageHtml,/GMWW V2\.94 · Ngôi làng/);
-  assert.match(villageHtml,/village\.mjs\?v=294/);
+test('V3.01 uses clean circular plus markers and assigned players remain seated',()=>{
+  assert.match(appCss,/\.play-player-token\.is-empty \.play-player-avatar\{[\s\S]*width:44px!important;height:44px!important;[\s\S]*border:0!important;border-radius:50%!important/);
+  assert.match(villageCss,/\.seat-empty \.seat-dot\{[\s\S]*width:44px!important;height:44px!important;border:0!important;border-radius:50%!important/);
+  assert.match(village,/function sittingNow\([^)]*\)\{return Number\(data\?\.seatId\|\|0\)>0/);
+  assert.match(app,/function playCharacterSitting\([^)]*\)[\s\S]*Number\(member\?\.seatId\|\|0\)>0/);
 });
