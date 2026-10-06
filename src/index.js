@@ -975,7 +975,7 @@ export default {async fetch(request,env){
       const currentVersion=VERSION.replace(/^V/i,"");
       const readVersionedManifest=async()=>{
         try{
-          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest.json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
+          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
           const rr=await env.ASSETS.fetch(new Request(u.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
           if(!rr.ok)return null;const mm=await rr.json();return String(mm?.releaseVersion||"")===currentVersion?mm:null
         }catch{return null}
