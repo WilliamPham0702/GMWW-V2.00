@@ -931,6 +931,10 @@ export default {async fetch(request,env){
       const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
       if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
       const manifest=await res.json();
+      const currentVersion=VERSION.replace(/^V/i,"");
+      if(String(manifest?.releaseVersion||"")!==currentVersion){
+        return j({ok:true,...manifest,releaseVersion:currentVersion,releaseType:"server_only",runtimeVersion:currentVersion,webVersion:currentVersion,serverVersion:currentVersion,required:false,restartRequired:false,message:"Server/Player Web đã cập nhật.",checkedAt:new Date().toISOString()});
+      }
       return j({ok:true,...manifest,checkedAt:new Date().toISOString()});
     }catch(e){
       console.error("GMWW_UPDATE_MANIFEST",e);
