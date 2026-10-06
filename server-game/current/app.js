@@ -837,7 +837,7 @@ function setUpdateUi(kind,status,message,detail=''){
 function setUpdateAction(kind,context={}){
   const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
   const title=document.getElementById('updateDecisionTitle'),hint=document.getElementById('updateDecisionHint');
-  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=true;x.setAttribute('aria-disabled','true')});
+  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=false;x.removeAttribute('aria-disabled')});
   const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
   const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
   if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
