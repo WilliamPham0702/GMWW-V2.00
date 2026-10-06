@@ -21,7 +21,8 @@ const runtimePatterns = [
   /^assets\/backgrounds\//,
   /^assets\/characters\//,
   /^assets\/village\//,
-  /^update-system\//
+  /^update-system\//,
+  /^\.github\/scripts\/prepare-update-channel\.mjs$/
 ];
 
 const serverPatterns = [
