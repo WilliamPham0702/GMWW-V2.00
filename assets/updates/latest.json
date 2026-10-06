@@ -1,22 +1,22 @@
 {
   "schema": 1,
-  "releaseVersion": "2.83",
-  "releaseType": "runtime",
-  "shellVersion": "2.81",
-  "minimumShellVersion": "2.81",
-  "runtimeVersion": "2.83",
-  "webVersion": "2.83",
-  "serverVersion": "2.83",
+  "releaseVersion": "2.88",
+  "releaseType": "native",
+  "shellVersion": "2.88",
+  "minimumShellVersion": "2.88",
+  "runtimeVersion": "2.88",
+  "webVersion": "2.88",
+  "serverVersion": "2.88",
   "required": false,
-  "restartRequired": true,
-  "message": "Có GMWW V2.83. Có thể cập nhật trực tiếp, không cần cài lại IPA.",
+  "restartRequired": false,
+  "message": "Có GMWW V2.88. Vui lòng cài IPA mới.",
   "runtime": {
     "files": []
   },
   "ipa": {
-    "version": "2.81",
-    "fileName": "GMWW-V2.81.ipa",
-    "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v2.81/GMWW-V2.81.ipa"
+    "version": "2.88",
+    "fileName": "GMWW-V2.88.ipa",
+    "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v2.88/GMWW-V2.88.ipa"
   },
   "delete": []
 }
