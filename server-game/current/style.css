@@ -1652,3 +1652,19 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 .update-decision b{font-size:14px;color:#f3f8ff}.update-decision small{font-size:12px;color:#aebdce;line-height:1.35}
 .update-actions .settings-action:disabled{opacity:.34;filter:saturate(.35);pointer-events:none;box-shadow:none}
 .update-actions .settings-action.recommended{opacity:1;filter:none}
+
+/* V3.01 authoritative GM seating */
+.play-player-token.is-empty{width:50px!important;opacity:1!important}
+.play-player-token.is-empty .play-player-avatar{
+  width:44px!important;height:44px!important;border:0!important;border-radius:50%!important;
+  background:rgba(89,231,224,.38)!important;box-shadow:0 5px 16px rgba(0,47,62,.25)!important;
+}
+.play-player-token.is-empty .play-player-avatar span{
+  width:44px!important;height:44px!important;border:0!important;border-radius:50%!important;
+  background:rgba(89,231,224,.38)!important;color:#087b94!important;font-size:24px!important;font-weight:1000!important;
+  box-shadow:none!important;
+}
+.play-player-token.is-empty>b{display:none!important}
+.play-player-ring.is-dense .play-player-token.is-empty{width:40px!important}
+.play-player-ring.is-dense .play-player-token.is-empty .play-player-avatar,
+.play-player-ring.is-dense .play-player-token.is-empty .play-player-avatar span{width:34px!important;height:34px!important}
