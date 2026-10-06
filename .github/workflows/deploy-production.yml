@@ -99,6 +99,10 @@ jobs:
             if(m.releaseType!=='runtime')throw new Error('Expected runtime update when runtimeVersion differs from shellVersion');
             if(!Array.isArray(m.runtime?.files)||!m.runtime.files.some(x=>x?.path==='gm/gm-white-wolf.webp'))throw new Error('GM rider asset missing from runtime update manifest');
           }
+          if(m.releaseType==='native'){
+            if(String(m.ipa?.version||'')!==String(m.releaseVersion||''))throw new Error('Native IPA version does not match releaseVersion');
+            if(String(m.ipa?.fileName||'')!=='GMWW-V'+String(m.releaseVersion||'')+'.ipa')throw new Error('Native IPA filename is stale');
+          }
           NODE
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json

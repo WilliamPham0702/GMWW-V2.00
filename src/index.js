@@ -8,7 +8,7 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageGatherPoint } from "./gmww-village-gather-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V2.96",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V2.96",UPDATE_CHANNEL_REV="native-296",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -968,14 +968,14 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
-      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION);
+      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
       const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
       if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
       const manifest=await res.json();
       const currentVersion=VERSION.replace(/^V/i,"");
       const readVersionedManifest=async()=>{
         try{
-          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest.json";u.search="?v="+encodeURIComponent(VERSION);
+          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest.json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
           const rr=await env.ASSETS.fetch(new Request(u.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
           if(!rr.ok)return null;const mm=await rr.json();return String(mm?.releaseVersion||"")===currentVersion?mm:null
         }catch{return null}
