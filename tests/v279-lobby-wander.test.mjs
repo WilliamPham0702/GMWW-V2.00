@@ -18,7 +18,7 @@ test('V2.94 lobby motion cycles around village then sits cross-legged at campfir
   assert.ok(server.includes('sitUntil:sitting?arrivedAt+30000:null'));
   assert.ok(village.includes('GMWW_SEATED_CHARACTER01_URL'));
   assert.ok(village.includes('character-02'));
-  assert.ok(village.includes('seated-v295/character-02/front.webp'));
+  assert.ok(village.includes('seated-v296/character-02/front.webp'));
   assert.doesNotMatch(village,/NGỒI XẾP BẰNG •/);
 });
 
