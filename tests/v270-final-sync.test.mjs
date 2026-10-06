@@ -7,7 +7,7 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('V3.00 runtime on the V2.96 native shell is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assert.ok(server.includes('VERSION="V3.00"'));
-  assert.ok(app.includes("const VERSION='2.99';"));
+  assert.ok(app.includes("const VERSION='3.00';"));
   assert.ok(html.includes('GMWW V3.00'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 296;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.96;'));
