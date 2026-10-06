@@ -1,5 +1,5 @@
 GMWW V3.01 official build
 Requested: 2026-10-06
-Revision: v301-gm-authoritative-seating
+Revision: v301-gm-authoritative-seating-final
 Source: main
-Reason: one centered Create Room page; no visible room code; seat count; Reset/Online-Offline/Delete/On-Off; remove Mystery Portal; GM-only Manual/Random seating; circular plus markers; Player Ready/Leave Seat; assigned players use seated pose.
+Reason: final CI-passed one-page Create Room and GM-only seating flow. No room code display, no small Create Room box, no Mystery Portal, no Player seat registration. Manual/Random GM seating, circular plus markers, Ready/Leave Seat, persistent seated pose.
