@@ -506,7 +506,40 @@
   </div>
 </div>
 
-<div class="sheet hidden" id="playCreateRoomSheet"><div class="sheet-card"><div class="sheet-head"><h3>Tạo Phòng</h3><button id="playCreateRoomClose" type="button">×</button></div><label>Tên Phòng<input id="playCreateRoomName" maxlength="40" value="Phòng GMWW"></label><label>Số người tối đa<input id="playCreateRoomCapacity" type="number" min="1" max="30" value="12"></label><div class="button-row"><button data-play-room-mode="online" type="button">ONLINE</button><button data-play-room-mode="offline" type="button">OFFLINE</button></div><button class="primary" id="playCreateRoomConfirm" type="button">TẠO PHÒNG</button></div></div>
+<div class="sheet hidden play-center-sheet" id="playCreateRoomSheet">
+  <div class="sheet-card play-room-page-card">
+    <div class="sheet-head play-room-page-head">
+      <div><small>THIẾT LẬP PHÒNG</small><h3>Tạo Phòng</h3></div>
+      <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
+    </div>
+    <div class="play-room-page-body">
+      <label class="play-room-field">
+        <span>MÃ PHÒNG</span>
+        <input id="playCreateRoomCode" value="TỰ TẠO" readonly>
+      </label>
+      <label class="play-room-field">
+        <span>TÊN PHÒNG</span>
+        <input id="playCreateRoomName" maxlength="40" value="Phòng GMWW">
+      </label>
+      <div class="play-room-danger-row">
+        <button id="playCreateRoomReset" type="button">↻ RESET</button>
+        <button id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
+      </div>
+      <div class="play-room-section">
+        <small>CHẾ ĐỘ</small>
+        <div class="play-room-segment">
+          <button data-play-room-mode="online" type="button">ONLINE</button>
+          <button data-play-room-mode="offline" type="button">OFFLINE</button>
+        </div>
+      </div>
+      <div class="play-room-live-row">
+        <div><small>TRẠNG THÁI PHÒNG</small><b id="playCreateRoomLiveLabel">ĐANG TẮT</b></div>
+        <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
+      </div>
+      <button class="primary play-room-next" id="playCreateRoomNext" type="button">TIẾP ›</button>
+    </div>
+  </div>
+</div>
 <script src="village-layout.js"></script>
 <script src="app.js"></script>
 </body>
