@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V2.88</title>
+<title>GMWW V2.89</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -55,18 +55,21 @@
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
         <header class="play-hud">
-          <button class="play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM">
-            <span class="play-auto-spinner" aria-hidden="true">↻</span>
+          <button class="play-top-control play-auto-gm is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM">
+            <span class="play-auto-spinner" aria-hidden="true">↻</span><small>AUTO</small>
           </button>
-          <div class="play-phase-pill" id="playPhasePill">
+          <button class="play-top-control play-gm-top" id="playRoomButton" type="button" aria-label="Mở quyền Quản Trò" title="GM">
+            <span>GM</span><small>QUẢN TRÒ</small>
+          </button>
+          <div class="play-top-control play-phase-pill" id="playPhasePill">
             <span class="play-phase-orb" id="playPhaseOrb">◉</span>
             <div><small id="playPhaseEyebrow">THÔNG TIN</small><b id="playPhaseTitle">Chọn Nhân Vật</b></div>
           </div>
-          <button class="play-gm-top" id="playRoomButton" type="button" aria-label="Mở quyền Quản Trò" title="GM">
-            <span>GM</span>
+          <button class="play-top-control play-refresh-server" id="playRefreshServer" type="button" aria-label="Đồng bộ realtime từ server" title="Realtime server">
+            <span class="play-refresh-glyph">↻</span><small>REALTIME</small><i class="play-live-dot" aria-hidden="true"></i>
           </button>
-          <button class="play-refresh-server" id="playRefreshServer" type="button" aria-label="Làm mới realtime từ server" title="Refresh server">
-            <span>↻</span>
+          <button class="play-top-control play-audio-top" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio">
+            <span class="play-audio-glyph">🔊</span><small>AUDIO</small>
           </button>
         </header>
 
