@@ -968,20 +968,25 @@ function setServerHealthState(kind,text,detail,data={}){
 async function checkServerHealth(){
   if(serverHealthBusy)return; serverHealthBusy=true;
   const btn=document.getElementById('checkServerHealth');if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.classList.add('is-busy')}
-  setServerHealthState('checking','Đang kiểm tra…','');
+  setServerHealthState('checking','Đang kiểm tra…','Đang kiểm tra Server và Player Web');
   const started=performance.now();
   try{
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
-    const res=await fetch(GMWW_SERVER_BASE+'/api/health?ipa='+Date.now(),{method:'GET',cache:'no-store',signal:controller.signal});
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000),stamp=Date.now();
+    const [healthRes,webRes]=await Promise.all([
+      fetch(GMWW_SERVER_BASE+'/api/health?ipa='+stamp,{method:'GET',cache:'no-store',signal:controller.signal}),
+      fetch(GMWW_SERVER_BASE+'/api/web-sync?health='+stamp,{method:'GET',cache:'no-store',signal:controller.signal})
+    ]);
     clearTimeout(timer);
     const latency=Math.max(1,Math.round(performance.now()-started));
-    let body={};try{body=await res.json()}catch{}
-    if(!res.ok||body.ok!==true)throw new Error('HTTP '+res.status);
-    const level=latency<=800?'ok':'warn';
-    setServerHealthState(level,level==='ok'?'Hoạt động tốt':'Phản hồi chậm',level==='ok'?'Sẵn sàng':'Nên kiểm tra lại',{web:'Online',api:'Online',latency:latency+' ms',version:body.version||'—'});
+    let body={},web={};try{body=await healthRes.json()}catch{}try{web=await webRes.json()}catch{}
+    if(!healthRes.ok||body.ok!==true)throw new Error('HTTP '+healthRes.status);
+    const webOk=webRes.ok&&web.ok===true,slow=latency>800,level=webOk&&!slow?'ok':'warn';
+    setServerHealthState(level,level==='ok'?'Hoạt động tốt':slow?'Phản hồi chậm':'Player Web cần kiểm tra',
+      webOk?(slow?'Server + Player Web Online • phản hồi đang chậm':'Server + Player Web sẵn sàng'):'Server Online • chưa xác nhận được Player Web',
+      {web:webOk?'Online':'Cảnh báo',api:'Online',latency:latency+' ms',version:body.version||'—'});
   }catch(err){
     const latency=Math.max(1,Math.round(performance.now()-started));
-    setServerHealthState('bad','Mất kết nối','Kiểm tra mạng hoặc thử lại',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
+    setServerHealthState('bad','Mất kết nối','Không xác nhận được Server/Player Web',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
   }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
 }
 const refreshServerData=document.getElementById('refreshServerData');
@@ -994,8 +999,8 @@ const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120)}));
-window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);setTimeout(()=>runSystemDiagnostics({silent:true}),220)}));
+window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();setTimeout(()=>runSystemDiagnostics({silent:true}),160)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
 function setMaintenanceState(kind,text,detail){
@@ -1036,6 +1041,109 @@ async function clearSafeRuntimeCache(){
 const auditLocalDataBtn=document.getElementById('auditLocalData');if(auditLocalDataBtn)auditLocalDataBtn.addEventListener('click',auditLocalData);
 const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clearRuntimeCacheBtn)clearRuntimeCacheBtn.addEventListener('click',clearSafeRuntimeCache);
 const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
+
+/* V2.97 — self diagnostics for Server + Player Web */
+let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];
+function gmwwCaptureRuntimeIssue(kind,message){
+  const text=String(message||'Lỗi không xác định').replace(/\s+/g,' ').trim().slice(0,220);
+  if(!text)return;
+  gmwwRuntimeErrors.unshift({kind:String(kind||'runtime'),message:text,at:Date.now()});
+  gmwwRuntimeErrors=gmwwRuntimeErrors.slice(0,8);
+  if(document.getElementById('settings')?.classList.contains('active'))setDiagnosticState('warn','PHÁT HIỆN LỖI','Đã ghi nhận lỗi Runtime',text);
+}
+window.addEventListener('error',event=>gmwwCaptureRuntimeIssue('javascript',event?.message||event?.error?.message));
+window.addEventListener('unhandledrejection',event=>gmwwCaptureRuntimeIssue('promise',event?.reason?.message||event?.reason));
+
+function setDiagnosticState(kind,status,summary,detail=''){
+  const dot=document.getElementById('diagnosticDot'),pill=document.getElementById('diagnosticStatus'),sum=document.getElementById('diagnosticSummary'),hint=document.getElementById('diagnosticHint'),det=document.getElementById('diagnosticDetail');
+  if(dot)dot.className='diagnostic-dot '+kind;
+  if(pill){pill.className='diagnostic-pill '+kind;pill.textContent=status}
+  if(sum)sum.textContent=summary||'';
+  if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
+  if(det)det.textContent=detail||'';
+}
+function renderDiagnosticItem(key,kind,text){
+  const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
+  row.className=kind||'';const out=row.querySelector('b');if(out)out.textContent=text||'—';
+}
+async function gmwwJsonProbe(path,validate=()=>true,timeout=7000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout),started=performance.now();
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+path,{cache:'no-store',signal:controller.signal});
+    let data={};try{data=await res.json()}catch{}
+    const valid=res.ok&&validate(data,res)!==false;
+    return{ok:valid,status:res.status,data,latency:Math.max(1,Math.round(performance.now()-started)),error:valid?'':String(data?.error||data?.message||('HTTP '+res.status))}
+  }catch(err){return{ok:false,status:0,data:{},latency:Math.max(1,Math.round(performance.now()-started)),error:String(err?.name==='AbortError'?'Timeout':err?.message||'Network error')}}
+  finally{clearTimeout(timer)}
+}
+async function runSystemDiagnostics({silent=false}={}){
+  if(gmwwDiagnosticBusy)return null;gmwwDiagnosticBusy=true;
+  const btn=document.getElementById('runSystemDiagnostics');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  if(!silent)setDiagnosticState('checking','ĐANG QUÉT','Đang quét Server + Player Web…','5 nhóm kiểm tra');
+  ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'','…'));
+  try{
+    if(navigator.onLine===false){
+      ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'bad','OFFLINE'));
+      setDiagnosticState('bad','MẤT MẠNG','Thiết bị đang Offline.','Kết nối mạng rồi chạy lại Health Check.');
+      return{ok:false,offline:true}
+    }
+    const stamp=Date.now();
+    const [server,player,update,characters,settings]=await Promise.all([
+      gmwwJsonProbe('/api/health?diag='+stamp,d=>d?.ok===true&&d?.project==='GMWW-V2.00'),
+      gmwwJsonProbe('/api/web-sync?diag='+stamp,d=>d?.ok===true),
+      gmwwJsonProbe('/api/update/manifest?diag='+stamp,d=>d?.ok===true&&!!d?.releaseVersion),
+      gmwwJsonProbe('/api/game-characters?diag='+stamp,d=>Array.isArray(d?.characters)&&d.characters.length>=20),
+      gmwwJsonProbe('/api/ui-settings?diag='+stamp,()=>true)
+    ]);
+    const probes={server,player,update,characters,settings};
+    for(const [key,result] of Object.entries(probes))renderDiagnosticItem(key,result.ok?'ok':'bad',result.ok?'OK':(result.error||'LỖI').slice(0,18));
+    const failures=Object.entries(probes).filter(([,v])=>!v.ok);
+    const warnings=[];
+    const m=update.data||{},runtime=String(m.runtimeVersion||''),shell=String(m.shellVersion||''),type=String(m.releaseType||'');
+    if(update.ok&&runtime&&shell&&runtime!==shell&&type!=='runtime')warnings.push('Kênh cập nhật chưa đúng loại Runtime');
+    if(server.ok&&server.latency>800)warnings.push('Server phản hồi chậm '+server.latency+' ms');
+    if(gmwwRuntimeErrors.length)warnings.push('Runtime ghi nhận '+gmwwRuntimeErrors.length+' lỗi gần đây');
+    if(failures.length){
+      setDiagnosticState('bad','PHÁT HIỆN LỖI',failures.length+' thành phần chưa đạt',failures.map(([k,v])=>k+': '+(v.error||'Lỗi')).slice(0,2).join(' • '));
+      return{ok:false,failures,warnings,probes}
+    }
+    if(warnings.length){
+      setDiagnosticState('warn','CÓ CẢNH BÁO','5/5 thành phần kết nối được',warnings.slice(0,2).join(' • '));
+      return{ok:true,warnings,probes}
+    }
+    setDiagnosticState('ok','HỆ THỐNG TỐT','5/5 kiểm tra đạt','Health Check hoàn tất • '+server.latency+' ms');
+    return{ok:true,warnings:[],probes}
+  }finally{gmwwDiagnosticBusy=false;if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function quickRepairSystem(){
+  if(gmwwDiagnosticBusy)return;
+  const btn=document.getElementById('quickRepairSystem');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  setDiagnosticState('checking','ĐANG SỬA','Đang thực hiện sửa lỗi an toàn…','Dọn cache tạm • tải lại dữ liệu • đồng bộ Player Web');
+  try{
+    await clearSafeRuntimeCache();
+    memberAdminState.loaded=false;
+    try{await loadMembers(true)}catch(_){}
+    await syncPlayerWebUpdate();
+    await checkAppUpdate({notify:false});
+    await checkServerHealth();
+    gmwwRuntimeErrors=[];
+    const result=await runSystemDiagnostics({silent:true});
+    if(result?.ok)setDiagnosticState(result.warnings?.length?'warn':'ok',result.warnings?.length?'CÒN CẢNH BÁO':'ĐÃ SỬA XONG',result.warnings?.length?'Các kết nối đã phục hồi, còn cảnh báo cần theo dõi.':'Server + Player Web đã được kiểm tra lại.',result.warnings?.slice(0,2).join(' • ')||'Không xoá dữ liệu game.');
+  }catch(err){setDiagnosticState('bad','SỬA LỖI THẤT BẠI','Không hoàn tất được sửa nhanh.',String(err?.message||'Vui lòng thử lại.'))}
+  finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function checkPlayerWebNow(){
+  const btn=document.getElementById('checkPlayerWebNow');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  try{
+    await syncPlayerWebUpdate();
+    await runSystemDiagnostics({silent:false});
+  }finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
+const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
+const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active'))runSystemDiagnostics({silent:true})},120000);
+
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
