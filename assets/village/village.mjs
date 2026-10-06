@@ -82,7 +82,7 @@ if(game){
     button.addEventListener("click",e=>{e.stopPropagation();if(isGM)return;if(embedded){if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:data.id,seatId:actualSeat},window.location.origin);return}selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
     return button
   }
-  function renderPortal(){\n    const portal=document.getElementById('gmwwPortal'),notice=document.getElementById('gmwwPortalNotice');\n    if(!portal)return;\n    const join=portalState.mode==='join';\n    portal.hidden=false;portal.classList.toggle('is-join',join);\n    portal.querySelector('strong').textContent=join?'':safeText(portalState.label||'CỔNG BÍ CẢNH');\n    portal.querySelector('small').textContent=join?'':safeText(portalState.roomName||('Phòng '+portalState.roomCode));\n    portal.setAttribute('aria-label',join?'Đi vào phòng đang mở':'Cổng xuất hiện của Phòng chờ');\n    if(notice)notice.hidden=true;\n  }\n  function render(){
+  function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}\n  function render(){
     cancelAnimationFrame(moveFrame);moveFrame=0;
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
@@ -92,8 +92,7 @@ if(game){
       if(!data){
         const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving"),empty=document.createElement("button");empty.type="button";empty.className="seat-empty"+(Number(setupState.selectedSeatId||0)===seatId?" selected":"")+(reserved?" reserved":"");empty.dataset.seatId=String(seatId);const display=screenPoint(p);empty.style.left=display.x+"%";empty.style.top=display.y+"%";empty.style.zIndex=String(9+Math.round(p.y));empty.innerHTML='<span class="seat-dot"></span><b>'+(reserved?'Đang tới ':'Vị trí ')+seatId+'</b>';
         empty.setAttribute("aria-label","Vị trí "+seatId+(reserved?" đang được chọn":" đang trống"));
-        if(embedded&&setupState.enabled&&!reserved)empty.addEventListener("click",e=>{e.stopPropagation();try{window.parent.postMessage({type:"gmww:seat-click",seatId,x:p.x,y:p.y},window.location.origin)}catch{}});
-        else empty.disabled=true;players.append(empty);return
+        empty.disabled=true;players.append(empty);return
       }
       const pos=movementPosition(data,p),button=makePlayerButton(data,pos,seatId,i);players.append(button);const item=document.createElement("span");item.textContent=seatId+" · "+safeText(data.displayName)+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item)
     });
@@ -144,7 +143,7 @@ if(game){
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
-    portalState=payload?.portal&&typeof payload.portal==="object"?payload.portal:null;
+    
     all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100};setupState.characterScale=normalizeCharacterScale(setupState.characterScale);
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
