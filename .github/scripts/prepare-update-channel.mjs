@@ -134,5 +134,6 @@ fs.writeFileSync(path.join('assets','updates','latest.json'),JSON.stringify(mani
 fs.writeFileSync(path.join(outRoot,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 const workerSource=fs.readFileSync('src/index.js','utf8');
 const updateChannelRev=workerSource.match(/UPDATE_CHANNEL_REV="([^"]+)"/)?.[1]||'runtime';
-fs.writeFileSync(path.join(outRoot,'manifest-'+updateChannelRev+'.json'),JSON.stringify(manifest,null,2)+'\n');
+const revisionedManifest=path.join(outRoot,'manifest-'+updateChannelRev+'.json');
+fs.writeFileSync(revisionedManifest,JSON.stringify(manifest,null,2)+'\n');
 console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));
