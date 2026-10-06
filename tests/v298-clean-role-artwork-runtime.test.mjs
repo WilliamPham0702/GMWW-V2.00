@@ -21,3 +21,9 @@ test('runtime update ships exactly the canonical clean role artwork package',()=
   assert.match(deploy,/EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"/);
   assert.match(deploy,/Expected 63 clean role artworks in runtime update/);
 });
+
+test('update endpoint uses revisioned runtime manifest to defeat stale asset caches',()=>{
+  assert.match(prep,/manifest-'\+updateChannelRev\+'\\.json/);
+  const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  assert.match(worker,/manifest-"\+UPDATE_CHANNEL_REV\+"\\.json/);
+});
