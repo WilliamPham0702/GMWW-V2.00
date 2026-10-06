@@ -1,4 +1,4 @@
-GMWW V2.87 polished top HUD build
+GMWW V2.88 clean role artwork build
 Requested: 2026-10-06
-Revision: official-v287
-Reason: keep the approved bottom menu unchanged; redesign the top HUD as Auto rotating icon (spins only when enabled), contextual Info box, GM button, and realtime Refresh icon.
+Revision: clean-role-artwork-v288
+Reason: package only the 63 clean high-resolution role artworks and remove old delivery/thumb duplicate variants from the IPA.
