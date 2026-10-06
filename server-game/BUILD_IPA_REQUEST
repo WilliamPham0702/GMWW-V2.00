@@ -4,3 +4,4 @@ Revision: v303-update-actions-always-enabled
 Source: main
 Reason: rebuild after update-manager fix. Keep CẬP NHẬT RUNTIME, TẢI IPA and ĐỒNG BỘ WEB available at all times; system only highlights the recommended action.
 Rebuild: 2026-10-06 V3.03 final after metadata/runtime commits.
+Rebuild: 2026-10-06 final UI menu layout + remove floating context box + restore named room setup.
