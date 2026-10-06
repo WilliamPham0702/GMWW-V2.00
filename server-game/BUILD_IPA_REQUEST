@@ -1,4 +1,4 @@
-GMWW V2.88 clean role artwork build
+GMWW V2.89 official test build
 Requested: 2026-10-06
-Revision: clean-role-artwork-v288
-Reason: package only the 63 clean high-resolution role artworks and remove old delivery/thumb duplicate variants from the IPA.
+Revision: official-v289
+Reason: top menu now mirrors the approved bottom-menu proportions in the order Auto / GM / Information / Realtime / Audio. GM receives and animates Player Web movement from the room WebSocket in realtime, with reconnect state shown directly on the Realtime button.
