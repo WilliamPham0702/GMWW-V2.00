@@ -782,6 +782,20 @@ setTimeout(initCharacterScaleSetting,0);
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+let gmwwGmPresenceTimer=null;
+async function gmwwSendGmPresence(online=true){
+  try{
+    await fetch(GMWW_SERVER_BASE+'/api/gm/presence',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({online:online!==false}),cache:'no-store',keepalive:true});
+  }catch(_){}
+}
+function gmwwStartGmPresence(){
+  gmwwSendGmPresence(true);
+  if(gmwwGmPresenceTimer)clearInterval(gmwwGmPresenceTimer);
+  gmwwGmPresenceTimer=setInterval(()=>{if(document.visibilityState!=='hidden')gmwwSendGmPresence(true)},20000);
+}
+setTimeout(gmwwStartGmPresence,0);
+window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
+
 /* UPDATE MANAGER V1 — prepared off-main */
 let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
 const gmwwRuntimeVersion=()=>String(VERSION||'').replace(/^V/i,'');
@@ -970,7 +984,7 @@ const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(s
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
 document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120)}));
 window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active'))checkServerHealth()});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>checkAppUpdate({notify:true}),250)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
 function setMaintenanceState(kind,text,detail){
   const pill=document.getElementById('maintenanceStatus'),dot=document.getElementById('maintenanceDot'),msg=document.getElementById('maintenanceDetail');

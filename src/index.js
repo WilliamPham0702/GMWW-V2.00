@@ -10,6 +10,7 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 const PROJECT="GMWW-V2.00",VERSION="V2.94",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+const GM_PRESENCE_TTL=75000;
 
 export class RoomDurableObject extends DurableObject {
   async fetch(request){
@@ -58,6 +59,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/ui"&&request.method==="PUT")return this.globalUiSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/web-sync"&&request.method==="GET")return this.globalWebSyncGet();
     if(url.pathname==="/global-settings/web-sync"&&request.method==="POST")return this.globalWebSyncBump(await safeJson(request));
+    if(url.pathname==="/global-settings/gm-presence"&&request.method==="GET")return this.globalGmPresenceGet();
+    if(url.pathname==="/global-settings/gm-presence"&&request.method==="POST")return this.globalGmPresencePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
       const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Phòng Online"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,enabled,autoGM:true,roomMode,seatMoveMode,seatCount,gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
@@ -320,6 +323,24 @@ export class RoomDurableObject extends DurableObject {
       updatedAt:new Date().toISOString()
     };
     await this.ctx.storage.put("globalSetting:webSync",rec);return j({ok:true,...rec});
+  }
+
+  async globalGmPresenceGet(){
+    const rec=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),lastSeenAt=Math.max(0,Number(rec?.lastSeenAt||0));
+    const online=rec?.online===true&&lastSeenAt>0&&(now-lastSeenAt)<=GM_PRESENCE_TTL;
+    return j({ok:true,gm:{online,sessionId:online?String(rec?.sessionId||""):"",sessionStartedAt:online?Math.max(0,Number(rec?.sessionStartedAt||lastSeenAt)):0,lastSeenAt:online?lastSeenAt:0}});
+  }
+  async globalGmPresencePut(body){
+    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),online=body?.online!==false;
+    if(!online){
+      const rec={online:false,sessionId:String(old?.sessionId||""),sessionStartedAt:Math.max(0,Number(old?.sessionStartedAt||0)),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
+      await this.ctx.storage.put("globalSetting:gmPresence",rec);
+      return j({ok:true,gm:{online:false,sessionId:"",sessionStartedAt:0,lastSeenAt:0}});
+    }
+    const expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL;
+    const rec={online:true,sessionId:expired?randomToken(12):String(old?.sessionId||randomToken(12)),sessionStartedAt:expired?now:Math.max(0,Number(old?.sessionStartedAt||now)),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
+    await this.ctx.storage.put("globalSetting:gmPresence",rec);
+    return j({ok:true,gm:{online:true,sessionId:rec.sessionId,sessionStartedAt:rec.sessionStartedAt,lastSeenAt:rec.lastSeenAt}});
   }
 
   async globalAssetGet(key,contentType){
@@ -951,12 +972,21 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/assets/role-card-back"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-assets/card-back");
   if(url.pathname==="/api/ui-settings"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/ui");
   if(url.pathname==="/api/web-sync"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/web-sync");
+  if(url.pathname==="/api/gm-presence"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/gm-presence");
   if(url.pathname==="/api/gm/web-sync"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
     const rr=await memberStore(env).fetch(new Request("https://member.internal/global-settings/web-sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:VERSION,source:body?.source||"GM_APP"})}));
     if(!rr.ok)return rr;
     const data=await rr.json();return j({ok:true,...data,version:VERSION,serverVersion:VERSION,webVersion:VERSION});
+  }
+  if(url.pathname==="/api/gm/presence"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    const body=await safeJson(request)||{};
+    return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({online:body?.online!==false})}));
+  }
+  if(url.pathname.startsWith("/api/gm/")&&url.pathname!=="/api/gm/presence"&&bearer(request)===GM_SYNC_TOKEN){
+    try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true}'}))}catch(_){}
   }
   if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/ui",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
   if(url.pathname==="/api/gm/assets/victory-audio"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/victory",{method:"PUT",headers:{"content-type":"audio/mpeg"},body:request.body}));}
