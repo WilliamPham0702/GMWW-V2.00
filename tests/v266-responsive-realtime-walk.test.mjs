@@ -87,7 +87,7 @@ test('V2.66 movement contract remains packaged in the V2.87 runtime',()=>{
   assert.ok(server.includes('VERSION="V2.96"'));
   assert.ok(app.includes("const VERSION='2.96';"));
   assert.ok(html.includes('GMWW V2.96'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 295;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.95;'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 296;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.96;'));
   assert.equal(pkg.version,'2.96.0');
 });
