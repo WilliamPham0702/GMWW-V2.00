@@ -44,7 +44,7 @@ test('Player Web treats WebSocket movement as realtime and polling only as fallb
   assert.ok(live.includes('state.serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
   assert.ok(live.includes('state.gameStateTimer=setInterval(pollRoomState,15000)'));
   assert.ok(live.includes('clockOffsetMs:Number(state.serverClockOffsetMs||0)'));
-  assert.ok(live.includes("iframe.src='/village/?embed=1&v=290'"));
+  assert.ok(live.includes("iframe.src='/village/?embed=1&v=291'"));
 });
 
 test('GM IPA consumes move WebSocket events and animates tokens with requestAnimationFrame',()=>{
