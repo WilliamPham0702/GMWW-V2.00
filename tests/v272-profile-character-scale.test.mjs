@@ -19,7 +19,7 @@ test('V2.87 keeps six discrete character sizes and removes the slider',()=>{
   assert.doesNotMatch(server,/globalWebVeilGet|globalWebVeilPut|global-settings\/web-veil/);
 });
 
-test('Player Web scales actor artwork and official labels together while keeping the seat container fixed',()=>{
+test('Player Web scales actor artwork only while official labels stay fixed',()=>{
   const live=read('src/gmww-members-live.js'),village=read('assets/village/village.mjs'),art=read('assets/village/village-art.css'),css=read('assets/village/village.css');
   assert.ok(live.includes('GMWW_CHARACTER_SCALES=[75,100,125,150,175,200]'));
   assert.ok(live.includes("api('/api/ui-settings')"));
@@ -30,10 +30,11 @@ test('Player Web scales actor artwork and official labels together while keeping
   assert.ok(village.includes('button.style.minWidth=Math.max(52,baseW+10)+"px"'));
   assert.ok(village.includes('button.style.setProperty("--gmww-character-scale",String(scale))'));
   assert.ok(art.includes('scale(var(--gmww-character-scale,1))'));
-  assert.ok(css.includes('.player .player-over'));
-  assert.ok(css.includes('.player .player-role'));
-  assert.match(css,/player-over[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
-  assert.match(css,/player-role[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
+  assert.match(css,/\.player \.portrait\.game-character img\{[^}]*transform:scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/\.player \.player-over\{[^}]*transform:translateX\(-50%\);/s);
+  assert.doesNotMatch(css,/\.player \.player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/\.player \.player-role\{[^}]*transform:none/);
+  assert.doesNotMatch(css,/\.player \.player-role\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
 
 test('Player tapping their own character no longer opens information',()=>{

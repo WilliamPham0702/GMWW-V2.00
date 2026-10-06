@@ -42,11 +42,13 @@ test('V2.93 hides both top and bottom menus completely after 20 seconds and reve
   assert.match(app,/document\.addEventListener\('keydown',reveal/);
   assert.match(app,/querySelector\('\.gm-top-icon-audio-v293'\)/);
 });
-test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
+test('GM player labels keep name and status fixed while only character artwork scales',()=>{
   assert.match(app,/<div class="play-player-over"><b>'\+playEsc\(name\)\+'<\/b><small>'\+playEsc\(statusLabel\)/);
   assert.match(app,/play-player-role/);
-  assert.match(css,/\.play-player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
-  assert.match(css,/\.play-player-role\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/\.play-player-over\{[^}]*transform:translateX\(-50%\)[^}]*\}/s);
+  assert.doesNotMatch(css,/\.play-player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.match(css,/\.play-player-role\{[^}]*transform:none!important/s);
+  assert.doesNotMatch(css,/\.play-player-role\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
   assert.match(css,/play-player-avatar img\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
 
@@ -92,11 +94,12 @@ test('room presence is websocket-authoritative with realtime heartbeat and disco
   assert.match(live,/JSON\.stringify\(\{type:'ping'/);
 });
 
-test('Player Web mirrors scalable name/status above character and own role below',()=>{
+test('Player Web keeps name/status and role fixed while character artwork scales',()=>{
   assert.match(village,/statusLabel:safeText\(p\.statusLabel/);
   assert.match(village,/roleName:safeText\(p\.roleName/);
   assert.match(village,/className="player-over"/);
   assert.match(village,/className="player-role"/);
-  assert.match(villageCss,/\.player \.player-over[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
-  assert.match(villageCss,/\.player \.player-role[\s\S]*scale\(var\(--gmww-character-scale,1\)\)/);
+  assert.match(villageCss,/\.player \.portrait\.game-character img\{[^}]*transform:scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.doesNotMatch(villageCss,/\.player \.player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
+  assert.doesNotMatch(villageCss,/\.player \.player-role\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
