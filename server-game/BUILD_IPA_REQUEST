@@ -1,7 +1,5 @@
-GMWW V2.93 official build
+GMWW V2.94 official build
 Requested: 2026-10-06
-Revision: v293-hide-both-menus-completely-retry-1
+Revision: v294-create-room-mystery-portal
 Source: main
-Reason: after 20 seconds of inactivity, slide the entire top menu fully off the top edge and the entire bottom menu fully off the bottom edge. Reveal both together on any user interaction. No visible edge or partial menu remains.
-
-Retry: preserve exact footer markup while hiding the existing bottom bar via its class.
+Reason: centered Create Room page with room code/name/reset/delete/online-offline/live toggle/next; Player Web Mystery Portal at campfire for Live rooms; portal arrival at the stairs; seat plus selection automatically confirms Ready.
