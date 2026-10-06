@@ -1567,3 +1567,15 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 @media(max-width:390px){
   .play-center-sheet>.sheet-card{width:min(94vw,410px)!important}
 }
+
+
+/* GM rider: autonomous by default, manually steerable from Trang Chơi. */
+.play-player-token.is-gm-rider{width:112px;pointer-events:auto!important;z-index:50}
+.play-player-token.is-gm-rider .play-player-avatar{width:84px;height:111px}
+.play-player-token.is-gm-rider .play-player-avatar img{object-fit:contain;filter:drop-shadow(0 9px 7px rgba(0,0,0,.46)) drop-shadow(0 0 10px rgba(224,244,255,.32))}
+.play-player-token.is-gm-rider .play-player-over b{background:linear-gradient(180deg,rgba(104,70,15,.94),rgba(45,31,9,.94));border:1px solid rgba(255,226,132,.72);color:#fff1b0}
+.play-player-token.is-gm-rider .play-player-over small{background:rgba(255,236,174,.94);color:#5f4104}
+@keyframes playGmWolfRide{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.play-player-token.is-gm-rider.is-moving .play-player-avatar{animation:playGmWolfRide .52s ease-in-out infinite}
+@media(max-width:390px){.play-player-token.is-gm-rider{width:96px}.play-player-token.is-gm-rider .play-player-avatar{width:72px;height:95px}}
+@media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider.is-moving .play-player-avatar{animation:none}}

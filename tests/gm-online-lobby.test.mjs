@@ -40,3 +40,17 @@ test('GM remains visible in a full 30-player room without consuming a seat',()=>
   assert.match(village,/regularCount>=30/);
   assert.match(village,/gmIncluded/);
 });
+
+test('GM can be manually steered while retaining autonomous roaming',()=>{
+  assert.match(server,/\/api\/gm\/move/);
+  assert.match(server,/globalGmMovePut/);
+  assert.match(server,/manualUntil:now\+duration\+15000/);
+  assert.match(app,/gmwwMoveGmCharacter/);
+  assert.match(app,/await gmwwMoveGmCharacter\(raw\.x,raw\.y\)/);
+  assert.match(app,/GMWW_GM_AUTO_HOLD_MS=15000/);
+  assert.match(live,/manualUntil/);
+  assert.match(live,/gm_manual/);
+  assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},1000\)/);
+  assert.match(css,/\.play-player-token\.is-gm-rider/);
+  assert.match(css,/width:84px;height:111px/);
+});
