@@ -1486,3 +1486,84 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
   body.play-immersive #start .play-control-bar{transition:none!important}
 }
 
+/* V2.94 centered setup-page system + Create Room */
+.play-center-sheet{
+  align-items:center!important;
+  justify-content:center!important;
+  padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))!important;
+  background:rgba(2,15,24,.46)!important;
+}
+.play-center-sheet>.sheet-card{
+  width:min(92vw,440px)!important;
+  max-height:min(82dvh,680px)!important;
+  margin:auto!important;
+  border-radius:22px!important;
+}
+#playCreateRoomSheet .play-room-page-card{
+  padding:14px!important;
+  border:1px solid rgba(125,231,244,.34)!important;
+  background:linear-gradient(180deg,rgba(8,44,61,.97),rgba(5,28,42,.98))!important;
+  box-shadow:0 22px 60px rgba(0,18,29,.46),inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+#playCreateRoomSheet .play-room-page-head{margin-bottom:13px!important}
+#playCreateRoomSheet .play-room-page-head>div>small{
+  display:block;font-size:7px;font-weight:950;letter-spacing:.14em;color:#8adfe9;margin-bottom:2px
+}
+#playCreateRoomSheet .play-room-page-head h3{font-size:19px!important;color:#fff8df!important}
+#playCreateRoomSheet .play-room-page-head>button{
+  width:36px!important;height:36px!important;border-radius:50%!important;
+  border:1px solid rgba(255,255,255,.18)!important;background:rgba(8,63,81,.82)!important;color:#fff!important
+}
+.play-room-page-body{display:grid;gap:10px}
+.play-room-field{display:grid!important;gap:5px!important;margin:0!important}
+.play-room-field>span,.play-room-section>small,.play-room-live-row small{
+  font-size:7px!important;font-weight:950!important;letter-spacing:.12em!important;color:#8adfe9!important
+}
+.play-room-field input{
+  width:100%!important;height:44px!important;box-sizing:border-box!important;
+  border:1px solid rgba(125,231,244,.22)!important;border-radius:12px!important;
+  background:rgba(3,28,41,.76)!important;color:#fff8df!important;
+  padding:0 12px!important;font-size:13px!important;font-weight:850!important
+}
+.play-room-field input[readonly]{color:#8eefff!important;letter-spacing:.12em!important}
+.play-room-danger-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.play-room-danger-row button{
+  min-height:38px;border-radius:11px;font-size:9px;font-weight:950;letter-spacing:.04em
+}
+#playCreateRoomReset{border:1px solid rgba(241,194,104,.38);background:rgba(82,63,25,.54);color:#ffe5a6}
+#playCreateRoomDelete{border:1px solid rgba(255,117,126,.36);background:rgba(89,40,47,.60);color:#ffd8dc}
+.play-room-danger-row button:disabled{opacity:.34}
+.play-room-section{
+  display:grid;gap:6px;padding:10px;border:1px solid rgba(125,231,244,.13);border-radius:13px;background:rgba(4,34,48,.48)
+}
+.play-room-segment{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.play-room-segment button{
+  min-height:40px;border:1px solid rgba(125,231,244,.18);border-radius:11px;background:rgba(7,48,65,.82);
+  color:#ccecf1;font-size:10px;font-weight:950
+}
+.play-room-segment button.active{
+  background:linear-gradient(180deg,rgba(21,131,161,.94),rgba(8,84,116,.92));
+  border-color:rgba(125,231,244,.58);color:#fff
+}
+.play-room-live-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:58px;padding:10px;border:1px solid rgba(125,231,244,.13);border-radius:13px;background:rgba(4,34,48,.48)
+}
+.play-room-live-row>div{display:grid;gap:3px}
+.play-room-live-row>div>b{font-size:11px;color:#ffcf8a}
+#playCreateRoomEnabled{
+  min-width:112px;min-height:40px;border:1px solid rgba(255,255,255,.16);border-radius:999px;
+  background:rgba(89,40,47,.72);color:#ffd8dc;display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:8px;font-weight:950
+}
+#playCreateRoomEnabled>span{width:9px;height:9px;border-radius:50%;background:#ff8a91;box-shadow:0 0 8px rgba(255,94,104,.42)}
+#playCreateRoomEnabled.is-on{background:rgba(11,93,77,.78);border-color:rgba(107,241,190,.46);color:#d9fff0}
+#playCreateRoomEnabled.is-on>span{background:#66f1bf;box-shadow:0 0 10px rgba(102,241,191,.72)}
+#playCreateRoomLiveLabel.is-on{color:#70f1c0!important}
+.play-room-next{
+  width:100%!important;min-height:46px!important;border-radius:13px!important;margin-top:2px!important;
+  font-size:11px!important;font-weight:1000!important;letter-spacing:.06em!important
+}
+@media(max-width:390px){
+  .play-center-sheet>.sheet-card{width:min(94vw,410px)!important}
+}
