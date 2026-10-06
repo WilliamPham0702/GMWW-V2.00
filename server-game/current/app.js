@@ -1872,7 +1872,7 @@ function renderPlayContext(){
   }else{
     if(k)k.textContent=step.k;if(t)t.textContent=step.t;
     if(x){
-      if(isLivePlayRoom()&&(playSceneState.step==='room'||playSceneState.step==='members')){const s=playSeatStats();x.textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneState.roomMode==='offline'?'OFFLINE':'ONLINE')+' • '+s.occupied+'/'+s.seatCount+' vị trí có người • '+s.available+' vị trí trống.'}
+      if(isLivePlayRoom()&&(playSceneState.step==='room'||playSceneState.step==='members')){const s=playSeatStats();x.textContent=(playSceneState.roomMode==='offline'?'OFFLINE':'ONLINE')+' • '+s.occupied+'/'+s.seatCount+' ghế có người • '+s.available+' ghế trống.'}
       else if(playSceneState.step==='game')x.textContent=(playSceneRuntime.gameConfig?.name||playSceneState.gameName||'Chưa chọn Ván Mẫu')+' • '+playRolePlanTotal()+'/'+playLiveMembers().length+' Vai Trò.';
       else if(playSceneState.step==='seats'){const st=playSeatStats();x.textContent=st.occupied+'/'+st.seatCount+' vị trí đã có người • '+st.available+' vị trí còn trống'+(playSceneRuntime.room?.seatsLocked?' • ĐÃ KHÓA VỊ TRÍ':'');}
       else if(playSceneState.step==='roles')x.textContent='Đã cấu hình '+playRolePlanTotal()+' Vai Trò. Nhấn PHÂN VAI để chia ngẫu nhiên; chưa gửi xuống Player Web.';
@@ -1885,11 +1885,7 @@ function renderPlayContext(){
         actions.querySelector('[data-play-reroll-role]')?.addEventListener('click',()=>playBuildAssignments({preserveArtifacts:true}));
         actions.querySelector('[data-play-reroll-artifact]')?.addEventListener('click',playRerollArtifacts);
         actions.querySelector('[data-play-cycle-artifact]')?.addEventListener('click',playCycleActiveArtifact);
-      }else if(playSceneState.step==='room'){
-        const st=playSeatStats();actions.innerHTML='<button class="play-action-chip '+(playSceneState.roomMode==='online'?'active':'')+'" data-play-room-mode="online" type="button"><span>◎</span><b>ONLINE</b></button><button class="play-action-chip '+(playSceneState.roomMode==='offline'?'active':'')+'" data-play-room-mode="offline" type="button"><span>◉</span><b>OFFLINE</b></button>'+(isLivePlayRoom()?'<button class="play-action-chip play-seat-total" disabled><span>⌁</span><b>'+playEsc(playSceneState.roomCode)+'</b></button>':'<label class="play-slot-picker"><span>SỐ GHẾ</span><input id="playSeatCount" type="number" min="1" max="30" step="1" value="'+st.seatCount+'"></label>');
-        const input=actions.querySelector('#playSeatCount');if(input)input.addEventListener('change',()=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(input.value)||12));input.value=String(playSceneState.seatCount);savePlayScene()});
-        bindPlayRoomModeButtons()
-      }else if(playSceneState.step==='members'){
+      }else if(playSceneState.step==='room'){actions.innerHTML=''}else if(playSceneState.step==='members'){
         const chosen=(playSceneState.selectedMemberIds||[]).length,online=(memberAdminState.members||[]).filter(m=>m?.online).length;
         actions.innerHTML=playSceneState.roomMode==='online'?'<button class="play-action-chip active" disabled><span>●</span><b>'+chosen+' đã chọn / '+online+' Online</b></button>':'<button class="play-action-chip active" data-play-open-roster type="button"><span>☰</span><b>Danh sách Người Chơi</b></button>';
         actions.querySelector('[data-play-open-roster]')?.addEventListener('click',openPlayRosterSheet)
