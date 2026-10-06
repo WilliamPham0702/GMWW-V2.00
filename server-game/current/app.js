@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.91';
+const VERSION='2.92';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1384,7 +1384,7 @@ function setPlayRealtimeState(state='idle'){
 }
 function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)==='1'}catch{return false}}
 function applyPlayAudioState(){
-  const muted=playAudioMuted(),btn=document.getElementById('playAudioTop'),glyph=btn?.querySelector('.gm-top-icon-audio-v291');
+  const muted=playAudioMuted(),btn=document.getElementById('playAudioTop'),glyph=btn?.querySelector('.gm-top-icon-audio-v292');
   document.querySelectorAll('audio').forEach(a=>{a.muted=muted});
   if(btn){btn.classList.toggle('is-muted',muted);btn.setAttribute('aria-pressed',String(!muted));btn.setAttribute('aria-label',muted?'Âm thanh đang tắt':'Âm thanh đang bật');btn.title=muted?'Audio: Tắt':'Audio: Bật'}
   if(glyph)glyph.textContent=muted?'🔇':'🔊';
@@ -2020,8 +2020,38 @@ async function backPlayPhase(){
   }
   if(playSceneState.phase!=='lobby'){await playSyncRoom(true);return}advancePlaySetup(-1)
 }
+const PLAY_TOP_MENU_IDLE_MS=20000;
+let playTopMenuIdleTimer=0;
+function setPlayTopMenuHidden(hidden){
+  const menu=document.getElementById('gmTopMenu');if(!menu)return;
+  menu.classList.toggle('is-auto-hidden',!!hidden);
+  menu.dataset.autoHidden=hidden?'1':'0';
+}
+function clearPlayTopMenuIdle(){
+  if(playTopMenuIdleTimer){clearTimeout(playTopMenuIdleTimer);playTopMenuIdleTimer=0}
+}
+function resetPlayTopMenuIdle(){
+  const menu=document.getElementById('gmTopMenu');if(!menu)return;
+  setPlayTopMenuHidden(false);clearPlayTopMenuIdle();
+  if(!document.body.classList.contains('play-immersive'))return;
+  playTopMenuIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayTopMenuHidden(true)},PLAY_TOP_MENU_IDLE_MS);
+}
+function initPlayTopMenuAutoHide(){
+  const menu=document.getElementById('gmTopMenu');if(!menu||menu.dataset.autoHideBound==='1')return;
+  menu.dataset.autoHideBound='1';
+  const reveal=()=>resetPlayTopMenuIdle();
+  document.addEventListener('pointerdown',reveal,{capture:true,passive:true});
+  document.addEventListener('touchstart',reveal,{capture:true,passive:true});
+  document.addEventListener('keydown',reveal,{capture:true});
+  document.addEventListener('wheel',reveal,{capture:true,passive:true});
+  let lastMove=0;
+  document.addEventListener('mousemove',()=>{const now=Date.now();if(now-lastMove>800){lastMove=now;resetPlayTopMenuIdle()}},{capture:true,passive:true});
+  menu.addEventListener('focusin',reveal);
+  menu.addEventListener('pointerenter',reveal);
+}
 async function enterPlayImmersive(){
   document.body.classList.add('play-immersive');
+  resetPlayTopMenuIdle();
   try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
   if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
 }
@@ -2029,6 +2059,7 @@ function exitPlayImmersive(){
   if(playSceneRuntime.busy)return;
   if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
   document.body.classList.remove('play-immersive');
+  clearPlayTopMenuIdle();setPlayTopMenuHidden(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
   const home=document.getElementById('home');if(home)home.scrollTop=0
@@ -2036,6 +2067,7 @@ function exitPlayImmersive(){
 function openPlayCreateRoomSheet(){if(isLivePlayRoom()){setPlayStep('room');return}const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;const n=document.getElementById('playCreateRoomCapacity');if(n)n.value=playSceneState.seatCount;sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
+  initPlayTopMenuAutoHide();
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
   document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
   document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
