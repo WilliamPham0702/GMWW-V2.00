@@ -1683,7 +1683,16 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 @media(max-width:520px){.play-room-quick-row{grid-template-columns:repeat(2,minmax(0,1fr))}.play-room-live-simple{grid-template-columns:1fr 1fr}}
 
 /* V3.03 menu refinement + clean room setup */
-.play-control-bar-three{grid-template-columns:20% 60% 20%!important}
+body.play-immersive #start .play-control-bar.play-control-bar-three{
+  display:grid!important;
+  grid-template-columns:minmax(0,20fr) minmax(0,60fr) minmax(0,20fr)!important;
+  gap:0!important;
+  box-sizing:border-box!important;
+}
+body.play-immersive #start .play-control-bar.play-control-bar-three>#playBack{grid-column:1!important;width:100%!important}
+body.play-immersive #start .play-control-bar.play-control-bar-three>#playPrimaryAction{grid-column:2!important;width:100%!important}
+body.play-immersive #start .play-control-bar.play-control-bar-three>#playNext{grid-column:3!important;width:100%!important}
+body.play-immersive #start .play-control-bar.play-control-bar-three>*{min-width:0!important;max-width:none!important;margin:0!important}
 .play-room-name-field{display:grid;gap:7px;padding:13px 15px;border:1px solid rgba(92,211,241,.24);border-radius:16px;background:rgba(4,37,50,.66)}
 .play-room-name-field>span{font-size:11px;font-weight:900;letter-spacing:.14em;color:#a8eaff}
 .play-room-name-field input{width:100%;min-height:48px;padding:0 14px;border:1px solid rgba(116,228,255,.26);border-radius:13px;background:rgba(1,24,34,.68);color:#fff;font:inherit;font-weight:800}
