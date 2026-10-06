@@ -11,22 +11,25 @@ const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 
-test('V2.87 GM lobby keeps one-second realtime fallback alongside websocket',()=>{
+test('V2.89 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
-  assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&\!playSceneRuntime\.busy\)playSyncRoom\(false\)\},1000\)/);
+  assert.match(app,/playSceneRuntime\.socket\.readyState!==WebSocket\.OPEN\)\)playSyncRoom\(false\)\},750\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('official GM header is Auto icon, contextual info, GM, realtime refresh',()=>{
-  const auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),gm=html.indexOf('id="playRoomButton"'),refresh=html.indexOf('id="playRefreshServer"');
-  assert.ok(auto>=0&&info>auto&&gm>info&&refresh>gm);
+test('official GM header is Auto, GM, Info, Realtime, Audio with bottom-menu proportions',()=>{
+  const auto=html.indexOf('id="playAutoGM"'),gm=html.indexOf('id="playRoomButton"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"'),audio=html.indexOf('id="playAudioTop"');
+  assert.ok(auto>=0&&gm>auto&&info>gm&&refresh>info&&audio>refresh);
   assert.match(html,/class="play-auto-spinner"/);
-  assert.match(html,/class="play-gm-top" id="playRoomButton"/);
-  assert.doesNotMatch(html,/class="play-gm-float"/);
+  assert.match(html,/class="play-top-control play-gm-top" id="playRoomButton"/);
+  assert.match(html,/class="play-top-control play-audio-top" id="playAudioTop"/);
+  assert.match(css,/V2\.89 — top HUD mirrors the approved bottom game-menu proportions/);
+  assert.match(css,/grid-template-columns:52px 56px minmax\(0,1fr\) 52px 52px!important/);
   assert.match(css,/play-auto-gm\.is-on \.play-auto-spinner[\s\S]*animation:gmwwAutoSpin/);
-  assert.match(css,/@keyframes gmwwAutoSpin/);
+  assert.match(css,/play-refresh-server\.is-live \.play-live-dot/);
   assert.match(app,/function refreshPlayServerRealtime\(\)/);
-  assert.match(app,/playSyncRoom\(true\);connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
+  assert.match(app,/function togglePlayAudio\(\)/);
+  assert.match(app,/renderPlayPlayers\(\);syncPlayMovementTicker\(\);renderPlayRealtimeHeader\(\)/);
 });
 
 test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
