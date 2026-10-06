@@ -79,7 +79,7 @@ if(game){
     const over=document.createElement("span");over.className="player-over";over.append(name,status);
     const role=document.createElement("span");role.className="player-role";role.textContent=safeText(data.roleName||"");if(!role.textContent)role.hidden=true;
     button.append(over,avatar,role);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+" · "+status.textContent);
-    button.addEventListener("click",e=>{e.stopPropagation();if(isGM)return;if(embedded){if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:data.id,seatId:actualSeat},window.location.origin);return}selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
+    button.addEventListener("click",e=>{e.stopPropagation();if(isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}if(embedded){if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:data.id,seatId:actualSeat},window.location.origin);return}selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
     return button
   }
   function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}\n  function render(){
