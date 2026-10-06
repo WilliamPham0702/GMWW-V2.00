@@ -1,5 +1,5 @@
-GMWW V3.01 official build
+GMWW V3.02 official build
 Requested: 2026-10-06
-Revision: v301-gm-authoritative-seating-final2
+Revision: v302-compact-room-update-status
 Source: main
-Reason: final CI-passed one-page Create Room and GM-only seating flow. No room code display, no small Create Room box, no Mystery Portal, no Player seat registration. Manual/Random GM seating, circular plus markers, Ready/Leave Seat, persistent seated pose.
+Reason: compact Create Room, GM character control panel, top Exit/End actions, unified update status, publish IPA V3.02 for in-app download.
