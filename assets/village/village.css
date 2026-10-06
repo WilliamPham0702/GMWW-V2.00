@@ -113,3 +113,68 @@ html.embedded .player .player-over .name{font-size:11px}
   .player .player-over .name{font-size:10px}
   .player .player-status,.player .player-role{font-size:7px}
 }
+
+/* V2.94 Mystery Portal — join at campfire, arrival at stairs */
+.gmww-portal{
+  position:absolute;z-index:8;width:92px;height:112px;transform:translate(-50%,-72%);
+  border:0;background:transparent;color:#fff;padding:0;overflow:visible;touch-action:manipulation;
+  filter:drop-shadow(0 12px 18px rgba(0,24,42,.42));
+}
+.gmww-portal:disabled{opacity:1}
+.gmww-portal .portal-aura{
+  position:absolute;left:50%;top:48%;width:78px;height:92px;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(ellipse at center,rgba(238,255,255,.96) 0 8%,rgba(85,237,244,.78) 18%,rgba(54,161,224,.43) 42%,rgba(80,90,209,.14) 64%,transparent 72%);
+  box-shadow:0 0 24px rgba(87,238,244,.82),0 0 52px rgba(77,155,234,.46);
+  animation:gmwwPortalAura 1.65s ease-in-out infinite alternate;
+}
+.gmww-portal .portal-ring{
+  position:absolute;left:50%;top:47%;border-radius:50%;border:3px solid rgba(190,253,255,.9);
+  transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(93,241,246,.9),inset 0 0 12px rgba(93,241,246,.52);
+}
+.gmww-portal .portal-ring-a{width:62px;height:88px;animation:gmwwPortalSpin 3.8s linear infinite}
+.gmww-portal .portal-ring-b{width:48px;height:72px;border-color:rgba(255,224,126,.72);animation:gmwwPortalSpinBack 3.2s linear infinite}
+.gmww-portal .portal-core{
+  position:absolute;left:50%;top:47%;width:37px;height:60px;transform:translate(-50%,-50%);
+  border-radius:50%;background:linear-gradient(180deg,rgba(242,255,255,.96),rgba(72,231,239,.68) 38%,rgba(47,108,217,.42) 72%,rgba(90,49,190,.24));
+  box-shadow:inset 0 0 18px rgba(255,255,255,.9),0 0 18px rgba(79,240,245,.8);
+}
+.gmww-portal strong,.gmww-portal small{
+  position:absolute;left:50%;width:max-content;max-width:154px;transform:translateX(-50%);
+  border-radius:999px;text-align:center;white-space:nowrap;text-shadow:0 2px 7px rgba(0,0,0,.8);
+}
+.gmww-portal strong{
+  top:88px;padding:3px 8px;background:rgba(4,43,61,.88);border:1px solid rgba(126,241,241,.45);
+  color:#efffff;font-size:8px;letter-spacing:.08em;font-weight:1000;
+}
+.gmww-portal small{
+  top:107px;padding:2px 7px;background:rgba(4,31,44,.76);color:#ffe5a0;font-size:7px;font-weight:850;
+}
+.gmww-portal.is-join{cursor:pointer}
+.gmww-portal.is-join:active{transform:translate(-50%,-72%) scale(.96)}
+.gmww-portal.is-arrival{pointer-events:none;opacity:.82;transform:translate(-50%,-58%) scale(.82)}
+.gmww-portal.is-arrival strong{top:88px}
+.gmww-portal-notice{
+  position:absolute;z-index:18;left:50%;top:calc(env(safe-area-inset-top) + 72px);transform:translateX(-50%);
+  width:max-content;max-width:min(86vw,330px);padding:8px 15px;border-radius:999px;
+  border:1px solid rgba(142,246,247,.58);
+  background:linear-gradient(180deg,rgba(7,76,94,.94),rgba(5,47,70,.94));
+  box-shadow:0 9px 26px rgba(0,28,42,.3),0 0 22px rgba(91,236,240,.22);
+  text-align:center;pointer-events:none;
+  animation:gmwwPortalNoticeIn .36s ease-out both;
+}
+.gmww-portal-notice b{display:block;color:#efffff;font-size:10px;line-height:1.05;letter-spacing:.13em}
+.gmww-portal-notice small{display:block;margin-top:3px;color:#ffe7a4;font-size:8px;font-weight:850}
+@keyframes gmwwPortalAura{to{transform:translate(-50%,-50%) scale(1.08);opacity:.86}}
+@keyframes gmwwPortalSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes gmwwPortalSpinBack{to{transform:translate(-50%,-50%) rotate(-360deg)}}
+@keyframes gmwwPortalNoticeIn{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(max-width:390px){
+  .gmww-portal{width:78px;height:98px}
+  .gmww-portal .portal-aura{width:68px;height:82px}
+  .gmww-portal .portal-ring-a{width:55px;height:78px}
+  .gmww-portal .portal-ring-b{width:43px;height:64px}
+  .gmww-portal strong{top:79px}.gmww-portal small{top:97px}
+}
+@media(prefers-reduced-motion:reduce){
+  .gmww-portal .portal-aura,.gmww-portal .portal-ring-a,.gmww-portal .portal-ring-b,.gmww-portal-notice{animation:none!important}
+}
