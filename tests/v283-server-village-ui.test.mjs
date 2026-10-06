@@ -19,8 +19,8 @@ test('V2.93 GM lobby uses websocket-first realtime with fallback polling',()=>{
 });
 
 test('V2.93 hides both top and bottom menus completely after 20 seconds and reveals both on interaction',()=>{
-  const auto=html.indexOf('id="playAutoGM"'),gm=html.indexOf('id="playRoomButton"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"'),audio=html.indexOf('id="playAudioTop"');
-  assert.ok(auto>=0&&gm>auto&&info>gm&&refresh>info&&audio>refresh);
+  const exit=html.indexOf('id="playExitVillage"'),auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),audio=html.indexOf('id="playAudioTop"'),end=html.indexOf('id="playEndGame"');
+  assert.ok(exit>=0&&auto>exit&&info>auto&&audio>info&&end>audio);
   assert.match(html,/class="gm-top-menu-v293"/);
   assert.match(html,/<footer class="play-control-bar">/);
   assert.match(html,/gm-top-auto-v293/);
@@ -52,12 +52,14 @@ test('GM player labels keep name and status fixed while only character artwork s
   assert.match(css,/play-player-avatar img\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
 
-test('bottom menu is a five-control game bar and pre-game panels are centered closable popups',()=>{
-  assert.match(css,/body\.play-immersive #start \.play-control-bar\{/);
-  assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
-  assert.match(css,/play-context-panel\.is-setup-popup\{[\s\S]*left:50%!important;[\s\S]*top:50%!important;[\s\S]*translate\(-50%,-50%\)/);
-  assert.match(app,/play-context-close/);
-  assert.match(app,/setupPopupClosed=true/);
+test('bottom menu is Back, Info, Continue and floating setup box is removed',()=>{
+  assert.match(html,/play-control-bar-three/);
+  assert.match(css,/play-control-bar-three\{grid-template-columns:/);
+  assert.match(html,/id="playBack"/);
+  assert.match(html,/id="playPrimaryAction"/);
+  assert.match(html,/id="playNext"/);
+  assert.doesNotMatch(html,/id="playContextPanel"/);
+  assert.doesNotMatch(app,/renderPlayContext\(\);const context=/);
 });
 
 test('Player Web uses the full desktop viewport while auth stays compact and mobile remains viewport-native',()=>{
