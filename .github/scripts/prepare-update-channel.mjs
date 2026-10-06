@@ -62,6 +62,11 @@ if(previousManifest?.releaseVersion===version){
   if((typeRank[previousType]??0)>(typeRank[releaseType]??0)) releaseType=previousType;
 }
 const shell=(fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8').match(/MARKETING_VERSION = ([^;]+);/)?.[1]||version).trim();
+// Build-trigger/follow-up commits can be server-only even though a new native shell
+// was just released. When the advertised version changed and the shell matches it,
+// keep the channel native so older installs are told to download the new IPA.
+const versionChanged=String(previousManifest?.releaseVersion||'')!==version;
+if(releaseType==='server_only'&&versionChanged&&shell===version) releaseType='native';
 // A newer runtime running on an older native shell must stay a runtime update even
 // when the latest commit only touches tests/server files. Otherwise an incidental
 // follow-up commit would hide the downloadable runtime package from installed apps.
