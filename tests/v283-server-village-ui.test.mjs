@@ -10,6 +10,7 @@ const server=read('src/index.js');
 const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
+const membersPage=read('src/gmww-members-page.js');
 
 test('V2.89 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
@@ -23,8 +24,8 @@ test('official GM header is Auto, GM, Info, Realtime, Audio with bottom-menu pro
   assert.match(html,/class="play-auto-spinner"/);
   assert.match(html,/class="play-top-control play-gm-top" id="playRoomButton"/);
   assert.match(html,/class="play-top-control play-audio-top" id="playAudioTop"/);
-  assert.match(css,/V2\.89 — top HUD mirrors the approved bottom game-menu proportions/);
-  assert.match(css,/grid-template-columns:52px 56px minmax\(0,1fr\) 52px 52px!important/);
+  assert.match(css,/V2\.89 AUTHORITATIVE TOP HUD — exactly 2 small \+ 1 large \+ 2 small/);
+  assert.match(css,/grid-template-columns:64px 64px minmax\(0,1fr\) 64px 64px!important/);
   assert.match(css,/play-auto-gm\.is-on \.play-auto-spinner[\s\S]*animation:gmwwAutoSpin/);
   assert.match(css,/play-refresh-server\.is-live \.play-live-dot/);
   assert.match(app,/function refreshPlayServerRealtime\(\)/);
@@ -41,11 +42,18 @@ test('GM player labels keep name and status above character, role below, all sca
 });
 
 test('bottom menu is a five-control game bar and pre-game panels are centered closable popups',()=>{
-  assert.match(css,/V2\.86 — refined lightweight game HUD/);
+  assert.match(css,/body\.play-immersive #start \.play-control-bar\{/);
   assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
   assert.match(css,/play-context-panel\.is-setup-popup\{[\s\S]*left:50%!important;[\s\S]*top:50%!important;[\s\S]*translate\(-50%,-50%\)/);
   assert.match(app,/play-context-close/);
   assert.match(app,/setupPopupClosed=true/);
+});
+
+test('Player Web uses the full desktop viewport while auth stays compact and mobile remains viewport-native',()=>{
+  assert.match(membersPage,/\.app\{width:100%;max-width:none;min-height:100dvh;margin:0/);
+  assert.doesNotMatch(membersPage,/\.app\{width:min\(430px,100%\)/);
+  assert.match(membersPage,/#login \.panel,#create \.panel,#reset \.panel\{width:min\(100%,430px\);margin-left:auto;margin-right:auto\}/);
+  assert.match(membersPage,/\.demo-toggle\{position:fixed;right:max\(12px,calc\(env\(safe-area-inset-right\) \+ 12px\)\)/);
 });
 
 test('GM sheet exposes immediate Kill and Revive and server implements revive',()=>{
