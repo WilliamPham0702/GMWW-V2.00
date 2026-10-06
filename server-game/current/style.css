@@ -1412,12 +1412,12 @@ body.play-immersive #start #gmTopMenu.gm-top-menu-v293.is-auto-hidden{
   opacity:0!important;pointer-events:none!important;
 }
 
-body.play-immersive #start #playBottomMenu.play-control-bar{
+body.play-immersive #start .play-control-bar{
   transform:translateY(0)!important;opacity:1!important;
   transition:transform .30s cubic-bezier(.22,.75,.2,1),opacity .22s ease!important;
   will-change:transform,opacity!important;
 }
-body.play-immersive #start #playBottomMenu.play-control-bar.is-auto-hidden{
+body.play-immersive #start .play-control-bar.is-auto-hidden{
   transform:translateY(calc(100% + env(safe-area-inset-bottom) + 18px))!important;
   opacity:0!important;pointer-events:none!important;
 }
@@ -1483,6 +1483,6 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 
 @media(prefers-reduced-motion:reduce){
   body.play-immersive #start #gmTopMenu.gm-top-menu-v293,
-  body.play-immersive #start #playBottomMenu.play-control-bar{transition:none!important}
+  body.play-immersive #start .play-control-bar{transition:none!important}
 }
 
