@@ -88,9 +88,11 @@ jobs:
           grep -q 'id="playSeatSheet"' "$APPDIR/Web/GMWW.html"
           grep -q "gameCharacterId" "$APPDIR/Web/app.js"
           grep -q "playUpdateRoomSettings" "$APPDIR/Web/app.js"
-          grep -q 'data-play-seat-move="instant"' "$APPDIR/Web/GMWW.html"
-          grep -q 'data-play-seat-move="walk"' "$APPDIR/Web/GMWW.html"
-          grep -q "enabled:playSceneState.roomEnabled===true,seatMoveMode:'walk'" "$APPDIR/Web/app.js"
+          grep -q 'id="playCreateRoomSeatCount"' "$APPDIR/Web/GMWW.html"
+          ! grep -q 'id="playCreateRoomCode"' "$APPDIR/Web/GMWW.html"
+          grep -q "enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant'" "$APPDIR/Web/app.js"
+          grep -q "THỦ CÔNG" "$APPDIR/Web/app.js"
+          grep -q "NGẪU NHIÊN" "$APPDIR/Web/app.js"
           grep -q "playMovementPoint" "$APPDIR/Web/app.js"
 
           # Core catalog / theme / audio / member capabilities must remain present.
