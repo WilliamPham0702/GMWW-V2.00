@@ -14,7 +14,8 @@ test('V3.03 runtime keeps offline/online room flow with GM-only seating',()=>{
   assert.match(app,/roomMode:playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
-  assert.match(html,/id="playCreateRoomName"/);\n  assert.match(html,/id="playCreateRoomSeatCount"/);
+  assert.match(html,/id="playCreateRoomName"/);
+  assert.match(html,/id="playCreateRoomSeatCount"/);
   assert.match(html,/data-play-seat-move="instant"/);
   assert.match(html,/data-play-seat-move="walk"/);
   assert.match(app,/seatMoveMode:'instant'/);
