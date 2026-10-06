@@ -1396,30 +1396,33 @@ body.play-immersive #start .play-exit-control{background:rgba(89,40,47,.78)!impo
   body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:52px!important;height:52px!important}
 }
 
-/* V2.92 TOP MENU — color-mirrored to bottom bar + 20s auto-hide */
-body.play-immersive #start #gmTopMenu.gm-top-menu-v292{
+/* V2.93 GAME CHROME — both menus fully disappear after 20s inactivity */
+body.play-immersive #start #gmTopMenu.gm-top-menu-v293{
   position:absolute!important;z-index:90!important;
   top:calc(env(safe-area-inset-top) + 10px)!important;left:10px!important;right:10px!important;
   width:auto!important;height:54px!important;min-height:54px!important;margin:0!important;padding:0!important;
   display:grid!important;grid-template-columns:52px 52px minmax(0,1fr) 52px 56px!important;gap:6px!important;
   align-items:stretch!important;box-sizing:border-box!important;background:transparent!important;border:0!important;box-shadow:none!important;
-  pointer-events:auto!important;
-  transform:translateY(0)!important;
-  transition:transform .28s cubic-bezier(.22,.75,.2,1),opacity .22s ease!important;
-  will-change:transform!important;
+  pointer-events:auto!important;transform:translateY(0)!important;opacity:1!important;
+  transition:transform .30s cubic-bezier(.22,.75,.2,1),opacity .22s ease!important;
+  will-change:transform,opacity!important;
 }
-body.play-immersive #start #gmTopMenu.gm-top-menu-v292::after{
-  content:""!important;position:absolute!important;left:50%!important;bottom:1px!important;
-  width:42px!important;height:3px!important;transform:translateX(-50%)!important;
-  border-radius:999px!important;background:rgba(255,255,255,.42)!important;
-  opacity:.22!important;pointer-events:none!important;
+body.play-immersive #start #gmTopMenu.gm-top-menu-v293.is-auto-hidden{
+  transform:translateY(calc(-100% - env(safe-area-inset-top) - 18px))!important;
+  opacity:0!important;pointer-events:none!important;
 }
-body.play-immersive #start #gmTopMenu.gm-top-menu-v292.is-auto-hidden{
-  transform:translateY(calc(-100% + 8px))!important;opacity:.96!important;
-}
-body.play-immersive #start #gmTopMenu.gm-top-menu-v292.is-auto-hidden::after{opacity:.88!important}
 
-body.play-immersive #start #gmTopMenu .gm-top-box-v292{
+body.play-immersive #start #playBottomMenu.play-control-bar{
+  transform:translateY(0)!important;opacity:1!important;
+  transition:transform .30s cubic-bezier(.22,.75,.2,1),opacity .22s ease!important;
+  will-change:transform,opacity!important;
+}
+body.play-immersive #start #playBottomMenu.play-control-bar.is-auto-hidden{
+  transform:translateY(calc(100% + env(safe-area-inset-bottom) + 18px))!important;
+  opacity:0!important;pointer-events:none!important;
+}
+
+body.play-immersive #start #gmTopMenu .gm-top-box-v293{
   appearance:none!important;-webkit-appearance:none!important;position:relative!important;
   width:100%!important;min-width:0!important;max-width:none!important;height:54px!important;min-height:54px!important;
   margin:0!important;box-sizing:border-box!important;overflow:hidden!important;
@@ -1427,64 +1430,59 @@ body.play-immersive #start #gmTopMenu .gm-top-box-v292{
   background:rgba(7,48,65,.82)!important;
   box-shadow:0 5px 14px rgba(0,20,32,.16)!important;color:#fff8df!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-auto-v292{
-  background:rgba(89,40,47,.78)!important;color:#ffe4dd!important;
-}
-body.play-immersive #start #gmTopMenu .gm-top-gm-v292,
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292{
-  background:rgba(7,48,65,.82)!important;color:#fff8df!important;
-}
-body.play-immersive #start #gmTopMenu .gm-top-info-v292{
+body.play-immersive #start #gmTopMenu .gm-top-auto-v293{background:rgba(89,40,47,.78)!important;color:#ffe4dd!important}
+body.play-immersive #start #gmTopMenu .gm-top-gm-v293,
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293{background:rgba(7,48,65,.82)!important;color:#fff8df!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-v293{
   background:linear-gradient(180deg,rgba(21,131,161,.94),rgba(8,84,116,.92))!important;
   border-color:rgba(125,231,244,.58)!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-audio-v292{
-  background:rgba(82,63,25,.78)!important;color:#fff0be!important;
-}
+body.play-immersive #start #gmTopMenu .gm-top-audio-v293{background:rgba(82,63,25,.78)!important;color:#fff0be!important}
 
-body.play-immersive #start #gmTopMenu .gm-top-small-v292{
+body.play-immersive #start #gmTopMenu .gm-top-small-v293{
   padding:4px 3px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
   gap:1px!important;text-align:center!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-info-v292{
+body.play-immersive #start #gmTopMenu .gm-top-info-v293{
   padding:5px 10px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;text-align:left!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-icon-v292{display:block!important;font-size:18px!important;line-height:19px!important;font-weight:900!important}
-body.play-immersive #start #gmTopMenu .gm-top-gm-label-v292{display:block!important;font-size:15px!important;line-height:18px!important;font-weight:1000!important;letter-spacing:.02em!important}
-body.play-immersive #start #gmTopMenu .gm-top-small-v292>small{
+body.play-immersive #start #gmTopMenu .gm-top-icon-v293{display:block!important;font-size:18px!important;line-height:19px!important;font-weight:900!important}
+body.play-immersive #start #gmTopMenu .gm-top-gm-label-v293{display:block!important;font-size:15px!important;line-height:18px!important;font-weight:1000!important;letter-spacing:.02em!important}
+body.play-immersive #start #gmTopMenu .gm-top-small-v293>small{
   display:block!important;max-width:100%!important;font-size:6px!important;line-height:7px!important;font-weight:950!important;letter-spacing:.06em!important;
   white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;opacity:.86!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-info-orb-v292{
+body.play-immersive #start #gmTopMenu .gm-top-info-orb-v293{
   flex:0 0 25px!important;width:25px!important;height:25px!important;display:grid!important;place-items:center!important;border-radius:50%!important;font-size:11px!important;
   color:#fff8ca!important;background:radial-gradient(circle at 35% 30%,#fffde2,#62e5f5 45%,#168bb6 72%)!important;box-shadow:0 0 16px rgba(255,249,189,.35)!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-info-copy-v292{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important}
-body.play-immersive #start #gmTopMenu .gm-top-info-copy-v292 small{display:block!important;font-size:6.4px!important;line-height:8px!important;font-weight:950!important;letter-spacing:.11em!important;opacity:.80!important}
-body.play-immersive #start #gmTopMenu .gm-top-info-copy-v292 b{display:block!important;min-width:0!important;font-size:10.5px!important;line-height:13px!important;font-weight:950!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293 small{display:block!important;font-size:6.4px!important;line-height:8px!important;font-weight:950!important;letter-spacing:.11em!important;opacity:.80!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293 b{display:block!important;min-width:0!important;font-size:10.5px!important;line-height:13px!important;font-weight:950!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 
-body.play-immersive #start #gmTopMenu .gm-top-auto-v292 .gm-top-icon-auto-v292{opacity:.42!important;animation:none!important}
-body.play-immersive #start #gmTopMenu .gm-top-auto-v292.is-on .gm-top-icon-auto-v292{opacity:1!important;color:#77f0df!important;text-shadow:0 0 9px rgba(87,242,221,.42)!important;animation:gmwwAutoSpin 1.45s linear infinite!important}
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292 .gm-top-live-dot-v292{
+body.play-immersive #start #gmTopMenu .gm-top-auto-v293 .gm-top-icon-auto-v293{opacity:.42!important;animation:none!important}
+body.play-immersive #start #gmTopMenu .gm-top-auto-v293.is-on .gm-top-icon-auto-v293{opacity:1!important;color:#77f0df!important;text-shadow:0 0 9px rgba(87,242,221,.42)!important;animation:gmwwAutoSpin 1.45s linear infinite!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293 .gm-top-live-dot-v293{
   position:absolute!important;right:5px!important;top:5px!important;width:6px!important;height:6px!important;border-radius:50%!important;
   background:#75848d!important;box-shadow:0 0 0 2px rgba(3,28,40,.55)!important;
 }
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292.is-live .gm-top-live-dot-v292{background:#66f1bf!important;box-shadow:0 0 0 2px rgba(3,28,40,.55),0 0 8px rgba(102,241,191,.8)!important}
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292.is-reconnecting .gm-top-live-dot-v292{background:#ffd36f!important}
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292.is-offline .gm-top-live-dot-v292{background:#ff8e8e!important}
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292.is-syncing .gm-top-icon-refresh-v292,
-body.play-immersive #start #gmTopMenu .gm-top-realtime-v292.is-reconnecting .gm-top-icon-refresh-v292{animation:gmwwServerSpin .72s linear infinite!important}
-body.play-immersive #start #gmTopMenu .gm-top-audio-v292.is-muted{opacity:.68!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293.is-live .gm-top-live-dot-v293{background:#66f1bf!important;box-shadow:0 0 0 2px rgba(3,28,40,.55),0 0 8px rgba(102,241,191,.8)!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293.is-reconnecting .gm-top-live-dot-v293{background:#ffd36f!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293.is-offline .gm-top-live-dot-v293{background:#ff8e8e!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293.is-syncing .gm-top-icon-refresh-v293,
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v293.is-reconnecting .gm-top-icon-refresh-v293{animation:gmwwServerSpin .72s linear infinite!important}
+body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!important}
 
 @media(max-width:390px){
-  body.play-immersive #start #gmTopMenu.gm-top-menu-v292{
+  body.play-immersive #start #gmTopMenu.gm-top-menu-v293{
     left:8px!important;right:8px!important;height:52px!important;min-height:52px!important;
     grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;gap:5px!important;
   }
-  body.play-immersive #start #gmTopMenu .gm-top-box-v292{height:52px!important;min-height:52px!important;border-radius:14px!important}
+  body.play-immersive #start #gmTopMenu .gm-top-box-v293{height:52px!important;min-height:52px!important;border-radius:14px!important}
 }
 
 @media(prefers-reduced-motion:reduce){
-  body.play-immersive #start #gmTopMenu.gm-top-menu-v292{transition:none!important}
+  body.play-immersive #start #gmTopMenu.gm-top-menu-v293,
+  body.play-immersive #start #playBottomMenu.play-control-bar{transition:none!important}
 }
 
