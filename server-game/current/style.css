@@ -1317,12 +1317,12 @@ body.play-immersive #start .play-player-token:not(.is-empty) .play-player-avatar
 }
 body.play-immersive #start .play-player-over{
   bottom:calc(100% + 3px)!important;
-  transform:translateX(-50%) scale(var(--gmww-character-scale,1))!important;
+  transform:translateX(-50%)!important;
   transform-origin:50% 100%!important;
 }
 body.play-immersive #start .play-player-role{
   margin-top:4px!important;
-  transform:scale(var(--gmww-character-scale,1))!important;
+  transform:none!important;
   transform-origin:50% 0!important;
 }
 body.play-immersive #start .play-player-over b{font-size:12px!important}
