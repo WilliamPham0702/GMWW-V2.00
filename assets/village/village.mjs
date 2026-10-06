@@ -144,7 +144,7 @@ if(game){
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase();
     
-    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100};setupState.characterScale=normalizeCharacterScale(setupState.characterScale);
+    all=incoming;count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));setupState=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100};setupState.characterScale=normalizeCharacterScale(setupState.characterScale);const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlinePanel=document.getElementById("onlinePanel");if(onlinePanel){onlinePanel.hidden=offline;onlinePanel.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
