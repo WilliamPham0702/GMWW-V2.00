@@ -1647,3 +1647,26 @@ body.play-immersive #start .play-audio-top>small{font-size:6.2px!important;line-
   }
   body.play-immersive #start .play-hud>.play-top-control{height:58px!important;min-height:58px!important;border-radius:16px!important}
 }
+
+
+/* V2.89 final top bar — force exact visual ratio of approved bottom bar */
+body.play-immersive #start .play-hud{
+  display:grid!important;
+  grid-template-columns:14% 14% minmax(0,44%) 14% 14%!important;
+  column-gap:0!important;
+  padding:0 10px!important;
+  box-sizing:border-box!important;
+  left:0!important;right:0!important;width:100%!important;
+}
+body.play-immersive #start .play-hud>.play-top-control{
+  width:calc(100% - 6px)!important;
+  max-width:none!important;
+  min-width:0!important;
+  justify-self:center!important;
+  box-sizing:border-box!important;
+}
+body.play-immersive #start .play-auto-gm{grid-column:1!important}
+body.play-immersive #start .play-gm-top{grid-column:2!important}
+body.play-immersive #start .play-phase-pill{grid-column:3!important;width:calc(100% - 8px)!important}
+body.play-immersive #start .play-refresh-server{grid-column:4!important}
+body.play-immersive #start .play-audio-top{grid-column:5!important}
