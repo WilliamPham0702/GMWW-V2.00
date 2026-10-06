@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.97';
+const VERSION='2.98';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -466,6 +466,7 @@ function applyV221AudioGuard(s){
   }
   return s;
 }
+const DEFAULT_ROLE_ID_SET=new Set((DEFAULT_STATE.cards||[]).map(x=>String(x.id||'')));
 let state=loadState(),prefs=loadPrefs();
 saveState();
 let currentKind='cards',currentId='role_old_witch',editDraft=null,cardFilter='all',artifactFilter='all',actionKind='role',audioKind='cards',editContext=null,lastTouchMap=new WeakMap(),defaultThumb='',objectUrls=new Map();
@@ -510,6 +511,12 @@ function builtinRoleArtwork(id,assetKind){
 async function resolveArtwork(kind,id,assetKind){
   const builtIn=kind==='cards'?builtinRoleArtwork(id,assetKind):'';
   if(builtIn)return builtIn;
+  // Built-in Vai Trò must never fall back to old persisted artwork. If the clean
+  // canonical package is missing, show the neutral placeholder instead of a stale card.
+  if(kind==='cards'&&DEFAULT_ROLE_ID_SET.has(String(id))){
+    if(assetKind==='thumb')return await ensureDefaultThumb();
+    return 'default-artwork.webp';
+  }
   const active=state.themes.activeId||'theme-sea';
   if(active!=='theme-default'){
     const local=await blobUrlFor(cardBlobKey(active,kind,id,assetKind));if(local)return local;

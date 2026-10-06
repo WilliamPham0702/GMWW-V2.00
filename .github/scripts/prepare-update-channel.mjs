@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const classifiedReleaseType=(process.argv[2]||process.env.GMWW_RELEASE_TYPE||'server_only').trim();
 const typeRank={server_only:0,runtime:1,native:2};
@@ -43,6 +44,41 @@ copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp
 copy('assets/backgrounds/gmww-village-night-v260.webp','gmww-village-night-v260.webp');
 copyDir('assets/characters/v253','game-characters');
 copyDir('assets/gm','gm');
+
+// Canonical clean role artwork (63 originals, no old delivery/thumb variants).
+// deploy-production.yml restores this source from the pinned V2.52 release archive
+// before this script runs.
+{
+  const sourceRoot=path.join('server-game','legacy-assets','v252');
+  const sourceManifest=path.join(sourceRoot,'role-artwork-v251.js');
+  const originalRoot=path.join(sourceRoot,'assets','role-artwork-v251','original');
+  if(!fs.existsSync(sourceManifest)||!fs.existsSync(originalRoot)){
+    throw new Error('Canonical clean role artwork source is missing');
+  }
+  const ctx={window:{}};vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(sourceManifest,'utf8'),ctx,{filename:'role-artwork-v251.js'});
+  const source=ctx.window.GMWW_BUILTIN_ROLE_ARTWORK||{},out={};
+  const entries=Object.entries(source);
+  if(entries.length!==63)throw new Error('Expected 63 canonical role mappings, found '+entries.length);
+  for(const [id,row] of entries){
+    const sourceFile=path.join(originalRoot,id+'.webp');
+    if(!fs.existsSync(sourceFile))throw new Error('Missing clean role artwork '+id);
+    const rel='assets/role-artwork-v251/original/'+id+'.webp';
+    copy(sourceFile,rel);
+    out[id]={...row,display:rel,delivery:rel,thumb:rel,width:3072,height:2560,deliveryWidth:3072,deliveryHeight:2560};
+  }
+  const manifestRel='role-artwork-v251.js';
+  fs.writeFileSync(path.join(outRoot,manifestRel),'window.GMWW_BUILTIN_ROLE_ARTWORK='+JSON.stringify(out)+';\n');
+  copied.push(manifestRel);
+
+  const htmlFile=path.join(outRoot,'GMWW.html');
+  let html=fs.readFileSync(htmlFile,'utf8');
+  if(!html.includes('role-artwork-v251.js')){
+    html=html.replace('<script src="app.js"></script>','<script src="role-artwork-v251.js"></script>\n<script src="app.js"></script>');
+    fs.writeFileSync(htmlFile,html);
+  }
+  if(!html.includes('role-artwork-v251.js'))throw new Error('Runtime HTML did not load canonical role artwork manifest');
+}
 
 const artwork=fs.readFileSync('server-game/shared/artwork.js','utf8');
 const m=artwork.match(/data:image\/webp;base64,([^']+)/);

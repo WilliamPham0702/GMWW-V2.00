@@ -55,6 +55,24 @@ jobs:
           export GMWW_CHANGED_FILES="$(cat /tmp/gmww-changed-files.txt)"
           TYPE=$(node .github/scripts/classify-update.mjs | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).releaseType))")
           echo "release_type=$TYPE" >> "$GITHUB_OUTPUT"
+
+          # Restore the pinned canonical source, then publish ONLY the 63 clean originals.
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="/tmp/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          CLEAN_COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            CLEAN_COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$CLEAN_COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED_SHA  $ARCHIVE" | shasum -a 256 -c -
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+
           node .github/scripts/prepare-update-channel.mjs "$TYPE"
 
       - name: Verify Cloudflare credentials
@@ -98,6 +116,9 @@ jobs:
           if(String(m.runtimeVersion||'')!==String(m.shellVersion||'')){
             if(m.releaseType!=='runtime')throw new Error('Expected runtime update when runtimeVersion differs from shellVersion');
             if(!Array.isArray(m.runtime?.files)||!m.runtime.files.some(x=>x?.path==='gm/gm-white-wolf.webp'))throw new Error('GM rider asset missing from runtime update manifest');
+            if(!m.runtime.files.some(x=>x?.path==='role-artwork-v251.js'))throw new Error('Clean role artwork manifest missing from runtime update');
+            const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
+            if(clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update, found '+clean.length);
           }
           if(m.releaseType==='native'){
             if(String(m.ipa?.version||'')!==String(m.releaseVersion||''))throw new Error('Native IPA version does not match releaseVersion');
