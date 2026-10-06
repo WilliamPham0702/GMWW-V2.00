@@ -25,7 +25,7 @@ test('Player Web renders a dedicated GM rider only while GM is online',()=>{
   assert.match(live,/avatarUrl:'\/gm\/gm-white-wolf\.webp'/);
   assert.match(live,/gmPlayer=gmVillagePlayer\(\)/);
   assert.match(village,/isGM:p\?\.isGM===true\|\|p\?\.kind==="gm"/);
-  assert.match(village,/scale=isGM\?normalScale\*1\.5:normalScale/);
+  assert.doesNotMatch(village,/normalScale\\*1\\.5/);
   assert.match(village,/if\(isGM\)return/);
   assert.match(css,/\.player\.gm/);
 });
@@ -53,5 +53,22 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(live,/gm_manual/);
   assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},1000\)/);
   assert.match(gmStyle,/\.play-player-token\.is-gm-rider/);
-  assert.match(gmStyle,/width:84px;height:111px/);
+  assert.match(gmStyle,/width:56px;height:74px/);
+});
+
+test('V2.95 keeps GM rider at normal character size and animates wolf legs',()=>{
+  assert.match(app,/const VERSION='2\.95'/);
+  assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
+  assert.match(app,/activePlayerId='gm:online'/);
+  assert.match(app,/gmSelected=activeId==='gm:online'/);
+  assert.match(gmStyle,/\.play-player-token\.is-gm-rider\{width:72px/);
+  assert.match(gmStyle,/playGmWolfLegA/);
+  assert.match(gmStyle,/playGmWolfLegB/);
+  assert.match(village,/baseW=compact\?50:62,baseH=compact\?67:82/);
+  assert.match(css,/gmwwGmWolfLegA/);
+  assert.match(css,/gmwwGmWolfLegB/);
+  const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const ipa=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
+  assert.match(prepare,/copyDir\('assets\/gm','gm'\)/);
+  assert.match(ipa,/cp assets\/gm\/gm-white-wolf\.webp/);
 });

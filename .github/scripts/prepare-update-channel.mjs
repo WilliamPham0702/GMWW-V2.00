@@ -42,6 +42,7 @@ copy('assets/village/village-layout.js','village-layout.js');
 copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp');
 copy('assets/backgrounds/gmww-village-night-v260.webp','gmww-village-night-v260.webp');
 copyDir('assets/characters/v253','game-characters');
+copyDir('assets/gm','gm');
 
 const artwork=fs.readFileSync('server-game/shared/artwork.js','utf8');
 const m=artwork.match(/data:image\/webp;base64,([^']+)/);

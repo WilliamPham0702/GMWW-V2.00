@@ -180,13 +180,21 @@ html.embedded .player .player-over .name{font-size:11px}
 }
 
 
-/* GM Online Rider — 150% visual scale, separate from player seats. */
-.player.gm{pointer-events:none!important;overflow:visible!important;min-width:110px!important}
-.player.gm .portrait.game-character{width:78px;height:82px;overflow:visible!important}
-.player.gm .portrait.game-character img{object-fit:contain!important;filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(214,238,255,.28))}
+/* GM Online Rider — same visual size as normal players; separate from player seats. */
+.player.gm{pointer-events:none!important;overflow:visible!important;min-width:72px!important}
+.player.gm .portrait.game-character{width:62px;height:82px;overflow:visible!important;position:relative}
+.player.gm .gm-wolf-sprite{position:relative;display:block;width:100%;height:100%;overflow:visible}
+.player.gm .gm-wolf-sprite img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain!important;filter:drop-shadow(0 7px 6px rgba(0,0,0,.48)) drop-shadow(0 0 7px rgba(214,238,255,.24));pointer-events:none}
+.player.gm .gm-wolf-body{clip-path:polygon(0 0,100% 0,100% 69%,0 69%)}
+.player.gm .gm-wolf-leg-a{clip-path:polygon(0 57%,56% 57%,56% 100%,0 100%);transform-origin:37% 79%}
+.player.gm .gm-wolf-leg-b{clip-path:polygon(44% 57%,100% 57%,100% 100%,44% 100%);transform-origin:68% 79%}
 .player.gm .player-over .name{background:linear-gradient(180deg,rgba(91,59,13,.96),rgba(42,29,9,.96));border:1px solid rgba(255,221,120,.78);color:#ffe9a0}
 .player.gm .player-status{background:rgba(255,231,153,.96);color:#573900}
-@keyframes gmww-gm-wolf-bob{0%,100%{margin-top:0}50%{margin-top:-3px}}
-.player.gm.moving .portrait.game-character{animation:gmww-gm-wolf-bob .52s ease-in-out infinite}
-@media(max-width:390px){.player.gm{min-width:94px!important}.player.gm .portrait.game-character{width:64px;height:67px}}
-@media(prefers-reduced-motion:reduce){.player.gm.moving .portrait.game-character{animation:none!important}}
+@keyframes gmwwGmWolfBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+@keyframes gmwwGmWolfLegA{0%,100%{transform:translate(-1px,1px) rotate(-2.5deg)}50%{transform:translate(1px,-2px) rotate(2.5deg)}}
+@keyframes gmwwGmWolfLegB{0%,100%{transform:translate(1px,-2px) rotate(2.5deg)}50%{transform:translate(-1px,1px) rotate(-2.5deg)}}
+.player.gm.moving .gm-wolf-body{animation:gmwwGmWolfBody .38s ease-in-out infinite}
+.player.gm.moving .gm-wolf-leg-a{animation:gmwwGmWolfLegA .38s steps(2,end) infinite}
+.player.gm.moving .gm-wolf-leg-b{animation:gmwwGmWolfLegB .38s steps(2,end) infinite}
+@media(max-width:390px){.player.gm{min-width:60px!important}.player.gm .portrait.game-character{width:50px;height:67px}}
+@media(prefers-reduced-motion:reduce){.player.gm.moving .gm-wolf-body,.player.gm.moving .gm-wolf-leg{animation:none!important}}

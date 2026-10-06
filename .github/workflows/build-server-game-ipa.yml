@@ -54,6 +54,8 @@ jobs:
           cp assets/village/village-layout.js "$APPDIR/Web/village-layout.js"
           mkdir -p "$APPDIR/Web/game-characters"
           cp assets/characters/v253/chibi-*.webp "$APPDIR/Web/game-characters/"
+          mkdir -p "$APPDIR/Web/gm"
+          cp assets/gm/gm-white-wolf.webp "$APPDIR/Web/gm/"
           mkdir -p "$APPDIR/Web/game-characters/walk-v263"
           cp -R assets/characters/walk-v263/character-* "$APPDIR/Web/game-characters/walk-v263/"
           mkdir -p "$APPDIR/Web/game-characters/walk-v266-left"
@@ -73,6 +75,7 @@ jobs:
           test -s "$APPDIR/Web/style.css"
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/gmww-village-coast.svg"
+          test -s "$APPDIR/Web/gm/gm-white-wolf.webp"
           test -s "$APPDIR/Web/default-artwork.webp"
 
           grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
@@ -296,6 +299,7 @@ jobs:
           test -s "$APP/Web/app.js"
           test -s "$APP/Web/style.css"
           test -s "$APP/Web/gmww-village-coast.svg"
+          test -s "$APP/Web/gm/gm-white-wolf.webp"
           test -s "$APP/Web/gmww-village-day-v260.webp"
           test -s "$APP/Web/gmww-village-night-v260.webp"
           test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -eq 42
