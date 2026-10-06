@@ -7,6 +7,7 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const live=fs.readFileSync('src/gmww-members-live.js','utf8');
 const village=fs.readFileSync('assets/village/village.mjs','utf8');
 const css=fs.readFileSync('assets/village/village.css','utf8');
+const gmStyle=fs.readFileSync('server-game/current/style.css','utf8');
 const gmAsset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 
 test('GM presence API has authenticated heartbeat and public online TTL',()=>{
@@ -51,6 +52,6 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(live,/manualUntil/);
   assert.match(live,/gm_manual/);
   assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},1000\)/);
-  assert.match(css,/\.play-player-token\.is-gm-rider/);
-  assert.match(css,/width:84px;height:111px/);
+  assert.match(gmStyle,/\.play-player-token\.is-gm-rider/);
+  assert.match(gmStyle,/width:84px;height:111px/);
 });
