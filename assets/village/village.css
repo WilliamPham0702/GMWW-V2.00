@@ -272,4 +272,12 @@ html.embedded .player .player-over .name{font-size:11px}
   .seat-empty{width:38px!important;min-width:38px!important;height:38px!important}
   .seat-empty .seat-dot{width:38px!important;height:38px!important}
 }
-.gmww-portal,.gmww-portal-notice{display:none!important}
+
+/* V3.02 Player Web rainbow mystery portal */
+.gmww-portal{display:block!important}.gmww-portal-notice{display:none!important}.gmww-portal.is-join strong,.gmww-portal.is-join small{display:none!important}
+.gmww-portal.is-join .portal-core{clip-path:none!important;width:54px!important;height:70px!important;left:50%!important;top:47%!important;border-radius:50%!important;background:radial-gradient(circle at 45% 38%,#eaffff 0 7%,#77f8ff 18%,#35d7ff 40%,#7788ff 63%,rgba(102,67,255,.3) 78%,transparent 80%)!important;box-shadow:0 0 18px #7ffcff,0 0 34px rgba(91,114,255,.82)!important;filter:none!important;animation:gmwwPortalPulse 1.8s ease-in-out infinite!important}
+.gmww-portal.is-join .portal-core::before,.gmww-portal.is-join .portal-core::after{display:none!important}
+.gmww-portal.is-join .portal-aura{width:92px!important;height:112px!important;top:47%!important;background:conic-gradient(from 0deg,#ff3b30,#ff9500,#ffd60a,#34c759,#00c7be,#0a84ff,#bf5af2,#ff2d55,#ff3b30)!important;filter:blur(8px);opacity:.72;animation:gmwwRainbowSpin 4s linear infinite!important}
+.gmww-portal.is-join .portal-ring{top:47%!important;border:4px solid transparent!important;background:linear-gradient(#061a2b,#061a2b) padding-box,conic-gradient(#ff3b30,#ff9500,#ffd60a,#34c759,#00c7be,#0a84ff,#bf5af2,#ff3b30) border-box!important;box-shadow:0 0 13px rgba(116,244,255,.85)!important}
+.gmww-portal.is-join .portal-ring-a{width:68px!important;height:94px!important;animation:gmwwPortalSpin 3.8s linear infinite!important}.gmww-portal.is-join .portal-ring-b{width:52px!important;height:78px!important;animation:gmwwPortalSpinBack 3.2s linear infinite!important}
+@keyframes gmwwRainbowSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
