@@ -23,7 +23,7 @@ test('Player Web renders a dedicated GM rider only while GM is online',()=>{
   assert.match(live,/GM_VILLAGE_MOVE_MS=8500/);
   assert.match(live,/avatarUrl:'\/gm\/gm-white-wolf\.webp'/);
   assert.match(live,/gmPlayer=gmVillagePlayer\(\)/);
-  assert.match(village,/isGM=p\?\.isGM===true\|\|p\?\.kind==="gm"/);
+  assert.match(village,/isGM:p\?\.isGM===true\|\|p\?\.kind==="gm"/);
   assert.match(village,/scale=isGM\?normalScale\*1\.5:normalScale/);
   assert.match(village,/if\(isGM\)return/);
   assert.match(css,/\.player\.gm/);

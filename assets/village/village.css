@@ -186,8 +186,6 @@ html.embedded .player .player-over .name{font-size:11px}
 .player.gm .portrait.game-character img{object-fit:contain!important;filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(214,238,255,.28))}
 .player.gm .player-over .name{background:linear-gradient(180deg,rgba(91,59,13,.96),rgba(42,29,9,.96));border:1px solid rgba(255,221,120,.78);color:#ffe9a0}
 .player.gm .player-status{background:rgba(255,231,153,.96);color:#573900}
-.player.gm[data-walk-dir="left"] .portrait.game-character img{transform:scaleX(-1) scale(var(--gmww-character-scale,1))!important}
-.player.gm[data-walk-dir="right"] .portrait.game-character img{transform:scaleX(1) scale(var(--gmww-character-scale,1))!important}
 @keyframes gmww-gm-wolf-bob{0%,100%{margin-top:0}50%{margin-top:-3px}}
 .player.gm.moving .portrait.game-character{animation:gmww-gm-wolf-bob .52s ease-in-out infinite}
 @media(max-width:390px){.player.gm{min-width:94px!important}.player.gm .portrait.game-character{width:64px;height:67px}}
