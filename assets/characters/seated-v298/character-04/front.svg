@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="350" viewBox="0 0 280 350">
+  <defs>
+    <clipPath id="upper"><rect x="18" y="0" width="205" height="252" rx="0"/></clipPath>
+    <clipPath id="leftLeg"><rect x="30" y="232" width="105" height="128"/></clipPath>
+    <clipPath id="rightLeg"><rect x="108" y="230" width="115" height="130"/></clipPath>
+  </defs>
+  <g transform="translate(11 44) rotate(62 88 252) scale(.88)" clip-path="url(#leftLeg)">
+    <image href="/characters/walk-v263/character-04/frame-01.webp" x="0" y="0" width="240" height="360" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+  <g transform="translate(74 36) rotate(-61 158 252) scale(.88)" clip-path="url(#rightLeg)">
+    <image href="/characters/walk-v263/character-04/frame-01.webp" x="0" y="0" width="240" height="360" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+  <g transform="translate(20 14) scale(1)" clip-path="url(#upper)">
+    <image href="/characters/walk-v263/character-04/frame-01.webp" x="0" y="0" width="240" height="360" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+</svg>
