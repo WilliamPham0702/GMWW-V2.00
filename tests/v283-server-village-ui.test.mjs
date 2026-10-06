@@ -59,6 +59,12 @@ test('Player Web uses the full desktop viewport while auth stays compact and mob
   assert.doesNotMatch(membersPage,/\.app\{width:min\(430px,100%\)/);
   assert.match(membersPage,/#login \.panel,#create \.panel,#reset \.panel\{width:min\(100%,430px\);margin-left:auto;margin-right:auto\}/);
   assert.match(membersPage,/\.demo-toggle\{position:fixed;right:max\(12px,calc\(env\(safe-area-inset-right\) \+ 12px\)\)/);
+  assert.match(live,/function ensureDesktopResponsiveStyle\(\)/);
+  assert.match(live,/@media \(min-width:768px\)\{#profile\.screen\.active\{[^}]*width:100vw!important;[^}]*height:100dvh!important/s);
+  assert.match(live,/#profile \.profile-main\{width:min\(92vw,1100px\)!important/);
+  assert.match(live,/#rooms\.screen\.active\{[^}]*width:100vw!important;[^}]*height:100dvh!important/s);
+  assert.match(live,/#rooms \.room-list\{grid-template-columns:repeat\(auto-fit,minmax\(320px,1fr\)\)!important/);
+  assert.match(live,/ensureDesktopResponsiveStyle\(\);\\n  return hud/);
 });
 
 test('GM sheet exposes immediate Kill and Revive and server implements revive',()=>{
