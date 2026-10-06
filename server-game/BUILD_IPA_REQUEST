@@ -9,3 +9,4 @@ Rebuild: 2026-10-06 bottom GM menu locked to 20%-60%-20% (Quay về / Thông Tin
 Rebuild: exact 3-column GM bottom menu, Quay ve 20 / Thong Tin 60 / Tiep tuc 20; override legacy CSS.
 Release V3.04 build 304: exact GM bottom menu 20/60/20 and latest source.
 V3.04 rebuild: restore THONG TIN center button to current create-game/setup flow; keep bottom 20/60/20.
+Release V3.05 build 305: versioned delivery; publish IPA for in-game Settings update channel.
