@@ -1,5 +1,5 @@
-GMWW V2.96 official build
+GMWW V3.01 official build
 Requested: 2026-10-06
-Revision: v296-gm-control-wolf-run
+Revision: v301-gm-authoritative-seating
 Source: main
-Reason: publish the exact GMWW-V2.96.ipa with the controllable GM rider, same-size GM presentation, and visible wolf running/leaping animation; replace the stale V2.94/V2.95 IPA download target.
+Reason: one centered Create Room page; no visible room code; seat count; Reset/Online-Offline/Delete/On-Off; remove Mystery Portal; GM-only Manual/Random seating; circular plus markers; Player Ready/Leave Seat; assigned players use seated pose.
