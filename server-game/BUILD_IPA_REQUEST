@@ -1,5 +1,7 @@
 GMWW V2.90 official build
 Requested: 2026-10-06
-Revision: v290-final-five-box-menu
+Revision: v290-final-five-box-menu-retry-1
 Source: main
 Reason: force a new native build so iOS cannot reuse the earlier V2.89 package/cache. Top HUD is locked to the exact approved bottom-menu geometry in the order Auto / GM / Information / Realtime / Audio. CSS and JS use V2.90 cache-busting URLs.
+
+Retry: package clean 63-role artwork with versioned CSS and standard app.js script hook.
