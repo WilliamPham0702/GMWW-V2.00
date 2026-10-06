@@ -142,7 +142,7 @@ export class RoomDurableObject extends DurableObject {
     const bin=atob(m[2]);return new Response(Uint8Array.from(bin,c=>c.charCodeAt(0)),{headers:{"content-type":m[1],"cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   async validMemberAvatar(id){
-    id=String(id||"").trim();if(GMWW_MEMBER_AVATAR_IDS.has(id))return true;
+    id=String(id||"").trim();if(normalizeGameCharacterId(id))return true;if(GMWW_MEMBER_AVATAR_IDS.has(id))return true;
     if(!/^[A-Za-z0-9._-]{3,120}$/.test(id))return false;
     return !!(await this.ctx.storage.get("customAvatar:"+id));
   }
@@ -182,7 +182,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminCreate(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||"avatar-cut-001"),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId);
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId||body?.avatarId),avatarId=gameCharacterId||String(body?.avatarId||"avatar-cut-001");
     if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
@@ -195,7 +195,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberAdminEdit(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
-    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),avatarId=String(body?.avatarId||""),requestedCharacter=normalizeGameCharacterId(body?.gameCharacterId),member=await this.ctx.storage.get("member:"+loginId);
+    const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),requestedCharacter=normalizeGameCharacterId(body?.gameCharacterId||body?.avatarId),member=await this.ctx.storage.get("member:"+loginId),avatarId=requestedCharacter||String(body?.avatarId||member?.avatarId||"");
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy Thành Viên."},404);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
     if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR",message:"Avatar không hợp lệ."},400);
@@ -1037,7 +1037,7 @@ export default {async fetch(request,env){
     return memberStore(env).fetch(new Request("https://member.internal/avatars/upsert",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));
   }
   const avatar=url.pathname.match(/^\/api\/avatars\/([^/]+)\/image$/);if(avatar&&request.method==="GET"){
-    const id=decodeURIComponent(avatar[1]);if(GMWW_MEMBER_AVATAR_IDS.has(id))return avatarImage(id);
+    const id=decodeURIComponent(avatar[1]);if(normalizeGameCharacterId(id))return gameCharacterImage(env,id,request);if(GMWW_MEMBER_AVATAR_IDS.has(id))return avatarImage(id);
     return memberStore(env).fetch("https://member.internal/avatars/image/"+encodeURIComponent(id));
   }
   if(url.pathname==="/api/members/register"&&request.method==="POST"){const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON",message:"Dữ liệu tạo thành viên không hợp lệ."},400);return memberStore(env).fetch("https://member.internal/members/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});}
@@ -1232,12 +1232,12 @@ function clearPlayerMovement(p,{keepPosition=false}={}){if(!p)return p;if(!keepP
 function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
 function normalizeSeatId(v,seatCount){const n=Math.trunc(Number(v));return Number.isFinite(n)&&n>=1&&n<=normalizeSeatCount(seatCount)?n:null}
 function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:""}
-function activeGameCharacterId(v,seed=""){const id=normalizeGameCharacterId(v);if(id){const n=Number(id.slice(-2));return"character-"+String(((n-1)%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}const text=String(seed||"");let h=0;for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))>>>0;return"character-"+String((h%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}
+function activeGameCharacterId(v,seed=""){const id=normalizeGameCharacterId(v);if(id)return id;const text=String(seed||"");let h=0;for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))>>>0;return"character-"+String((h%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}
 const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200];
 function normalizeCharacterScale(v,fallback=100){const n=Number(v);if(!Number.isFinite(n))return fallback;return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALE_OPTIONS[0])}
 function disableMemberPassword(m){if(!m||typeof m!=="object")return m;delete m.passwordSalt;delete m.passwordHash;delete m.passwordAlgorithm;delete m.passwordIterations;delete m.resetRequestedAt;delete m.passwordResetAt;m.passwordConfigured=false;m.passwordRequired=false;return m}
 function gameCharacterCatalog(){return Array.from({length:GAME_CHARACTER_COUNT},(_,i)=>{const n=String(i+1).padStart(2,"0"),id="character-"+n;return{id,name:"Nhân vật "+n,frameCount:6,imageUrl:"/api/game-characters/"+id+"/frame/1",frameUrl:"/api/game-characters/"+id+"/frame/{frame}"}})}
-async function gameCharacterFrame(env,id,frame,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));if(!m)return new Response("Not found",{status:404});const source=String(((Number(m[1])-1)%GAME_CHARACTER_COUNT)+1).padStart(2,"0");if(env.ASSETS){try{const u=new URL(request.url),left=u.searchParams.get("dir")==="left";u.pathname=(left?"/characters/walk-v266-left/":"/characters/walk-v263/")+"character-"+source+"/frame-"+String(f).padStart(2,"0")+".webp";u.search="";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Walk frame not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+async function gameCharacterFrame(env,id,frame,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));if(!m)return new Response("Not found",{status:404});const number=Number(m[1]);if(number>GAME_CHARACTER_COUNT){if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";u.search="";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Chibi frame not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}const source=m[1];if(env.ASSETS){try{const u=new URL(request.url),left=u.searchParams.get("dir")==="left";u.pathname=(left?"/characters/walk-v266-left/":"/characters/walk-v263/")+"character-"+source+"/frame-"+String(f).padStart(2,"0")+".webp";u.search="";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Walk frame not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
 async function gameCharacterImage(env,id,request){const m=String(id||"").match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/);if(!m)return new Response("Not found",{status:404});if(Number(m[1])<=20)return gameCharacterFrame(env,id,1,request);if(env.ASSETS){try{const u=new URL(request.url);u.pathname="/characters/v253/chibi-"+m[1]+".webp";const a=await env.ASSETS.fetch(new Request(u.toString(),request));if(a.ok)return new Response(a.body,{status:200,headers:{"content-type":"image/webp","cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}catch{}}return new Response("Chibi not found",{status:404,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
 function firstFreeSeat(players,seatCount,excludeId=""){const used=new Set(Object.entries(players||{}).filter(([id])=>id!==excludeId).map(([,p])=>Number(p?.seatId||0)).filter(n=>n>=1));for(let n=1;n<=normalizeSeatCount(seatCount);n++)if(!used.has(n))return n;return null}
 function enforceUniqueSeatClaims(players,seatCount){const claimed=new Set();for(const p of Object.values(players||{})){const seatId=normalizeSeatId(p?.seatId,seatCount);if(!seatId||claimed.has(seatId)){if(p){p.seatId=null;p.ready=false}continue}claimed.add(seatId);p.seatId=seatId}return players}

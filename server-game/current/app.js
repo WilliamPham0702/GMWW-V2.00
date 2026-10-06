@@ -1038,7 +1038,7 @@ const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clear
 const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
 
 /* V2.29 — V1 Member management + Ranking + History */
-const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:''};
+const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:'',characterPreviewTimer:null};
 
 function gmHeaders(extra={}){return {...extra,Authorization:'Bearer '+GMWW_GM_AUTH}}
 async function gmApi(path,opts={}){
@@ -1052,48 +1052,49 @@ async function gmApi(path,opts={}){
     return data;
   }finally{clearTimeout(timer)}
 }
-async function listStoredArtworkAvatars(){
-  const db=await openDb();
-  try{
-    const rows=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly'),q=tx.objectStore(DB_STORE).getAll();q.onsuccess=()=>resolve(Array.isArray(q.result)?q.result:[]);q.onerror=()=>reject(q.error)});
-    const picked=new Map();
-    for(const rec of rows){
-      const m=String(rec?.key||'').match(/^v225\|([^|]+)\|(cards|artifacts)\|([^|]+)\|(thumb|display)$/);
-      if(!m||!(rec?.blob instanceof Blob))continue;
-      const identity=m[1]+'|'+m[2]+'|'+m[3],current=picked.get(identity);
-      if(!current||m[4]==='thumb')picked.set(identity,{themeId:m[1],kind:m[2],entityId:m[3],assetKind:m[4],key:rec.key,blob:rec.blob,updatedAt:Number(rec.updatedAt)||0});
-    }
-    return [...picked.values()];
-  }finally{db.close()}
+const MEMBER_CHARACTER_COUNT=42;
+const MEMBER_ANIMATED_CHARACTER_COUNT=20;
+function memberCharacterCatalog(serverRows=[]){
+  const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
+  return Array.from({length:MEMBER_CHARACTER_COUNT},(_,i)=>{
+    const n=String(i+1).padStart(2,'0'),id='character-'+n,remote=source.get(id)||{};
+    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
+  });
 }
-async function syncArtworkAvatars(){
-  const serverCatalog=new Map(memberAdminState.avatars.map(a=>[String(a.id),a])),catalog=new Map(serverCatalog);
-  const stored=await listStoredArtworkAvatars().catch(()=>[]);
-  for(const item of stored){
-    const theme=themeById(item.themeId),entity=entityById(item.kind,item.entityId);
-    const identity=item.themeId+'|'+item.kind+'|'+item.entityId;
-    let hash=2166136261;for(const ch of identity){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
-    const id='artwork-'+(hash>>>0).toString(16),digest=String(item.updatedAt||0)+'-'+item.blob.size;
-    const imageUrl=await blobUrlFor(item.key);if(!imageUrl)continue;
-    const priority=item.themeId===state.themes.activeId?1200:1100;
-    const local={id,name:(entity?.name||item.entityId)+' • '+(theme?.name||item.themeId),imageUrl,source:item.kind,priority,digest};
-    const previous=serverCatalog.get(id);
-    if(previous?.digest===digest){catalog.set(id,{...previous,imageUrl,priority,digest});continue}
-    try{
-      const img=await imageToThumb(imageUrl);
-      if(!img.startsWith('data:image/')||img.length>110000)throw new Error('Không tạo được thumbnail Avatar hợp lệ');
-      await gmApi('/api/gm/avatars/upsert',{method:'POST',body:JSON.stringify({id,name:local.name,img,digest,priority,source:item.kind})});
-      catalog.set(id,local);
-    }catch(err){
-      console.warn('Không đồng bộ Avatar '+local.name,err.message);
-      if(previous)catalog.set(id,previous);else catalog.delete(id);
-    }
-  }
-  memberAdminState.avatars=[...catalog.values()].sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
+function memberCharacterFrameUrl(id,frame=1){
+  const raw=String(id||''),m=raw.match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));
+  if(!m)return memberAvatarUrl(raw);
+  return Number(m[1])<=MEMBER_ANIMATED_CHARACTER_COUNT
+    ?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/frame/'+f
+    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image';
+}
+function memberSelectedCharacterId(m){
+  const direct=String(m?.gameCharacterId||m?.avatarId||'');
+  if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(direct))return direct;
+  const legacy=String(m?.avatarId||'').match(/^avatar-cut-(\d{3})$/i),n=legacy?Number(legacy[1]):0;
+  if(n>=1&&n<=MEMBER_CHARACTER_COUNT)return 'character-'+String(n).padStart(2,'0');
+  return memberAdminState.avatars[0]?.id||'character-01';
+}
+function ensureMemberCharacterPreviewStyle(){
+  if(document.getElementById('gmwwMemberCharacterPreviewStyle'))return;
+  const st=document.createElement('style');st.id='gmwwMemberCharacterPreviewStyle';
+  st.textContent='@keyframes gmwwMemberCharacterFloat{from{transform:translateY(1px)}to{transform:translateY(-3px)}}#memberAvatarGrid .member-avatar-choice img{object-fit:contain!important}#memberAvatarGrid .member-avatar-choice img.member-character-static{animation:gmwwMemberCharacterFloat .7s ease-in-out infinite alternate}';
+  document.head.appendChild(st);
+}
+function ensureMemberCharacterPreviewTicker(){
+  if(memberAdminState.characterPreviewTimer)return;
+  memberAdminState.characterPreviewTimer=setInterval(()=>{
+    const frame=(Math.floor(performance.now()/120)%6)+1;
+    document.querySelectorAll('#memberAvatarGrid img[data-member-character]').forEach(img=>{
+      const id=String(img.dataset.memberCharacter||'');if(!id)return;
+      const key=id+':'+frame;if(img.dataset.memberFrame===key)return;
+      img.dataset.memberFrame=key;img.src=memberCharacterFrameUrl(id,frame);
+    });
+  },95);
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
-function memberAvatarUrl(id){return GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(String(id||''))+'/image'}
+function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image'}
 function memberDate(v,withTime=false){
   if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
   return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -1110,13 +1111,12 @@ async function loadMembers(force=false){
   setMemberBusy(true);
   const list=document.getElementById('memberDirectoryList');if(list)list.innerHTML='<div class="member-empty">Đang đồng bộ Thành Viên…</div>';
   try{
-    const [dir,avatars]=await Promise.all([
+    const [dir,characters]=await Promise.all([
       gmApi('/api/gm/members'),
-      fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({avatars:memberAdminState.avatars}))
+      fetch(GMWW_SERVER_BASE+'/api/game-characters?gm='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():({characters:[]})).catch(()=>({characters:[]}))
     ]);
     memberAdminState.members=Array.isArray(dir?.members)?dir.members:[];
-    if(Array.isArray(avatars?.avatars)&&avatars.avatars.length)memberAdminState.avatars=avatars.avatars.map(a=>{const u=String(a?.imageUrl||'');return {...a,imageUrl:u.startsWith('/')?GMWW_SERVER_BASE+u:u}});
-    await syncArtworkAvatars();
+    memberAdminState.avatars=memberCharacterCatalog(characters?.characters);
     memberAdminState.loaded=true;
     renderMembersAll();
   }catch(err){
@@ -1150,7 +1150,7 @@ function renderMemberDirectory(){
       '<div class="member-flags"></div></div>'+
       '<div class="member-card-actions">'+
       '<button data-act="reset" type="button">Reset MK</button><button data-act="delete" class="danger-mini" type="button">Xoá</button></div>';
-    const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
     card.querySelector('.member-card-main small').textContent='@'+m.loginId;
     const status=card.querySelector('.member-status');status.textContent=m.online?'ONLINE':'OFFLINE';status.classList.toggle('online',!!m.online);
@@ -1180,7 +1180,7 @@ function renderMemberRanking(){
     const s=memberStats(m),row=document.createElement('article');row.className='ranking-row'+(i<3?' podium':'');
     row.innerHTML='<div class="rank-no"></div><img class="rank-avatar" alt=""><div class="rank-main"><b></b><small></small></div><div class="rank-stats"><b>'+s.w+'</b><small>Thắng</small></div><div class="rank-stats"><b>'+s.rate+'%</b><small>Tỷ lệ</small></div><div class="rank-stats"><b>'+s.games+'</b><small>Ván</small></div>';
     row.querySelector('.rank-no').textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
-    const img=row.querySelector('.rank-avatar');img.src=memberAvatarUrl(m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    const img=row.querySelector('.rank-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     row.querySelector('.rank-main b').textContent=m.displayName||m.loginId;
     row.querySelector('.rank-main small').textContent=s.l+' Thua'+(m.online?' • Online':'');
     box.appendChild(row);
@@ -1189,7 +1189,7 @@ function renderMemberRanking(){
 function allHistoryRows(){
   const out=[];
   for(const m of memberAdminState.members){
-    for(const h of (Array.isArray(m.history)?m.history:[]))out.push({...h,loginId:m.loginId,displayName:m.displayName||m.loginId,avatarId:m.avatarId});
+    for(const h of (Array.isArray(m.history)?m.history:[]))out.push({...h,loginId:m.loginId,displayName:m.displayName||m.loginId,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId});
   }
   return out.sort((a,b)=>(Date.parse(b.playedAt||0)||0)-(Date.parse(a.playedAt||0)||0));
 }
@@ -1209,7 +1209,7 @@ function renderMemberHistory(){
     const row=document.createElement('article');row.className='history-row';
     const win=h.result==='win';
     row.innerHTML='<img class="history-avatar" alt=""><div class="history-main"><div class="history-title"><b></b><span class="history-result '+(win?'win':'lose')+'">'+(win?'THẮNG':'THUA')+'</span></div><small class="history-sub"></small><small class="history-detail"></small></div><time></time>';
-    const img=row.querySelector('.history-avatar');img.src=memberAvatarUrl(h.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    const img=row.querySelector('.history-avatar');img.src=memberAvatarUrl(h.gameCharacterId||h.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     row.querySelector('.history-title b').textContent=h.displayName||h.loginId;
     row.querySelector('.history-sub').textContent=[h.roomName||h.gameName||'Ván GMWW',h.roleName||'',h.faction||''].filter(Boolean).join(' • ');
     row.querySelector('.history-detail').textContent=[h.winnerFaction?('Thắng: '+h.winnerFaction):'',h.roomCode?('Phòng '+h.roomCode):''].filter(Boolean).join(' • ');
@@ -1224,7 +1224,9 @@ function switchMemberTab(tab){
   if(tab==='history')renderMemberHistory();if(tab==='ranking')renderMemberRanking();
 }
 function openMemberSheet(mode,m=null){
-  memberAdminState.sheetMode=mode;memberAdminState.sheetMember=m;memberAdminState.selectedAvatarId=m?.avatarId||memberAdminState.avatars[0]?.id||'';
+  memberAdminState.sheetMode=mode;memberAdminState.sheetMember=m;
+  if(!memberAdminState.avatars.length)memberAdminState.avatars=memberCharacterCatalog();
+  memberAdminState.selectedAvatarId=memberSelectedCharacterId(m);
   const sheet=document.getElementById('memberSheet'),title=document.getElementById('memberSheetTitle'),body=document.getElementById('memberSheetBody'),save=document.getElementById('memberSheetSave');
   if(!sheet||!body)return;
   {
@@ -1234,53 +1236,63 @@ function openMemberSheet(mode,m=null){
       '<label>Tên đăng nhập<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Vui lòng nhập tên đăng nhập" autocomplete="username"></label>'+
       '<label>Tên Hiển Thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Bạn mong muốn người chơi khác thấy tên gì?" autocomplete="name"></label>'+
       (editing?'':'<div class="member-password-optional"><button class="member-password-toggle" id="memberPasswordToggle" type="button" aria-expanded="false">＋ Đặt mật khẩu cho tài khoản nếu muốn</button><label class="hidden" id="memberPasswordWrap">Mật khẩu<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label></div>')+
-      '<div class="member-avatar-picker"><div class="member-form-label">Avatar</div><div class="member-avatar-library-head"><b>🖼 Kho Avatar</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Artwork</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ 42 Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
     renderMemberAvatarPicker();
     if(!editing){const toggle=document.getElementById('memberPasswordToggle'),wrap=document.getElementById('memberPasswordWrap');if(toggle&&wrap)toggle.onclick=()=>{const open=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!open);toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';if(open)setTimeout(()=>document.getElementById('memberPassword')?.focus(),30)}}
     document.getElementById('memberDisplayName')?.addEventListener('blur',e=>{e.target.value=memberTitleCase(e.target.value)});
     document.getElementById('memberAvatarRefresh').onclick=async()=>{
       const btn=document.getElementById('memberAvatarRefresh');btn.disabled=true;btn.textContent='Đang đồng bộ…';
-      try{await refreshAvatarLibrary();renderMemberAvatarPicker()}catch(e){alert('Không cập nhật được Kho Avatar: '+e.message)}
-      finally{btn.disabled=false;btn.textContent='↻ Đồng bộ Artwork'}
+      try{await refreshAvatarLibrary();renderMemberAvatarPicker()}catch(e){alert('Không cập nhật được Bộ Nhân Vật: '+e.message)}
+      finally{btn.disabled=false;btn.textContent='↻ Đồng bộ Nhân vật'}
     };
     save.textContent=editing?'LƯU THAY ĐỔI':'TẠO THÀNH VIÊN';
   }
   sheet.classList.remove('hidden');
-  refreshAvatarLibrary().then(()=>renderMemberAvatarPicker()).catch(err=>console.warn('Kho Avatar:',err.message));
+  refreshAvatarLibrary().then(()=>{memberAdminState.selectedAvatarId=memberSelectedCharacterId(m);renderMemberAvatarPicker()}).catch(err=>console.warn('Bộ Nhân Vật:',err.message));
 }
 async function refreshAvatarLibrary(){
-  const response=await fetch(GMWW_SERVER_BASE+'/api/avatars?gm='+Date.now(),{cache:'no-store'});
-  if(!response.ok)throw new Error('Không tải được Kho Avatar từ server');
+  const response=await fetch(GMWW_SERVER_BASE+'/api/game-characters?gm='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('Không tải được Bộ Nhân Vật từ server');
   const data=await response.json();
-  if(Array.isArray(data.avatars))memberAdminState.avatars=data.avatars.map(a=>{const u=String(a.imageUrl||'');return {...a,imageUrl:u.startsWith('/')?GMWW_SERVER_BASE+u:u}});
-  await syncArtworkAvatars();
-  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=memberAdminState.avatars.length+' ảnh';
+  memberAdminState.avatars=memberCharacterCatalog(data?.characters);
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=MEMBER_CHARACTER_COUNT+' nhân vật';
 }
 function renderMemberAvatarPicker(){
   const box=document.getElementById('memberAvatarGrid');if(!box)return;box.innerHTML='';
-  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=memberAdminState.avatars.length+' ảnh';
+  ensureMemberCharacterPreviewStyle();
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=MEMBER_CHARACTER_COUNT+' nhân vật';
   for(const a of memberAdminState.avatars){
     const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
-    b.innerHTML='<img alt=""><small></small>';const img=b.querySelector('img');img.src=String(a.imageUrl||memberAvatarUrl(a.id));img.onerror=()=>{img.src=memberAvatarUrl(a.id);img.onerror=()=>{img.alt='Ảnh chưa tải được';img.style.opacity='.35'}};b.querySelector('small').textContent=a.name||a.id;
+    b.innerHTML='<img alt=""><small></small>';
+    const img=b.querySelector('img'),num=Number(String(a.id).slice(-2));
+    img.alt=a.name||a.id;img.src=memberCharacterFrameUrl(a.id,1);
+    if(num<=MEMBER_ANIMATED_CHARACTER_COUNT)img.dataset.memberCharacter=a.id;else img.classList.add('member-character-static');
+    img.onerror=()=>{img.onerror=null;img.src=memberAvatarUrl(a.id)};
+    b.querySelector('small').textContent=a.name||a.id;
     b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
   }
-  if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Kho Avatar.</div>';
+  if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Bộ Nhân Vật.</div>';
+  ensureMemberCharacterPreviewTicker();
 }
-function closeMemberSheet(){const s=document.getElementById('memberSheet');if(s)s.classList.add('hidden');memberAdminState.sheetMode='';memberAdminState.sheetMember=null}
+function closeMemberSheet(){
+  const s=document.getElementById('memberSheet');if(s)s.classList.add('hidden');
+  if(memberAdminState.characterPreviewTimer){clearInterval(memberAdminState.characterPreviewTimer);memberAdminState.characterPreviewTimer=null}
+  memberAdminState.sheetMode='';memberAdminState.sheetMember=null;
+}
 async function saveMemberSheet(){
   const btn=document.getElementById('memberSheetSave');if(btn?.disabled)return;
   const mode=memberAdminState.sheetMode,m=memberAdminState.sheetMember;
   try{
     if(btn){btn.disabled=true;btn.classList.add('is-busy')}
     {
-      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=memberTitleCase(document.getElementById('memberDisplayName')?.value||''),avatarId=memberAdminState.selectedAvatarId;
+      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=memberTitleCase(document.getElementById('memberDisplayName')?.value||''),gameCharacterId=memberAdminState.selectedAvatarId,avatarId=gameCharacterId;
       if(displayName.length<2)throw new Error('Tên Hiển Thị phải có ít nhất 2 ký tự.');
-      if(!avatarId)throw new Error('Vui lòng chọn Avatar.');
+      if(!gameCharacterId)throw new Error('Vui lòng chọn Nhân Vật.');
       if(mode==='edit'){
-        await gmApi('/api/gm/members/edit',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId})});
+        await gmApi('/api/gm/members/edit',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,gameCharacterId})});
       }else{
         const password=document.getElementById('memberPassword')?.value||'';if(password&&password.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
-        await gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,password})});
+        await gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,gameCharacterId,password})});
       }
     }
     closeMemberSheet();memberAdminState.loaded=false;await loadMembers(true);
@@ -1438,9 +1450,9 @@ async function refreshPlayServerRealtime(){
 }
 function playSeatPositions(count){return globalThis.GMWW_VILLAGE_LAYOUT.positions(count).map(p=>[p.x,p.y])}
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
-function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||''),n=Number(id.slice(-2));return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)&&Number.isFinite(n)?'character-'+String(((n-1)%20)+1).padStart(2,'0'):'character-01'}
+function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:'character-01'}
 function playWalkDirection(member){const dx=Number(member?.moveToX)-Number(member?.moveFromX);return Number.isFinite(dx)&&dx<-.01?'left':'right'}
-function playCharacterFrameUrl(gameCharacterId,frame=1,direction='right'){const id=playActiveCharacterId(gameCharacterId),f=Math.max(1,Math.min(6,Number(frame)||1)),folder=direction==='left'?'walk-v266-left':'walk-v263';return 'game-characters/'+folder+'/'+id+'/frame-'+String(f).padStart(2,'0')+'.webp'}
+function playCharacterFrameUrl(gameCharacterId,frame=1,direction='right'){const id=playActiveCharacterId(gameCharacterId),n=Number(id.slice(-2)),f=Math.max(1,Math.min(6,Number(frame)||1));if(n>20)return GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image';const folder=direction==='left'?'walk-v266-left':'walk-v263';return 'game-characters/'+folder+'/'+id+'/frame-'+String(f).padStart(2,'0')+'.webp'}
 function playCharacterUrl(gameCharacterId){return playCharacterFrameUrl(gameCharacterId,1,'right')}
 const PLAY_SEATED_CHARACTER01_URL="data:image/webp;base64,"+["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"].join("");
 const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARACTER01_URL,'character-02':GMWW_SERVER_BASE+'/characters/seated-v296/character-02/front.webp','character-03':GMWW_SERVER_BASE+'/characters/seated-v297/character-03/front.webp' ,'character-04':GMWW_SERVER_BASE+'/characters/seated-v299/character-04/front.svg'});
@@ -2101,7 +2113,7 @@ async function openPlayRosterSheet(){
     const b=document.createElement('button');b.type='button';b.className='play-roster-row'+(selected.has(String(m.loginId))?' selected':'');b.dataset.loginId=String(m.loginId);
     const initial=(String(m.displayName||m.loginId||'?').trim().charAt(0)||'?').toUpperCase();
     b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b><small>'+playEsc(m.loginId)+' • '+(m.gameCharacterId?'Nhân vật cố định':'Chưa chọn nhân vật')+' • '+(m.online?'Online':'Offline')+'</small></div><span class="play-roster-check">✓</span>';
-    const img=b.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);img.src=characterSrc||memberAvatarUrl(m.avatarId);img.onerror=()=>{if(characterSrc&&img.src!==memberAvatarUrl(m.avatarId)){img.src=memberAvatarUrl(m.avatarId);return}const s=document.createElement('span');s.className='play-roster-avatar-fallback';s.textContent=initial;img.replaceWith(s)};
+    const img=b.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);img.src=characterSrc||memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{if(characterSrc&&img.src!==memberAvatarUrl(m.gameCharacterId||m.avatarId)){img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);return}const s=document.createElement('span');s.className='play-roster-avatar-fallback';s.textContent=initial;img.replaceWith(s)};
     b.onclick=()=>{b.classList.toggle('selected');updatePlayRosterCount()};list.appendChild(b);
   }
   if(!rows.length)list.innerHTML='<div class="member-empty">Chưa có Thành Viên trong danh bạ.</div>';
