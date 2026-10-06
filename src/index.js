@@ -927,7 +927,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
-      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="";
+      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION);
       const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
       if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
       const manifest=await res.json();
