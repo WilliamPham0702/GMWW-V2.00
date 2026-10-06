@@ -49,10 +49,10 @@ test('server exposes authenticated movement, arrival and optional seat mode',()=
   assert.match(server,/villageLayout\.clampPoint/);
 });
 
-test('Player Web supports free roaming, walk-to-seat, reconnect completion and direct-seat fallback',()=>{
+test('Player Web supports free roaming while seat assignment is GM-only',()=>{
   assert.match(live,/gmww:ground-click/);
   assert.match(live,/startFreeWalk/);
-  assert.match(live,/startSeatWalk/);
+  assert.match(live,/releaseMySeat/);
   assert.match(live,/scheduleMovementCompletion/);
   assert.match(live,/move\/complete/);
   assert.match(live,/seatMoveMode\|\|'instant'/);
@@ -72,7 +72,7 @@ test('village animates chibi and reports arrival to parent',()=>{
   assert.match(village,/movementPosition/);
   assert.match(village,/requestAnimationFrame\(animateMovementFrame\)/);
   assert.match(village,/gmww:move-arrived/);
-  assert.match(village,/gmww:seat-click/);
+  assert.doesNotMatch(village,/gmww:seat-click/);
   assert.match(village,/gmww:ground-click/);
   assert.match(village,/moveTargetSeatId/);
   assert.match(village,/layout\.clampPoint/);
