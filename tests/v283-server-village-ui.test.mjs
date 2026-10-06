@@ -22,7 +22,7 @@ test('V2.93 hides both top and bottom menus completely after 20 seconds and reve
   const exit=html.indexOf('id="playExitVillage"'),auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),audio=html.indexOf('id="playAudioTop"'),end=html.indexOf('id="playEndGame"');
   assert.ok(exit>=0&&auto>exit&&info>auto&&audio>info&&end>audio);
   assert.match(html,/class="gm-top-menu-v293"/);
-  assert.match(html,/<footer class="play-control-bar">/);
+  assert.match(html,/<footer class="play-control-bar play-control-bar-three">/);
   assert.match(html,/gm-top-auto-v293/);
   assert.match(html,/gm-top-gm-v293/);
   assert.match(html,/gm-top-info-v293/);
