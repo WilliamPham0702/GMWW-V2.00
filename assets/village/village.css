@@ -281,3 +281,15 @@ html.embedded .player .player-over .name{font-size:11px}
 .gmww-portal.is-join .portal-ring{top:47%!important;border:4px solid transparent!important;background:linear-gradient(#061a2b,#061a2b) padding-box,conic-gradient(#ff3b30,#ff9500,#ffd60a,#34c759,#00c7be,#0a84ff,#bf5af2,#ff3b30) border-box!important;box-shadow:0 0 13px rgba(116,244,255,.85)!important}
 .gmww-portal.is-join .portal-ring-a{width:68px!important;height:94px!important;animation:gmwwPortalSpin 3.8s linear infinite!important}.gmww-portal.is-join .portal-ring-b{width:52px!important;height:78px!important;animation:gmwwPortalSpinBack 3.2s linear infinite!important}
 @keyframes gmwwRainbowSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+
+/* V3.06 — GM white wolf must visibly animate: stride/dash + independent head shake/howl */
+@keyframes gmWolfV306StrideFront{0%,100%{transform:translate(-5px,1px) rotate(-18deg) scaleY(1.62)}25%{transform:translate(5px,-5px) rotate(14deg) scaleY(1.12)}50%{transform:translate(12px,-8px) rotate(25deg) scaleY(.94)}75%{transform:translate(5px,2px) rotate(4deg) scaleY(1.52)}}
+@keyframes gmWolfV306StrideRear{0%,100%{transform:translate(9px,-5px) rotate(18deg) scaleY(1.02)}25%{transform:translate(3px,2px) rotate(4deg) scaleY(1.48)}50%{transform:translate(-7px,3px) rotate(-22deg) scaleY(1.66)}75%{transform:translate(-2px,-4px) rotate(-7deg) scaleY(1.12)}}
+@keyframes gmWolfV306Dash{0%,100%{transform:translateX(0) translateY(1px)}16%{transform:translateX(3px) translateY(-2px)}38%{transform:translateX(13px) translateY(-9px)}55%{transform:translateX(18px) translateY(-5px)}74%{transform:translateX(8px) translateY(1px)}}
+@keyframes gmWolfV306Head{0%,55%,100%{transform:translate(0,0) rotate(0)}60%{transform:translate(2px,0) rotate(7deg)}64%{transform:translate(-2px,0) rotate(-7deg)}68%{transform:translate(2px,0) rotate(5deg)}72%{transform:translate(0,0) rotate(0)}82%{transform:translate(1px,-2px) rotate(-9deg)}87%{transform:translate(2px,-7px) rotate(-19deg) scale(1.03)}92%{transform:translate(1px,-5px) rotate(-14deg)}96%{transform:translate(0,-1px) rotate(-4deg)}}
+.player.gm .gm-wolf-head{animation:gmWolfV306Head 7.2s ease-in-out infinite!important}
+.player.gm.moving .gm-wolf-sprite{animation:gmWolfV306Dash .58s cubic-bezier(.28,0,.48,1) infinite!important}
+.player.gm.moving .gm-wolf-leg-a{animation:gmWolfV306StrideFront .58s cubic-bezier(.3,0,.55,1) infinite!important}
+.player.gm.moving .gm-wolf-leg-b{animation:gmWolfV306StrideRear .58s cubic-bezier(.3,0,.55,1) infinite!important}
+.player.gm.moving .gm-wolf-head{animation:gmWolfV306Head 5.8s ease-in-out infinite!important}
