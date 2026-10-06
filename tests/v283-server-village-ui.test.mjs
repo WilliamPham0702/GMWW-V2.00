@@ -52,7 +52,7 @@ test('GM player labels keep name and status fixed while only character artwork s
 
 test('bottom menu is Back, Info, Continue and floating setup box is removed',()=>{
   assert.match(html,/play-control-bar-three/);
-  assert.match(css,/play-control-bar-three\{grid-template-columns:20% 60% 20%!important\}/);
+  assert.match(css,/play-control-bar\.play-control-bar-three\{[\s\S]*grid-template-columns:minmax\(0,20fr\) minmax\(0,60fr\) minmax\(0,20fr\)!important/);
   assert.match(html,/id="playBack"/);
   assert.match(html,/id="playPrimaryAction"/);
   assert.match(html,/id="playNext"/);
