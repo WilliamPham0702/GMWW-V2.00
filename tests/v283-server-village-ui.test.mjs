@@ -22,7 +22,7 @@ test('V2.93 hides both top and bottom menus completely after 20 seconds and reve
   const auto=html.indexOf('id="playAutoGM"'),gm=html.indexOf('id="playRoomButton"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"'),audio=html.indexOf('id="playAudioTop"');
   assert.ok(auto>=0&&gm>auto&&info>gm&&refresh>info&&audio>refresh);
   assert.match(html,/class="gm-top-menu-v293"/);
-  assert.match(html,/id="playBottomMenu"/);
+  assert.match(html,/<footer class="play-control-bar">/);
   assert.match(html,/gm-top-auto-v293/);
   assert.match(html,/gm-top-gm-v293/);
   assert.match(html,/gm-top-info-v293/);
@@ -30,7 +30,7 @@ test('V2.93 hides both top and bottom menus completely after 20 seconds and reve
   assert.match(html,/gm-top-audio-v293/);
   assert.match(css,/V2\.93 GAME CHROME — both menus fully disappear after 20s inactivity/);
   assert.match(css,/#gmTopMenu\.gm-top-menu-v293\.is-auto-hidden\{[\s\S]*translateY\(calc\(-100% - env\(safe-area-inset-top\) - 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
-  assert.match(css,/#playBottomMenu\.play-control-bar\.is-auto-hidden\{[\s\S]*translateY\(calc\(100% \+ env\(safe-area-inset-bottom\) \+ 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
+  assert.match(css,/\.play-control-bar\.is-auto-hidden\{[\s\S]*translateY\(calc\(100% \+ env\(safe-area-inset-bottom\) \+ 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
   assert.doesNotMatch(css,/calc\(-100% \+ 8px\)/);
   assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=20000/);
   assert.match(app,/function setPlayGameChromeHidden\(hidden\)/);
