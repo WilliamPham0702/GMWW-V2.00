@@ -1,7 +1,5 @@
-GMWW V2.91 official build
+GMWW V2.92 official build
 Requested: 2026-10-06
-Revision: v291-rebuild-top-menu-from-zero-retry-1
+Revision: v292-top-menu-color-mirror-auto-hide
 Source: main
-Reason: remove the previous five top-menu boxes and rebuild the component from zero with an isolated namespace. Final geometry: AUTO small / GM small / INFORMATION large / REALTIME small / AUDIO small.
-
-Retry: runtime smoke fixed; rebuild the verified V2.91 native package.
+Reason: mirror the top menu colors to the approved bottom menu and auto-slide the top menu up after 20 seconds of inactivity, revealing it again on user interaction.
