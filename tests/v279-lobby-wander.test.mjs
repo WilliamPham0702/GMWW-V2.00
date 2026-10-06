@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.92 lobby motion cycles around village then sits cross-legged at campfire for 30 seconds',()=>{
+test('V2.93 lobby motion cycles around village then sits cross-legged at campfire for 30 seconds',()=>{
   const live=read('src/gmww-members-live.js');
   assert.ok(live.includes('const LOBBY_MOTION_HOLD_MS=30000'));
   assert.ok(live.includes('function buildLobbyMotionRoute()'));
@@ -42,10 +42,10 @@ test('Profile exposes a default-on lobby movement switch and persists it per mem
 
 test('V2.87 runtime metadata stays aligned on the V2.87 native shell',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.92"'));
-  assert.ok(app.includes("const VERSION='2.92';"));
-  assert.ok(html.includes('GMWW V2.92'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 292;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.92;'));
-  assert.equal(pkg.version,'2.92.0');
+  assert.ok(server.includes('VERSION="V2.93"'));
+  assert.ok(app.includes("const VERSION='2.93';"));
+  assert.ok(html.includes('GMWW V2.93'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 293;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.93;'));
+  assert.equal(pkg.version,'2.93.0');
 });
