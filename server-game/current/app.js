@@ -2023,21 +2023,21 @@ async function backPlayPhase(){
 const PLAY_GAME_CHROME_IDLE_MS=20000;
 let playGameChromeIdleTimer=0;
 function setPlayGameChromeHidden(hidden){
-  const top=document.getElementById('gmTopMenu'),bottom=document.getElementById('playBottomMenu');
+  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
   [top,bottom].forEach(menu=>{if(!menu)return;menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0'});
 }
 function clearPlayGameChromeIdle(){
   if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
 }
 function resetPlayGameChromeIdle(){
-  const top=document.getElementById('gmTopMenu'),bottom=document.getElementById('playBottomMenu');
+  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
   if(!top&&!bottom)return;
   setPlayGameChromeHidden(false);clearPlayGameChromeIdle();
   if(!document.body.classList.contains('play-immersive'))return;
   playGameChromeIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayGameChromeHidden(true)},PLAY_GAME_CHROME_IDLE_MS);
 }
 function initPlayGameChromeAutoHide(){
-  const top=document.getElementById('gmTopMenu'),bottom=document.getElementById('playBottomMenu');
+  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
   if((top?.dataset.autoHideBound==='1')||(bottom?.dataset.autoHideBound==='1'))return;
   if(top)top.dataset.autoHideBound='1';if(bottom)bottom.dataset.autoHideBound='1';
   const reveal=()=>resetPlayGameChromeIdle();
