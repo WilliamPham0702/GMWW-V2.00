@@ -21,7 +21,7 @@ test('V3.01 has one centered Create Room page and hides generated room code',()=
   assert.match(html,/data-play-room-mode="online"/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/id="playCreateRoomEnabled"/);
-  assert.match(html,/TẠO PHÒNG & XẾP CHỖ/);
+  assert.match(html,/THIẾT LẬP PHÒNG/);
   assert.match(appCss,/\.play-center-sheet\{[\s\S]*align-items:center!important;[\s\S]*justify-content:center!important/);
 });
 
