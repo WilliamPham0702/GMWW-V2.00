@@ -87,7 +87,7 @@ jobs:
           grep -q "playUpdateRoomSettings" "$APPDIR/Web/app.js"
           grep -q 'data-play-seat-move="instant"' "$APPDIR/Web/GMWW.html"
           grep -q 'data-play-seat-move="walk"' "$APPDIR/Web/GMWW.html"
-          grep -q "seatMoveMode:playSceneState.seatMoveMode" "$APPDIR/Web/app.js"
+          grep -q "enabled:playSceneState.roomEnabled===true,seatMoveMode:'walk'" "$APPDIR/Web/app.js"
           grep -q "playMovementPoint" "$APPDIR/Web/app.js"
 
           # Core catalog / theme / audio / member capabilities must remain present.
