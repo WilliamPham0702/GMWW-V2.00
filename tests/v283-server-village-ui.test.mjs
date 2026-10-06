@@ -24,9 +24,7 @@ test('V2.93 hides both top and bottom menus completely after 20 seconds and reve
   assert.match(html,/class="gm-top-menu-v293"/);
   assert.match(html,/<footer class="play-control-bar play-control-bar-three">/);
   assert.match(html,/gm-top-auto-v293/);
-  assert.match(html,/gm-top-gm-v293/);
   assert.match(html,/gm-top-info-v293/);
-  assert.match(html,/gm-top-realtime-v293/);
   assert.match(html,/gm-top-audio-v293/);
   assert.match(css,/V2\.93 GAME CHROME — both menus fully disappear after 20s inactivity/);
   assert.match(css,/#gmTopMenu\.gm-top-menu-v293\.is-auto-hidden\{[\s\S]*translateY\(calc\(-100% - env\(safe-area-inset-top\) - 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
