@@ -1681,3 +1681,11 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 .play-room-inline-seat input{width:76px;min-height:44px;text-align:center;border-radius:12px}
 .play-exit-top,.play-end-top{border-color:rgba(255,149,160,.34)!important}
 @media(max-width:520px){.play-room-quick-row{grid-template-columns:repeat(2,minmax(0,1fr))}.play-room-live-simple{grid-template-columns:1fr 1fr}}
+
+/* V3.03 menu refinement + clean room setup */
+.play-control-bar-three{grid-template-columns:minmax(86px,.7fr) minmax(180px,1.8fr) minmax(86px,.7fr)!important}
+.play-room-name-field{display:grid;gap:7px;padding:13px 15px;border:1px solid rgba(92,211,241,.24);border-radius:16px;background:rgba(4,37,50,.66)}
+.play-room-name-field>span{font-size:11px;font-weight:900;letter-spacing:.14em;color:#a8eaff}
+.play-room-name-field input{width:100%;min-height:48px;padding:0 14px;border:1px solid rgba(116,228,255,.26);border-radius:13px;background:rgba(1,24,34,.68);color:#fff;font:inherit;font-weight:800}
+.play-room-page-card{max-width:560px}
+.play-room-page-body{gap:12px}
