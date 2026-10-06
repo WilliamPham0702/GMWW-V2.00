@@ -121,5 +121,5 @@ test('V2.99 wolf uses a forward gallop, longer clear legs, and independent head 
   assert.ok(gmStyle.includes('@keyframes gmWolfLongRearStride'));
   assert.ok(gmStyle.includes('@keyframes gmWolfHeadLife'));
   assert.ok(gmStyle.includes('scaleY(1.58)'));
-  assert.ok(gmStyle.includes('translateY(-5px) rotate(-14deg)'));
+  assert.ok(gmStyle.includes('translate(2px,-5px) rotate(-14deg)'));
 });
