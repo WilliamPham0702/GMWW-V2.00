@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.87 lobby motion cycles around village then rests at campfire for 30 seconds',()=>{
+test('V2.90 lobby motion cycles around village then sits cross-legged at campfire for 30 seconds',()=>{
   const live=read('src/gmww-members-live.js');
   assert.ok(live.includes('const LOBBY_MOTION_HOLD_MS=30000'));
   assert.ok(live.includes('function buildLobbyMotionRoute()'));
@@ -12,6 +12,12 @@ test('V2.87 lobby motion cycles around village then rests at campfire for 30 sec
   assert.ok(live.includes("state.lobbyMotionPhase='gather'"));
   assert.ok(live.includes("state.lobbyMotionPhase='hold';state.lobbyMotionHoldUntil=Date.now()+LOBBY_MOTION_HOLD_MS"));
   assert.ok(live.includes('resetLobbyMotionPlan()'));
+  assert.ok(live.includes("autoMotionPhase:state.lobbyMotionPhase==='gather'?'gather':'roam'"));
+  const server=read('src/index.js'),village=read('assets/village/village.mjs');
+  assert.ok(server.includes("villageActivity:sitting?'sitting':'idle'"));
+  assert.ok(server.includes('sitUntil:sitting?arrivedAt+30000:null'));
+  assert.ok(village.includes('GMWW_SEATED_CHARACTER01_URL'));
+  assert.ok(village.includes('NGỒI XẾP BẰNG'));
 });
 
 test('Automatic motion stops once the player has a seat and seat walking wins over roaming',()=>{
@@ -26,7 +32,7 @@ test('Automatic motion stops once the player has a seat and seat walking wins ov
 test('Profile exposes a default-on lobby movement switch and persists it per member',()=>{
   const live=read('src/gmww-members-live.js'),server=read('src/index.js');
   assert.ok(live.includes('Di chuyển trong sảnh'));
-  assert.ok(live.includes('Tự đi quanh Làng, nghỉ quanh đống lửa 30 giây rồi đi tiếp.'));
+  assert.ok(live.includes('Tự đi quanh Làng, về đống lửa ngồi xếp bằng 30 giây rồi đứng dậy đi tiếp.'));
   assert.ok(live.includes('role=\\\"switch\\\"'));
   assert.ok(live.includes("body:JSON.stringify({lobbyMotionEnabled:enabled})"));
   assert.ok(server.includes('lobbyMotionEnabled:true'));
