@@ -1396,206 +1396,60 @@ body.play-immersive #start .play-exit-control{background:rgba(89,40,47,.78)!impo
   body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:52px!important;height:52px!important}
 }
 
-
-/* V2.89 AUTHORITATIVE TOP HUD — exactly 2 small + 1 large + 2 small */
-body.play-immersive #start .play-hud{
-  position:absolute!important;
-  left:18px!important;
-  right:18px!important;
-  top:calc(env(safe-area-inset-top) + 10px)!important;
-  width:auto!important;
-  height:62px!important;
-  min-height:62px!important;
-  padding:0!important;
-  margin:0!important;
-  display:grid!important;
-  grid-template-columns:64px 64px minmax(0,1fr) 64px 64px!important;
-  gap:6px!important;
-  align-items:stretch!important;
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  box-sizing:border-box!important;
+/* V2.91 TOP MENU — rebuilt from zero, isolated from every legacy play-hud rule */
+body.play-immersive #start #gmTopMenu.gm-top-menu-v291{
+  position:absolute!important;z-index:90!important;
+  top:calc(env(safe-area-inset-top) + 10px)!important;left:10px!important;right:10px!important;
+  width:auto!important;height:54px!important;min-height:54px!important;margin:0!important;padding:0!important;
+  display:grid!important;grid-template-columns:52px 52px minmax(0,1fr) 52px 56px!important;gap:6px!important;
+  align-items:stretch!important;box-sizing:border-box!important;background:transparent!important;border:0!important;box-shadow:none!important;
+  pointer-events:auto!important;
 }
-body.play-immersive #start .play-hud>.play-top-control{
-  width:100%!important;
-  min-width:0!important;
-  max-width:none!important;
-  height:62px!important;
-  min-height:62px!important;
-  margin:0!important;
-  padding:5px 6px!important;
-  box-sizing:border-box!important;
-  border-radius:17px!important;
-  border:1px solid rgba(219,194,135,.44)!important;
-  background:linear-gradient(180deg,rgba(8,77,103,.88),rgba(5,51,72,.90))!important;
-  box-shadow:0 6px 15px rgba(0,24,38,.20),inset 0 1px 0 rgba(255,255,255,.07)!important;
-  color:#fff8df!important;
-  overflow:hidden!important;
+body.play-immersive #start #gmTopMenu .gm-top-box-v291{
+  appearance:none!important;-webkit-appearance:none!important;position:relative!important;
+  width:100%!important;min-width:0!important;max-width:none!important;height:54px!important;min-height:54px!important;
+  margin:0!important;box-sizing:border-box!important;overflow:hidden!important;
+  border:1px solid rgba(232,205,143,.42)!important;border-radius:15px!important;
+  background:rgba(7,48,65,.84)!important;
+  box-shadow:0 5px 14px rgba(0,20,32,.18),inset 0 1px 0 rgba(255,255,255,.06)!important;color:#fff8df!important;
 }
-body.play-immersive #start .play-auto-gm{grid-column:1!important}
-body.play-immersive #start .play-gm-top{grid-column:2!important}
-body.play-immersive #start .play-phase-pill{grid-column:3!important}
-body.play-immersive #start .play-refresh-server{grid-column:4!important}
-body.play-immersive #start .play-audio-top{grid-column:5!important}
-
-body.play-immersive #start .play-auto-gm,
-body.play-immersive #start .play-gm-top,
-body.play-immersive #start .play-refresh-server,
-body.play-immersive #start .play-audio-top{
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:2px!important;
+body.play-immersive #start #gmTopMenu .gm-top-small-v291{
+  padding:4px 3px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  gap:1px!important;text-align:center!important;
 }
-body.play-immersive #start .play-phase-pill{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:flex-start!important;
-  gap:8px!important;
-  padding-left:12px!important;
-  padding-right:12px!important;
+body.play-immersive #start #gmTopMenu .gm-top-info-v291{
+  padding:5px 10px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;text-align:left!important;
 }
-body.play-immersive #start .play-phase-orb{
-  width:28px!important;height:28px!important;min-width:28px!important;font-size:12px!important;
+body.play-immersive #start #gmTopMenu .gm-top-icon-v291{display:block!important;font-size:18px!important;line-height:19px!important;font-weight:900!important}
+body.play-immersive #start #gmTopMenu .gm-top-gm-label-v291{display:block!important;font-size:15px!important;line-height:18px!important;font-weight:1000!important;letter-spacing:.02em!important}
+body.play-immersive #start #gmTopMenu .gm-top-small-v291>small{
+  display:block!important;max-width:100%!important;font-size:6px!important;line-height:7px!important;font-weight:950!important;letter-spacing:.06em!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;opacity:.86!important;
 }
-body.play-immersive #start .play-phase-pill>div{flex:1!important;min-width:0!important;overflow:hidden!important}
-body.play-immersive #start .play-phase-pill>div small{
-  display:block!important;font-size:6.5px!important;line-height:8px!important;letter-spacing:.12em!important;font-weight:950!important;opacity:.78!important;
+body.play-immersive #start #gmTopMenu .gm-top-info-orb-v291{
+  flex:0 0 25px!important;width:25px!important;height:25px!important;display:grid!important;place-items:center!important;border-radius:50%!important;font-size:11px!important;
+  color:#fff8ca!important;background:radial-gradient(circle at 35% 30%,#fffde2,#62e5f5 45%,#168bb6 72%)!important;box-shadow:0 0 16px rgba(255,249,189,.35)!important;
 }
-body.play-immersive #start .play-phase-pill>div b{
-  display:block!important;font-size:12px!important;line-height:15px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
-}
-body.play-immersive #start .play-auto-spinner,
-body.play-immersive #start .play-refresh-glyph,
-body.play-immersive #start .play-audio-glyph{
-  display:block!important;font-size:20px!important;line-height:21px!important;font-weight:900!important;
-}
-body.play-immersive #start .play-gm-top>span{font-size:16px!important;font-weight:1000!important;line-height:20px!important}
-body.play-immersive #start .play-hud>.play-top-control>small{
-  display:block!important;font-size:6.2px!important;line-height:8px!important;letter-spacing:.08em!important;font-weight:950!important;white-space:nowrap!important;opacity:.82!important;
-}
-body.play-immersive #start .play-auto-gm .play-auto-spinner{opacity:.42!important;animation:none!important}
-body.play-immersive #start .play-auto-gm.is-on .play-auto-spinner{
-  opacity:1!important;animation:gmwwAutoSpin 1.45s linear infinite!important;color:#77f0df!important;text-shadow:0 0 9px rgba(87,242,221,.42)!important;
-}
-body.play-immersive #start .play-audio-top.is-muted{opacity:.68!important}
-body.play-immersive #start .play-refresh-server{position:relative!important}
-body.play-immersive #start .play-refresh-server .play-live-dot{
-  position:absolute!important;right:6px!important;top:6px!important;width:6px!important;height:6px!important;border-radius:50%!important;
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v291{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v291 small{display:block!important;font-size:6.4px!important;line-height:8px!important;font-weight:950!important;letter-spacing:.11em!important;opacity:.80!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v291 b{display:block!important;min-width:0!important;font-size:10.5px!important;line-height:13px!important;font-weight:950!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.play-immersive #start #gmTopMenu .gm-top-auto-v291 .gm-top-icon-auto-v291{opacity:.42!important;animation:none!important}
+body.play-immersive #start #gmTopMenu .gm-top-auto-v291.is-on .gm-top-icon-auto-v291{opacity:1!important;color:#77f0df!important;text-shadow:0 0 9px rgba(87,242,221,.42)!important;animation:gmwwAutoSpin 1.45s linear infinite!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291 .gm-top-live-dot-v291{
+  position:absolute!important;right:5px!important;top:5px!important;width:6px!important;height:6px!important;border-radius:50%!important;
   background:#75848d!important;box-shadow:0 0 0 2px rgba(3,28,40,.55)!important;
 }
-body.play-immersive #start .play-refresh-server.is-live .play-live-dot{
-  background:#66f1bf!important;box-shadow:0 0 0 2px rgba(3,28,40,.55),0 0 8px rgba(102,241,191,.8)!important;
-}
-body.play-immersive #start .play-refresh-server.is-reconnecting .play-live-dot{background:#ffd36f!important}
-body.play-immersive #start .play-refresh-server.is-offline .play-live-dot{background:#ff8e8e!important}
-body.play-immersive #start .play-refresh-server.is-syncing .play-refresh-glyph,
-body.play-immersive #start .play-refresh-server.is-reconnecting .play-refresh-glyph{
-  animation:gmwwServerSpin .72s linear infinite!important;
-}
-
-@media(max-width:430px){
-  body.play-immersive #start .play-hud{
-    left:14px!important;right:14px!important;
-    grid-template-columns:56px 56px minmax(0,1fr) 56px 56px!important;
-    gap:5px!important;height:58px!important;min-height:58px!important;
-  }
-  body.play-immersive #start .play-hud>.play-top-control{
-    height:58px!important;min-height:58px!important;border-radius:16px!important;padding:4px 5px!important;
-  }
-  body.play-immersive #start .play-phase-pill{padding-left:10px!important;padding-right:10px!important;gap:6px!important}
-  body.play-immersive #start .play-phase-orb{width:24px!important;height:24px!important;min-width:24px!important}
-  body.play-immersive #start .play-phase-pill>div b{font-size:10.5px!important}
-}
-
-/* V2.90 FINAL TOP HUD LOCK — mirror approved bottom menu exactly */
-body.play-immersive #start .play-hud{
-  position:absolute!important;
-  left:10px!important;
-  right:10px!important;
-  top:calc(env(safe-area-inset-top) + 10px)!important;
-  width:auto!important;
-  height:54px!important;
-  min-height:54px!important;
-  padding:0!important;
-  margin:0!important;
-  display:grid!important;
-  grid-template-columns:52px 52px minmax(0,1fr) 52px 56px!important;
-  gap:6px!important;
-  align-items:stretch!important;
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  box-sizing:border-box!important;
-}
-body.play-immersive #start .play-hud>.play-top-control{
-  width:100%!important;
-  min-width:0!important;
-  max-width:none!important;
-  height:54px!important;
-  min-height:54px!important;
-  margin:0!important;
-  padding:4px 5px!important;
-  box-sizing:border-box!important;
-  border-radius:15px!important;
-  border:1px solid rgba(232,205,143,.42)!important;
-  background:rgba(7,48,65,.82)!important;
-  box-shadow:0 5px 14px rgba(0,20,32,.16)!important;
-  color:#fff8df!important;
-  overflow:hidden!important;
-}
-body.play-immersive #start .play-auto-gm{grid-column:1!important}
-body.play-immersive #start .play-gm-top{grid-column:2!important}
-body.play-immersive #start .play-phase-pill{
-  grid-column:3!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:flex-start!important;
-  gap:7px!important;
-  padding-left:10px!important;
-  padding-right:10px!important;
-}
-body.play-immersive #start .play-refresh-server{grid-column:4!important}
-body.play-immersive #start .play-audio-top{grid-column:5!important}
-body.play-immersive #start .play-auto-gm,
-body.play-immersive #start .play-gm-top,
-body.play-immersive #start .play-refresh-server,
-body.play-immersive #start .play-audio-top{
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:1px!important;
-}
-body.play-immersive #start .play-phase-orb{
-  width:24px!important;height:24px!important;min-width:24px!important;font-size:11px!important;
-}
-body.play-immersive #start .play-phase-pill>div{flex:1!important;min-width:0!important;overflow:hidden!important}
-body.play-immersive #start .play-phase-pill>div small{
-  display:block!important;font-size:6.2px!important;line-height:7px!important;letter-spacing:.10em!important;font-weight:950!important;opacity:.82!important;
-}
-body.play-immersive #start .play-phase-pill>div b{
-  display:block!important;font-size:10.5px!important;line-height:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
-}
-body.play-immersive #start .play-auto-spinner,
-body.play-immersive #start .play-refresh-glyph,
-body.play-immersive #start .play-audio-glyph{
-  display:block!important;font-size:18px!important;line-height:19px!important;font-weight:900!important;
-}
-body.play-immersive #start .play-gm-top>span{font-size:15px!important;font-weight:1000!important;line-height:18px!important}
-body.play-immersive #start .play-hud>.play-top-control>small{
-  display:block!important;font-size:6px!important;line-height:7px!important;letter-spacing:.07em!important;font-weight:950!important;white-space:nowrap!important;opacity:.84!important;
-}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291.is-live .gm-top-live-dot-v291{background:#66f1bf!important;box-shadow:0 0 0 2px rgba(3,28,40,.55),0 0 8px rgba(102,241,191,.8)!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291.is-reconnecting .gm-top-live-dot-v291{background:#ffd36f!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291.is-offline .gm-top-live-dot-v291{background:#ff8e8e!important}
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291.is-syncing .gm-top-icon-refresh-v291,
+body.play-immersive #start #gmTopMenu .gm-top-realtime-v291.is-reconnecting .gm-top-icon-refresh-v291{animation:gmwwServerSpin .72s linear infinite!important}
+body.play-immersive #start #gmTopMenu .gm-top-audio-v291.is-muted{opacity:.68!important}
 @media(max-width:390px){
-  body.play-immersive #start .play-hud{
-    left:8px!important;right:8px!important;
-    grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;
-    gap:5px!important;height:52px!important;min-height:52px!important;
+  body.play-immersive #start #gmTopMenu.gm-top-menu-v291{
+    left:8px!important;right:8px!important;height:52px!important;min-height:52px!important;
+    grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;gap:5px!important;
   }
-  body.play-immersive #start .play-hud>.play-top-control{
-    height:52px!important;min-height:52px!important;border-radius:14px!important;
-  }
+  body.play-immersive #start #gmTopMenu .gm-top-box-v291{height:52px!important;min-height:52px!important;border-radius:14px!important}
 }
 
