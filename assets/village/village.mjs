@@ -100,10 +100,10 @@ if(game){
     const join=portalState.mode==="join",raw=join?layout.fire:layout.clampPoint(Number(portalState.x??50),Number(portalState.y??12)),point=screenPoint(raw);
     portal.hidden=false;portal.classList.toggle("is-join",join);portal.classList.toggle("is-arrival",!join);portal.disabled=!join;
     portal.style.left=point.x+"%";portal.style.top=point.y+"%";portal.dataset.roomCode=String(portalState.roomCode||"");
-    portal.querySelector("strong").textContent=safeText(portalState.label||(join?"BÍ CẢNH ĐÃ MỞ":"CỔNG BÍ CẢNH"));
-    portal.querySelector("small").textContent=safeText(portalState.roomName||("Phòng "+portalState.roomCode));
-    portal.setAttribute("aria-label",join?"Đi vào Bí cảnh "+safeText(portalState.roomName||portalState.roomCode):"Cổng xuất hiện của Phòng chờ");
-    notice.hidden=!join;if(join)notice.querySelector("small").textContent=safeText(portalState.roomName||("Phòng "+portalState.roomCode))
+    portal.querySelector("strong").textContent=join?"":safeText(portalState.label||"CỔNG BÍ CẢNH");
+    portal.querySelector("small").textContent=join?"":safeText(portalState.roomName||("Phòng "+portalState.roomCode));
+    portal.setAttribute("aria-label",join?"Đi vào phòng đang mở":"Cổng xuất hiện của Phòng chờ");
+    notice.hidden=true
   }
   function render(){
     cancelAnimationFrame(moveFrame);moveFrame=0;
