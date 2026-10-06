@@ -24,8 +24,8 @@ test('official GM header is Auto, GM, Info, Realtime, Audio with bottom-menu pro
   assert.match(html,/class="play-auto-spinner"/);
   assert.match(html,/class="play-top-control play-gm-top" id="playRoomButton"/);
   assert.match(html,/class="play-top-control play-audio-top" id="playAudioTop"/);
-  assert.match(css,/V2\.89 AUTHORITATIVE TOP HUD — exactly 2 small \+ 1 large \+ 2 small/);
-  assert.match(css,/grid-template-columns:64px 64px minmax\(0,1fr\) 64px 64px!important/);
+  assert.match(css,/V2\.90 FINAL TOP HUD LOCK — mirror approved bottom menu exactly/);
+  assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
   assert.match(css,/play-auto-gm\.is-on \.play-auto-spinner[\s\S]*animation:gmwwAutoSpin/);
   assert.match(css,/play-refresh-server\.is-live \.play-live-dot/);
   assert.match(app,/function refreshPlayServerRealtime\(\)/);
