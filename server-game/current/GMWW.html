@@ -504,23 +504,35 @@
 
 <div class="sheet hidden play-center-sheet" id="playCreateRoomSheet">
   <div class="sheet-card play-room-page-card">
-    <div class="sheet-head play-room-page-head">
-      <div><small>THIẾT LẬP PHÒNG</small><h3>Tạo Phòng</h3></div>
+    <div class="sheet-head play-room-page-head play-room-title-centered">
+      <h3>THIẾT LẬP PHÒNG</h3>
       <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
     </div>
     <div class="play-room-page-body">
-      <label class="play-room-name-field"><span>TÊN PHÒNG</span><input id="playCreateRoomName" type="text" maxlength="32" placeholder="Ví dụ: Phòng William" autocomplete="off"></label>
-      <div class="play-room-quick-row">
-        <button id="playCreateRoomReset" type="button">↻ RESET</button>
-        <button data-play-room-mode="online" type="button">ONLINE</button>
-        <button data-play-room-mode="offline" type="button">OFFLINE</button>
-        <button id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
-      </div>
-      <div class="play-room-live-row play-room-live-simple">
+      <section class="play-room-section-card">
+        <div class="play-room-section-title"><b>CÁC PHÒNG ĐÃ TẠO</b><small>TÌNH TRẠNG</small></div>
+        <div class="play-room-created-list" id="playCreatedRoomList"></div>
+      </section>
+      <section class="play-room-section-card">
+        <div class="play-room-section-title"><b>CHẾ ĐỘ</b></div>
+        <div class="play-room-mode-row">
+          <button data-play-room-mode="online" type="button">ONLINE</button>
+          <button data-play-room-mode="offline" type="button">OFFLINE</button>
+        </div>
+      </section>
+      <section class="play-room-section-card play-room-settings-row">
         <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
         <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
-      </div>
-      <button class="primary play-room-next" id="playCreateRoomNext" type="button">TẠO PHÒNG & XẾP CHỖ ›</button>
+      </section>
+      <button class="play-room-add-new" id="playCreateRoomAdd" type="button">＋ THÊM MỚI</button>
+      <section class="play-room-editor hidden" id="playRoomEditor">
+        <label class="play-room-name-field"><span>TÊN PHÒNG</span><input id="playCreateRoomName" type="text" maxlength="32" placeholder="Ví dụ: Làng Sói đẹp" autocomplete="off"></label>
+        <div class="play-room-edit-actions">
+          <button class="primary" id="playCreateRoomSave" type="button">LƯU</button>
+          <button id="playCreateRoomReset" type="button">↻ RESET</button>
+          <button class="danger" id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
+        </div>
+      </section>
     </div>
   </div>
 </div>
