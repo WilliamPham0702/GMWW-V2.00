@@ -1341,60 +1341,10 @@ body.play-immersive #start .play-player-over small{font-size:8px!important}
 }
 
 
-/* V2.86 — refined lightweight game HUD */
-body.play-immersive #start .play-hud{
-  left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
-  width:auto!important;height:48px!important;min-height:48px!important;
-  display:grid!important;grid-template-columns:88px minmax(0,1fr) 48px!important;gap:6px!important;
-  align-items:center!important;background:transparent!important;border:0!important;box-shadow:none!important;
-}
-body.play-immersive #start .play-hud>*{min-height:46px!important;height:46px!important}
-body.play-immersive #start .play-auto-gm{
-  grid-column:1!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;
-  gap:7px!important;width:auto!important;margin:0!important;padding:0 9px!important;border-radius:15px!important;
-  border:1px solid rgba(240,207,132,.58)!important;background:linear-gradient(180deg,rgba(8,51,70,.86),rgba(4,34,50,.82))!important;
-  box-shadow:0 5px 14px rgba(0,24,38,.18)!important;color:#fff7dc!important;
-}
-body.play-immersive #start .play-auto-gm b{font-size:9px!important;white-space:nowrap!important}
-body.play-immersive #start .play-auto-switch{width:32px!important;height:16px!important;min-height:16px!important;flex:0 0 auto!important}
-body.play-immersive #start .play-auto-switch i{width:12px!important;height:12px!important}
-body.play-immersive #start .play-auto-gm.is-on .play-auto-switch i{transform:translateX(16px)!important}
-
-body.play-immersive #start .play-phase-pill{
-  grid-column:2!important;display:flex!important;height:46px!important;min-height:46px!important;padding:4px 10px!important;
-  border-radius:15px!important;border:1px solid rgba(240,207,132,.46)!important;
-  background:linear-gradient(180deg,rgba(9,52,71,.82),rgba(5,36,52,.76))!important;
-  box-shadow:0 5px 14px rgba(0,24,38,.16)!important;color:#fff8df!important;
-}
-body.play-immersive #start .play-phase-orb{width:27px!important;height:27px!important;min-width:27px!important;font-size:12px!important}
-body.play-immersive #start .play-phase-pill small{display:none!important}
-body.play-immersive #start .play-phase-pill b{font-size:11px!important;line-height:1.1!important;text-align:left!important}
-
-body.play-immersive #start .play-refresh-server{
-  grid-column:3!important;width:46px!important;height:46px!important;min-height:46px!important;padding:0!important;
-  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:0!important;
-  border-radius:15px!important;border:1px solid rgba(240,207,132,.52)!important;
-  background:linear-gradient(180deg,rgba(8,51,70,.86),rgba(4,34,50,.82))!important;color:#fff7dc!important;
-  box-shadow:0 5px 14px rgba(0,24,38,.18)!important;
-}
-body.play-immersive #start .play-refresh-server span{font-size:21px!important;line-height:18px!important}
-body.play-immersive #start .play-refresh-server small{font-size:5.5px!important;letter-spacing:.09em!important;font-weight:900!important}
-body.play-immersive #start .play-refresh-server.is-syncing span{animation:gmwwServerSpin .62s linear infinite}
-body.play-immersive #start .play-refresh-server.is-ok{border-color:#78f0c6!important;box-shadow:0 0 0 2px rgba(120,240,198,.16),0 5px 14px rgba(0,24,38,.18)!important}
-body.play-immersive #start .play-refresh-server.is-error{border-color:#ff9f9f!important}
+/* Shared animation helpers */
 @keyframes gmwwServerSpin{to{transform:rotate(360deg)}}
-
-body.play-immersive #start .play-gm-float{
-  position:absolute;left:12px;top:112px;z-index:78;width:64px;height:44px;padding:3px 6px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
-  border-radius:14px;border:1px solid rgba(255,221,145,.72);
-  background:linear-gradient(180deg,rgba(16,71,89,.92),rgba(5,40,57,.88));color:#fff6d3;
-  box-shadow:0 8px 18px rgba(0,26,40,.24),inset 0 1px 0 rgba(255,255,255,.12);
-  touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
-}
-body.play-immersive #start .play-gm-float span{font-size:15px;font-weight:1000;line-height:17px}
-body.play-immersive #start .play-gm-float small{font-size:5.5px;font-weight:900;letter-spacing:.08em;opacity:.72;white-space:nowrap}
-body.play-immersive #start .play-gm-float.is-dragging{cursor:grabbing;transform:scale(1.05);box-shadow:0 10px 22px rgba(0,26,40,.3),0 0 0 2px rgba(255,224,151,.18)}
+@keyframes gmwwAutoSpin{to{transform:rotate(360deg)}}
+body.play-immersive #start .play-gm-float{display:none!important}
 
 body.play-immersive #start .play-context-panel.is-setup-popup{
   left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;
@@ -1442,136 +1392,96 @@ body.play-immersive #start .play-exit-control{background:rgba(89,40,47,.78)!impo
 .play-gm-actions button{min-height:50px!important;border-radius:13px!important}
 
 @media(max-width:390px){
-  body.play-immersive #start .play-hud{grid-template-columns:82px minmax(0,1fr) 44px!important;gap:5px!important}
-  body.play-immersive #start .play-refresh-server{width:44px!important}
   body.play-immersive #start .play-control-bar{grid-template-columns:48px 48px minmax(0,1fr) 48px 52px!important;gap:5px!important}
   body.play-immersive #start .play-control-icon,body.play-immersive #start .play-primary-control{min-height:52px!important;height:52px!important}
 }
 
 
-/* V2.87 — polished four-item top game HUD */
+/* V2.89 AUTHORITATIVE TOP HUD — exactly 2 small + 1 large + 2 small */
 body.play-immersive #start .play-hud{
-  left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
-  width:auto!important;height:44px!important;min-height:44px!important;
-  display:grid!important;grid-template-columns:42px minmax(0,1fr) 48px 42px!important;gap:6px!important;
-  align-items:center!important;background:transparent!important;border:0!important;box-shadow:none!important;
-}
-body.play-immersive #start .play-hud>*{height:42px!important;min-height:42px!important}
-
-body.play-immersive #start .play-auto-gm{
-  grid-column:1!important;width:42px!important;min-width:42px!important;margin:0!important;padding:0!important;
-  display:grid!important;place-items:center!important;border-radius:50%!important;
-  border:1px solid rgba(242,214,151,.60)!important;
-  background:linear-gradient(180deg,rgba(8,61,78,.88),rgba(4,37,52,.84))!important;
-  color:#78efe0!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
-}
-body.play-immersive #start .play-auto-spinner{
-  display:block!important;font-size:24px!important;line-height:1!important;font-weight:800!important;
-  transform-origin:50% 50%!important;opacity:.48!important;
-}
-body.play-immersive #start .play-auto-gm.is-on .play-auto-spinner{
-  opacity:1!important;animation:gmwwAutoSpin 1.45s linear infinite!important;
-  text-shadow:0 0 10px rgba(87,242,221,.48)!important;
-}
-@keyframes gmwwAutoSpin{to{transform:rotate(360deg)}}
-
-body.play-immersive #start .play-phase-pill{
-  grid-column:2!important;height:42px!important;min-height:42px!important;padding:3px 10px!important;
-  border-radius:15px!important;border:1px solid rgba(240,207,132,.44)!important;
-  background:linear-gradient(180deg,rgba(9,55,72,.80),rgba(5,38,53,.74))!important;
-  box-shadow:0 5px 14px rgba(0,24,38,.14)!important;color:#fff8df!important;
-}
-body.play-immersive #start .play-phase-orb{width:25px!important;height:25px!important;min-width:25px!important;font-size:11px!important}
-body.play-immersive #start .play-phase-pill small{display:none!important}
-body.play-immersive #start .play-phase-pill b{font-size:10.5px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-
-body.play-immersive #start .play-gm-top{
-  grid-column:3!important;width:48px!important;min-width:48px!important;padding:0!important;
-  display:grid!important;place-items:center!important;border-radius:14px!important;
-  border:1px solid rgba(242,214,151,.60)!important;
-  background:linear-gradient(180deg,rgba(12,68,86,.88),rgba(5,42,59,.84))!important;
-  color:#fff5ce!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
-}
-body.play-immersive #start .play-gm-top span{font-size:15px!important;font-weight:1000!important;letter-spacing:.04em!important}
-
-body.play-immersive #start .play-refresh-server{
-  grid-column:4!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;
-  display:grid!important;place-items:center!important;border-radius:50%!important;
-  border:1px solid rgba(242,214,151,.60)!important;
-  background:linear-gradient(180deg,rgba(8,61,78,.88),rgba(4,37,52,.84))!important;
-  color:#fff7dc!important;box-shadow:0 5px 14px rgba(0,24,38,.16)!important;
-}
-body.play-immersive #start .play-refresh-server span{font-size:22px!important;line-height:1!important}
-body.play-immersive #start .play-refresh-server small{display:none!important}
-body.play-immersive #start .play-refresh-server.is-syncing span{animation:gmwwServerSpin .62s linear infinite!important}
-
-/* V2.87 removes the floating GM chip; GM now lives in the top HUD. */
-body.play-immersive #start .play-gm-float{display:none!important}
-
-@media(max-width:390px){
-  body.play-immersive #start .play-hud{grid-template-columns:40px minmax(0,1fr) 46px 40px!important;gap:5px!important}
-  body.play-immersive #start .play-auto-gm,body.play-immersive #start .play-refresh-server{width:40px!important;min-width:40px!important}
-  body.play-immersive #start .play-gm-top{width:46px!important;min-width:46px!important}
-}
-
-
-/* V2.89 — top HUD mirrors the approved bottom game-menu proportions */
-body.play-immersive #start .play-hud{
-  left:10px!important;right:10px!important;top:calc(env(safe-area-inset-top) + 8px)!important;
-  width:auto!important;height:58px!important;min-height:58px!important;
-  display:grid!important;grid-template-columns:52px 56px minmax(0,1fr) 52px 52px!important;gap:6px!important;
-  align-items:center!important;background:transparent!important;border:0!important;box-shadow:none!important;
+  position:absolute!important;
+  left:18px!important;
+  right:18px!important;
+  top:calc(env(safe-area-inset-top) + 10px)!important;
+  width:auto!important;
+  height:62px!important;
+  min-height:62px!important;
+  padding:0!important;
+  margin:0!important;
+  display:grid!important;
+  grid-template-columns:64px 64px minmax(0,1fr) 64px 64px!important;
+  gap:6px!important;
+  align-items:stretch!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  box-sizing:border-box!important;
 }
 body.play-immersive #start .play-hud>.play-top-control{
-  min-width:0!important;width:100%!important;height:54px!important;min-height:54px!important;
-  margin:0!important;padding:4px 5px!important;border-radius:15px!important;
-  border:1px solid rgba(232,205,143,.42)!important;
-  background:rgba(7,48,65,.82)!important;
-  box-shadow:0 5px 14px rgba(0,20,32,.16)!important;
-  color:#fff8df!important;overflow:hidden!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:62px!important;
+  min-height:62px!important;
+  margin:0!important;
+  padding:5px 6px!important;
+  box-sizing:border-box!important;
+  border-radius:17px!important;
+  border:1px solid rgba(219,194,135,.44)!important;
+  background:linear-gradient(180deg,rgba(8,77,103,.88),rgba(5,51,72,.90))!important;
+  box-shadow:0 6px 15px rgba(0,24,38,.20),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  color:#fff8df!important;
+  overflow:hidden!important;
 }
+body.play-immersive #start .play-auto-gm{grid-column:1!important}
+body.play-immersive #start .play-gm-top{grid-column:2!important}
+body.play-immersive #start .play-phase-pill{grid-column:3!important}
+body.play-immersive #start .play-refresh-server{grid-column:4!important}
+body.play-immersive #start .play-audio-top{grid-column:5!important}
+
 body.play-immersive #start .play-auto-gm,
 body.play-immersive #start .play-gm-top,
 body.play-immersive #start .play-refresh-server,
 body.play-immersive #start .play-audio-top{
-  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:2px!important;
 }
-body.play-immersive #start .play-auto-gm{grid-column:1!important;border-radius:15px!important}
-body.play-immersive #start .play-gm-top{grid-column:2!important;border-radius:15px!important}
 body.play-immersive #start .play-phase-pill{
-  grid-column:3!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;
-  gap:7px!important;padding:5px 8px!important;border-radius:15px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  padding-left:12px!important;
+  padding-right:12px!important;
 }
-body.play-immersive #start .play-refresh-server{grid-column:4!important;border-radius:15px!important;position:relative!important}
-body.play-immersive #start .play-audio-top{grid-column:5!important;border-radius:15px!important}
-
+body.play-immersive #start .play-phase-orb{
+  width:28px!important;height:28px!important;min-width:28px!important;font-size:12px!important;
+}
+body.play-immersive #start .play-phase-pill>div{flex:1!important;min-width:0!important;overflow:hidden!important}
+body.play-immersive #start .play-phase-pill>div small{
+  display:block!important;font-size:6.5px!important;line-height:8px!important;letter-spacing:.12em!important;font-weight:950!important;opacity:.78!important;
+}
+body.play-immersive #start .play-phase-pill>div b{
+  display:block!important;font-size:12px!important;line-height:15px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
 body.play-immersive #start .play-auto-spinner,
 body.play-immersive #start .play-refresh-glyph,
 body.play-immersive #start .play-audio-glyph{
   display:block!important;font-size:20px!important;line-height:21px!important;font-weight:900!important;
 }
 body.play-immersive #start .play-gm-top>span{font-size:16px!important;font-weight:1000!important;line-height:20px!important}
-body.play-immersive #start .play-hud>.play-top-control>small,
-body.play-immersive #start .play-gm-top>small,
-body.play-immersive #start .play-refresh-server>small,
-body.play-immersive #start .play-audio-top>small{
-  display:block!important;font-size:5.8px!important;line-height:7px!important;letter-spacing:.08em!important;
-  font-weight:950!important;white-space:nowrap!important;opacity:.82!important;
+body.play-immersive #start .play-hud>.play-top-control>small{
+  display:block!important;font-size:6.2px!important;line-height:8px!important;letter-spacing:.08em!important;font-weight:950!important;white-space:nowrap!important;opacity:.82!important;
 }
-body.play-immersive #start .play-phase-orb{width:27px!important;height:27px!important;min-width:27px!important;font-size:11px!important}
-body.play-immersive #start .play-phase-pill>div{min-width:0!important;overflow:hidden!important}
-body.play-immersive #start .play-phase-pill>div small{
-  display:block!important;font-size:6px!important;line-height:8px!important;letter-spacing:.12em!important;font-weight:950!important;opacity:.78!important;
-}
-body.play-immersive #start .play-phase-pill>div b{
-  display:block!important;font-size:10.5px!important;line-height:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
-}
-
 body.play-immersive #start .play-auto-gm .play-auto-spinner{opacity:.42!important;animation:none!important}
 body.play-immersive #start .play-auto-gm.is-on .play-auto-spinner{
   opacity:1!important;animation:gmwwAutoSpin 1.45s linear infinite!important;color:#77f0df!important;text-shadow:0 0 9px rgba(87,242,221,.42)!important;
 }
 body.play-immersive #start .play-audio-top.is-muted{opacity:.68!important}
+body.play-immersive #start .play-refresh-server{position:relative!important}
 body.play-immersive #start .play-refresh-server .play-live-dot{
   position:absolute!important;right:6px!important;top:6px!important;width:6px!important;height:6px!important;border-radius:50%!important;
   background:#75848d!important;box-shadow:0 0 0 2px rgba(3,28,40,.55)!important;
@@ -1582,91 +1492,20 @@ body.play-immersive #start .play-refresh-server.is-live .play-live-dot{
 body.play-immersive #start .play-refresh-server.is-reconnecting .play-live-dot{background:#ffd36f!important}
 body.play-immersive #start .play-refresh-server.is-offline .play-live-dot{background:#ff8e8e!important}
 body.play-immersive #start .play-refresh-server.is-syncing .play-refresh-glyph,
-body.play-immersive #start .play-refresh-server.is-reconnecting .play-refresh-glyph{animation:gmwwServerSpin .72s linear infinite!important}
-body.play-immersive #start .play-refresh-server.is-ok{border-color:rgba(102,241,191,.72)!important}
-body.play-immersive #start .play-refresh-server.is-error{border-color:rgba(255,142,142,.78)!important}
-
-@media(max-width:390px){
-  body.play-immersive #start .play-hud{
-    left:8px!important;right:8px!important;
-    grid-template-columns:46px 50px minmax(0,1fr) 46px 46px!important;gap:5px!important;
-  }
-  body.play-immersive #start .play-hud>.play-top-control{height:52px!important;min-height:52px!important;padding:3px 4px!important}
-  body.play-immersive #start .play-phase-pill{padding:4px 6px!important;gap:5px!important}
-  body.play-immersive #start .play-phase-orb{width:23px!important;height:23px!important;min-width:23px!important}
-  body.play-immersive #start .play-phase-pill>div b{font-size:9.5px!important}
+body.play-immersive #start .play-refresh-server.is-reconnecting .play-refresh-glyph{
+  animation:gmwwServerSpin .72s linear infinite!important;
 }
 
-
-/* V2.89 hotfix — exact bottom-menu geometry: 2 small + 1 large + 2 small */
-body.play-immersive #start .play-hud{
-  left:18px!important;
-  right:18px!important;
-  top:calc(env(safe-area-inset-top) + 10px)!important;
-  height:62px!important;
-  min-height:62px!important;
-  display:grid!important;
-  grid-template-columns:minmax(54px,1fr) minmax(54px,1fr) minmax(0,2.45fr) minmax(54px,1fr) minmax(54px,1fr)!important;
-  gap:8px!important;
-  align-items:stretch!important;
-}
-body.play-immersive #start .play-hud>.play-top-control{
-  width:100%!important;
-  height:62px!important;
-  min-height:62px!important;
-  border-radius:17px!important;
-  padding:5px 6px!important;
-  background:linear-gradient(180deg,rgba(8,77,103,.88),rgba(5,51,72,.90))!important;
-  border:1px solid rgba(219,194,135,.44)!important;
-  box-shadow:0 6px 15px rgba(0,24,38,.20),inset 0 1px 0 rgba(255,255,255,.07)!important;
-}
-body.play-immersive #start .play-auto-gm{grid-column:1!important}
-body.play-immersive #start .play-gm-top{grid-column:2!important}
-body.play-immersive #start .play-phase-pill{
-  grid-column:3!important;
-  justify-content:center!important;
-  text-align:left!important;
-  padding-left:11px!important;
-  padding-right:11px!important;
-}
-body.play-immersive #start .play-refresh-server{grid-column:4!important}
-body.play-immersive #start .play-audio-top{grid-column:5!important}
-body.play-immersive #start .play-phase-pill>div{flex:1!important;min-width:0!important}
-body.play-immersive #start .play-phase-pill>div b{font-size:12px!important;line-height:15px!important}
-body.play-immersive #start .play-phase-pill>div small{font-size:6.5px!important;line-height:8px!important}
-body.play-immersive #start .play-hud>.play-top-control>small,
-body.play-immersive #start .play-gm-top>small,
-body.play-immersive #start .play-refresh-server>small,
-body.play-immersive #start .play-audio-top>small{font-size:6.2px!important;line-height:8px!important}
-
-@media(max-width:390px){
+@media(max-width:430px){
   body.play-immersive #start .play-hud{
     left:14px!important;right:14px!important;
-    grid-template-columns:minmax(48px,1fr) minmax(48px,1fr) minmax(0,2.35fr) minmax(48px,1fr) minmax(48px,1fr)!important;
-    gap:6px!important;height:58px!important;min-height:58px!important;
+    grid-template-columns:56px 56px minmax(0,1fr) 56px 56px!important;
+    gap:5px!important;height:58px!important;min-height:58px!important;
   }
-  body.play-immersive #start .play-hud>.play-top-control{height:58px!important;min-height:58px!important;border-radius:16px!important}
+  body.play-immersive #start .play-hud>.play-top-control{
+    height:58px!important;min-height:58px!important;border-radius:16px!important;padding:4px 5px!important;
+  }
+  body.play-immersive #start .play-phase-pill{padding-left:10px!important;padding-right:10px!important;gap:6px!important}
+  body.play-immersive #start .play-phase-orb{width:24px!important;height:24px!important;min-width:24px!important}
+  body.play-immersive #start .play-phase-pill>div b{font-size:10.5px!important}
 }
-
-
-/* V2.89 final top bar — force exact visual ratio of approved bottom bar */
-body.play-immersive #start .play-hud{
-  display:grid!important;
-  grid-template-columns:14% 14% minmax(0,44%) 14% 14%!important;
-  column-gap:0!important;
-  padding:0 10px!important;
-  box-sizing:border-box!important;
-  left:0!important;right:0!important;width:100%!important;
-}
-body.play-immersive #start .play-hud>.play-top-control{
-  width:calc(100% - 6px)!important;
-  max-width:none!important;
-  min-width:0!important;
-  justify-self:center!important;
-  box-sizing:border-box!important;
-}
-body.play-immersive #start .play-auto-gm{grid-column:1!important}
-body.play-immersive #start .play-gm-top{grid-column:2!important}
-body.play-immersive #start .play-phase-pill{grid-column:3!important;width:calc(100% - 8px)!important}
-body.play-immersive #start .play-refresh-server{grid-column:4!important}
-body.play-immersive #start .play-audio-top{grid-column:5!important}
