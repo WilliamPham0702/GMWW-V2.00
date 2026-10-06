@@ -105,6 +105,15 @@ test('Update manifest always advertises an exact native IPA version and URL',()=
   assert.match(workflow,/server-game\/BUILD_IPA_REQUEST/);
 });
 
+test('Version bumps keep native update channel and web-sync self-heals',()=>{
+  const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const worker=fs.readFileSync('src/index.js','utf8');
+  assert.match(script,/versionChanged/);
+  assert.match(script,/versionChanged&&shell===version/);
+  assert.match(worker,/source:"SERVER_DEPLOY"/);
+  assert.match(worker,/String\(old\?\.version\|\|""\)!==VERSION/);
+});
+
 
 test('V2.81 fresh IPA uses bundled runtime and does not request same IPA again',()=>{
   const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
