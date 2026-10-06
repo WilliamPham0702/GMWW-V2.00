@@ -1037,6 +1037,7 @@ const auditLocalDataBtn=document.getElementById('auditLocalData');if(auditLocalD
 const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clearRuntimeCacheBtn)clearRuntimeCacheBtn.addEventListener('click',clearSafeRuntimeCache);
 const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
 
+/* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
 const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:'',characterPreviewTimer:null};
 
