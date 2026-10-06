@@ -93,6 +93,13 @@ jobs:
           curl -fsS "$URL/api/update/manifest?verify=$(date +%s)" > /tmp/manifest.json
           cat /tmp/manifest.json
           grep -q "\"releaseVersion\":\"$EXPECTED\"" /tmp/manifest.json
+          node - <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          if(String(m.runtimeVersion||'')!==String(m.shellVersion||'')){
+            if(m.releaseType!=='runtime')throw new Error('Expected runtime update when runtimeVersion differs from shellVersion');
+            if(!Array.isArray(m.runtime?.files)||!m.runtime.files.some(x=>x?.path==='gm/gm-white-wolf.webp'))throw new Error('GM rider asset missing from runtime update manifest');
+          }
+          NODE
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html

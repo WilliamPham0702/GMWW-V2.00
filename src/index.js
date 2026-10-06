@@ -971,7 +971,20 @@ export default {async fetch(request,env){
       if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
       const manifest=await res.json();
       const currentVersion=VERSION.replace(/^V/i,"");
-      if(String(manifest?.releaseVersion||"")!==currentVersion){
+      const readVersionedManifest=async()=>{
+        try{
+          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest.json";u.search="?v="+encodeURIComponent(VERSION);
+          const rr=await env.ASSETS.fetch(new Request(u.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
+          if(!rr.ok)return null;const mm=await rr.json();return String(mm?.releaseVersion||"")===currentVersion?mm:null
+        }catch{return null}
+      };
+      const latestMismatch=String(manifest?.releaseVersion||"")!==currentVersion;
+      const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
+      if(latestMismatch||latestLostRuntime){
+        const versioned=await readVersionedManifest();
+        if(versioned&&String(versioned?.releaseType||"")!=="server_only")return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
+      }
+      if(latestMismatch){
         return j({ok:true,...manifest,releaseVersion:currentVersion,releaseType:"server_only",runtimeVersion:currentVersion,webVersion:currentVersion,serverVersion:currentVersion,required:false,restartRequired:false,message:"Server/Player Web đã cập nhật.",checkedAt:new Date().toISOString()});
       }
       return j({ok:true,...manifest,checkedAt:new Date().toISOString()});

@@ -72,3 +72,12 @@ test('V2.95 keeps GM rider at normal character size and animates wolf legs',()=>
   assert.match(prepare,/copyDir\('assets\/gm','gm'\)/);
   assert.match(ipa,/cp assets\/gm\/gm-white-wolf\.webp/);
 });
+
+test('V2.95 update channel preserves runtime manifest and GM rider asset for V2.94 shell',()=>{
+  const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(server,/updates\/runtime\/V/);
+  assert.match(server,/latestLostRuntime/);
+  assert.match(prepare,/manifest\.json/);
+  assert.match(deploy,/gm\/gm-white-wolf\.webp/);
+});

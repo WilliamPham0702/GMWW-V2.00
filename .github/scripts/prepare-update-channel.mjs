@@ -95,4 +95,5 @@ const manifest={
 };
 fs.mkdirSync(path.join('assets','updates'),{recursive:true});
 fs.writeFileSync(path.join('assets','updates','latest.json'),JSON.stringify(manifest,null,2)+'\n');
+fs.writeFileSync(path.join(outRoot,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));
