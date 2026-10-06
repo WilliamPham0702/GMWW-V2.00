@@ -25,7 +25,7 @@ test('IPA renders fixed seat IDs and prefers game characters over legacy avatars
   assert.match(app,/play-player-over/);
   assert.match(app,/play-player-role/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
-  assert.match(app,/memberAvatarUrl\(m\.avatarId\)/);
+  assert.match(app,/memberAvatarUrl\(m\.gameCharacterId\|\|m\.avatarId\)/);
   assert.match(html,/id="playSeatSheet"/);
   assert.match(app,/\/seat'.*swap:/s);
 });
