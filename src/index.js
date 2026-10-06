@@ -8,7 +8,7 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageGatherPoint } from "./gmww-village-gather-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.03",UPDATE_CHANNEL_REV="runtime-303",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.03",NATIVE_SHELL_VERSION="3.03",UPDATE_CHANNEL_REV="runtime-303",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -973,6 +973,27 @@ export default {async fetch(request,env){
       if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
       const manifest=await res.json();
       const currentVersion=VERSION.replace(/^V/i,"");
+      const currentNativeShell=NATIVE_SHELL_VERSION===currentVersion;
+      const nativeManifest=()=>({
+        ...manifest,
+        releaseVersion:currentVersion,
+        releaseType:"native",
+        shellVersion:currentVersion,
+        minimumShellVersion:currentVersion,
+        runtimeVersion:currentVersion,
+        webVersion:currentVersion,
+        serverVersion:currentVersion,
+        required:false,
+        restartRequired:false,
+        message:"GMWW V"+currentVersion+" yêu cầu cài IPA mới.",
+        runtime:{files:[]},
+        ipa:{
+          version:currentVersion,
+          fileName:"GMWW-V"+currentVersion+".ipa",
+          url:"https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v"+currentVersion+"/GMWW-V"+currentVersion+".ipa"
+        },
+        checkedAt:new Date().toISOString()
+      });
       const readVersionedManifest=async()=>{
         try{
           const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
@@ -985,6 +1006,7 @@ export default {async fetch(request,env){
       if(latestMismatch||latestLostRuntime){
         const versioned=await readVersionedManifest();
         if(versioned&&String(versioned?.releaseType||"")!=="server_only")return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
+        if(currentNativeShell)return j({ok:true,...nativeManifest()});
       }
       if(latestMismatch){
         return j({ok:true,...manifest,releaseVersion:currentVersion,releaseType:"server_only",runtimeVersion:currentVersion,webVersion:currentVersion,serverVersion:currentVersion,required:false,restartRequired:false,message:"Server/Player Web đã cập nhật.",checkedAt:new Date().toISOString()});
