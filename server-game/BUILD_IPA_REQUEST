@@ -1,5 +1,5 @@
 GMWW V2.94 official build
 Requested: 2026-10-06
-Revision: v294-create-room-mystery-portal
+Revision: v294-create-room-mystery-portal-final
 Source: main
-Reason: centered Create Room page with room code/name/reset/delete/online-offline/live toggle/next; Player Web Mystery Portal at campfire for Live rooms; portal arrival at the stairs; seat plus selection automatically confirms Ready.
+Reason: centered Create Room page with room code/name/reset/delete/online-offline/live toggle/next; Player Web Mystery Portal at campfire for Live rooms; portal arrival at the stairs; seat plus selection automatically confirms Ready. Build after CI and packaging-contract fixes.
