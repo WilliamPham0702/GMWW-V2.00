@@ -1475,7 +1475,7 @@ const PLAY_STEP_COPY={
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
   members:{k:'CHỌN NGƯỜI CHƠI',t:'Chọn Người Chơi',x:'ONLINE: chạm trực tiếp chibi đang Online trong Làng. OFFLINE: chọn danh sách hỗ trợ.',a:'XÁC NHẬN NGƯỜI CHƠI'},
   game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
-  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'Chọn dấu + quanh lửa, phân vị trí còn lại rồi khóa vị trí để chọn ván.',a:'KHÓA GHẾ'},
+  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'GM chọn Thủ công: chạm Người Chơi rồi chạm dấu +; hoặc chọn Ngẫu nhiên để phân phối toàn bộ.',a:'KHÓA GHẾ'},
   roles:{k:'PHÂN VAI',t:'Phân Vai',x:'Vai Trò và Artifact được phân nội bộ, chưa gửi xuống Player Web.',a:'PHÂN VAI'},
   deal:{k:'PHÁT VAI',t:'Phát Vai',x:'Chỉ tại bước này Server mới gửi Vai Trò/Artifact riêng xuống Player Web.',a:'PHÁT VAI'},
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
@@ -1669,8 +1669,8 @@ function renderPlayRealtimeHeader(){
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();renderPlayScene()}
 function renderPlayCreateRoomSheet(){
   const live=isLivePlayRoom(),room=playSceneRuntime.room||{};
-  const code=document.getElementById('playCreateRoomCode'),name=document.getElementById('playCreateRoomName'),toggle=document.getElementById('playCreateRoomEnabled'),label=document.getElementById('playCreateRoomLiveLabel'),reset=document.getElementById('playCreateRoomReset'),del=document.getElementById('playCreateRoomDelete');
-  if(code)code.value=live?String(playSceneState.roomCode):'TỰ TẠO';
+  const name=document.getElementById('playCreateRoomName'),seatCount=document.getElementById('playCreateRoomSeatCount'),toggle=document.getElementById('playCreateRoomEnabled'),label=document.getElementById('playCreateRoomLiveLabel'),reset=document.getElementById('playCreateRoomReset'),del=document.getElementById('playCreateRoomDelete');
+  if(seatCount&&document.activeElement!==seatCount)seatCount.value=String(playSceneState.seatCount||12);
   if(name&&live&&document.activeElement!==name)name.value=String(room.roomName||name.value||'Phòng GMWW');
   document.querySelectorAll('#playCreateRoomSheet [data-play-room-mode]').forEach(b=>b.classList.toggle('active',b.dataset.playRoomMode===playSceneState.roomMode));
   const enabled=playSceneState.roomEnabled===true;if(toggle){toggle.classList.toggle('is-on',enabled);toggle.setAttribute('aria-pressed',String(enabled));const b=toggle.querySelector('b');if(b)b.textContent=enabled?'TẮT PHÒNG':'MỞ PHÒNG'}
@@ -1716,10 +1716,10 @@ async function playCreateRoom(){
   if(playSceneRuntime.busy)return false;
   playSetBusy(true);
   try{
-    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:document.getElementById('playCreateRoomName')?.value.trim()||'Phòng GMWW',roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'walk',seatCount:playSceneState.seatCount})});
+    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:document.getElementById('playCreateRoomName')?.value.trim()||'Phòng GMWW',roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.roomCode)throw new Error(data?.message||data?.error||'Không tạo được Phòng.');
-    playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.seatMoveMode='walk';playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();
+    playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.seatMoveMode='instant';playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();
     await playSyncRoom(true);try{memberAdminState.loaded=false;await loadMembers(false)}catch{}renderPlayCreateRoomSheet();renderPlayScene();return true
   }catch(err){playFlashError(err.message);return false}
   finally{playSetBusy(false)}
@@ -1728,7 +1728,7 @@ async function playCreateRoomNext(){
   if(playSceneRuntime.busy)return;
   if(!isLivePlayRoom()){const ok=await playCreateRoom();if(!ok)return}
   if(!(await playSaveRoomName()))return;
-  playSceneState.step='members';savePlayScene();document.getElementById('playCreateRoomSheet')?.classList.add('hidden');renderPlayScene()
+  playSceneState.step='seats';playSceneState.activePlayerId='';savePlayScene();document.getElementById('playCreateRoomSheet')?.classList.add('hidden');renderPlayScene()
 }
 async function playSyncRoom(force=false){
   if(!isLivePlayRoom())return null;
@@ -1897,10 +1897,10 @@ function renderPlayContext(){
         actions.innerHTML='<button class="play-action-chip active" type="button" disabled><span>▣</span><b>'+playEsc(playSceneState.gameName||'Ván Mẫu')+'</b></button>'
       }else if(playSceneState.step==='seats'){
         const st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
-        actions.innerHTML='<button class="play-action-chip '+(playSceneState.seatMoveMode==='instant'?'active':'')+'" data-play-seat-move="instant" type="button"><span>＋</span><b>CHỌN VỊ TRÍ</b></button><button class="play-action-chip '+(playSceneState.seatMoveMode==='walk'?'active':'')+'" data-play-seat-move="walk" type="button"><span>➜</span><b>ĐI TỚI VỊ TRÍ</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>PHÂN VỊ TRÍ CÒN LẠI</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA VỊ TRÍ':'KHÓA VỊ TRÍ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>＋</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
+        actions.innerHTML='<button class="play-action-chip active" data-play-seat-manual type="button"><span>☝</span><b>THỦ CÔNG</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>NGẪU NHIÊN</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA XẾP CHỖ':'CHỐT XẾP CHỖ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>●</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
         actions.querySelector('[data-play-random-seats]')?.addEventListener('click',playRandomSeatRemaining);
         actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>playSetSeatLock(!locked));
-        bindPlaySeatMoveButtons()
+        actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',()=>playFlashError('Chọn một Người Chơi rồi chạm dấu + để xếp chỗ.'))
       }else if(playSceneState.step==='roles'){actions.innerHTML='<button class="play-action-chip" data-play-assign-auto type="button"><b>TỰ ĐỘNG</b></button><button class="play-action-chip" data-play-assign-random type="button"><b>NGẪU NHIÊN</b></button>';actions.querySelector('[data-play-assign-auto]')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(e){playFlashError(e.message)}});actions.querySelector('[data-play-assign-random]')?.addEventListener('click',()=>{try{playBuildAssignments()}catch(e){playFlashError(e.message)}})}else actions.innerHTML='';
     }
   }
@@ -2308,7 +2308,7 @@ function exitPlayImmersive(){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
   const home=document.getElementById('home');if(home)home.scrollTop=0
 }
-async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);const name=document.getElementById('playCreateRoomName');if(name)name.value=String(playSceneRuntime.room?.roomName||name.value||'Phòng GMWW');renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
+async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);const name=document.getElementById('playCreateRoomName');if(name)name.value=String(playSceneRuntime.room?.roomName||name.value||'Phòng GMWW');const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   initPlayGameChromeAutoHide();
@@ -2347,6 +2347,7 @@ function initPlayScene(){
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
   document.querySelector('.play-core-pearl')?.addEventListener('click',openPlayCreateRoomSheet);
   document.getElementById('playCreateRoomNext')?.addEventListener('click',playCreateRoomNext);
+  document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});
   document.getElementById('playCreateRoomEnabled')?.addEventListener('click',playToggleRoomEnabled);
   document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
   document.getElementById('playCreateRoomDelete')?.addEventListener('click',playDeleteCreatedRoom);
