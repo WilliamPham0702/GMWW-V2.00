@@ -23,7 +23,7 @@ test('runtime update ships exactly the canonical clean role artwork package',()=
 });
 
 test('update endpoint uses revisioned runtime manifest to defeat stale asset caches',()=>{
-  assert.match(prep,/manifest-'\+updateChannelRev\+'\\.json/);
+  assert.ok(prep.includes("path.join(outRoot,'manifest-'+updateChannelRev+'.json')"));
   const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
-  assert.match(worker,/manifest-"\+UPDATE_CHANNEL_REV\+"\\.json/);
+  assert.ok(worker.includes('manifest-"+UPDATE_CHANNEL_REV+".json'));
 });
