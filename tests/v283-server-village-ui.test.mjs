@@ -12,31 +12,35 @@ const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
 const membersPage=read('src/gmww-members-page.js');
 
-test('V2.91 GM lobby uses websocket-first realtime with fallback polling',()=>{
+test('V2.92 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/ensurePlayRealtimePoll/);
   assert.match(app,/playSceneRuntime\.socket\.readyState!==WebSocket\.OPEN\)\)playSyncRoom\(false\)\},750\)/);
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('V2.91 top menu is rebuilt from zero with isolated small-small-large-small-small geometry',()=>{
+test('V2.92 top menu mirrors bottom colors and auto-hides after 20 seconds',()=>{
   const auto=html.indexOf('id="playAutoGM"'),gm=html.indexOf('id="playRoomButton"'),info=html.indexOf('id="playPhasePill"'),refresh=html.indexOf('id="playRefreshServer"'),audio=html.indexOf('id="playAudioTop"');
   assert.ok(auto>=0&&gm>auto&&info>gm&&refresh>info&&audio>refresh);
-  assert.match(html,/id="gmTopMenu"/);
-  assert.match(html,/class="gm-top-menu-v291"/);
-  assert.match(html,/gm-top-auto-v291/);
-  assert.match(html,/gm-top-gm-v291/);
-  assert.match(html,/gm-top-info-v291/);
-  assert.match(html,/gm-top-realtime-v291/);
-  assert.match(html,/gm-top-audio-v291/);
-  assert.doesNotMatch(html,/class="play-hud"/);
-  assert.doesNotMatch(html,/class="play-top-control/);
-  assert.match(css,/V2\.91 TOP MENU — rebuilt from zero/);
+  assert.match(html,/class="gm-top-menu-v292"/);
+  assert.match(html,/gm-top-auto-v292/);
+  assert.match(html,/gm-top-gm-v292/);
+  assert.match(html,/gm-top-info-v292/);
+  assert.match(html,/gm-top-realtime-v292/);
+  assert.match(html,/gm-top-audio-v292/);
+  assert.match(css,/V2\.92 TOP MENU — color-mirrored to bottom bar \+ 20s auto-hide/);
   assert.match(css,/grid-template-columns:52px 52px minmax\(0,1fr\) 52px 56px!important/);
-  assert.match(css,/#gmTopMenu \.gm-top-auto-v291\.is-on \.gm-top-icon-auto-v291/);
-  assert.match(css,/#gmTopMenu \.gm-top-realtime-v291\.is-live \.gm-top-live-dot-v291/);
-  assert.match(app,/function refreshPlayServerRealtime\(\)/);
-  assert.match(app,/function togglePlayAudio\(\)/);
-  assert.match(app,/querySelector\('\.gm-top-icon-audio-v291'\)/);
+  assert.match(css,/\.gm-top-auto-v292\{[\s\S]*background:rgba\(89,40,47,\.78\)!important/);
+  assert.match(css,/\.gm-top-gm-v292,[\s\S]*\.gm-top-realtime-v292\{[\s\S]*background:rgba\(7,48,65,\.82\)!important/);
+  assert.match(css,/\.gm-top-info-v292\{[\s\S]*linear-gradient\(180deg,rgba\(21,131,161,\.94\),rgba\(8,84,116,\.92\)\)!important/);
+  assert.match(css,/\.gm-top-audio-v292\{[\s\S]*background:rgba\(82,63,25,\.78\)!important/);
+  assert.match(css,/\.gm-top-menu-v292\.is-auto-hidden\{[\s\S]*translateY\(calc\(-100% \+ 8px\)\)/);
+  assert.match(app,/const PLAY_TOP_MENU_IDLE_MS=20000/);
+  assert.match(app,/function resetPlayTopMenuIdle\(\)/);
+  assert.match(app,/setTimeout\(\(\)=>\{if\(document\.body\.classList\.contains\('play-immersive'\)\)setPlayTopMenuHidden\(true\)\},PLAY_TOP_MENU_IDLE_MS\)/);
+  assert.match(app,/document\.addEventListener\('pointerdown',reveal/);
+  assert.match(app,/document\.addEventListener\('touchstart',reveal/);
+  assert.match(app,/document\.addEventListener\('keydown',reveal/);
+  assert.match(app,/querySelector\('\.gm-top-icon-audio-v292'\)/);
 });
 test('GM player labels keep name and status above character, role below, all scaled with character',()=>{
   assert.match(app,/<div class="play-player-over"><b>'\+playEsc\(name\)\+'<\/b><small>'\+playEsc\(statusLabel\)/);
