@@ -44,7 +44,7 @@ test('Player Web treats WebSocket movement as realtime and polling only as fallb
   assert.ok(live.includes('state.serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
   assert.ok(live.includes('state.gameStateTimer=setInterval(pollRoomState,15000)'));
   assert.ok(live.includes('clockOffsetMs:Number(state.serverClockOffsetMs||0)'));
-  assert.ok(live.includes("iframe.src='/village/?embed=1&v=291'"));
+  assert.ok(live.includes("iframe.src='/village/?embed=1&v=294'"));
 });
 
 test('GM IPA consumes move WebSocket events and animates tokens with requestAnimationFrame',()=>{
@@ -84,10 +84,10 @@ test('IPA workflow bundles and verifies all 240 walk frames',()=>{
 
 test('V2.66 movement contract remains packaged in the V2.87 runtime',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.93"'));
-  assert.ok(app.includes("const VERSION='2.93';"));
-  assert.ok(html.includes('GMWW V2.93'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 293;'));
-  assert.ok(project.includes('MARKETING_VERSION = 2.93;'));
-  assert.equal(pkg.version,'2.93.0');
+  assert.ok(server.includes('VERSION="V2.94"'));
+  assert.ok(app.includes("const VERSION='2.94';"));
+  assert.ok(html.includes('GMWW V2.94'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 294;'));
+  assert.ok(project.includes('MARKETING_VERSION = 2.94;'));
+  assert.equal(pkg.version,'2.94.0');
 });
