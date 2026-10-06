@@ -17,7 +17,7 @@ test('V3.01 runtime keeps offline/online room flow with GM-only seating',()=>{
   assert.match(html,/id="playSeatCount"/);
   assert.match(html,/data-play-seat-move="instant"/);
   assert.match(html,/data-play-seat-move="walk"/);
-  assert.match(app,/seatMoveMode:'walk'/);
+  assert.match(app,/seatMoveMode:'instant'/);
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
