@@ -6,3 +6,4 @@ Reason: rebuild after update-manager fix. Keep CẬP NHẬT RUNTIME, TẢI IPA a
 Rebuild: 2026-10-06 V3.03 final after metadata/runtime commits.
 Rebuild: 2026-10-06 final UI menu layout + remove floating context box + restore named room setup.
 Rebuild: 2026-10-06 bottom GM menu locked to 20%-60%-20% (Quay về / Thông Tin / Tiếp tục).
+Rebuild: exact 3-column GM bottom menu, Quay ve 20 / Thong Tin 60 / Tiep tuc 20; override legacy CSS.
