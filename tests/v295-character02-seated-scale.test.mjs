@@ -28,5 +28,5 @@ test("Character-02 patch avoids rebuilding GM player DOM on every unchanged hear
   assert.match(app,/playPlayerRenderSignature/);
   assert.match(app,/if\(playerRenderChanged\)renderPlayPlayers\(\)/);
   assert.equal(pkg.version,"3.01.0");
-  assert.match(worker,/VERSION="V3\.00"/);
+  assert.match(worker,/VERSION="V3\.01"/);
 });
