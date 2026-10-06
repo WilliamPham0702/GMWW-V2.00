@@ -1569,21 +1569,26 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 }
 
 
-/* GM rider: same visual size as a normal character; autonomous + player-like manual control. */
-.play-player-token.is-gm-rider{width:72px;pointer-events:auto!important;z-index:50}
+/* GM rider: same size as a normal character; visible running/leaping gait. */
+.play-player-token.is-gm-rider{width:72px;pointer-events:auto!important;z-index:50;--gm-run-dir:1}
 .play-player-token.is-gm-rider .play-player-avatar{width:56px;height:74px;position:relative;overflow:visible}
-.play-player-token.is-gm-rider .gm-wolf-sprite{position:relative;display:block;width:100%;height:100%;overflow:visible}
-.play-player-token.is-gm-rider .gm-wolf-sprite img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 5px rgba(0,0,0,.42)) drop-shadow(0 0 7px rgba(224,244,255,.24));pointer-events:none}
-.play-player-token.is-gm-rider .gm-wolf-body{clip-path:polygon(0 0,100% 0,100% 69%,0 69%)}
-.play-player-token.is-gm-rider .gm-wolf-leg-a{clip-path:polygon(0 57%,56% 57%,56% 100%,0 100%);transform-origin:37% 79%}
-.play-player-token.is-gm-rider .gm-wolf-leg-b{clip-path:polygon(44% 57%,100% 57%,100% 100%,44% 100%);transform-origin:68% 79%}
+.play-player-token.is-gm-rider .gm-wolf-sprite{position:relative;display:block;width:100%;height:100%;overflow:visible;transform-origin:50% 88%;will-change:transform}
+.play-player-token.is-gm-rider .gm-wolf-sprite img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 5px rgba(0,0,0,.42)) drop-shadow(0 0 7px rgba(224,244,255,.24));pointer-events:none;z-index:2}
+.play-player-token.is-gm-rider .gm-wolf-shadow{position:absolute;left:14%;right:9%;bottom:3px;height:8px;border-radius:50%;background:rgba(10,31,39,.28);filter:blur(2px);z-index:1}
+.play-player-token.is-gm-rider .gm-wolf-body{clip-path:polygon(0 0,100% 0,100% 70%,0 70%);transform-origin:54% 70%}
+.play-player-token.is-gm-rider .gm-wolf-leg-a{clip-path:polygon(0 54%,57% 54%,57% 100%,0 100%);transform-origin:38% 68%;transform:scaleY(1.22)}
+.play-player-token.is-gm-rider .gm-wolf-leg-b{clip-path:polygon(43% 54%,100% 54%,100% 100%,43% 100%);transform-origin:68% 68%;transform:scaleY(1.22)}
 .play-player-token.is-gm-rider .play-player-over b{background:linear-gradient(180deg,rgba(104,70,15,.94),rgba(45,31,9,.94));border:1px solid rgba(255,226,132,.72);color:#fff1b0}
 .play-player-token.is-gm-rider .play-player-over small{background:rgba(255,236,174,.94);color:#5f4104}
-@keyframes playGmWolfBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
-@keyframes playGmWolfLegA{0%,100%{transform:translate(-1px,1px) rotate(-2.5deg)}50%{transform:translate(1px,-2px) rotate(2.5deg)}}
-@keyframes playGmWolfLegB{0%,100%{transform:translate(1px,-2px) rotate(2.5deg)}50%{transform:translate(-1px,1px) rotate(-2.5deg)}}
-.play-player-token.is-gm-rider.is-moving .gm-wolf-body{animation:playGmWolfBody .38s ease-in-out infinite}
-.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-a{animation:playGmWolfLegA .38s steps(2,end) infinite}
-.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-b{animation:playGmWolfLegB .38s steps(2,end) infinite}
+@keyframes playGmWolfLeap{0%{transform:translate(0,1px) rotate(0)}18%{transform:translate(calc(var(--gm-run-dir)*1px),2px)}46%{transform:translate(calc(var(--gm-run-dir)*7px),-8px) rotate(calc(var(--gm-run-dir)*-4deg))}70%{transform:translate(calc(var(--gm-run-dir)*9px),-3px)}100%{transform:translate(0,1px) rotate(0)}}
+@keyframes playGmWolfBodyRun{0%,100%{transform:translateY(1px)}45%{transform:translateY(-2px)}70%{transform:translateY(0)}}
+@keyframes playGmWolfLegA{0%,100%{transform:translate(calc(var(--gm-run-dir)*-2px),0) rotate(calc(var(--gm-run-dir)*-7deg)) scaleY(1.48)}45%{transform:translate(calc(var(--gm-run-dir)*4px),-4px) rotate(calc(var(--gm-run-dir)*10deg)) scaleY(.88)}70%{transform:translate(calc(var(--gm-run-dir)*5px),1px) rotate(calc(var(--gm-run-dir)*5deg)) scaleY(1.34)}}
+@keyframes playGmWolfLegB{0%,100%{transform:translate(calc(var(--gm-run-dir)*4px),-3px) rotate(calc(var(--gm-run-dir)*9deg)) scaleY(.9)}45%{transform:translate(calc(var(--gm-run-dir)*-3px),1px) rotate(calc(var(--gm-run-dir)*-9deg)) scaleY(1.5)}70%{transform:translate(calc(var(--gm-run-dir)*-1px),0) rotate(calc(var(--gm-run-dir)*-4deg)) scaleY(1.18)}}
+@keyframes playGmWolfShadow{0%,100%{left:13%;right:8%;opacity:.34}46%{left:28%;right:24%;opacity:.16}70%{left:21%;right:16%;opacity:.23}}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-sprite{animation:playGmWolfLeap .48s cubic-bezier(.35,0,.55,1) infinite}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-body{animation:playGmWolfBodyRun .48s ease-in-out infinite}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-a{animation:playGmWolfLegA .48s ease-in-out infinite}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-b{animation:playGmWolfLegB .48s ease-in-out infinite}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-shadow{animation:playGmWolfShadow .48s ease-in-out infinite}
 @media(max-width:390px){.play-player-token.is-gm-rider{width:72px}.play-player-token.is-gm-rider .play-player-avatar{width:56px;height:74px}}
-@media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider.is-moving .gm-wolf-body,.play-player-token.is-gm-rider.is-moving .gm-wolf-leg{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider.is-moving .gm-wolf-sprite,.play-player-token.is-gm-rider.is-moving .gm-wolf-body,.play-player-token.is-gm-rider.is-moving .gm-wolf-leg,.play-player-token.is-gm-rider.is-moving .gm-wolf-shadow{animation:none!important}}

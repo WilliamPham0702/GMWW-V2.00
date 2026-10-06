@@ -56,8 +56,8 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V2.95 keeps GM rider at normal character size and animates wolf legs',()=>{
-  assert.match(app,/const VERSION='2\.95'/);
+test('V2.96 keeps GM rider at normal character size and animates wolf legs',()=>{
+  assert.match(app,/const VERSION='2\.96'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
@@ -73,11 +73,24 @@ test('V2.95 keeps GM rider at normal character size and animates wolf legs',()=>
   assert.match(ipa,/cp assets\/gm\/gm-white-wolf\.webp/);
 });
 
-test('V2.95 update channel preserves runtime manifest and GM rider asset for V2.94 shell',()=>{
+test('V2.96 update channel preserves runtime manifest and GM rider asset for V2.94 shell',()=>{
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(server,/updates\/runtime\/V/);
   assert.match(server,/latestLostRuntime/);
   assert.match(prepare,/manifest\.json/);
   assert.match(deploy,/gm\/gm-white-wolf\.webp/);
+});
+
+test('GM can be steered before room creation and wolf visibly leaps instead of gliding',()=>{
+  const h=app.match(/document\.getElementById\('playWorld'\)\?\.addEventListener\('click',[\s\S]*?window\.addEventListener\('resize'/)?.[0]||'';
+  assert.ok(h);
+  assert.doesNotMatch(h,/\|\|!isLivePlayRoom\(\)\)return/);
+  assert.match(h,/gmSelected\|\|!activeId/);
+  assert.match(h,/if\(!isLivePlayRoom\(\)\)return/);
+  assert.match(gmStyle,/playGmWolfLeap/);
+  assert.match(gmStyle,/scaleY\(1\.48\)/);
+  assert.match(gmStyle,/gm-wolf-shadow/);
+  assert.match(css,/gmwwGmWolfLeap/);
+  assert.match(css,/scaleY\(1\.5\)/);
 });
