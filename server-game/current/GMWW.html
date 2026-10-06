@@ -100,20 +100,7 @@
           </div>
         </section>
 
-        <section class="play-context-panel" id="playContextPanel">
-          <div class="play-context-copy">
-            <small id="playContextKicker">THIẾT LẬP VÁN</small>
-            <b id="playContextTitle">Tạo Phòng → Thành Viên → Ván → Vai Trò → Phát Vai → Vào Trận</b>
-            <span id="playContextText">Hai chế độ dùng chung một sân chơi và cùng dữ liệu phòng.</span>
-          </div>
-          <div class="play-context-actions" id="playContextActions">
-            <button class="play-action-chip active" data-play-room-mode="offline" type="button"><span>◉</span><b>OFFLINE</b></button>
-            <button class="play-action-chip" data-play-room-mode="online" type="button"><span>◎</span><b>ONLINE</b></button>
-            <button class="play-action-chip active" data-play-seat-move="instant" type="button"><span>＋</span><b>CHỌN GHẾ NGAY</b></button>
-            <button class="play-action-chip" data-play-seat-move="walk" type="button"><span>➜</span><b>CHIBI ĐI TỚI GHẾ</b></button>
-            <label class="play-slot-picker"><span>SỐ GHẾ</span><input id="playSeatCount" type="number" min="1" max="30" step="1" value="12"></label>
-          </div>
-        </section>
+        
 
         <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="done" data-play-step="room" type="button"><span>1</span><b>Phòng</b></button>
@@ -127,7 +114,7 @@
 
         <footer class="play-control-bar play-control-bar-three">
           <button class="play-control-icon" id="playBack" type="button" aria-label="Quay về"><span>‹</span><small>Quay về</small></button>
-          <button class="play-primary-control play-info-control" id="playPrimaryAction" type="button"><span id="playPrimaryIcon">◉</span><b id="playPrimaryLabel">THÔNG TIN</b></button>
+          <div class="play-primary-control play-info-control" id="playPrimaryAction" role="status" aria-live="polite"><span id="playPrimaryIcon">◉</span><b id="playPrimaryLabel">THÔNG TIN</b></div>
           <button class="play-control-icon" id="playNext" type="button" aria-label="Tiếp tục"><span>›</span><small>Tiếp tục</small></button>
         </footer>
       </div>
