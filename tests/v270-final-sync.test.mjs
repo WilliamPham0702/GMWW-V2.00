@@ -6,12 +6,12 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('V2.95 runtime and native shell are aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.95"'));
-  assert.ok(app.includes("const VERSION='2.95';"));
-  assert.ok(html.includes('GMWW V2.95'));
+  assert.ok(server.includes('VERSION="V2.96"'));
+  assert.ok(app.includes("const VERSION='2.96';"));
+  assert.ok(html.includes('GMWW V2.96'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 295;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.95;'));
-  assert.equal(pkg.version,'2.95.0');
+  assert.equal(pkg.version,'2.96.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
