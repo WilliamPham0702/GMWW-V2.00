@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='2.96';
+const VERSION='2.97';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1350,7 +1350,7 @@ let playSceneState=(()=>{
   const base={step:'room',roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:12,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:45,autoAdvance:true},matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.roomEnabled=saved.roomEnabled===true;saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.roomEnabled=false;saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='room';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))saved.step='room';return saved}catch{return base}
 })();
-const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
+const playSceneRuntime={room:null,players:[],assignments:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
 function playLiveMembers(){
@@ -1366,6 +1366,10 @@ function playVillageMembers(){
     for(const m of (memberAdminState.members||[]).filter(x=>x?.online&&x?.loginId&&!x.currentRoomCode)){
       const id=String(m.loginId),old=liveById.get(id)||{};
       byId.set(id,{...m,...old,kind:'member',loginId:id,online:true});
+    }
+    for(const m of live){
+      const id=String(m?.loginId||String(m?.participantId||'').replace(/^member:/,''));
+      if(id&&!byId.has(id))byId.set(id,{...m,kind:'member',loginId:id,online:true});
     }
   }
   return [...byId.values()];
@@ -1427,7 +1431,7 @@ async function refreshPlayServerRealtime(){
       disconnectPlaySocket();
       await playSyncRoom(true);
       connectPlaySocket();ensurePlayRealtimePoll();renderPlayPlayers();syncPlayMovementTicker();
-    }else{try{await loadMembers(false)}catch{}renderPlayScene()}
+    }else{try{await loadMembers(false)}catch{}await playSyncGlobalVillageMotion(true);renderPlayScene()}
     btn.classList.add('is-ok');setTimeout(()=>btn.classList.remove('is-ok'),850)
   }catch(err){setPlayRealtimeState('offline');btn.classList.add('is-error');playFlashError('Không cập nhật được realtime từ server. '+(err?.message||''));setTimeout(()=>btn.classList.remove('is-error'),1100)}
   finally{delete btn.dataset.syncing;btn.classList.remove('is-syncing')}
@@ -1462,7 +1466,27 @@ async function playRoomApi(path='',opts={}){
   return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,opts);
 }
 function disconnectPlaySocket(){if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}if(playSceneRuntime.roomSyncTimer){clearTimeout(playSceneRuntime.roomSyncTimer);playSceneRuntime.roomSyncTimer=0}if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}try{playSceneRuntime.socket?.close(1000,'GM_ROOM_CHANGED')}catch{}playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode=''}
-function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}return}if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},750)}
+function stopPlayGlobalVillagePoll(){if(playSceneRuntime.villagePollTimer){clearInterval(playSceneRuntime.villagePollTimer);playSceneRuntime.villagePollTimer=0}}
+async function playSyncGlobalVillageMotion(forceRender=false){
+  if(isLivePlayRoom())return null;
+  try{
+    const before=playPlayerRenderSignature(),res=await fetch(GMWW_SERVER_BASE+'/api/village?ts='+Date.now(),{cache:'no-store'}),d=await res.json();
+    if(!res.ok||d?.ok===false)throw new Error(d?.message||d?.error||('HTTP '+res.status));
+    if(Number.isFinite(Number(d?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+    const rows=(Array.isArray(d?.players)?d.players:[]).map(p=>{const participantId=String(p?.participantId||''),loginId=String(p?.loginId||participantId.replace(/^member:/,''));return{...p,participantId:participantId||('member:'+loginId),kind:'member',loginId,online:p?.online!==false}});
+    playSceneRuntime.players=rows;playSceneRuntime.lastSyncAt=Date.now();setPlayRealtimeState('live');
+    const changed=before!==playPlayerRenderSignature();
+    if(forceRender||changed)renderPlayPlayers();else syncPlayMovementTicker();
+    renderPlayRealtimeHeader();return d
+  }catch(err){setPlayRealtimeState('offline');return null}
+}
+function ensurePlayGlobalVillagePoll(){
+  if(isLivePlayRoom()){stopPlayGlobalVillagePoll();return}
+  if(playSceneRuntime.villagePollTimer)return;
+  playSyncGlobalVillageMotion(true);
+  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},250)
+}
+function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},750)}
 function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')}
 function connectPlaySocket(){
   if(!isLivePlayRoom()){disconnectPlaySocket();setPlayRealtimeState('offline');return}
@@ -1608,7 +1632,7 @@ function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
 function renderPlayGmToken(){
   const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(Date.now());if(!ring)return;ring.querySelector('[data-play-gm-rider]')?.remove();if(!actor)return;
-  const pt=playMapDisplay(actor.x,actor.y),el=document.createElement('button'),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.type='button';el.dataset.playGmRider='1';el.className='play-player-token is-gm-rider'+(String(playSceneState.activePlayerId||'')==='gm:online'?' is-active':'')+(actor.moving?' is-moving':'');el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.innerHTML='<div class="play-player-over"><b>GM</b><small>'+playEsc(actor.status)+'</small></div><div class="play-player-avatar"><span class="gm-wolf-sprite"><span class="gm-wolf-shadow"></span><img class="gm-wolf-body" src="gm/gm-white-wolf.webp" alt="GM cưỡi sói trắng"><img class="gm-wolf-leg gm-wolf-leg-a" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-b" src="gm/gm-white-wolf.webp" alt=""></span></div>';el.onclick=e=>{e.stopPropagation();playSceneState.activePlayerId='gm:online';savePlayScene();renderPlayScene()};ring.appendChild(el)
+  const pt=playMapDisplay(actor.x,actor.y),el=document.createElement('button'),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.type='button';el.dataset.playGmRider='1';el.className='play-player-token is-gm-rider'+(String(playSceneState.activePlayerId||'')==='gm:online'?' is-active':'')+(actor.moving?' is-moving':'');el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.innerHTML='<div class="play-player-over"><b>GM</b><small>'+playEsc(actor.status)+'</small></div><div class="play-player-avatar"><div class="gm-wolf-sprite"><div class="gm-wolf-shadow"></div><img class="gm-wolf-body" src="gm/gm-white-wolf.webp" alt="GM cưỡi sói trắng"><img class="gm-wolf-leg gm-wolf-leg-a" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-b" src="gm/gm-white-wolf.webp" alt=""></div></div>';el.onclick=e=>{e.stopPropagation();playSceneState.activePlayerId='gm:online';savePlayScene();renderPlayScene()};ring.appendChild(el)
 }
 function updatePlayGmToken(now=Date.now()){
   const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(now);if(!ring||!actor)return false;let el=ring.querySelector('[data-play-gm-rider]');if(!el){renderPlayGmToken();el=ring.querySelector('[data-play-gm-rider]');if(!el)return false}const pt=playMapDisplay(actor.x,actor.y),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.classList.toggle('is-moving',actor.moving);const status=el.querySelector('small');if(status)status.textContent=actor.status;return true
@@ -1825,7 +1849,7 @@ function renderPlayScene(){
   if(primary){if(phase==='night')primary.textContent=playSceneRuntime.nightRuntime?.completed?'SANG BAN NGÀY':'TIẾP THEO';else if(phase==='day')primary.textContent='ĐÊM TIẾP THEO';else primary.textContent=(PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room).a}
   if(icon)icon.textContent=phase==='night'?(playSceneRuntime.nightRuntime?.completed?'☀':'›'):phase==='day'?'☾':playSceneState.step==='battle'?'☾':'＋';
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
-  renderPlayContext();const context=document.getElementById('playContextPanel');if(context){context.classList.toggle('is-setup-popup',playSceneState.phase==='lobby');context.classList.toggle('is-popup-closed',playSceneState.phase==='lobby'&&playSceneRuntime.setupPopupClosed);let close=context.querySelector('.play-context-close');if(!close){close=document.createElement('button');close.type='button';close.className='play-context-close';close.textContent='×';close.setAttribute('aria-label','Đóng');close.onclick=()=>{playSceneRuntime.setupPopupClosed=true;context.classList.add('is-popup-closed')};context.appendChild(close)}}renderPlayPlayers();renderPlayCards();syncPlayAutoAdvance();
+  renderPlayContext();const context=document.getElementById('playContextPanel');if(context){context.classList.toggle('is-setup-popup',playSceneState.phase==='lobby');context.classList.toggle('is-popup-closed',playSceneState.phase==='lobby'&&playSceneRuntime.setupPopupClosed);let close=context.querySelector('.play-context-close');if(!close){close=document.createElement('button');close.type='button';close.className='play-context-close';close.textContent='×';close.setAttribute('aria-label','Đóng');close.onclick=()=>{playSceneRuntime.setupPopupClosed=true;context.classList.add('is-popup-closed')};context.appendChild(close)}}renderPlayPlayers();renderPlayCards();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 
 function playFactionLabel(role){const f=String(role?.factionId||role?.faction||'').toLowerCase();if(f==='wolf'||f.includes('sói')||f.includes('soi'))return'Phe Sói';if(f==='third'||f.includes('ba')||f.includes('third'))return'Phe Ba';return'Phe Dân'}

@@ -102,3 +102,14 @@ test('V2.96 update manifest bypasses stale asset cache and native download canno
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);
 });
+
+test('V2.97 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
+  assert.ok(app.includes('villagePollTimer:0'));
+  assert.ok(app.includes('/api/village?ts='));
+  assert.ok(app.includes('playSyncGlobalVillageMotion'));
+  assert.ok(app.includes('playSyncGlobalVillageMotion(false)},250)'));
+  assert.ok(app.includes('serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
+  assert.ok(app.includes('<div class="gm-wolf-sprite"><div class="gm-wolf-shadow"></div>'));
+  assert.ok(!app.includes('<span class="gm-wolf-sprite"><span class="gm-wolf-shadow">'));
+  assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
+});

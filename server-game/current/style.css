@@ -1592,3 +1592,8 @@ body.play-immersive #start #gmTopMenu .gm-top-audio-v293.is-muted{opacity:.68!im
 .play-player-token.is-gm-rider.is-moving .gm-wolf-shadow{animation:playGmWolfShadow .48s ease-in-out infinite}
 @media(max-width:390px){.play-player-token.is-gm-rider{width:72px}.play-player-token.is-gm-rider .play-player-avatar{width:56px;height:74px}}
 @media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider.is-moving .gm-wolf-sprite,.play-player-token.is-gm-rider.is-moving .gm-wolf-body,.play-player-token.is-gm-rider.is-moving .gm-wolf-leg,.play-player-token.is-gm-rider.is-moving .gm-wolf-shadow{animation:none!important}}
+
+/* V2.97 GM transparency + authoritative pre-room realtime motion */
+.play-player-token.is-gm-rider .play-player-avatar,
+.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.play-player-token.is-gm-rider .gm-wolf-shadow{border-radius:50%!important}
