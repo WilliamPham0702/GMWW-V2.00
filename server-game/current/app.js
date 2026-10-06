@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.01';
+const VERSION='3.02';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -843,9 +843,9 @@ function setUpdateAction(kind,context={}){
   if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
   else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
-  else if(kind==='compatible'){if(title)title.textContent='Không cần làm gì';if(hint)hint.textContent='Ứng dụng V'+shell+' vẫn tương thích. Runtime/Server đã ở V'+runtimeV+'. Không tải lại IPA V'+(ipaV||shell)+'.'}
+  else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
   else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
-  else {if(title)title.textContent='Không cần làm gì';if(hint)hint.textContent='Hệ thống đang ở trạng thái phù hợp.'}
+  else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
 }
 async function installRuntimeUpdate(){
   if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
@@ -1766,7 +1766,7 @@ function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
 function renderPlayGmToken(){
   const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(Date.now());if(!ring)return;ring.querySelector('[data-play-gm-rider]')?.remove();if(!actor)return;
-  const pt=playMapDisplay(actor.x,actor.y),el=document.createElement('button'),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.type='button';el.dataset.playGmRider='1';el.className='play-player-token is-gm-rider'+(String(playSceneState.activePlayerId||'')==='gm:online'?' is-active':'')+(actor.moving?' is-moving':'');el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.innerHTML='<div class="play-player-over"><b>GM</b><small>'+playEsc(actor.status)+'</small></div><div class="play-player-avatar"><div class="gm-wolf-sprite"><div class="gm-wolf-shadow"></div><img class="gm-wolf-body" src="gm/gm-white-wolf.webp" alt="GM cưỡi sói trắng"><img class="gm-wolf-head" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-a" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-b" src="gm/gm-white-wolf.webp" alt=""></div></div>';el.onclick=e=>{e.stopPropagation();playSceneState.activePlayerId='gm:online';savePlayScene();renderPlayScene()};ring.appendChild(el)
+  const pt=playMapDisplay(actor.x,actor.y),el=document.createElement('button'),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.type='button';el.dataset.playGmRider='1';el.className='play-player-token is-gm-rider'+(String(playSceneState.activePlayerId||'')==='gm:online'?' is-active':'')+(actor.moving?' is-moving':'');el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.innerHTML='<div class="play-player-over"><b>GM</b><small>'+playEsc(actor.status)+'</small></div><div class="play-player-avatar"><div class="gm-wolf-sprite"><div class="gm-wolf-shadow"></div><img class="gm-wolf-body" src="gm/gm-white-wolf.webp" alt="GM cưỡi sói trắng"><img class="gm-wolf-head" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-a" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-leg gm-wolf-leg-b" src="gm/gm-white-wolf.webp" alt=""></div></div>';el.onclick=e=>{e.stopPropagation();playSceneState.activePlayerId='gm:online';savePlayScene();renderPlayScene();openPlayGMSheet()};ring.appendChild(el)
 }
 function updatePlayGmToken(now=Date.now()){
   const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(now);if(!ring||!actor)return false;let el=ring.querySelector('[data-play-gm-rider]');if(!el){renderPlayGmToken();el=ring.querySelector('[data-play-gm-rider]');if(!el)return false}const pt=playMapDisplay(actor.x,actor.y),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.classList.toggle('is-moving',actor.moving);const status=el.querySelector('small');if(status)status.textContent=actor.status;return true
