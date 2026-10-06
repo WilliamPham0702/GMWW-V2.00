@@ -896,9 +896,9 @@ export class RoomDurableObject extends DurableObject {
     const phase=String(meta.phase||"lobby").toLowerCase();if(meta.seatsLocked)return j({ok:false,error:"SEATS_LOCKED",message:"Ghế đã được GM khóa."},409);if(!["lobby","waiting","role_delivery"].includes(phase))return j({ok:false,error:"SETUP_LOCKED_IN_MATCH",message:"Không thể đổi Nhân Vật hoặc vị trí ngồi khi ván đang chạy."},409);
     const id="member:"+loginId,players=(await this.ctx.storage.get("players"))||{},p=players[id];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM"},404);
     const gameCharacterId=normalizeGameCharacterId(p.gameCharacterId);if(!gameCharacterId)return j({ok:false,error:"ACCOUNT_CHARACTER_REQUIRED",message:"Tài khoản chưa có Nhân Vật game cố định. Hãy chọn Nhân Vật tại Thông Tin trước."},409);
-    const seatCount=normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12),mode=normalizeRoomMode(meta.roomMode),seatMoveMode=normalizeSeatMoveMode(meta.seatMoveMode);const seatId=normalizeSeatId(body?.seatId,seatCount);
+    const seatCount=normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12),seatId=normalizeSeatId(body?.seatId,seatCount);
 
-    if(!seatId&&body?.seatId!==null)return j({ok:false,error:"SEAT_REQUIRED",message:mode==="offline"?"Phòng Offline bắt buộc chọn đúng vị trí đang ngồi.":"Hãy chọn một vị trí ngồi trên vòng Làng trước khi xác nhận."},400);
+    if(body?.seatId!==null)return j({ok:false,error:"GM_SEAT_ASSIGNMENT_REQUIRED",message:"Vị trí do GM xếp. Người chơi không thể tự đăng ký ghế."},403);
     const conflict=seatClaimConflict(players,id,seatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Vị trí đã có người chọn."},409);
     p.gameCharacterId=gameCharacterId;p.seatId=seatId;p.ready=false;clearPlayerMovement(p);if(seatId){const point=villageLayout.positions(seatCount)[seatId-1];p.positionX=point.x;p.positionY=point.y;}p.lastHeartbeatAt=Date.now();p.lastSeenAt=new Date().toISOString();players[id]=p;await this.ctx.storage.put("players",players);
     meta.updatedAt=p.lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
@@ -912,7 +912,7 @@ export class RoomDurableObject extends DurableObject {
     const id="member:"+loginId,players=(await this.ctx.storage.get("players"))||{},p=players[id];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM"},404);
     if(!normalizeGameCharacterId(p.gameCharacterId))return j({ok:false,error:"ACCOUNT_CHARACTER_REQUIRED"},409);
     const seatCount=normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12),targetSeatId=body?.seatId==null?null:normalizeSeatId(body.seatId,seatCount);
-    if(body?.seatId!=null&&!targetSeatId)return j({ok:false,error:"INVALID_SEAT"},400);
+    if(body?.seatId!=null)return j({ok:false,error:"GM_SEAT_ASSIGNMENT_REQUIRED",message:"Ghế chỉ do GM phân phối."},403);
     if(!targetSeatId&&normalizeSeatId(p.seatId,seatCount))return j({ok:false,error:"SEATED_MOVE_REQUIRES_TARGET",message:"Đã ngồi ghế. Hãy chọn ghế mới để đổi chỗ."},409);
     if(targetSeatId){
       if(Number(p.seatId||0)===targetSeatId)return j({ok:true,already:true,room:publicRoom(meta),player:publicPlayer(p),players:Object.values(players).map(publicPlayer)});
