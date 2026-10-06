@@ -1977,9 +1977,8 @@ function renderPlayScene(){
   else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseEyebrow','BAN NGÀY');put('playPhaseTitle','Ngày '+Math.max(1,night));put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
   else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room,active=playLiveMembers().find(p=>String(p?.loginId||'')===String(playSceneState.activePlayerId||''));put('playPhaseOrb',active?'●':'◉');put('playPhaseEyebrow',active?'NGƯỜI CHƠI':'THÔNG TIN');put('playPhaseTitle',active?.displayName||(isLivePlayRoom()?('Phòng '+playSceneState.roomCode):'Chọn Nhân Vật'));put('playCycleBadge',isLivePlayRoom()?'PHÒNG '+playSceneState.roomCode:'CHƯA TẠO PHÒNG');put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
   document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur)});
-  const primary=document.getElementById('playPrimaryLabel'),icon=document.getElementById('playPrimaryIcon');
-  if(primary)primary.textContent='THÔNG TIN';
-  if(icon)icon.textContent='◉';
+  const primary=document.getElementById('playPrimaryLabel');
+  if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=step.t.toUpperCase()}
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
   renderPlayPlayers();renderPlayCards();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
@@ -2307,9 +2306,22 @@ function exitPlayImmersive(){
   const home=document.getElementById('home');if(home)home.scrollTop=0
 }
 async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);const name=document.getElementById('playCreateRoomName');if(name)name.value=String(playSceneRuntime.room?.roomName||name.value||'Phòng GMWW');const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
+function initDraggablePlaySheets(){
+  document.querySelectorAll('.sheet .sheet-card').forEach(card=>{
+    if(card.dataset.dragBound==='1')return;card.dataset.dragBound='1';
+    const handle=card.querySelector('.sheet-head');if(!handle)return;
+    handle.style.touchAction='none';handle.style.cursor='grab';
+    let active=false,startX=0,startY=0,baseX=0,baseY=0,pid=null;
+    handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,select,textarea'))return;active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault()});
+    handle.addEventListener('pointermove',e=>{if(!active||e.pointerId!==pid)return;const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX)),y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';e.preventDefault()});
+    const end=e=>{if(!active||e.pointerId!==pid)return;active=false;handle.style.cursor='grab';try{handle.releasePointerCapture?.(pid)}catch{}};
+    handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  });
+}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   initPlayGameChromeAutoHide();
+  initDraggablePlaySheets();
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
   document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
   document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
