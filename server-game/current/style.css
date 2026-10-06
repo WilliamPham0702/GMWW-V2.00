@@ -1698,3 +1698,15 @@ body.play-immersive #start .play-control-bar.play-control-bar-three>*{min-width:
 .play-room-name-field input{width:100%;min-height:48px;padding:0 14px;border:1px solid rgba(116,228,255,.26);border-radius:13px;background:rgba(1,24,34,.68);color:#fff;font:inherit;font-weight:800}
 .play-room-page-card{max-width:560px}
 .play-room-page-body{gap:12px}
+
+
+/* V3.06 — GM white wolf must visibly animate: stride/dash + independent head shake/howl */
+@keyframes playGmWolfV306StrideFront{0%,100%{transform:translate(-5px,1px) rotate(-18deg) scaleY(1.62)}25%{transform:translate(5px,-5px) rotate(14deg) scaleY(1.12)}50%{transform:translate(12px,-8px) rotate(25deg) scaleY(.94)}75%{transform:translate(5px,2px) rotate(4deg) scaleY(1.52)}}
+@keyframes playGmWolfV306StrideRear{0%,100%{transform:translate(9px,-5px) rotate(18deg) scaleY(1.02)}25%{transform:translate(3px,2px) rotate(4deg) scaleY(1.48)}50%{transform:translate(-7px,3px) rotate(-22deg) scaleY(1.66)}75%{transform:translate(-2px,-4px) rotate(-7deg) scaleY(1.12)}}
+@keyframes playGmWolfV306Dash{0%,100%{transform:translateX(0) translateY(1px)}16%{transform:translateX(3px) translateY(-2px)}38%{transform:translateX(13px) translateY(-9px)}55%{transform:translateX(18px) translateY(-5px)}74%{transform:translateX(8px) translateY(1px)}}
+@keyframes playGmWolfV306Head{0%,55%,100%{transform:translate(0,0) rotate(0)}60%{transform:translate(2px,0) rotate(7deg)}64%{transform:translate(-2px,0) rotate(-7deg)}68%{transform:translate(2px,0) rotate(5deg)}72%{transform:translate(0,0) rotate(0)}82%{transform:translate(1px,-2px) rotate(-9deg)}87%{transform:translate(2px,-7px) rotate(-19deg) scale(1.03)}92%{transform:translate(1px,-5px) rotate(-14deg)}96%{transform:translate(0,-1px) rotate(-4deg)}}
+.play-player-token.is-gm-rider .gm-wolf-head{animation:playGmWolfV306Head 7.2s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-sprite{animation:playGmWolfV306Dash .58s cubic-bezier(.28,0,.48,1) infinite!important}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-a{animation:playGmWolfV306StrideFront .58s cubic-bezier(.3,0,.55,1) infinite!important}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-leg-b{animation:playGmWolfV306StrideRear .58s cubic-bezier(.3,0,.55,1) infinite!important}
+.play-player-token.is-gm-rider.is-moving .gm-wolf-head{animation:playGmWolfV306Head 5.8s ease-in-out infinite!important}
