@@ -8,10 +8,10 @@ const css=readFileSync(new URL('../server-game/current/style.css',import.meta.ur
 const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
-test('V2.87 runtime keeps offline/online room flow on the V2.87 native shell',()=>{
-  assert.ok(app.includes("const VERSION='3.00';"));
-  assert.ok(html.includes('GMWW V3.00'));
-  assert.match(app,/roomMode:playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'walk',seatCount:playSceneState\.seatCount/);
+test('V3.01 runtime keeps offline/online room flow with GM-only seating',()=>{
+  assert.ok(app.includes("const VERSION='3.01';"));
+  assert.ok(html.includes('GMWW V3.01'));
+  assert.match(app,/roomMode:playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
   assert.match(html,/id="playSeatCount"/);
