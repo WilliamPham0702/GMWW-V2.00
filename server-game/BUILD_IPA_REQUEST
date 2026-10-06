@@ -1,4 +1,5 @@
-GMWW V2.89 official test build
+GMWW V2.89 final menu build
 Requested: 2026-10-06
-Revision: official-v289
-Reason: top menu now mirrors the approved bottom-menu proportions in the order Auto / GM / Information / Realtime / Audio. GM receives and animates Player Web movement from the room WebSocket in realtime, with reconnect state shown directly on the Realtime button.
+Revision: final-v289-five-box-menu
+Source: main @ f47ab209a916e3eb68ea49e2a69d8fc1d67ce49c
+Reason: rebuild IPA from current main so the final five-box top HUD matches the approved layout exactly: Auto / GM / Information / Realtime / Audio.
