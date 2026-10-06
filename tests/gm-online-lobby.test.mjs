@@ -56,7 +56,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V3.00 keeps GM rider at normal character size and animates wolf legs',()=>{
+test('V3.01 keeps GM rider at normal character size and animates wolf legs',()=>{
   assert.match(app,/const VERSION='3\.00'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
@@ -95,7 +95,7 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
   assert.match(css,/scaleY\(1\.5\)/);
 });
 
-test('V3.00 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
+test('V3.01 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(server,/UPDATE_CHANNEL_REV="runtime-298"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
@@ -103,7 +103,7 @@ test('V3.00 update manifest bypasses stale asset cache and native download canno
   assert.match(deploy,/Native IPA filename is stale/);
 });
 
-test('V3.00 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
+test('V3.01 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(app.includes('villagePollTimer:0'));
   assert.ok(app.includes('/api/village?ts='));
   assert.ok(app.includes('playSyncGlobalVillageMotion'));
@@ -114,7 +114,7 @@ test('V3.00 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
 });
 
-test('V3.00 wolf uses a forward gallop, longer clear legs, and independent head life',()=>{
+test('V3.01 wolf uses a forward gallop, longer clear legs, and independent head life',()=>{
   assert.ok(app.includes('gm-wolf-head'));
   assert.ok(gmStyle.includes('@keyframes gmWolfForwardGallop'));
   assert.ok(gmStyle.includes('@keyframes gmWolfLongFrontStride'));
