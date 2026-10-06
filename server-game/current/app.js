@@ -2059,7 +2059,7 @@ function exitPlayImmersive(){
   if(playSceneRuntime.busy)return;
   if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
   document.body.classList.remove('play-immersive');
-  clearPlayTopMenuIdle();setPlayTopMenuHidden(false);
+  if(typeof clearPlayTopMenuIdle==='function'){clearPlayTopMenuIdle();setPlayTopMenuHidden(false)}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
   const home=document.getElementById('home');if(home)home.scrollTop=0
