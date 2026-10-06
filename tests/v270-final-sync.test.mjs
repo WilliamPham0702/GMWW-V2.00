@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V2.96 runtime and native shell are aligned',()=>{
+test('V2.97 runtime on the V2.96 native shell is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assert.ok(server.includes('VERSION="V2.97"'));
   assert.ok(app.includes("const VERSION='2.97';"));
@@ -42,7 +42,7 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
 
 test('V2.96 native build request is the official distributable shell',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
-  assert.ok(request.includes('GMWW V2.97'));
+  assert.ok(request.includes('GMWW V2.96'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
