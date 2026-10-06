@@ -84,10 +84,10 @@ test('IPA workflow bundles and verifies all 240 walk frames',()=>{
 
 test('V2.66 movement contract remains packaged in the V2.87 runtime',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V2.97"'));
-  assert.ok(app.includes("const VERSION='2.97';"));
-  assert.ok(html.includes('GMWW V2.97'));
+  assert.ok(server.includes('VERSION="V2.98"'));
+  assert.ok(app.includes("const VERSION='2.98';"));
+  assert.ok(html.includes('GMWW V2.98'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 296;'));
   assert.ok(project.includes('MARKETING_VERSION = 2.96;'));
-  assert.equal(pkg.version,'2.97.0');
+  assert.equal(pkg.version,'2.98.0');
 });
