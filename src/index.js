@@ -304,8 +304,13 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("globalSetting:ui",rec);await this.ctx.storage.delete("globalSetting:webVeil");return j({ok:true,...rec});
   }
   async globalWebSyncGet(){
-    const rec=await this.ctx.storage.get("globalSetting:webSync");
-    return j({ok:true,generation:Math.max(0,Number(rec?.generation||0)),version:String(rec?.version||VERSION),updatedAt:rec?.updatedAt||null,source:rec?.source||null});
+    const old=await this.ctx.storage.get("globalSetting:webSync");
+    if(String(old?.version||"")!==VERSION){
+      const rec={generation:Math.max(0,Number(old?.generation||0))+1,version:VERSION,source:"SERVER_DEPLOY",updatedAt:new Date().toISOString()};
+      await this.ctx.storage.put("globalSetting:webSync",rec);
+      return j({ok:true,...rec});
+    }
+    return j({ok:true,generation:Math.max(0,Number(old?.generation||0)),version:VERSION,updatedAt:old?.updatedAt||null,source:old?.source||null});
   }
   async globalWebSyncBump(body){
     const old=await this.ctx.storage.get("globalSetting:webSync"),rec={
