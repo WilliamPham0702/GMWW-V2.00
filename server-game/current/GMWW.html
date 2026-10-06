@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.01</title>
-<link rel="stylesheet" href="style.css?v=3.01">
+<title>GMWW V3.02</title>
+<link rel="stylesheet" href="style.css?v=3.02">
 </head>
 <body>
 <div id="app">
@@ -55,12 +55,8 @@
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
         <nav class="gm-top-menu-v293" id="gmTopMenu" aria-label="Thanh điều khiển trên">
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM">
-            <span class="gm-top-icon-v293 gm-top-icon-auto-v293" aria-hidden="true">↻</span><small>AUTO</small>
-          </button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-gm-v293" id="playRoomButton" type="button" aria-label="Mở quyền Quản Trò" title="GM">
-            <span class="gm-top-gm-label-v293">GM</span><small>QUẢN TRÒ</small>
-          </button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
           <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill">
             <span class="gm-top-info-orb-v293" id="playPhaseOrb">◉</span>
             <div class="gm-top-info-copy-v293"><small id="playPhaseEyebrow">THÔNG TIN</small><b id="playPhaseTitle">Chọn Nhân Vật</b></div>
@@ -535,28 +531,15 @@
       <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
     </div>
     <div class="play-room-page-body">
-      <label class="play-room-field">
-        <span>TÊN PHÒNG</span>
-        <input id="playCreateRoomName" maxlength="40" value="Phòng GMWW">
-      </label>
-      <div class="play-room-section">
-        <small>CHẾ ĐỘ</small>
-        <div class="play-room-segment">
-          <button data-play-room-mode="online" type="button">ONLINE</button>
-          <button data-play-room-mode="offline" type="button">OFFLINE</button>
-        </div>
-      </div>
-      <label class="play-room-field play-room-seat-count">
-        <span>SỐ LƯỢNG GHẾ NGỒI</span>
-        <input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12">
-      </label>
-      <div class="play-room-live-row">
-        <div><small>TRẠNG THÁI PHÒNG</small><b id="playCreateRoomLiveLabel">ĐANG TẮT</b></div>
-        <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
-      </div>
-      <div class="play-room-danger-row">
+      <div class="play-room-quick-row">
         <button id="playCreateRoomReset" type="button">↻ RESET</button>
+        <button data-play-room-mode="online" type="button">ONLINE</button>
+        <button data-play-room-mode="offline" type="button">OFFLINE</button>
         <button id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
+      </div>
+      <div class="play-room-live-row play-room-live-simple">
+        <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
+        <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
       </div>
       <button class="primary play-room-next" id="playCreateRoomNext" type="button">TẠO PHÒNG & XẾP CHỖ ›</button>
     </div>
