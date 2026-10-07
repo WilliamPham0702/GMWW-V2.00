@@ -1746,7 +1746,7 @@ function renderPlayCreateRoomSheet(){
   document.querySelectorAll('#playCreateRoomSheet [data-play-room-mode]').forEach(b=>b.classList.toggle('active',b.dataset.playRoomMode===playSceneState.roomMode));
   const enabled=playSceneState.roomEnabled===true;if(toggle){toggle.classList.toggle('is-on',enabled);toggle.setAttribute('aria-pressed',String(enabled));const b=toggle.querySelector('b');if(b)b.textContent=enabled?'ON':'OFF'}
   document.getElementById('playRoomModeStep')?.classList.toggle('hidden',!(['mode','settings'].includes(stage)&&!!playRoomUiState.selectedCode));
-  document.getElementById('playRoomSettingsStep')?.classList.toggle('hidden',!(stage==='settings'&&!!playRoomUiState.selectedCode));
+  document.getElementById('playRoomSettingsStep')?.classList.add('hidden');
   document.getElementById('playRoomEditor')?.classList.toggle('hidden',stage!=='edit');
   if(reset)reset.disabled=false;if(del)del.disabled=false;renderPlayCreatedRooms();
 }
@@ -1925,7 +1925,7 @@ async function renderPlayCards(){
   if(roleImg){roleImg.style.opacity=roleVisible&&role?'1':'.28';roleImg.src=role?await resolveArtwork('cards',role.id,'thumb'):'default-artwork.webp'}
   if(artifactImg){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
 }
-function bindPlayRoomModeButtons(){document.querySelectorAll('[data-play-room-mode]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playRoomMode==='online'?'online':'offline';playSceneState.roomMode=mode;playRoomUiState.stage='settings';savePlayScene();renderPlayCreateRoomSheet();if(isLivePlayRoom())await playUpdateRoomSettings({roomMode:mode});else renderPlayScene();renderPlayCreateRoomSheet()})}
+function bindPlayRoomModeButtons(){document.querySelectorAll('[data-play-room-mode]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playRoomMode==='online'?'online':'offline';playSceneState.roomMode=mode;playRoomUiState.stage='mode';savePlayScene();renderPlayCreateRoomSheet();if(isLivePlayRoom())await playUpdateRoomSettings({roomMode:mode});else renderPlayScene();renderPlayCreateRoomSheet()})}
 function bindPlaySeatMoveButtons(){document.querySelectorAll('[data-play-seat-move]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playSeatMove==='walk'?'walk':'instant';playSceneState.seatMoveMode=mode;savePlayScene();if(isLivePlayRoom())await playUpdateRoomSettings({seatMoveMode:mode});else renderPlayScene()})}
 async function playUpdateRoomSettings(patch={}){
   if(!isLivePlayRoom())return;playSetBusy(true);
