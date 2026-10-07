@@ -25,8 +25,8 @@ test('V3.01 has one centered Create Room page and hides generated room code',()=
   assert.match(appCss,/\.play-center-sheet\{[\s\S]*align-items:center!important;[\s\S]*justify-content:center!important/);
 });
 
-test('V3.01 goes from Create Room directly to GM seating',()=>{
-  assert.match(app,/playSceneState\.step='seats';playSceneState\.activePlayerId=''/);
+test('Create Room advances to Member selection before seating',()=>{
+  assert.match(app,/playSceneState\.step='members';playSceneState\.activePlayerId=''/);
   assert.match(app,/seatMoveMode:'instant'/);
   assert.match(app,/THỦ CÔNG/);
   assert.match(app,/NGẪU NHIÊN/);
