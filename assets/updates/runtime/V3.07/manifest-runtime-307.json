@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "releaseVersion": "3.07",
+  "releaseType": "runtime",
+  "shellVersion": "3.06",
+  "minimumShellVersion": "3.05",
+  "runtimeVersion": "3.07",
+  "webVersion": "3.07",
+  "serverVersion": "3.07",
+  "required": false,
+  "restartRequired": true,
+  "message": "Có GMWW V3.07. Chỉ cần cập nhật trực tiếp trong ứng dụng, không cần cài lại IPA.",
+  "runtime": {
+    "files": [
+      {
+        "path": "GMWW.html",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/GMWW.html",
+        "sha256": "74d79f6728fe6812f12e113d9e4f563c3a3d7458c5c77c51ec92a390d99f73ce"
+      },
+      {
+        "path": "app.js",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/app.js",
+        "sha256": "dc06475a861c66e0f7cb1f7a02ae339edac2d9ebc8a87e4c3b2009710c68fab0"
+      },
+      {
+        "path": "style.css",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/style.css",
+        "sha256": "020ff84441eeee45359e55b4d22d3db9f630c78644a1145e42ca70a18c5f473c"
+      }
+    ]
+  },
+  "ipa": null,
+  "delete": []
+}
