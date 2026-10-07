@@ -9,21 +9,16 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const server=fs.readFileSync('src/index.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 
-test('V3.11 GM empty seats use tropical leaf mats with a central plus',()=>{
-  assert.match(gmCss,/V3\.10 — tropical leaf seat markers/);
-  assert.match(gmCss,/\.play-player-token\.is-empty \.play-player-avatar::before/);
-  assert.match(gmCss,/border-radius:92% 16% 92% 16%/);
-  assert.match(gmCss,/linear-gradient\(145deg,#7ce7a7/);
-  assert.match(gmCss,/\.play-position-plus\{[\s\S]*radial-gradient\(circle at 36% 30%,#fffbe0/);
+test('V3.14 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{
+  assert.match(gmCss,/V3\\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
+  assert.match(gmCss,/seat-leaf\\.webp\\?v=314/);
+  assert.match(gmCss,/\\.play-position-plus\\{display:none!important/);
 });
 
-test('V3.11 Player Web seats use the same tropical leaf visual language',()=>{
-  assert.match(villageCss,/V3\.10 — tropical leaf seat markers shared by Player Web/);
-  assert.match(villageCss,/\.seat-empty \.seat-dot::after/);
-  assert.match(villageCss,/border-radius:92% 16% 92% 16%/);
-  assert.match(villageCss,/\.seat-empty \.seat-dot::before\{[\s\S]*content:"\+"/);
-  assert.match(villageCss,/\.seat-empty\.selected \.seat-dot::before\{content:"✓"/);
-  assert.match(villageCss,/\.seat-empty\.reserved \.seat-dot::before\{content:"➜"/);
+test('V3.14 Player Web uses the supplied fantasy leaf artwork and removes generated plus/check arrows',()=>{
+  assert.match(villageCss,/V3\\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
+  assert.match(villageCss,/seat-leaf\\.webp\\?v=314/);
+  assert.match(villageCss,/\\.seat-empty \\.seat-dot::before,\\.seat-empty \\.seat-dot::after\\{content:none!important/);
 });
 
 test('V3.14 runtime is aligned on the V3.11 native shell',()=>{
