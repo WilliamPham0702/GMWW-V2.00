@@ -225,11 +225,11 @@
 
 
 /* Character Runtime 0.4 — visible 30s sitting pose for Character-01..20. */
-@keyframes gmww-rig-sit-body{0%{transform:translateY(0) scaleY(1)}55%,100%{transform:translateY(15%) scaleY(.90)}}
-@keyframes gmww-rig-sit-leg-back{0%{transform:rotate(0)}55%,100%{transform:translate(8%,13%) rotate(58deg)}}
-@keyframes gmww-rig-sit-leg-front{0%{transform:rotate(0)}55%,100%{transform:translate(-8%,13%) rotate(-58deg)}}
-@keyframes gmww-rig-sit-arm-back{0%{transform:rotate(0)}55%,100%{transform:translateY(7%) rotate(24deg)}}
-@keyframes gmww-rig-sit-arm-front{0%{transform:rotate(0)}55%,100%{transform:translateY(7%) rotate(-24deg)}}
+@keyframes gmww-rig-sit-body{0%{transform:translateY(0) scaleY(1)}55%,100%{transform:translateY(11%) scaleY(.95)}}
+@keyframes gmww-rig-sit-leg-back{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(-2%,15%) rotate(34deg) scaleY(.94)}}
+@keyframes gmww-rig-sit-leg-front{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(2%,15%) rotate(-34deg) scaleY(.94)}}
+@keyframes gmww-rig-sit-arm-back{0%{transform:rotate(0)}55%,100%{transform:translate(2%,8%) rotate(14deg)}}
+@keyframes gmww-rig-sit-arm-front{0%{transform:rotate(0)}55%,100%{transform:translate(-2%,8%) rotate(-14deg)}}
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-torso,
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-head{animation:gmww-rig-sit-body 680ms ease-out forwards!important}
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-leg-back{animation:gmww-rig-sit-leg-back 680ms ease-out forwards!important}
