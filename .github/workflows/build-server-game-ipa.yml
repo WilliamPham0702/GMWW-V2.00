@@ -223,7 +223,19 @@ jobs:
           test "$(find server-game/GMWW-Server/Web/assets/role-artwork-v251 -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
           ! test -d server-game/GMWW-Server/Web/assets/role-artwork-v251/delivery
           ! test -d server-game/GMWW-Server/Web/assets/role-artwork-v251/thumb
-          sed -i '' 's@<script src="app.js">@<script src="role-artwork-v251.js"></script>\n<script src="app.js">@' server-game/GMWW-Server/Web/GMWW.html
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='server-game/GMWW-Server/Web/GMWW.html';
+          let html=fs.readFileSync(file,'utf8');
+          if(!html.includes('role-artwork-v251.js')){
+            const re=/<script src="app\\.js(?:\\?v=[^"]+)?"><\\/script>/;
+            if(!re.test(html))throw new Error('app.js script tag not found');
+            html=html.replace(re,'<script src="role-artwork-v251.js"></script>\\n          sed -i '' 's@<script src="app.js">@<script src="role-artwork-v251.js"></script>\n<script src="app.js">@' server-game/GMWW-Server/Web/GMWW.html
+          grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
+');
+            fs.writeFileSync(file,html);
+          }
+          NODE
           grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
 
       - name: Validate JavaScript and baseline structure
