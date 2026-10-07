@@ -10,15 +10,15 @@ const server=fs.readFileSync('src/index.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 
 test('V3.14 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{
-  assert.match(gmCss,/V3\\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
-  assert.match(gmCss,/seat-leaf\\.webp\\?v=314/);
-  assert.match(gmCss,/\\.play-position-plus\\{display:none!important/);
+  assert.match(gmCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
+  assert.match(gmCss,/seat-leaf\.webp\?v=314/);
+  assert.match(gmCss,/\.play-position-plus\{display:none!important/);
 });
 
 test('V3.14 Player Web uses the supplied fantasy leaf artwork and removes generated plus/check arrows',()=>{
-  assert.match(villageCss,/V3\\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
-  assert.match(villageCss,/seat-leaf\\.webp\\?v=314/);
-  assert.match(villageCss,/\\.seat-empty \\.seat-dot::before,\\.seat-empty \\.seat-dot::after\\{content:none!important/);
+  assert.match(villageCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
+  assert.match(villageCss,/seat-leaf\.webp\?v=314/);
+  assert.match(villageCss,/\.seat-empty \.seat-dot::before,\.seat-empty \.seat-dot::after\{content:none!important/);
 });
 
 test('V3.14 runtime is aligned on the V3.11 native shell',()=>{
