@@ -80,9 +80,13 @@ test('V2.81 update actions stay visible and IPA download never falls back to an 
 test('Production deploy verifies exact runtime, manifest and web-sync endpoint',()=>{
   const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(workflow,/EXPECTED=.*package\.json/);
+  assert.match(workflow,/EXPECTED_SHELL/);
   assert.match(workflow,/version.*V\$EXPECTED/);
   assert.match(workflow,/api\/update\/manifest/);
-  assert.match(workflow,/releaseVersion.*\$EXPECTED/);
+  assert.match(workflow,/releaseVersion/);
+  assert.match(workflow,/Newer runtime was hidden/);
+  assert.match(workflow,/GM rider asset must appear exactly once/);
+  assert.match(workflow,/gm\/gm-white-wolf\.webp/);
   assert.match(workflow,/api\/web-sync/);
 });
 
@@ -143,4 +147,15 @@ test('Installed runtime newer than native shell persists across relaunches',()=>
   const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
   assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) == \.orderedAscending/);
   assert.doesNotMatch(swift,/active\.compare\(shellVersion, options: \.numeric\) != \.orderedSame/);
+});
+
+
+test('V3.12 runtime channel cannot silently fall back to server-only',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  assert.match(worker,/validRuntime=/);
+  assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
+  assert.match(worker,/NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-312"/);
+  assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
+  assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });
