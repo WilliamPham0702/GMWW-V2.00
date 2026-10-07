@@ -23,3 +23,8 @@ Release V3.09 build 309: Character Engine 0.2 native release.
 Requested: 2026-10-07
 Source: feature/character-engine-mainline -> main
 Reason: shared semantic Character Engine + segmented renderer on Player Web and GM/IPA; Character-01 master; shared rig proof Character-01..20; deterministic idle-life behavior; audited rig profiles Character-01/02/03; synchronized realtime characterAnimation payload.
+
+Release V3.10 build 310: GM white wolf rider character.
+Requested: 2026-10-07
+Source: main
+Reason: build installable IPA with GM white-wolf village character, idle/walk/run/head-shake/howl motion controller.
