@@ -82,7 +82,8 @@ if(game){
     button.addEventListener("click",e=>{e.stopPropagation();if(isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}if(embedded){if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:data.id,seatId:actualSeat},window.location.origin);return}selectedId=data.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName;selection.hidden=false;render()});
     return button
   }
-  function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}\n  function render(){
+  function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}
+  function render(){
     cancelAnimationFrame(moveFrame);moveFrame=0;
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}

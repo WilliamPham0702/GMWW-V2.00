@@ -30,6 +30,7 @@ jobs:
       - run: npm install
       - run: npm run check
       - run: node --check server-game/current/app.js
+      - run: node --check assets/village/village.mjs
       - run: npm test
       - name: Smoke-test Player Web locally
         shell: bash
