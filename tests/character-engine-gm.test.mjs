@@ -39,9 +39,9 @@ test('GM shell loads renderer before app and IPA build bundles both renderer fil
   const html=read('server-game/current/GMWW.html');
   const workflow=read('.github/workflows/build-server-game-ipa.yml');
   const css=read('server-game/current/character-renderer.css');
-  assert.ok(html.includes('character-renderer.css?v=ce1'));
-  assert.ok(html.includes('character-renderer.js?v=ce1'));
-  assert.ok(html.indexOf('character-renderer.js?v=ce1')<html.indexOf('app.js'));
+  assert.ok(html.includes('character-renderer.css?v=ce2'));
+  assert.ok(html.includes('character-renderer.js?v=ce2'));
+  assert.ok(html.indexOf('character-renderer.js?v=ce2')<html.indexOf('app.js'));
   assert.ok(workflow.includes('cp server-game/current/character-renderer.js "$APPDIR/Web/character-renderer.js"'));
   assert.ok(workflow.includes('cp server-game/current/character-renderer.css "$APPDIR/Web/character-renderer.css"'));
   assert.ok(css.includes('@keyframes gmwwPlayRigLegA'));
