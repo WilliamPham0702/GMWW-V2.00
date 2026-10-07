@@ -19,6 +19,7 @@ on:
       - ".github/workflows/build-server-game-ipa.yml"
       - "tests/character-engine-gm.test.mjs"
       - ".github/workflows/check-character-engine.yml"
+      - "tools/character-rig-audit.py"
   workflow_dispatch:
 
 concurrency:
@@ -42,6 +43,10 @@ jobs:
           node --check server-game/current/character-renderer.js
       - name: Character Engine unit tests
         run: node --test tests/character-engine.test.mjs tests/character-renderer.test.mjs tests/character-engine-gm.test.mjs
+      - name: Character rig asset audit
+        run: |
+          python -m pip install --disable-pip-version-check --quiet pillow
+          python tools/character-rig-audit.py
       - name: Character Engine manifest smoke
         shell: bash
         run: |
