@@ -100,7 +100,7 @@ test('Every new version can notify the GM with the required action',()=>{
   assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
 });
 
-test('Official native IPA build is manual-only and cannot be triggered by runtime commits',()=>{
+test('Official native IPA build is isolated to explicit dispatch or native-shell changes',()=>{
   const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   const workflow=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
   assert.match(script,/version:isNative\?version:shell/);
@@ -164,12 +164,12 @@ test('Installed runtime newer than native shell persists across relaunches',()=>
 });
 
 
-test('V3.17 runtime channel cannot silently fall back to server-only',()=>{
+test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
   const worker=fs.readFileSync('src/index.js','utf8');
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   assert.match(worker,/validRuntime=/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
-  assert.match(worker,/NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-317"/);
+  assert.match(worker,/NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-317"/);
   assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
   assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });
