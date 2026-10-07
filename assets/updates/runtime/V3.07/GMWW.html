@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.07</title>
-<link rel="stylesheet" href="style.css?v=3.07">
+<title>GMWW V3.08</title>
+<link rel="stylesheet" href="style.css?v=3.08">
 </head>
 <body>
 <div id="app">
@@ -57,7 +57,7 @@
         <nav class="gm-top-menu-v293" id="gmTopMenu" aria-label="Thanh điều khiển trên">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span><small>AUTO GM</small></button>
-          <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">Chọn Nhân Vật</b></div></div>
+          <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">SẢNH CHỜ</b></div></div>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span><small>AUDIO</small></button>
           <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
         </nav>
@@ -527,11 +527,9 @@
 
       <section class="play-room-section-card play-room-step hidden" id="playRoomSettingsStep">
         <div class="play-room-section-title"><b>THIẾT LẬP</b><small>SỐ GHẾ • TRẠNG THÁI</small></div>
-        <div class="play-room-settings-row">
+        <div class="play-room-settings-row play-room-settings-inline">
           <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
           <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>ON</b></button>
-        </div>
-        <div class="play-room-step-next-row">
           <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
       </section>
@@ -549,5 +547,69 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="app.js"></script>
+<script>
+/* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
+(()=>{
+  'use strict';
+  const ROOM_RE=/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
+  function hasLiveRoom(){
+    try{
+      if(typeof isLivePlayRoom==='function')return !!isLivePlayRoom();
+      if(typeof playSceneState!=='undefined')return ROOM_RE.test(String(playSceneState?.roomCode||''));
+      const saved=JSON.parse(localStorage.getItem('GMWW_V264_PLAY_SCENE')||'{}');
+      return ROOM_RE.test(String(saved?.roomCode||''));
+    }catch{return false}
+  }
+  function currentRoomName(){
+    try{
+      const runtimeName=String(typeof playSceneRuntime!=='undefined'?(playSceneRuntime?.room?.roomName||''):'').trim();
+      if(runtimeName)return runtimeName;
+      const code=String(typeof playSceneState!=='undefined'?(playSceneState?.roomCode||''):'').trim();
+      if(code&&typeof playRoomRegistry==='function'){
+        const hit=(playRoomRegistry()||[]).find(x=>String(x?.roomCode||'')===code);
+        const registryName=String(hit?.roomName||'').trim();
+        if(registryName)return registryName;
+      }
+    }catch{}
+    return 'Phòng GMWW';
+  }
+  function syncLobbyState(){
+    const live=hasLiveRoom();
+    if(!live){
+      try{
+        if(typeof playSceneState!=='undefined'){
+          let changed=false;
+          const set=(k,v)=>{if(playSceneState[k]!==v){playSceneState[k]=v;changed=true}};
+          set('roomCode','—');set('gmToken','');set('roomEnabled',false);set('step','room');set('phase','lobby');set('activePlayerId','');
+          if(Array.isArray(playSceneState.selectedMemberIds)&&playSceneState.selectedMemberIds.length){playSceneState.selectedMemberIds=[];changed=true}
+          if(Array.isArray(playSceneState.assignmentsPreview)&&playSceneState.assignmentsPreview.length){playSceneState.assignmentsPreview=[];changed=true}
+          if(changed&&typeof savePlayScene==='function')savePlayScene();
+        }
+      }catch{}
+    }
+    const title=document.getElementById('playPhaseTitle');
+    if(!title)return;
+    if(!live){
+      if(title.textContent!=='SẢNH CHỜ')title.textContent='SẢNH CHỜ';
+      return;
+    }
+    try{
+      if(typeof playSceneState!=='undefined'&&String(playSceneState.phase||'lobby').toLowerCase()==='lobby'){
+        const name=currentRoomName();
+        if(title.textContent!==name)title.textContent=name;
+      }
+    }catch{}
+  }
+  const start=()=>{
+    syncLobbyState();
+    const title=document.getElementById('playPhaseTitle');
+    if(title)new MutationObserver(syncLobbyState).observe(title,{childList:true,subtree:true,characterData:true});
+    window.addEventListener('focus',syncLobbyState);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncLobbyState()});
+    setInterval(syncLobbyState,1000);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
 </body>
 </html>
