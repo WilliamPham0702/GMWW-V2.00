@@ -2207,21 +2207,20 @@ body.play-immersive #start .play-player-token.is-empty:focus-visible .play-playe
   padding:0 9px!important;border-radius:11px!important;font-size:10.5px!important;font-weight:900!important;
   display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important
 }
-#playCreateRoomSheet .play-room-control-row #playRoomModeToggle{
-  border:1px solid rgba(255,126,139,.40)!important;background:rgba(94,40,48,.68)!important;color:#ffe8ea!important
-}
+/* Online and Offline are room modes: both use the same warm amber, never warning red or cyan. */
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
 #playCreateRoomSheet .play-room-control-row #playRoomModeToggle.is-online{
-  border-color:rgba(106,231,255,.78)!important;background:linear-gradient(180deg,rgba(35,176,208,.88),rgba(8,105,136,.94))!important;color:#effcff!important
+  border:1px solid rgba(255,195,110,.82)!important;
+  background:linear-gradient(180deg,rgba(204,122,39,.94),rgba(139,72,22,.96))!important;
+  color:#fff4df!important
 }
 #playCreateRoomSheet .play-room-control-row #playRoomModeToggle span,
 #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled span{
   width:9px!important;height:9px!important;border-radius:50%!important;flex:0 0 9px!important
 }
-#playCreateRoomSheet .play-room-control-row #playRoomModeToggle span{
-  background:#ff7887!important;box-shadow:0 0 8px rgba(255,94,104,.55)!important
-}
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle span,
 #playCreateRoomSheet .play-room-control-row #playRoomModeToggle.is-online span{
-  background:#6ce9ff!important;box-shadow:0 0 10px rgba(91,224,255,.72)!important
+  background:#ffd27a!important;box-shadow:0 0 10px rgba(255,194,89,.65)!important
 }
 #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
   border:1px solid rgba(255,126,139,.40)!important;background:rgba(94,40,48,.68)!important;color:#ffe8ea!important
