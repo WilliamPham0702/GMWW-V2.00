@@ -1,35 +1,45 @@
 {
   "schema": 1,
-  "releaseVersion": "3.08",
+  "releaseVersion": "3.10",
   "releaseType": "runtime",
-  "shellVersion": "3.06",
-  "minimumShellVersion": "3.05",
-  "runtimeVersion": "3.08",
-  "webVersion": "3.08",
-  "serverVersion": "3.08",
+  "shellVersion": "3.09",
+  "minimumShellVersion": "3.06",
+  "runtimeVersion": "3.10",
+  "webVersion": "3.10",
+  "serverVersion": "3.10",
   "required": false,
   "restartRequired": true,
-  "message": "Có GMWW V3.08. Chỉ cần cập nhật trực tiếp trong ứng dụng, không cần cài lại IPA.",
+  "message": "Có GMWW V3.10. Cập nhật trực tiếp trong ứng dụng để nhận thiết kế vị trí ngồi dạng lá nhiệt đới; không cần cài lại IPA.",
   "runtime": {
     "files": [
       {
         "path": "GMWW.html",
-        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/GMWW.html",
-        "sha256": "00cebcf6c3eeae497a92886396199699e234ab9a7bf37c084a3615f19d71a536"
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/GMWW.html",
+        "sha256": "7d80bb1825bd6c9138985708e94e9c8926b80c4e4c00f6d67140d64b1a604800"
       },
       {
         "path": "app.js",
-        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/app.js",
-        "sha256": "c79d21a87778b6891a0349d62f05fd1e32ba6e4a32f0f152652cbe5e679846e4"
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/app.js",
+        "sha256": "1d2cbe8870f00e255410fa98dcb436a75c0123d7b4f3299874228127744084e4"
       },
       {
         "path": "style.css",
-        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/style.css",
-        "sha256": "38046a848101080539441401f842dca311fee20a2ec1a99d62a707b24c0e3a5f"
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/style.css",
+        "sha256": "cd260b97f820e2a0ac07769d3cc8a80fa863bf4e997e065e678760683d17f9ab"
+      },
+      {
+        "path": "character-renderer.css",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/character-renderer.css",
+        "sha256": "46e44c7672b714673cda879a5714c487f52c1b0e1db6691d4f0c6bba1b67573d"
+      },
+      {
+        "path": "character-renderer.js",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/character-renderer.js",
+        "sha256": "eadb453a24a421e6df563cfb8ad792389efae90b6a2a1e2e3015fb8eb9fa2adf"
       },
       {
         "path": "village-layout.js",
-        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/village-layout.js",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.10/village-layout.js",
         "sha256": "3e90ad9d1dffd13a7c8cdad7898677673ef49f323e427390274d29f911e7d4f8"
       }
     ]
