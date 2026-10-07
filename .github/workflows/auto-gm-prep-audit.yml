@@ -1,0 +1,24 @@
+name: GMWW Auto GM Preparation Audit
+
+# Runs only on the isolated preparation branch. Does not build IPA or deploy.
+on:
+  push:
+    branches:
+      - prep/auto-gm-readiness-20261002
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check scripts/check-auto-gm-readiness.mjs
+      - name: Read-only source readiness audit
+        run: node scripts/check-auto-gm-readiness.mjs
