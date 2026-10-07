@@ -114,10 +114,11 @@ jobs:
           node - <<'NODE'
           const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
           if(m.releaseType==='runtime'){
-            if(!Array.isArray(m.runtime?.files)||!m.runtime.files.some(x=>x?.path==='gm/gm-white-wolf.webp'))throw new Error('GM rider asset missing from runtime update manifest');
-            if(!m.runtime.files.some(x=>x?.path==='role-artwork-v251.js'))throw new Error('Clean role artwork manifest missing from runtime update');
-            const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
-            if(clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update, found '+clean.length);
+            if(String(m.runtimeVersion||'')!==String(m.releaseVersion||''))throw new Error('Runtime version does not match releaseVersion');
+            if(!Array.isArray(m.runtime?.files)||m.runtime.files.length===0)throw new Error('Runtime update manifest has no files');
+            for(const f of m.runtime.files){
+              if(!String(f?.path||'').trim()||!String(f?.url||'').startsWith('https://')||!/^[a-f0-9]{64}$/i.test(String(f?.sha256||'')))throw new Error('Invalid runtime file entry');
+            }
           }
           if(m.releaseType==='native'){
             if(String(m.ipa?.version||'')!==String(m.releaseVersion||''))throw new Error('Native IPA version does not match releaseVersion');
