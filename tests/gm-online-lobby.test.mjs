@@ -65,7 +65,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
 });
 
 test('V3.09 keeps GM rider at normal character size and animates wolf legs',()=>{
-  assert.match(app,/const VERSION='3\.08'/);
+  assert.match(app,/const VERSION='3\.09'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
