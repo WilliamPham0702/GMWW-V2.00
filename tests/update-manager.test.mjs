@@ -137,3 +137,10 @@ test('V3.03 Update Manager keeps all actions available and highlights the recomm
  assert.match(js,/Bắt buộc cài IPA V/);
  assert.match(js,/Chỉ Player Web\/Server cần đồng bộ/);
 });
+
+
+test('Installed runtime newer than native shell persists across relaunches',()=>{
+  const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
+  assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) == \.orderedAscending/);
+  assert.doesNotMatch(swift,/active\.compare\(shellVersion, options: \.numeric\) != \.orderedSame/);
+});
