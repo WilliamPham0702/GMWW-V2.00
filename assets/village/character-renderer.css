@@ -118,18 +118,18 @@
 
 
 /* Character Life Layer — semantic micro-behaviors, phase-shifted per actor. */
-@keyframes gmww-rig-blink{0%,42%,58%,100%{transform:scaleY(1)}49%,52%{transform:scaleY(.955) translateY(.7%)}}
-@keyframes gmww-rig-look{0%,100%{transform:rotate(0deg) translateX(0)}32%{transform:rotate(-3deg) translateX(-1.2%)}68%{transform:rotate(3deg) translateX(1.2%)}}
-@keyframes gmww-rig-stretch-torso{0%,100%{transform:translateY(0) scaleY(1)}38%{transform:translateY(-2.8%) scaleY(1.035)}70%{transform:translateY(-1.4%) scaleY(1.018)}}
-@keyframes gmww-rig-stretch-arm-left{0%,100%{transform:rotate(0)}45%{transform:rotate(-16deg) translateY(-2%)}}
-@keyframes gmww-rig-stretch-arm-right{0%,100%{transform:rotate(0)}45%{transform:rotate(16deg) translateY(-2%)}}
+@keyframes gmww-rig-blink{0%,38%,62%,100%{transform:scaleY(1)}48%,54%{transform:scaleY(.90) translateY(1.4%)}}
+@keyframes gmww-rig-look{0%,100%{transform:rotate(0deg) translateX(0)}32%{transform:rotate(-6deg) translateX(-2.4%)}68%{transform:rotate(6deg) translateX(2.4%)}}
+@keyframes gmww-rig-stretch-torso{0%,100%{transform:translateY(0) scaleY(1)}38%{transform:translateY(-5.5%) scaleY(1.07)}70%{transform:translateY(-3%) scaleY(1.035)}}
+@keyframes gmww-rig-stretch-arm-left{0%,100%{transform:rotate(0)}45%{transform:rotate(-46deg) translateY(-8%)}}
+@keyframes gmww-rig-stretch-arm-right{0%,100%{transform:rotate(0)}45%{transform:rotate(46deg) translateY(-8%)}}
 .gmww-segmented-rig[data-state="idle"] .gmww-rig-torso{animation-delay:var(--rig-idle-delay,0ms)}
 .gmww-segmented-rig[data-state="idle"] .gmww-rig-head{animation-delay:var(--rig-idle-delay,0ms)}
-.gmww-segmented-rig[data-motion="blink"] .gmww-rig-head{animation:gmww-rig-blink 520ms ease-in-out 1}
-.gmww-segmented-rig[data-motion="look-around"] .gmww-rig-head{animation:gmww-rig-look 1500ms ease-in-out 1}
-.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-torso{animation:gmww-rig-stretch-torso 1700ms ease-in-out 1}
-.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-back{transform-origin:32% 31%;animation:gmww-rig-stretch-arm-left 1700ms ease-in-out 1}
-.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-front{transform-origin:68% 31%;animation:gmww-rig-stretch-arm-right 1700ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="blink"] .gmww-rig-head{animation:gmww-rig-blink 900ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="look-around"] .gmww-rig-head{animation:gmww-rig-look 1900ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-torso{animation:gmww-rig-stretch-torso 2400ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-back{transform-origin:32% 31%;animation:gmww-rig-stretch-arm-left 2400ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-front{transform-origin:68% 31%;animation:gmww-rig-stretch-arm-right 2400ms ease-in-out 1}
 
 
 /* Audited rig profiles from real alpha bounds (Character-01/02/03). */
@@ -222,3 +222,17 @@
 .gmww-segmented-rig[data-motion="surprised"]{animation:gmww-rig-v03-surprised 520ms ease-out 1}
 .gmww-segmented-rig[data-motion="sad"] .gmww-rig-head,
 .gmww-segmented-rig[data-motion="sad"] .gmww-rig-torso{animation:gmww-rig-v03-sad 1800ms ease-in-out infinite!important}
+
+
+/* Character Runtime 0.4 — visible 30s sitting pose for Character-01..20. */
+@keyframes gmww-rig-sit-body{0%{transform:translateY(0) scaleY(1)}55%,100%{transform:translateY(15%) scaleY(.90)}}
+@keyframes gmww-rig-sit-leg-back{0%{transform:rotate(0)}55%,100%{transform:translate(8%,13%) rotate(58deg)}}
+@keyframes gmww-rig-sit-leg-front{0%{transform:rotate(0)}55%,100%{transform:translate(-8%,13%) rotate(-58deg)}}
+@keyframes gmww-rig-sit-arm-back{0%{transform:rotate(0)}55%,100%{transform:translateY(7%) rotate(24deg)}}
+@keyframes gmww-rig-sit-arm-front{0%{transform:rotate(0)}55%,100%{transform:translateY(7%) rotate(-24deg)}}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-torso,
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-head{animation:gmww-rig-sit-body 680ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-leg-back{animation:gmww-rig-sit-leg-back 680ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-leg-front{animation:gmww-rig-sit-leg-front 680ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-arm-back{animation:gmww-rig-sit-arm-back 680ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-arm-front{animation:gmww-rig-sit-arm-front 680ms ease-out forwards!important}
