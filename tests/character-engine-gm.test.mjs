@@ -12,7 +12,7 @@ test('GM/IPA renderer exposes the shared-rig batch contract for the first 20 cha
   vm.runInContext(source,context);
   const api=context.window.GMWW_CHARACTER_RENDERER;
   assert.ok(api);
-  assert.equal(api.version,'0.1.0');
+  assert.equal(api.version,'0.2.0');
   assert.equal(api.rendererKind('character-01'),'segmented-skeletal');
   assert.equal(api.rendererKind('character-02'),'segmented-skeletal');
   assert.equal(api.rendererKind('character-03'),'segmented-skeletal');
@@ -50,9 +50,11 @@ test('GM shell loads renderer before app and IPA build bundles both renderer fil
   assert.doesNotMatch(css,/scaleX\s*\(/);
 });
 
-test('GM renderer itself does not contain a frame animation loop',()=>{
+test('GM renderer uses one shared idle scheduler and no frame sequencing loop',()=>{
   const renderer=read('server-game/current/character-renderer.js');
-  assert.doesNotMatch(renderer,/setInterval\s*\(/);
+  assert.equal((renderer.match(/setInterval\s*\(/g)||[]).length,1);
   assert.doesNotMatch(renderer,/requestAnimationFrame\s*\(/);
   assert.doesNotMatch(renderer,/frame-(?:02|03|04|05|06)/);
+  assert.ok(renderer.includes('LIVE_IDLE_ROOTS'));
+  assert.ok(renderer.includes('liveIdleMotionAt'));
 });
