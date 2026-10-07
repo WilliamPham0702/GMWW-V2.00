@@ -1887,3 +1887,59 @@ body.play-immersive #start .play-control-bar.play-control-bar-three>#playNext sp
 #playCreateRoomSheet .play-room-edit-actions button{
   min-height:34px!important;height:34px!important;border-radius:9px!important;font-size:8.5px!important
 }
+
+/* V3.07 fine tune — medium compact room controls */
+#playCreateRoomSheet>.play-room-page-card{
+  width:min(90vw,410px)!important;max-width:410px!important;
+  padding:10px!important
+}
+#playCreateRoomSheet .play-room-title-centered h3{
+  font-size:15px!important;line-height:19px!important
+}
+#playCreateRoomSheet .play-room-section-card{
+  padding:9px!important;border-radius:13px!important
+}
+#playCreateRoomSheet .play-room-section-title{
+  font-size:9px!important;margin-bottom:6px!important
+}
+#playCreateRoomSheet .play-room-section-title small{
+  font-size:7px!important
+}
+#playCreateRoomSheet .play-room-add-tile{
+  flex-basis:64px!important;min-width:64px!important;width:64px!important;height:64px!important;
+  border-radius:12px!important
+}
+#playCreateRoomSheet .play-room-add-tile span{font-size:26px!important}
+#playCreateRoomSheet .play-room-add-tile small{font-size:7.5px!important}
+#playCreateRoomSheet .play-created-room{
+  flex-basis:122px!important;width:122px!important;height:64px!important;
+  padding:8px 9px!important;border-radius:12px!important
+}
+#playCreateRoomSheet .play-created-room b{font-size:10px!important}
+#playCreateRoomSheet .play-created-room small{font-size:7.5px!important}
+#playCreateRoomSheet .play-room-mode-row button{
+  min-height:40px!important;border-radius:11px!important;font-size:10.5px!important
+}
+#playCreateRoomSheet .play-room-settings-row.play-room-settings-inline{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.28fr) minmax(92px,.82fr) 42px!important;
+  gap:7px!important;
+  align-items:stretch!important
+}
+#playCreateRoomSheet .play-room-settings-inline .play-room-inline-seat{
+  min-height:44px!important;height:44px!important;
+  padding:7px 10px!important;border-radius:11px!important;font-size:9.5px!important
+}
+#playCreateRoomSheet .play-room-settings-inline .play-room-inline-seat input{
+  width:58px!important;min-height:32px!important;height:32px!important;
+  border-radius:8px!important;font-size:12px!important
+}
+#playCreateRoomSheet .play-room-settings-inline #playCreateRoomEnabled{
+  min-height:44px!important;height:44px!important;
+  border-radius:11px!important;font-size:10.5px!important
+}
+#playCreateRoomSheet .play-room-settings-inline .play-room-step-next{
+  width:42px!important;height:44px!important;
+  border-radius:11px!important;font-size:27px!important
+}
+#playCreateRoomSheet .play-room-step-next-row{display:none!important}
