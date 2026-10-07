@@ -26,14 +26,14 @@ test('V3.11 Player Web seats use the same tropical leaf visual language',()=>{
   assert.match(villageCss,/\.seat-empty\.reserved \.seat-dot::before\{content:"➜"/);
 });
 
-test('V3.11 is the aligned native release',()=>{
-  assert.match(html,/<title>GMWW V3\.11<\/title>/);
-  assert.match(app,/const VERSION='3\.11'/);
-  assert.match(server,/VERSION="V3\.11",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="native-311"/);
-  assert.ok(['3.10','3.11'].includes(manifest.releaseVersion));
+test('V3.12 runtime is aligned on the V3.11 native shell',()=>{
+  assert.match(html,/<title>GMWW V3\.12<\/title>/);
+  assert.match(app,/const VERSION='3\.12'/);
+  assert.match(server,/VERSION="V3\.12",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-312"/);
+  assert.ok(['3.10','3.11','3.12'].includes(manifest.releaseVersion));
   assert.ok(['native','runtime'].includes(manifest.releaseType));
   assert.ok(['3.09','3.11'].includes(manifest.shellVersion));
-  assert.ok(['3.10','3.11'].includes(manifest.runtimeVersion));
+  assert.ok(['3.10','3.11','3.12'].includes(manifest.runtimeVersion));
   if(manifest.releaseType==='native')assert.ok(manifest.ipa?.url);
   assert.ok(manifest.runtime.files.some(x=>x.path==='style.css'));
   assert.ok(manifest.runtime.files.some(x=>x.path==='character-renderer.js'));
