@@ -13,7 +13,7 @@ test('V3.17 GM empty seats use the supplied fantasy leaf artwork and no plus mar
   assert.match(gmCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
   assert.match(gmCss,/seat-leaf\.webp\?v=318/);
   assert.match(gmCss,/\.play-position-plus\{display:none!important/);
-  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=318/);
+  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=320/);
   assert.doesNotMatch(app,/<span class="play-position-plus">＋<\/span>/);
 });
 
