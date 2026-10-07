@@ -228,10 +228,10 @@ jobs:
           const file='server-game/GMWW-Server/Web/GMWW.html';
           let html=fs.readFileSync(file,'utf8');
           if(!html.includes('role-artwork-v251.js')){
-            const re=/<script src="app\\.js(?:\\?v=[^"]+)?"><\\/script>/;
+            const re=/<script src="app\.js(?:\?v=[^"]+)?"><\/script>/;
             const match=html.match(re);
             if(!match)throw new Error('app.js script tag not found');
-            html=html.replace(re,'<script src="role-artwork-v251.js"></script>\\n'+match[0]);
+            html=html.replace(re,'<script src="role-artwork-v251.js"></script>\n'+match[0]);
             fs.writeFileSync(file,html);
           }
           NODE
