@@ -338,3 +338,32 @@ html.embedded .player .player-over .name{font-size:11px}
   .seat-empty .seat-dot::after{width:27px!important;height:20px!important}
   .seat-empty .seat-dot::before{width:22px!important;height:22px!important;font-size:18px!important}
 }
+
+/* V3.07 — fantasy leaf seat marker supplied by user */
+.seat-empty{min-width:58px!important}
+.seat-empty .seat-dot{
+  width:54px!important;height:40px!important;
+  border:0!important;border-radius:0!important;
+  background:transparent url("/assets/village/seat-leaf.svg?v=307") center/contain no-repeat!important;
+  box-shadow:none!important;filter:drop-shadow(0 3px 4px rgba(0,0,0,.34)) drop-shadow(0 0 5px rgba(255,210,76,.30))!important;
+}
+.seat-empty .seat-dot::before{content:""!important;display:none!important}
+.seat-empty:not(:disabled) .seat-dot{
+  border:0!important;background-color:transparent!important;
+  box-shadow:none!important;animation:gmwwLeafSeatPulse 1.9s ease-in-out infinite!important
+}
+.seat-empty.selected .seat-dot{
+  border:0!important;background-color:transparent!important;
+  box-shadow:none!important;filter:drop-shadow(0 0 8px rgba(255,229,126,.90)) drop-shadow(0 4px 4px rgba(0,0,0,.34))!important
+}
+.seat-empty.selected .seat-dot::before{content:""!important;display:none!important}
+.seat-empty.reserved .seat-dot{
+  border:0!important;background-color:transparent!important;animation:none!important;
+  filter:drop-shadow(0 0 7px rgba(255,217,122,.78)) drop-shadow(0 4px 4px rgba(0,0,0,.32))!important
+}
+.seat-empty.reserved .seat-dot::before{content:""!important;display:none!important}
+@keyframes gmwwLeafSeatPulse{0%,100%{transform:scale(.96)}50%{transform:scale(1.07)}}
+@media(max-width:390px){
+  .seat-empty{min-width:52px!important}
+  .seat-empty .seat-dot{width:48px!important;height:36px!important}
+}
