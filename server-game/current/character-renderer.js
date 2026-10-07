@@ -9,6 +9,7 @@
   ]);
   const STATES=new Set(['idle','walking','running','ready','playing','reaction','dead']);
   const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','turn','ready','cheer','surprised','sad','dead']);
+  function idlePhaseMsFor(characterId){const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;return -((n*431+137)%6800)}
   function defaultRigIdFor(characterId){const m=String(characterId||'').match(/^character-(\d{2})$/),n=m?Number(m[1]):1;return n<=12?'rig-male-muscular-v1':n<=24?'rig-male-normal-v1':n<=36?'rig-female-v1':'rig-special-v1'}
   function normalize(command={},fallback=MASTER){
     const characterId=/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(String(command.characterId||''))?String(command.characterId):fallback;
@@ -31,7 +32,7 @@
   function mount(host,{characterId=MASTER,command={},sitting=false,textureUrl}={}){
     if(!host||rendererKind(characterId,{sitting})!=='segmented-skeletal')return null;
     host.replaceChildren();
-    const root=document.createElement('span');root.className='gmww-character-renderer gmww-segmented-rig';root.dataset.characterRenderer='segmented-skeletal';root.dataset.characterId=characterId;
+    const root=document.createElement('span');root.className='gmww-character-renderer gmww-segmented-rig';root.dataset.characterRenderer='segmented-skeletal';root.dataset.characterId=characterId;root.style.setProperty('--rig-idle-delay',idlePhaseMsFor(characterId)+'ms');
     const shadow=document.createElement('span');shadow.className='gmww-rig-shadow';root.append(shadow);
     const c=normalize({...command,characterId},characterId),src=typeof textureUrl==='function'?textureUrl(characterId,c.facing):'';
     for(const [id,cls] of SEGMENTS){
