@@ -8,7 +8,7 @@ on:
       baseline_shell:
         description: Verified native shell release to reuse
         required: true
-        default: "3.11"
+        default: "3.17"
         type: string
   push:
     branches: [main]
@@ -34,7 +34,7 @@ jobs:
       - name: Resolve runtime and shell metadata
         id: meta
         env:
-          BASELINE_SHELL: ${{ inputs.baseline_shell || '3.11' }}
+          BASELINE_SHELL: ${{ inputs.baseline_shell || '3.17' }}
         shell: bash
         run: |
           set -euo pipefail
