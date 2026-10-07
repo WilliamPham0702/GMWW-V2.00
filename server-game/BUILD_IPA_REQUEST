@@ -13,3 +13,5 @@ Release V3.05 build 305: versioned delivery; publish IPA for in-game Settings up
 V3.05 final rebuild: bottom center is live create-game flow; remove info orbs; all sheet cards draggable by touch.
 
 Release V3.06 build 306: room manager redesign (created rooms/status, online-offline, seats/on-off, add/edit/save-reset-delete) + latest runtime.
+
+Release V3.07 build 307: progressive disclosure room setup; single tap selects room, double tap edits, horizontal + tile, staged mode then seats/status.
