@@ -10,6 +10,8 @@ on:
       - "assets/village/character-renderer.css"
       - "assets/village/village.mjs"
       - "assets/village/index.html"
+      - "assets/village/character-lab.html"
+      - "assets/village/character-lab.mjs"
       - "tests/character-engine.test.mjs"
       - "tests/character-renderer.test.mjs"
       - "server-game/current/app.js"
@@ -85,17 +87,25 @@ jobs:
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME"
           "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1280,900 --virtual-time-budget=5000 --screenshot=character-preview.png http://127.0.0.1:8787/village/
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1400,760 --virtual-time-budget=2600 --screenshot=character-lab.png http://127.0.0.1:8787/village/character-lab.html
           test -s character-preview.png
+          test -s character-lab.png
           python - <<'PY'
           from PIL import Image
           im=Image.open('character-preview.png').convert('RGB')
+          lab=Image.open('character-lab.png').convert('RGB')
           print('CHARACTER_VISUAL_SMOKE='+str(im.size))
+          print('CHARACTER_LAB_SMOKE='+str(lab.size))
           if im.width < 1000 or im.height < 700:
               raise SystemExit('SCREENSHOT_TOO_SMALL')
+          if lab.width < 1200 or lab.height < 650:
+              raise SystemExit('LAB_SCREENSHOT_TOO_SMALL')
           PY
       - name: Upload Character visual
         uses: actions/upload-artifact@v4
         with:
           name: character-preview
-          path: character-preview.png
+          path: |
+            character-preview.png
+            character-lab.png
           retention-days: 3
