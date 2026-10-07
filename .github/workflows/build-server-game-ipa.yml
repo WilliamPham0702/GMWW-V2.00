@@ -1,13 +1,9 @@
-name: Build Quản Trò Ma Sói V2 IPA
+name: Build Native GMWW IPA
 
-# Routine source/Player Web/Cloudflare commits do not build IPA.
-# An explicit BUILD_IPA_REQUEST change is the automated release trigger.
+# Full Xcode build is reserved for true native-shell changes.
+# Runtime/server/UI changes must use the runtime channel or Fast Runtime Snapshot workflow.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "server-game/BUILD_IPA_REQUEST"
 
 permissions:
   contents: write
@@ -28,15 +24,21 @@ jobs:
           const fs=require('fs');
           const app=fs.readFileSync('server-game/current/app.js','utf8');
           const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
-          const version=app.match(/const VERSION='([^']+)'/)?.[1]||'';
+          const runtime=app.match(/const VERSION='([^']+)'/)?.[1]||'';
           const build=project.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1]||'';
-          const marketing=project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
-          if(!version||!build) throw new Error('Missing VERSION/build metadata');
-          if(marketing!==version) throw new Error('MARKETING_VERSION '+marketing+' != app VERSION '+version);
-          if(version.replace(/\./g,'')!==build) throw new Error('Build '+build+' does not match version '+version);
-          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\nBUILD=${build}\n`);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\nbuild=${build}\n`);
-          console.log('Resolved V'+version+' / build '+build);
+          const shell=project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
+          if(!runtime||!shell||!build) throw new Error('Missing runtime/native build metadata');
+          if(shell!==runtime) {
+            throw new Error(
+              'Native build blocked: runtime V'+runtime+' is running on native shell V'+shell+
+              '. This is a runtime-only state. Use the Fast Runtime Snapshot workflow, or intentionally bump Xcode MARKETING_VERSION/CURRENT_PROJECT_VERSION for a true native release.'
+            );
+          }
+          if(shell.replace(/\./g,'')!==build) throw new Error('Native build '+build+' does not match shell version '+shell);
+          const version=shell;
+          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\nRUNTIME_VERSION=${runtime}\nNATIVE_SHELL_VERSION=${shell}\nBUILD=${build}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\nruntime=${runtime}\nshell=${shell}\nbuild=${build}\n`);
+          console.log('Resolved native V'+shell+' / build '+build+' with bundled runtime V'+runtime);
           NODE
 
       - name: Prepare clean web bundle
