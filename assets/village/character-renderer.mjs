@@ -15,6 +15,11 @@ export const MASTER_RIG_SEGMENTS=Object.freeze([
   Object.freeze({id:'head',className:'head'})
 ]);
 
+export function idlePhaseMsFor(characterId){
+  const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;
+  return -((n*431+137)%6800);
+}
+
 export function defaultRigIdFor(characterId){
   const m=String(characterId||'').match(/^character-(\d{2})$/),n=m?Number(m[1]):1;
   return n<=12?'rig-male-muscular-v1':n<=24?'rig-male-normal-v1':n<=36?'rig-female-v1':'rig-special-v1';
@@ -92,6 +97,7 @@ export function mountCharacterRenderer(host,{characterId=MASTER_CHARACTER_ID,com
   root.className='gmww-character-renderer gmww-segmented-rig';
   root.dataset.characterRenderer='segmented-skeletal';
   root.dataset.characterId=characterId;
+  root.style.setProperty('--rig-idle-delay',idlePhaseMsFor(characterId)+'ms');
 
   const shadow=document.createElement('span');
   shadow.className='gmww-rig-shadow';
