@@ -1806,11 +1806,10 @@ async function playCreateRoomNext(){
   if(!isLivePlayRoom()){const ok=await playCreateRoom();if(!ok)return}
   if(!(await playSaveRoomName()))return;
   rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
-  playSceneState.step='members';playSceneState.activePlayerId='';savePlayScene();
+  playSceneState.step='seats';playSceneState.activePlayerId='';savePlayScene();
   playRoomUiState.stage='rooms';playRoomUiState.editorMode='';
   document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
   renderPlayScene();
-  setTimeout(()=>openPlayRosterSheet(),80)
 }
 async function playSyncRoom(force=false){
   if(!isLivePlayRoom())return null;
