@@ -1,4 +1,4 @@
-export const CHARACTER_ENGINE_VERSION='0.1.0';
+export const CHARACTER_ENGINE_VERSION='0.2.0';
 
 export const CHARACTER_STATES=Object.freeze({
   IDLE:'idle',
