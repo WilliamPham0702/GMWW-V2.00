@@ -58,3 +58,16 @@
 .play-player-avatar .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-torso>img{clip-path:polygon(22% 26%,78% 26%,75% 69%,25% 69%)}
 .play-player-avatar .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-arm-back>img{clip-path:polygon(2% 26%,36% 27%,31% 70%,1% 72%)}
 .play-player-avatar .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-arm-front>img{clip-path:polygon(64% 27%,98% 26%,99% 72%,69% 70%)}
+
+
+/* Character Life Layer — same semantic micro-behaviors on GM/IPA. */
+@keyframes gmwwPlayRigBlink{0%,42%,58%,100%{transform:scaleY(1)}49%,52%{transform:scaleY(.955) translateY(.7%)}}
+@keyframes gmwwPlayRigLook{0%,100%{transform:rotate(0deg) translateX(0)}32%{transform:rotate(-3deg) translateX(-1.2%)}68%{transform:rotate(3deg) translateX(1.2%)}}
+@keyframes gmwwPlayRigStretchTorso{0%,100%{transform:translateY(0) scaleY(1)}38%{transform:translateY(-2.8%) scaleY(1.035)}70%{transform:translateY(-1.4%) scaleY(1.018)}}
+@keyframes gmwwPlayRigStretchLeft{0%,100%{transform:rotate(0)}45%{transform:rotate(-16deg) translateY(-2%)}}
+@keyframes gmwwPlayRigStretchRight{0%,100%{transform:rotate(0)}45%{transform:rotate(16deg) translateY(-2%)}}
+.gmww-segmented-rig[data-motion="blink"] .gmww-rig-head{animation:gmwwPlayRigBlink 520ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="look-around"] .gmww-rig-head{animation:gmwwPlayRigLook 1500ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-torso{animation:gmwwPlayRigStretchTorso 1700ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-back{transform-origin:32% 31%;animation:gmwwPlayRigStretchLeft 1700ms ease-in-out 1}
+.gmww-segmented-rig[data-motion="stretch"] .gmww-rig-arm-front{transform-origin:68% 31%;animation:gmwwPlayRigStretchRight 1700ms ease-in-out 1}
