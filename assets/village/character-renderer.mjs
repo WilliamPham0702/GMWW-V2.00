@@ -1,4 +1,4 @@
-export const CHARACTER_RENDERER_VERSION='0.2.0';
+export const CHARACTER_RENDERER_VERSION='0.3.0';
 export const MASTER_CHARACTER_ID='character-01';
 export const SHARED_RIG_BATCH_IDS=Object.freeze(Array.from({length:20},(_,i)=>`character-${String(i+1).padStart(2,'0')}`));
 export const SHARED_RIG_PROOF_IDS=SHARED_RIG_BATCH_IDS;
@@ -43,6 +43,23 @@ export function idlePhaseMsFor(characterId){
   return -((n*431+137)%6800);
 }
 
+export function motionProfileFor(state='idle',rigId='rig-male-muscular-v1'){
+  const normal=String(rigId)==='rig-male-normal-v1';
+  if(state==='running')return Object.freeze({cycleMs:normal?360:390,legForward:normal?15:14,legBack:normal?-17:-16,arm:normal?14:13,lift:normal?3.3:3.1,lean:normal?-1.6:-2.1});
+  if(state==='walking')return Object.freeze({cycleMs:normal?610:660,legForward:normal?11:9,legBack:normal?-12:-10,arm:normal?10:8,lift:normal?2.2:1.9,lean:normal?-.5:-.9});
+  return Object.freeze({cycleMs:760,legForward:8,legBack:-9,arm:7,lift:1.5,lean:0});
+}
+function applyMotionProfile(root,state,rigId){
+  const p=motionProfileFor(state,rigId);
+  root.style.setProperty('--rig-cycle',p.cycleMs+'ms');
+  root.style.setProperty('--rig-leg-forward',p.legForward+'deg');
+  root.style.setProperty('--rig-leg-back',p.legBack+'deg');
+  root.style.setProperty('--rig-arm-swing',p.arm+'deg');
+  root.style.setProperty('--rig-body-lift',p.lift+'%');
+  root.style.setProperty('--rig-body-lean',p.lean+'deg');
+  root.dataset.gait=state==='running'?'run':state==='walking'?'walk':'rest';
+}
+
 export function defaultRigIdFor(characterId){
   const m=String(characterId||'').match(/^character-(\d{2})$/),n=m?Number(m[1]):1;
   return n<=12?'rig-male-muscular-v1':n<=24?'rig-male-normal-v1':n<=36?'rig-female-v1':'rig-special-v1';
@@ -83,6 +100,7 @@ function applyCommand(root,command){
   root.dataset.activity=c.activity;
   root.dataset.rigId=c.rigId;
   root.dataset.engineVersion=c.engineVersion;
+  applyMotionProfile(root,c.state,c.rigId);
   if(root.dataset.textureFacing!==c.facing){
     root.dataset.textureFacing=c.facing;
     const src=masterTextureUrl(c.characterId,c.facing);

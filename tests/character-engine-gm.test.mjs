@@ -12,7 +12,7 @@ test('GM/IPA renderer exposes the shared-rig batch contract for the first 20 cha
   vm.runInContext(source,context);
   const api=context.window.GMWW_CHARACTER_RENDERER;
   assert.ok(api);
-  assert.equal(api.version,'0.2.0');
+  assert.equal(api.version,'0.3.0');
   assert.equal(api.rendererKind('character-01'),'segmented-skeletal');
   assert.equal(api.rendererKind('character-02'),'segmented-skeletal');
   assert.equal(api.rendererKind('character-03'),'segmented-skeletal');
@@ -57,4 +57,19 @@ test('GM renderer uses one shared idle scheduler and no frame sequencing loop',(
   assert.doesNotMatch(renderer,/frame-(?:02|03|04|05|06)/);
   assert.ok(renderer.includes('LIVE_IDLE_ROOTS'));
   assert.ok(renderer.includes('liveIdleMotionAt'));
+});
+
+
+test('GM v0.3 gait profile changes cadence and body weight by movement state',()=>{
+  const source=read('server-game/current/character-renderer.js');
+  const context={window:{},setInterval:()=>1,Date};
+  vm.createContext(context);
+  vm.runInContext(source,context);
+  const api=context.window.GMWW_CHARACTER_RENDERER;
+  assert.equal(api.version,'0.3.0');
+  const walk=api.motionProfileFor('walking','rig-male-muscular-v1');
+  const run=api.motionProfileFor('running','rig-male-muscular-v1');
+  assert.ok(run.cycleMs<walk.cycleMs);
+  assert.ok(run.lift>walk.lift);
+  assert.ok(Math.abs(run.lean)>Math.abs(walk.lean));
 });

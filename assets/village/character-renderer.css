@@ -165,3 +165,60 @@
 .player .portrait.game-character .gmww-segmented-rig[data-character-id="character-03"] .gmww-rig-leg-front{transform-origin:52.9% 57.4%}
 .player .portrait.game-character .gmww-segmented-rig[data-character-id="character-03"] .gmww-rig-arm-back{transform-origin:33.9% 30.7%}
 .player .portrait.game-character .gmww-segmented-rig[data-character-id="character-03"] .gmww-rig-arm-front{transform-origin:62.4% 30.7%}
+
+
+/* Character Motion V0.3 — per-rig gait, weight transfer and richer reactions. */
+@keyframes gmww-rig-v03-leg-a{
+  0%,100%{transform:rotate(var(--rig-leg-forward,9deg)) translateY(0)}
+  50%{transform:rotate(var(--rig-leg-back,-10deg)) translateY(calc(var(--rig-body-lift,2%) * -.35))}
+}
+@keyframes gmww-rig-v03-leg-b{
+  0%,100%{transform:rotate(var(--rig-leg-back,-10deg)) translateY(calc(var(--rig-body-lift,2%) * -.35))}
+  50%{transform:rotate(var(--rig-leg-forward,9deg)) translateY(0)}
+}
+@keyframes gmww-rig-v03-arm-a{
+  0%,100%{transform:rotate(calc(var(--rig-arm-swing,8deg) * -1))}
+  50%{transform:rotate(var(--rig-arm-swing,8deg))}
+}
+@keyframes gmww-rig-v03-arm-b{
+  0%,100%{transform:rotate(var(--rig-arm-swing,8deg))}
+  50%{transform:rotate(calc(var(--rig-arm-swing,8deg) * -1))}
+}
+@keyframes gmww-rig-v03-body{
+  0%,100%{transform:translateY(0) rotate(var(--rig-body-lean,0deg))}
+  50%{transform:translateY(calc(var(--rig-body-lift,2%) * -1)) rotate(var(--rig-body-lean,0deg))}
+}
+@keyframes gmww-rig-v03-turn{
+  0%{transform:rotate(0deg) translateX(0)}
+  45%{transform:rotate(-5deg) translateX(-2%)}
+  100%{transform:rotate(0deg) translateX(0)}
+}
+@keyframes gmww-rig-v03-cheer{
+  0%,100%{transform:translateY(0)}
+  35%{transform:translateY(-7%)}
+  62%{transform:translateY(-3%)}
+}
+@keyframes gmww-rig-v03-surprised{
+  0%,100%{transform:translateY(0) scale(1)}
+  24%{transform:translateY(-4%) scale(1.035)}
+}
+@keyframes gmww-rig-v03-sad{
+  0%,100%{transform:translateY(2%) rotate(0deg)}
+  50%{transform:translateY(3%) rotate(-1.2deg)}
+}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-leg-back,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-leg-back{animation:gmww-rig-v03-leg-a var(--rig-cycle) ease-in-out infinite!important}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-leg-front,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-leg-front{animation:gmww-rig-v03-leg-b var(--rig-cycle) ease-in-out infinite!important}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-arm-back,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-arm-back{animation:gmww-rig-v03-arm-a var(--rig-cycle) ease-in-out infinite!important}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-arm-front,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-arm-front{animation:gmww-rig-v03-arm-b var(--rig-cycle) ease-in-out infinite!important}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-torso,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-torso{animation:gmww-rig-v03-body calc(var(--rig-cycle)/2) ease-in-out infinite!important}
+.gmww-segmented-rig[data-motion="turn"] .gmww-rig-head,
+.gmww-segmented-rig[data-motion="turn"] .gmww-rig-torso{animation:gmww-rig-v03-turn 540ms ease-out 1!important}
+.gmww-segmented-rig[data-motion="cheer"]{animation:gmww-rig-v03-cheer 720ms ease-out 1}
+.gmww-segmented-rig[data-motion="surprised"]{animation:gmww-rig-v03-surprised 520ms ease-out 1}
+.gmww-segmented-rig[data-motion="sad"] .gmww-rig-head,
+.gmww-segmented-rig[data-motion="sad"] .gmww-rig-torso{animation:gmww-rig-v03-sad 1800ms ease-in-out infinite!important}

@@ -1,6 +1,6 @@
 (function(g){
   'use strict';
-  const VERSION='0.2.0';
+  const VERSION='0.3.0';
   const MASTER='character-01';
   const PROOF=Object.freeze(Array.from({length:20},(_,i)=>'character-'+String(i+1).padStart(2,'0')));
   const SEGMENTS=Object.freeze([
@@ -21,6 +21,22 @@
   function tickLiveIdle(now=Date.now()){for(const root of [...LIVE_IDLE_ROOTS]){if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}if(root.dataset.state==='idle')root.dataset.motion=liveIdleMotionAt(root.dataset.characterId,now)}return LIVE_IDLE_ROOTS.size}
   function ensureLiveIdleTicker(){if(liveIdleTimer||typeof setInterval!=='function')return;liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240)}
   function idlePhaseMsFor(characterId){const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;return -((n*431+137)%6800)}
+  function motionProfileFor(state='idle',rigId='rig-male-muscular-v1'){
+    const normal=String(rigId)==='rig-male-normal-v1';
+    if(state==='running')return{cycleMs:normal?360:390,legForward:normal?15:14,legBack:normal?-17:-16,arm:normal?14:13,lift:normal?3.3:3.1,lean:normal?-1.6:-2.1};
+    if(state==='walking')return{cycleMs:normal?610:660,legForward:normal?11:9,legBack:normal?-12:-10,arm:normal?10:8,lift:normal?2.2:1.9,lean:normal?-.5:-.9};
+    return{cycleMs:760,legForward:8,legBack:-9,arm:7,lift:1.5,lean:0};
+  }
+  function applyMotionProfile(root,state,rigId){
+    const p=motionProfileFor(state,rigId);
+    root.style.setProperty('--rig-cycle',p.cycleMs+'ms');
+    root.style.setProperty('--rig-leg-forward',p.legForward+'deg');
+    root.style.setProperty('--rig-leg-back',p.legBack+'deg');
+    root.style.setProperty('--rig-arm-swing',p.arm+'deg');
+    root.style.setProperty('--rig-body-lift',p.lift+'%');
+    root.style.setProperty('--rig-body-lean',p.lean+'deg');
+    root.dataset.gait=state==='running'?'run':state==='walking'?'walk':'rest';
+  }
   function defaultRigIdFor(characterId){const m=String(characterId||'').match(/^character-(\d{2})$/),n=m?Number(m[1]):1;return n<=12?'rig-male-muscular-v1':n<=24?'rig-male-normal-v1':n<=36?'rig-female-v1':'rig-special-v1'}
   function normalize(command={},fallback=MASTER){
     const characterId=/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(String(command.characterId||''))?String(command.characterId):fallback;
@@ -32,7 +48,7 @@
   function apply(root,command,textureUrl){
     if(!root)return false;
     const c=normalize(command,root.dataset.characterId||MASTER);
-    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;
+    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;applyMotionProfile(root,c.state,c.rigId);
     if(root.dataset.textureFacing!==c.facing){
       root.dataset.textureFacing=c.facing;
       const src=typeof textureUrl==='function'?textureUrl(c.characterId,c.facing):'';
@@ -56,5 +72,5 @@
     const root=host?.querySelector?.('[data-character-renderer="segmented-skeletal"]');if(!root)return false;
     return apply(root,command,textureUrl);
   }
-  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update,liveIdleMotionAt,tickLiveIdle});
+  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update,liveIdleMotionAt,tickLiveIdle,motionProfileFor});
 })(window);
