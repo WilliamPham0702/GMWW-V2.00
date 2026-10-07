@@ -505,26 +505,34 @@
 <div class="sheet hidden play-center-sheet" id="playCreateRoomSheet">
   <div class="sheet-card play-room-page-card">
     <div class="sheet-head play-room-page-head play-room-title-centered">
-      <h3>THIẾT LẬP PHÒNG</h3>
+      <h3>TẠO PHÒNG</h3>
       <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
     </div>
     <div class="play-room-page-body">
-      <section class="play-room-section-card">
-        <div class="play-room-section-title"><b>CÁC PHÒNG ĐÃ TẠO</b><small>TÌNH TRẠNG</small></div>
-        <div class="play-room-created-list" id="playCreatedRoomList"></div>
+      <section class="play-room-section-card play-room-picker-card">
+        <div class="play-room-section-title"><b>PHÒNG</b><small>CHẠM 1 LẦN ĐỂ CHỌN • 2 LẦN ĐỂ EDIT</small></div>
+        <div class="play-room-strip">
+          <button class="play-room-add-tile" id="playCreateRoomAdd" type="button" aria-label="Thêm phòng mới"><span>＋</span><small>MỚI</small></button>
+          <div class="play-room-created-list" id="playCreatedRoomList"></div>
+        </div>
       </section>
-      <section class="play-room-section-card">
-        <div class="play-room-section-title"><b>CHẾ ĐỘ</b></div>
+
+      <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep">
+        <div class="play-room-section-title"><b>CHẾ ĐỘ</b><small>CHỌN 1 CHẾ ĐỘ</small></div>
         <div class="play-room-mode-row">
           <button data-play-room-mode="online" type="button">ONLINE</button>
           <button data-play-room-mode="offline" type="button">OFFLINE</button>
         </div>
       </section>
-      <section class="play-room-section-card play-room-settings-row">
-        <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
-        <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
+
+      <section class="play-room-section-card play-room-step hidden" id="playRoomSettingsStep">
+        <div class="play-room-section-title"><b>THIẾT LẬP</b><small>SỐ GHẾ • TRẠNG THÁI</small></div>
+        <div class="play-room-settings-row">
+          <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
+          <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
+        </div>
       </section>
-      <button class="play-room-add-new" id="playCreateRoomAdd" type="button">＋ THÊM MỚI</button>
+
       <section class="play-room-editor hidden" id="playRoomEditor">
         <label class="play-room-name-field"><span>TÊN PHÒNG</span><input id="playCreateRoomName" type="text" maxlength="32" placeholder="Ví dụ: Làng Sói đẹp" autocomplete="off"></label>
         <div class="play-room-edit-actions">
