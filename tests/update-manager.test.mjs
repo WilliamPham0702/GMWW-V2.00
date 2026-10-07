@@ -100,13 +100,27 @@ test('Every new version can notify the GM with the required action',()=>{
   assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
 });
 
-test('Update manifest always advertises an exact native IPA version and URL',()=>{
+test('Official native IPA build is manual-only and cannot be triggered by runtime commits',()=>{
   const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   const workflow=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
   assert.match(script,/version:isNative\?version:shell/);
   assert.match(script,/GMWW-V\$\{isNative\?version:shell\}\.ipa/);
-  assert.match(workflow,/push:/);
-  assert.match(workflow,/server-game\/BUILD_IPA_REQUEST/);
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.doesNotMatch(workflow,/server-game\/BUILD_IPA_REQUEST/);
+  assert.match(workflow,/Native build blocked:/);
+  assert.match(workflow,/Fast Runtime Snapshot workflow/);
+});
+
+test('Fast Runtime Snapshot reuses a verified native shell and never runs Xcode or publishes official IPA',()=>{
+  const workflow=fs.readFileSync('.github/workflows/build-runtime-snapshot-ipa.yml','utf8');
+  assert.match(workflow,/baseline_shell:/);
+  assert.match(workflow,/gh release download/);
+  assert.match(workflow,/prepare-update-channel\.mjs runtime/);
+  assert.match(workflow,/Native executable changed during snapshot/);
+  assert.match(workflow,/Info\.plist changed during snapshot/);
+  assert.doesNotMatch(workflow,/xcodebuild/);
+  assert.doesNotMatch(workflow,/gh release create|gh release upload/);
+  assert.match(workflow,/official_release=false/);
 });
 
 test('Version bumps keep native update channel and web-sync self-heals',()=>{
