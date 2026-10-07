@@ -1,0 +1,117 @@
+/* Character Engine proof renderer — Character-01 segmented skeletal adapter. */
+.player .portrait.game-character .gmww-character-renderer{
+  position:absolute;inset:0;display:block;width:100%;height:100%;
+  transform:scale(var(--gmww-character-scale,1));
+  transform-origin:50% 95%;
+  pointer-events:none;
+}
+.player .portrait.game-character .gmww-segmented-rig{
+  overflow:visible;
+  filter:drop-shadow(0 7px 5px rgba(0,0,0,.45));
+  --rig-cycle:760ms;
+  --rig-breathe:2800ms;
+  --rig-phase:0ms;
+}
+.player .portrait.game-character .gmww-segmented-rig .gmww-rig-shadow{
+  position:absolute;left:23%;right:23%;bottom:2%;height:8%;
+  border-radius:50%;background:rgba(0,0,0,.30);filter:blur(2px);
+  transform-origin:50% 50%;
+  animation:gmww-rig-shadow-breathe var(--rig-breathe) ease-in-out infinite;
+}
+.player .portrait.game-character .gmww-rig-part{
+  position:absolute;inset:0;width:100%;height:100%;
+  transform-origin:50% 50%;will-change:transform;
+}
+.player .portrait.game-character .gmww-rig-part>img{
+  position:absolute;inset:0;width:100%!important;height:100%!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  object-fit:contain!important;box-shadow:none!important;filter:none!important;
+  transform:none!important;transform-origin:50% 100%!important;
+}
+.player .portrait.game-character .gmww-rig-leg-back>img{clip-path:polygon(7% 56%,49% 56%,51% 100%,4% 100%)}
+.player .portrait.game-character .gmww-rig-leg-front>img{clip-path:polygon(49% 56%,93% 56%,96% 100%,50% 100%)}
+.player .portrait.game-character .gmww-rig-torso>img{clip-path:polygon(20% 25%,80% 25%,77% 68%,23% 68%)}
+.player .portrait.game-character .gmww-rig-arm-back>img{clip-path:polygon(0 25%,35% 26%,30% 69%,0 72%)}
+.player .portrait.game-character .gmww-rig-arm-front>img{clip-path:polygon(65% 26%,100% 25%,100% 72%,70% 69%)}
+.player .portrait.game-character .gmww-rig-head>img{clip-path:polygon(20% 0,80% 0,78% 31%,22% 31%)}
+
+@keyframes gmww-rig-breathe{
+  0%,100%{transform:translateY(0) scaleY(1)}
+  50%{transform:translateY(-1.5%) scaleY(1.018)}
+}
+@keyframes gmww-rig-head-life{
+  0%,16%,100%{transform:rotate(0deg) translateY(0)}
+  24%{transform:rotate(-1.8deg) translateY(-.6%)}
+  34%{transform:rotate(0deg) translateY(0)}
+  66%{transform:rotate(1.4deg) translateY(-.4%)}
+  76%{transform:rotate(0deg) translateY(0)}
+}
+@keyframes gmww-rig-shadow-breathe{
+  0%,100%{transform:scale(1);opacity:.30}
+  50%{transform:scale(.93);opacity:.22}
+}
+@keyframes gmww-rig-leg-a{
+  0%,100%{transform:rotate(8deg) translateY(0)}
+  50%{transform:rotate(-9deg) translateY(-1%)}
+}
+@keyframes gmww-rig-leg-b{
+  0%,100%{transform:rotate(-9deg) translateY(-1%)}
+  50%{transform:rotate(8deg) translateY(0)}
+}
+@keyframes gmww-rig-arm-a{
+  0%,100%{transform:rotate(-7deg)}
+  50%{transform:rotate(8deg)}
+}
+@keyframes gmww-rig-arm-b{
+  0%,100%{transform:rotate(8deg)}
+  50%{transform:rotate(-7deg)}
+}
+@keyframes gmww-rig-step-body{
+  0%,100%{transform:translateY(0) rotate(-.5deg)}
+  50%{transform:translateY(-2.2%) rotate(.5deg)}
+}
+@keyframes gmww-rig-ready{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-1.4%)}
+}
+@keyframes gmww-rig-reaction{
+  0%,100%{transform:translateY(0) rotate(0)}
+  20%{transform:translateY(-5%) rotate(-2deg)}
+  42%{transform:translateY(-2%) rotate(2deg)}
+}
+@keyframes gmww-rig-dead{
+  to{transform:translateY(13%) rotate(74deg);opacity:.72}
+}
+
+.gmww-segmented-rig[data-state="idle"] .gmww-rig-torso,
+.gmww-segmented-rig[data-state="playing"] .gmww-rig-torso{animation:gmww-rig-breathe var(--rig-breathe) ease-in-out infinite}
+.gmww-segmented-rig[data-state="idle"] .gmww-rig-head,
+.gmww-segmented-rig[data-state="playing"] .gmww-rig-head{animation:gmww-rig-head-life 5.4s ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"]{--rig-cycle:620ms}
+.gmww-segmented-rig[data-state="running"]{--rig-cycle:390ms}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-leg-back,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-leg-back{transform-origin:44% 58%;animation:gmww-rig-leg-a var(--rig-cycle) ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-leg-front,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-leg-front{transform-origin:56% 58%;animation:gmww-rig-leg-b var(--rig-cycle) ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-arm-back,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-arm-back{transform-origin:32% 31%;animation:gmww-rig-arm-a var(--rig-cycle) ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-arm-front,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-arm-front{transform-origin:68% 31%;animation:gmww-rig-arm-b var(--rig-cycle) ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-torso,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-torso{animation:gmww-rig-step-body calc(var(--rig-cycle)/2) ease-in-out infinite}
+.gmww-segmented-rig[data-state="walking"] .gmww-rig-head,
+.gmww-segmented-rig[data-state="running"] .gmww-rig-head{animation:gmww-rig-step-body calc(var(--rig-cycle)/2) ease-in-out infinite reverse}
+.gmww-segmented-rig[data-state="ready"] .gmww-rig-torso,
+.gmww-segmented-rig[data-state="ready"] .gmww-rig-head{animation:gmww-rig-ready 1.5s ease-in-out infinite}
+.gmww-segmented-rig[data-state="reaction"]{animation:gmww-rig-reaction 620ms ease-out 1}
+.gmww-segmented-rig[data-state="dead"]{animation:gmww-rig-dead 620ms ease-out forwards}
+
+@media(prefers-reduced-motion:reduce){
+  .gmww-segmented-rig,.gmww-segmented-rig .gmww-rig-part,.gmww-segmented-rig .gmww-rig-shadow{animation:none!important}
+}
+
+/* Shared rig profile: male-normal (Character 13–20 in the first batch). */
+.player .portrait.game-character .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-head>img{clip-path:polygon(18% 0,82% 0,80% 33%,20% 33%)}
+.player .portrait.game-character .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-torso>img{clip-path:polygon(22% 26%,78% 26%,75% 69%,25% 69%)}
+.player .portrait.game-character .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-arm-back>img{clip-path:polygon(2% 26%,36% 27%,31% 70%,1% 72%)}
+.player .portrait.game-character .gmww-segmented-rig[data-rig-id="rig-male-normal-v1"] .gmww-rig-arm-front>img{clip-path:polygon(64% 27%,98% 26%,99% 72%,69% 70%)}
