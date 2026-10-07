@@ -351,7 +351,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,gm:publicGmPresence(rec,true)});
   }
   async globalGmMovePut(body){
-    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode&&isValidRoomCode(requestedRoomCode)?requestedRoomCode:String(old?.roomCode||"");
+    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode?(isValidRoomCode(requestedRoomCode)?requestedRoomCode:""):String(old?.roomCode||"");
     const sessionId=expired?randomToken(12):String(old?.sessionId||randomToken(12)),sessionStartedAt=expired?now:Math.max(0,Number(old?.sessionStartedAt||now));
     const from=villageLayout.clampPoint(body?.fromX,body?.fromY),to=villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,(to.y-from.y)*2),duration=Math.max(450,Math.min(4200,Math.trunc(distance*48||650)));
     const rec={...(expired?{}:(old||{})),online:true,sessionId,sessionStartedAt,lastSeenAt:now,updatedAt:new Date(now).toISOString(),roomCode,moveFromX:from.x,moveFromY:from.y,moveToX:to.x,moveToY:to.y,moveStartedAt:now,moveDurationMs:duration,manualUntil:now+duration+15000};
