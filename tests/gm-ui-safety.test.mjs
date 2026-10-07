@@ -27,16 +27,55 @@ test('confirmed Exit returns Home without ending/deleting room',()=>{
   vm.runInNewContext(section('function exitPlayImmersive()','function initPlayScene()')+';exitPlayImmersive()',ctx);
   assert.equal(page,'home');assert.equal(removed,true);
 });
-test('cancel final End confirmation never sends API request or changes busy state',async()=>{
-  let calls=0,busy=0;const ctx={playSceneRuntime:{selectedWinnerFaction:'Phe Sói',busy:false},playSceneState:{roomCode:'ABC234'},confirm:()=>false,playSetBusy(){busy++},playRoomApi(){calls++},playFlashError(){throw new Error('not expected')}};
-  const result=vm.runInNewContext(section('async function confirmPlayEndGame()','function playRosterSelectedIds()')+';confirmPlayEndGame()',ctx);
-  await result;assert.equal(calls,0);assert.equal(busy,0);
+test('force End modal opens at any phase and requires explicit confirmation',async()=>{
+  const code=section('async function openPlayEndSheet()','function closePlayEndSheet()');
+  let opened=false,requests=0;
+  const ctx={playSceneRuntime:{busy:false,room:{phase:'lobby',roomName:'Test'}},playSceneState:{roomCode:'ABC234'},
+    isLivePlayRoom:()=>true,document:{getElementById(id){
+      if(id==='playEndSheet')return{classList:{remove(name){opened=name==='hidden'}}};
+      return{disabled:false,textContent:''}
+    }},playFlashError(){throw Error('unexpected')},playSyncRoom(){requests++}};
+  await vm.runInNewContext(code+';openPlayEndSheet()',ctx);
+  assert.equal(opened,true);assert.equal(requests,0);
+  assert.match(html,/id="playEndConfirm"[^>]*>XÁC NHẬN KẾT THÚC/);
+  assert.doesNotMatch(html,/id="playWinnerGrid"/);
 });
-test('confirmed End sends selected winner once and retains seat data',async()=>{
-  const requests=[],room={matchId:'match-1',matchRevision:4},players=[{loginId:'a',seatId:9}];
-  const ctx={playSceneRuntime:{selectedWinnerFaction:'Phe Sói',busy:false,room,players},playSceneState:{roomCode:'ABC234'},confirm:()=>true,playSetBusy(on){ctx.playSceneRuntime.busy=on},document:{getElementById(){return{disabled:false}}},async playRoomApi(path,opts){requests.push({path,body:JSON.parse(opts.body)});return{room:{...room,phase:'lobby'}}},savePlayScene(){},closePlayEndSheet(){},async playSyncRoom(){},renderPlayScene(){},playFlashError(){}};
+
+test('cancel force End closes dialog without calling the server',()=>{
+  const code=section('function closePlayEndSheet()','async function confirmPlayEndGame()');
+  let hidden=false;
+  const ctx={document:{getElementById(){return{classList:{add(c){hidden=c==='hidden'}}}}}};
+  vm.runInNewContext(code+';closePlayEndSheet()',ctx);
+  assert.equal(hidden,true);
+});
+
+test('confirmed force End resets match and clears members without requiring winner or match phase',async()=>{
+  const requests=[],room={matchId:'match-1',matchRevision:4,resetVersion:5,phase:'lobby',enabled:true};
+  const ctx={playSceneRuntime:{selectedWinnerFaction:'',busy:false,room,players:[{loginId:'a',seatId:9}],assignments:[{roleId:'wolf'}],nightRuntime:{},
+     activeEffects:[{type:'frozen'}]},playSceneState:{roomCode:'ABC234',step:'seats',night:4,matchId:'match-1',selectedMemberIds:['a']},
+     isLivePlayRoom:()=>true,playSetBusy(on){ctx.playSceneRuntime.busy=on},
+     document:{getElementById(){return{disabled:false}}},
+     async playRoomApi(path,opts){requests.push({path,body:JSON.parse(opts.body)});return {ok:true,hardReset:true,playersCount:0,room:{...room,phase:'lobby',seatsLocked:false,resetVersion:6}}},
+     savePlayScene(){},closePlayEndSheet(){},async playSyncRoom(){},renderPlayScene(){},playFlashError(){}};
   await vm.runInNewContext(section('async function confirmPlayEndGame()','function playRosterSelectedIds()')+';confirmPlayEndGame()',ctx);
-  assert.equal(requests.length,1);assert.equal(requests[0].path,'/end');assert.equal(requests[0].body.winnerFaction,'Phe Sói');assert.equal(ctx.playSceneState.step,'members');assert.equal(players[0].seatId,9);
+  assert.equal(requests.length,1);assert.equal(requests[0].path,'/reset');
+  assert.equal(requests[0].body.forceEnd,true);
+  assert.equal(requests[0].body.preserveParticipants,false);
+  assert.equal(requests[0].body.expectedResetVersion,5);
+  assert.equal(ctx.playSceneState.step,'room');
+  assert.equal(ctx.playSceneState.night,0);
+  assert.equal(ctx.playSceneState.matchId,'');
+  assert.equal(ctx.playSceneRuntime.players.length,0);
+  assert.equal(ctx.playSceneRuntime.assignments.length,0);
+  assert.equal(ctx.playSceneRuntime.activeEffects.length,0);
+  assert.equal(ctx.playSceneRuntime.nightRuntime,null);
+  assert.equal(ctx.playSceneRuntime.busy,false);
+});
+
+test('busy state prevents duplicate forced end requests',async()=>{
+  let requests=0;const ctx={playSceneRuntime:{busy:true},isLivePlayRoom:()=>true,playRoomApi(){requests++}};
+  await vm.runInNewContext(section('async function confirmPlayEndGame()','function playRosterSelectedIds()')+';confirmPlayEndGame()',ctx);
+  assert.equal(requests,0);
 });
 test('fixed seats use stable, distinct positions for every room size',()=>{
   const ctx={};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8'),ctx);vm.runInContext(section('function playSeatPositions(count)','function playEsc(v)'),ctx);
