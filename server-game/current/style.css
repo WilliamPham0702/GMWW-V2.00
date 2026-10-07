@@ -2194,7 +2194,7 @@ body.play-immersive #start .play-player-token.is-empty:focus-visible .play-playe
 @media(max-width:390px){body.play-immersive #start .play-player-token.is-empty{width:52px!important;min-width:52px!important}body.play-immersive #start .play-player-token.is-empty .play-player-avatar{width:48px!important;height:36px!important}}
 
 
-/* V3.16 — room mode and room power use the same toggle pattern */
+/* V3.17 — room mode and room power use the same toggle pattern */
 #playCreateRoomSheet .play-room-control-row{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px!important;

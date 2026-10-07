@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V3.16 runtime on the V3.11 native shell is aligned',()=>{
+test('V3.17 runtime on the V3.11 native shell is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V3.16"'));
-  assert.ok(app.includes("const VERSION='3.16';"));
-  assert.ok(html.includes('GMWW V3.16'));
+  assert.ok(server.includes('VERSION="V3.17"'));
+  assert.ok(app.includes("const VERSION='3.17';"));
+  assert.ok(html.includes('GMWW V3.17'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 311;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.11;'));
-  assert.equal(pkg.version,'3.16.0');
+  assert.equal(pkg.version,'3.17.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
@@ -40,7 +40,7 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('Native IPA build is manual-only while V3.16 remains a runtime release on shell V3.11',()=>{
+test('Native IPA build is manual-only while V3.17 remains a runtime release on shell V3.11',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml');
   assert.ok(workflow.includes('workflow_dispatch:'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
