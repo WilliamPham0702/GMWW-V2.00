@@ -96,3 +96,19 @@ test('first 20 characters share two rig archetypes instead of per-character anim
   const css=read('assets/village/character-renderer.css');
   assert.ok(css.includes('[data-rig-id="rig-male-normal-v1"]'));
 });
+
+
+test('micro-behaviors are shared across Player Web and GM renderer',()=>{
+  const web=read('assets/village/character-renderer.css');
+  const gm=read('server-game/current/character-renderer.css');
+  for(const token of ['data-motion="blink"','data-motion="look-around"','data-motion="stretch"']){
+    assert.ok(web.includes(token));
+    assert.ok(gm.includes(token));
+  }
+  assert.ok(web.includes('gmww-rig-blink'));
+  assert.ok(web.includes('gmww-rig-look'));
+  assert.ok(web.includes('gmww-rig-stretch-torso'));
+  assert.ok(gm.includes('gmwwPlayRigBlink'));
+  assert.ok(gm.includes('gmwwPlayRigLook'));
+  assert.ok(gm.includes('gmwwPlayRigStretchTorso'));
+});
