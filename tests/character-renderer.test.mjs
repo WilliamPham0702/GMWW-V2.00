@@ -16,7 +16,7 @@ import {
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Character-01 is the segmented skeletal master and does not sequence walk frames',()=>{
-  assert.equal(CHARACTER_RENDERER_VERSION,'0.1.0');
+  assert.equal(CHARACTER_RENDERER_VERSION,'0.2.0');
   assert.equal(MASTER_CHARACTER_ID,'character-01');
   assert.equal(rendererKind('character-01'),'segmented-skeletal');
   assert.equal(rendererKind('character-02'),'segmented-skeletal');
@@ -111,4 +111,18 @@ test('micro-behaviors are shared across Player Web and GM renderer',()=>{
   assert.ok(gm.includes('gmwwPlayRigBlink'));
   assert.ok(gm.includes('gmwwPlayRigLook'));
   assert.ok(gm.includes('gmwwPlayRigStretchTorso'));
+});
+
+
+test('local idle-life scheduler is shared and phase-shifted without per-character timers',async()=>{
+  const mod=await import('../assets/village/character-renderer.mjs');
+  const times=Array.from({length:80},(_,i)=>i*500);
+  const a=times.map(t=>mod.liveIdleMotionAt('character-01',t));
+  const b=times.map(t=>mod.liveIdleMotionAt('character-02',t));
+  assert.deepEqual(a,times.map(t=>mod.liveIdleMotionAt('character-01',t)));
+  assert.notDeepEqual(a,b);
+  assert.ok(a.some(x=>x!=='idle-breathe'));
+  const source=read('assets/village/character-renderer.mjs');
+  assert.equal((source.match(/setInterval\s*\(/g)||[]).length,1);
+  assert.ok(source.includes('LIVE_IDLE_ROOTS'));
 });
