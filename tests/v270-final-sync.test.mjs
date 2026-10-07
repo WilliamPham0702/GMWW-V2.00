@@ -40,12 +40,14 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V3.07 native build request remains the official distributable shell',()=>{
-  const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
-  assert.ok(request.includes('GMWW V3.07'));
+test('Native IPA build is manual-only while V3.16 remains a runtime release on shell V3.11',()=>{
+  const workflow=read('.github/workflows/build-server-game-ipa.yml');
+  assert.ok(workflow.includes('workflow_dispatch:'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
   assert.ok(workflow.includes('walk-v266-left'));
-  assert.ok(workflow.includes('server-game/BUILD_IPA_REQUEST'));
+  assert.ok(workflow.includes('Native build blocked:'));
+  assert.ok(workflow.includes('Fast Runtime Snapshot workflow'));
+  assert.ok(!workflow.includes('server-game/BUILD_IPA_REQUEST'));
 });
