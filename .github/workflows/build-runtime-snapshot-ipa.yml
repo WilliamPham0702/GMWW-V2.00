@@ -10,6 +10,10 @@ on:
         required: true
         default: "3.11"
         type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-runtime-snapshot-ipa.yml"
 
 permissions:
   contents: read
@@ -29,7 +33,7 @@ jobs:
       - name: Resolve runtime and shell metadata
         id: meta
         env:
-          BASELINE_SHELL: ${{ inputs.baseline_shell }}
+          BASELINE_SHELL: ${{ inputs.baseline_shell || '3.11' }}
         shell: bash
         run: |
           set -euo pipefail
