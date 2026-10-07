@@ -1750,7 +1750,9 @@ async function playToggleRoomEnabled(){
   catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
 async function playResetCreatedRoom(){
-  if(!isLivePlayRoom()||playSceneRuntime.busy)return;
+  if(playSceneRuntime.busy)return;
+  if(playRoomUiState.editorMode==='new'){const n=document.getElementById('playCreateRoomName');if(n){n.value='';n.focus()}return}
+  if(!isLivePlayRoom())return;
   if(!confirm('RESET Phòng '+playSceneState.roomCode+'?\nToàn bộ người chơi, vị trí và dữ liệu ván trong phòng sẽ được làm mới.'))return;
   const keepEnabled=playSceneState.roomEnabled===true;
   playSetBusy(true);
@@ -1763,10 +1765,12 @@ async function playResetCreatedRoom(){
   }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
 async function playDeleteCreatedRoom(){
-  if(!isLivePlayRoom()||playSceneRuntime.busy)return;
+  if(playSceneRuntime.busy)return;
+  if(playRoomUiState.editorMode==='new'){const n=document.getElementById('playCreateRoomName');if(n)n.value='';playRoomUiState.editorMode='';playRoomUiState.stage='rooms';renderPlayCreateRoomSheet();return}
+  if(!isLivePlayRoom())return;
   if(!confirm('XOÁ Phòng '+playSceneState.roomCode+'?\nPhòng sẽ biến mất khỏi Player Web và không thể tham gia lại.'))return;
   playSetBusy(true);
-  try{const oldCode=playSceneState.roomCode;await playRoomApi('/delete',{method:'POST',body:'{}'});forgetPlayRoom(oldCode);clearStalePlayRoom();document.getElementById('playRoomEditor')?.classList.add('hidden');renderPlayCreateRoomSheet()}
+  try{const oldCode=playSceneState.roomCode;await playRoomApi('/delete',{method:'POST',body:'{}'});forgetPlayRoom(oldCode);clearStalePlayRoom();playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.stage='rooms';renderPlayCreateRoomSheet()}
   catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
 async function playSaveRoomName(){
@@ -1907,7 +1911,7 @@ async function renderPlayCards(){
   if(roleImg){roleImg.style.opacity=roleVisible&&role?'1':'.28';roleImg.src=role?await resolveArtwork('cards',role.id,'thumb'):'default-artwork.webp'}
   if(artifactImg){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
 }
-function bindPlayRoomModeButtons(){document.querySelectorAll('[data-play-room-mode]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playRoomMode==='online'?'online':'offline';playSceneState.roomMode=mode;savePlayScene();if(isLivePlayRoom())await playUpdateRoomSettings({roomMode:mode});else renderPlayScene();renderPlayCreateRoomSheet()})}
+function bindPlayRoomModeButtons(){document.querySelectorAll('[data-play-room-mode]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playRoomMode==='online'?'online':'offline';playSceneState.roomMode=mode;playRoomUiState.stage='settings';savePlayScene();renderPlayCreateRoomSheet();if(isLivePlayRoom())await playUpdateRoomSettings({roomMode:mode});else renderPlayScene();renderPlayCreateRoomSheet()})}
 function bindPlaySeatMoveButtons(){document.querySelectorAll('[data-play-seat-move]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playSeatMove==='walk'?'walk':'instant';playSceneState.seatMoveMode=mode;savePlayScene();if(isLivePlayRoom())await playUpdateRoomSettings({seatMoveMode:mode});else renderPlayScene()})}
 async function playUpdateRoomSettings(patch={}){
   if(!isLivePlayRoom())return;playSetBusy(true);
@@ -2367,7 +2371,7 @@ function exitPlayImmersive(){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
   const home=document.getElementById('home');if(home)home.scrollTop=0
 }
-async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);const name=document.getElementById('playCreateRoomName');if(name)name.value=String(playSceneRuntime.room?.roomName||name.value||'Phòng GMWW');const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);document.getElementById('playRoomEditor')?.classList.toggle('hidden',!isLivePlayRoom());renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
+async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.lastTapCode='';playRoomUiState.lastTapAt=0;const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
 function initDraggablePlaySheets(){
   document.querySelectorAll('.sheet .sheet-card').forEach(card=>{
     if(card.dataset.dragBound==='1')return;card.dataset.dragBound='1';
