@@ -77,8 +77,9 @@ test('Player Web card preview keeps V2.52 art-title-info layout and compact fact
 });
 
 
-test('GM Play is an immersive seven-stage village flow',()=>{
-  assert.match(app,/PLAY_STEPS=\['room','members','seats','game','roles','deal','battle'\]/);
+test('GM Play uses the current six-stage village flow without a Member tab',()=>{
+  assert.match(app,/PLAY_STEPS=\['room','seats','game','roles','deal','battle'\]/);
+  assert.match(app,/function setPlayStep\(step\)\{if\(step==='members'\)step='seats'/);
   assert.match(html,/id="playExitVillage"/);
   assert.match(html,/data-play-step="seats"/);
   assert.match(css,/body\.play-immersive #bottomNav\{display:none!important\}/);
