@@ -4,14 +4,14 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('V3.07 runtime on the V3.06 native shell is aligned',()=>{
+test('V3.08 runtime on the V3.06 native shell is aligned',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V3.07"'));
-  assert.ok(app.includes("const VERSION='3.07';"));
-  assert.ok(html.includes('GMWW V3.07'));
+  assert.ok(server.includes('VERSION="V3.08"'));
+  assert.ok(app.includes("const VERSION='3.08';"));
+  assert.ok(html.includes('GMWW V3.08'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 306;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.06;'));
-  assert.equal(pkg.version,'3.07.0');
+  assert.equal(pkg.version,'3.08.0');
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
@@ -40,7 +40,7 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('V3.07 native build request is the official distributable shell',()=>{
+test('V3.07 native build request remains the official distributable shell',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml'),request=read('server-game/BUILD_IPA_REQUEST');
   assert.ok(request.includes('GMWW V3.07'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));

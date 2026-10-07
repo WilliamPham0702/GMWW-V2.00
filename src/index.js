@@ -8,14 +8,14 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageGatherPoint } from "./gmww-village-gather-rules.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.07",NATIVE_SHELL_VERSION="3.06",UPDATE_CHANNEL_REV="runtime-307",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.08",NATIVE_SHELL_VERSION="3.06",UPDATE_CHANNEL_REV="runtime-308",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
 function publicGmPresence(rec,online=true){
-  if(!online)return{online:false,sessionId:"",sessionStartedAt:0,lastSeenAt:0};
+  if(!online)return{online:false,sessionId:"",sessionStartedAt:0,lastSeenAt:0,roomCode:""};
   const num=k=>Number.isFinite(Number(rec?.[k]))?Number(rec[k]):null;
-  return{online:true,sessionId:String(rec?.sessionId||""),sessionStartedAt:Math.max(0,Number(rec?.sessionStartedAt||rec?.lastSeenAt||0)),lastSeenAt:Math.max(0,Number(rec?.lastSeenAt||0)),moveFromX:num("moveFromX"),moveFromY:num("moveFromY"),moveToX:num("moveToX"),moveToY:num("moveToY"),moveStartedAt:Math.max(0,Number(rec?.moveStartedAt||0)),moveDurationMs:Math.max(0,Number(rec?.moveDurationMs||0)),manualUntil:Math.max(0,Number(rec?.manualUntil||0))};
+  const roomCode=normalizeRoomCode(rec?.roomCode||"");return{online:true,sessionId:String(rec?.sessionId||""),sessionStartedAt:Math.max(0,Number(rec?.sessionStartedAt||rec?.lastSeenAt||0)),lastSeenAt:Math.max(0,Number(rec?.lastSeenAt||0)),roomCode:isValidRoomCode(roomCode)?roomCode:"",moveFromX:num("moveFromX"),moveFromY:num("moveFromY"),moveToX:num("moveToX"),moveToY:num("moveToY"),moveStartedAt:Math.max(0,Number(rec?.moveStartedAt||0)),moveDurationMs:Math.max(0,Number(rec?.moveDurationMs||0)),manualUntil:Math.max(0,Number(rec?.manualUntil||0))};
 }
 
 export class RoomDurableObject extends DurableObject {
@@ -339,22 +339,22 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,gm:publicGmPresence(rec,online)});
   }
   async globalGmPresencePut(body){
-    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),online=body?.online!==false;
+    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),online=body?.online!==false,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode&&isValidRoomCode(requestedRoomCode)?requestedRoomCode:"";
     if(!online){
-      const rec={...(old||{}),online:false,lastSeenAt:now,updatedAt:new Date(now).toISOString()};
+      const rec={...(old||{}),online:false,roomCode:hasRoomCode?roomCode:String(old?.roomCode||""),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
       await this.ctx.storage.put("globalSetting:gmPresence",rec);
       return j({ok:true,gm:publicGmPresence(rec,false)});
     }
     const expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL;
-    const rec=expired?{online:true,sessionId:randomToken(12),sessionStartedAt:now,lastSeenAt:now,updatedAt:new Date(now).toISOString(),moveFromX:null,moveFromY:null,moveToX:null,moveToY:null,moveStartedAt:0,moveDurationMs:0,manualUntil:0}:{...old,online:true,lastSeenAt:now,updatedAt:new Date(now).toISOString()};
+    const rec=expired?{online:true,sessionId:randomToken(12),sessionStartedAt:now,lastSeenAt:now,updatedAt:new Date(now).toISOString(),roomCode:hasRoomCode?roomCode:"",moveFromX:null,moveFromY:null,moveToX:null,moveToY:null,moveStartedAt:0,moveDurationMs:0,manualUntil:0}:{...old,online:true,...(hasRoomCode?{roomCode}:{}),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
     await this.ctx.storage.put("globalSetting:gmPresence",rec);
     return j({ok:true,gm:publicGmPresence(rec,true)});
   }
   async globalGmMovePut(body){
-    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL;
+    const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode?(isValidRoomCode(requestedRoomCode)?requestedRoomCode:""):String(old?.roomCode||"");
     const sessionId=expired?randomToken(12):String(old?.sessionId||randomToken(12)),sessionStartedAt=expired?now:Math.max(0,Number(old?.sessionStartedAt||now));
     const from=villageLayout.clampPoint(body?.fromX,body?.fromY),to=villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,(to.y-from.y)*2),duration=Math.max(450,Math.min(4200,Math.trunc(distance*48||650)));
-    const rec={...(expired?{}:(old||{})),online:true,sessionId,sessionStartedAt,lastSeenAt:now,updatedAt:new Date(now).toISOString(),moveFromX:from.x,moveFromY:from.y,moveToX:to.x,moveToY:to.y,moveStartedAt:now,moveDurationMs:duration,manualUntil:now+duration+15000};
+    const rec={...(expired?{}:(old||{})),online:true,sessionId,sessionStartedAt,lastSeenAt:now,updatedAt:new Date(now).toISOString(),roomCode,moveFromX:from.x,moveFromY:from.y,moveToX:to.x,moveToY:to.y,moveStartedAt:now,moveDurationMs:duration,manualUntil:now+duration+15000};
     await this.ctx.storage.put("globalSetting:gmPresence",rec);
     return j({ok:true,gm:publicGmPresence(rec,true),durationMs:duration});
   }
@@ -1034,7 +1034,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/presence"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
-    return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({online:body?.online!==false})}));
+    const payload={online:body?.online!==false};if(Object.prototype.hasOwnProperty.call(body,"roomCode"))payload.roomCode=body.roomCode;return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}));
   }
   if(url.pathname==="/api/gm/move"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
