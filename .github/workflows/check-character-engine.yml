@@ -1,5 +1,7 @@
 name: Check Character Engine
 
+# Character Lab is generated inside CI only; it is not shipped in production assets.
+
 on:
   pull_request:
     branches: [main]
