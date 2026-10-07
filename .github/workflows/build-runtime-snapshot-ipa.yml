@@ -1,0 +1,181 @@
+name: Build Fast Runtime Snapshot IPA
+
+# Fast packaging path: reuse a verified native IPA and overlay only the tested Web runtime.
+# This workflow never compiles Xcode and never publishes to the official in-app IPA channel.
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_shell:
+        description: Verified native shell release to reuse
+        required: true
+        default: "3.11"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout tested source
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve runtime and shell metadata
+        id: meta
+        env:
+          BASELINE_SHELL: ${{ inputs.baseline_shell }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const app=fs.readFileSync('server-game/current/app.js','utf8');
+          const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+          const runtime=app.match(/const VERSION='([^']+)'/)?.[1]||'';
+          const shell=project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
+          const build=project.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1]||'';
+          const baseline=String(process.env.BASELINE_SHELL||'').trim();
+          if(!runtime||!shell||!build||!baseline) throw new Error('Missing runtime/shell/baseline metadata');
+          if(shell!==baseline) throw new Error('Requested baseline shell V'+baseline+' does not match repository native shell V'+shell);
+          const parts=v=>String(v).split('.').map(x=>Number(x)||0);
+          const cmp=(a,b)=>{const A=parts(a),B=parts(b),n=Math.max(A.length,B.length);for(let i=0;i<n;i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}return 0};
+          if(cmp(runtime,shell)<0) throw new Error('Runtime V'+runtime+' cannot be older than native shell V'+shell);
+          fs.appendFileSync(process.env.GITHUB_ENV,`RUNTIME_VERSION=${runtime}\nNATIVE_SHELL_VERSION=${shell}\nNATIVE_BUILD=${build}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`runtime=${runtime}\nshell=${shell}\nbuild=${build}\n`);
+          console.log('Fast snapshot: runtime V'+runtime+' on verified native shell V'+shell+' / build '+build);
+          NODE
+
+      - name: Restore canonical legacy artwork source
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="$RUNNER_TEMP/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          CLEAN_COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            CLEAN_COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$CLEAN_COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED_SHA  $ARCHIVE" | shasum -a 256 -c -
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+
+      - name: Prepare deterministic runtime overlay
+        run: |
+          set -euo pipefail
+          node .github/scripts/prepare-update-channel.mjs runtime
+          ROOT="assets/updates/runtime/V$RUNTIME_VERSION"
+          test -s "$ROOT/manifest.json"
+          test -s "$ROOT/GMWW.html"
+          test -s "$ROOT/app.js"
+          test -s "$ROOT/style.css"
+          test -s "$ROOT/character-renderer.js"
+          test -s "$ROOT/character-renderer.css"
+          node - "$ROOT/manifest.json" "$RUNTIME_VERSION" "$NATIVE_SHELL_VERSION" <<'NODE'
+          const fs=require('fs');
+          const [file,runtime,shell]=process.argv.slice(2);
+          const m=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(String(m.releaseVersion)!==runtime) throw new Error('Snapshot manifest runtime mismatch');
+          if(String(m.shellVersion)!==shell) throw new Error('Snapshot manifest shell mismatch');
+          if(m.releaseType!=='runtime' && runtime!==shell) throw new Error('Expected runtime release for newer runtime');
+          if(!Array.isArray(m.runtime?.files)||m.runtime.files.length===0) throw new Error('Runtime overlay is empty');
+          NODE
+
+      - name: Download and verify native baseline IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="gmww-v$NATIVE_SHELL_VERSION"
+          BASELINE="GMWW-V$NATIVE_SHELL_VERSION.ipa"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BASELINE" --output "$BASELINE"
+          test -s "$BASELINE"
+          EXPECTED=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq ".assets[] | select(.name==\"$BASELINE\") | .digest" | head -1)
+          ACTUAL="sha256:$(shasum -a 256 "$BASELINE" | awk '{print $1}')"
+          test -n "$EXPECTED" || { echo "::error::Baseline release has no SHA-256 digest"; exit 1; }
+          test "$EXPECTED" = "$ACTUAL" || { echo "::error::Baseline IPA digest mismatch"; exit 1; }
+          echo "Verified baseline $BASELINE $ACTUAL"
+
+      - name: Overlay runtime without touching native shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf snapshot
+          mkdir snapshot
+          unzip -q "GMWW-V$NATIVE_SHELL_VERSION.ipa" -d snapshot
+          APP=$(find snapshot/Payload -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -n "$APP"
+          test -d "$APP/Web"
+          EXEC=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          SHELL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          SHELL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
+          test "$SHELL_VERSION" = "$NATIVE_SHELL_VERSION"
+          test "$SHELL_BUILD" = "$NATIVE_BUILD"
+          BEFORE_EXEC=$(shasum -a 256 "$APP/$EXEC" | awk '{print $1}')
+          BEFORE_PLIST=$(shasum -a 256 "$APP/Info.plist" | awk '{print $1}')
+          export SNAPSHOT_APP_WEB="$APP/Web"
+          export SNAPSHOT_RUNTIME_ROOT="assets/updates/runtime/V$RUNTIME_VERSION"
+          node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const root=process.env.SNAPSHOT_RUNTIME_ROOT,web=process.env.SNAPSHOT_APP_WEB;
+          const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8'));
+          const safe=p=>p&&!p.startsWith('/')&&!p.includes('..')&&p.split('/').every(x=>x&&x!=='.');
+          for(const rel of manifest.delete||[]){
+            if(!safe(rel)) throw new Error('Unsafe delete path '+rel);
+            fs.rmSync(path.join(web,rel),{recursive:true,force:true});
+          }
+          for(const file of manifest.runtime.files||[]){
+            const rel=String(file.path||'');
+            if(!safe(rel)) throw new Error('Unsafe runtime path '+rel);
+            const src=path.join(root,rel),dst=path.join(web,rel);
+            if(!fs.existsSync(src)) throw new Error('Runtime source missing '+rel);
+            fs.mkdirSync(path.dirname(dst),{recursive:true});
+            fs.copyFileSync(src,dst);
+          }
+          NODE
+          AFTER_EXEC=$(shasum -a 256 "$APP/$EXEC" | awk '{print $1}')
+          AFTER_PLIST=$(shasum -a 256 "$APP/Info.plist" | awk '{print $1}')
+          test "$BEFORE_EXEC" = "$AFTER_EXEC" || { echo "::error::Native executable changed during snapshot"; exit 1; }
+          test "$BEFORE_PLIST" = "$AFTER_PLIST" || { echo "::error::Info.plist changed during snapshot"; exit 1; }
+          cmp -s "assets/updates/runtime/V$RUNTIME_VERSION/app.js" "$APP/Web/app.js"
+          cmp -s "assets/updates/runtime/V$RUNTIME_VERSION/GMWW.html" "$APP/Web/GMWW.html"
+          test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -ge 42
+          test "$(find "$APP/Web/game-characters/walk-v263" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
+          test "$(find "$APP/Web/game-characters/walk-v266-left" -type f -name 'frame-*.webp' | wc -l | tr -d ' ')" -eq 120
+          test "$(find "$APP/Web/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+          echo "Native shell preserved: V$SHELL_VERSION build $SHELL_BUILD"
+
+      - name: Package and verify snapshot IPA
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA="GMWW-Runtime-V$RUNTIME_VERSION-Shell-V$NATIVE_SHELL_VERSION.ipa"
+          (cd snapshot && ditto -c -k --sequesterRsrc --keepParent Payload "../$IPA")
+          unzip -t "$IPA" >/dev/null
+          test "$(stat -f%z "$IPA")" -gt 50000000
+          SHA=$(shasum -a 256 "$IPA" | awk '{print $1}')
+          printf 'runtime=V%s\nnative_shell=V%s\nnative_build=%s\nsha256=%s\nofficial_release=false\n'             "$RUNTIME_VERSION" "$NATIVE_SHELL_VERSION" "$NATIVE_BUILD" "$SHA" > SNAPSHOT-METADATA.txt
+          echo "ipa=$IPA" >> "$GITHUB_OUTPUT"
+          echo "Snapshot ready: $IPA sha256:$SHA"
+
+      - name: Upload fast snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Runtime-V${{ steps.meta.outputs.runtime }}-Shell-V${{ steps.meta.outputs.shell }}
+          path: |
+            ${{ steps.package.outputs.ipa }}
+            SNAPSHOT-METADATA.txt
+          if-no-files-found: error
+          retention-days: 14
