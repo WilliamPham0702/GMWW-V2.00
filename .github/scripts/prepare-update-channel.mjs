@@ -35,6 +35,8 @@ function copyDir(src,dst){
   }
 }
 
+const leanRuntimePatch=version==='3.16';
+
 copy('server-game/current/GMWW.html','GMWW.html');
 copy('server-game/current/app.js','app.js');
 copy('server-game/current/style.css','style.css');
@@ -44,13 +46,13 @@ copy('server-game/current/gmww-village-coast.svg','gmww-village-coast.svg');
 copy('assets/village/village-layout.js','village-layout.js');
 copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp');
 copy('assets/backgrounds/gmww-village-night-v260.webp','gmww-village-night-v260.webp');
-copyDir('assets/characters/v253','game-characters');
+if(!leanRuntimePatch)copyDir('assets/characters/v253','game-characters');
 copyDir('assets/gm','gm');
 
 // Canonical clean role artwork (63 originals, no old delivery/thumb variants).
 // deploy-production.yml restores this source from the pinned V2.52 release archive
 // before this script runs.
-{
+if(!leanRuntimePatch){
   const sourceRoot=path.join('server-game','legacy-assets','v252');
   const sourceManifest=path.join(sourceRoot,'role-artwork-v251.js');
   const originalRoot=path.join(sourceRoot,'assets','role-artwork-v251','original');
@@ -83,11 +85,13 @@ copyDir('assets/gm','gm');
   if(!html.includes('role-artwork-v251.js'))throw new Error('Runtime HTML did not load canonical role artwork manifest');
 }
 
-const artwork=fs.readFileSync('server-game/shared/artwork.js','utf8');
-const m=artwork.match(/data:image\/webp;base64,([^']+)/);
-if(m){
-  fs.writeFileSync(path.join(outRoot,'default-artwork.webp'),Buffer.from(m[1],'base64'));
-  copied.push('default-artwork.webp');
+if(!leanRuntimePatch){
+  const artwork=fs.readFileSync('server-game/shared/artwork.js','utf8');
+  const m=artwork.match(/data:image\/webp;base64,([^']+)/);
+  if(m){
+    fs.writeFileSync(path.join(outRoot,'default-artwork.webp'),Buffer.from(m[1],'base64'));
+    copied.push('default-artwork.webp');
+  }
 }
 
 function sha(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}
