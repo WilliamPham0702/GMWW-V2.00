@@ -8,6 +8,7 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
+import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V3.21",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-321",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
@@ -22,11 +23,28 @@ function publicGmPresence(rec,online=true){
 export class RoomDurableObject extends DurableObject {
   async fetch(request){
     const path=new URL(request.url).pathname;
+    if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
+  async securityRateLimit(body){
+    const policy=Object.values(PUBLIC_ENTRY_LIMITS).find(x=>x.key===String(body?.key||""));
+    if(!policy)return j({ok:false,error:"UNKNOWN_ADMISSION_POLICY"},400);
+    const previous=await this.ctx.storage.get("security-rate");
+    const result=stepPublicEntryWindow(previous,policy,Date.now());
+    if(result.allowed){
+      await this.ctx.storage.put("security-rate",result.next);
+      await this.ctx.storage.setAlarm(result.next.startedAt+policy.windowMs+1000);
+    }
+    return j({ok:result.allowed,retryAfterSeconds:result.retryAfterSeconds},result.allowed?200:429);
+  }
   async handleFetch(request){
     const url=new URL(request.url);
+    if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
+    if(url.pathname==="/health/storage"&&request.method==="GET"){
+      await this.ctx.storage.get("__gmww_health_read_only__");
+      return j({ok:true,storage:"reachable"});
+    }
     if(url.pathname==="/avatars/catalog"&&request.method==="GET")return this.customAvatarCatalog();
     if(url.pathname==="/avatars/upsert"&&request.method==="POST")return this.customAvatarUpsert(await safeJson(request));
     const customAvatarImagePath=url.pathname.match(/^\/avatars\/image\/(.+)$/);if(customAvatarImagePath&&request.method==="GET")return this.customAvatarImage(decodeURIComponent(customAvatarImagePath[1]));
@@ -805,7 +823,16 @@ export class RoomDurableObject extends DurableObject {
   async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",rows.slice(-100));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});return j({ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true})}
   async alarm(){
     try{
-      let meta=await this.ctx.storage.get("meta");if(!meta)return;
+      let meta=await this.ctx.storage.get("meta");
+      if(!meta){
+        const limiter=await this.ctx.storage.get("security-rate");
+        if(limiter){
+          const expiresAt=Number(limiter.startedAt||0)+Number(limiter.windowMs||60000);
+          if(Date.now()>=expiresAt)await this.ctx.storage.delete("security-rate");
+          else await this.ctx.storage.setAlarm(expiresAt+1000);
+        }
+        return;
+      }
       if(String(meta.phase||"").toLowerCase()==="deleted")return;
       if(meta.reopenAt){meta.reopenAt=null;await this.ctx.storage.put("meta",meta)}
       if(await this.runAutoAdvanceIfDue(meta))return;
@@ -972,8 +999,20 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
+  if(admissionPolicy){
+    const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
+    if(admissionResponse)return admissionResponse;
+  }
   if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
+  if(url.pathname==="/api/health/deep"&&request.method==="GET"){
+    try{
+      const ready=await memberStore(env).fetch("https://member.internal/health/storage");
+      if(!ready.ok)return j({ok:false,project:PROJECT,status:"degraded",checks:{memberStorage:"unavailable"}},503);
+      return j({ok:true,project:PROJECT,status:"ready",version:VERSION,checks:{memberStorage:"ready"}});
+    }catch{return j({ok:false,project:PROJECT,status:"degraded",checks:{memberStorage:"unavailable"}},503)}
+  }
   if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
@@ -1162,6 +1201,28 @@ export default {async fetch(request,env){
   const shortJoin=url.pathname.match(/^\/([A-Za-z0-9]+)$/);if(shortJoin&&request.method==="GET"){const c=normalizeRoomCode(shortJoin[1]);if(isValidRoomCode(c))return playerPage(c)}
   if(url.pathname==="/"&&request.method==="GET")return playerPage("");return new Response("Không tìm thấy trang",{status:404,headers:{...corsHeaders(),"content-type":"text/plain; charset=UTF-8"}});
 }};
+
+async function applyPublicEntryRateLimit(env,request,policy){
+  // Cloudflare sets CF-Connecting-IP at the trusted edge. Never trust X-Forwarded-For.
+  // Hash before using the identity as a Durable Object name; never store raw addresses.
+  const clientAddress=request.headers.get("CF-Connecting-IP")||"local-development";
+  const digest=await sha256("public-entry-v1:"+policy.key+":"+clientAddress);
+  try{
+    const limiter=env.ROOMS.get(env.ROOMS.idFromName("__GMWW_RATE_V1__"+digest));
+    const res=await limiter.fetch("https://rate.internal/security/rate-limit",{
+      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({key:policy.key})
+    });
+    if(res.ok)return null;
+    if(res.status===429){
+      const detail=await res.json().catch(()=>({}));
+      const retry=Math.max(1,Math.min(60,Number(detail?.retryAfterSeconds)||60));
+      return new Response(JSON.stringify({ok:false,error:"TOO_MANY_REQUESTS",message:"Quá nhiều yêu cầu. Vui lòng thử lại sau."}),{
+        status:429,headers:{...corsHeaders(),"content-type":"application/json; charset=UTF-8","cache-control":"no-store","retry-after":String(retry)}
+      });
+    }
+  }catch{}
+  return j({ok:false,error:"ADMISSION_UNAVAILABLE",message:"Tạm thời không thể xác nhận yêu cầu. Vui lòng thử lại."},503);
+}
 
 async function createRoom(env,url,request){const body=await safeJson(request)||{};for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
 async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const body=await safeJson(request);if(body?.token){const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:{Authorization:"Bearer "+body.token}}));if(!me.ok)return me;const data=await me.json();const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({member:data.member})});if(joined.ok){await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,roomCode:code,ready:false})});await syncRoomDirectory(env,code)}return joined}const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({guest:body?.guest})});if(joined.ok)await syncRoomDirectory(env,code);return joined}
