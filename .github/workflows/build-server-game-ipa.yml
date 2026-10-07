@@ -99,7 +99,7 @@ jobs:
           grep -q "const STATE_KEY='GMWW_V258_STATE'" "$APPDIR/Web/app.js"
           grep -q "const PREF_KEY='GMWW_V258_PREFS'" "$APPDIR/Web/app.js"
           grep -q 'gmww-village-coast.svg' "$APPDIR/Web/style.css"
-          grep -q 'data-play-room-mode="offline"' "$APPDIR/Web/GMWW.html"
+          grep -q 'id="playRoomModeToggle"' "$APPDIR/Web/GMWW.html"
           grep -q 'id="playSeatSheet"' "$APPDIR/Web/GMWW.html"
           grep -q "gameCharacterId" "$APPDIR/Web/app.js"
           grep -q "playUpdateRoomSettings" "$APPDIR/Web/app.js"
