@@ -38,6 +38,8 @@ function copyDir(src,dst){
 copy('server-game/current/GMWW.html','GMWW.html');
 copy('server-game/current/app.js','app.js');
 copy('server-game/current/style.css','style.css');
+copy('server-game/current/character-renderer.js','character-renderer.js');
+copy('server-game/current/character-renderer.css','character-renderer.css');
 copy('server-game/current/gmww-village-coast.svg','gmww-village-coast.svg');
 copy('assets/village/village-layout.js','village-layout.js');
 copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp');
