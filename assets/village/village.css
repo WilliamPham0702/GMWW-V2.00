@@ -409,3 +409,18 @@ html.embedded .player .player-over .name{font-size:11px}
 .player.gm.gm-action-walk .gm-wolf-shadow{animation:gmWolfRuntimeShadowWalk .72s ease-in-out infinite!important}
 .player.gm.gm-action-run .gm-wolf-shadow{animation:gmWolfRuntimeShadowRun .46s ease-in-out infinite!important}
 @media(prefers-reduced-motion:reduce){.player.gm .gm-wolf-character *{animation:none!important}}
+
+
+/* V3.14 — user fantasy leaf artwork replaces the empty-seat plus marker */
+.seat-empty{width:58px!important;min-width:58px!important;height:42px!important}
+.seat-empty .seat-dot{
+  width:54px!important;height:40px!important;border:0!important;border-radius:0!important;
+  background:transparent url("/assets/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
+  box-shadow:none!important;transform:none!important;overflow:visible!important;
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.34)) drop-shadow(0 0 5px rgba(255,210,76,.30))!important;
+  animation:gmwwLeafSeatPulse 1.9s ease-in-out infinite!important
+}
+.seat-empty .seat-dot::before,.seat-empty .seat-dot::after{content:none!important;display:none!important}
+.seat-empty.selected .seat-dot{filter:drop-shadow(0 0 10px rgba(255,229,126,.95)) drop-shadow(0 4px 4px rgba(0,0,0,.34))!important}
+.seat-empty.reserved .seat-dot{animation:none!important;filter:drop-shadow(0 0 8px rgba(255,217,122,.82)) drop-shadow(0 4px 4px rgba(0,0,0,.32))!important}
+@media(max-width:390px){.seat-empty{width:52px!important;min-width:52px!important;height:38px!important}.seat-empty .seat-dot{width:48px!important;height:36px!important}}
