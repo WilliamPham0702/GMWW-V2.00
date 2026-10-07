@@ -9,7 +9,7 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.18",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-318",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.19",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-319",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -792,13 +792,13 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"RESET_VERSION_CONFLICT",message:"Phòng đã thay đổi trước khi RESET. Hãy cập nhật Phòng rồi thử lại.",expectedResetVersion:expected,currentResetVersion:currentVersion,room:publicRoom(meta)},409)
     }
     const oldPlayers=(await this.ctx.storage.get("players"))||{},removedPlayers=Object.values(oldPlayers).map(publicPlayer),nextVersion=currentVersion+1;
-    await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
+    await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);await this.ctx.storage.put("seatSwaps",[]);
     await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");
     for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
-    meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.enabled=roomWasEnabled;meta.gameName="";meta.playerCount=0;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("reset-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
+    meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.locked=false;meta.seatsLocked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.cycleStartedAt=null;meta.currentNightTurnId=null;meta.autoPausedRemainingMs=null;meta.enabled=roomWasEnabled;meta.gameName="";meta.playerCount=0;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("reset-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
     await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
-    const room=publicRoom(meta),ack={ok:true,reset:true,hardReset:true,transactionId:meta.lastResetTransactionId,resetVersion:nextVersion,phase:room.phase,locked:room.locked,playersCount:0,assignmentsCount:0,room,players:[],removedPlayers};
-    this.broadcast({type:"room_hard_reset",room,players:[],resetVersion:nextVersion,transactionId:ack.transactionId});
+    const room=publicRoom(meta),ack={ok:true,reset:true,hardReset:true,forcedEnd:body?.forceEnd===true,transactionId:meta.lastResetTransactionId,resetVersion:nextVersion,phase:room.phase,locked:room.locked,playersCount:0,assignmentsCount:0,room,players:[],removedPlayers};
+    this.broadcast({type:"room_hard_reset",room,players:[],forcedEnd:ack.forcedEnd,resetVersion:nextVersion,transactionId:ack.transactionId});
     for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_HARD_RESET")}catch{}
     return j(ack)
   }

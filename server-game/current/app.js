@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.18';
+const VERSION='3.19';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1831,7 +1831,7 @@ async function playSyncRoom(force=false){
       playSceneState.phase='lobby';
     }else if(serverPhase==='lobby'||serverPhase==='waiting'){
       playSceneState.phase='lobby';
-      if(playSceneState.step==='battle')playSceneState.step=data.assignments?.length?'deal':'members';
+      if(playSceneState.step==='battle')playSceneState.step=data.assignments?.length?'deal':'room';
     }
     savePlayScene();connectPlaySocket();ensurePlayRealtimePoll();renderPlayScene();return data;
   }catch(err){
@@ -2313,34 +2313,46 @@ async function playFinishSeating(){
   const locked=await playSetSeatLock(true);if(locked){playSceneState.step='game';playSceneState.activePlayerId='';savePlayScene();renderPlayScene()}
 }
 async function openPlayEndSheet(){
-  if(!isLivePlayRoom()){playFlashError('Chưa có Phòng đang chơi.');return}
+  // Forced end is available during room setup, seating, role delivery, day or night.
+  if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
   if(!playSceneRuntime.room)await playSyncRoom(true);
-  const phase=String(playSceneRuntime.room?.phase||'').toLowerCase();
-  if(!['running','started','game','playing'].includes(phase)){playFlashError('Chỉ kết thúc khi ván đang chạy.');return}
+  if(!isLivePlayRoom())return;
   const sheet=document.getElementById('playEndSheet');if(!sheet)return;
-  const proposal=playSceneRuntime.winProposal;
-  document.getElementById('playEndRoomLabel').textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneRuntime.room?.gameName||playSceneState.gameName||'Ván GMWW');
-  const box=document.getElementById('playWinProposal');box?.classList.toggle('hidden',!proposal);
-  if(proposal){
-    document.getElementById('playWinProposalFaction').textContent=proposal.winnerLabel||proposal.winnerFaction||'—';
-    document.getElementById('playWinProposalReason').textContent=proposal.reason||'Hệ thống phát hiện điều kiện kết thúc cơ bản.';
-  }
-  selectPlayWinner(proposal?.winnerFaction||'');sheet.classList.remove('hidden');
+  const label=document.getElementById('playEndRoomLabel');
+  if(label)label.textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneRuntime.room?.roomName||'GMWW');
+  const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=!!playSceneRuntime.busy;
+  sheet.classList.remove('hidden');
 }
 function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
 async function confirmPlayEndGame(){
-  const winner=String(playSceneRuntime.selectedWinnerFaction||'');if(!winner){playFlashError('Hãy chọn Phe thắng trước khi kết thúc ván.');return}
   if(playSceneRuntime.busy)return;
-  if(!confirm('Kết thúc ván tại Phòng '+playSceneState.roomCode+'?\nPhe thắng: '+winner+'.\nKết quả sẽ được ghi nhận và người chơi trở về Phòng Chờ. Vị trí được giữ nguyên.'))return;
+  if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
   playSetBusy(true);const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=true;
   try{
-    const room=playSceneRuntime.room||{},data=await playRoomApi('/end',{method:'POST',body:JSON.stringify({matchId:room.matchId||playSceneState.matchId||'',matchRevision:Number(room.matchRevision||0),winnerFaction:winner,winnerLabel:winner})});
-    playSceneRuntime.room=data.room||room;playSceneRuntime.nightRuntime=null;playSceneRuntime.artifactCycle={count:0,max:3};playSceneRuntime.winProposal=null;playSceneRuntime.selectedWinnerFaction='';
-    playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;playSceneState.step='members';playSceneState.assignmentsPreview=[];playSceneState.activePlayerId='';playSceneState.roleId='';playSceneState.artifactId='';playSceneState.matchId='';savePlayScene();
-    closePlayEndSheet();await playSyncRoom(true);renderPlayScene();
-    playFlashError('Đã kết thúc ván • '+winner+' thắng. Mọi Thành Viên đã về Phòng Chờ và Sẵn sàng.');
-  }catch(err){playFlashError(err.message||'Không kết thúc được ván.')}
-  finally{playSetBusy(false);if(btn)btn.disabled=!playSceneRuntime.selectedWinnerFaction}
+    // Reuse the server's authenticated hard reset. This does not record a winner.
+    const resetVersion=Number(playSceneRuntime.room?.resetVersion||0);
+    const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+      transactionId:'forced-end-'+Date.now(),expectedResetVersion:resetVersion,
+      forceEnd:true,postGame:false,preserveParticipants:false
+    })});
+    if(data?.hardReset!==true||Number(data?.playersCount||0)!==0)throw new Error('Server chưa xác nhận kết thúc cưỡng ép và giải phóng toàn bộ người chơi.');
+    playSceneRuntime.room=data.room||null;
+    playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;
+    playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
+    playSceneRuntime.activeEffects=[];playSceneRuntime.artifactCycle={count:0,max:3};
+    playSceneRuntime.selectedWinnerFaction='';
+    playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;
+    playSceneState.artifactCount=0;playSceneState.assignmentsPreview=[];
+    playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';
+    playSceneState.roleId='';playSceneState.artifactId='';
+    playSceneState.matchId='';playSceneState.gameName='Ván GMWW';
+    playSceneState.gameTemplateId='';playSceneState.rolePlan={};
+    playSceneState.roleDurations={};playSceneState.artifactsEnabled=false;
+    savePlayScene();closePlayEndSheet();
+    await playSyncRoom(true);renderPlayScene();
+    playFlashError('Đã cưỡng ép kết thúc ván. Toàn bộ người chơi đã trở về sảnh chờ.');
+  }catch(err){playFlashError(err.message||'Không thể kết thúc cưỡng ép.')}
+  finally{playSetBusy(false);if(btn)btn.disabled=false}
 }
 function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
 function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
