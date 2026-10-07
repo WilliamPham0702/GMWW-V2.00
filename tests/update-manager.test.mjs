@@ -115,10 +115,10 @@ test('Version bumps keep native update channel and web-sync self-heals',()=>{
 });
 
 
-test('V2.81 fresh IPA uses bundled runtime and does not request same IPA again',()=>{
+test('Fresh IPA keeps newer installed runtime and does not request same IPA again',()=>{
   const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
   const js=fs.readFileSync('server-game/current/app.js','utf8');
-  assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) != \.orderedSame/);
+  assert.match(swift,/active\.compare\(shellVersion, options: \.numeric\) == \.orderedAscending/);
   assert.match(js,/shellCurrent=gmwwVersionCompare\(shell,latest\)>=0/);
   assert.match(js,/type==='native'&&shellCurrent/);
   assert.match(js,/ĐÃ CÀI IPA/);
