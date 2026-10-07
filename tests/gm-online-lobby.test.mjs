@@ -106,7 +106,7 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
 
 test('V3.16 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-316"/);
+  assert.match(server,/UPDATE_CHANNEL_REV="runtime-316b"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);
