@@ -293,3 +293,48 @@ html.embedded .player .player-over .name{font-size:11px}
 .player.gm.moving .gm-wolf-leg-a{animation:gmWolfV306StrideFront .58s cubic-bezier(.3,0,.55,1) infinite!important}
 .player.gm.moving .gm-wolf-leg-b{animation:gmWolfV306StrideRear .58s cubic-bezier(.3,0,.55,1) infinite!important}
 .player.gm.moving .gm-wolf-head{animation:gmWolfV306Head 5.8s ease-in-out infinite!important}
+
+/* V3.10 — tropical leaf seat markers shared by Player Web */
+@keyframes gmwwVillageLeafSeatGlow{
+  0%,100%{filter:drop-shadow(0 4px 5px rgba(0,45,47,.28)) drop-shadow(0 0 4px rgba(93,244,201,.18))}
+  50%{filter:drop-shadow(0 5px 6px rgba(0,45,47,.32)) drop-shadow(0 0 9px rgba(111,255,214,.42))}
+}
+.seat-empty{
+  width:50px!important;min-width:50px!important;height:38px!important;overflow:visible!important
+}
+.seat-empty .seat-dot{
+  position:relative!important;width:46px!important;height:34px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+  transform:perspective(90px) rotateX(50deg)!important;transform-origin:50% 62%!important;
+  overflow:visible!important;animation:gmwwVillageLeafSeatGlow 2.2s ease-in-out infinite!important
+}
+.seat-empty .seat-dot::after{
+  content:""!important;position:absolute!important;z-index:0!important;left:1px!important;top:5px!important;
+  width:30px!important;height:22px!important;border-radius:92% 16% 92% 16%!important;
+  transform:rotate(-24deg)!important;
+  border:1px solid rgba(194,255,215,.62)!important;
+  background:linear-gradient(145deg,#7ce7a7 0%,#35bd91 48%,#128c7e 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(244,255,224,.52),16px 7px 0 -1px rgba(58,193,151,.96),17px 8px 0 0 rgba(194,255,215,.42),0 3px 6px rgba(0,52,55,.26)!important
+}
+.seat-empty .seat-dot::before{
+  content:"+"!important;position:absolute!important;z-index:3!important;left:50%!important;top:50%!important;inset:auto!important;
+  transform:translate(-50%,-50%) rotateX(-12deg)!important;
+  width:24px!important;height:24px!important;border-radius:50%!important;
+  display:grid!important;place-items:center!important;
+  background:radial-gradient(circle at 36% 30%,#fffbe0 0 18%,#ffe690 48%,#e9b84e 100%)!important;
+  border:1px solid rgba(255,250,205,.9)!important;color:#0b766e!important;
+  font:950 20px/1 system-ui!important;text-shadow:none!important;
+  box-shadow:0 2px 6px rgba(35,78,49,.34),0 0 9px rgba(255,232,132,.42)!important
+}
+.seat-empty.selected .seat-dot::before{content:"✓"!important;color:#73570d!important;font-size:17px!important}
+.seat-empty.reserved .seat-dot::before{content:"➜"!important;color:#73570d!important;font-size:17px!important}
+.seat-empty.selected .seat-dot::after,.seat-empty.reserved .seat-dot::after{
+  background:linear-gradient(145deg,#9cf1ad 0%,#5ccd92 48%,#2b9b72 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,224,.62),16px 7px 0 -1px rgba(91,205,145,.96),17px 8px 0 0 rgba(255,235,153,.52),0 0 11px rgba(255,225,118,.32)!important
+}
+@media(max-width:390px){
+  .seat-empty{width:44px!important;min-width:44px!important;height:34px!important}
+  .seat-empty .seat-dot{width:41px!important;height:31px!important}
+  .seat-empty .seat-dot::after{width:27px!important;height:20px!important}
+  .seat-empty .seat-dot::before{width:22px!important;height:22px!important;font-size:18px!important}
+}
