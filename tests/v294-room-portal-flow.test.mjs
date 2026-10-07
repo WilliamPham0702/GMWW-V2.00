@@ -18,8 +18,8 @@ test('V3.01 has one centered Create Room page and hides generated room code',()=
   assert.doesNotMatch(html,/id="playCreateRoomSeatCount"/);
   assert.match(html,/id="playCreateRoomReset"/);
   assert.match(html,/id="playCreateRoomDelete"/);
-  assert.match(html,/data-play-room-mode="online"/);
-  assert.match(html,/data-play-room-mode="offline"/);
+  assert.match(html,/id="playRoomModeToggle"/);
+  assert.doesNotMatch(html,/data-play-room-mode=/);
   assert.match(html,/id="playCreateRoomEnabled"/);
   assert.match(html,/TẠO PHÒNG/);
   assert.match(appCss,/\.play-center-sheet\{[\s\S]*align-items:center!important;[\s\S]*justify-content:center!important/);
