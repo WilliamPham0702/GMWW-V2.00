@@ -44,6 +44,8 @@ jobs:
             sleep 1
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/health.json
+          curl -fsS http://127.0.0.1:8787/api/health/deep > /tmp/health-deep.json
+          grep -q '"memberStorage":"ready"' /tmp/health-deep.json
           curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
           curl -fsS http://127.0.0.1:8787/gmww-members-live.js > /tmp/player-live.js
