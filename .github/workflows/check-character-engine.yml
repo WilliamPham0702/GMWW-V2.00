@@ -1,0 +1,167 @@
+name: Check Character Engine
+
+# Character Lab is generated inside CI only; it is not shipped in production assets.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gmww-character-engine.js"
+      - "src/index.js"
+      - "assets/village/character-renderer.mjs"
+      - "assets/village/character-renderer.css"
+      - "assets/village/village.mjs"
+      - "assets/village/index.html"
+      - "tests/character-engine.test.mjs"
+      - "tests/character-renderer.test.mjs"
+      - "server-game/current/app.js"
+      - "server-game/current/GMWW.html"
+      - "server-game/current/character-renderer.js"
+      - "server-game/current/character-renderer.css"
+      - ".github/workflows/build-server-game-ipa.yml"
+      - "tests/character-engine-gm.test.mjs"
+      - ".github/workflows/check-character-engine.yml"
+      - "tools/character-rig-audit.py"
+  workflow_dispatch:
+
+concurrency:
+  group: character-engine-check-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  character-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Worker dry run
+        run: npm run check
+      - name: GM renderer syntax
+        run: |
+          node --check server-game/current/app.js
+          node --check server-game/current/character-renderer.js
+      - name: Character Engine unit tests
+        run: node --test tests/character-engine.test.mjs tests/character-renderer.test.mjs tests/character-engine-gm.test.mjs
+      - name: Character rig asset audit
+        run: |
+          python -m pip install --disable-pip-version-check --quiet pillow
+          python tools/character-rig-audit.py
+      - name: Character Engine manifest smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-character-wrangler.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true; cat /tmp/gmww-character-wrangler.log || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/api/character-engine/manifest > /tmp/character-engine.json; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8787/village/character-renderer.mjs > /tmp/character-renderer.mjs
+          curl -fsS http://127.0.0.1:8787/village/character-renderer.css > /tmp/character-renderer.css
+          grep -q "segmented-skeletal" /tmp/character-renderer.mjs
+          grep -q "gmww-rig-leg-back" /tmp/character-renderer.css
+          node - <<'NODE'
+          const fs=require('fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/character-engine.json','utf8'));
+          if(!m.ok)throw new Error('Character Engine manifest not OK');
+          if(m.engineVersion!=='0.2.0')throw new Error('Unexpected Character Engine version');
+          if(m.master?.id!=='character-01')throw new Error('Character Master is not character-01');
+          if(!Array.isArray(m.characters)||m.characters.length!==42)throw new Error('Expected 42 Character definitions');
+          if(!m.characters.every(x=>Array.isArray(x.motions)&&x.motions.includes('walk')&&x.motions.includes('idle')))throw new Error('Shared motion contract incomplete');
+          NODE
+      - name: Character visual smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > assets/village/character-lab.html <<'HTML'
+          <!doctype html>
+          <html lang="vi">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>GMWW Character Lab</title>
+          <link rel="stylesheet" href="./character-renderer.css?v=ce2">
+          <style>
+          html,body{margin:0;min-height:100%;background:#10283a;color:#f7fbff;font:14px/1.35 system-ui,-apple-system,sans-serif}
+          body{padding:24px;box-sizing:border-box}
+          h1{margin:0 0 6px;font-size:24px}p{margin:0 0 20px;color:#aad3df}
+          #lab{display:grid;gap:18px}.row{display:grid;grid-template-columns:120px repeat(7,minmax(120px,1fr));gap:10px;align-items:stretch}
+          .id{display:grid;place-items:center;font-weight:900;background:#17384d;border-radius:14px}
+          .cell{background:linear-gradient(#214b62,#163649);border:1px solid #ffffff22;border-radius:14px;padding:8px;min-height:190px;display:grid;grid-template-rows:1fr auto}
+          .player{position:relative;min-height:150px;display:grid;place-items:center}.portrait.game-character{position:relative;display:block;width:100px;height:142px;--gmww-character-scale:1.65}
+          .label{text-align:center;font-size:11px;font-weight:800;color:#d7eef4}
+          </style>
+          </head>
+          <body>
+          <h1>GMWW Character Engine 0.2 — Rig Lab</h1>
+          <p>Character-01 / 02 / 03 · audited alpha profiles · semantic motion renderer</p>
+          <div id="lab"></div>
+          <script type="module" src="./character-lab.mjs?v=ce2"></script>
+          </body></html>
+          HTML
+          cat > assets/village/character-lab.mjs <<'MJS'
+          import {mountCharacterRenderer} from './character-renderer.mjs';
+          
+          const motions=[
+            ['Idle','playing','idle-breathe'],
+            ['Blink','playing','blink'],
+            ['Look','playing','look-around'],
+            ['Stretch','playing','stretch'],
+            ['Walk','walking','walk'],
+            ['Run','running','run'],
+            ['Reaction','reaction','surprised']
+          ];
+          const ids=['character-01','character-02','character-03'];
+          const lab=document.getElementById('lab');
+          for(const id of ids){
+            const row=document.createElement('section');row.className='row';
+            const title=document.createElement('div');title.className='id';title.textContent=id;row.append(title);
+            for(const [label,state,motion] of motions){
+              const cell=document.createElement('div');cell.className='cell';
+              const player=document.createElement('div');player.className='player';
+              const portrait=document.createElement('span');portrait.className='portrait game-character';
+              player.append(portrait);
+              const caption=document.createElement('div');caption.className='label';caption.textContent=label;
+              cell.append(player,caption);row.append(cell);
+              mountCharacterRenderer(portrait,{characterId:id,command:{characterId:id,state,motion,facing:'right',loop:true,engineVersion:'0.2.0'},sources:[]});
+            }
+            lab.append(row);
+          }
+          
+          MJS
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-character-visual.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/village/ >/dev/null; then break; fi
+            sleep 1
+          done
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1280,900 --virtual-time-budget=5000 --screenshot=character-preview.png http://127.0.0.1:8787/village/
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1400,760 --virtual-time-budget=2600 --screenshot=character-lab.png http://127.0.0.1:8787/village/character-lab.html
+          test -s character-preview.png
+          test -s character-lab.png
+          python - <<'PY'
+          from PIL import Image
+          im=Image.open('character-preview.png').convert('RGB')
+          lab=Image.open('character-lab.png').convert('RGB')
+          print('CHARACTER_VISUAL_SMOKE='+str(im.size))
+          print('CHARACTER_LAB_SMOKE='+str(lab.size))
+          if im.width < 1000 or im.height < 700:
+              raise SystemExit('SCREENSHOT_TOO_SMALL')
+          if lab.width < 1200 or lab.height < 650:
+              raise SystemExit('LAB_SCREENSHOT_TOO_SMALL')
+          PY
+      - name: Upload Character visual
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-preview
+          path: |
+            character-preview.png
+            character-lab.png
+          retention-days: 3
