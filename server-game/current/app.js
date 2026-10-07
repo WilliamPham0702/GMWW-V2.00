@@ -1470,7 +1470,7 @@ document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListen
 /* GMWW V2.57 — immersive 2D village GM flow */
 const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
 const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V263_PLAY_SCENE','GMWW_V257_PLAY_SCENE','GMWW_V256_PLAY_SCENE','GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
-const PLAY_STEPS=['room','members','seats','game','roles','deal','battle'];
+const PLAY_STEPS=['room','seats','game','roles','deal','battle'];
 const PLAY_STEP_COPY={
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
   members:{k:'CHỌN NGƯỜI CHƠI',t:'Chọn Người Chơi',x:'ONLINE: chạm trực tiếp chibi đang Online trong Làng. OFFLINE: chọn danh sách hỗ trợ.',a:'XÁC NHẬN NGƯỜI CHƠI'},
@@ -1993,7 +1993,7 @@ function renderPlayContext(){
     actions.querySelector('[data-play-manage-seat]')?.addEventListener('click',openPlaySeatSheet)
   }
 }
-function setPlayStep(step){if(!PLAY_STEPS.includes(step))return;if(['game','roles','deal','battle'].includes(step)&&!playSceneRuntime.room?.seatsLocked){playFlashError('Khóa vị trí trước khi chọn ván.');return;}playSceneState.step=step;if(step!=='battle'){playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0}savePlayScene();renderPlayScene()}
+function setPlayStep(step){if(step==='members')step='seats';if(!PLAY_STEPS.includes(step))return;if(['game','roles','deal','battle'].includes(step)&&!playSceneRuntime.room?.seatsLocked){playFlashError('Khóa vị trí trước khi chọn ván.');return;}playSceneState.step=step;if(step!=='battle'){playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0}savePlayScene();renderPlayScene()}
 function advancePlaySetup(dir=1){const i=PLAY_STEPS.indexOf(playSceneState.step),next=Math.max(0,Math.min(PLAY_STEPS.length-1,i+dir));setPlayStep(PLAY_STEPS[next])}
 async function playSetServerCycle(phase,night){
   const serverPhase=phase==='day'?'morning':'night',n=Math.max(1,Number(night)||1),cycleKey=serverPhase+'-'+n;
@@ -2018,7 +2018,7 @@ async function togglePlayAutoGM(){
 }
 async function advancePlayPhase(){
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='room'){openPlayCreateRoomSheet();return}
+  if(playSceneState.step==='room'){if(isLivePlayRoom()&&playSceneState.roomEnabled===true){setPlayStep('seats');return}openPlayCreateRoomSheet();return}
   if(playSceneState.step==='members'){if(playSceneState.roomMode==='online')await savePlayRosterIds(playSceneState.selectedMemberIds||[]);else openPlayRosterSheet();return}
   if(playSceneState.step==='game'){openPlayGameSheet();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
@@ -2454,7 +2454,7 @@ function initPlayScene(){
   document.getElementById('playRefreshServer')?.addEventListener('click',refreshPlayServerRealtime);
   document.getElementById('playAudioTop')?.addEventListener('click',togglePlayAudio);
   document.getElementById('playPrimaryAction')?.addEventListener('click',advancePlayPhase);
-  document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
+  document.getElementById('playNext')?.addEventListener('click',()=>{if(playSceneState.step==='room'&&isLivePlayRoom()){setPlayStep('seats');return}advancePlayPhase()});
   document.getElementById('playBack')?.addEventListener('click',backPlayPhase);
   document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
