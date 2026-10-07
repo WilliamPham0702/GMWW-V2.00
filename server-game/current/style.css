@@ -2192,3 +2192,38 @@ body.play-immersive #start .play-player-token.is-empty .play-position-plus{displ
 body.play-immersive #start .play-player-token.is-empty:hover .play-player-avatar,
 body.play-immersive #start .play-player-token.is-empty:focus-visible .play-player-avatar{filter:drop-shadow(0 0 11px rgba(255,229,126,.92)) drop-shadow(0 4px 4px rgba(0,0,0,.34))!important}
 @media(max-width:390px){body.play-immersive #start .play-player-token.is-empty{width:52px!important;min-width:52px!important}body.play-immersive #start .play-player-token.is-empty .play-player-avatar{width:48px!important;height:36px!important}}
+
+
+/* V3.15 — compact room setup: ONLINE / OFFLINE / ON-OFF / NEXT on one row */
+#playCreateRoomSheet .play-room-control-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(74px,.72fr) 44px!important;
+  gap:7px!important;
+  align-items:stretch!important
+}
+#playCreateRoomSheet .play-room-control-row>[data-play-room-mode],
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  min-width:0!important;min-height:44px!important;height:44px!important;
+  padding:0 8px!important;border-radius:11px!important;font-size:10.5px!important;font-weight:900!important
+}
+#playCreateRoomSheet .play-room-control-row>[data-play-room-mode]{
+  border:1px solid rgba(92,211,241,.30)!important;background:rgba(4,37,50,.70)!important;color:#effcff!important
+}
+#playCreateRoomSheet .play-room-control-row>[data-play-room-mode].active{
+  border-color:rgba(106,231,255,.78)!important;background:linear-gradient(180deg,rgba(35,176,208,.88),rgba(8,105,136,.94))!important
+}
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important
+}
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled span{
+  width:9px!important;height:9px!important;border-radius:50%!important;flex:0 0 9px!important
+}
+#playCreateRoomSheet .play-room-control-row .play-room-step-next{
+  width:44px!important;height:44px!important;border-radius:11px!important;font-size:27px!important
+}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-control-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 68px 42px!important;gap:5px!important}
+  #playCreateRoomSheet .play-room-control-row>[data-play-room-mode],
+  #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{height:42px!important;min-height:42px!important;padding:0 5px!important;font-size:9.5px!important}
+  #playCreateRoomSheet .play-room-control-row .play-room-step-next{width:42px!important;height:42px!important}
+}
