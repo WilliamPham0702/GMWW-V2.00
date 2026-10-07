@@ -23,14 +23,16 @@ test("gather positions are deterministic regardless of participant input order",
   assert.deepEqual(a,b);
 });
 
-test("server overrides gather targets for both public village and room movement",()=>{
+test("server redirects legacy gather motion to per-character random safe points",()=>{
   const worker=fs.readFileSync("src/index.js","utf8");
-  assert.match(worker,/villageGatherPoint\("member:"\+normalizeLoginId\(m\.loginId\),ids\)/);
-  assert.match(worker,/autoMotionPhase==="gather"\?villageGatherPoint\(id,gatherIds\)/);
+  assert.match(worker,/villageAutoPoint\("member:"\+normalizeLoginId\(m\.loginId\),Math\.floor\(now\/1000\),villageLayout\)/);
+  assert.match(worker,/autoMotionPhase==="gather"\?villageAutoPoint\(id,Math\.floor\(now\/1000\),villageLayout\)/);
+  assert.doesNotMatch(worker,/villageGatherPoint\(id,gatherIds\)/);
 });
 
-test("Player Web predicts the same per-player gather ring instead of one shared point",()=>{
+test("Player Web chooses a fresh random destination instead of a gather ring",()=>{
   const live=fs.readFileSync("src/gmww-members-live.js","utf8");
-  assert.match(live,/function lobbyGatherPointForId\(id,ids\)/);
-  assert.match(live,/return lobbyGatherPointForId\(own,ids\)/);
+  assert.match(live,/function lobbyRandomPoint\(\)/);
+  assert.match(live,/function buildLobbyMotionRoute\(\)\{return\[lobbyRandomPoint\(\)\]\}/);
+  assert.doesNotMatch(live,/function lobbyGatherPointForId/);
 });
