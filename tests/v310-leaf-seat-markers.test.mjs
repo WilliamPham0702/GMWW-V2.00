@@ -9,28 +9,28 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const server=fs.readFileSync('src/index.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 
-test('V3.15 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{
+test('V3.16 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{
   assert.match(gmCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
   assert.match(gmCss,/seat-leaf\.webp\?v=314/);
   assert.match(gmCss,/\.play-position-plus\{display:none!important/);
-  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=315/);
+  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=316/);
   assert.doesNotMatch(app,/<span class="play-position-plus">＋<\/span>/);
 });
 
-test('V3.15 Player Web uses the supplied fantasy leaf artwork and removes generated plus/check arrows',()=>{
+test('V3.16 Player Web uses the supplied fantasy leaf artwork and removes generated plus/check arrows',()=>{
   assert.match(villageCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
   assert.match(villageCss,/seat-leaf\.webp\?v=314/);
   assert.match(villageCss,/\.seat-empty \.seat-dot::before,\.seat-empty \.seat-dot::after\{content:none!important/);
 });
 
-test('V3.15 runtime is aligned on the V3.11 native shell',()=>{
-  assert.match(html,/<title>GMWW V3\.15<\/title>/);
-  assert.match(app,/const VERSION='3\.15'/);
-  assert.match(server,/VERSION="V3\.15",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-315"/);
-  assert.ok(['3.10','3.11','3.12','3.13','3.15'].includes(manifest.releaseVersion));
+test('V3.16 runtime is aligned on the V3.11 native shell',()=>{
+  assert.match(html,/<title>GMWW V3\.16<\/title>/);
+  assert.match(app,/const VERSION='3\.16'/);
+  assert.match(server,/VERSION="V3\.16",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-316"/);
+  assert.ok(['3.10','3.11','3.12','3.13','3.16'].includes(manifest.releaseVersion));
   assert.ok(['native','runtime'].includes(manifest.releaseType));
   assert.ok(['3.09','3.11'].includes(manifest.shellVersion));
-  assert.ok(['3.10','3.11','3.12','3.15'].includes(manifest.runtimeVersion));
+  assert.ok(['3.10','3.11','3.12','3.16'].includes(manifest.runtimeVersion));
   if(manifest.releaseType==='native')assert.ok(manifest.ipa?.url);
   assert.ok(manifest.runtime.files.some(x=>x.path==='style.css'));
   assert.ok(manifest.runtime.files.some(x=>x.path==='character-renderer.js'));
