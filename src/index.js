@@ -1005,6 +1005,13 @@ export default {async fetch(request,env){
       };
       const latestMismatch=String(manifest?.releaseVersion||"")!==currentVersion;
       const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
+      const validRuntime=m=>String(m?.releaseVersion||"")===currentVersion&&String(m?.releaseType||"")==="runtime"&&String(m?.runtimeVersion||"")===currentVersion&&String(m?.shellVersion||"")===String(NATIVE_SHELL_VERSION)&&Array.isArray(m?.runtime?.files)&&m.runtime.files.length>0;
+      if(!currentNativeShell){
+        const versioned=await readVersionedManifest();
+        if(validRuntime(versioned))return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
+        if(validRuntime(manifest))return j({ok:true,...manifest,checkedAt:new Date().toISOString()});
+        return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
+      }
       if(latestMismatch||latestLostRuntime){
         const versioned=await readVersionedManifest();
         if(versioned&&String(versioned?.releaseType||"")!=="server_only")return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
