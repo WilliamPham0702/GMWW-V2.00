@@ -970,12 +970,31 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
-      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
-      const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
-      if(!res.ok)return j({ok:false,error:"UPDATE_MANIFEST_NOT_FOUND"},404);
-      const manifest=await res.json();
       const currentVersion=VERSION.replace(/^V/i,"");
       const currentNativeShell=NATIVE_SHELL_VERSION===currentVersion;
+      const validRuntime=m=>String(m?.releaseVersion||"")===currentVersion&&String(m?.releaseType||"")==="runtime"&&String(m?.runtimeVersion||"")===currentVersion&&String(m?.shellVersion||"")===String(NATIVE_SHELL_VERSION)&&Array.isArray(m?.runtime?.files)&&m.runtime.files.length>0;
+      const readVersionedManifest=async()=>{
+        try{
+          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
+          const rr=await env.ASSETS.fetch(new Request(u.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
+          if(!rr.ok)return null;const mm=await rr.json();return String(mm?.releaseVersion||"")===currentVersion?mm:null
+        }catch{return null}
+      };
+
+      // Runtime shells must not depend on latest.json being fresh at every edge.
+      // Prefer the immutable, versioned manifest first so an installed older runtime
+      // can always discover and install the current runtime release.
+      if(!currentNativeShell){
+        const versioned=await readVersionedManifest();
+        if(validRuntime(versioned))return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
+      }
+
+      const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
+      const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
+      if(!res.ok){
+        return j({ok:false,error:currentNativeShell?"UPDATE_MANIFEST_NOT_FOUND":"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},currentNativeShell?404:503);
+      }
+      const manifest=await res.json();
       const nativeManifest=()=>({
         ...manifest,
         releaseVersion:currentVersion,
@@ -996,26 +1015,16 @@ export default {async fetch(request,env){
         },
         checkedAt:new Date().toISOString()
       });
-      const readVersionedManifest=async()=>{
-        try{
-          const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV);
-          const rr=await env.ASSETS.fetch(new Request(u.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
-          if(!rr.ok)return null;const mm=await rr.json();return String(mm?.releaseVersion||"")===currentVersion?mm:null
-        }catch{return null}
-      };
       const latestMismatch=String(manifest?.releaseVersion||"")!==currentVersion;
       const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
-      const validRuntime=m=>String(m?.releaseVersion||"")===currentVersion&&String(m?.releaseType||"")==="runtime"&&String(m?.runtimeVersion||"")===currentVersion&&String(m?.shellVersion||"")===String(NATIVE_SHELL_VERSION)&&Array.isArray(m?.runtime?.files)&&m.runtime.files.length>0;
       if(!currentNativeShell){
-        const versioned=await readVersionedManifest();
-        if(validRuntime(versioned))return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
         if(validRuntime(manifest))return j({ok:true,...manifest,checkedAt:new Date().toISOString()});
         return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
       }
       if(latestMismatch||latestLostRuntime){
         const versioned=await readVersionedManifest();
         if(versioned&&String(versioned?.releaseType||"")!=="server_only")return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
-        if(currentNativeShell)return j({ok:true,...nativeManifest()});
+        return j({ok:true,...nativeManifest()});
       }
       if(latestMismatch){
         return j({ok:true,...manifest,releaseVersion:currentVersion,releaseType:"server_only",runtimeVersion:currentVersion,webVersion:currentVersion,serverVersion:currentVersion,required:false,restartRequired:false,message:"Server/Player Web đã cập nhật.",checkedAt:new Date().toISOString()});
