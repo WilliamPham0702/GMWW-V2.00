@@ -21,3 +21,14 @@ Player Web is responsible for:
 - never force-reloading during active gameplay.
 
 This branch is preparation-only. Do not merge until the parallel IPA work has finished and the newest main IPA build is verified.
+
+
+## IPA packaging policy
+
+GMWW now separates three delivery paths:
+
+- **SERVER_ONLY / RUNTIME**: normal fixes, UI, gameplay logic, artwork, character and Player Web changes. Deploy and publish runtime only. No Xcode build.
+- **FAST RUNTIME SNAPSHOT IPA**: for a quick installable test package, reuse the verified native shell release and overlay the tested runtime files. The native executable and Info.plist must remain byte-identical to the baseline. Snapshot artifacts are never published to the official in-app IPA channel.
+- **NATIVE**: only Swift/Xcode/Info.plist/entitlements/native-resource changes. Run the full Xcode workflow, require runtime version = native shell version, then publish the official IPA release.
+
+The old `server-game/BUILD_IPA_REQUEST` push trigger is retired. Full native builds are explicit `workflow_dispatch` runs. Runtime releases must not be forced to bump Xcode metadata merely to satisfy IPA packaging.
