@@ -2080,3 +2080,20 @@ body.play-immersive #start .play-player-token.is-empty>b{
   body.play-immersive #start .play-player-token.is-empty .play-player-avatar::after{width:27px!important;height:20px!important}
   body.play-immersive #start .play-player-token.is-empty .play-position-plus{width:22px!important;height:22px!important;font-size:18px!important}
 }
+
+/* GM WHITE WOLF CHARACTER — quadruped/rider motion */
+.gm-wolf-character{position:absolute;left:50%;top:58%;width:clamp(118px,14vw,210px);aspect-ratio:4/5;z-index:16;transform:translate(-50%,-50%);transform-origin:50% 82%;pointer-events:none;filter:drop-shadow(0 10px 9px rgba(0,0,0,.28));--gm-phase:0ms}
+.gm-wolf-character .gm-wolf-body{position:absolute;inset:0;transform-origin:48% 76%;animation:gmWolfIdle 2.7s ease-in-out infinite;animation-delay:var(--gm-phase)}
+.gm-wolf-character img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none}
+.gm-wolf-shadow{position:absolute;left:16%;right:9%;bottom:4%;height:9%;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(5px);animation:gmWolfShadow 2.7s ease-in-out infinite}
+.gm-wolf-character[data-motion="walk"] .gm-wolf-body{animation:gmWolfWalk .62s ease-in-out infinite}
+.gm-wolf-character[data-motion="run"] .gm-wolf-body{animation:gmWolfRun .34s cubic-bezier(.45,0,.55,1) infinite}
+.gm-wolf-character[data-motion="head-shake"] .gm-wolf-body{animation:gmWolfHeadShake .72s ease-in-out 1}
+.gm-wolf-character[data-motion="howl"] .gm-wolf-body{animation:gmWolfHowl 1.65s ease-in-out 1}
+@keyframes gmWolfIdle{0%,100%{transform:translateY(0) rotate(0)}45%{transform:translateY(-1.4%) rotate(-.35deg)}70%{transform:translateY(-.6%) rotate(.25deg)}}
+@keyframes gmWolfShadow{0%,100%{transform:scaleX(1);opacity:.28}50%{transform:scaleX(.94);opacity:.22}}
+@keyframes gmWolfWalk{0%,100%{transform:translateY(0) rotate(-.8deg) scaleY(1)}25%{transform:translateY(-2.7%) rotate(.7deg) scaleY(.99)}50%{transform:translateY(-.7%) rotate(1deg) scaleY(1.012)}75%{transform:translateY(-3%) rotate(-.5deg) scaleY(.992)}}
+@keyframes gmWolfRun{0%,100%{transform:translate(0,0) rotate(-2.1deg) scaleX(1.018) scaleY(.985)}25%{transform:translate(1.4%,-4.5%) rotate(.5deg) scaleX(.99) scaleY(1.018)}50%{transform:translate(0,-1%) rotate(1.5deg) scaleX(.975) scaleY(1.025)}75%{transform:translate(-1.2%,-5%) rotate(-.8deg) scaleX(1.01) scaleY(.99)}}
+@keyframes gmWolfHeadShake{0%,100%{transform:rotate(0)}18%{transform:rotate(-2.7deg) translateX(-1%)}38%{transform:rotate(2.9deg) translateX(1%)}58%{transform:rotate(-2deg)}78%{transform:rotate(1.4deg)}}
+@keyframes gmWolfHowl{0%,100%{transform:translateY(0) rotate(0) scale(1)}25%{transform:translateY(1%) rotate(1.5deg) scale(.995)}48%,72%{transform:translateY(-3.8%) rotate(-5.2deg) scale(1.025)}86%{transform:translateY(-1%) rotate(-1.5deg) scale(1.008)}}
+@media(prefers-reduced-motion:reduce){.gm-wolf-character .gm-wolf-body,.gm-wolf-shadow{animation:none!important}}
