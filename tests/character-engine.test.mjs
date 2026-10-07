@@ -17,7 +17,7 @@ import {
 } from '../src/gmww-character-engine.js';
 
 test('Character Master uses the shared muscular rig and animation adapter',()=>{
-  assert.equal(CHARACTER_ENGINE_VERSION,'0.1.0');
+  assert.equal(CHARACTER_ENGINE_VERSION,'0.2.0');
   assert.equal(CHARACTER_MASTER.id,'character-01');
   assert.equal(CHARACTER_MASTER.rigId,SHARED_RIGS['male-muscular'].id);
   assert.equal(CHARACTER_MASTER.renderer,'adapter');
