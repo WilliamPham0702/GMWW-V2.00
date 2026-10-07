@@ -11,9 +11,9 @@ const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 
 test('V3.17 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{
   assert.match(gmCss,/V3\.14 — user fantasy leaf artwork replaces the empty-seat plus marker/);
-  assert.match(gmCss,/seat-leaf\.webp\?v=314/);
+  assert.match(gmCss,/seat-leaf\.webp\?v=318/);
   assert.match(gmCss,/\.play-position-plus\{display:none!important/);
-  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=316/);
+  assert.match(app,/play-seat-leaf-art[^\n]+seat-leaf\.webp\?v=318/);
   assert.doesNotMatch(app,/<span class="play-position-plus">＋<\/span>/);
 });
 
@@ -24,9 +24,9 @@ test('V3.17 Player Web uses the supplied fantasy leaf artwork and removes genera
 });
 
 test('V3.17 runtime is aligned with native shell V3.17',()=>{
-  assert.match(html,/<title>GMWW V3\.17<\/title>/);
-  assert.match(app,/const VERSION='3\.17'/);
-  assert.match(server,/VERSION="V3\.17",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-317"/);
+  assert.match(html,/<title>GMWW V3\.18<\/title>/);
+  assert.match(app,/const VERSION='3\.18'/);
+  assert.match(server,/VERSION="V3\.18",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-318"/);
   assert.ok(['3.10','3.11','3.12','3.13','3.17'].includes(manifest.releaseVersion));
   assert.ok(['native','runtime'].includes(manifest.releaseType));
   assert.ok(['3.09','3.11','3.17'].includes(manifest.shellVersion));
