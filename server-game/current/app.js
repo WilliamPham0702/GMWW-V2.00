@@ -1819,6 +1819,15 @@ async function playCreateRoomNext(){
     playFlashError('Hãy chọn một phòng có thật hoặc nhấn MỚI, đặt tên và LƯU trước khi tiếp tục.');
     return;
   }
+  const sheet=document.getElementById('playCreateRoomSheet');
+  if(sheet&&!sheet.classList.contains('hidden')&&String(playRoomUiState.selectedCode)!==String(playSceneState.roomCode)){
+    playFlashError('Chọn một phòng trong danh sách trước khi tiếp tục.');
+    return;
+  }
+  if(!playSceneRuntime.room){
+    const checked=await playSyncRoom(true);
+    if(!checked?.room){await openPlayCreateRoomSheet();return}
+  }
   if(!(await playSaveRoomName()))return;
   rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
   playSceneState.step='seats';playSceneState.activePlayerId='';savePlayScene();
