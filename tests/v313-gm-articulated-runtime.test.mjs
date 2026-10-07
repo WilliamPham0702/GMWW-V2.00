@@ -16,7 +16,7 @@ const asset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 test('V3.14 is a runtime update on the existing V3.11 native shell',()=>{
   assert.match(app,/const VERSION='3\.14'/);
   assert.match(html,/<title>GMWW V3\.14<\/title>/);
-  assert.match(server,/VERSION="V3\.14",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-314"/);
+  assert.match(server,/VERSION="V3\.14",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-314b"/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 311;/);
   assert.match(project,/MARKETING_VERSION = 3\.11;/);
   assert.equal(pkg.version,'3.14.0');
