@@ -74,10 +74,8 @@ copyDir('assets/gm','gm');
   const htmlFile=path.join(outRoot,'GMWW.html');
   let html=fs.readFileSync(htmlFile,'utf8');
   if(!html.includes('role-artwork-v251.js')){
-    html=html.replace(/<script src="app\\.js(?:\\?v=[^"]+)?"><\\/script>/,'<script src="role-artwork-v251.js"></script>\\n  if(!html.includes('role-artwork-v251.js')){
-    html=html.replace('<script src="app.js"></script>','<script src="role-artwork-v251.js"></script>\n<script src="app.js"></script>');
-    fs.writeFileSync(htmlFile,html);
-  }');
+    const appScript=html.match(/<script src="app\.js(?:\?v=[^"]+)?"><\/script>/)?.[0]||'';
+    if(appScript)html=html.replace(appScript,'<script src="role-artwork-v251.js"></script>\n'+appScript);
     fs.writeFileSync(htmlFile,html);
   }
   if(!html.includes('role-artwork-v251.js'))throw new Error('Runtime HTML did not load canonical role artwork manifest');
