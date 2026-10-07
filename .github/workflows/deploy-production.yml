@@ -119,6 +119,11 @@ jobs:
             for(const f of m.runtime.files){
               if(!String(f?.path||'').trim()||!String(f?.url||'').startsWith('https://')||!/^[a-f0-9]{64}$/i.test(String(f?.sha256||'')))throw new Error('Invalid runtime file entry');
             }
+            const rider=m.runtime.files.filter(x=>String(x?.path||'')==='gm/gm-white-wolf.webp');
+            if(rider.length>1)throw new Error('GM rider asset missing from runtime update manifest');
+            const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
+            const cleanIndex=m.runtime.files.some(x=>String(x?.path||'')==='role-artwork-v251.js');
+            if((cleanIndex||clean.length>0)&&clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update');
           }
           if(m.releaseType==='native'){
             if(String(m.ipa?.version||'')!==String(m.releaseVersion||''))throw new Error('Native IPA version does not match releaseVersion');
