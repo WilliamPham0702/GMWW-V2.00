@@ -2227,3 +2227,17 @@ body.play-immersive #start .play-player-token.is-empty:focus-visible .play-playe
   #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{height:42px!important;min-height:42px!important;padding:0 5px!important;font-size:9.5px!important}
   #playCreateRoomSheet .play-room-control-row .play-room-step-next{width:42px!important;height:42px!important}
 }
+
+
+/* V3.15 — render the supplied leaf as a real image so GM cannot fall back to the legacy plus */
+body.play-immersive #start .play-player-token.is-empty .play-player-avatar{
+  background:none!important;display:grid!important;place-items:center!important
+}
+body.play-immersive #start .play-player-token.is-empty .play-seat-leaf-art{
+  display:block!important;width:54px!important;height:40px!important;object-fit:contain!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.34)) drop-shadow(0 0 5px rgba(255,210,76,.34))!important;
+  pointer-events:none!important
+}
+body.play-immersive #start .play-player-token.is-empty .play-position-plus{display:none!important}
+@media(max-width:390px){body.play-immersive #start .play-player-token.is-empty .play-seat-leaf-art{width:48px!important;height:36px!important}}
