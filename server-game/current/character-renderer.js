@@ -1,6 +1,6 @@
 (function(g){
   'use strict';
-  const VERSION='0.1.0';
+  const VERSION='0.2.0';
   const MASTER='character-01';
   const PROOF=Object.freeze(Array.from({length:20},(_,i)=>'character-'+String(i+1).padStart(2,'0')));
   const SEGMENTS=Object.freeze([
@@ -9,6 +9,17 @@
   ]);
   const STATES=new Set(['idle','walking','running','ready','playing','reaction','dead']);
   const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','turn','ready','cheer','surprised','sad','dead']);
+  const LIVE_IDLE_SLOT_MS=7000,LIVE_IDLE_ROOTS=new Set();let liveIdleTimer=0;
+  function hash32(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+  function unit(seed){return (hash32(seed)%1000000)/1000000}
+  function liveIdleMotionAt(characterId,now=Date.now()){
+    const id=/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(String(characterId||''))?String(characterId):MASTER;
+    const t=Math.max(0,Number(now)||0),phase=hash32(id+':idle-phase')%LIVE_IDLE_SLOT_MS,shifted=t+phase,slot=Math.floor(shifted/LIVE_IDLE_SLOT_MS),local=shifted%LIVE_IDLE_SLOT_MS,roll=unit(id+':'+slot+':idle-live');
+    const motion=roll<.38?'blink':roll<.64?'look-around':roll<.76?'stretch':'idle-breathe',duration=motion==='blink'?520:motion==='look-around'?1500:motion==='stretch'?1700:0;
+    return local<duration?motion:'idle-breathe';
+  }
+  function tickLiveIdle(now=Date.now()){for(const root of [...LIVE_IDLE_ROOTS]){if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}if(root.dataset.state==='idle')root.dataset.motion=liveIdleMotionAt(root.dataset.characterId,now)}return LIVE_IDLE_ROOTS.size}
+  function ensureLiveIdleTicker(){if(liveIdleTimer||typeof setInterval!=='function')return;liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240)}
   function idlePhaseMsFor(characterId){const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;return -((n*431+137)%6800)}
   function defaultRigIdFor(characterId){const m=String(characterId||'').match(/^character-(\d{2})$/),n=m?Number(m[1]):1;return n<=12?'rig-male-muscular-v1':n<=24?'rig-male-normal-v1':n<=36?'rig-female-v1':'rig-special-v1'}
   function normalize(command={},fallback=MASTER){
@@ -21,7 +32,7 @@
   function apply(root,command,textureUrl){
     if(!root)return false;
     const c=normalize(command,root.dataset.characterId||MASTER);
-    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;
+    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;
     if(root.dataset.textureFacing!==c.facing){
       root.dataset.textureFacing=c.facing;
       const src=typeof textureUrl==='function'?textureUrl(c.characterId,c.facing):'';
@@ -39,11 +50,11 @@
       const part=document.createElement('span');part.className='gmww-rig-part gmww-rig-'+cls;part.dataset.rigPart=id;
       const img=document.createElement('img');img.src=src;img.alt='';img.decoding='async';img.dataset.rigTexture='1';part.append(img);root.append(part);
     }
-    host.append(root);apply(root,c,textureUrl);return root;
+    host.append(root);LIVE_IDLE_ROOTS.add(root);ensureLiveIdleTicker();apply(root,c,textureUrl);return root;
   }
   function update(host,command,{textureUrl}={}){
     const root=host?.querySelector?.('[data-character-renderer="segmented-skeletal"]');if(!root)return false;
     return apply(root,command,textureUrl);
   }
-  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update});
+  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update,liveIdleMotionAt,tickLiveIdle});
 })(window);
