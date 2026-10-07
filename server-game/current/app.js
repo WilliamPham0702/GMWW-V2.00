@@ -2498,3 +2498,20 @@ document.querySelectorAll('[data-page="start"]').forEach(el=>el.addEventListener
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initPlayScene,{once:true});else initPlayScene();
 
 })();
+
+/* GM white wolf autonomous life + movement hooks */
+function gmWolfSetMotion(motion='idle',duration=0){
+  const el=document.getElementById('gmWolfCharacter');if(!el)return;
+  el.dataset.motion=motion;
+  if(el._gmWolfTimer)clearTimeout(el._gmWolfTimer);
+  if(duration>0)el._gmWolfTimer=setTimeout(()=>{el.dataset.motion='idle';el._gmWolfTimer=0},duration);
+}
+function gmWolfMovementMotion(speed=0){gmWolfSetMotion(Number(speed)>1.35?'run':Number(speed)>0?'walk':'idle')}
+function gmWolfLifeTick(){
+  const el=document.getElementById('gmWolfCharacter');if(!el||el.dataset.motion!=='idle'||document.hidden)return;
+  const seed=(Date.now()/1000|0)%17;
+  if(seed===5)gmWolfSetMotion('head-shake',760);
+  else if(seed===12)gmWolfSetMotion('howl',1700);
+}
+if(!window.__GMWW_GM_WOLF_LIFE__){window.__GMWW_GM_WOLF_LIFE__=setInterval(gmWolfLifeTick,5000)}
+window.GMWW_GM_WOLF={setMotion:gmWolfSetMotion,setMovement:gmWolfMovementMotion,howl:()=>gmWolfSetMotion('howl',1700),shake:()=>gmWolfSetMotion('head-shake',760)};
