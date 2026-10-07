@@ -225,9 +225,9 @@
 
 
 /* Character Runtime 0.4 — visible 30s sitting pose for Character-01..20. */
-@keyframes gmww-rig-sit-body{0%{transform:translateY(0) scaleY(1)}55%,100%{transform:translateY(11%) scaleY(.95)}}
-@keyframes gmww-rig-sit-leg-back{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(-2%,15%) rotate(34deg) scaleY(.94)}}
-@keyframes gmww-rig-sit-leg-front{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(2%,15%) rotate(-34deg) scaleY(.94)}}
+@keyframes gmww-rig-sit-body{0%{transform:translateY(0) scaleY(1)}55%,100%{transform:translateY(9%) scaleY(.97)}}
+@keyframes gmww-rig-sit-leg-back{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(-6%,17%) rotate(22deg) scale(.92,.93)}}
+@keyframes gmww-rig-sit-leg-front{0%{transform:translate(0,0) rotate(0)}55%,100%{transform:translate(6%,17%) rotate(-22deg) scale(.92,.93)}}
 @keyframes gmww-rig-sit-arm-back{0%{transform:rotate(0)}55%,100%{transform:translate(2%,8%) rotate(14deg)}}
 @keyframes gmww-rig-sit-arm-front{0%{transform:rotate(0)}55%,100%{transform:translate(-2%,8%) rotate(-14deg)}}
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-torso,
