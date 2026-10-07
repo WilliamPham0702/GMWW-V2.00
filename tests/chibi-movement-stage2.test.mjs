@@ -85,6 +85,6 @@ test('GM IPA exposes the movement option and renders moving players',()=>{
   assert.match(gm,/playMovementPoint/);
   assert.match(gm,/is-moving/);
   assert.match(gm,/GMWW_VILLAGE_LAYOUT\.clampPoint/);
-  assert.match(gm,/play-position-plus/);
+  assert.match(gm,/play-seat-leaf-art/);
   assert.doesNotMatch(gm,/🪑/);
 });
