@@ -34,6 +34,14 @@ if(game){
   // Integration contract: server-filtered public player records only (never role/faction).
   const params=new URLSearchParams(window.location.search),embedded=params.get("embed")==="1"&&window.parent!==window;
   if(embedded)document.documentElement.classList.add("embedded");
+  if(embedded){
+    let gmwwLastActivitySignal=0;
+    const gmwwSignalUserActivity=()=>{
+      const now=Date.now();if(now-gmwwLastActivitySignal<450)return;gmwwLastActivitySignal=now;
+      try{window.parent.postMessage({type:"gmww:user-activity"},window.location.origin)}catch{}
+    };
+    ["pointerdown","pointermove","touchstart","wheel","keydown"].forEach(type=>window.addEventListener(type,gmwwSignalUserActivity,{passive:true,capture:true}));
+  }
   const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
   const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
   let all=embedded?[]:(supplied?.length?supplied:sample);
