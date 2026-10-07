@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "releaseVersion": "3.08",
+  "releaseType": "runtime",
+  "shellVersion": "3.06",
+  "minimumShellVersion": "3.05",
+  "runtimeVersion": "3.08",
+  "webVersion": "3.08",
+  "serverVersion": "3.08",
+  "required": false,
+  "restartRequired": true,
+  "message": "Có GMWW V3.08. Chỉ cần cập nhật trực tiếp trong ứng dụng, không cần cài lại IPA.",
+  "runtime": {
+    "files": [
+      {
+        "path": "GMWW.html",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/GMWW.html",
+        "sha256": "00cebcf6c3eeae497a92886396199699e234ab9a7bf37c084a3615f19d71a536"
+      },
+      {
+        "path": "app.js",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/app.js",
+        "sha256": "c79d21a87778b6891a0349d62f05fd1e32ba6e4a32f0f152652cbe5e679846e4"
+      },
+      {
+        "path": "style.css",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/style.css",
+        "sha256": "38046a848101080539441401f842dca311fee20a2ec1a99d62a707b24c0e3a5f"
+      },
+      {
+        "path": "village-layout.js",
+        "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.08/village-layout.js",
+        "sha256": "3e90ad9d1dffd13a7c8cdad7898677673ef49f323e427390274d29f911e7d4f8"
+      }
+    ]
+  },
+  "ipa": null,
+  "delete": []
+}
