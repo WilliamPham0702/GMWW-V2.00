@@ -10,13 +10,14 @@ import {
   defaultRigIdFor,
   masterTextureUrl,
   normalizeRendererCommand,
-  rendererKind
+  rendererKind,
+  motionProfileFor
 } from '../assets/village/character-renderer.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Character-01 is the segmented skeletal master and does not sequence walk frames',()=>{
-  assert.equal(CHARACTER_RENDERER_VERSION,'0.2.0');
+  assert.equal(CHARACTER_RENDERER_VERSION,'0.3.0');
   assert.equal(MASTER_CHARACTER_ID,'character-01');
   assert.equal(rendererKind('character-01'),'segmented-skeletal');
   assert.equal(rendererKind('character-02'),'segmented-skeletal');
@@ -141,4 +142,23 @@ test('audited Character-01 to 03 rig profiles use per-character alpha bounds',()
   assert.ok(gm.includes('41.8% 58%'));
   assert.ok(gm.includes('45.2% 57.2%'));
   assert.ok(gm.includes('43.4% 57.4%'));
+});
+
+
+test('gait profiles distinguish muscular and normal rigs and walking from running',()=>{
+  const muscularWalk=motionProfileFor('walking','rig-male-muscular-v1');
+  const normalWalk=motionProfileFor('walking','rig-male-normal-v1');
+  const muscularRun=motionProfileFor('running','rig-male-muscular-v1');
+  assert.notEqual(muscularWalk.cycleMs,normalWalk.cycleMs);
+  assert.ok(muscularRun.cycleMs<muscularWalk.cycleMs);
+  assert.ok(Math.abs(muscularRun.legBack)>Math.abs(muscularWalk.legBack));
+  assert.ok(muscularRun.lift>muscularWalk.lift);
+  const web=read('assets/village/character-renderer.css');
+  const gm=read('server-game/current/character-renderer.css');
+  assert.ok(web.includes('Character Motion V0.3'));
+  assert.ok(web.includes('--rig-leg-forward'));
+  assert.ok(web.includes('data-motion="turn"'));
+  assert.ok(web.includes('data-motion="cheer"'));
+  assert.ok(gm.includes('Character Motion V0.3'));
+  assert.ok(gm.includes('gmwwPlayRigV03Body'));
 });
