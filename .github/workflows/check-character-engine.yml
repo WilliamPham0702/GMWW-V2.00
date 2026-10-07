@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: character-engine-check-${{ github.ref }}
+  group: character-engine-check-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
