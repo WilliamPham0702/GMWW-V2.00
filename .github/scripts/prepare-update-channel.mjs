@@ -101,7 +101,12 @@ if(previousManifest?.releaseVersion===version){
   const previousType=String(previousManifest.releaseType||'server_only');
   if((typeRank[previousType]??0)>(typeRank[releaseType]??0)) releaseType=previousType;
 }
-const shell=(fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8').match(/MARKETING_VERSION = ([^;]+);/)?.[1]||version).trim();
+const projectShell=(fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8').match(/MARKETING_VERSION = ([^;]+);/)?.[1]||'').trim();
+const workerSource=fs.readFileSync('src/index.js','utf8');
+const workerShell=(workerSource.match(/NATIVE_SHELL_VERSION="([^"]+)"/)?.[1]||'').trim();
+if(!workerShell)throw new Error('Cannot resolve native shell version from Worker');
+if(projectShell&&projectShell!==workerShell)throw new Error('Native shell version mismatch: Worker '+workerShell+' vs Xcode '+projectShell);
+const shell=workerShell;
 // Build-trigger/follow-up commits can be server-only even though a new native shell
 // was just released. When the advertised version changed and the shell matches it,
 // keep the channel native so older installs are told to download the new IPA.
@@ -135,8 +140,13 @@ const manifest={
 fs.mkdirSync(path.join('assets','updates'),{recursive:true});
 fs.writeFileSync(path.join('assets','updates','latest.json'),JSON.stringify(manifest,null,2)+'\n');
 fs.writeFileSync(path.join(outRoot,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
-const workerSource=fs.readFileSync('src/index.js','utf8');
 const updateChannelRev=workerSource.match(/UPDATE_CHANNEL_REV="([^"]+)"/)?.[1]||'runtime';
 const revisionedManifest=path.join(outRoot,'manifest-'+updateChannelRev+'.json');
 fs.writeFileSync(revisionedManifest,JSON.stringify(manifest,null,2)+'\n');
+if(version!==shell){
+  if(releaseType!=='runtime')throw new Error('Runtime '+version+' on shell '+shell+' must publish as runtime');
+  const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp'];
+  for(const p of required)if(!files.some(f=>f.path===p))throw new Error('Runtime package missing '+p);
+  if(!fs.existsSync(revisionedManifest))throw new Error('Revisioned runtime manifest was not generated');
+}
 console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));
