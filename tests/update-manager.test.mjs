@@ -159,3 +159,14 @@ test('V3.15 runtime channel cannot silently fall back to server-only',()=>{
   assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
   assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });
+
+
+test('Runtime update lookup prefers the immutable versioned manifest before latest.json',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const route=worker.slice(worker.indexOf('if(url.pathname==="/api/update/manifest"'),worker.indexOf('if((url.pathname==="/favicon.svg"',worker.indexOf('if(url.pathname==="/api/update/manifest"')));
+  const versioned=route.indexOf('const versioned=await readVersionedManifest()');
+  const latest=route.indexOf('manifestUrl.pathname="/updates/latest.json"');
+  assert.ok(versioned>=0&&latest>=0&&versioned<latest);
+  assert.match(route,/manifest-"+UPDATE_CHANNEL_REV+"\.json/);
+  assert.match(route,/if\(validRuntime\(versioned\)\)return j\(\{ok:true/);
+});
