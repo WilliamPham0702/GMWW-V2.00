@@ -15,3 +15,5 @@ V3.05 final rebuild: bottom center is live create-game flow; remove info orbs; a
 Release V3.06 build 306: room manager redesign (created rooms/status, online-offline, seats/on-off, add/edit/save-reset-delete) + latest runtime.
 
 Release V3.07 build 307: progressive disclosure room setup; single tap selects room, double tap edits, horizontal + tile, staged mode then seats/status.
+
+V3.07 refinement rebuild: remove top info label, center header text, arrow-only bottom navigation, compact room UI, persist room settings, in-sheet next arrow advances to Members.
