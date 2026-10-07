@@ -131,3 +131,8 @@ jobs:
           grep -q 'GMWW PLAYER' /tmp/player.html
           grep -Fq '.app{width:100%;max-width:none;min-height:100dvh;margin:0' /tmp/player.html
           ! grep -Fq '.app{width:min(430px,100%)' /tmp/player.html
+          curl -fsS "$URL/village/village.mjs?verify=$(date +%s)" > /tmp/village.mjs
+          node --check /tmp/village.mjs
+          grep -Fq 'document.documentElement.classList.add("embedded")' /tmp/village.mjs
+          curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
+          grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
