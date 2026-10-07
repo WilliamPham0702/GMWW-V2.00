@@ -96,7 +96,7 @@ test('position stage preserves occupied positions, supports swap/random remainde
   assert.match(server,/gmRandomSeatsRoute/);
   assert.match(server,/seatsRandomized:true/);
   assert.match(app,/\/seat-lock/);
-  assert.match(app,/play-position-plus/);
+  assert.match(app,/play-seat-leaf-art/);
   assert.doesNotMatch(app,/🪑/);
   assert.match(server,/async gmSeatLock\(/);
   assert.match(server,/meta\.seatsLocked/);
