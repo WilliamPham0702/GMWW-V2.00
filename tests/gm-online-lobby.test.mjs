@@ -64,14 +64,15 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V3.10 keeps GM rider at normal character size and animates wolf legs',()=>{
-  assert.match(app,/const VERSION='3\.10'/);
+test('V3.11 keeps GM rider at normal character size and uses the single Character Master',()=>{
+  assert.match(app,/const VERSION='3\.11'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
   assert.match(gmStyle,/\.play-player-token\.is-gm-rider\{width:72px/);
-  assert.match(gmStyle,/playGmWolfLegA/);
-  assert.match(gmStyle,/playGmWolfLegB/);
+  assert.match(app,/gm-wolf-master/);
+  assert.equal((app.match(/gm\/gm-white-wolf\.webp/g)||[]).length,1);
+  for(const state of ['idle','walk','run','shake','howl'])assert.match(gmStyle,new RegExp('gm-action-'+state));
   assert.match(village,/baseW=compact\?50:62,baseH=compact\?67:82/);
   assert.match(css,/gmwwGmWolfLegA/);
   assert.match(css,/gmwwGmWolfLegB/);
@@ -103,9 +104,9 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
   assert.match(css,/scaleY\(1\.5\)/);
 });
 
-test('V3.09 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
+test('V3.11 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-310"/);
+  assert.match(server,/UPDATE_CHANNEL_REV="native-311"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);
@@ -122,12 +123,8 @@ test('V3.09 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
 });
 
-test('V3.09 wolf uses a forward gallop, longer clear legs, and independent head life',()=>{
-  assert.ok(app.includes('gm-wolf-head'));
-  assert.ok(gmStyle.includes('@keyframes gmWolfForwardGallop'));
-  assert.ok(gmStyle.includes('@keyframes gmWolfLongFrontStride'));
-  assert.ok(gmStyle.includes('@keyframes gmWolfLongRearStride'));
-  assert.ok(gmStyle.includes('@keyframes gmWolfHeadLife'));
-  assert.ok(gmStyle.includes('scaleY(1.58)'));
-  assert.ok(gmStyle.includes('translate(2px,-5px) rotate(-14deg)'));
+test('V3.11 wolf uses one master and five approved behaviors',()=>{
+  assert.ok(app.includes('gm-wolf-master'));
+  assert.ok(!app.includes('gm-wolf-head'));
+  for(const name of ['gmMasterIdle','gmMasterWalk','gmMasterRun','gmMasterShake','gmMasterHowl'])assert.ok(gmStyle.includes('@keyframes '+name));
 });
