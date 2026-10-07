@@ -17,3 +17,9 @@ Release V3.06 build 306: room manager redesign (created rooms/status, online-off
 Release V3.07 build 307: progressive disclosure room setup; single tap selects room, double tap edits, horizontal + tile, staged mode then seats/status.
 
 V3.07 refinement rebuild: remove top info label, center header text, arrow-only bottom navigation, compact room UI, persist room settings, in-sheet next arrow advances to Members.
+
+
+Release V3.09 build 309: Character Engine 0.2 native release.
+Requested: 2026-10-07
+Source: feature/character-engine-mainline -> main
+Reason: shared semantic Character Engine + segmented renderer on Player Web and GM/IPA; Character-01 master; shared rig proof Character-01..20; deterministic idle-life behavior; audited rig profiles Character-01/02/03; synchronized realtime characterAnimation payload.
