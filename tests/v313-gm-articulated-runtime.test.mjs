@@ -14,9 +14,9 @@ const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const asset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 
 test('V3.17 is a runtime update on the existing V3.11 native shell',()=>{
-  assert.match(app,/const VERSION='3\.16'/);
-  assert.match(html,/<title>GMWW V3\.16<\/title>/);
-  assert.match(server,/VERSION="V3\.16",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-317"/);
+  assert.match(app,/const VERSION='3\.17'/);
+  assert.match(html,/<title>GMWW V3\.17<\/title>/);
+  assert.match(server,/VERSION="V3\.17",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-317"/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 311;/);
   assert.match(project,/MARKETING_VERSION = 3\.11;/);
   assert.equal(pkg.version,'3.17.0');
