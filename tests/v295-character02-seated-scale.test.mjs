@@ -27,6 +27,6 @@ test("Character-02 patch character scaling affects avatar only",()=>{
 test("Character-02 patch avoids rebuilding GM player DOM on every unchanged heartbeat",()=>{
   assert.match(app,/playPlayerRenderSignature/);
   assert.match(app,/if\(playerRenderChanged\)renderPlayPlayers\(\)/);
-  assert.equal(pkg.version,"3.19.0");
-  assert.match(worker,/VERSION="V3\.19"/);
+  assert.equal(pkg.version,"3.20.0");
+  assert.match(worker,/VERSION="V3\.20"/);
 });
