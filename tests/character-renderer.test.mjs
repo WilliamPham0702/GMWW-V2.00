@@ -71,8 +71,8 @@ test('master rig animation is body-part driven and never runtime mirrored',()=>{
 
 test('village loads renderer CSS and renderer module as part of the live scene',()=>{
   const html=read('assets/village/index.html');
-  assert.ok(html.includes('./character-renderer.css?v=ce1'));
-  assert.ok(html.includes('./village.mjs?v=ce1'));
+  assert.ok(html.includes('./character-renderer.css?v=ce2'));
+  assert.ok(html.includes('./village.mjs?v=ce2'));
 });
 
 
