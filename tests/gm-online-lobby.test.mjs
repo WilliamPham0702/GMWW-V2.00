@@ -67,7 +67,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
 });
 
 test('V3.17 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
-  assert.match(app,/const VERSION='3\.18'/);
+  assert.match(app,/const VERSION='3\.19'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
