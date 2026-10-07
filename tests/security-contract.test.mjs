@@ -14,7 +14,7 @@ function sliceBetween(startNeedle,endNeedle){
 }
 
 test('Security contract: Player mutation APIs bind identity to authenticated member session',()=>{
-  const segment=sliceBetween('async function playerMoveApi','async function playerRoleViewedApi');
+  const segment=sliceBetween('async function playerRoomMoveApi','async function playerRoomMoveCompleteApi');
   assert.ok(segment.includes('/members/session'));
   assert.ok(segment.includes('loginId:data.member.loginId'));
 
