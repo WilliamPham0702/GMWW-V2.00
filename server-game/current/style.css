@@ -1738,3 +1738,58 @@ body.play-immersive #start .play-control-bar.play-control-bar-three>*{min-width:
 #playCreateRoomSheet .play-room-edit-actions #playCreateRoomSave{background:linear-gradient(180deg,#42d6ef,#1698bd);color:#04232c}
 #playCreateRoomSheet .play-room-edit-actions #playCreateRoomReset{background:rgba(82,63,25,.54);color:#ffe5a6;border-color:rgba(241,194,104,.38)}
 #playCreateRoomSheet .play-room-edit-actions #playCreateRoomDelete{background:rgba(91,37,51,.62);color:#ffd7df;border-color:rgba(255,113,142,.42)}
+
+/* V3.07 — progressive disclosure room setup */
+#playCreateRoomSheet .play-room-title-centered h3{
+  font-size:17px!important;letter-spacing:.04em!important;font-weight:900!important
+}
+#playCreateRoomSheet .play-room-picker-card{padding:11px!important}
+#playCreateRoomSheet .play-room-strip{
+  display:flex!important;align-items:stretch!important;gap:8px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important;
+  -webkit-overflow-scrolling:touch!important;padding-bottom:2px!important
+}
+#playCreateRoomSheet .play-room-strip::-webkit-scrollbar{display:none!important}
+#playCreateRoomSheet .play-room-add-tile{
+  flex:0 0 74px!important;min-width:74px!important;height:72px!important;
+  border-radius:14px!important;border:1px dashed rgba(91,225,249,.56)!important;
+  background:rgba(5,49,63,.7)!important;color:#dffcff!important;
+  display:grid!important;place-items:center!important;align-content:center!important;gap:1px!important
+}
+#playCreateRoomSheet .play-room-add-tile span{font-size:30px!important;line-height:1!important;font-weight:400!important}
+#playCreateRoomSheet .play-room-add-tile small{font-size:8px!important;font-weight:950!important;letter-spacing:.08em!important;color:#99e6f0!important}
+#playCreateRoomSheet .play-room-created-list{
+  display:flex!important;flex:0 0 auto!important;gap:8px!important;max-height:none!important;overflow:visible!important
+}
+#playCreateRoomSheet .play-created-room{
+  flex:0 0 132px!important;width:132px!important;height:72px!important;
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;padding:9px 10px!important
+}
+#playCreateRoomSheet .play-created-room span{overflow:hidden!important}
+#playCreateRoomSheet .play-created-room b{font-size:11px!important}
+#playCreateRoomSheet .play-created-room small{font-size:8px!important}
+#playCreateRoomSheet .play-created-room i{
+  align-self:start!important;padding:3px 4px!important;border-radius:999px!important;
+  background:rgba(255,255,255,.05)!important
+}
+#playCreateRoomSheet .play-room-empty{
+  flex:0 0 auto!important;display:flex!important;align-items:center!important;
+  height:72px!important;padding:0 10px!important;white-space:nowrap!important
+}
+#playCreateRoomSheet .play-room-step{
+  animation:playRoomStepOpen .18s ease-out both!important
+}
+#playCreateRoomSheet .play-room-editor{
+  animation:playRoomStepOpen .18s ease-out both!important
+}
+@keyframes playRoomStepOpen{
+  from{opacity:0;transform:translateY(-5px)}
+  to{opacity:1;transform:translateY(0)}
+}
+#playCreateRoomSheet .play-room-section-title{
+  margin-bottom:7px!important;font-size:9.5px!important
+}
+#playCreateRoomSheet .play-room-section-title small{
+  font-size:7.5px!important;letter-spacing:.04em!important;text-align:right!important
+}
