@@ -1475,7 +1475,7 @@ const PLAY_STEP_COPY={
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
   members:{k:'CHỌN NGƯỜI CHƠI',t:'Chọn Người Chơi',x:'ONLINE: chạm trực tiếp chibi đang Online trong Làng. OFFLINE: chọn danh sách hỗ trợ.',a:'XÁC NHẬN NGƯỜI CHƠI'},
   game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
-  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'GM chọn Thủ công: chạm Người Chơi rồi chạm dấu +; hoặc chọn Ngẫu nhiên để phân phối toàn bộ.',a:'KHÓA GHẾ'},
+  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'GM chạm dấu + rồi chọn Thành Viên; hoặc chọn Ngẫu nhiên để phân phối toàn bộ.',a:'KHÓA GHẾ'},
   roles:{k:'PHÂN VAI',t:'Phân Vai',x:'Vai Trò và Artifact được phân nội bộ, chưa gửi xuống Player Web.',a:'PHÂN VAI'},
   deal:{k:'PHÁT VAI',t:'Phát Vai',x:'Chỉ tại bước này Server mới gửi Vai Trò/Artifact riêng xuống Player Web.',a:'PHÁT VAI'},
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
@@ -1711,7 +1711,7 @@ function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
   playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';
   if(isNew){
-    playRoomUiState.selectedCode='';
+    playRoomUiState.selectedCode='';playSceneState.seatCount=24;savePlayScene();
     const n=document.getElementById('playCreateRoomName');if(n)n.value='';
   }else{
     playRoomUiState.selectedCode=String(playSceneState.roomCode||'');
@@ -1722,7 +1722,7 @@ function openPlayRoomEditor(isNew=false){
 async function savePlayRoomEditor(){
   if(playSceneRuntime.busy)return;
   if(playRoomUiState.editorMode==='new'){
-    playSceneState.roomMode='online';playSceneState.seatCount=12;playSceneState.roomEnabled=true;savePlayScene();
+    playSceneState.roomMode='online';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
     const ok=await playCreateRoom();if(!ok)return;
     playRoomUiState.selectedCode=String(playSceneState.roomCode||'');playRoomUiState.editorMode='';playRoomUiState.stage='mode';
   }else{
@@ -1973,7 +1973,7 @@ function renderPlayContext(){
         actions.innerHTML='<button class="play-action-chip active" data-play-seat-manual type="button"><span>☝</span><b>THỦ CÔNG</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>NGẪU NHIÊN</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA XẾP CHỖ':'CHỐT XẾP CHỖ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>●</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
         actions.querySelector('[data-play-random-seats]')?.addEventListener('click',playRandomSeatRemaining);
         actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>playSetSeatLock(!locked));
-        actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',()=>playFlashError('Chọn một Người Chơi rồi chạm dấu + để xếp chỗ.'))
+        actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',()=>playFlashError('Chạm dấu + trên sân rồi chọn Thành Viên cho vị trí đó.'))
       }else if(playSceneState.step==='roles'){actions.innerHTML='<button class="play-action-chip" data-play-assign-auto type="button"><b>TỰ ĐỘNG</b></button><button class="play-action-chip" data-play-assign-random type="button"><b>NGẪU NHIÊN</b></button>';actions.querySelector('[data-play-assign-auto]')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(e){playFlashError(e.message)}});actions.querySelector('[data-play-assign-random]')?.addEventListener('click',()=>{try{playBuildAssignments()}catch(e){playFlashError(e.message)}})}else actions.innerHTML='';
     }
   }
