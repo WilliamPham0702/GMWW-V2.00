@@ -30,3 +30,5 @@ Source: main
 Reason: build installable IPA with GM white-wolf village character, idle/walk/run/head-shake/howl motion controller.
 
 V3.10 rebuild after aligning Xcode marketing/build metadata to 3.10/310.
+
+Release V3.11 build 311: official distributable with runtime persistence fix and latest V3.10 content; publish IPA to official server download channel.
