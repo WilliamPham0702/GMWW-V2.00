@@ -64,8 +64,8 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V3.14 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
-  assert.match(app,/const VERSION='3\.14'/);
+test('V3.15 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
+  assert.match(app,/const VERSION='3\.15'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
@@ -104,9 +104,9 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
   assert.match(css,/scaleY\(1\.5\)/);
 });
 
-test('V3.14 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
+test('V3.15 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-314b"/);
+  assert.match(server,/UPDATE_CHANNEL_REV="runtime-315"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);
@@ -123,7 +123,7 @@ test('V3.09 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
 });
 
-test('V3.14 wolf articulates legs and head across five approved behaviors',()=>{
+test('V3.15 wolf articulates legs and head across five approved behaviors',()=>{
   assert.ok(app.includes('data-gm-wolf-runtime="1"'));
   assert.ok(app.includes('gm-wolf-head'));
   assert.ok(app.includes('gm-wolf-rear-legs'));
