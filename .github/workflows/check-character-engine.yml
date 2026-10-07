@@ -71,3 +71,31 @@ jobs:
           if(!Array.isArray(m.characters)||m.characters.length!==42)throw new Error('Expected 42 Character definitions');
           if(!m.characters.every(x=>Array.isArray(x.motions)&&x.motions.includes('walk')&&x.motions.includes('idle')))throw new Error('Shared motion contract incomplete');
           NODE
+      - name: Character visual smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-character-visual.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/village/ >/dev/null; then break; fi
+            sleep 1
+          done
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1280,900 --virtual-time-budget=5000 --screenshot=character-preview.png http://127.0.0.1:8787/village/
+          test -s character-preview.png
+          python - <<'PY'
+          from PIL import Image
+          im=Image.open('character-preview.png').convert('RGB')
+          print('CHARACTER_VISUAL_SMOKE='+str(im.size))
+          if im.width < 1000 or im.height < 700:
+              raise SystemExit('SCREENSHOT_TOO_SMALL')
+          PY
+      - name: Upload Character visual
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-preview
+          path: character-preview.png
+          retention-days: 3
