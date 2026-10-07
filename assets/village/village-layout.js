@@ -5,7 +5,7 @@
   function inside(x,y){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit}
   function clampPoint(x,y){x=Number(x);y=Number(y);if(arguments[0]==null||arguments[1]==null||!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:76};y=Math.max(34,Math.min(98,y));const xs=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length];if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]))}}if(xs.length)x=Math.max(Math.min(...xs)+1.5,Math.min(Math.max(...xs)-1.5,x));if(Math.hypot((x-fire.x)/6,(y-fire.y)/3)<1)y=fire.y+(y<fire.y?-3.1:3.1);return{x,y}}
   function positions(count){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||1))),rings=n<=8?[n]:n<=24?[8,n-8]:[8,16,n-24],out=[];
+    const n=Math.max(24,Math.min(30,Math.trunc(Number(count)||24))),rings=n<=24?[8,16]:[8,16,n-24],out=[];
     const geometry=[{rx:17,ry:7.2},{rx:29,ry:12.2},{rx:37,ry:15.2}];
     rings.forEach((size,r)=>{
       if(!size)return;
