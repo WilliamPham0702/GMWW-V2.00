@@ -10,7 +10,7 @@ const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.
 
 test('V3.08 runtime keeps offline/online room flow with GM-only seating',()=>{
   assert.ok(app.includes("const VERSION='3.08';"));
-  assert.ok(html.includes('GMWW V3.07'));
+  assert.ok(html.includes('GMWW V3.08'));
   assert.match(app,/roomMode:playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
   assert.match(html,/data-play-room-mode="offline"/);
   assert.match(html,/data-play-room-mode="online"/);
