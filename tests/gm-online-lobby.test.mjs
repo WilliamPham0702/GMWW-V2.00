@@ -64,14 +64,14 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(gmStyle,/width:56px;height:74px/);
 });
 
-test('V3.11 keeps GM rider at normal character size and uses the single Character Master',()=>{
+test('V3.11 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
   assert.match(app,/const VERSION='3\.11'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
   assert.match(gmStyle,/\.play-player-token\.is-gm-rider\{width:72px/);
-  assert.match(app,/gm-wolf-master/);
-  assert.equal((app.match(/gm\/gm-white-wolf\.webp/g)||[]).length,1);
+  assert.match(app,/data-gm-wolf-runtime="1"/);
+  for(const part of ['gm-wolf-body','gm-wolf-rear-legs','gm-wolf-front-legs','gm-wolf-head'])assert.match(app,new RegExp(part));
   for(const state of ['idle','walk','run','shake','howl'])assert.match(gmStyle,new RegExp('gm-action-'+state));
   assert.match(village,/baseW=compact\?50:62,baseH=compact\?67:82/);
   assert.match(css,/gmwwGmWolfLegA/);
@@ -118,13 +118,17 @@ test('V3.09 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
   assert.ok(app.includes('playSyncGlobalVillageMotion'));
   assert.ok(app.includes('playSyncGlobalVillageMotion(false)},250)'));
   assert.ok(app.includes('serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
-  assert.ok(app.includes('<div class="gm-wolf-sprite"><div class="gm-wolf-shadow"></div>'));
+  assert.ok(app.includes('data-gm-wolf-runtime="1"'));
   assert.ok(!app.includes('<span class="gm-wolf-sprite"><span class="gm-wolf-shadow">'));
   assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
 });
 
-test('V3.11 wolf uses one master and five approved behaviors',()=>{
-  assert.ok(app.includes('gm-wolf-master'));
-  assert.ok(!app.includes('gm-wolf-head'));
-  for(const name of ['gmMasterIdle','gmMasterWalk','gmMasterRun','gmMasterShake','gmMasterHowl'])assert.ok(gmStyle.includes('@keyframes '+name));
+test('V3.11 wolf articulates legs and head across five approved behaviors',()=>{
+  assert.ok(app.includes('data-gm-wolf-runtime="1"'));
+  assert.ok(app.includes('gm-wolf-head'));
+  assert.ok(app.includes('gm-wolf-rear-legs'));
+  assert.ok(app.includes('gm-wolf-front-legs'));
+  for(const name of ['gmWolfRuntimeWalkRear','gmWolfRuntimeWalkFront','gmWolfRuntimeRunRear','gmWolfRuntimeRunFront','gmWolfRuntimeShakeHead','gmWolfRuntimeHowlHead'])assert.ok(gmStyle.includes('@keyframes '+name));
+  assert.ok(village.includes('gmActionFor'));
+  assert.ok(css.includes('gmWolfRuntimeHowlHead'));
 });
