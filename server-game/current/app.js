@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.14';
+const VERSION='3.15';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1702,7 +1702,7 @@ function renderPlayCreatedRooms(){
   if(!rows.length){list.innerHTML='<div class="play-room-empty">Chưa có phòng</div>';return}
   rows.forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
-    b.innerHTML='<span><b>'+playEsc(r.roomName||'Phòng GMWW')+'</b><small>'+playEsc((r.roomMode||'online').toUpperCase())+' • '+Number(r.seatCount||12)+' ghế</small></span><i class="'+(r.enabled!==false?'on':'')+'">'+(r.enabled!==false?'ON':'OFF')+'</i>';
+    b.innerHTML='<span><b>'+playEsc(r.roomName||'Phòng GMWW')+'</b><small>'+playEsc((r.roomMode||'online').toUpperCase())+'</small></span><i class="'+(r.enabled!==false?'on':'')+'">'+(r.enabled!==false?'ON':'OFF')+'</i>';
     b.onclick=async()=>{
       const now=Date.now(),code=String(r.roomCode),doubleTap=playRoomUiState.lastTapCode===code&&(now-playRoomUiState.lastTapAt)<480;
       playRoomUiState.lastTapCode=code;playRoomUiState.lastTapAt=now;
