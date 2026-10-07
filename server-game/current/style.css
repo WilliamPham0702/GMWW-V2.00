@@ -2257,3 +2257,22 @@ body.play-immersive #start .play-player-token.is-empty .play-position-plus{displ
 /* Keep the bottom navigation accessible while the room picker is shown. */
 body.play-immersive #playCreateRoomSheet{pointer-events:none!important}
 body.play-immersive #playCreateRoomSheet .sheet-card{pointer-events:auto!important}
+
+
+/* GMWW room flow alignment: center interactive controls, not informational text. */
+body.play-immersive #start .play-control-bar.play-control-bar-three>button,
+#playCreateRoomSheet .play-room-control-row>button,
+#playCreateRoomSheet .play-room-edit-actions>button,
+#playEndSheet .play-roster-actions>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;
+}
+#playEndSheet .play-roster-actions,
+#playSeatSheet .play-roster-actions,
+#playRosterSheet .play-roster-actions,
+#playCreateRoomSheet .play-room-edit-actions,
+#playGMSheet .play-gm-actions{
+  justify-content:center!important;align-items:center!important;text-align:center!important;gap:10px!important;
+}
+#playEndSheet .play-roster-actions{display:flex!important;flex-wrap:wrap!important}
+#playEndSheet .play-roster-actions>button{flex:0 1 auto!important;min-height:48px!important}
+@media(max-width:390px){#playEndSheet .play-roster-actions{gap:7px!important}#playEndSheet .play-roster-actions>button{font-size:12px!important;padding:10px 12px!important}}
