@@ -3,10 +3,25 @@ const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
 import {startVillagePerformanceReporter} from "./village-performance.mjs";
+import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character-renderer.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count)}
 export function safeText(v){return String(v??"").slice(0,80)}
+export function mapCharacterAnimation(p){
+  const a=p?.characterAnimation;
+  if(!a||typeof a!=="object")return null;
+  return{
+    characterId:typeof a.characterId==="string"?safeText(a.characterId):"",
+    rigId:typeof a.rigId==="string"?safeText(a.rigId):"",
+    state:typeof a.state==="string"?safeText(a.state):"idle",
+    motion:typeof a.motion==="string"?safeText(a.motion):"idle-breathe",
+    facing:a.facing==="left"?"left":"right",
+    loop:a.loop!==false,
+    engineVersion:typeof a.engineVersion==="string"?safeText(a.engineVersion):"",
+    activity:typeof a.activity==="string"?safeText(a.activity):"idle"
+  };
+}
 export function mapPublicPlayers(state){
   const players=Array.isArray(state?.players)?state.players:[];
   const ids=new Set();let regularCount=0,gmIncluded=false;
@@ -20,7 +35,7 @@ export function mapPublicPlayers(state){
     gameCharacterId:typeof p.gameCharacterId==="string"?p.gameCharacterId:"",
     seatId:Number(p.seatId||0)||null,
     positionX:p.positionX==null?null:Number(p.positionX),positionY:p.positionY==null?null:Number(p.positionY),
-    movementStatus:p.movementStatus==="moving"?"moving":"idle",villageActivity:safeText(p.villageActivity||"idle"),sitStartedAt:Number(p.sitStartedAt||0)||null,sitUntil:Number(p.sitUntil||0)||null,moveId:String(p.moveId||""),
+    movementStatus:p.movementStatus==="moving"?"moving":"idle",characterAnimation:mapCharacterAnimation(p),villageActivity:safeText(p.villageActivity||"idle"),sitStartedAt:Number(p.sitStartedAt||0)||null,sitUntil:Number(p.sitUntil||0)||null,moveId:String(p.moveId||""),
     moveFromX:p.moveFromX==null?null:Number(p.moveFromX),moveFromY:p.moveFromY==null?null:Number(p.moveFromY),
     moveToX:p.moveToX==null?null:Number(p.moveToX),moveToY:p.moveToY==null?null:Number(p.moveToY),
     moveStartedAt:Number(p.moveStartedAt||0)||null,moveDurationMs:Number(p.moveDurationMs||0)||null,moveTargetSeatId:Number(p.moveTargetSeatId||0)||null,
@@ -61,6 +76,11 @@ if(game){
   function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?dir=left":"";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
+  function animationCommandFor(data,position){
+    const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};
+    const moving=!!position?.moving,state=moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");
+    return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")
+  }
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(isGM?" gm":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
@@ -73,7 +93,7 @@ if(game){
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
     const direction=position?.moving?walkDirection(data):"right",gmUrl=isGM?trustedAvatarUrl(data.avatarUrl||"/gm/gm-white-wolf.webp"):"",characterUrl=isGM?"":(position?.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
     const sources=(isGM?[gmUrl]:[characterUrl,legacyUrl,safeDefault]).filter((u,i,a)=>u&&a.indexOf(u)===i);
-    if(sources.length){avatar.classList.add("has-image","game-character");if(isGM)avatar.classList.add("gm-character");const scale=normalizeCharacterScale(setupState.characterScale)/100,compact=window.innerWidth<=390,baseW=compact?50:62,baseH=compact?67:82;avatar.style.width=baseW+"px";avatar.style.height=baseH+"px";button.style.setProperty("--gmww-character-scale",String(scale));button.style.minWidth=Math.max(52,baseW+10)+"px";if(isGM){const shell=document.createElement("span"),shadow=document.createElement("span");shell.className="gm-wolf-sprite";shadow.className="gm-wolf-shadow";shell.append(shadow);for(const cls of ["gm-wolf-body","gm-wolf-head","gm-wolf-leg gm-wolf-leg-a","gm-wolf-leg gm-wolf-leg-b"]){const img=document.createElement("img");img.className=cls;img.src=sources[0];img.alt="";img.loading="eager";img.decoding="async";shell.append(img)}const dx=Number(data?.moveToX??position?.x??0)-Number(data?.moveFromX??position?.x??0);button.style.setProperty("--gm-run-dir",String(dx<0?-1:1));avatar.append(shell)}else{const img=document.createElement("img");let sourceIndex=0;img.src=sources[sourceIndex];img.alt="";img.loading="eager";img.decoding="async";img.dataset.walkCharacter=characterId;img.dataset.walkFrame=String(walkFrameFor(data));img.dataset.walkDir=direction;img.addEventListener("error",()=>{sourceIndex++;if(sourceIndex<sources.length){img.src=sources[sourceIndex];return}img.remove();avatar.classList.remove("has-image","game-character","gm-character")});avatar.append(img)}}
+    if(sources.length){avatar.classList.add("has-image","game-character");if(isGM)avatar.classList.add("gm-character");const scale=normalizeCharacterScale(setupState.characterScale)/100,compact=window.innerWidth<=390,baseW=compact?50:62,baseH=compact?67:82;avatar.style.width=baseW+"px";avatar.style.height=baseH+"px";button.style.setProperty("--gmww-character-scale",String(scale));button.style.minWidth=Math.max(52,baseW+10)+"px";if(isGM){const shell=document.createElement("span"),shadow=document.createElement("span");shell.className="gm-wolf-sprite";shadow.className="gm-wolf-shadow";shell.append(shadow);for(const cls of ["gm-wolf-body","gm-wolf-head","gm-wolf-leg gm-wolf-leg-a","gm-wolf-leg gm-wolf-leg-b"]){const img=document.createElement("img");img.className=cls;img.src=sources[0];img.alt="";img.loading="eager";img.decoding="async";shell.append(img)}const dx=Number(data?.moveToX??position?.x??0)-Number(data?.moveFromX??position?.x??0);button.style.setProperty("--gm-run-dir",String(dx<0?-1:1));avatar.append(shell)}else{const command=animationCommandFor({...data,gameCharacterId:characterId},position),renderer=mountCharacterRenderer(avatar,{characterId,command,sources,sitting:!!position?.sitting});const img=renderer?.querySelector?.("img[data-walk-character]");if(img){img.dataset.walkFrame=String(walkFrameFor(data));img.dataset.walkDir=direction}}}
     const name=document.createElement("span");name.className="name";name.textContent=playerName;
     const status=document.createElement("span");status.className="player-status";status.textContent=isGM?(position?.moving?"GM ĐANG TUẦN TRA":"GM ONLINE"):(position?.moving?"ĐANG DI CHUYỂN":safeText(data.statusLabel||(data.online===false?"OFFLINE":data.ready?"READY":"ONLINE")));
     const over=document.createElement("span");over.className="player-over";over.append(name,status);
@@ -109,7 +129,7 @@ if(game){
       if(data?.movementStatus!=="moving"&&!sitTagged)continue;
       const el=players.querySelector('[data-player-id="'+CSS.escape(String(data.id))+'"]');if(!el)continue;
       const pos=movementPosition(data,null,nowMs),display=screenPoint(pos);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving||pos.sitting;
-      const img=el.querySelector("img[data-walk-character]");if(img){const characterId=img.dataset.walkCharacter,frame=pos.moving?walkFrameFor(data,nowMs):1,direction=pos.moving?walkDirection(data):"right",src=pos.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):walkFrameUrl(characterId,frame,direction),key=(pos.sitting?"sit":direction)+":"+frame;if(img.dataset.walkFrame!==key){img.dataset.walkFrame=key;img.dataset.walkDir=direction;img.src=src}}
+      const avatar=el.querySelector(".portrait.game-character"),semantic=animationCommandFor(data,pos),rigUpdated=avatar?updateCharacterRenderer(avatar,semantic):false;const img=rigUpdated?null:el.querySelector("img[data-walk-character]");if(img){const characterId=img.dataset.walkCharacter,frame=pos.moving?walkFrameFor(data,nowMs):1,direction=pos.moving?walkDirection(data):"right",src=pos.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):walkFrameUrl(characterId,frame,direction),key=(pos.sitting?"sit":direction)+":"+frame;if(img.dataset.walkFrame!==key){img.dataset.walkFrame=key;img.dataset.walkDir=direction;img.src=src}}
       const status=el.querySelector(".player-status");if(status){const gm=data?.isGM===true||data?.kind==="gm";status.textContent=gm?(pos.moving?"GM ĐANG TUẦN TRA":"GM ONLINE"):(pos.moving?"ĐANG DI CHUYỂN":safeText(data.statusLabel||(data.online===false?"OFFLINE":data.ready?"READY":"ONLINE")))}
       el.dataset.walkDir=pos.moving?walkDirection(data):"right";el.classList.toggle("moving",!!pos.moving);el.classList.toggle("sitting",!!pos.sitting);
       if(!pos.moving&&data?.movementStatus==="moving"&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
