@@ -1,6 +1,6 @@
-GMWW V3.05 official build
+GMWW V3.07 official build
 Requested: 2026-10-06
-Revision: v305-current-production
+Revision: v307-current-production
 Source: main
 Reason: rebuild after update-manager fix. Keep CẬP NHẬT RUNTIME, TẢI IPA and ĐỒNG BỘ WEB available at all times; system only highlights the recommended action.
 Rebuild: 2026-10-06 V3.03 final after metadata/runtime commits.
