@@ -44,6 +44,7 @@ copy('server-game/current/character-renderer.js','character-renderer.js');
 copy('server-game/current/character-renderer.css','character-renderer.css');
 copy('server-game/current/gmww-village-coast.svg','gmww-village-coast.svg');
 copy('assets/village/village-layout.js','village-layout.js');
+copy('assets/village/seat-leaf.webp','village/seat-leaf.webp');
 copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp');
 copy('assets/backgrounds/gmww-village-night-v260.webp','gmww-village-night-v260.webp');
 if(!leanRuntimePatch)copyDir('assets/characters/v253','game-characters');

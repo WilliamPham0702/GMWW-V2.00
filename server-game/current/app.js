@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.17';
+const VERSION='3.18';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1879,7 +1879,7 @@ function renderPlayPlayers(){
     el.className='play-player-token'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-position':'')+(moving?' is-moving':'')+(sitting?' is-sitting':'');
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,statusLabel=m?(isOnlinePick?(selectedIds.has(String(m.loginId))?'ĐÃ CHỌN':'ONLINE'):(moving?'ĐANG DI CHUYỂN':(effectLabel||((m.online?'ONLINE':'OFFLINE')+' • '+(m.ready?'READY':'CHƯA READY'))))):'TRỐNG';
-    const assignment=m?(playSceneRuntime.assignments||[]).find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'';el.innerHTML=(m?'<div class="play-player-over"><b>'+playEsc(name)+'</b><small>'+playEsc(statusLabel)+'</small></div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="/village/seat-leaf.webp?v=316" alt="" aria-hidden="true">')+'</div>'+(m?'<span class="play-player-role">'+playEsc(roleLabel||'CHƯA PHÂN VAI')+'</span>':'<b>Vị trí '+seatId+'</b>');
+    const assignment=m?(playSceneRuntime.assignments||[]).find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'';el.innerHTML=(m?'<div class="play-player-over"><b>'+playEsc(name)+'</b><small>'+playEsc(statusLabel)+'</small></div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=318" alt="" aria-hidden="true">')+'</div>'+(m?'<span class="play-player-role">'+playEsc(roleLabel||'CHƯA PHÂN VAI')+'</span>':'<b>Vị trí '+seatId+'</b>');
     el.setAttribute('aria-label',name+' • '+statusLabel);el.title=name+' • '+statusLabel;
     if(m){
       const host=el.querySelector('.play-player-avatar'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterVisualUrl(m,frame,direction),rigMounted=playMountCharacterRig(host,m,{moving,sitting,effect});el.dataset.walkDir=direction;

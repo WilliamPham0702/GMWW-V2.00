@@ -164,6 +164,9 @@ jobs:
           grep -Fq 'visualFallbackMoves' /tmp/village.mjs
           grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
           curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
+          curl -fsS "$URL/village/seat-leaf.webp?verify=$(date +%s)" > /tmp/seat-leaf.webp
+          test "$(shasum -a 256 assets/village/seat-leaf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/seat-leaf.webp | awk '{print $1}')"
+          grep -Fq '/village/seat-leaf.webp' /tmp/village.css
           grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
