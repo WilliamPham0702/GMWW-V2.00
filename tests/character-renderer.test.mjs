@@ -126,3 +126,19 @@ test('local idle-life scheduler is shared and phase-shifted without per-characte
   assert.equal((source.match(/setInterval\s*\(/g)||[]).length,1);
   assert.ok(source.includes('LIVE_IDLE_ROOTS'));
 });
+
+
+test('audited Character-01 to 03 rig profiles use per-character alpha bounds',()=>{
+  const web=read('assets/village/character-renderer.css');
+  const gm=read('server-game/current/character-renderer.css');
+  for(const id of ['character-01','character-02','character-03']){
+    assert.ok(web.includes(`data-character-id="${id}"`));
+    assert.ok(gm.includes(`data-character-id="${id}"`));
+  }
+  assert.ok(web.includes('41.8% 58%'));
+  assert.ok(web.includes('45.2% 57.2%'));
+  assert.ok(web.includes('43.4% 57.4%'));
+  assert.ok(gm.includes('41.8% 58%'));
+  assert.ok(gm.includes('45.2% 57.2%'));
+  assert.ok(gm.includes('43.4% 57.4%'));
+});
