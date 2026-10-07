@@ -1,10 +1,33 @@
-export const CHARACTER_RENDERER_VERSION='0.1.0';
+export const CHARACTER_RENDERER_VERSION='0.2.0';
 export const MASTER_CHARACTER_ID='character-01';
 export const SHARED_RIG_BATCH_IDS=Object.freeze(Array.from({length:20},(_,i)=>`character-${String(i+1).padStart(2,'0')}`));
 export const SHARED_RIG_PROOF_IDS=SHARED_RIG_BATCH_IDS;
 
 const STATES=new Set(['idle','walking','running','ready','playing','reaction','dead']);
 const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','turn','ready','cheer','surprised','sad','dead']);
+const LIVE_IDLE_SLOT_MS=7000;
+const LIVE_IDLE_ROOTS=new Set();
+let liveIdleTimer=0;
+function hash32(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function unit(seed){return (hash32(seed)%1000000)/1000000}
+export function liveIdleMotionAt(characterId,now=Date.now()){
+  const id=/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(String(characterId||''))?String(characterId):MASTER_CHARACTER_ID;
+  const t=Math.max(0,Number(now)||0),phase=hash32(id+':idle-phase')%LIVE_IDLE_SLOT_MS,shifted=t+phase,slot=Math.floor(shifted/LIVE_IDLE_SLOT_MS),local=shifted%LIVE_IDLE_SLOT_MS,roll=unit(id+':'+slot+':idle-live');
+  const motion=roll<.38?'blink':roll<.64?'look-around':roll<.76?'stretch':'idle-breathe';
+  const duration=motion==='blink'?520:motion==='look-around'?1500:motion==='stretch'?1700:0;
+  return local<duration?motion:'idle-breathe';
+}
+export function tickLiveIdle(now=Date.now()){
+  for(const root of [...LIVE_IDLE_ROOTS]){
+    if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}
+    if(root.dataset.state==='idle')root.dataset.motion=liveIdleMotionAt(root.dataset.characterId,now);
+  }
+  return LIVE_IDLE_ROOTS.size;
+}
+function ensureLiveIdleTicker(){
+  if(liveIdleTimer||typeof setInterval!=='function')return;
+  liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240);
+}
 
 export const MASTER_RIG_SEGMENTS=Object.freeze([
   Object.freeze({id:'leg-back',className:'leg-back'}),
@@ -55,7 +78,7 @@ function applyCommand(root,command){
   const c=normalizeRendererCommand(command,root.dataset.characterId||MASTER_CHARACTER_ID);
   root.dataset.characterId=c.characterId;
   root.dataset.state=c.state;
-  root.dataset.motion=c.motion;
+  root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;
   root.dataset.facing=c.facing;
   root.dataset.activity=c.activity;
   root.dataset.rigId=c.rigId;
@@ -118,6 +141,7 @@ export function mountCharacterRenderer(host,{characterId=MASTER_CHARACTER_ID,com
     root.append(part);
   }
   host.append(root);
+  LIVE_IDLE_ROOTS.add(root);ensureLiveIdleTicker();
   applyCommand(root,normalized);
   return root;
 }
