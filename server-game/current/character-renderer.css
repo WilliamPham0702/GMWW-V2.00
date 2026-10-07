@@ -127,3 +127,15 @@
 .gmww-segmented-rig[data-motion="cheer"]{animation:gmwwPlayRigV03Cheer 720ms ease-out 1}
 .gmww-segmented-rig[data-motion="surprised"]{animation:gmwwPlayRigV03Surprised 520ms ease-out 1}
 .gmww-segmented-rig[data-motion="sad"] .gmww-rig-head,.gmww-segmented-rig[data-motion="sad"] .gmww-rig-torso{animation:gmwwPlayRigV03Sad 1800ms ease-in-out infinite!important}
+
+/* Shared Character Runtime: visible sitting state for Character-01..20. */
+@keyframes gmwwPlayRigSitBody{0%{transform:translateY(0) scaleY(1)}45%,100%{transform:translateY(16%) scaleY(.88)}}
+@keyframes gmwwPlayRigSitLegBack{0%{transform:rotate(0)}45%,100%{transform:translate(8%,12%) rotate(58deg)}}
+@keyframes gmwwPlayRigSitLegFront{0%{transform:rotate(0)}45%,100%{transform:translate(-8%,12%) rotate(-58deg)}}
+@keyframes gmwwPlayRigSitArmBack{0%{transform:rotate(0)}45%,100%{transform:translateY(8%) rotate(20deg)}}
+@keyframes gmwwPlayRigSitArmFront{0%{transform:rotate(0)}45%,100%{transform:translateY(8%) rotate(-20deg)}}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-torso,.gmww-segmented-rig[data-state="sitting"] .gmww-rig-head{animation:gmwwPlayRigSitBody 620ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-leg-back{animation:gmwwPlayRigSitLegBack 620ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-leg-front{animation:gmwwPlayRigSitLegFront 620ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-arm-back{animation:gmwwPlayRigSitArmBack 620ms ease-out forwards!important}
+.gmww-segmented-rig[data-state="sitting"] .gmww-rig-arm-front{animation:gmwwPlayRigSitArmFront 620ms ease-out forwards!important}
