@@ -1,0 +1,6 @@
+GMWW V3.17 fast runtime snapshot
+Requested: 2026-10-07
+Source: main
+Runtime: 3.17
+Native shell baseline: 3.11
+Mode: FAST_RUNTIME_SNAPSHOT
