@@ -7,8 +7,8 @@
     ['leg-back','leg-back'],['leg-front','leg-front'],['torso','torso'],
     ['arm-back','arm-back'],['arm-front','arm-front'],['head','head']
   ]);
-  const STATES=new Set(['idle','walking','running','ready','playing','reaction','dead']);
-  const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','turn','ready','cheer','surprised','sad','dead']);
+  const STATES=new Set(['idle','walking','running','sitting','ready','playing','reaction','dead']);
+  const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','sit','turn','ready','cheer','surprised','sad','dead']);
   const LIVE_IDLE_SLOT_MS=7000,LIVE_IDLE_ROOTS=new Set();let liveIdleTimer=0;
   const LIVE_ACTION_SLOT_MS=11000;
   function liveActionMotionAt(characterId,now=Date.now()){const id=String(characterId||MASTER),t=Math.max(0,Number(now)||0),phase=hash32(id+':action-phase')%LIVE_ACTION_SLOT_MS,shifted=t+phase,slot=Math.floor(shifted/LIVE_ACTION_SLOT_MS),local=shifted%LIVE_ACTION_SLOT_MS,roll=unit(id+':'+slot+':action');if(local>1200)return null;return roll<.34?'turn':roll<.58?'cheer':roll<.78?'surprised':roll<.92?'sad':null}
@@ -43,10 +43,10 @@
   function normalize(command={},fallback=MASTER){
     const characterId=/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(String(command.characterId||''))?String(command.characterId):fallback;
     const state=STATES.has(String(command.state||''))?String(command.state):'idle';
-    const motion=MOTIONS.has(String(command.motion||''))?String(command.motion):(state==='walking'?'walk':state==='running'?'run':state==='ready'?'ready':state==='dead'?'dead':'idle-breathe');
+    const motion=MOTIONS.has(String(command.motion||''))?String(command.motion):(state==='walking'?'walk':state==='running'?'run':state==='sitting'?'sit':state==='ready'?'ready':state==='dead'?'dead':'idle-breathe');
     return{characterId,rigId:String(command.rigId||defaultRigIdFor(characterId)),state,motion,facing:command.facing==='left'?'left':'right',loop:command.loop!==false,engineVersion:String(command.engineVersion||''),activity:String(command.activity||'idle')};
   }
-  function rendererKind(id,{sitting=false}={}){return PROOF.includes(String(id))&&!sitting?'segmented-skeletal':'fallback'}
+  function rendererKind(id,{sitting=false}={}){return PROOF.includes(String(id))?'segmented-skeletal':'fallback'}
   function apply(root,command,textureUrl){
     if(!root)return false;
     const c=normalize(command,root.dataset.characterId||MASTER);
