@@ -30,7 +30,7 @@ test('Create Room advances to Member selection before seating',()=>{
   assert.match(app,/seatMoveMode:'instant'/);
   assert.match(app,/THỦ CÔNG/);
   assert.match(app,/NGẪU NHIÊN/);
-  assert.match(app,/Chọn một Người Chơi rồi chạm dấu \+ để xếp chỗ/);
+  assert.match(app,/Chạm dấu \+ trên sân rồi chọn Thành Viên cho vị trí đó/);
   assert.match(app,/playRoomApi\('\/seats\/randomize-remaining'/);
   assert.match(app,/playRoomApi\('\/seat'/);
 });

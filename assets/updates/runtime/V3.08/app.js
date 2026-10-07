@@ -1580,11 +1580,6 @@ const PLAY_SEATED_CHARACTER01_URL="data:image/webp;base64,"+["UklGRoQeAABXRUJQVl
 const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARACTER01_URL,'character-02':GMWW_SERVER_BASE+'/characters/seated-v296/character-02/front.webp','character-03':GMWW_SERVER_BASE+'/characters/seated-v297/character-03/front.webp' ,'character-04':GMWW_SERVER_BASE+'/characters/seated-v300/character-04/front.webp'});
 function playCharacterSitting(member,now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId);return !!PLAY_SEATED_CHARACTER_URLS[id]&&(Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now))}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId);return playCharacterSitting(member,now)?PLAY_SEATED_CHARACTER_URLS[id]:playCharacterFrameUrl(id,frame,direction)}
-function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,effect='alive'}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const state=effect==='dead'?'dead':moving?(base.state==='running'?'running':'walking'):(member?.ready?'ready':'idle');const motion=state==='dead'?'dead':state==='running'?'run':state==='walking'?'walk':state==='ready'?'ready':'idle-breathe';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:String(member?.villageActivity||base.activity||'idle')}}
-function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
-function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const api=playCharacterRendererApi(),id=playActiveCharacterId(member?.gameCharacterId);if(!api||api.rendererKind(id,{sitting})!=='segmented-skeletal')return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,effect}),sitting,textureUrl:playRigTextureUrl});return true}
-function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const api=playCharacterRendererApi();if(!api)return false;return api.update(host,playCharacterAnimationCommand(member,{moving,effect}),{textureUrl:playRigTextureUrl})}
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
@@ -1627,7 +1622,7 @@ function ensurePlayGlobalVillagePoll(){
   playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},250)
 }
 function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},750)}
-function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),String(p?.characterAnimation?.state||''),String(p?.characterAnimation?.motion||''),String(p?.characterAnimation?.facing||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')}
+function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')}
 function connectPlaySocket(){
   if(!isLivePlayRoom()){disconnectPlaySocket();setPlayRealtimeState('offline');return}
   const code=String(playSceneState.roomCode);
@@ -1860,7 +1855,7 @@ function playMovementFrame(){
     const id=String(m?.loginId||m?.participantId||''),el=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');if(!el)continue;
     const moving=m?.movementStatus==='moving',sitting=playCharacterSitting(m,now);active=active||moving||sitting;
     if(moving){const point=playMovementPoint(m,null,now),pt=playMapDisplay(point[0],point[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]))}
-    const host=el.querySelector('.play-player-avatar'),effect=playPlayerEffect(m.loginId),rigUpdated=host?playUpdateCharacterRig(host,m,{moving,sitting,effect}):false,im=rigUpdated?null:host?.querySelector('img'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,now):1,src=playCharacterVisualUrl(m,frame,direction,now),key=(sitting?'sit':direction)+':'+frame;
+    const im=el.querySelector('img'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,now):1,src=playCharacterVisualUrl(m,frame,direction,now),key=(sitting?'sit':direction)+':'+frame;
     el.dataset.walkDir=direction;el.classList.toggle('is-moving',moving);el.classList.toggle('is-sitting',sitting);if(im&&im.dataset.walkKey!==key){im.dataset.walkKey=key;im.src=src}
     const status=el.querySelector('.play-player-over small');if(status&&moving)status.textContent='ĐANG DI CHUYỂN';
   }
@@ -1884,10 +1879,10 @@ function renderPlayPlayers(){
     const assignment=m?(playSceneRuntime.assignments||[]).find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'';el.innerHTML=(m?'<div class="play-player-over"><b>'+playEsc(name)+'</b><small>'+playEsc(statusLabel)+'</small></div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<span class="play-position-plus">＋</span>')+'</div>'+(m?'<span class="play-player-role">'+playEsc(roleLabel||'CHƯA PHÂN VAI')+'</span>':'<b>Vị trí '+seatId+'</b>');
     el.setAttribute('aria-label',name+' • '+statusLabel);el.title=name+' • '+statusLabel;
     if(m){
-      const host=el.querySelector('.play-player-avatar'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterVisualUrl(m,frame,direction),rigMounted=playMountCharacterRig(host,m,{moving,sitting,effect});el.dataset.walkDir=direction;
-      if(!rigMounted){const im=host?.querySelector('img');if(im){im.src=characterSrc;im.dataset.walkKey=direction+':'+frame;im.decoding='async';im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))}}}
+      const im=el.querySelector('img'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterVisualUrl(m,frame,direction);im.src=characterSrc;im.dataset.walkKey=direction+':'+frame;el.dataset.walkDir=direction;im.decoding='async';
       // A neutral preview does not assign/change the account's fixed character.
       if(!characterSrc){el.classList.add('is-character-preview');const s=el.querySelector('.play-player-over small');if(s)s.textContent='CHƯA CHỌN NHÂN VẬT'}
+      im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))};
       el.onclick=async()=>{
         const lid=String(m.loginId||'');
         if(isOnlinePick){

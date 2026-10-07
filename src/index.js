@@ -623,9 +623,9 @@ export class RoomDurableObject extends DurableObject {
     for(let seatId=1;seatId<=seatCount;seatId++)if(!used.has(seatId))free.push(seatId);
     if(!remaining.length)return j({ok:true,unchanged:true,assigned:[],room:publicRoom(meta),players:entries.map(([,player])=>publicPlayer(player))});
     if(free.length<remaining.length)return j({ok:false,error:"NOT_ENOUGH_FREE_SEATS",message:"Không đủ ghế trống cho Người Chơi còn lại.",remaining:remaining.length,available:free.length},409);
-    const shuffled=secureShuffle(free),assigned=[];
-    for(let index=0;index<remaining.length;index++){
-      const [participantId,player]=remaining[index],seatId=shuffled[index];
+    const shuffledPlayers=secureShuffle(remaining),assigned=[];
+    for(let index=0;index<shuffledPlayers.length;index++){
+      const [participantId,player]=shuffledPlayers[index],seatId=free[index];
       player.seatId=seatId;player.ready=false;clearPlayerMovement(player);players[participantId]=player;assigned.push({participantId,seatId});
     }
     await this.ctx.storage.put("players",players);meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);

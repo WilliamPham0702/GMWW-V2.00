@@ -11,16 +11,7 @@ export function safeText(v){return String(v??"").slice(0,80)}
 export function mapCharacterAnimation(p){
   const a=p?.characterAnimation;
   if(!a||typeof a!=="object")return null;
-  return{
-    characterId:typeof a.characterId==="string"?safeText(a.characterId):"",
-    rigId:typeof a.rigId==="string"?safeText(a.rigId):"",
-    state:typeof a.state==="string"?safeText(a.state):"idle",
-    motion:typeof a.motion==="string"?safeText(a.motion):"idle-breathe",
-    facing:a.facing==="left"?"left":"right",
-    loop:a.loop!==false,
-    engineVersion:typeof a.engineVersion==="string"?safeText(a.engineVersion):"",
-    activity:typeof a.activity==="string"?safeText(a.activity):"idle"
-  };
+  return{characterId:typeof a.characterId==="string"?safeText(a.characterId):"",rigId:typeof a.rigId==="string"?safeText(a.rigId):"",state:typeof a.state==="string"?safeText(a.state):"idle",motion:typeof a.motion==="string"?safeText(a.motion):"idle-breathe",facing:a.facing==="left"?"left":"right",loop:a.loop!==false,engineVersion:typeof a.engineVersion==="string"?safeText(a.engineVersion):"",activity:typeof a.activity==="string"?safeText(a.activity):"idle"};
 }
 export function mapPublicPlayers(state){
   const players=Array.isArray(state?.players)?state.players:[];
@@ -111,11 +102,7 @@ if(game){
   function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?dir=left":"";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){
-    const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};
-    const moving=!!position?.moving,state=moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");
-    return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")
-  }
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const moving=!!position?.moving,state=moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(isGM?" gm":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");

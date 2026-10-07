@@ -43,6 +43,17 @@ test('all 30 shared GM/Web positions are unique and inside the courtyard',()=>{
   for(const p of points){assert.equal(layout.inside(p.x,p.y),true);assert.ok(Math.hypot((p.x-layout.fire.x)/6,(p.y-layout.fire.y)/3)>=1)}
 });
 
+test('seat layout fills 8 inner, 16 outer, then opens a third ring above 24',()=>{
+  const p8=layout.positions(8),p24=layout.positions(24),p30=layout.positions(30);
+  assert.deepEqual(p8.map(p=>p.ring),Array(8).fill(0));
+  assert.equal(p24.filter(p=>p.ring===0).length,8);
+  assert.equal(p24.filter(p=>p.ring===1).length,16);
+  assert.equal(p24.filter(p=>p.ring===2).length,0);
+  assert.equal(p30.filter(p=>p.ring===0).length,8);
+  assert.equal(p30.filter(p=>p.ring===1).length,16);
+  assert.equal(p30.filter(p=>p.ring===2).length,6);
+});
+
 test('concurrent swap requests are serialized and only the recipient can accept',async()=>{
   const {RoomDurableObject}=await loadWorker(),ctx=new Context(),room=new RoomDurableObject(ctx,{}),roomMeta=meta();
   await ctx.storage.put('meta',roomMeta);
