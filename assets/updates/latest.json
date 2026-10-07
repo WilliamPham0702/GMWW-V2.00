@@ -15,17 +15,17 @@
       {
         "path": "GMWW.html",
         "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/GMWW.html",
-        "sha256": "74d79f6728fe6812f12e113d9e4f563c3a3d7458c5c77c51ec92a390d99f73ce"
+        "sha256": "6ac7742fe3e5d67ac6b63f5d38353687795ccf3be4aa4c1b751f08fc4656477d"
       },
       {
         "path": "app.js",
         "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/app.js",
-        "sha256": "dc06475a861c66e0f7cb1f7a02ae339edac2d9ebc8a87e4c3b2009710c68fab0"
+        "sha256": "077395d97f919824db45200627e116ec07b04cf598764727c020b9d3fc56f1c4"
       },
       {
         "path": "style.css",
         "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.07/style.css",
-        "sha256": "020ff84441eeee45359e55b4d22d3db9f630c78644a1145e42ca70a18c5f473c"
+        "sha256": "1ce7afa762a410fec014a4feb30bfdce41d747fd9a2b4321a54660efa9f6eabf"
       }
     ]
   },
