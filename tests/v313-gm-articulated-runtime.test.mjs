@@ -13,15 +13,15 @@ const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const asset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 
-test('V3.13 is a runtime update on the existing V3.11 native shell',()=>{
-  assert.match(app,/const VERSION='3\.13'/);
-  assert.match(html,/<title>GMWW V3\.13<\/title>/);
-  assert.match(server,/VERSION="V3\.13",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-313"/);
+test('V3.14 is a runtime update on the existing V3.11 native shell',()=>{
+  assert.match(app,/const VERSION='3\.14'/);
+  assert.match(html,/<title>GMWW V3\.14<\/title>/);
+  assert.match(server,/VERSION="V3\.14",NATIVE_SHELL_VERSION="3\.11",UPDATE_CHANNEL_REV="runtime-314"/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 311;/);
   assert.match(project,/MARKETING_VERSION = 3\.11;/);
-  assert.equal(pkg.version,'3.13.0');
-  assert.equal(lock.version,'3.13.0');
-  assert.equal(lock.packages?.['']?.version,'3.13.0');
+  assert.equal(pkg.version,'3.14.0');
+  assert.equal(lock.version,'3.14.0');
+  assert.equal(lock.packages?.['']?.version,'3.14.0');
 });
 
 test('GM has one runtime actor with articulated white-wolf segments in both views',()=>{
