@@ -229,10 +229,9 @@ jobs:
           let html=fs.readFileSync(file,'utf8');
           if(!html.includes('role-artwork-v251.js')){
             const re=/<script src="app\\.js(?:\\?v=[^"]+)?"><\\/script>/;
-            if(!re.test(html))throw new Error('app.js script tag not found');
-            html=html.replace(re,'<script src="role-artwork-v251.js"></script>\\n          sed -i '' 's@<script src="app.js">@<script src="role-artwork-v251.js"></script>\n<script src="app.js">@' server-game/GMWW-Server/Web/GMWW.html
-          grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
-');
+            const match=html.match(re);
+            if(!match)throw new Error('app.js script tag not found');
+            html=html.replace(re,'<script src="role-artwork-v251.js"></script>\\n'+match[0]);
             fs.writeFileSync(file,html);
           }
           NODE
