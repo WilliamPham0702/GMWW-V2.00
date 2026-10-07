@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 
 test('GM mounts one wolf runtime with segmented master layers',()=>{
   const start=app.indexOf('function renderPlayGmToken');
@@ -22,4 +23,11 @@ test('GM runtime exposes all five approved behavior states and articulated motio
   assert.match(app,/gait:moving\?'run':'idle'/);
   assert.match(app,/gait:moving\?'walk':'idle'/);
   for(const motion of ['gmWolfRuntimeWalkRear','gmWolfRuntimeWalkFront','gmWolfRuntimeRunRear','gmWolfRuntimeRunFront','gmWolfRuntimeShakeHead','gmWolfRuntimeHowlHead'])assert.match(css,new RegExp(motion));
+});
+
+
+test('GM scene contains no retired second wolf actor or controller',()=>{
+  assert.doesNotMatch(html,/id="gmWolfCharacter"/);
+  assert.doesNotMatch(app,/function gmWolfSetMotion/);
+  assert.equal((html.match(/gm\/gm-white-wolf\.webp/g)||[]).length,0);
 });
