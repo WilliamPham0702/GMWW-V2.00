@@ -2133,3 +2133,45 @@ body.play-immersive #start .play-player-token.is-empty>b{
 .play-player-token.is-gm-rider.gm-action-run .gm-wolf-master{animation:gmMasterRun .46s cubic-bezier(.3,0,.5,1) infinite}
 .play-player-token.is-gm-rider.gm-action-shake .gm-wolf-master{animation:gmMasterShake 1.15s ease-in-out}
 .play-player-token.is-gm-rider.gm-action-howl .gm-wolf-master{animation:gmMasterHowl 1.8s ease-in-out}
+
+
+/* V3.12 — GM segmented runtime: one actor, independent body/head/front/rear motion */
+.play-player-token.is-gm-rider .gm-wolf-character{position:relative;display:block;width:100%;height:100%;overflow:visible;transform-origin:50% 88%}
+.play-player-token.is-gm-rider .gm-wolf-character>.gm-wolf-shadow{position:absolute!important;left:14%!important;right:9%!important;bottom:3px!important;height:8px!important;border-radius:50%!important;background:rgba(10,31,39,.28)!important;filter:blur(2px)!important;z-index:1!important}
+.play-player-token.is-gm-rider .gm-wolf-character>.gm-wolf-sprite{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;overflow:visible!important;transform-origin:50% 82%!important;animation:none!important}
+.play-player-token.is-gm-rider .gm-wolf-segment{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;pointer-events:none!important;animation:none!important;will-change:transform;filter:brightness(1.08) contrast(1.08) saturate(.82) drop-shadow(0 7px 5px rgba(0,0,0,.34))!important}
+.play-player-token.is-gm-rider .gm-wolf-body{clip-path:polygon(0 0,79% 0,79% 31%,73% 43%,74% 60%,65% 71%,57% 74%,54% 82%,27% 82%,23% 73%,0 88%);transform-origin:52% 66%;z-index:2}
+.play-player-token.is-gm-rider .gm-wolf-rear-legs{clip-path:polygon(7% 68%,59% 68%,60% 100%,6% 100%);transform-origin:36% 69%;z-index:3}
+.play-player-token.is-gm-rider .gm-wolf-front-legs{clip-path:polygon(54% 64%,96% 64%,100% 100%,53% 100%);transform-origin:68% 67%;z-index:4}
+.play-player-token.is-gm-rider .gm-wolf-head{clip-path:polygon(67% 19%,100% 19%,100% 73%,80% 75%,70% 66%,63% 47%);transform-origin:73% 48%;z-index:5}
+@keyframes gmWolfRuntimeIdleBody{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.2px) rotate(.25deg)}}
+@keyframes gmWolfRuntimeIdleHead{0%,76%,100%{transform:rotate(0)}82%{transform:rotate(-1.2deg)}88%{transform:rotate(.8deg)}}
+@keyframes gmWolfRuntimeWalkBody{0%,100%{transform:translateY(0) rotate(-.45deg)}50%{transform:translateY(-2px) rotate(.55deg)}}
+@keyframes gmWolfRuntimeWalkRear{0%,100%{transform:translateY(1px) rotate(-5deg) scaleY(1.035)}50%{transform:translateY(-2px) rotate(6deg) scaleY(.97)}}
+@keyframes gmWolfRuntimeWalkFront{0%,100%{transform:translateY(-2px) rotate(6deg) scaleY(.97)}50%{transform:translateY(1px) rotate(-6deg) scaleY(1.04)}}
+@keyframes gmWolfRuntimeRunSprite{0%,100%{transform:translateY(1px) rotate(-1deg)}42%{transform:translateY(-7px) rotate(1.5deg)}72%{transform:translateY(-2px) rotate(-.5deg)}}
+@keyframes gmWolfRuntimeRunRear{0%,100%{transform:translate(calc(var(--gm-run-dir)*-2px),1px) rotate(calc(var(--gm-run-dir)*-10deg)) scaleY(1.08)}45%{transform:translate(calc(var(--gm-run-dir)*4px),-5px) rotate(calc(var(--gm-run-dir)*11deg)) scaleY(.9)}}
+@keyframes gmWolfRuntimeRunFront{0%,100%{transform:translate(calc(var(--gm-run-dir)*4px),-4px) rotate(calc(var(--gm-run-dir)*10deg)) scaleY(.9)}45%{transform:translate(calc(var(--gm-run-dir)*-3px),1px) rotate(calc(var(--gm-run-dir)*-10deg)) scaleY(1.1)}}
+@keyframes gmWolfRuntimeRunHead{0%,100%{transform:translateY(0) rotate(-1deg)}45%{transform:translateY(-2px) rotate(1deg)}}
+@keyframes gmWolfRuntimeShakeHead{0%,100%{transform:rotate(0)}18%{transform:rotate(-5deg)}36%{transform:rotate(5.5deg)}54%{transform:rotate(-4deg)}72%{transform:rotate(3deg)}88%{transform:rotate(-1.2deg)}}
+@keyframes gmWolfRuntimeHowlHead{0%,100%{transform:translate(0,0) rotate(0)}28%{transform:translate(-1px,-2px) rotate(-4deg)}48%,76%{transform:translate(-3px,-7px) rotate(-13deg)}88%{transform:translate(-1px,-3px) rotate(-5deg)}}
+@keyframes gmWolfRuntimeHowlBody{0%,100%{transform:translateY(0) rotate(0)}45%,74%{transform:translateY(-2px) rotate(-.8deg)}}
+@keyframes gmWolfRuntimeShadowWalk{0%,100%{transform:scaleX(1);opacity:.32}50%{transform:scaleX(.88);opacity:.24}}
+@keyframes gmWolfRuntimeShadowRun{0%,100%{transform:scaleX(1);opacity:.34}42%{transform:scaleX(.62);opacity:.15}72%{transform:scaleX(.78);opacity:.22}}
+.play-player-token.is-gm-rider.gm-action-idle .gm-wolf-body{animation:gmWolfRuntimeIdleBody 2.8s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-idle .gm-wolf-head{animation:gmWolfRuntimeIdleHead 5.8s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-walk .gm-wolf-body{animation:gmWolfRuntimeWalkBody .72s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-walk .gm-wolf-rear-legs{animation:gmWolfRuntimeWalkRear .72s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-walk .gm-wolf-front-legs{animation:gmWolfRuntimeWalkFront .72s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-walk .gm-wolf-head{animation:gmWolfRuntimeIdleHead 4.8s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-run .gm-wolf-sprite{animation:gmWolfRuntimeRunSprite .46s cubic-bezier(.3,0,.5,1) infinite!important}
+.play-player-token.is-gm-rider.gm-action-run .gm-wolf-rear-legs{animation:gmWolfRuntimeRunRear .46s cubic-bezier(.3,0,.55,1) infinite!important}
+.play-player-token.is-gm-rider.gm-action-run .gm-wolf-front-legs{animation:gmWolfRuntimeRunFront .46s cubic-bezier(.3,0,.55,1) infinite!important}
+.play-player-token.is-gm-rider.gm-action-run .gm-wolf-head{animation:gmWolfRuntimeRunHead .46s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-shake .gm-wolf-body{animation:gmWolfRuntimeIdleBody 2.8s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-shake .gm-wolf-head{animation:gmWolfRuntimeShakeHead 1.15s ease-in-out 1!important}
+.play-player-token.is-gm-rider.gm-action-howl .gm-wolf-body{animation:gmWolfRuntimeHowlBody 1.8s ease-in-out 1!important}
+.play-player-token.is-gm-rider.gm-action-howl .gm-wolf-head{animation:gmWolfRuntimeHowlHead 1.8s ease-in-out 1!important}
+.play-player-token.is-gm-rider.gm-action-walk .gm-wolf-shadow{animation:gmWolfRuntimeShadowWalk .72s ease-in-out infinite!important}
+.play-player-token.is-gm-rider.gm-action-run .gm-wolf-shadow{animation:gmWolfRuntimeShadowRun .46s ease-in-out infinite!important}
+@media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider .gm-wolf-character *{animation:none!important}}
