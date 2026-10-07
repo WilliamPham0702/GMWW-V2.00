@@ -62,6 +62,7 @@ jobs:
           cp assets/backgrounds/gmww-village-day-v260.webp "$APPDIR/Web/"
           cp assets/backgrounds/gmww-village-night-v260.webp "$APPDIR/Web/"
           cp assets/village/village-layout.js "$APPDIR/Web/village-layout.js"
+          cp assets/village/seat-leaf.webp "$APPDIR/Web/seat-leaf.webp"
           mkdir -p "$APPDIR/Web/game-characters"
           cp assets/characters/v253/chibi-*.webp "$APPDIR/Web/game-characters/"
           mkdir -p "$APPDIR/Web/gm"
@@ -83,6 +84,7 @@ jobs:
 
           test -s "$APPDIR/Web/GMWW.html"
           test -s "$APPDIR/Web/style.css"
+          test -s "$APPDIR/Web/seat-leaf.webp"
           test -s "$APPDIR/Web/app.js"
           test -s "$APPDIR/Web/character-renderer.js"
           test -s "$APPDIR/Web/character-renderer.css"
