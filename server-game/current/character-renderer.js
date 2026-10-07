@@ -10,6 +10,8 @@
   const STATES=new Set(['idle','walking','running','ready','playing','reaction','dead']);
   const MOTIONS=new Set(['idle-breathe','blink','look-around','stretch','walk','run','turn','ready','cheer','surprised','sad','dead']);
   const LIVE_IDLE_SLOT_MS=7000,LIVE_IDLE_ROOTS=new Set();let liveIdleTimer=0;
+  const LIVE_ACTION_SLOT_MS=11000;
+  function liveActionMotionAt(characterId,now=Date.now()){const id=String(characterId||MASTER),t=Math.max(0,Number(now)||0),phase=hash32(id+':action-phase')%LIVE_ACTION_SLOT_MS,shifted=t+phase,slot=Math.floor(shifted/LIVE_ACTION_SLOT_MS),local=shifted%LIVE_ACTION_SLOT_MS,roll=unit(id+':'+slot+':action');if(local>1200)return null;return roll<.34?'turn':roll<.58?'cheer':roll<.78?'surprised':roll<.92?'sad':null}
   function hash32(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
   function unit(seed){return (hash32(seed)%1000000)/1000000}
   function liveIdleMotionAt(characterId,now=Date.now()){
@@ -18,7 +20,7 @@
     const motion=roll<.38?'blink':roll<.64?'look-around':roll<.76?'stretch':'idle-breathe',duration=motion==='blink'?520:motion==='look-around'?1500:motion==='stretch'?1700:0;
     return local<duration?motion:'idle-breathe';
   }
-  function tickLiveIdle(now=Date.now()){for(const root of [...LIVE_IDLE_ROOTS]){if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}if(root.dataset.state==='idle')root.dataset.motion=liveIdleMotionAt(root.dataset.characterId,now)}return LIVE_IDLE_ROOTS.size}
+  function tickLiveIdle(now=Date.now()){for(const root of [...LIVE_IDLE_ROOTS]){if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}if(root.dataset.state==='idle'){const action=liveActionMotionAt(root.dataset.characterId,now);root.dataset.motion=action||liveIdleMotionAt(root.dataset.characterId,now)}}return LIVE_IDLE_ROOTS.size}
   function ensureLiveIdleTicker(){if(liveIdleTimer||typeof setInterval!=='function')return;liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240)}
   function idlePhaseMsFor(characterId){const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;return -((n*431+137)%6800)}
   function motionProfileFor(state='idle',rigId='rig-male-muscular-v1'){
@@ -48,7 +50,7 @@
   function apply(root,command,textureUrl){
     if(!root)return false;
     const c=normalize(command,root.dataset.characterId||MASTER);
-    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;applyMotionProfile(root,c.state,c.rigId);
+    root.dataset.characterId=c.characterId;root.dataset.state=c.state;root.dataset.motion=c.state==='idle'?(liveActionMotionAt(c.characterId,Date.now())||liveIdleMotionAt(c.characterId,Date.now())):c.motion;root.dataset.facing=c.facing;root.dataset.activity=c.activity;root.dataset.rigId=c.rigId;root.dataset.engineVersion=c.engineVersion;applyMotionProfile(root,c.state,c.rigId);
     if(root.dataset.textureFacing!==c.facing){
       root.dataset.textureFacing=c.facing;
       const src=typeof textureUrl==='function'?textureUrl(c.characterId,c.facing):'';
@@ -72,5 +74,5 @@
     const root=host?.querySelector?.('[data-character-renderer="segmented-skeletal"]');if(!root)return false;
     return apply(root,command,textureUrl);
   }
-  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update,liveIdleMotionAt,tickLiveIdle,motionProfileFor});
+  g.GMWW_CHARACTER_RENDERER=Object.freeze({version:VERSION,masterCharacterId:MASTER,proofIds:PROOF,segments:SEGMENTS,normalize,rendererKind,mount,update,liveIdleMotionAt,liveActionMotionAt,tickLiveIdle,motionProfileFor});
 })(window);
