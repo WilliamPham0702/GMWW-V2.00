@@ -344,7 +344,7 @@ html.embedded .player .player-over .name{font-size:11px}
 .seat-empty .seat-dot{
   width:54px!important;height:40px!important;
   border:0!important;border-radius:0!important;
-  background:transparent url("/assets/village/seat-leaf.webp?v=307") center/contain no-repeat!important;
+  background:transparent url("/village/seat-leaf.webp?v=307") center/contain no-repeat!important;
   box-shadow:none!important;filter:drop-shadow(0 3px 4px rgba(0,0,0,.34)) drop-shadow(0 0 5px rgba(255,210,76,.30))!important;
 }
 .seat-empty .seat-dot::before{content:""!important;display:none!important}
@@ -415,7 +415,7 @@ html.embedded .player .player-over .name{font-size:11px}
 .seat-empty{width:58px!important;min-width:58px!important;height:42px!important}
 .seat-empty .seat-dot{
   width:54px!important;height:40px!important;border:0!important;border-radius:0!important;
-  background:transparent url("/assets/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
+  background:transparent url("/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
   box-shadow:none!important;transform:none!important;overflow:visible!important;
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.34)) drop-shadow(0 0 5px rgba(255,210,76,.30))!important;
   animation:gmwwLeafSeatPulse 1.9s ease-in-out infinite!important

@@ -36,3 +36,11 @@ test('Player Web handles room OFF by returning to lobby',()=>{
   assert.match(live,/e\?\.reason==='ROOM_DISABLED'/);
   assert.match(live,/Bạn đã được đưa về Phòng chờ/);
 });
+
+
+test('OFF clears occupants, detects disabled rooms in polling, and evicts websocket clients',()=>{
+  const enabled=worker.slice(worker.indexOf('async gmEnabled(request,body)'),worker.indexOf('async gmLock',worker.indexOf('async gmEnabled(request,body)')));
+  assert.match(enabled,/await this\.ctx\.storage\.put\("players",\{\}\)/);
+  assert.match(live,/pub\.room\.enabled===false/);
+  assert.match(live,/e\?\.status===423/);
+});

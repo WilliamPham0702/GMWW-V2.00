@@ -522,8 +522,11 @@ export class RoomDurableObject extends DurableObject {
     meta.enabled=enabled;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const players=(await this.ctx.storage.get("players"))||{},publicPlayers=Object.values(players).map(publicPlayer),room=publicRoom(meta);
     if(!enabled){
+      // Evict all existing occupants (including disconnected clients), not only new join attempts.
+      // The response retains their identities so the public wrapper can reset member presence.
       this.broadcast({type:"room_disabled",room,players:publicPlayers,serverTime:Date.now()});
       for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_DISABLED")}catch{}
+      await this.ctx.storage.put("players",{});
     }else{
       this.broadcast({type:"room_state",room,players:publicPlayers,serverTime:Date.now()});
     }

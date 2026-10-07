@@ -2182,7 +2182,7 @@ body.play-immersive #start .play-player-token.is-empty>b{
 body.play-immersive #start .play-player-token.is-empty{width:58px!important;min-width:58px!important;min-height:42px!important}
 body.play-immersive #start .play-player-token.is-empty .play-player-avatar{
   width:54px!important;height:40px!important;border:0!important;border-radius:0!important;
-  background:transparent url("/assets/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
+  background:transparent url("/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
   box-shadow:none!important;transform:none!important;overflow:visible!important;
   animation:gmwwFantasySeatLeafPulse 1.9s ease-in-out infinite!important
 }
@@ -2252,3 +2252,8 @@ body.play-immersive #start .play-player-token.is-empty .play-seat-leaf-art{
 }
 body.play-immersive #start .play-player-token.is-empty .play-position-plus{display:none!important}
 @media(max-width:390px){body.play-immersive #start .play-player-token.is-empty .play-seat-leaf-art{width:48px!important;height:36px!important}}
+
+
+/* Keep the bottom navigation accessible while the room picker is shown. */
+body.play-immersive #playCreateRoomSheet{pointer-events:none!important}
+body.play-immersive #playCreateRoomSheet .sheet-card{pointer-events:auto!important}

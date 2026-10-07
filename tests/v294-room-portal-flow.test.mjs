@@ -31,7 +31,7 @@ test('Create Room advances directly to seating without a Member tab',()=>{
   assert.match(app,/seatMoveMode:'instant'/);
   assert.match(app,/THỦ CÔNG/);
   assert.match(app,/NGẪU NHIÊN/);
-  assert.match(app,/Chạm dấu \+ trên sân rồi chọn Thành Viên cho vị trí đó/);
+  assert.match(app,/Chạm chiếc lá trên sân rồi chọn người chơi cho vị trí đó/);
   assert.match(app,/playRoomApi\('\/seats\/randomize-remaining'/);
   assert.match(app,/playRoomApi\('\/seat'/);
 });
