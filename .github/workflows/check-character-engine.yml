@@ -61,7 +61,7 @@ jobs:
           const fs=require('fs');
           const m=JSON.parse(fs.readFileSync('/tmp/character-engine.json','utf8'));
           if(!m.ok)throw new Error('Character Engine manifest not OK');
-          if(m.engineVersion!=='0.1.0')throw new Error('Unexpected Character Engine version');
+          if(m.engineVersion!=='0.2.0')throw new Error('Unexpected Character Engine version');
           if(m.master?.id!=='character-01')throw new Error('Character Master is not character-01');
           if(!Array.isArray(m.characters)||m.characters.length!==42)throw new Error('Expected 42 Character definitions');
           if(!m.characters.every(x=>Array.isArray(x.motions)&&x.motions.includes('walk')&&x.motions.includes('idle')))throw new Error('Shared motion contract incomplete');
