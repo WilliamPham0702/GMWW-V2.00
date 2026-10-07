@@ -149,7 +149,7 @@ jobs:
           if test "$EXPECTED" != "$EXPECTED_SHELL"; then
             RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
             test -n "$RIDER_URL"
-            curl -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
+            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
             test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')"
           fi
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
@@ -165,6 +165,6 @@ jobs:
           grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
           curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
           grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
-          curl -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
+          curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
