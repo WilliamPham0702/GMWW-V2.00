@@ -108,28 +108,50 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
-          curl -fsS "$URL/api/update/manifest?verify=$(date +%s)" > /tmp/manifest.json
-          cat /tmp/manifest.json
-          grep -q "\"releaseVersion\":\"$EXPECTED\"" /tmp/manifest.json
-          node - <<'NODE'
-          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
-          if(m.releaseType==='runtime'){
-            if(String(m.runtimeVersion||'')!==String(m.releaseVersion||''))throw new Error('Runtime version does not match releaseVersion');
+          EXPECTED_SHELL=$(node -e "const fs=require('fs'),s=fs.readFileSync('src/index.js','utf8'),m=s.match(/NATIVE_SHELL_VERSION=\\\"([^\\\"]+)\\\"/);if(!m)process.exit(2);process.stdout.write(m[1])")
+          MANIFEST_OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/update/manifest?verify=$i-$(date +%s)" > /tmp/manifest.json; then
+              if node - "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const expected=process.argv[2],shell=process.argv[3];
+          if(String(m.releaseVersion||'')!==expected)throw new Error('Manifest releaseVersion is stale');
+          if(expected!==shell){
+            if(m.releaseType!=='runtime')throw new Error('Newer runtime was hidden as '+String(m.releaseType||'missing'));
+            if(String(m.shellVersion||'')!==shell)throw new Error('Runtime shellVersion mismatch');
+            if(String(m.runtimeVersion||'')!==expected)throw new Error('Runtime version does not match releaseVersion');
             if(!Array.isArray(m.runtime?.files)||m.runtime.files.length===0)throw new Error('Runtime update manifest has no files');
             for(const f of m.runtime.files){
               if(!String(f?.path||'').trim()||!String(f?.url||'').startsWith('https://')||!/^[a-f0-9]{64}$/i.test(String(f?.sha256||'')))throw new Error('Invalid runtime file entry');
             }
+            const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp'];
+            for(const p of required)if(!m.runtime.files.some(x=>String(x?.path||'')===p))throw new Error('Runtime package missing '+p);
             const rider=m.runtime.files.filter(x=>String(x?.path||'')==='gm/gm-white-wolf.webp');
-            if(rider.length>1)throw new Error('GM rider asset missing from runtime update manifest');
+            if(rider.length!==1)throw new Error('GM rider asset must appear exactly once in runtime manifest');
             const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
             const cleanIndex=m.runtime.files.some(x=>String(x?.path||'')==='role-artwork-v251.js');
             if((cleanIndex||clean.length>0)&&clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update');
-          }
-          if(m.releaseType==='native'){
-            if(String(m.ipa?.version||'')!==String(m.releaseVersion||''))throw new Error('Native IPA version does not match releaseVersion');
-            if(String(m.ipa?.fileName||'')!=='GMWW-V'+String(m.releaseVersion||'')+'.ipa')throw new Error('Native IPA filename is stale');
+          }else if(m.releaseType==='native'){
+            if(String(m.ipa?.version||'')!==expected)throw new Error('Native IPA version does not match releaseVersion');
+            if(String(m.ipa?.fileName||'')!=='GMWW-V'+expected+'.ipa')throw new Error('Native IPA filename is stale');
           }
           NODE
+              then
+                MANIFEST_OK=1
+                break
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/manifest.json
+          test "$MANIFEST_OK" = "1"
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+            RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
+            test -n "$RIDER_URL"
+            curl -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
+            test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')"
+          fi
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
