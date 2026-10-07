@@ -2175,3 +2175,20 @@ body.play-immersive #start .play-player-token.is-empty>b{
 .play-player-token.is-gm-rider.gm-action-walk .gm-wolf-shadow{animation:gmWolfRuntimeShadowWalk .72s ease-in-out infinite!important}
 .play-player-token.is-gm-rider.gm-action-run .gm-wolf-shadow{animation:gmWolfRuntimeShadowRun .46s ease-in-out infinite!important}
 @media(prefers-reduced-motion:reduce){.play-player-token.is-gm-rider .gm-wolf-character *{animation:none!important}}
+
+
+/* V3.14 — user fantasy leaf artwork replaces the empty-seat plus marker */
+@keyframes gmwwFantasySeatLeafPulse{0%,100%{filter:drop-shadow(0 4px 4px rgba(0,0,0,.34)) drop-shadow(0 0 4px rgba(255,211,82,.30));transform:scale(.96)}50%{filter:drop-shadow(0 5px 5px rgba(0,0,0,.36)) drop-shadow(0 0 9px rgba(255,225,118,.60));transform:scale(1.05)}}
+body.play-immersive #start .play-player-token.is-empty{width:58px!important;min-width:58px!important;min-height:42px!important}
+body.play-immersive #start .play-player-token.is-empty .play-player-avatar{
+  width:54px!important;height:40px!important;border:0!important;border-radius:0!important;
+  background:transparent url("/assets/village/seat-leaf.webp?v=314") center/contain no-repeat!important;
+  box-shadow:none!important;transform:none!important;overflow:visible!important;
+  animation:gmwwFantasySeatLeafPulse 1.9s ease-in-out infinite!important
+}
+body.play-immersive #start .play-player-token.is-empty .play-player-avatar::before,
+body.play-immersive #start .play-player-token.is-empty .play-player-avatar::after{content:none!important;display:none!important}
+body.play-immersive #start .play-player-token.is-empty .play-position-plus{display:none!important;content:none!important}
+body.play-immersive #start .play-player-token.is-empty:hover .play-player-avatar,
+body.play-immersive #start .play-player-token.is-empty:focus-visible .play-player-avatar{filter:drop-shadow(0 0 11px rgba(255,229,126,.92)) drop-shadow(0 4px 4px rgba(0,0,0,.34))!important}
+@media(max-width:390px){body.play-immersive #start .play-player-token.is-empty{width:52px!important;min-width:52px!important}body.play-immersive #start .play-player-token.is-empty .play-player-avatar{width:48px!important;height:36px!important}}
