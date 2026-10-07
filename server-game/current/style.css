@@ -2097,3 +2097,18 @@ body.play-immersive #start .play-player-token.is-empty>b{
 @keyframes gmWolfHeadShake{0%,100%{transform:rotate(0)}18%{transform:rotate(-2.7deg) translateX(-1%)}38%{transform:rotate(2.9deg) translateX(1%)}58%{transform:rotate(-2deg)}78%{transform:rotate(1.4deg)}}
 @keyframes gmWolfHowl{0%,100%{transform:translateY(0) rotate(0) scale(1)}25%{transform:translateY(1%) rotate(1.5deg) scale(.995)}48%,72%{transform:translateY(-3.8%) rotate(-5.2deg) scale(1.025)}86%{transform:translateY(-1%) rotate(-1.5deg) scale(1.008)}}
 @media(prefers-reduced-motion:reduce){.gm-wolf-character .gm-wolf-body,.gm-wolf-shadow{animation:none!important}}
+
+
+/* V3.11 GM rider sharp-render hotfix: preserve source pixels while animated/scaled. */
+.play-player-token.is-gm-rider .gm-wolf-sprite img{
+  image-rendering:auto!important;
+  filter:drop-shadow(0 5px 3px rgba(0,0,0,.38))!important;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  transform-style:preserve-3d;
+}
+.play-player-token.is-gm-rider .gm-wolf-sprite,
+.play-player-token.is-gm-rider .gm-wolf-body,
+.play-player-token.is-gm-rider .gm-wolf-leg{
+  -webkit-font-smoothing:antialiased;
+}
