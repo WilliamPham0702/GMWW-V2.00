@@ -57,7 +57,7 @@
         <nav class="gm-top-menu-v293" id="gmTopMenu" aria-label="Thanh điều khiển trên">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span><small>AUTO GM</small></button>
-          <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill"><div class="gm-top-info-copy-v293"><small id="playPhaseEyebrow">THÔNG TIN</small><b id="playPhaseTitle">Chọn Nhân Vật</b></div></div>
+          <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">Chọn Nhân Vật</b></div></div>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span><small>AUDIO</small></button>
           <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
         </nav>
@@ -113,9 +113,9 @@
         </section>
 
         <footer class="play-control-bar play-control-bar-three">
-          <button class="play-control-icon" id="playBack" type="button" aria-label="Quay về"><span>‹</span><small>Quay về</small></button>
+          <button class="play-control-icon" id="playBack" type="button" aria-label="Quay về" title="Quay về"><span>‹</span></button>
           <button class="play-primary-control play-info-control" id="playPrimaryAction" type="button" aria-label="Mở luồng tạo game"><b id="playPrimaryLabel">TẠO PHÒNG</b></button>
-          <button class="play-control-icon" id="playNext" type="button" aria-label="Tiếp tục"><span>›</span><small>Tiếp tục</small></button>
+          <button class="play-control-icon" id="playNext" type="button" aria-label="Tiếp tục" title="Tiếp tục"><span>›</span></button>
         </footer>
       </div>
     </section>
@@ -529,7 +529,10 @@
         <div class="play-room-section-title"><b>THIẾT LẬP</b><small>SỐ GHẾ • TRẠNG THÁI</small></div>
         <div class="play-room-settings-row">
           <label class="play-room-inline-seat"><span>SỐ GHẾ</span><input id="playCreateRoomSeatCount" type="number" min="1" max="30" inputmode="numeric" value="12"></label>
-          <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>MỞ PHÒNG</b></button>
+          <button id="playCreateRoomEnabled" type="button" aria-pressed="false"><span></span><b>ON</b></button>
+        </div>
+        <div class="play-room-step-next-row">
+          <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
       </section>
 
