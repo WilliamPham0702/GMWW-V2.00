@@ -167,6 +167,27 @@ export function arriveCharacter(model,{x,y,now=Date.now(),nextState=CHARACTER_ST
 
 const IDLE_BEHAVIORS=Object.freeze(['blink','look','idle','stretch','look','blink']);
 
+const IDLE_BEHAVIOR_SLOT_MS=7000;
+const IDLE_BEHAVIOR_WINDOWS=Object.freeze({
+  blink:520,
+  look:1500,
+  stretch:1700,
+  idle:0
+});
+
+export function idleBehaviorAt(characterId,now=Date.now()){
+  const id=normalizeCharacterId(characterId)||CHARACTER_MASTER.id;
+  const t=Math.max(0,Number(now)||0);
+  const phase=hash32(id+':idle-phase')%IDLE_BEHAVIOR_SLOT_MS;
+  const shifted=t+phase;
+  const slot=Math.floor(shifted/IDLE_BEHAVIOR_SLOT_MS);
+  const local=shifted%IDLE_BEHAVIOR_SLOT_MS;
+  const roll=unit(id+':'+slot+':idle-live');
+  const behavior=roll<.38?'blink':roll<.64?'look':roll<.76?'stretch':'idle';
+  const duration=IDLE_BEHAVIOR_WINDOWS[behavior]||0;
+  return local<duration?behavior:'idle';
+}
+
 export function scheduleIdleBehavior(model,{now=Date.now(),minDelayMs=2200,maxDelayMs=6200}={}){
   if(model.state!==CHARACTER_STATES.IDLE)return model;
   const index=Math.max(0,Number(model.behaviorIndex)||0);
@@ -223,6 +244,8 @@ export function characterStateFromPlayer(player,{now=Date.now()}={}){
     }
   }else if(player?.ready){
     model=transitionCharacter(model,CHARACTER_STATES.READY,{now});
+  }else{
+    model={...model,motion:idleBehaviorAt(id,now)};
   }
   const command=characterRendererCommand(model);
   return {
