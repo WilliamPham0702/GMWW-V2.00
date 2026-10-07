@@ -4,6 +4,11 @@ name: Build Native GMWW IPA
 # Runtime/server/UI changes must use the runtime channel or Fast Runtime Snapshot workflow.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "server-game/GMWW-Server/**"
+      - "server-game/GMWW-Server.xcodeproj/**"
 
 permissions:
   contents: write
