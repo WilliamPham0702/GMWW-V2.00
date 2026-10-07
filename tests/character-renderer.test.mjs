@@ -17,7 +17,8 @@ import {
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Character-01 is the segmented skeletal master and does not sequence walk frames',()=>{
-  assert.equal(CHARACTER_RENDERER_VERSION,'0.3.0');
+  assert.equal(CHARACTER_RENDERER_VERSION,'0.4.0');
+  assert.equal(rendererKind('character-01',{sitting:true}),'segmented-skeletal');
   assert.equal(MASTER_CHARACTER_ID,'character-01');
   assert.equal(rendererKind('character-01'),'segmented-skeletal');
   assert.equal(rendererKind('character-02'),'segmented-skeletal');
@@ -72,8 +73,8 @@ test('master rig animation is body-part driven and never runtime mirrored',()=>{
 
 test('village loads renderer CSS and renderer module as part of the live scene',()=>{
   const html=read('assets/village/index.html');
-  assert.ok(html.includes('./character-renderer.css?v=ce2'));
-  assert.ok(html.includes('./village.mjs?v=ce2'));
+  assert.ok(html.includes('./character-renderer.css?v=ce4'));
+  assert.ok(html.includes('./village.mjs?v=ce4'));
 });
 
 
