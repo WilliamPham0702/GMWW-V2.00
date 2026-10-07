@@ -91,3 +91,15 @@ html.embedded .hud{display:none!important}
 @media (min-aspect-ratio:18/25){
   .stage::after{background-size:contain!important}
 }
+
+
+/* V3.08 — Player Web desktop: fill the laptop viewport instead of preserving an iPhone portrait canvas. */
+@media (min-width:900px){
+  html.embedded,html.embedded body,html.embedded .game,html.embedded .stage{
+    width:100vw!important;height:100vh!important;min-height:100vh!important;max-width:none!important;
+  }
+  html.embedded .stage::after{
+    background-size:100% 100%!important;
+    background-position:center center!important;
+  }
+}
