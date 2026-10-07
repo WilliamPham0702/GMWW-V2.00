@@ -12,7 +12,8 @@ import {
   scheduleIdleBehavior,
   transitionCharacter,
   characterRendererCommand,
-  characterStateFromPlayer
+  characterStateFromPlayer,
+  idleBehaviorAt
 } from '../src/gmww-character-engine.js';
 
 test('Character Master uses the shared muscular rig and animation adapter',()=>{
@@ -104,4 +105,33 @@ test('Worker exposes character engine manifest and semantic animation in public 
   assert.ok(worker.includes('from "./gmww-character-engine.js"'));
   assert.ok(worker.includes('/api/character-engine/manifest'));
   assert.ok(worker.includes('characterAnimation:characterStateFromPlayer(p)'));
+});
+
+
+test('idle micro-behaviors are deterministic, phase-shifted and self-contained',()=>{
+  const times=Array.from({length:60},(_,i)=>i*1000);
+  const a=times.map(t=>idleBehaviorAt('character-01',t));
+  const b=times.map(t=>idleBehaviorAt('character-02',t));
+  assert.deepEqual(a,times.map(t=>idleBehaviorAt('character-01',t)));
+  assert.ok(a.some(x=>x!=='idle'));
+  assert.ok(b.some(x=>x!=='idle'));
+  assert.notDeepEqual(a,b);
+  assert.ok(a.every(x=>['idle','blink','look','stretch'].includes(x)));
+});
+
+test('live idle behavior reaches renderer but movement always takes priority',()=>{
+  const times=Array.from({length:80},(_,i)=>i*500);
+  const liveTime=times.find(t=>idleBehaviorAt('character-01',t)!=='idle');
+  assert.notEqual(liveTime,undefined);
+  const idle=characterStateFromPlayer({gameCharacterId:'character-01',movementStatus:'idle',ready:false},{now:liveTime});
+  assert.ok(['blink','look-around','stretch'].includes(idle.motion));
+  const moving=characterStateFromPlayer({
+    gameCharacterId:'character-01',
+    movementStatus:'moving',
+    moveFromX:0,moveFromY:0,moveToX:4,moveToY:2,
+    moveStartedAt:liveTime,
+    villageActivity:'roaming'
+  },{now:liveTime});
+  assert.equal(moving.motion,'walk');
+  assert.equal(moving.state,'walking');
 });
