@@ -29,12 +29,12 @@ test('Server disables legacy password enforcement when a member logs in',()=>{
   assert.doesNotMatch(segment,/verifyPassword|PASSWORD_REQUIRED|INVALID_PASSWORD/);
 });
 
-test('V3.15 runtime metadata is aligned on the V3.11 native shell',()=>{
+test('V3.16 runtime metadata is aligned on the V3.11 native shell',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V3.15"'));
-  assert.ok(app.includes("const VERSION='3.15';"));
-  assert.ok(html.includes('GMWW V3.15'));
+  assert.ok(server.includes('VERSION="V3.16"'));
+  assert.ok(app.includes("const VERSION='3.16';"));
+  assert.ok(html.includes('GMWW V3.16'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 311;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.11;'));
-  assert.equal(pkg.version,'3.15.0');
+  assert.equal(pkg.version,'3.16.0');
 });
