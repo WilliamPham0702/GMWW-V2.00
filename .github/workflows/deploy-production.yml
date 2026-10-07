@@ -143,3 +143,6 @@ jobs:
           grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
           curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
           grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
+          curl -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
+          test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
+          test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
