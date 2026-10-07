@@ -562,20 +562,45 @@
       return ROOM_RE.test(String(saved?.roomCode||''));
     }catch{return false}
   }
-  function syncLobbyState(){
-    if(hasLiveRoom())return;
+  function currentRoomName(){
     try{
-      if(typeof playSceneState!=='undefined'){
-        let changed=false;
-        const set=(k,v)=>{if(playSceneState[k]!==v){playSceneState[k]=v;changed=true}};
-        set('roomCode','—');set('gmToken','');set('roomEnabled',false);set('step','room');set('phase','lobby');set('activePlayerId','');
-        if(Array.isArray(playSceneState.selectedMemberIds)&&playSceneState.selectedMemberIds.length){playSceneState.selectedMemberIds=[];changed=true}
-        if(Array.isArray(playSceneState.assignmentsPreview)&&playSceneState.assignmentsPreview.length){playSceneState.assignmentsPreview=[];changed=true}
-        if(changed&&typeof savePlayScene==='function')savePlayScene();
+      const runtimeName=String(typeof playSceneRuntime!=='undefined'?(playSceneRuntime?.room?.roomName||''):'').trim();
+      if(runtimeName)return runtimeName;
+      const code=String(typeof playSceneState!=='undefined'?(playSceneState?.roomCode||''):'').trim();
+      if(code&&typeof playRoomRegistry==='function'){
+        const hit=(playRoomRegistry()||[]).find(x=>String(x?.roomCode||'')===code);
+        const registryName=String(hit?.roomName||'').trim();
+        if(registryName)return registryName;
       }
     }catch{}
+    return 'Phòng GMWW';
+  }
+  function syncLobbyState(){
+    const live=hasLiveRoom();
+    if(!live){
+      try{
+        if(typeof playSceneState!=='undefined'){
+          let changed=false;
+          const set=(k,v)=>{if(playSceneState[k]!==v){playSceneState[k]=v;changed=true}};
+          set('roomCode','—');set('gmToken','');set('roomEnabled',false);set('step','room');set('phase','lobby');set('activePlayerId','');
+          if(Array.isArray(playSceneState.selectedMemberIds)&&playSceneState.selectedMemberIds.length){playSceneState.selectedMemberIds=[];changed=true}
+          if(Array.isArray(playSceneState.assignmentsPreview)&&playSceneState.assignmentsPreview.length){playSceneState.assignmentsPreview=[];changed=true}
+          if(changed&&typeof savePlayScene==='function')savePlayScene();
+        }
+      }catch{}
+    }
     const title=document.getElementById('playPhaseTitle');
-    if(title&&title.textContent!=='SẢNH CHỜ')title.textContent='SẢNH CHỜ';
+    if(!title)return;
+    if(!live){
+      if(title.textContent!=='SẢNH CHỜ')title.textContent='SẢNH CHỜ';
+      return;
+    }
+    try{
+      if(typeof playSceneState!=='undefined'&&String(playSceneState.phase||'lobby').toLowerCase()==='lobby'){
+        const name=currentRoomName();
+        if(title.textContent!==name)title.textContent=name;
+      }
+    }catch{}
   }
   const start=()=>{
     syncLobbyState();
