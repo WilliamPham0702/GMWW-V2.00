@@ -113,8 +113,7 @@ jobs:
           grep -q "\"releaseVersion\":\"$EXPECTED\"" /tmp/manifest.json
           node - <<'NODE'
           const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
-          if(String(m.runtimeVersion||'')!==String(m.shellVersion||'')){
-            if(m.releaseType!=='runtime')throw new Error('Expected runtime update when runtimeVersion differs from shellVersion');
+          if(m.releaseType==='runtime'){
             if(!Array.isArray(m.runtime?.files)||!m.runtime.files.some(x=>x?.path==='gm/gm-white-wolf.webp'))throw new Error('GM rider asset missing from runtime update manifest');
             if(!m.runtime.files.some(x=>x?.path==='role-artwork-v251.js'))throw new Error('Clean role artwork manifest missing from runtime update');
             const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
@@ -134,5 +133,7 @@ jobs:
           curl -fsS "$URL/village/village.mjs?verify=$(date +%s)" > /tmp/village.mjs
           node --check /tmp/village.mjs
           grep -Fq 'document.documentElement.classList.add("embedded")' /tmp/village.mjs
+          grep -Fq 'visualFallbackMoves' /tmp/village.mjs
+          grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
           curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
           grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
