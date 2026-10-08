@@ -18,26 +18,23 @@ test('V2.93 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('V2.93 hides both top and bottom menus completely after 20 seconds and reveals both on interaction',()=>{
-  const exit=html.indexOf('id="playExitVillage"'),auto=html.indexOf('id="playAutoGM"'),info=html.indexOf('id="playPhasePill"'),audio=html.indexOf('id="playAudioTop"'),end=html.indexOf('id="playEndGame"');
-  assert.ok(exit>=0&&auto>exit&&info>auto&&audio>info&&end>audio);
-  assert.match(html,/class="gm-top-menu-v293"/);
-  assert.match(html,/<footer class="play-control-bar play-control-bar-three">/);
-  assert.match(html,/gm-top-auto-v293/);
-  assert.match(html,/gm-top-info-v293/);
-  assert.match(html,/gm-top-audio-v293/);
-  assert.match(css,/V2\.93 GAME CHROME — both menus fully disappear after 20s inactivity/);
-  assert.match(css,/#gmTopMenu\.gm-top-menu-v293\.is-auto-hidden\{[\s\S]*translateY\(calc\(-100% - env\(safe-area-inset-top\) - 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
-  assert.match(css,/\.play-control-bar\.is-auto-hidden\{[\s\S]*translateY\(calc\(100% \+ env\(safe-area-inset-bottom\) \+ 18px\)\)!important;[\s\S]*opacity:0!important;[\s\S]*pointer-events:none!important/);
-  assert.doesNotMatch(css,/calc\(-100% \+ 8px\)/);
+test('V3.25 auto-hides the top timeline and bottom five-control dock after 20 seconds',()=>{
+  const ids=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
+  let cursor=-1;for(const id of ids){const pos=html.indexOf('id="'+id+'"');assert.ok(pos>cursor);cursor=pos}
+  assert.match(html,/class="gm-top-menu-v293 gm-bottom-menu-v325"/);
+  assert.match(html,/id="playSetupStrip"/);
+  assert.doesNotMatch(html,/<footer class="play-control-bar/);
+  assert.match(css,/V3\.25: single seven-step top timeline and frosted five-control bottom dock/);
+  assert.match(css,/#playSetupStrip\.play-setup-strip\.is-auto-hidden/);
+  assert.match(css,/#gmTopMenu\.gm-top-menu-v293\.is-auto-hidden/);
+  assert.ok(css.includes('transform:translateY(calc(100% + env(safe-area-inset-bottom) + 18px))!important;'));
   assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=20000/);
-  assert.match(app,/function setPlayGameChromeHidden\(hidden\)/);
+  assert.ok(app.includes("const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu')"));
   assert.match(app,/\[top,bottom\]\.forEach/);
   assert.match(app,/setPlayGameChromeHidden\(false\);clearPlayGameChromeIdle\(\)/);
   assert.match(app,/setPlayGameChromeHidden\(true\)/);
   assert.match(app,/document\.addEventListener\('pointerdown',reveal/);
   assert.match(app,/document\.addEventListener\('touchstart',reveal/);
-  assert.match(app,/document\.addEventListener\('keydown',reveal/);
   assert.match(app,/querySelector\('\.gm-top-icon-audio-v293'\)/);
 });
 test('GM player labels keep name and status fixed while only character artwork scales',()=>{
@@ -50,16 +47,15 @@ test('GM player labels keep name and status fixed while only character artwork s
   assert.match(css,/play-player-avatar img\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
 });
 
-test('bottom menu is Back, Info, Continue and floating setup box is removed',()=>{
-  assert.match(html,/play-control-bar-three/);
-  assert.match(css,/play-control-bar\.play-control-bar-three\{[\s\S]*grid-template-columns:minmax\(0,20fr\) minmax\(0,60fr\) minmax\(0,20fr\)!important/);
-  assert.match(html,/id="playBack"/);
-  assert.match(html,/id="playPrimaryAction"/);
-  assert.match(html,/id="playNext"/);
+test('V3.25 removes the old three-button footer and retains all core GM actions',()=>{
+  assert.doesNotMatch(html,/play-control-bar-three|id="playBack"|id="playPrimaryAction"|id="playNext"/);
+  for(const id of ['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'])assert.match(html,new RegExp('id="'+id+'"'));
+  assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="gmTopMenu"'));
+  assert.match(css,/#gmTopMenu\.gm-top-menu-v293\{/);
+  assert.match(app,/handlePlayTimelineStep\(b\.dataset\.playStep\)/);
   assert.doesNotMatch(html,/id="playContextPanel"/);
   assert.doesNotMatch(app,/renderPlayContext\(\);const context=/);
 });
-
 test('Player Web uses the full desktop viewport while auth stays compact and mobile remains viewport-native',()=>{
   assert.match(membersPage,/\.app\{width:100%;max-width:none;min-height:100dvh;margin:0/);
   assert.doesNotMatch(membersPage,/\.app\{width:min\(430px,100%\)/);

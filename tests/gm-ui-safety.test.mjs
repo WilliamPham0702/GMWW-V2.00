@@ -6,15 +6,20 @@ import vm from 'node:vm';
 const app=readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
 function section(first,next){return app.slice(app.indexOf(first),app.indexOf(next,app.indexOf(first)))}
-test('top menu owns Exit and End while bottom menu is Back, Info, Continue only',()=>{
-  const top=html.slice(html.indexOf('<nav class="gm-top-menu-v293"'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293"')));
-  const footer=html.slice(html.indexOf('<footer class="play-control-bar'),html.indexOf('</footer>',html.indexOf('<footer class="play-control-bar')));
-  const exit=top.indexOf('id="playExitVillage"'),auto=top.indexOf('id="playAutoGM"'),info=top.indexOf('id="playPhasePill"'),audio=top.indexOf('id="playAudioTop"'),end=top.indexOf('id="playEndGame"');
-  assert.ok(exit>=0&&auto>exit&&info>auto&&audio>info&&end>audio);
-  assert.equal((html.match(/id="playExitVillage"/g)||[]).length,1);
-  assert.equal((html.match(/id="playEndGame"/g)||[]).length,1);
-  assert.doesNotMatch(footer,/playExitVillage|playEndGame/);
-  assert.match(footer,/id="playBack"/);assert.match(footer,/id="playPrimaryAction"/);assert.match(footer,/id="playNext"/);
+test('timeline at top and five primary actions at bottom keep their original IDs',()=>{
+  const timeline=html.slice(html.indexOf('id="playSetupStrip"'),html.indexOf('</section>',html.indexOf('id="playSetupStrip"')));
+  const dock=html.slice(html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325"'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325"')));
+  assert.ok(timeline.includes('data-play-step="lobby"'));
+  assert.equal((timeline.match(/data-play-step=/g)||[]).length,7);
+  assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="playWorld"'));
+  assert.ok(html.indexOf('id="gmTopMenu"')>html.indexOf('id="playWorld"'));
+  let last=-1;
+  for(const id of ['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame']){
+    const pos=dock.indexOf('id="'+id+'"');assert.ok(pos>last, id+' missing or unordered');last=pos;
+    assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);
+  }
+  assert.match(dock,/<button[^>]+id="playPhasePill"[^>]+type="button"/);
+  assert.doesNotMatch(html,/play-control-bar-three|id="playBack"|id="playPrimaryAction"|id="playNext"/);
 });
 test('cancel Exit leaves village and local room data untouched',()=>{
   let changes=0;const code=section('function exitPlayImmersive()','function initPlayScene()');

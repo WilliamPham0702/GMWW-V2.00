@@ -7,12 +7,14 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('GM Create Room primary action opens room selector instead of silently advancing',()=>{
-  assert.match(app,/playPrimaryAction'\)\?\.addEventListener\('click',\(\)=>\{\s*if\(playSceneState\.step==='room'\)\{openPlayCreateRoomSheet\(\);return\}/);
+test('GM Create Room opens the room selector via timeline without skipping setup',()=>{
+  assert.match(app,/async function handlePlayTimelineStep\(step\)/);
+  assert.match(app,/if\(step==='room'\)await openPlayCreateRoomSheet\(\)/);
+  assert.match(app,/if\(target===from\+1\)\{await advancePlayPhase\(\);return\}/);
+  assert.match(app,/document\.getElementById\('playPhasePill'\)\?\.addEventListener\('click'/);
   assert.match(app,/async function playCreateRoomNext\(\)\{[\s\S]*if\(!isLivePlayRoom\(\)\)\{\s*await openPlayCreateRoomSheet\(\)/);
   assert.doesNotMatch(app,/if\(!isLivePlayRoom\(\)\)\{const ok=await playCreateRoom\(\)/);
 });
-
 test('GM new rooms preview exactly 24 leaf markers, and old user rooms keep their seat count',()=>{
   assert.match(app,/seatCount:24,autoGM:true/);
   assert.match(app,/previewNew\?24:playSeatStats\(\)\.seatCount/);
