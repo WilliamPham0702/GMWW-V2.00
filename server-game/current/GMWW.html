@@ -328,12 +328,13 @@
 
     <section class="page" id="settings">
       <div class="settings-page">
-        <div class="settings-page-head"><div><h2>⚙ Cài Đặt</h2><small>Các công cụ vận hành GMWW — cuộn để xem tất cả</small></div>
+        <div class="settings-page-head"><div><h2>⚙ Cài Đặt</h2></div>
           <div class="settings-hub-mini-health" id="settingsHubMiniHealth" aria-live="polite"><span class="settings-hub-mini-dot"></span><span id="settingsHubMiniText">Sẵn sàng kiểm tra</span></div>
         </div>
         <div class="settings-unified-box" id="settingsGroupUpdate">
-          <div class="settings-unified-heading"><span class="settings-unified-index">01</span><div><h3>Cập nhật & đồng bộ</h3><p>Đối chiếu phiên bản và chọn đúng phương án cập nhật. Không cần cài IPA nếu Runtime tương thích.</p></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">01</span><div><h3>Cập nhật & đồng bộ</h3></div></div>
           <div class="settings-tool-inner update-manager-card" id="updateManagerCard">
+          <div class="settings-operation-console settings-update-console" aria-label="Trạng thái cập nhật">
           <div class="health-v236-head"><div><span class="update-dot checking" id="updateDot"></span><b>Cập Nhật Hệ Thống</b></div><span class="update-pill checking" id="updateStatus">ĐANG KIỂM TRA</span></div>
           <div class="update-version-grid">
             <div><small>Ứng dụng</small><b id="updateShellVersion">V—</b></div>
@@ -342,106 +343,108 @@
           </div>
           <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
           <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
+          <small class="update-detail" id="updateDetail">—</small>
+          </div>
           <div class="health-v236-actions update-actions update-actions-three">
             <button class="settings-action settings-action-server" id="installRuntimeUpdate" type="button"><span>⬇</span><b>CẬP NHẬT RUNTIME</b></button>
             <button class="settings-action settings-action-server" id="downloadNewIPA" type="button"><span>📦</span><b>TẢI IPA</b></button>
             <button class="settings-action settings-action-server" id="syncPlayerWebUpdate" type="button"><span>⟳</span><b>ĐỒNG BỘ WEB</b></button>
           </div>
-          <small class="update-detail" id="updateDetail">Chỉ nút cần thiết mới được bật.</small>
         </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & kết nối</h3></div></div>
-          <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
-          <div class="health-v236-head">
-            <div><span class="ops-dot" id="opsDot"></span><b id="gmwwOpsTitle">Trung Tâm Vận Hành GMWW</b></div>
-            <span class="ops-pill" id="opsOverall">CHƯA KIỂM TRA</span>
+          <div class="settings-operations-tools">
+            <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
+              <b class="settings-operation-tool-heading">Vận hành</b>
+              <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
+                <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
+                <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
+                <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+              </div>
+              <label class="ops-auto"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra mỗi 2 phút</span></label>
+            </div>
+            <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
+              <b class="settings-operation-tool-heading">Server</b>
+              <div class="health-v236-actions">
+                <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
+                <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+                <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
+              </div>
+            </div>
+            <div class="settings-tool-inner diagnostics-card" id="systemDiagnosticsCard">
+              <b class="settings-operation-tool-heading">Chẩn đoán</b>
+              <div class="health-v236-actions diagnostic-actions">
+                <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
+                <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
+                <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
+              </div>
+            </div>
           </div>
-          <div class="ops-status-grid" aria-live="polite">
-            <div><small>SERVER</small><b id="opsServerState">—</b></div>
-            <div><small>LƯU TRỮ</small><b id="opsStorageState">—</b></div>
-            <div><small>REALTIME</small><b id="opsRealtimeState">—</b></div>
-            <div><small>PHIÊN BẢN</small><b id="opsReleaseState">—</b></div>
+          <div class="settings-operation-console settings-operations-console" id="settingsOperationResults" aria-label="Kết quả vận hành" role="region" aria-live="polite">
+            <div class="settings-operation-console-heading"><span class="ops-dot" id="opsDot"></span><b id="gmwwOpsTitle">KẾT QUẢ VẬN HÀNH</b><span class="ops-pill" id="opsOverall">CHƯA KIỂM TRA</span></div>
+            <div class="ops-status-grid">
+              <div><small>SERVER</small><b id="opsServerState">—</b></div>
+              <div><small>LƯU TRỮ</small><b id="opsStorageState">—</b></div>
+              <div><small>REALTIME</small><b id="opsRealtimeState">—</b></div>
+              <div><small>PHIÊN BẢN</small><b id="opsReleaseState">—</b></div>
+            </div>
+            <div class="ops-report" id="opsReport">
+              <div data-ops-check="server"><span>Cloudflare Worker</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="storage"><span>Durable Objects</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="player"><span>Player Web</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="update"><span>Runtime / IPA</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="room"><span>Phòng đang chọn</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="realtime"><span>WebSocket</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="characters"><span>Kho nhân vật</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="runtime"><span>Lỗi ứng dụng</span><b>—</b><small>Chưa kiểm tra</small></div>
+            </div>
+            <div class="ops-advice" id="opsAdvice" role="status">Chưa kiểm tra hệ thống.</div>
+            <small class="ops-footnote" id="opsLastChecked">—</small>
+            <div class="settings-operation-console-heading settings-operation-subheading"><span class="health-dot checking" id="serverHealthDot"></span><b>SỨC KHỎE SERVER</b><span class="health-pill checking" id="serverHealthPill">CHƯA KIỂM TRA</span></div>
+            <div class="health-v236-status"><b id="serverHealthText">Server</b><strong id="healthLatency">—</strong><small id="serverHealthDetail">—</small></div>
+            <small class="health-checked" id="healthCheckedAt">—</small>
+            <span class="hidden" id="healthPlayerWeb"></span><span class="hidden" id="healthApi"></span><span class="hidden" id="healthVersion"></span>
+            <div class="settings-operation-console-heading settings-operation-subheading"><span class="diagnostic-dot" id="diagnosticDot"></span><b>CHẨN ĐOÁN</b><span class="diagnostic-pill" id="diagnosticStatus">SẴN SÀNG</span></div>
+            <div class="diagnostic-summary"><b id="diagnosticSummary">Chưa quét hệ thống</b><small id="diagnosticHint">—</small></div>
+            <div class="diagnostic-list" id="diagnosticList">
+              <div data-diagnostic="server"><span>Server API</span><b>—</b></div>
+              <div data-diagnostic="player"><span>Player Web</span><b>—</b></div>
+              <div data-diagnostic="update"><span>Kênh cập nhật</span><b>—</b></div>
+              <div data-diagnostic="characters"><span>Kho nhân vật</span><b>—</b></div>
+              <div data-diagnostic="settings"><span>Dữ liệu cài đặt</span><b>—</b></div>
+            </div>
+            <small class="diagnostic-detail" id="diagnosticDetail">—</small>
           </div>
-          <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
-            <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
-            <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
-            <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
-            
-          </div>
-          <div class="ops-report" id="opsReport" aria-live="polite">
-            <div data-ops-check="server"><span>Cloudflare Worker</span><b>—</b><small>Đang chờ kiểm tra</small></div>
-            <div data-ops-check="storage"><span>Durable Objects</span><b>—</b><small>Kiểm tra đọc dữ liệu, không ghi đè</small></div>
-            <div data-ops-check="player"><span>Player Web</span><b>—</b><small>Chưa kiểm tra kết nối</small></div>
-            <div data-ops-check="update"><span>Runtime / IPA</span><b>—</b><small>Chưa đối chiếu phiên bản</small></div>
-            <div data-ops-check="room"><span>Phòng đang chọn</span><b>—</b><small>Chưa kiểm tra phòng</small></div>
-            <div data-ops-check="realtime"><span>WebSocket</span><b>—</b><small>Chưa kiểm tra kết nối realtime</small></div>
-            <div data-ops-check="characters"><span>Kho nhân vật</span><b>—</b><small>Chưa kiểm tra kho nhân vật</small></div>
-            <div data-ops-check="runtime"><span>Lỗi ứng dụng</span><b>—</b><small>Chưa ghi nhận kết quả</small></div>
-          </div>
-          <div class="ops-advice" id="opsAdvice" role="status">Nhấn KIỂM TRA TỔNG để kiểm tra toàn bộ hệ thống.</div>
-          <label class="ops-auto"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra khi mở Cài Đặt và mỗi 2 phút</span></label>
-          <small class="ops-footnote" id="opsLastChecked">Chỉ kiểm tra và báo lỗi, không tự xoá dữ liệu, reset phòng hoặc cài IPA.</small>
-          
-        </div>
-          <div class="settings-unified-divider" role="separator"></div>
-          <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
-          <div class="health-v236-head"><div><span class="health-dot checking" id="serverHealthDot"></span><b>Sức khỏe Server</b></div><span class="health-pill checking" id="serverHealthPill">CHƯA KIỂM TRA</span></div>
-          <div class="health-v236-status"><b id="serverHealthText">Server</b><strong id="healthLatency">—</strong><small id="serverHealthDetail">Nhấn Kiểm tra</small></div>
-          <div class="health-v236-actions">
-            <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
-            <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
-            <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
-          </div>
-          <small class="health-checked" id="healthCheckedAt">—</small>
-          <span class="hidden" id="healthPlayerWeb"></span><span class="hidden" id="healthApi"></span><span class="hidden" id="healthVersion"></span>
-        </div>
-          <div class="settings-unified-divider" role="separator"></div>
-          <div class="settings-tool-inner diagnostics-card" id="systemDiagnosticsCard">
-          <div class="health-v236-head"><div><span class="diagnostic-dot" id="diagnosticDot"></span><b>Tự chẩn đoán hệ thống</b></div><span class="diagnostic-pill" id="diagnosticStatus">SẴN SÀNG</span></div>
-          <div class="diagnostic-summary">
-            <b id="diagnosticSummary">Chưa quét hệ thống</b>
-            <small id="diagnosticHint">Tự kiểm tra Server, Player Web, cập nhật và dữ liệu nền.</small>
-          </div>
-          <div class="diagnostic-list" id="diagnosticList">
-            <div data-diagnostic="server"><span>Server API</span><b>—</b></div>
-            <div data-diagnostic="player"><span>Player Web</span><b>—</b></div>
-            <div data-diagnostic="update"><span>Kênh cập nhật</span><b>—</b></div>
-            <div data-diagnostic="characters"><span>Kho nhân vật</span><b>—</b></div>
-            <div data-diagnostic="settings"><span>Dữ liệu cài đặt</span><b>—</b></div>
-          </div>
-          <div class="health-v236-actions diagnostic-actions">
-            <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
-            <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
-            <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
-          </div>
-          <small class="diagnostic-detail" id="diagnosticDetail">Tự chạy khi mở Cài Đặt và khi ứng dụng trở lại Online.</small>
-        </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupTasks">
-          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3><p>Ưu tiên việc chưa hoàn thành. Những việc đã xong nằm trong Lịch sử, không chiếm phần đầu.</p></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3></div></div>
+          <div class="settings-operation-console settings-task-console" aria-label="Trạng thái công việc">
           <div class="gmww-task-summary" id="gmwwTasksSummary" role="status" aria-live="polite">Đang tải công việc từ GitHub…</div>
           <div class="gmww-task-section"><h4>Việc cần tiếp tục <span id="gmwwTasksOpenCount">—</span></h4>
             <div class="gmww-task-list" id="gmwwTasksOpenList"><p class="gmww-task-empty">Đang tải danh sách công việc…</p></div>
           </div>
           <details class="gmww-task-history" id="gmwwTasksHistory"><summary>Lịch sử hoàn tất <span id="gmwwTasksDoneCount">0</span></summary><div class="gmww-task-list" id="gmwwTasksDoneList"><p class="gmww-task-empty">Chưa có mục hoàn tất được ghi nhận.</p></div></details>
+          </div>
           <div class="gmww-task-actions"><button class="settings-action settings-action-server" id="gmwwTasksReload" type="button"><span>↻</span><b>LÀM MỚI TIẾN ĐỘ</b></button></div>
           <small class="gmww-task-source" id="gmwwTasksSource">Nguồn: các công việc có mã GitHub Issue trong dự án GMWW; trạng thái cập nhật từ issue, không tự suy đoán đã hoàn tất.</small>
         </div>
         <div class="settings-unified-box" id="settingsGroupMaintenance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Bảo trì & khắc phục</h3><p>Kiểm tra dữ liệu, dọn bộ nhớ tạm và tải lại khi cần. Giữ nguyên dữ liệu game.</p></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Bảo trì & khắc phục</h3></div></div>
           <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
-          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
           <div class="health-v236-actions maintenance-actions">
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
             <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
           </div>
-          <small class="maintenance-detail" id="maintenanceDetail">Không xoá dữ liệu game.</small>
+          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
+          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
+          <small class="maintenance-detail" id="maintenanceDetail">—</small>
+          </div>
         </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupAppearance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">05</span><div><h3>Giao diện & nhân vật</h3><p>Tùy chỉnh cách hiển thị nhân vật; không thay đổi luật, vai hoặc dữ liệu trận.</p></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">05</span><div><h3>Giao diện & nhân vật</h3></div></div>
           <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">

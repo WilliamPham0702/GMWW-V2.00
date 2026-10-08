@@ -2669,3 +2669,116 @@ body.play-immersive #start #playGatherToolbar.hidden{display:none!important}
 #settings .settings-page-head{align-items:flex-start;flex-wrap:wrap;gap:8px}
 #settings .settings-page-head .settings-hub-mini-health{max-width:100%;flex:0 0 auto;min-height:31px}
 #settings .settings-unified-heading>div:has(>h3){gap:0}
+
+
+/* V3.29 — read-only results belong to one operational log; only controls get raised boxes. */
+#settings .settings-page-head .settings-hub-mini-health{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+  padding:4px 0!important;border-radius:0!important;
+}
+#settings .settings-unified-heading .settings-unified-index{
+  border:0!important;background:transparent!important;box-shadow:none!important;
+}
+#settings .settings-operations-tools{display:grid;gap:12px;min-width:0}
+#settings .settings-operations-tools .settings-tool-inner{gap:6px}
+#settings .settings-operation-tool-heading{
+  color:#c3e7ef;font-size:10px;letter-spacing:.06em;font-weight:900;
+  text-transform:uppercase;padding:0 2px;
+}
+#settings .settings-operation-console{
+  background:linear-gradient(145deg,rgba(5,39,58,.52),rgba(5,43,56,.37))!important;
+  border:1px solid rgba(174,232,243,.36)!important;
+  border-radius:15px!important;padding:10px 12px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09)!important;
+  display:grid;gap:0;min-width:0;
+}
+#settings .settings-operation-console-heading{
+  display:flex;gap:7px;align-items:center;padding:7px 0 9px;
+  border-bottom:1px solid rgba(174,232,243,.23);
+}
+#settings .settings-operation-console-heading>b{
+  font-size:11px!important;color:#dff7fc;letter-spacing:.035em;flex:1;
+}
+#settings .settings-operation-console-heading .ops-pill,
+#settings .settings-operation-console-heading .health-pill,
+#settings .settings-operation-console-heading .diagnostic-pill{
+  border:none!important;border-radius:0!important;background:none!important;
+  box-shadow:none!important;padding:0!important;font-size:10px!important;
+}
+#settings .settings-operation-console .ops-status-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0!important;
+}
+#settings .settings-operation-console .ops-status-grid>div{
+  border:0!important;border-bottom:1px solid rgba(174,232,243,.15)!important;
+  border-radius:0!important;background:none!important;box-shadow:none!important;
+  padding:9px 6px!important;min-height:48px!important;
+}
+#settings .settings-operation-console .ops-report{display:grid;gap:0!important}
+#settings .settings-operation-console .ops-report>div,
+#settings .settings-operation-console .diagnostic-list>div{
+  border:0!important;border-bottom:1px solid rgba(174,232,243,.15)!important;
+  border-radius:0!important;background:none!important;box-shadow:none!important;
+  margin:0!important;padding:9px 3px!important;min-height:34px;
+}
+#settings .settings-operation-console .ops-advice,
+#settings .settings-operation-console .diagnostic-summary,
+#settings .settings-operation-console .health-v236-status,
+#settings .settings-operation-console .update-decision,
+#settings .settings-operation-console .update-message{
+  border:0!important;border-radius:0!important;background:none!important;
+  box-shadow:none!important;margin:0!important;padding:9px 3px!important;
+}
+#settings .settings-operation-console .ops-advice{border-top:1px solid rgba(174,232,243,.15)!important}
+#settings .settings-operation-console .ops-footnote,
+#settings .settings-operation-console .health-checked,
+#settings .settings-operation-console .diagnostic-detail,
+#settings .settings-operation-console .update-detail{
+  margin:0!important;padding:8px 3px!important;color:#b7dce8!important;
+}
+#settings .settings-operation-console-heading.settings-operation-subheading{
+  margin-top:5px;padding-top:12px;border-top:1px solid rgba(174,232,243,.28);
+}
+#settings .settings-operation-console .diagnostic-summary{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+}
+#settings .settings-operation-console .diagnostic-summary small{text-align:right}
+#settings .settings-update-console .update-version-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+}
+#settings .settings-update-console .update-version-grid>div{
+  min-height:54px!important;border:0!important;border-radius:0!important;
+  border-right:1px solid rgba(174,232,243,.19)!important;
+  background:none!important;box-shadow:none!important;
+}
+#settings .settings-update-console .update-version-grid>div:last-child{border-right:0!important}
+#settings .settings-update-console .update-message,
+#settings .settings-update-console .update-decision{
+  border-top:1px solid rgba(174,232,243,.18)!important;
+}
+#settings .settings-task-console .gmww-task-summary{
+  padding:9px 3px!important;border:0!important;border-radius:0!important;
+  border-bottom:1px solid rgba(174,232,243,.22)!important;
+  background:none!important;box-shadow:none!important;
+}
+#settings .settings-task-console .gmww-task-item{
+  padding:10px 3px!important;margin:0!important;border:0!important;
+  border-bottom:1px solid rgba(174,232,243,.18)!important;
+  border-radius:0!important;background:none!important;box-shadow:none!important;
+}
+#settings .settings-task-console .gmww-task-list{gap:0!important}
+#settings .settings-task-console .gmww-task-section{padding-top:9px}
+#settings .settings-task-console .gmww-task-history{
+  margin-top:10px;padding:0!important;border:0!important;
+  border-radius:0!important;background:none!important;
+}
+#settings .settings-task-console .gmww-task-history>summary{
+  padding:8px 10px;background:rgba(36,94,110,.42)!important;
+  border:1px solid rgba(174,232,243,.3)!important;border-radius:10px!important;
+}
+#settings .settings-maintenance-console .health-v236-head{margin:0!important;padding:5px 0}
+#settings .settings-unified-box .settings-action:active{transform:scale(.98)}
+@media(max-width:380px){
+  #settings .settings-operation-console{padding:8px 9px!important}
+  #settings .settings-operation-console .ops-report>div{grid-template-columns:minmax(0,1fr) minmax(85px,auto)}
+  #settings .settings-operations-tools .ops-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
