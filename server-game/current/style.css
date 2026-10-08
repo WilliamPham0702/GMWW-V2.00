@@ -3645,3 +3645,12 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-n
 body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-nav{display:flex!important;visibility:visible!important;pointer-events:auto!important}
 body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-nav>span{display:grid;place-items:center;width:44px;height:44px;font-size:34px;color:#d3f5ff;filter:drop-shadow(0 3px 4px #042c54)}
+
+/* V3.44 hotfix: remove duplicate sign over the sign already baked into hero artwork. */
+#home .gmww-home-v344 .gmww-home-brand{display:none!important}
+#home .gmww-home-v344 .gmww-home-poster{width:calc(100% + 22px)!important;margin-left:-11px!important;margin-right:-11px!important;aspect-ratio:0.98!important;max-height:none!important;overflow:visible!important}
+#home .gmww-home-v344 .gmww-home-hero{inset:0!important;border-radius:0!important}
+#home .gmww-home-v344 .gmww-home-entry{bottom:-10px!important}
+#home .gmww-home-v344 .gmww-home-explore{margin-top:13px!important}
+#home .gmww-home-v344 .gmww-home-play-arrow{display:none!important}
+#home .gmww-home-v344 .gmww-home-play:before{content:"🐚   ✦   🐚"!important}
