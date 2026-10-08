@@ -39,3 +39,9 @@
 - Phần **cơ thể, góc nghiêng, góc sau** vẫn là Rig vector thử nghiệm, **chưa phải Skin phân lớp hoàn chỉnh**.
 - 9 Action giữ nguyên. Tư thế ngồi xếp bằng dùng lớp chân riêng và chuyển mờ theo `sitBlend` khi ngồi/đứng.
 - Phần xoay khi đi có heading liên tục, không bước ngang mặt trước. **Chỉ trên nhánh thử nghiệm, chưa Production hoặc IPA.**
+
+## Cập nhật bộ trang phục nguyên ảnh gốc (nhánh thử nghiệm)
+- Mặt + tóc trước: texture gốc Character-01, xoay cố định 12° để bù độ nghiêng của ảnh nguồn; không có chuyển động lắc/nghiêng đầu.
+- Áo mở ngực cơ bắp, quần hoa, dép ở **mặt trước**: lấy chi tiết texture từ **cùng ảnh gốc**, cắt vào mặt nạ phần thân/quần/dép chuyển động riêng.
+- Mặt nghiêng trái/phải và sau lưng: vẽ theo outfit gốc (áo xanh ngọc, họa tiết, quần hoa, dép), **chưa phải ảnh gốc được minh họa lại hoàn chỉnh**.
+- Giữ 9 Action; vẫn yêu cầu nghiệm thu ngoại hình từng hướng, hành động, chân bám đất trước khi merge hoặc Production.
