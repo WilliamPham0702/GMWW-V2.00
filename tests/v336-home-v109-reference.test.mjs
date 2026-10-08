@@ -57,7 +57,7 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
 
-test("Trang Chủ v3.47 có ba thẻ Khám phá gắn nhãn và menu 4 mục kiểu biển",()=>{
+test("Trang Chủ v3.47 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
  const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
@@ -68,7 +68,7 @@ test("Trang Chủ v3.47 có ba thẻ Khám phá gắn nhãn và menu 4 mục ki�
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.47-compact-settings-1/);
+ assert.match(html,/style\.css\?v=3\.47-sea-home-1/);
 });
 
 
@@ -77,7 +77,7 @@ test("Trang Chủ V3.47 phản ánh thiết kế đã duyệt, không giả dữ
  assert.match(home,/gmww-home-poster/);
  assert.match(home,/gmww-home-v344/);
  assert.match(home,/gmww-home-profile/);
- assert.match(home,/gmww-home-brand-title">WilliamPham</);
+ assert.doesNotMatch(home,/class="gmww-home-brand"/);
  assert.match(home,/Ma Sói|MA SÓI/);
  assert.match(home,/gmww-home-hero-art/);
  assert.match(home,/gmwwHomeEnterVillage/);
