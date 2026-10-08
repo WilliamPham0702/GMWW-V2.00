@@ -6,6 +6,7 @@ on:
       - 'assets/village/rig-skin-*.mjs'
       - 'assets/village/rig-skin-demo.html'
       - 'tests/rig-skin-master.test.mjs'
+      - 'tools/build-rig-skin-offline.mjs'
       - 'docs/rig-skin-character01-proof.md'
       - '.github/workflows/check-rig-skin-proof.yml'
   workflow_dispatch:
@@ -25,6 +26,10 @@ jobs:
           node --test tests/rig-skin-master.test.mjs
       - name: Install Worker development dependency
         run: npm install
+      - name: Build single-file offline Character-01 preview
+        run: |
+          node tools/build-rig-skin-offline.mjs
+          test -s rig-skin-character01-offline.html
       - name: Serve isolated rig lab with Worker local assets
         shell: bash
         run: |
@@ -56,6 +61,10 @@ jobs:
           test -s rig-skin-walk.png
           test -s rig-skin-sit.png
           test -s rig-skin-30.png
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=1800 \
+            --dump-dom "file://$PWD/rig-skin-character01-offline.html" > /tmp/rig-offline-dom.html
+          grep -q 'data-joint="shinL"' /tmp/rig-offline-dom.html
+          grep -q '<option value="walk"' /tmp/rig-offline-dom.html
       - name: Upload motion-proof screenshots
         uses: actions/upload-artifact@v4
         if: always()
@@ -65,6 +74,7 @@ jobs:
             rig-skin-walk.png
             rig-skin-sit.png
             rig-skin-30.png
+            rig-skin-character01-offline.html
           retention-days: 7
       - name: Stop local Worker
         if: always()
