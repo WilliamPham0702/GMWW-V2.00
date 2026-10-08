@@ -41,7 +41,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.40<\/title>/);
+  assert.match(html,/<title>GMWW V3\.41<\/title>/);
 });
 
 
@@ -57,12 +57,12 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
 
-test("Trang Chủ v3.40 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
+test("Trang Chủ v3.41 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
  const labels=[...home.matchAll(/class="gmww-home-tile-label">([^<]+)/g)].map(x=>x[1]);
  assert.deepEqual(labels,["BỘ BÀI","THÀNH VIÊN","HÀNH ĐỘNG"]);
  assert.match(html,/id="bottomNav"/);
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.40-ota-fix-1/);
+ assert.match(html,/style\.css\?v=3\.41-popup-fix-1/);
 });
