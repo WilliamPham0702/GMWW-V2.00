@@ -29,12 +29,12 @@ export function svgMarkup(s){
     <!-- Cross-legged pose is a dedicated soft silhouette, not a crouched standing leg rig.
          Opacity eases during sit-down/stand-up; no rigid disconnected kneecaps. -->
     <g data-seated-legs opacity="0">
-      <path d="M-13 1 Q-44 -6 -45 17 Q-39 28 14 27" fill="none" stroke="${c.shade}" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M-13 -1 Q-42 -8 -43 15 Q-34 25 17 25" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M13 1 Q44 -6 45 17 Q39 29 -14 28" fill="none" stroke="${c.shade}" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M13 -1 Q42 -8 43 15 Q34 25 -17 26" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M8 21 Q20 15 29 24 L30 29 Q22 34 8 29Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M-8 21 Q-20 15 -29 24 L-30 29 Q-22 34 -8 29Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M-13 0 Q-39 -3 -39 9 Q-30 19 13 19" fill="none" stroke="${c.light}" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M-13 -1 Q-37 -3 -37 9 Q-29 17 14 17" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13 0 Q39 -3 39 9 Q30 19 -13 19" fill="none" stroke="${c.light}" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13 -1 Q37 -3 37 9 Q29 17 -14 17" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 16 Q20 14 27 19 L28 22 Q20 26 8 22Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M-8 16 Q-20 14 -27 19 L-28 22 Q-20 26 -8 22Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
     </g>
     <path data-shorts fill="${c.shorts}" stroke="#138fa4" stroke-width="2" stroke-linejoin="round"/>
     <path data-shorts-waist fill="none" stroke="${c.vestLight}" stroke-width="4"/>
