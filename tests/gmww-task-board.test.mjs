@@ -53,3 +53,36 @@ test("An explicit in-progress title reflects tracked ongoing work without requir
   const x=normalizeGmwwTasks([{number:61,title:"P1 — Đang thực hiện: nhân vật ngồi xếp bằng",state:"open",labels:[]}]);
   assert.equal(x.open[0].state,"doing");
 });
+
+test("Workboard includes every GitHub Issues page, excluding PRs",async()=>{
+  const page2=GMWW_TASK_SOURCE+"&page=2";
+  const seen=[];
+  const get=async(url)=>{
+    seen.push(url);
+    if(url===GMWW_TASK_SOURCE){
+      return new Response(JSON.stringify([
+        {number:64,title:"P0 Đang thực hiện kiểm kê",state:"open",labels:[]},
+        {number:63,title:"PR V3.26",state:"closed",pull_request:{url:"https://api.github.com/pr/63"}}
+      ]),{headers:{link:'<'+page2+'>; rel="next", <'+page2+'>; rel="last"'}});
+    }
+    if(url===page2)return new Response(JSON.stringify([
+      {number:62,title:"Đã hoàn thành giao diện V3.26",state:"closed",state_reason:"completed",labels:[]},
+      {number:50,title:"P0 Bảo mật",state:"open",labels:[]}
+    ]));
+    throw new Error("Unexpected page "+url);
+  };
+  const data=await fetchGmwwTasks(get);
+  assert.deepEqual(seen,[GMWW_TASK_SOURCE,page2]);
+  assert.deepEqual(data.open.map(x=>x.number),[64,50]);
+  assert.deepEqual(data.history.map(x=>x.number),[62]);
+  assert.equal(data.totals.open,2);
+  assert.equal(data.totals.history,1);
+});
+test("Workboard never truncates completed history",()=>{
+  const data=normalizeGmwwTasks(Array.from({length:45},(_,i)=>({number:i+1,title:"Hoàn thành "+i,state:"closed",state_reason:"completed"})));
+  assert.equal(data.history.length,45);
+});
+test("Workboard rejects unsafe pagination links",async()=>{
+  const fake=async()=>new Response("[]",{headers:{link:'<https://evil.example/issues?page=2>; rel="next"'}});
+  await assert.rejects(fetchGmwwTasks(fake),/TASK_SOURCE_PAGE_INVALID/);
+});

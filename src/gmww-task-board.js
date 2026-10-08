@@ -22,15 +22,34 @@ export function normalizeGmwwTasks(rows){
     .sort((a,b)=>(a.state==="doing"?0:1)-(b.state==="doing"?0:1)
       ||(a.priority?Number(a.priority.slice(1)):3)-(b.priority?Number(b.priority.slice(1)):3)
       ||b.number-a.number);
-  const history=tasks.filter(x=>x.state!=="doing"&&x.state!=="pending").sort((a,b)=>b.number-a.number).slice(0,30);
+  const history=tasks.filter(x=>x.state!=="doing"&&x.state!=="pending").sort((a,b)=>b.number-a.number);
   return {open,history,totals:{open:open.length,doing:open.filter(x=>x.state==="doing").length,
     pending:open.filter(x=>x.state==="pending").length,history:history.length}};
 }
+// GitHub Issues includes pull requests in the same paginated feed.
+// Read every page so both unfinished requests and completed history remain visible.
+const GMWW_TASK_MAX_PAGES=50;
 export async function fetchGmwwTasks(fetchFn=fetch){
-  const response=await fetchFn(GMWW_TASK_SOURCE,{
-    method:"GET",headers:{"accept":"application/vnd.github+json","user-agent":"GMWW-Workboard"},
-    cf:{cacheEverything:true,cacheTtl:120}
-  });
-  if(!response.ok)throw new Error("TASK_SOURCE_HTTP_"+response.status);
-  return normalizeGmwwTasks(await response.json());
+  const seen=new Set(),rows=[];
+  let nextUrl=GMWW_TASK_SOURCE;
+  while(nextUrl){
+    if(seen.has(nextUrl))throw new Error("TASK_SOURCE_PAGE_LOOP");
+    if(seen.size>=GMWW_TASK_MAX_PAGES)throw new Error("TASK_SOURCE_PAGE_LIMIT");
+    // Follow only GitHub issue listing links for our public repository.
+    if(!nextUrl.startsWith("https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/issues?"))
+      throw new Error("TASK_SOURCE_PAGE_INVALID");
+    seen.add(nextUrl);
+    const response=await fetchFn(nextUrl,{
+      method:"GET",headers:{"accept":"application/vnd.github+json","user-agent":"GMWW-Workboard"},
+      cf:{cacheEverything:true,cacheTtl:120}
+    });
+    if(!response.ok)throw new Error("TASK_SOURCE_HTTP_"+response.status);
+    const page=await response.json();
+    if(!Array.isArray(page))throw new Error("TASK_SOURCE_INVALID");
+    rows.push(...page);
+    const link=response.headers?.get("link")||"";
+    const found=link.match(/<([^>]+)>;\s*rel="next"/i);
+    nextUrl=found?found[1]:null;
+  }
+  return normalizeGmwwTasks(rows);
 }
