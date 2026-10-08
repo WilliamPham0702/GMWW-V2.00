@@ -58,6 +58,7 @@ export function svgMarkup(s){
       <circle data-hand-r r="9" fill="${c.light}" stroke="${c.shade}" stroke-width="1.4"/>
     </g>
     <g data-head>
+      <g data-vector-head opacity="0">
       <path d="M-9 19L9 19L9 35L-9 35Z" fill="${c.skin}"/>
       <ellipse cy="-1" rx="37" ry="37" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.5"/>
       <circle cx="-36" cy="4" r="6" fill="${c.light}"/><circle cx="36" cy="4" r="6" fill="${c.light}"/>
@@ -72,6 +73,7 @@ export function svgMarkup(s){
       <path d="M-9 15Q0 22 10 14Q9 27 -1 26Q-7 25 -9 15Z" data-smile fill="#73352e" stroke="#995b46" stroke-width="1"/>
       <path d="M-6 17Q0 20 6 17" fill="none" stroke="#fff0e7" stroke-width="3"/>
       <path d="M-24 14Q-18 17 -15 14 M15 14Q21 17 24 14" stroke="${c.shade}" stroke-width="1" fill="none" opacity=".4"/>
+      </g>
       <!-- Official Character-01 hair/face, cropped from the existing source asset.
            Limbs and trunk remain independently skinned, never a translated full-body bitmap. -->
       <g data-original-head opacity="1">
