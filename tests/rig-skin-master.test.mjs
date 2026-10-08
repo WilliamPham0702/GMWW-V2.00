@@ -51,10 +51,10 @@ test('walking is leg-and-arm articulation, run has greater knee lift and faster 
   const a=sampleRigAction('walk',195),b=sampleRigAction('walk',585);
   assert.notDeepEqual(a.ankles.L,b.ankles.L);
   assert.notDeepEqual(a.hands.L,b.hands.L);
-  const run=sampleRigAction('run',180);
+  const run=sampleRigAction('run',360);
   assert.ok(clipDuration('run')<clipDuration('walk'));
   assert.ok(run.footLift.L>0||run.footLift.R>0);
-  assert.ok(run.footLift.L>Math.min(a.footLift.L,a.footLift.R));
+  assert.ok(run.footLift.L>Math.max(a.footLift.L,a.footLift.R));
 });
 test('planted foot DOES NOT slide in world coordinates during stance',()=>{
   const d=clipDuration('walk');
