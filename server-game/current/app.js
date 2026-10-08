@@ -1474,7 +1474,7 @@ const PLAY_STEPS=['room','seats','game','roles','deal','battle'];
 const PLAY_STEP_COPY={
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
   game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
-  seats:{k:'SẮP CHỖ NGỒI',t:'Sắp Chỗ Ngồi',x:'GM chạm chiếc lá rồi chọn người chơi; hoặc chọn Ngẫu nhiên để phân phối toàn bộ.',a:'KHÓA GHẾ'},
+  seats:{k:'TẬP HỢP DÂN LÀNG',t:'Tập Hợp Dân Làng',x:'Gọi thành viên vào làng, sắp ngẫu nhiên ưu tiên 8 vị trí vòng trong hoặc GM bố trí thủ công.',a:'CHỐT VỊ TRÍ'},
   roles:{k:'PHÂN VAI',t:'Phân Vai',x:'Vai Trò và Artifact được phân nội bộ, chưa gửi xuống Player Web.',a:'PHÂN VAI'},
   deal:{k:'PHÁT VAI',t:'Phát Vai',x:'Chỉ tại bước này Server mới gửi Vai Trò/Artifact riêng xuống Player Web.',a:'PHÁT VAI'},
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
