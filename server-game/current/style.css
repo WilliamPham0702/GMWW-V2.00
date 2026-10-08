@@ -3329,3 +3329,7 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
   #home .gmww-home-art-v337 .gmww-home-shortcuts{gap:5px!important}
 }
 @media(prefers-reduced-motion:reduce){#home .gmww-home-art-v337 .gmww-home-shortcuts button{transition:none!important}}
+
+/* V3.37 Header utility in original fantasy style */
+#home .gmww-home-head-settings{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;margin-left:3px;padding:0;border:1px solid rgba(255,231,159,.9);border-radius:50%;background:linear-gradient(155deg,#236f96,#053b5e);box-shadow:0 2px 7px #062d4670,inset 0 1px 0 #ffffff6b;color:#ffe8ad;font-size:24px;text-shadow:0 2px 4px #031e35;cursor:pointer}
+#home .gmww-home-head-settings:focus-visible{outline:2px solid #fff0b6;outline-offset:2px}
