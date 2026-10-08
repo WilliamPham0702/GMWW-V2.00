@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GMWW • Rig + Skin Lab • Character-01</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#102a43;color:#f4faff}
+    main{max-width:1100px;margin:auto;padding:18px;display:grid;gap:14px}
+    h1{font-size:clamp(1.2rem,3vw,2rem);margin:0}p{color:#bfd8e9;line-height:1.5;margin:4px 0}
+    .notice{border-left:3px solid #d3b66c;padding:8px 12px;background:#203c53}
+    .layout{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:16px}
+    .panel{background:#1c3b53;border:1px solid #487089;border-radius:18px;padding:16px}
+    .controls{display:grid;gap:12px;align-content:start}
+    label{font-size:.88rem;display:grid;gap:5px;font-weight:600}
+    label.inline{display:flex;align-items:center;gap:8px;font-weight:400}
+    select,input[type=range]{width:100%;max-width:100%}
+    select,button{background:#245576;color:white;border:1px solid #6a9db0;border-radius:10px;padding:10px;font:inherit}
+    button{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f7da8c}
+    button.primary{background:#176e6d} .stage{position:relative;overflow:hidden;min-height:360px;border-radius:14px;
+      background:linear-gradient(#6fc5d4 0%,#b6eff0 55%,#84be86 56%,#4d926e 100%)}
+    .stage:before{content:"";position:absolute;inset:40% -6% auto; height:25%;
+      background:#478993;clip-path:polygon(0 100%,15% 30%,28% 95%,55% 10%,72% 93%,100% 15%,100% 100%);opacity:.6}
+    .fire{position:absolute;bottom:23px;right:22%;font-size:38px;filter:drop-shadow(0 3px 5px #724f28)}
+    .actor{position:absolute;left:50%;bottom:0;width:min(84%,390px);height:340px;transform:translateX(-50%);
+      pointer-events:none;will-change:transform}
+    .actor svg{display:block;width:100%;height:100%}
+    .caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:.8rem;color:#a9c9d8;margin-top:9px}
+    #crowd{display:none;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;height:220px;align-items:end}
+    #crowd.on{display:grid}#crowd .mini{min-width:0;height:90px;overflow:hidden}
+    #crowd .mini svg{height:100%;width:100%}
+    .metric{font-variant-numeric:tabular-nums}small{color:#cde8f6}
+    @media(max-width:720px){.layout{grid-template-columns:1fr}.panel{padding:12px}
+      .stage{min-height:330px}.actor{width:min(98%,360px)}#crowd{grid-template-columns:repeat(6,minmax(0,1fr));height:auto}}
+    @media(prefers-reduced-motion:reduce){.actor{will-change:auto}}
+  </style>
+</head>
+<body><main>
+  <header><h1>Character-01 • Action Rig + Skin Lab</h1>
+    <p>Mẫu chuyển động khớp thật: đùi → cẳng chân → bàn chân; vai → cánh tay → cẳng tay. Một Rig có thể thay Skin.</p>
+    <p class="notice">Bản kiểm chứng độc lập. Chưa thay nhân vật trong Production, chưa áp dụng đồng loạt 42 Character.</p>
+  </header>
+  <section class="layout">
+    <form id="controls" class="panel controls" autocomplete="off">
+      <label>Chọn Action (33 chuyển động)
+        <select id="action" aria-label="Chọn hành động"></select>
+      </label>
+      <label>Thay Skin – giữ nguyên Rig
+        <select id="skin"><option value="0">Chiến binh biển</option><option value="1">Chiến binh rừng</option></select>
+      </label>
+      <label>Phong cách chuyển động
+        <select id="personality"><option value="balanced">Cân bằng</option><option value="bold">Mạnh mẽ</option><option value="calm">Điềm tĩnh</option></select>
+      </label>
+      <label>Tốc độ <output id="speedLabel">1.00×</output><input id="speed" type="range" min="0.25" max="3" step="0.25" value="1"></label>
+      <label class="inline"><input id="secondary" type="checkbox" checked> Tóc và phụ kiện chuyển động</label>
+      <label class="inline"><input id="footLock" type="checkbox" checked> Bù chuyển động chân khi bước</label>
+      <label class="inline"><input id="smooth" type="checkbox" checked> Chuyển mượt giữa các Action</label>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button type="button" id="replay" class="primary">Phát lại Action</button>
+        <button type="button" id="toggle">Tạm dừng</button>
+        <button type="button" id="crowdButton">Thử 30 Character</button>
+      </div>
+      <small id="actionInfo" aria-live="polite"></small>
+    </form>
+    <section class="panel">
+      <div class="stage" id="stage"><div class="fire" aria-hidden="true">🔥</div><div class="actor" id="actor"></div></div>
+      <div class="caption"><span id="status">Action: Idle</span><span class="metric" id="fps">FPS: —</span></div>
+      <div id="crowd" aria-label="Đo tải giả lập 30 nhân vật cùng dùng master Rig"></div>
+      <p style="margin-top:10px">30 Character trong thử nghiệm dùng chung Action Rig và thay Skin thông số. Chỉ là phép thử renderer; chưa xác nhận khả năng chịu tải của Player Web thực tế.</p>
+    </section>
+  </section>
+</main>
+<script type="module">
+import {ACTION_CATALOG,ACTION_GROUPS,SAMPLE_SKINS,sampleRigAction,clipDuration,isLoopingAction} from './rig-skin-core.mjs';
+import {mountRigSkin} from './rig-skin-renderer.mjs';
+const byId=id=>document.getElementById(id);
+const actionEl=byId('action'),skinEl=byId('skin'),speedEl=byId('speed'),status=byId('status');
+for(const group of ACTION_GROUPS){
+  const optgroup=document.createElement('optgroup');optgroup.label=group.name;
+  for(const [id,label] of group.actions){
+    if(ACTION_CATALOG.find(a=>a.id===id)?.type==='system')continue;
+    const option=document.createElement('option');option.value=id;option.textContent=label;optgroup.append(option);
+  }
+  if(optgroup.children.length)actionEl.append(optgroup);
+}
+let rig=mountRigSkin(byId('actor'),{skin:SAMPLE_SKINS[0]});
+let selected='idle',previous=null,actionStart=performance.now(),blendStart=performance.now(),paused=false,pauseAt=0,frame=0,lastFpsAt=0;
+let rigs=[];
+const crowdEl=byId('crowd');
+function setupSkin(){
+  rig=mountRigSkin(byId('actor'),{skin:SAMPLE_SKINS[Number(skinEl.value)]});
+  if(rigs.length){rigs=[];crowdEl.replaceChildren();addCrowd()}
+}
+function addCrowd(){
+  for(let i=0;i<30;i++){
+    const wrap=document.createElement('div');wrap.className='mini';crowdEl.append(wrap);
+    rigs.push(mountRigSkin(wrap,{skin:SAMPLE_SKINS[(Number(skinEl.value)+i)%SAMPLE_SKINS.length]}));
+  }
+}
+function selectAction(){
+  previous=selected;selected=actionEl.value;
+  actionStart=performance.now();blendStart=actionStart;
+  const label=ACTION_CATALOG.find(a=>a.id===selected)?.label||selected;
+  status.textContent='Action: '+label;
+  byId('actionInfo').textContent=(isLoopingAction(selected)?'Lặp liên tục':'Phát một lần')+' · chu kỳ '+clipDuration(selected)+' ms';
+}
+actionEl.addEventListener('change',selectAction);
+skinEl.addEventListener('change',setupSkin);
+speedEl.addEventListener('input',()=>{byId('speedLabel').textContent=Number(speedEl.value).toFixed(2)+'×'});
+byId('replay').addEventListener('click',()=>{previous=null;actionStart=performance.now();blendStart=actionStart});
+byId('toggle').addEventListener('click',()=>{
+  paused=!paused;if(paused){pauseAt=performance.now();byId('toggle').textContent='Tiếp tục'}
+  else{const gap=performance.now()-pauseAt;actionStart+=gap;blendStart+=gap;byId('toggle').textContent='Tạm dừng'}
+});
+byId('crowdButton').addEventListener('click',()=>{
+  if(rigs.length){rigs=[];crowdEl.replaceChildren();crowdEl.classList.remove('on');byId('crowdButton').textContent='Thử 30 Character'}
+  else{addCrowd();crowdEl.classList.add('on');byId('crowdButton').textContent='Ẩn 30 Character'}
+});
+function draw(now){
+  requestAnimationFrame(draw);
+  if(paused)return;
+  const elapsed=now-actionStart,options={
+    speed:Number(speedEl.value),personality:byId('personality').value,
+    secondaryMotion:byId('secondary').checked,footLock:byId('footLock').checked,
+    previousAction:byId('smooth').checked?previous:null,
+    transitionElapsedMs:now-blendStart,blendMs:220
+  };
+  rig.render(sampleRigAction(selected,elapsed,options));
+  for(let i=0;i<rigs.length;i++){
+    const crowdId=i%3===0?'walk':i%3===1?'idle':'sit';
+    rigs[i].render(sampleRigAction(crowdId,elapsed+i*173,{
+      speed:options.speed,personality:options.personality,
+      secondaryMotion:options.secondaryMotion,footLock:options.footLock
+    }));
+  }
+  if(selected==='walk'||selected==='run'||selected==='wander'){
+    const stride=selected==='run'?28:15;
+    const travel=(elapsed/1300)%2;
+    byId('actor').style.transform='translateX(calc(-50% + '+(Math.sin(travel*Math.PI)*stride).toFixed(2)+'px))';
+  }else{byId('actor').style.transform='translateX(-50%)'}
+  frame++;if(now-lastFpsAt>1000){
+    if(lastFpsAt)byId('fps').textContent='FPS mẫu: '+Math.round(frame*1000/(now-lastFpsAt));
+    frame=0;lastFpsAt=now;
+  }
+}
+selectAction();
+requestAnimationFrame(draw);
+</script></body></html>
