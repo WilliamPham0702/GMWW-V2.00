@@ -59,7 +59,7 @@ test('Operations tools are visibly integrated into the existing GM settings page
   for(const id of ['gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsExportReport',
     'opsAutoCheck','opsServerState','opsStorageState','opsRealtimeState','opsReleaseState','opsReport'])
     assert.match(settings,new RegExp('id="'+id+'"'));
-  assert.ok(settings.indexOf('gmwwOpsCenter')>settings.indexOf('systemDiagnosticsCard'));
+  assert.ok(settings.indexOf('gmwwOpsCenter')<settings.indexOf('systemDiagnosticsCard'));
   assert.match(css,/\.gmww-ops-card/);
   assert.match(css,/\.ops-status-grid/);
   assert.match(css,/\.ops-tools/);
