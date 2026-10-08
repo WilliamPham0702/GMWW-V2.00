@@ -3640,3 +3640,8 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-n
 #settings #updateManagerCard .update-actions-three>.settings-action{width:100%!important;min-width:0!important}
 @media(max-width:360px){#settings .settings-operations-tools :is(.settings-action,.ops-auto){flex-basis:calc((100% - 14px)/3.07)!important;width:calc((100% - 14px)/3.07)!important;height:72px!important;min-height:72px!important}#settings .settings-operations-tools .settings-action>b,#settings .settings-operations-tools .ops-auto span{font-size:9.5px!important}}
 @media(min-width:450px){#settings .settings-operations-tools :is(.settings-action,.ops-auto){flex-basis:calc((100% - 24px)/4.12)!important;width:calc((100% - 24px)/4.12)!important}}
+
+/* Restore the fifth navigation item requested by GM; keep Chơi centered. */
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-nav{display:flex!important;visibility:visible!important;pointer-events:auto!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-nav>span{display:grid;place-items:center;width:44px;height:44px;font-size:34px;color:#d3f5ff;filter:drop-shadow(0 3px 4px #042c54)}
