@@ -8,6 +8,7 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
+import { characterV4Status } from "./gmww-character-v4.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
@@ -1233,6 +1234,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/village"&&request.method==="GET")return memberStore(env).fetch('https://member.internal/village/state');
   if(url.pathname==="/api/village/move"&&request.method==="POST")return memberStore(env).fetch(new Request('https://member.internal/village/move',{method:'POST',headers:request.headers,body:JSON.stringify(await safeJson(request)||{})}));
   const seatSwapRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/seat-swap$/);if(seatSwapRoute&&request.method==='POST')return playerSeatSwapApi(env,seatSwapRoute[1],request);
+  if(url.pathname==="/api/game-characters/v4"&&request.method==="GET")return j(characterV4Status());
   if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,frameCount:6,characters:gameCharacterCatalog()});
   const gameCharacterFrameRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/frame\/([1-6])$/);if(gameCharacterFrameRoute&&request.method==="GET")return gameCharacterFrame(env,gameCharacterFrameRoute[1],Number(gameCharacterFrameRoute[2]),request);
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return gameCharacterImage(env,gameCharacterImageRoute[1],request);
