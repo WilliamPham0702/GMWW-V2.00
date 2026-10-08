@@ -45,13 +45,22 @@
 </head>
 <body><main>
   <header><h1>Character-01 • Action Rig + Skin Lab</h1>
-    <p>Bản mẫu 9 Action. Cơ thể vẽ liền nét, chân có nhịp nhấc và bám đất; đối chiếu ảnh Character-01 gốc bên dưới.</p>
+    <p>Bản mẫu 9 Action, di chuyển đủ 4 hướng: xoay theo hướng đích rồi mới bước. Không còn trượt ngang khi vẫn nhìn chính diện.</p>
     <p class="notice">Bản kiểm chứng độc lập: 9 Action theo yêu cầu, Skin vector chỉ dùng thử. Chưa thay nhân vật trong Production và chưa cập nhật IPA.</p>
   </header>
   <section class="layout">
     <form id="controls" class="panel controls" autocomplete="off">
       <label>Chọn Action (9 hành động)
         <select id="action" aria-label="Chọn hành động"></select>
+      </label>
+      <label>Hướng di chuyển (đi bộ/chạy)
+        <select id="direction" aria-label="Chọn hướng di chuyển">
+          <option value="auto">Tự động: Phải → Lên → Trái → Xuống</option>
+          <option value="right">Sang phải – quay phải</option>
+          <option value="up">Đi lên – quay lưng</option>
+          <option value="left">Sang trái – quay trái</option>
+          <option value="down">Đi xuống – quay mặt về trước</option>
+        </select>
       </label>
       <label>Thay Skin – giữ nguyên Rig
         <select id="skin"><option value="0">Phong cách biển Character-01</option><option value="1">Skin biến thể</option></select>
@@ -76,13 +85,14 @@
       <div class="scale-preview"><div id="smallActor" class="thumb" aria-label="Nhân vật 80 pixel"></div><span><strong>Thử ở kích thước nhỏ</strong> — minh họa nhân vật cao khoảng 80–100px trong làng, đồng bộ hành động với nhân vật lớn bên trên.</span></div>
       <div class="reference"><img src="../characters/v253/chibi-01.webp" alt="Artwork Character-01 gốc từ GMWW" width="94" height="120"><p><strong>Đối chiếu Character-01 gốc</strong> — tóc đen, cơ bắp, áo xanh ngọc, quần đi biển. Skin bên trên mới là bản vector thử nghiệm, chưa thay thế được artwork gốc.</p></div>
       <div id="crowd" aria-label="Đo tải giả lập 30 nhân vật cùng dùng master Rig"></div>
-      <p style="margin-top:10px">Đoạn đi/chạy minh họa có dịch chuyển vị trí để kiểm tra chân có bám đất. 30 nhân vật chỉ để thử tải; chưa là xác nhận trên iPhone thật.</p>
+      <p style="margin-top:10px">Đoạn đi/chạy bây giờ xoay đúng hướng trước khi dịch chuyển: trái, phải, lưng khi đi lên và chính diện khi đi xuống. 30 nhân vật chỉ để thử tải; chưa là xác nhận trên iPhone thật.</p>
     </section>
   </section>
 </main>
 <script type="module">
 import {ACTION_CATALOG,ACTION_GROUPS,SAMPLE_SKINS,sampleRigAction,clipDuration,isLoopingAction} from './rig-skin-core.mjs';
 import {mountRigSkin} from './rig-skin-renderer.mjs';
+import {sampleVillageRoute,DIRECTION_LABELS} from './rig-skin-navigation.mjs';
 const byId=id=>document.getElementById(id);
 const actionEl=byId('action'),skinEl=byId('skin'),speedEl=byId('speed'),status=byId('status');
 for(const group of ACTION_GROUPS){
@@ -117,6 +127,8 @@ function selectAction(){
   byId('actionInfo').textContent=(isLoopingAction(selected)?'Lặp liên tục':'Phát một lần')+' · chu kỳ '+clipDuration(selected)+' ms';
 }
 actionEl.addEventListener('change',selectAction);
+byId('direction').addEventListener('change',()=>{actionStart=performance.now();blendStart=actionStart});
+
 skinEl.addEventListener('change',setupSkin);
 speedEl.addEventListener('input',()=>{byId('speedLabel').textContent=Number(speedEl.value).toFixed(2)+'×'});
 byId('replay').addEventListener('click',()=>{previous=null;actionStart=performance.now();blendStart=actionStart});
@@ -137,7 +149,15 @@ function draw(now){
     previousAction:byId('smooth').checked?previous:null,
     transitionElapsedMs:now-blendStart,blendMs:220
   };
-  const pose=sampleRigAction(selected,elapsed,options);rig.render(pose);smallRig.render(pose);
+  const isMovingAction=selected==='walk'||selected==='run';
+  const navigation=isMovingAction?sampleVillageRoute(elapsed,{mode:byId('direction').value,run:selected==='run',speed:options.speed}):null;
+  const facing=navigation?.direction||'down';
+  // Turning phase is IDLE: no world displacement until facing the selected heading.
+  const effectiveAction=navigation?.animation||selected;
+  const poseElapsed=navigation?navigation.motionElapsedMs/options.speed:elapsed;
+  const pose=sampleRigAction(effectiveAction,poseElapsed,options);
+  rig.render(pose,{facing});smallRig.render(pose,{facing});
+  if(navigation)byId('actionInfo').textContent=(navigation.turning?'Đang xoay · ':'Đang bước · ')+DIRECTION_LABELS[facing]+' · Không đi ngang như cua';
   for(let i=0;i<rigs.length;i++){
     const crowdId=i%3===0?'walk':i%3===1?'idle':'sit';
     rigs[i].render(sampleRigAction(crowdId,elapsed+i*173,{
@@ -145,11 +165,11 @@ function draw(now){
       footLock:options.footLock,outcome:options.outcome
     }));
   }
-  if(selected==='walk'||selected==='run'){
-    // World translation and stance-foot local counter-translation are driven by the SAME stride.
-    const scale=byId('actor').getBoundingClientRect().height/305;
-    const distance=pose.worldX*scale;const track=((distance+95)%190)-95;
-    byId('actor').style.transform='translateX(calc(-50% + '+track.toFixed(2)+'px))';
+  if(navigation){
+    const stage=byId('stage');
+    const dx=navigation.position.x*stage.clientWidth;
+    const dy=navigation.position.y*stage.clientHeight*.8;
+    byId('actor').style.transform='translate(calc(-50% + '+dx.toFixed(2)+'px), '+dy.toFixed(2)+'px)';
   }else{byId('actor').style.transform='translateX(-50%)'}
   frame++;if(now-lastFpsAt>1000){
     if(lastFpsAt)byId('fps').textContent='FPS mẫu: '+Math.round(frame*1000/(now-lastFpsAt));
@@ -158,6 +178,8 @@ function draw(now){
 }
 const demoParams=new URLSearchParams(location.search);
 const requestedAction=demoParams.get('action');
+const requestedDirection=demoParams.get('direction');
+if(requestedDirection&&[...Object.keys(DIRECTION_LABELS),'auto'].includes(requestedDirection))byId('direction').value=requestedDirection;
 if(requestedAction&&ACTION_CATALOG.some(a=>a.id===requestedAction&&a.type==='motion'))actionEl.value=requestedAction;
 if(demoParams.get('crowd')==='30')byId('crowdButton').click();
 selectAction();
