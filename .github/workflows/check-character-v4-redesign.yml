@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'assets/characters/v4/**'
+      - 'tests/character-v4-web-preview.test.mjs'
       - 'docs/character-v4-redesign.md'
       - 'tests/character-v4-manifest.test.mjs'
       - '.github/workflows/check-character-v4-redesign.yml'
@@ -18,10 +19,11 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
           test -s assets/characters/v4/manifest.json
+          test -s assets/characters/v4/index.html
           ! grep -q 'assets/characters/v4' assets/village/village.mjs
           ! grep -q 'assets/characters/v4' server-game/current/character-renderer.js
