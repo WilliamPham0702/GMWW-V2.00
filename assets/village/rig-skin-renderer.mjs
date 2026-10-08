@@ -9,7 +9,7 @@ const curve=(a,b,c)=>'M'+p(a)+' Q'+p(b)+' '+p(c);
 const point=(x,y)=>({x,y});
 export function svgMarkup(s){
   const c=validateSkin(s);
-  return `<svg class="rig-skin-svg" viewBox="95 18 210 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Chibi nam cơ bắp, tay và chân nối liền mạch">
+  return `<svg class="rig-skin-svg" viewBox="95 18 210 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Character-01 GMWW có mặt và tóc từ artwork gốc, tay chân chuyển động mềm"><defs><clipPath id="character01-original-head-clip"><path d="M-11 -55 Q17 -66 35 -42 Q52 -22 43 5 Q37 30 15 39 Q-11 47 -33 29 Q-49 9 -48 -20 Q-45 -47 -11 -55Z"/></clipPath></defs>
   <ellipse data-shadow cx="200" cy="297" rx="42" ry="6" fill="#133b38" opacity=".26"/>
   <g data-body>
     <g data-leg-left>
@@ -72,6 +72,12 @@ export function svgMarkup(s){
       <path d="M-9 15Q0 22 10 14Q9 27 -1 26Q-7 25 -9 15Z" data-smile fill="#73352e" stroke="#995b46" stroke-width="1"/>
       <path d="M-6 17Q0 20 6 17" fill="none" stroke="#fff0e7" stroke-width="3"/>
       <path d="M-24 14Q-18 17 -15 14 M15 14Q21 17 24 14" stroke="${c.shade}" stroke-width="1" fill="none" opacity=".4"/>
+      <!-- Official Character-01 hair/face, cropped from the existing source asset.
+           Limbs and trunk remain independently skinned, never a translated full-body bitmap. -->
+      <g data-original-head opacity="1">
+        <image href="../characters/v253/chibi-01.webp" x="-91" y="-52" width="182" height="227.5"
+          preserveAspectRatio="none" clip-path="url(#character01-original-head-clip)"/>
+      </g>
       <!-- Side profile visibly differs from the frontal face, rather than sliding sideways. -->
       <g data-profile-face opacity="0">
         <ellipse cx="0" cy="-2" rx="36" ry="37" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4"/>
@@ -99,7 +105,7 @@ function nodesFor(svg){
     'sandal-l','sandal-r','strap-l','strap-r','shorts','shorts-waist',
     'flower-l','flower-r','arm-l','arm-r','arm-l-highlight','arm-r-highlight',
     'hand-l','hand-r','chest','vest-left','vest-right','abs-1','abs-2','abs-3','abs-middle',
-    'necklace','pendant','head','eyes','smile','rear-torso','profile-face','rear-head'
+    'necklace','pendant','head','eyes','smile','rear-torso','profile-face','rear-head','original-head'
   ])n[attr]=byAttr(svg,attr);return n;
 }
 const set=(n,k,v)=>n?.setAttribute(k,v);
@@ -108,15 +114,19 @@ export function renderRigPose(nodes,pose,{facing='down'}={}){
   const b=nodes;
   // Keep world displacement separate from body orientation. Never side-step with a front-facing sprite.
   const valid=['left','right','up','down'].includes(facing)?facing:'down';
-  const profile=valid==='left'||valid==='right';
-  const xScale=valid==='left'?-.7:valid==='right'?.7:1;
+  const facingDegrees={down:0,right:90,up:180,left:270};
+  const angle=Number.isFinite(arguments[2]?.headingDeg)?arguments[2].headingDeg:facingDegrees[valid];
+  const rad=angle*Math.PI/180,front=Math.max(0,Math.cos(rad)),back=Math.max(0,-Math.cos(rad)),profile=Math.abs(Math.sin(rad));
+  const weights=front+profile+back||1;
+  const xScale=(Math.sin(rad)<-.0001?-1:1)*(1-.3*profile);
   set(b.body,'transform',`translate(${n(pose.root.x)} ${n(pose.root.y)}) translate(200 0) scale(${xScale} 1) translate(-200 0)`);
-  set(b['rear-head'],'opacity',valid==='up'?'1':'0');
-  set(b['rear-torso'],'opacity',valid==='up'?'1':'0');
+  set(b['rear-head'],'opacity',n(back/weights));
+  set(b['rear-torso'],'opacity',n(back/weights));
   // Rear jacket is a local garment shape: anchor it to the moving shoulder, not SVG origin.
   set(b['rear-torso'],'transform',`translate(${n(200+pose.shoulder.x)} ${n(pose.shoulder.y)})`);
-  set(b['profile-face'],'opacity',profile?'1':'0');
-  if(b.svg)b.svg.dataset.facing=valid;
+  set(b['profile-face'],'opacity',n(profile/weights));
+  set(b['original-head'],'opacity',n(front/weights));
+  if(b.svg){b.svg.dataset.facing=valid;b.svg.dataset.heading=String(Math.round(angle));}
   set(b.body,'opacity',n(pose.alpha));
   set(b.shadow,'rx',n(42*pose.shadow));
 
