@@ -85,6 +85,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/web-sync"&&request.method==="GET")return this.globalWebSyncGet();
     if(url.pathname==="/global-settings/web-sync"&&request.method==="POST")return this.globalWebSyncBump(await safeJson(request));
     if(url.pathname==="/global-settings/gm-presence"&&request.method==="GET")return this.globalGmPresenceGet();
+    if(url.pathname==="/global-settings/lobby-reset"&&request.method==="POST")return this.globalLobbyResetBump(await safeJson(request));
     if(url.pathname==="/global-settings/gm-presence"&&request.method==="POST")return this.globalGmPresencePut(await safeJson(request));
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
@@ -352,6 +353,12 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("globalSetting:webSync",rec);return j({ok:true,...rec});
   }
 
+  async globalLobbyResetBump(body){
+    const old=await this.ctx.storage.get("globalSetting:lobbyReset");
+    const rec={generation:Math.max(0,Number(old?.generation||0))+1,updatedAt:new Date().toISOString(),source:String(body?.source||"GM_LOBBY").slice(0,40)};
+    await this.ctx.storage.put("globalSetting:lobbyReset",rec);
+    return j({ok:true,...rec});
+  }
   async globalGmPresenceGet(){
     const rec=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),lastSeenAt=Math.max(0,Number(rec?.lastSeenAt||0));
     const online=rec?.online===true&&lastSeenAt>0&&(now-lastSeenAt)<=GM_PRESENCE_TTL;
@@ -362,12 +369,12 @@ export class RoomDurableObject extends DurableObject {
     if(!online){
       const rec={...(old||{}),online:false,roomCode:hasRoomCode?roomCode:String(old?.roomCode||""),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
       await this.ctx.storage.put("globalSetting:gmPresence",rec);
-      return j({ok:true,gm:publicGmPresence(rec,false)});
+      return j({ok:true,gm:publicGmPresence(rec,false),lobbyGeneration:Number((await this.ctx.storage.get("globalSetting:lobbyReset"))?.generation||0)});
     }
     const expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL;
     const rec=expired?{online:true,sessionId:randomToken(12),sessionStartedAt:now,lastSeenAt:now,updatedAt:new Date(now).toISOString(),roomCode:hasRoomCode?roomCode:"",moveFromX:null,moveFromY:null,moveToX:null,moveToY:null,moveStartedAt:0,moveDurationMs:0,manualUntil:0}:{...old,online:true,...(hasRoomCode?{roomCode}:{}),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
     await this.ctx.storage.put("globalSetting:gmPresence",rec);
-    return j({ok:true,gm:publicGmPresence(rec,true)});
+    return j({ok:true,gm:publicGmPresence(rec,true),lobbyGeneration:Number((await this.ctx.storage.get("globalSetting:lobbyReset"))?.generation||0)});
   }
   async globalGmMovePut(body){
     const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),expired=old?.online!==true||!Number(old?.lastSeenAt)||now-Number(old.lastSeenAt)>GM_PRESENCE_TTL,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode?(isValidRoomCode(requestedRoomCode)?requestedRoomCode:""):String(old?.roomCode||"");
@@ -1146,6 +1153,10 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
+  if(url.pathname==="/api/gm/lobby/reset"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return gmLobbyResetAll(env,request);
+  }
   if(url.pathname==="/api/gm/rooms"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/directory/rooms/list?includeEnded=1&includeDisabled=1");}
   if(url.pathname==="/api/gm/rooms"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmRoomsPurge(env,request);}
   if(url.pathname==="/api/village"&&request.method==="GET")return memberStore(env).fetch('https://member.internal/village/state');
@@ -1254,6 +1265,36 @@ async function playerArtifactActivateApi(env,raw,request){const c=normalizeRoomC
 async function playerInteractionRespondApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/interaction/respond",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function syncRoomDirectory(env,raw){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return;try{const r=await roomStub(env,c).fetch("https://room.internal/state");if(!r.ok)return;const d=await r.json();await memberStore(env).fetch("https://member.internal/directory/rooms/upsert",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...d.room,code:c,joinedCount:Array.isArray(d.players)?d.players.length:0,leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE})})}catch(e){console.warn("GMWW_ROOM_DIRECTORY_SYNC",e)}}
 async function gmReset939(env,request){const statusRes=await memberStore(env).fetch(new Request("https://member.internal/admin/reset-939",{method:"GET",headers:request.headers})),status=await statusRes.json().catch(()=>({}));if(status?.done)return j({ok:true,done:true,already:true,record:status.record||null});const roomsRes=await gmRoomsPurge(env,request),rooms=await roomsRes.clone().json().catch(()=>({}));if(!roomsRes.ok||rooms?.failed)return j({ok:false,error:"ROOM_PURGE_FAILED",rooms},500);const membersRes=await memberStore(env).fetch(new Request("https://member.internal/members/purge",{method:"DELETE",headers:request.headers})),members=await membersRes.clone().json().catch(()=>({}));if(!membersRes.ok)return j({ok:false,error:"MEMBER_PURGE_FAILED",rooms,members},500);const record={roomsDeleted:Number(rooms?.deleted||0),membersDeleted:Number(members?.membersDeleted||0),sessionsDeleted:Number(members?.sessionsDeleted||0)};const markRes=await memberStore(env).fetch(new Request("https://member.internal/admin/reset-939",{method:"POST",headers:{...Object.fromEntries(request.headers),"content-type":"application/json"},body:JSON.stringify(record)}));if(!markRes.ok)return j({ok:false,error:"RESET_MARK_FAILED",rooms,members},500);return j({ok:true,done:true,rooms,members,...record})}
+async function gmLobbyResetAll(env,request){
+  // Reset all room instances, not member accounts, personal preferences or saved templates.
+  // The directory includes disabled and ended rooms so no stale room can retain participants.
+  const listing=await memberStore(env).fetch("https://member.internal/directory/rooms/list?includeEnded=1&includeDisabled=1");
+  if(!listing.ok)return j({ok:false,error:"LOBBY_ROOM_LIST_FAILED"},502);
+  const directory=await listing.json().catch(()=>({rooms:[]})),rooms=Array.isArray(directory?.rooms)?directory.rooms:[],results=[];
+  const transactionId="lobby-"+Date.now().toString(36);
+  for(const row of rooms){
+    const code=normalizeRoomCode(row?.code);if(!isValidRoomCode(code))continue;
+    try{
+      const resetRequest=new Request("https://room.internal/gm/reset",{method:"POST",headers:request.headers,body:JSON.stringify({forceEnd:true,transactionId:transactionId+"-"+code})});
+      const reset=await gmRoomReset(env,code,resetRequest);
+      if(reset.status===404){
+        await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code})});
+        results.push({code,ok:true,stale:true,playersReturned:0});continue
+      }
+      if(!reset.ok){results.push({code,ok:false,stage:"reset",status:reset.status});continue}
+      const resetBody=await reset.json().catch(()=>({}));
+      const disabled=await gmRoomEnabled(env,code,new Request("https://room.internal/gm/enabled",{method:"POST",headers:request.headers,body:'{"enabled":false}'}));
+      results.push({code,ok:disabled.ok,stage:disabled.ok?"done":"disable",status:disabled.status,playersReturned:Array.isArray(resetBody.removedPlayers)?resetBody.removedPlayers.length:0});
+    }catch(e){results.push({code,ok:false,stage:"exception",error:String(e?.message||e)})}
+  }
+  const failed=results.filter(r=>!r.ok);
+  if(failed.length)return j({ok:false,error:"LOBBY_RESET_PARTIAL",roomsChecked:results.length,failed:failed.length,results},502);
+  const markerResponse=await memberStore(env).fetch("https://member.internal/global-settings/lobby-reset",{method:"POST",headers:{"content-type":"application/json"},body:'{"source":"GM_LOBBY"}'});
+  if(!markerResponse.ok)return j({ok:false,error:"LOBBY_RESET_MARKER_FAILED",roomsChecked:results.length},502);
+  const marker=await markerResponse.json().catch(()=>({}));
+  await memberStore(env).fetch("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true,"roomCode":null}'});
+  return j({ok:true,reset:true,generation:Number(marker.generation||0),roomsReset:results.filter(r=>!r.stale).length,devicesReturned:results.reduce((n,r)=>n+Number(r.playersReturned||0),0),rooms:results});
+}
 async function gmRoomsPurge(env,request){const listing=await memberStore(env).fetch("https://member.internal/directory/rooms/list"),data=await listing.json().catch(()=>({rooms:[]})),rooms=Array.isArray(data?.rooms)?data.rooms:[],results=[];for(const r of rooms){const code=normalizeRoomCode(r?.code);if(!isValidRoomCode(code))continue;try{const res=await gmRoomDelete(env,code,request),body=await res.clone().json().catch(()=>({}));if(res.status===404){await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code})});results.push({code,ok:true,status:404,staleDirectoryRemoved:true});continue}results.push({code,ok:res.ok,status:res.status,error:body?.error||null})}catch(e){results.push({code,ok:false,status:0,error:String(e?.message||e)})}}const failed=results.filter(x=>!x.ok);return j({ok:failed.length===0,purged:failed.length===0,deleted:results.length-failed.length,failed:failed.length,results},failed.length?500:200)}
 async function gmRoomParticipants(env,raw,request){
   const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
