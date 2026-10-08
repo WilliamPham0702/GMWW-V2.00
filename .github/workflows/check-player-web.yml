@@ -29,6 +29,8 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run check
+      - name: Verify synchronized GMWW version numbers
+        run: node .github/scripts/verify-gmww-versions.mjs
       - run: node --check server-game/current/app.js
       - run: node --check assets/village/village.mjs
       - run: npm test

@@ -84,6 +84,21 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
 
+      - name: Block GMWW version rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH="https://gmww-v2-00.williampham0702.workers.dev/api/health"
+          for i in $(seq 1 8); do
+            if curl --connect-timeout 8 --max-time 15 -fsS "$HEALTH?version-guard=$i" > /tmp/gmww-live-health.json &&
+               node .github/scripts/verify-gmww-versions.mjs /tmp/gmww-live-health.json; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Deployment blocked: candidate is older than Production, versions are inconsistent or Production health is unavailable."
+          exit 1
+
       - name: Deploy Worker to Production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
