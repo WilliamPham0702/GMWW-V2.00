@@ -25,6 +25,10 @@
     .actor{position:absolute;left:50%;bottom:0;width:min(84%,390px);height:340px;transform:translateX(-50%);
       pointer-events:none;will-change:transform}
     .actor svg{display:block;width:100%;height:100%}
+    .scale-preview{display:flex;align-items:center;gap:14px;margin-top:12px;padding:11px;border-radius:12px;background:#122d44;border:1px solid #38637a}
+    .scale-preview .thumb{flex:none;width:80px;height:106px;background:linear-gradient(#65bbc9 0 60%,#548a65 60%);border-radius:10px;overflow:hidden}
+    .scale-preview .thumb svg{display:block;width:80px;height:106px}
+    .scale-preview span{font-size:12px;line-height:1.5;color:#cce0ea}
     .reference{display:flex;align-items:center;gap:12px;background:#122d44;border:1px solid #38637a;border-radius:12px;padding:10px;margin-top:12px}
     .reference img{width:76px;height:100px;object-fit:contain;flex:none}
     .reference p{font-size:12px;line-height:1.5;margin:0}
@@ -69,6 +73,7 @@
     <section class="panel">
       <div class="stage" id="stage"><div class="fire" aria-hidden="true">🔥</div><div class="actor" id="actor"></div></div>
       <div class="caption"><span id="status">Action: Idle</span><span class="metric" id="fps">FPS: —</span></div>
+      <div class="scale-preview"><div id="smallActor" class="thumb" aria-label="Nhân vật 80 pixel"></div><span><strong>Thử ở kích thước nhỏ</strong> — minh họa nhân vật cao khoảng 80–100px trong làng, đồng bộ hành động với nhân vật lớn bên trên.</span></div>
       <div class="reference"><img src="../characters/v253/chibi-01.webp" alt="Artwork Character-01 gốc từ GMWW" width="94" height="120"><p><strong>Đối chiếu Character-01 gốc</strong> — tóc đen, cơ bắp, áo xanh ngọc, quần đi biển. Skin bên trên mới là bản vector thử nghiệm, chưa thay thế được artwork gốc.</p></div>
       <div id="crowd" aria-label="Đo tải giả lập 30 nhân vật cùng dùng master Rig"></div>
       <p style="margin-top:10px">Đoạn đi/chạy minh họa có dịch chuyển vị trí để kiểm tra chân có bám đất. 30 nhân vật chỉ để thử tải; chưa là xác nhận trên iPhone thật.</p>
@@ -88,11 +93,13 @@ for(const group of ACTION_GROUPS){
   if(optgroup.children.length)actionEl.append(optgroup);
 }
 let rig=mountRigSkin(byId('actor'),{skin:SAMPLE_SKINS[0]});
+let smallRig=mountRigSkin(byId('smallActor'),{skin:SAMPLE_SKINS[0]});
 let selected='idle',previous=null,actionStart=performance.now(),blendStart=performance.now(),paused=false,pauseAt=0,frame=0,lastFpsAt=0;
 let rigs=[];
 const crowdEl=byId('crowd');
 function setupSkin(){
   rig=mountRigSkin(byId('actor'),{skin:SAMPLE_SKINS[Number(skinEl.value)]});
+  smallRig=mountRigSkin(byId('smallActor'),{skin:SAMPLE_SKINS[Number(skinEl.value)]});
   if(rigs.length){rigs=[];crowdEl.replaceChildren();addCrowd()}
 }
 function addCrowd(){
@@ -130,7 +137,7 @@ function draw(now){
     previousAction:byId('smooth').checked?previous:null,
     transitionElapsedMs:now-blendStart,blendMs:220
   };
-  const pose=sampleRigAction(selected,elapsed,options);rig.render(pose);
+  const pose=sampleRigAction(selected,elapsed,options);rig.render(pose);smallRig.render(pose);
   for(let i=0;i<rigs.length;i++){
     const crowdId=i%3===0?'walk':i%3===1?'idle':'sit';
     rigs[i].render(sampleRigAction(crowdId,elapsed+i*173,{
@@ -140,7 +147,8 @@ function draw(now){
   }
   if(selected==='walk'||selected==='run'){
     // World translation and stance-foot local counter-translation are driven by the SAME stride.
-    const distance=pose.worldX;const track=((distance+95)%190)-95;
+    const scale=byId('actor').getBoundingClientRect().height/305;
+    const distance=pose.worldX*scale;const track=((distance+95)%190)-95;
     byId('actor').style.transform='translateX(calc(-50% + '+track.toFixed(2)+'px))';
   }else{byId('actor').style.transform='translateX(-50%)'}
   frame++;if(now-lastFpsAt>1000){
