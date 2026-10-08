@@ -9,7 +9,7 @@ export function normalizeGmwwTasks(rows){
       const labels=Array.isArray(item.labels)?item.labels.map(x=>String(x?.name||"").toLowerCase()):[],
         active=labels.some(x=>/in.progress|doing|wip|đang.thực.hiện|đang.xử.lý/.test(x))||/đang\s+thực\s+hiện/i.test(String(item.title||"")),
         done=item.state==="closed",
-        state=done?(item.state_reason==="completed"?"completed":"closed"):(active?"doing":"pending"),
+        state=done?(item.state_reason==="completed"?"completed":item.state_reason==="not_planned"?"skipped":"closed"):(active?"doing":"pending"),
         priority=urgency(item.title);
       return {
         number:item.number,title:String(item.title||"Công việc GMWW").slice(0,140),
