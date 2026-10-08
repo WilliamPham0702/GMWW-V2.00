@@ -1,0 +1,68 @@
+name: Check Rig Skin Character-01 Proof
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/village/rig-skin-*.mjs'
+      - 'assets/village/rig-skin-demo.html'
+      - 'tests/rig-skin-master.test.mjs'
+      - 'docs/rig-skin-character01-proof.md'
+      - '.github/workflows/check-rig-skin-proof.yml'
+  workflow_dispatch:
+jobs:
+  rig-skin-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify JavaScript syntax and 39 approved actions
+        run: |
+          node --check assets/village/rig-skin-core.mjs
+          node --check assets/village/rig-skin-renderer.mjs
+          node --test tests/rig-skin-master.test.mjs
+      - name: Install Worker development dependency
+        run: npm install
+      - name: Serve isolated rig lab with Worker local assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/rig-skin-worker.log 2>&1 &
+          echo $! > /tmp/rig-skin-worker.pid
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8787/village/rig-skin-demo.html > /tmp/rig-lab.html; then break; fi
+            sleep 1
+          done
+          grep -q 'Character-01' /tmp/rig-lab.html
+          curl -fsS http://127.0.0.1:8787/village/rig-skin-core.mjs | grep -q 'ACTION_CATALOG'
+      - name: Headless visual smoke for articulated skeleton
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=3200             --dump-dom 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=walk' > /tmp/rig-walk-dom.html
+          grep -q 'data-joint="shinL"' /tmp/rig-walk-dom.html
+          grep -q 'data-joint="forearmR"' /tmp/rig-walk-dom.html
+          grep -q '<option value="walk"' /tmp/rig-walk-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=2800             --screenshot=rig-skin-walk.png 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=walk'
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=2500             --screenshot=rig-skin-sit.png 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=sit'
+          "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=2500             --screenshot=rig-skin-30.png 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=run&crowd=30'
+          test -s rig-skin-walk.png
+          test -s rig-skin-sit.png
+          test -s rig-skin-30.png
+      - name: Upload motion-proof screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rig-skin-character01-walk-sit-30
+          path: |
+            rig-skin-walk.png
+            rig-skin-sit.png
+            rig-skin-30.png
+          retention-days: 7
+      - name: Stop local Worker
+        if: always()
+        run: kill "$(cat /tmp/rig-skin-worker.pid)" 2>/dev/null || true
