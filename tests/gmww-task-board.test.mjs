@@ -31,7 +31,7 @@ test("Workboard fetches public issues read-only without credentials",async()=>{
 });
 test("Unplanned closed work is not misrepresented as completed",()=>{
   const d=normalizeGmwwTasks(rows);
-  assert.equal(d.history.find(x=>x.number===54).state,"closed");
+  assert.equal(d.history.find(x=>x.number===54).state,"skipped");
   assert.equal(d.history.find(x=>x.number===53).state,"completed");
 });
 test("Source errors are explicit instead of fabricated progress",async()=>{
