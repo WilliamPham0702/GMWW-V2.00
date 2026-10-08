@@ -3469,3 +3469,6 @@ body:not(.play-immersive) #bottomNav .nav:focus-visible{
 #playGameSheet #playGameDelete:not([hidden]){display:block;color:#ffe0ce;border-color:#a96361}
 #playGameSheet #playGameDelete[hidden]{display:none!important}
 @media(max-width:390px){#playGameSheet .play-game-role-row{grid-template-columns:21px 34px minmax(0,1fr) 47px 45px 57px!important;gap:3px!important}#playGameSheet .play-game-role-copy b{font-size:10px}}
+
+#settings #updateReleaseNotes{display:block;font-size:11px;color:#ddf6d8;line-height:1.55;padding:8px 0;border-top:1px solid rgba(162,221,218,.25)}
+#settings .settings-health-action #settingsRunHealth:disabled{opacity:.55}

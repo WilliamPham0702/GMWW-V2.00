@@ -1,6 +1,6 @@
 // Fallback public GitHub Issues snapshot generated from the linked repository.
 // Live /api/operations/tasks always takes precedence; mark this snapshot as stale.
-export const GMWW_TASK_SNAPSHOT_GENERATED_AT="2026-10-08T19:45:00+07:00";
+export const GMWW_TASK_SNAPSHOT_GENERATED_AT="2026-10-08";
 export const GMWW_TASK_SNAPSHOT=[
   {
     "number": 103,

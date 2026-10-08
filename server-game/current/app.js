@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.41';
+const VERSION='3.42';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1531,7 +1531,7 @@ async function gmwwTasksRefresh({silent=false}={}){
     const openCount=document.getElementById('gmwwTasksOpenCount'),doneCount=document.getElementById('gmwwTasksDoneCount');
     if(openCount)openCount.textContent=String(open.length);
     if(doneCount)doneCount.textContent=String(done.length);
-    if(summary)summary.textContent=open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử (gồm Hoàn tất/Bỏ qua).';
+    if(summary)summary.textContent=(data.fallback?'BẢN DỰ PHÒNG '+String(data.generatedAt||'')+' • ':'')+open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử (gồm Hoàn tất/Bỏ qua).';
     const reviewState=document.getElementById('gmwwTaskReviewHealth');
     if(reviewState){
       const rendered=openList?.querySelectorAll('.gmww-task-review-link.completed')?.length||0;
@@ -2752,7 +2752,7 @@ async function savePlayGame(){
     playSetBusy(true);try{const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),compiled=template?.template?.compiledConfig||template?.template?.gameConfig;if(!compiled)throw new Error('Không tải được Ván Mẫu.');const matchId='match-'+Date.now().toString(36),data=await playRoomApi('/config',{method:'POST',body:JSON.stringify({gameConfig:compiled,matchId,matchRevision:Number(playSceneRuntime.room?.matchRevision||0)+1})});playSceneRuntime.gameConfig=data.gameConfig||compiled;playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.gameTemplateId=id;playSceneState.gameName=compiled.name||'Ván GMWW';playSceneState.matchId=matchId;playSceneState.assignmentsPreview=[];playSceneState.step='roles';savePlayScene();closePlayGameSheet();renderPlayScene()}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}return;
   }
   const total=playRolePlanTotal();if(total<1){playFlashError('Ván Mẫu phải có ít nhất một Lá Bài được chọn.');return}
-  const clamp=x=>Math.max(0,Math.min(3600,Number(x)||0)),roles=playSortedRoles().filter(r=>Number(playSceneState.rolePlan?.[r.id])>0);
+  const roles=playSortedRoles().filter(r=>Number(playSceneState.rolePlan?.[r.id])>0);
   const chosen=roles.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),
     description:r.information||'',count:Math.max(1,Number(playSceneState.rolePlan[r.id])||1),
     order:Math.max(1,Number(playSceneState.roleOrders?.[r.id])||i+1),
