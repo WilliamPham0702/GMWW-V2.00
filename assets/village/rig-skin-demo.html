@@ -156,7 +156,7 @@ function draw(now){
   const effectiveAction=navigation?.animation||selected;
   const poseElapsed=navigation?navigation.motionElapsedMs/options.speed:elapsed;
   const pose=sampleRigAction(effectiveAction,poseElapsed,options);
-  rig.render(pose,{facing});smallRig.render(pose,{facing});
+  rig.render(pose,{facing,headingDeg:navigation?.headingDeg});smallRig.render(pose,{facing,headingDeg:navigation?.headingDeg});
   if(navigation)byId('actionInfo').textContent=(navigation.turning?'Đang xoay · ':'Đang bước · ')+DIRECTION_LABELS[facing]+' · Không đi ngang như cua';
   for(let i=0;i<rigs.length;i++){
     const crowdId=i%3===0?'walk':i%3===1?'idle':'sit';
