@@ -46,6 +46,11 @@ export function svgMarkup(s){
       </g>
       <path data-necklace fill="none" stroke="#ebc77f" stroke-width="1.8"/>
       <circle data-pendant r="3.3" fill="#e4b755" stroke="#a7752d" stroke-width="1"/>
+      <g data-rear-torso opacity="0">
+        <path d="M-28 -3 Q0 -18 28 -3 L23 52 Q0 65 -23 52Z" fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2"/>
+        <path d="M-14 6 Q0 14 14 6 M0 7 L0 48" fill="none" stroke="${c.vestLight}" stroke-width="3" opacity=".62"/>
+        <path d="M-17 48 Q0 56 17 48" fill="none" stroke="${c.pattern}" stroke-width="3"/>
+      </g>
     </g>
     <g data-arm-right>
       <path data-arm-r fill="none" stroke="${c.skin}" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
@@ -67,24 +72,49 @@ export function svgMarkup(s){
       <path d="M-9 15Q0 22 10 14Q9 27 -1 26Q-7 25 -9 15Z" data-smile fill="#73352e" stroke="#995b46" stroke-width="1"/>
       <path d="M-6 17Q0 20 6 17" fill="none" stroke="#fff0e7" stroke-width="3"/>
       <path d="M-24 14Q-18 17 -15 14 M15 14Q21 17 24 14" stroke="${c.shade}" stroke-width="1" fill="none" opacity=".4"/>
+      <!-- Side profile visibly differs from the frontal face, rather than sliding sideways. -->
+      <g data-profile-face opacity="0">
+        <ellipse cx="0" cy="-2" rx="36" ry="37" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4"/>
+        <path d="M-5 -22 Q8 -30 24 -18 Q37 -8 41 0 L28 4 Q25 21 2 27" fill="${c.light}" opacity=".5"/>
+        <ellipse cx="13" cy="-3" rx="5" ry="7.5" fill="#fff"/>
+        <ellipse cx="16" cy="-3" rx="2.8" ry="5" fill="${c.eye}"/>
+        <path d="M9 -19 Q17 -23 24 -16" stroke="${c.hair}" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M19 16 Q27 20 31 14" stroke="${c.shade}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M-35 -15 Q-40 -56 -6 -61 Q23 -57 33 -31 L12 -35 Q-6 -33 -25 -22Z" fill="${c.hair}" stroke="#303747" stroke-width="1.5"/>
+      </g>
+      <!-- Rear view hides the facial features and exposes the hair on the back of the head. -->
+      <g data-rear-head opacity="0">
+        <ellipse cy="-1" rx="37" ry="37" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4"/>
+        <path d="M-36 -13 Q-47 -59 -11 -65 Q27 -69 38 -35 Q40 -7 32 15 Q20 30 6 29 Q-13 37 -31 18Z" fill="${c.hair}" stroke="#303747" stroke-width="1.6"/>
+        <path d="M-26 -31 Q0 -53 26 -32 M-22 -10 Q-8 3 -16 19 M20 -13 Q4 0 16 18" fill="none" stroke="#576173" stroke-width="2.5" stroke-linecap="round" opacity=".62"/>
+        <path d="M-13 29 Q0 34 13 29" fill="none" stroke="${c.light}" stroke-width="4"/>
+      </g>
     </g>
   </g></svg>`;
 }
 const byAttr=(svg,name)=>svg.querySelector('[data-'+name+']');
 function nodesFor(svg){
-  const n={};for(const attr of [
+  const n={svg};for(const attr of [
     'body','shadow','leg-l','leg-r','leg-l-shade','leg-r-shade',
     'sandal-l','sandal-r','strap-l','strap-r','shorts','shorts-waist',
     'flower-l','flower-r','arm-l','arm-r','arm-l-highlight','arm-r-highlight',
     'hand-l','hand-r','chest','vest-left','vest-right','abs-1','abs-2','abs-3','abs-middle',
-    'necklace','pendant','head','eyes','smile'
+    'necklace','pendant','head','eyes','smile','rear-torso','profile-face','rear-head'
   ])n[attr]=byAttr(svg,attr);return n;
 }
 const set=(n,k,v)=>n?.setAttribute(k,v);
-export function renderRigPose(nodes,pose){
+export function renderRigPose(nodes,pose,{facing='down'}={}){
   if(!nodes?.body)return;
   const b=nodes;
-  set(b.body,'transform',`translate(${n(pose.root.x)} ${n(pose.root.y)})`);
+  // Keep world displacement separate from body orientation. Never side-step with a front-facing sprite.
+  const valid=['left','right','up','down'].includes(facing)?facing:'down';
+  const profile=valid==='left'||valid==='right';
+  const xScale=valid==='left'?-.7:valid==='right'?.7:1;
+  set(b.body,'transform',`translate(${n(pose.root.x)} ${n(pose.root.y)}) translate(200 0) scale(${xScale} 1) translate(-200 0)`);
+  set(b['rear-head'],'opacity',valid==='up'?'1':'0');
+  set(b['rear-torso'],'opacity',valid==='up'?'1':'0');
+  set(b['profile-face'],'opacity',profile?'1':'0');
+  if(b.svg)b.svg.dataset.facing=valid;
   set(b.body,'opacity',n(pose.alpha));
   set(b.shadow,'rx',n(42*pose.shadow));
 
@@ -145,8 +175,8 @@ export function mountRigSkin(host,{skin=SAMPLE_SKINS[0]}={}){
   const svg=host.querySelector('svg'),nodes=nodesFor(svg);
   return Object.freeze({
     svg,skinId:skin.id,
-    render:(pose)=>renderRigPose(nodes,pose),
-    action:(id,elapsed,opts)=>renderRigPose(nodes,sampleRigAction(id,elapsed,opts)),
-    synchronized:(cmd,now,clockOffset)=>renderRigPose(nodes,sampleSynchronizedAction(cmd,now,clockOffset))
+    render:(pose,visual={})=>renderRigPose(nodes,pose,visual),
+    action:(id,elapsed,opts={})=>renderRigPose(nodes,sampleRigAction(id,elapsed,opts),opts),
+    synchronized:(cmd,now,clockOffset,visual={})=>renderRigPose(nodes,sampleSynchronizedAction(cmd,now,clockOffset),visual)
   });
 }
