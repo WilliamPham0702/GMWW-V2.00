@@ -6,8 +6,8 @@ function svgMarkup(skin){
   const c=validateSkin(skin);
   return `<svg class="rig-skin-svg" viewBox="0 0 400 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nhân vật mẫu với tay chân chuyển động bằng khớp">
     <defs>
-      <linearGradient id="skinBody" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.body}"/><stop offset="1" stop-color="${c.shadow}"/></linearGradient>
-      <linearGradient id="skinFabric" x1="0" y1="0" x2="0.9" y2="1"><stop stop-color="${c.top}"/><stop offset="1" stop-color="${c.pants}"/></linearGradient>
+      <linearGradient id="skinBody-${c.id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.body}"/><stop offset="1" stop-color="${c.shadow}"/></linearGradient>
+      <linearGradient id="skinFabric-${c.id}" x1="0" y1="0" x2="0.9" y2="1"><stop stop-color="${c.top}"/><stop offset="1" stop-color="${c.pants}"/></linearGradient>
     </defs>
     <ellipse data-shadow cx="200" cy="294" rx="38" ry="7" fill="#000000" opacity=".25"/>
     <g data-joint="root" transform="translate(200 283)">
@@ -33,26 +33,26 @@ function svgMarkup(skin){
       </g>
       <g data-joint="torso" transform="translate(0 -79)">
         <g data-joint="upperArmL" transform="translate(-26 -49)">
-          <path d="M-10 -2 Q-20 5 -15 30 L-9 38 L11 37 Q17 15 9 1Z" fill="url(#skinBody)" stroke="${c.shadow}" stroke-width="1"/>
+          <path d="M-10 -2 Q-20 5 -15 30 L-9 38 L11 37 Q17 15 9 1Z" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
           <g data-joint="forearmL" transform="translate(0 32)">
-            <path d="M-9 -3 Q-13 13 -9 30 L10 30 Q13 11 10 -3Z" fill="url(#skinBody)"/>
+            <path d="M-9 -3 Q-13 13 -9 30 L10 30 Q13 11 10 -3Z" fill="url(#skinBody-${c.id})"/>
             <ellipse cx="0" cy="31" rx="10" ry="11" fill="${c.body}"/>
           </g>
         </g>
-        <path d="M-27 -53 Q-39 -48 -33 -23 L-28 6 Q0 16 28 6 L33 -23 Q39 -49 26 -53 L17 -59 L-17 -59 Z" fill="url(#skinFabric)" stroke="${c.trim}" stroke-width="2"/>
+        <path d="M-27 -53 Q-39 -48 -33 -23 L-28 6 Q0 16 28 6 L33 -23 Q39 -49 26 -53 L17 -59 L-17 -59 Z" fill="url(#skinFabric-${c.id})" stroke="${c.trim}" stroke-width="2"/>
         <path d="M-22 -43 Q0 -36 22 -43 M-20 -23 Q0 -16 20 -23" fill="none" stroke="${c.trim}" opacity=".45" stroke-width="2"/>
         <path d="M-28 4 Q0 10 28 4" stroke="${c.belt}" stroke-width="8"/>
         <rect x="-6" y="1" width="12" height="8" rx="2" fill="${c.trim}"/>
         <g data-joint="upperArmR" transform="translate(26 -49)">
-          <path d="M-9 -2 Q-19 4 -13 30 L-9 38 L10 37 Q18 12 10 1Z" fill="url(#skinBody)" stroke="${c.shadow}" stroke-width="1"/>
+          <path d="M-9 -2 Q-19 4 -13 30 L-9 38 L10 37 Q18 12 10 1Z" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
           <g data-joint="forearmR" transform="translate(0 32)">
-            <path d="M-9 -3 Q-13 13 -10 30 L11 30 Q13 11 9 -3Z" fill="url(#skinBody)"/>
+            <path d="M-9 -3 Q-13 13 -10 30 L11 30 Q13 11 9 -3Z" fill="url(#skinBody-${c.id})"/>
             <ellipse cx="0" cy="31" rx="10" ry="11" fill="${c.body}"/>
           </g>
         </g>
         <g data-joint="head" transform="translate(0 -72)">
           <rect x="-9" y="-5" width="18" height="17" rx="6" fill="${c.body}"/>
-          <ellipse cx="0" cy="-20" rx="32" ry="35" fill="url(#skinBody)" stroke="${c.shadow}" stroke-width="1"/>
+          <ellipse cx="0" cy="-20" rx="32" ry="35" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
           <ellipse cx="-32" cy="-17" rx="5" ry="9" fill="${c.body}"/>
           <ellipse cx="32" cy="-17" rx="5" ry="9" fill="${c.body}"/>
           <g data-joint="hair">
