@@ -1,0 +1,44 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const html=fs.readFileSync("server-game/current/GMWW.html","utf8");
+const css=fs.readFileSync("server-game/current/style.css","utf8");
+const app=fs.readFileSync("server-game/current/app.js","utf8");
+const start=html.indexOf('<section class="page active" id="home"');
+const end=html.indexOf('<section class="page" id="members">',start);
+const home=html.slice(start,end);
+test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=>{
+  assert.ok(start>0&&end>start);
+  assert.doesNotMatch(home,/Sẽ xây dựng sau|Quản Trò Ma Sói<\/h1>/);
+  for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeServerState","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])
+    assert.equal(home.split('id="'+id+'"').length-1,1,id);
+  for(const cls of ["gmww-home-hero","gmww-home-entry","gmww-home-explore","gmww-home-achievements","gmww-home-recent"])assert.match(home,new RegExp(cls));
+  assert.match(home,/src="gm\/gm-white-wolf.webp"/);
+});
+test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
+  assert.match(home,/data-home-destination="members"/);
+  assert.match(home,/data-home-destination="library"/);
+  assert.match(home,/data-home-destination="settings"/);
+  assert.match(app,/function gmwwHomeNavigate\(target\)/);
+  assert.match(app,/if\(nav\)nav\.click\(\)/);
+  assert.match(app,/gmwwHomeEnterVillage/);
+  assert.match(app,/ranking\.open=true/);
+});
+test("Thông tin Trang Chủ lấy từ API và không bịa số liệu",()=>{
+  assert.match(app,/function gmwwHomeRenderMembers\(rows\)/);
+  assert.match(app,/gmApi\('\/api\/gm\/members'\)/);
+  assert.match(app,/fetch\(GMWW_SERVER_BASE\+'\/api\/health\?home='/);
+  assert.match(app,/Promise\.allSettled/);
+  assert.match(app,/Chưa kết nối được dữ liệu thành viên/);
+  assert.match(app,/Không tải được lịch sử/);
+  assert.match(app,/rows\.filter\(m=>m\?\.online\)/);
+  assert.match(app,/memberStats\(m\)\.games/);
+});
+test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung CSS cho home",()=>{
+  assert.match(css,/#home \.gmww-home-hero/);
+  assert.match(css,/#home \.gmww-home-shortcuts/);
+  assert.match(css,/@media\(max-width:380px\)/);
+  assert.match(css,/gmww-village-day-v260\.webp/);
+  assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.36 — Trang Chủ')),/#start/);
+  assert.match(html,/<title>GMWW V3\.36<\/title>/);
+});

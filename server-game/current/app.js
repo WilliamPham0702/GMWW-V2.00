@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.35';
+const VERSION='3.36';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1800,6 +1800,76 @@ const memberSheetSave=document.getElementById('memberSheetSave');if(memberSheetS
 const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSheet.addEventListener('click',e=>{if(e.target===memberSheet)closeMemberSheet()});
 document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
 
+/* V3.36 — Trang Chủ: cảm hứng bố cục V1, tất cả số liệu dựa trên máy chủ thật. */
+let gmwwHomeBusy=false,gmwwHomeLastLoaded=0;
+function gmwwHomeText(id,text){
+  const node=document.getElementById(id);
+  if(node)node.textContent=String(text??'—');
+}
+function gmwwHomeRenderMembers(rows){
+  if(!Array.isArray(rows))return;
+  gmwwHomeText('gmwwHomeMemberCount',rows.length);
+  gmwwHomeText('gmwwHomeOnlineCount',rows.filter(m=>m?.online).length);
+  const played=rows.reduce((sum,m)=>sum+memberStats(m).games,0);
+  gmwwHomeText('gmwwHomePlaysCount',played);
+  const ranking=[...rows].sort((a,b)=>{
+    const A=memberStats(a),B=memberStats(b);
+    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId||'').localeCompare(String(b.displayName||b.loginId||''),'vi');
+  });
+  const leader=ranking.find(m=>memberStats(m).games>0);
+  gmwwHomeText('gmwwHomeLeaderboard',leader
+    ?'Dẫn đầu: '+String(leader.displayName||leader.loginId||'Thành viên')+' · '+memberStats(leader).w+' thắng'
+    :'Chưa có kết quả để xếp hạng.');
+  const last=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,memberName:m.displayName||m.loginId})))
+    .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
+    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt))[0];
+  gmwwHomeText('gmwwHomeRecentResult',last
+    ?String(last.memberName||'Thành viên')+' · '+(last.result==='win'?'Thắng':last.result==='lose'?'Thua':'Đã tham gia')+' · '+memberDate(last.playedAt,true)
+    :'Chưa có lịch sử ván được ghi nhận.');
+}
+async function gmwwHomeRefresh(force=false){
+  const home=document.getElementById('home');
+  if(!home||gmwwHomeBusy||(!force&&gmwwHomeLastLoaded&&Date.now()-gmwwHomeLastLoaded<60000))return;
+  gmwwHomeBusy=true;
+  const badge=document.getElementById('gmwwHomeServerState');
+  if(badge){badge.dataset.status='checking';const label=badge.querySelector('span');if(label)label.textContent='Đang kết nối'}
+  gmwwHomeText('gmwwHomeVersion','GMWW V'+VERSION);
+  try{
+    const [health,members]=await Promise.allSettled([
+      fetch(GMWW_SERVER_BASE+'/api/health?home='+Date.now(),{cache:'no-store'})
+        .then(async r=>{const data=await r.json();if(!r.ok||data.ok!==true)throw new Error('Server không phản hồi');return data}),
+      gmApi('/api/gm/members')
+    ]);
+    if(badge){const ok=health.status==='fulfilled';badge.dataset.status=ok?'online':'offline';
+      const label=badge.querySelector('span');if(label)label.textContent=ok?'Server kết nối':'Mất kết nối'}
+    if(members.status==='fulfilled'&&Array.isArray(members.value?.members))
+      gmwwHomeRenderMembers(members.value.members);
+    else{
+      gmwwHomeText('gmwwHomeMemberCount','—');
+      gmwwHomeText('gmwwHomeOnlineCount','—');
+      gmwwHomeText('gmwwHomePlaysCount','—');
+      gmwwHomeText('gmwwHomeLeaderboard','Chưa kết nối được dữ liệu thành viên.');
+      gmwwHomeText('gmwwHomeRecentResult','Không tải được lịch sử. Nhấn Làm mới để thử lại.');
+    }
+    gmwwHomeLastLoaded=Date.now();
+  }finally{gmwwHomeBusy=false}
+}
+function gmwwHomeNavigate(target){
+  if(!['start','members','library','settings'].includes(target))return;
+  const nav=document.querySelector('#bottomNav .nav[data-page="'+target+'"]');
+  if(nav)nav.click();
+}
+document.getElementById('gmwwHomeEnterVillage')?.addEventListener('click',()=>gmwwHomeNavigate('start'));
+document.querySelectorAll('[data-home-destination]').forEach(button=>button.addEventListener('click',()=>gmwwHomeNavigate(button.dataset.homeDestination)));
+document.getElementById('gmwwHomeOpenRanking')?.addEventListener('click',()=>{
+  gmwwHomeNavigate('members');
+  setTimeout(()=>{const ranking=document.getElementById('memberGroupRanking');if(ranking){ranking.open=true;ranking.scrollIntoView({block:'start',behavior:'smooth'})}},120);
+});
+document.getElementById('gmwwHomeRefresh')?.addEventListener('click',()=>gmwwHomeRefresh(true));
+document.querySelectorAll('#bottomNav .nav[data-page="home"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>gmwwHomeRefresh(false),35)));
+setTimeout(()=>{if(document.getElementById('home')?.classList.contains('active'))gmwwHomeRefresh()},150);
+
+
 
 /* GMWW V2.57 — immersive 2D village GM flow */
 const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
@@ -2892,7 +2962,8 @@ function exitPlayImmersive(){
   if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
-  const home=document.getElementById('home');if(home)home.scrollTop=0
+  const home=document.getElementById('home');if(home)home.scrollTop=0;
+  setTimeout(()=>gmwwHomeRefresh(false),50)
 }
 async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.lastTapCode='';playRoomUiState.lastTapAt=0;const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
 function initDraggablePlaySheets(){

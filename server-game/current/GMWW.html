@@ -3,14 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.35</title>
-<link rel="stylesheet" href="style.css?v=3.35-compact-settings-1">
+<title>GMWW V3.36</title>
+<link rel="stylesheet" href="style.css?v=3.36-home-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
 <div id="app">
   <main id="stage">
-    <section class="page active" id="home"><div class="placeholder"><span>🏠</span><b>Trang Chủ</b><small>Sẽ xây dựng sau.</small></div></section>
+    <section class="page active" id="home" aria-label="Trang Chủ GMWW">
+      <div class="gmww-home-v336">
+        <header class="gmww-home-top">
+          <div class="gmww-home-identity"><span class="gmww-home-emblem" aria-hidden="true">✦</span><div><b>GMWW</b><small>LÀNG ASAHI</small></div></div>
+          <span class="gmww-home-presence" id="gmwwHomeServerState" data-status="checking" role="status" aria-live="polite"><i aria-hidden="true"></i><span>Đang kiểm tra</span></span>
+        </header>
+        <section class="gmww-home-hero" aria-label="Làng Ma Sói ven biển">
+          <div class="gmww-home-hero-copy"><span>HÀNH TRÌNH CỦA QUẢN TRÒ</span><h1>Chào mừng đến<br>Làng Asahi</h1><p>Mọi cuộc phiêu lưu bắt đầu từ ngôi làng này.</p></div>
+          <img class="gmww-home-guardian" src="gm/gm-white-wolf.webp" alt="Nhân vật quản trò cưỡi sói trắng" loading="eager" decoding="async">
+          <span class="gmww-home-hero-sun" aria-hidden="true">✧</span>
+        </section>
+        <section class="gmww-home-entry" aria-label="Bắt đầu chơi">
+          <div class="gmww-home-entry-copy"><b>Sẵn sàng điều hành ván mới?</b><small>Tiếp tục trận đang chơi hoặc mở sảnh chờ.</small></div>
+          <button id="gmwwHomeEnterVillage" class="gmww-home-play" type="button" aria-label="Vào Làng và mở Trang Chơi"><span aria-hidden="true">▶</span><b>VÀO LÀNG</b></button>
+        </section>
+        <section class="gmww-home-explore" aria-label="Khám phá GMWW">
+          <div class="gmww-home-section-title"><b>✦ Khám phá</b><small>Truy cập nhanh</small></div>
+          <div class="gmww-home-shortcuts">
+            <button type="button" data-home-destination="members" aria-label="Mở quản lý Thành Viên"><span class="gmww-home-shortcut-icon" aria-hidden="true">♟</span><b>THÀNH VIÊN</b><small>Người chơi</small></button>
+            <button type="button" data-home-destination="library" aria-label="Mở Thư Viện lá bài"><span class="gmww-home-shortcut-icon" aria-hidden="true">✧</span><b>BỘ BÀI</b><small>Vai trò &amp; Artifact</small></button>
+            <button type="button" data-home-destination="settings" aria-label="Mở Cài Đặt"><span class="gmww-home-shortcut-icon" aria-hidden="true">⚙</span><b>CÀI ĐẶT</b><small>Vận hành</small></button>
+          </div>
+        </section>
+        <section class="gmww-home-achievements" aria-label="Thành tích người chơi">
+          <div class="gmww-home-section-title"><b>🏆 Thành tích</b><button id="gmwwHomeOpenRanking" type="button">Xem xếp hạng <span aria-hidden="true">›</span></button></div>
+          <div class="gmww-home-stat-grid">
+            <div><small>THÀNH VIÊN</small><strong id="gmwwHomeMemberCount">—</strong></div>
+            <div><small>TRỰC TUYẾN</small><strong id="gmwwHomeOnlineCount">—</strong></div>
+            <div><small>LƯỢT CHƠI</small><strong id="gmwwHomePlaysCount">—</strong></div>
+          </div>
+          <div class="gmww-home-leader"><span aria-hidden="true">✦</span><small id="gmwwHomeLeaderboard">Đang tải thành tích…</small></div>
+        </section>
+        <section class="gmww-home-recent" aria-label="Hoạt động gần đây">
+          <div class="gmww-home-section-title"><b>◷ Gần đây</b><button id="gmwwHomeRefresh" type="button" aria-label="Làm mới thông tin Trang Chủ">↻ Làm mới</button></div>
+          <p id="gmwwHomeRecentResult">Đang kiểm tra lịch sử trận…</p>
+        </section>
+        <footer class="gmww-home-footnote"><span id="gmwwHomeVersion">GMWW V3.36</span><span>Giao diện biển · Dữ liệu trực tiếp</span></footer>
+      </div>
+    </section>
     <section class="page" id="members">
       <div class="member-page">
         <div class="member-page-head">
@@ -614,7 +652,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.35-compact-settings-1"></script>
+<script src="app.js?v=3.36-home-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

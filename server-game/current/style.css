@@ -3187,3 +3187,65 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
 #settings .update-progress-range{display:flex;justify-content:space-between;color:#b5d9e5;font-size:9px}
 @keyframes gmwwUpdateScan{from{transform:translateX(-105%)}to{transform:translateX(280%)}}
 @media(prefers-reduced-motion:reduce){#settings .update-progress-track>span{animation:none!important}}
+
+
+/* GMWW V3.36 — Trang Chủ biển, bố cục V1: banner / Vào Làng / Khám phá / Thành tích / Gần đây. */
+#home{background:linear-gradient(180deg,rgba(3,24,42,.68),rgba(3,20,39,.86)),url("gmww-village-day-v260.webp") center center / cover no-repeat;background-color:#073c5a}
+#home .gmww-home-v336{max-width:800px;margin:0 auto;padding:2px 0 24px;display:grid;gap:11px;color:#f2fcff}
+#home .gmww-home-top{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:38px}
+#home .gmww-home-identity{display:flex;align-items:center;gap:9px}
+#home .gmww-home-emblem{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-size:23px;color:#fff0b0;background:linear-gradient(140deg,rgba(37,152,173,.7),rgba(8,51,75,.86));border:1px solid rgba(255,234,159,.64);text-shadow:0 0 10px rgba(255,241,172,.4)}
+#home .gmww-home-identity div{display:grid;gap:1px}
+#home .gmww-home-identity b{font-size:16px;letter-spacing:.075em;line-height:1.1}
+#home .gmww-home-identity small{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#bcebf1}
+#home .gmww-home-presence{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:999px;background:rgba(2,28,48,.55);border:1px solid rgba(182,235,244,.38);font-size:9px;white-space:nowrap}
+#home .gmww-home-presence i{display:block;width:9px;height:9px;border-radius:50%;background:#ffcc84;box-shadow:0 0 0 3px rgba(255,198,94,.10)}
+#home .gmww-home-presence[data-status="online"] i{background:#4be9a9;box-shadow:0 0 0 3px rgba(75,233,169,.15)}
+#home .gmww-home-presence[data-status="offline"] i{background:#ff788a;box-shadow:0 0 0 3px rgba(255,120,138,.14)}
+#home .gmww-home-hero{position:relative;min-height:210px;overflow:hidden;border-radius:20px;border:1px solid rgba(202,243,249,.62);box-shadow:0 10px 30px rgba(0,29,46,.25),inset 0 1px 0 #fff8;background:linear-gradient(90deg,rgba(4,52,70,.74),rgba(2,50,65,.35) 58%,rgba(2,55,73,.06)),url("gmww-village-day-v260.webp") center 55% / cover no-repeat}
+#home .gmww-home-hero-copy{position:relative;z-index:2;width:69%;padding:18px 12px 17px 17px;text-shadow:0 2px 12px rgba(0,22,35,.68)}
+#home .gmww-home-hero-copy>span{color:#fff0b7;font-size:8.5px;font-weight:900;letter-spacing:.11em}
+#home .gmww-home-hero-copy h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(22px,6vw,35px);line-height:1.17;margin:12px 0 8px;font-weight:800;color:#fff9e6}
+#home .gmww-home-hero-copy p{font-size:11px;line-height:1.45;color:#e1faff;margin:0;max-width:220px}
+#home .gmww-home-guardian{position:absolute;z-index:1;right:-3%;bottom:-7px;width:47%;height:98%;object-fit:contain;object-position:bottom right;filter:drop-shadow(0 8px 10px rgba(0,28,45,.34));pointer-events:none}
+#home .gmww-home-hero-sun{position:absolute;right:13px;top:5px;color:#fff1be;font-size:24px;opacity:.8}
+#home .gmww-home-entry{display:flex;align-items:center;gap:9px;justify-content:space-between;padding:10px;border:1px solid rgba(190,238,246,.44);border-radius:15px;background:var(--gmww-glass-surface);box-shadow:var(--gmww-glass-shadow);backdrop-filter:blur(8px)}
+#home .gmww-home-entry-copy{min-width:0;display:grid;gap:5px}
+#home .gmww-home-entry-copy b{font-size:13px;color:#fff0bd}
+#home .gmww-home-entry-copy small{font-size:10px;line-height:1.4;color:#d0ecf4}
+#home .gmww-home-play{min-width:115px;min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 11px;border-radius:13px;border:1px solid rgba(192,255,255,.9);background:linear-gradient(180deg,#50def2,#1598bc);color:#043447;box-shadow:0 5px 13px rgba(0,57,76,.28);font-size:12px;font-weight:950;white-space:nowrap}
+#home .gmww-home-play span{font-size:18px}
+#home .gmww-home-explore,#home .gmww-home-achievements,#home .gmww-home-recent{padding:11px;border:1px solid var(--gmww-glass-stroke);border-radius:16px;background:var(--gmww-glass-surface);box-shadow:var(--gmww-glass-shadow);backdrop-filter:blur(8px)}
+#home .gmww-home-section-title{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:9px}
+#home .gmww-home-section-title>b{font-size:14px;color:#fff2c6}
+#home .gmww-home-section-title small{font-size:10px;color:#c0e5ed}
+#home .gmww-home-section-title button{min-height:27px;padding:3px 8px;border-radius:99px;border:1px solid rgba(186,239,248,.32);background:rgba(4,47,68,.36);font-size:10px;font-weight:850;color:#d6f5ff}
+#home .gmww-home-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#home .gmww-home-shortcuts button{min-width:0;min-height:108px;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;background:linear-gradient(160deg,rgba(35,139,164,.58),rgba(4,48,73,.76));border:1px solid rgba(191,238,248,.46);color:#f7fdff;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+#home .gmww-home-shortcut-icon{display:grid;place-items:center;width:42px;height:42px;font-size:25px;color:#fff5bf;border-radius:50%;background:rgba(7,54,76,.45);border:1px solid rgba(217,240,244,.3)}
+#home .gmww-home-shortcuts b{font-size:10px;letter-spacing:.01em}
+#home .gmww-home-shortcuts small{font-size:9px;color:#c6e6ed;white-space:normal;text-align:center;line-height:1.2}
+#home .gmww-home-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#home .gmww-home-stat-grid>div{display:flex;align-items:center;flex-direction:column;gap:4px;padding:10px 3px;border-radius:11px;border:1px solid rgba(165,230,241,.32);background:rgba(2,47,66,.39)}
+#home .gmww-home-stat-grid small{font-size:9px;color:#c2e7ee;line-height:1.2;font-weight:800;white-space:nowrap}
+#home .gmww-home-stat-grid strong{font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums}
+#home .gmww-home-leader{display:flex;align-items:center;gap:8px;margin-top:9px;color:#fff2ba;padding:2px 0}
+#home .gmww-home-leader span{font-size:18px}
+#home .gmww-home-leader small{font-size:10px;color:#d8edf3}
+#home .gmww-home-recent p{font-size:11px;line-height:1.45;margin:0;color:#d0edf4}
+#home .gmww-home-footnote{display:flex;justify-content:space-between;gap:5px;font-size:9px;color:#c1dce7;padding:2px 4px}
+#home button:focus-visible{outline:2px solid #fff3b8;outline-offset:2px}
+@media(max-width:380px){
+  #home .gmww-home-hero{min-height:195px}
+  #home .gmww-home-hero-copy{padding:14px 10px 15px 12px}
+  #home .gmww-home-play{min-width:100px;padding:8px;font-size:11px}
+  #home .gmww-home-entry-copy b{font-size:12px}
+  #home .gmww-home-shortcuts button{min-height:100px}
+}
+@media(min-width:740px){
+  #home .gmww-home-hero{min-height:270px}
+  #home .gmww-home-hero-copy{padding:28px;max-width:440px}
+  #home .gmww-home-hero-copy h1{font-size:38px}
+  #home .gmww-home-guardian{width:37%}
+}
+@media(prefers-reduced-motion:reduce){#home .gmww-home-play{transition:none}}
