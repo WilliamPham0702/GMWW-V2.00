@@ -113,6 +113,8 @@ export function renderRigPose(nodes,pose,{facing='down'}={}){
   set(b.body,'transform',`translate(${n(pose.root.x)} ${n(pose.root.y)}) translate(200 0) scale(${xScale} 1) translate(-200 0)`);
   set(b['rear-head'],'opacity',valid==='up'?'1':'0');
   set(b['rear-torso'],'opacity',valid==='up'?'1':'0');
+  // Rear jacket is a local garment shape: anchor it to the moving shoulder, not SVG origin.
+  set(b['rear-torso'],'transform',`translate(${n(200+pose.shoulder.x)} ${n(pose.shoulder.y)})`);
   set(b['profile-face'],'opacity',profile?'1':'0');
   if(b.svg)b.svg.dataset.facing=valid;
   set(b.body,'opacity',n(pose.alpha));
