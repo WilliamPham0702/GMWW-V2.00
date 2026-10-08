@@ -55,13 +55,17 @@
     </section>
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
-        <nav class="gm-top-menu-v293" id="gmTopMenu" aria-label="Thanh điều khiển trên">
-          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span><small>AUTO GM</small></button>
-          <div class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">SẢNH CHỜ</b></div></div>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span><small>AUDIO</small></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
-        </nav>
+
+        <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
+          <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
+          <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
+          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
+          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
+          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
+          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
+        </section>
+
 
         <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
           <div class="play-sky-glow"></div>
@@ -103,21 +107,16 @@
 
         
 
-        <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
-          <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
-          <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
-          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
-          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
-          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
-          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
-          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
-        </section>
 
-        <footer class="play-control-bar play-control-bar-three">
-          <button class="play-control-icon" id="playBack" type="button" aria-label="Quay về" title="Quay về"><span>‹</span></button>
-          <button class="play-primary-control play-info-control" id="playPrimaryAction" type="button" aria-label="Mở luồng tạo game"><b id="playPrimaryLabel">TẠO PHÒNG</b></button>
-          <button class="play-control-icon" id="playNext" type="button" aria-label="Tiếp tục" title="Tiếp tục"><span>›</span></button>
-        </footer>
+
+
+        <nav class="gm-top-menu-v293 gm-bottom-menu-v325" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
+          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span><small>AUTO GM</small></button>
+          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">SẢNH CHỜ</b><small>CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span><small>AUDIO</small></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
+        </nav>
       </div>
     </section>
 
@@ -627,7 +626,7 @@
         if(typeof playSceneState!=='undefined'){
           let changed=false;
           const set=(k,v)=>{if(playSceneState[k]!==v){playSceneState[k]=v;changed=true}};
-          set('roomCode','—');set('gmToken','');set('roomEnabled',false);set('step','room');set('phase','lobby');set('activePlayerId','');
+          set('roomCode','—');set('gmToken','');set('roomEnabled',false);if(!['lobby','room'].includes(String(playSceneState.step||'')))set('step','lobby');set('phase','lobby');set('activePlayerId','');
           if(Array.isArray(playSceneState.selectedMemberIds)&&playSceneState.selectedMemberIds.length){playSceneState.selectedMemberIds=[];changed=true}
           if(Array.isArray(playSceneState.assignmentsPreview)&&playSceneState.assignmentsPreview.length){playSceneState.assignmentsPreview=[];changed=true}
           if(changed&&typeof savePlayScene==='function')savePlayScene();

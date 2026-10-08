@@ -2352,7 +2352,8 @@ function renderPlayScene(){
   if(phase==='night'){const rt=playSceneRuntime.nightRuntime,cur=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;put('playPhaseOrb','☾');put('playPhaseTitle','Đêm '+Math.max(1,night));put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',cur?.kind==='early-artifact'?'ARTIFACT GỌI SỚM':cur?.kind==='artifact-main'?'ARTIFACT':cur?.kind==='role'?'VAI TRÒ':night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',cur?.label||'HOÀN TẤT ĐÊM '+Math.max(1,night));put('playCoreHint',rt?.completed?'Đã xong toàn bộ lượt. Có thể chuyển sang Ban Ngày.':cur?.kind==='wolf-introduction'?'Bầy Sói nhìn mặt nhau trước khi vào lượt chức năng.':'Thực hiện bước hiện tại rồi nhấn Tiếp theo.')}
   else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseTitle','Ngày '+Math.max(1,night));put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
   else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;put('playPhaseOrb','◉');put('playPhaseTitle',playRoomDisplayName());put('playCycleBadge',isLivePlayRoom()?playRoomDisplayName():'SẢNH CHỜ');put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
-  document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur)});
+  document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur);if(idx===cur)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Trạng thái '+String(document.getElementById('playPhaseTitle')?.textContent||'')+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=step.t.toUpperCase()}
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
@@ -2746,21 +2747,21 @@ async function backPlayPhase(){
 const PLAY_GAME_CHROME_IDLE_MS=20000;
 let playGameChromeIdleTimer=0;
 function setPlayGameChromeHidden(hidden){
-  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
+  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
   [top,bottom].forEach(menu=>{if(!menu)return;menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0'});
 }
 function clearPlayGameChromeIdle(){
   if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
 }
 function resetPlayGameChromeIdle(){
-  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
+  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
   if(!top&&!bottom)return;
   setPlayGameChromeHidden(false);clearPlayGameChromeIdle();
   if(!document.body.classList.contains('play-immersive'))return;
   playGameChromeIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayGameChromeHidden(true)},PLAY_GAME_CHROME_IDLE_MS);
 }
 function initPlayGameChromeAutoHide(){
-  const top=document.getElementById('gmTopMenu'),bottom=document.querySelector('#start .play-control-bar');
+  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
   if((top?.dataset.autoHideBound==='1')||(bottom?.dataset.autoHideBound==='1'))return;
   if(top)top.dataset.autoHideBound='1';if(bottom)bottom.dataset.autoHideBound='1';
   const reveal=()=>resetPlayGameChromeIdle();
@@ -2800,11 +2801,31 @@ function initDraggablePlaySheets(){
     handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
   });
 }
+async function handlePlayTimelineStep(step){
+  if(playSceneRuntime.busy)return;
+  const from=PLAY_STEPS.indexOf(playSceneState.step),target=PLAY_STEPS.indexOf(step);
+  if(from<0||target<0)return;
+  if(target===from){
+    if(step==='room')await openPlayCreateRoomSheet();
+    else if(step==='game')await openPlayGameSheet();
+    return;
+  }
+  if(target===from+1){await advancePlayPhase();return}
+  if(target<from){
+    if(step==='lobby'){await playReturnToLobby();return}
+    setPlayStep(step);
+    if(step==='room')await openPlayCreateRoomSheet();
+    else if(step==='game')await openPlayGameSheet();
+    return;
+  }
+  playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
+}
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   initPlayGameChromeAutoHide();
   initDraggablePlaySheets();
-  document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>setPlayStep(b.dataset.playStep)));
+  document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>{void handlePlayTimelineStep(b.dataset.playStep)}));
+  document.getElementById('playPhasePill')?.addEventListener('click',()=>{void advancePlayPhase()});
   document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
   document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
   document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
@@ -2814,8 +2835,6 @@ function initPlayScene(){
     if(playSceneState.step==='room'){openPlayCreateRoomSheet();return}
     advancePlayPhase();
   });
-  document.getElementById('playNext')?.addEventListener('click',advancePlayPhase);
-  document.getElementById('playBack')?.addEventListener('click',backPlayPhase);
   document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
   document.getElementById('playRoomButton')?.addEventListener('click',openPlayGMSheet);
