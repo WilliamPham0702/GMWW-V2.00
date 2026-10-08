@@ -132,3 +132,5 @@ test('V1.09 preservation contract keeps existing engine and local settings while
   assert.match(app,/applyActiveThemeUi/);
   assert.match(app,/audio_card_role_wolf/);
 });
+
+// V3.22 lobby-first flow assertions synchronized for CI.
