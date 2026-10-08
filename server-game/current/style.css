@@ -3333,3 +3333,33 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
 /* V3.37 Header utility in original fantasy style */
 #home .gmww-home-head-settings{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;margin-left:3px;padding:0;border:1px solid rgba(255,231,159,.9);border-radius:50%;background:linear-gradient(155deg,#236f96,#053b5e);box-shadow:0 2px 7px #062d4670,inset 0 1px 0 #ffffff6b;color:#ffe8ad;font-size:24px;text-shadow:0 2px 4px #031e35;cursor:pointer}
 #home .gmww-home-head-settings:focus-visible{outline:2px solid #fff0b6;outline-offset:2px}
+
+/* V3.38 Gathering UI and ground-position alignment. */
+body.play-immersive #start .play-shell[data-step="seats"] #playGatherToolbar.play-gather-toolbar.is-auto-hidden{transform:translate3d(0,0,0)!important;opacity:1!important;pointer-events:auto!important}
+#playGatherToolbar .play-gather-toolbar-actions{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+#playGatherToolbar #playGatherClose{display:none!important}
+#playGatherToolbar #playGatherDisband{border-color:rgba(255,169,157,.56);background:rgba(104,44,47,.7);color:#fff0dc}
+#playGatherToolbar .play-gather-toolbar-actions>button>b{font-size:7.1px!important;white-space:normal!important;text-align:center}
+body.play-immersive #start .play-player-token.is-seat-occupied:not(.is-gm-rider){transform:translate(-50%,-84%)!important}
+body.play-immersive #start .play-player-token.is-seat-occupied:not(.is-gm-rider)::before{content:"";position:absolute;left:50%;top:calc(100% - 16px);transform:translate(-50%,-50%);width:51px;height:37px;background:url("village/seat-leaf.webp?v=320") center/contain no-repeat;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));opacity:.82;pointer-events:none;z-index:-1}
+#playSeatSheet.is-manual .play-seat-sheet-card{width:min(96vw,680px);max-height:84dvh}
+#playSeatSheet .play-seat-manual-members{display:none}
+#playSeatSheet.is-manual .play-seat-manual-columns{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:8px;min-height:0;flex:1}
+#playSeatSheet.is-manual .play-seat-manual-members{display:flex;flex-direction:column;gap:5px;min-width:0;max-height:56dvh;overflow-y:auto;padding:3px}
+#playSeatSheet.is-manual #playSeatGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;max-height:56dvh;min-height:0;overflow-y:auto}
+#playSeatSheet .play-seat-manual-member{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:40px;padding:7px;border:1px solid rgba(111,205,222,.36);border-radius:10px;background:rgba(9,55,74,.79);color:#fff;text-align:left}
+#playSeatSheet .play-seat-manual-member b{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#playSeatSheet .play-seat-manual-member small{font-size:8px;color:#bcefeb;flex-shrink:0}
+#playSeatSheet .play-seat-manual-member.is-selected{border-color:#ffdd81;background:rgba(30,104,112,.92);box-shadow:inset 0 0 0 1px #ffdd81}
+#playSeatSheet.is-manual #playSeatGrid .play-seat-choice{min-height:47px;padding:5px 3px}
+#playSeatSheet.is-manual #playSeatGrid .play-seat-choice b{font-size:9px}
+#playSeatSheet.is-manual #playSeatGrid .play-seat-choice small{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+#playDisbandSheet .play-disband-sheet-card{width:min(94vw,490px);max-height:82dvh;display:flex;flex-direction:column;gap:10px}
+#playDisbandSheet .play-disband-list{display:flex;flex-direction:column;gap:6px;min-height:0;overflow-y:auto}
+#playDisbandSheet .play-disband-member{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(5,50,70,.83);border:1px solid rgba(105,202,231,.3);padding:8px;border-radius:11px}
+#playDisbandSheet .play-disband-member span{display:flex;flex-direction:column;gap:3px;min-width:0}
+#playDisbandSheet .play-disband-member b{font-size:12px;color:#edfbfc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#playDisbandSheet .play-disband-member small{font-size:10px;color:#a5e6e6}
+#playDisbandSheet .play-disband-one,#playDisbandSheet .play-disband-all{border:1px solid #eab19d;border-radius:10px;background:rgba(116,41,50,.9);color:#fff3df;font-size:11px;font-weight:900;padding:10px;min-height:42px;flex-shrink:0}
+#playDisbandSheet .play-disband-all{width:100%;min-height:46px}
+#playDisbandSheet button:disabled{opacity:.45}
