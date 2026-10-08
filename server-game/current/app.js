@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.31';
+const VERSION='3.32';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -966,7 +966,7 @@ window.GMWWUpdateNative={
     if(result.ok&&result.action==='installRuntime'){
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
       setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Khởi động lại game để dùng phiên bản mới.');
-      if(confirm('Cập nhật hoàn tất. Khởi động lại game ngay?'))gmwwNativePost('restartRuntime');
+      setTimeout(()=>{if(!gmwwNativePost('restartRuntime'))window.location.reload()},300);
       return
     }
     if(result.ok&&result.action==='downloadIPA'){
@@ -1021,7 +1021,7 @@ const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450);if(Date.now()-gmwwTasksLastLoaded>120000)setTimeout(()=>gmwwTasksRefresh({silent:true}),500)}));
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450);setTimeout(()=>gmwwTasksRefresh({silent:false}),500)}));
 window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
@@ -1369,7 +1369,7 @@ function gmwwTaskReviewLink(task,mode){
   const link=document.createElement('a');
   link.className='gmww-task-review-link '+mode;
   link.href='https://github.com/WilliamPham0702/GMWW-V2.00/issues/'+number;
-  link.target='_blank';
+  link.target='_self';
   link.rel='noopener noreferrer';
   link.textContent=labels[mode]||'XEM CÔNG VIỆC';
   link.setAttribute('aria-label',(labels[mode]||'Xem công việc')+' #'+number+' trên GitHub');
@@ -1432,9 +1432,19 @@ async function gmwwTasksRefresh({silent=false}={}){
     if(openCount)openCount.textContent=String(open.length);
     if(doneCount)doneCount.textContent=String(done.length);
     if(summary)summary.textContent=open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử (gồm Hoàn tất/Bỏ qua).';
+    const reviewState=document.getElementById('gmwwTaskReviewHealth');
+    if(reviewState){
+      const rendered=openList?.querySelectorAll('.gmww-task-review-link.completed')?.length||0;
+      const skipped=openList?.querySelectorAll('.gmww-task-review-link.skipped')?.length||0;
+      const ready=(rendered===open.length&&skipped===open.length);
+      reviewState.textContent=ready?'Bộ xác nhận V3.32 đã sẵn sàng · '+rendered+' công việc có nút Hoàn thành / Bỏ qua.'
+        :'CẢNH BÁO: Bộ xác nhận chưa hiển thị đủ ('+rendered+'/'+open.length+'). Nhấn LÀM MỚI TIẾN ĐỘ.';
+      reviewState.dataset.ready=ready?'true':'false';
+    }
     gmwwTasksLastLoaded=Date.now();
   }catch(error){
     if(summary)summary.textContent='Chưa lấy được tiến độ. Nhấn LÀM MỚI TIẾN ĐỘ để thử lại.';
+    const reviewState=document.getElementById('gmwwTaskReviewHealth');if(reviewState){reviewState.textContent='Chưa tải được công việc, không thể xác nhận. Thử LÀM MỚI TIẾN ĐỘ.';reviewState.dataset.ready='false'}
     if(!gmwwTasksLastLoaded&&openList){openList.replaceChildren();const p=document.createElement('p');p.className='gmww-task-empty';p.textContent='Nguồn công việc tạm thời không truy cập được; không thể xác nhận tiến độ.';openList.append(p)}
   }finally{clearTimeout(timeout);gmwwTasksBusy=false;if(refresh)refresh.disabled=false}
 }
