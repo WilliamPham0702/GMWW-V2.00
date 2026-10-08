@@ -1,29 +1,34 @@
-# GMWW Action Rig + Skin — Character-01 proof
+# GMWW Character-01 • Rig + Skin tối giản (bản thử nghiệm, chưa nghiệm thu)
 
-## Phạm vi được người dùng chốt
-39 hạng mục, gồm **33 động tác** thuộc 5 nhóm và **6 khả năng hệ thống** trong nhóm chuyển động nâng cao. Danh sách chuẩn, ID cố định và nhãn tiếng Việt trong `assets/village/rig-skin-core.mjs`.
+## Yêu cầu đã chốt ngày 08/10/2026
+**Chỉ 9 Action** (không giữ 39 Action cũ):
+1. Đứng yên – thở tự nhiên
+2. Đi bộ – chân bước, tay đánh tự nhiên
+3. Chạy nhẹ
+4. Ngồi xếp bằng – chân gọn sát người
+5. Chuyển từ đứng sang ngồi
+6. Chuyển từ ngồi sang đứng
+7. Vẫy tay chào
+8. Giơ tay bỏ phiếu
+9. Ăn mừng chiến thắng / buồn khi thua (một Action `result`, hai kết quả `win|lose`)
 
-## Bản mẫu đã xây dựng (không thay Production)
-- `assets/village/rig-skin-core.mjs`: bộ clip dạng điều khiển khớp, pose tính theo thời gian, điều chỉnh tốc độ, cá tính, chuyển tiếp và dấu thời gian đồng bộ.
-- `assets/village/rig-skin-renderer.mjs`: cấu trúc xương SVG có **từng bộ phận riêng** (không tái dùng một ảnh toàn thân rồi cắt bằng clip-path); cho phép thay palette Skin mà giữ rig.
-- `assets/village/rig-skin-demo.html`: phòng lab chọn Action, đổi hai Skin mẫu, tốc độ, chuyển tiếp và mô phỏng 30 instance. Trang tách biệt khỏi Player Web & GM IPA.
-- `tests/rig-skin-master.test.mjs`: kiểm tra cấu trúc, danh mục, trạng thái, biến đổi chuyển động, Skin và đồng bộ thời gian.
-- `.github/workflows/check-rig-skin-proof.yml`: test Node, smoke bằng local Worker, chụp màn hình ở browser, tải ảnh kiểm thử thành artifact.
+**Yêu cầu kỹ thuật không đếm Action:** Rig + Skin mềm, khuỷu/đầu gối không thô hoặc lộ đường nối, chuyển pose mượt, chân trụ không trượt, ngồi xếp bằng tự nhiên, phong cách chibi GMWW, chạy ổn với 30 thành viên, dữ liệu tái sử dụng cho Player Web và GM.
 
-## Chưa hoàn thành để sử dụng chính thức
-1. Đây là **Skin vector minh họa**, chưa phải Skin bóc tách từ asset `character-01` gốc và chưa đạt nghiệm thu thẩm mỹ.
-2. 33 clip đã có mẫu xử lý pose, nhưng vẫn cần review tay, chân, trọng lực, tiếp đất bằng mắt và chỉnh frame/keyframe cho từng clip.
-3. Foot-lock hiện chỉ bù chân trong không gian rig; để hết lướt trên địa hình cần phối hợp tọa độ, vận tốc và va chạm của World/Site movement. Không được xem chức năng này hoàn tất trên Production.
-4. Dữ liệu đồng bộ timestamp `sampleSynchronizedAction` là **hợp đồng thuần thuật toán**, chưa nối live GM và Player Web hoặc xử lý clock drift thực.
-5. Chưa đưa vào `assets/village/village.mjs` và `server-game/current`, chưa phát hành IPA. Không mở rộng Character 02–42 trước khi mẫu Character-01 được nghiệm thu.
-6. FPS hiển thị trên trang là chỉ báo chạy thực tế theo trình duyệt, chưa phải cam kết tốc độ trên iPhone hoặc Worker Production.
+## Thay đổi so với mẫu trước
+- `rig-skin-core.mjs`: chỉ 9 Action, nhịp chân trụ + chân đưa về trước, phối hợp displacement trong world với vị trí đặt bàn chân; đầu gối IK, ba trạng thái ngồi/đứng có nội suy tư thế.
+- `rig-skin-renderer.mjs`: tay/chân thành đường cong liền mạch với nét bo tròn, không còn các khớp chữ nhật; tạo thân chibi nam cơ bắp, tóc đen, vest xanh ngọc, short và sandal.
+- `rig-skin-demo.html`: minh họa kích thước chibi, 9 Action, lựa chọn 2 kết quả thắng/thua và ảnh đối chiếu **Character-01 gốc** (`assets/characters/v253/chibi-01.webp`).
+- Demo HTML offline được đóng gói từ `tools/build-rig-skin-offline.mjs`, nhúng ảnh đối chiếu gốc.
+- `tests/rig-skin-master.test.mjs`: kiểm thử các Action chốt, chạm đất tương ứng chuyển động root, ngồi gọn, cảnh 30 instance, logic chuyển pose, Skin và đồng bộ timestamp.
 
-## Nghiệm thu mẫu cần thực hiện
-- Xem cả 33 Action, không có đứt khớp, cắt tay/chân, nhân vật đi như tờ giấy.
-- Walk/Run phải thấy bàn chân đưa lên hạ xuống và tay đối xứng, Sit phải xếp bằng sát gọn (không dang chân).
-- Switch Skin 1→2 không đổi cấu trúc xương và không tạo chuyển động khác.
-- Thử đồng thời 30 bản sao trong lab, đo trên iPhone và máy tính. Không lấy thông số demo desktop làm chuẩn cho production.
-- Khi pass mới kết nối runtime Player Web và GM IPA, quản lý phiên bản/rollback và theo dõi đồng bộ.
+## Mức độ hoàn thiện / không được hiểu nhầm
+- Skin hiện tại **mô phỏng phong cách Character-01 bằng hình vector**, chưa tách các bộ phận gốc chất lượng nghệ thuật tương đương sprite gốc. Việc chuyển da thật phải làm ở giai đoạn sau khi người dùng đồng ý hướng hình.
+- Foot planting đã có kiểm tra trong **demo world 2D phẳng**; chưa nối với walk path/terrain của `village.mjs` hoặc tính đến đổ bóng/địa hình/camera của production.
+- Animation chỉ được xem là đạt kỹ thuật khi các bài test, Worker serve và smoke Chromium đều pass. Các bài test không thay thế nghiệm thu nhìn bằng mắt và thử trên iPhone thật.
+- Không thay source `assets/village/village.mjs`, `server-game/current` hoặc Worker `src/index.js`; **không cập nhật Production/IPA**. Nhánh này là prototype độc lập.
 
-## Truy cập ở branch/preview
-Dùng bản Worker triển khai từ **nhánh thử nghiệm** rồi mở `/village/rig-skin-demo.html`. Trang sẽ không xuất hiện trên Production hiện tại cho đến khi triển khai asset ở môi trường test.
+## Quy trình nghiệm thu
+1. Người dùng mở HTML offline hoặc preview nhánh test; so sánh với artwork trong trang.
+2. Test Walk/Run (chân trụ, chân đưa, tay đánh), Sit/Sit-down/Stand-up, Vote/Wave, Result thắng/thua.
+3. Đánh giá sự mượt khi chuyển Action ở kích cỡ nhân vật thật trong làng.
+4. Khi đạt hình ảnh và chuyển động mới bắt đầu thiết kế Skin 2D chính thức từ artwork, kết nối gameplay và mở rộng sang các Character khác.
