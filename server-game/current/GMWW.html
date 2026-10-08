@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.26</title>
-<link rel="stylesheet" href="style.css?v=3.26">
+<title>GMWW V3.27</title>
+<link rel="stylesheet" href="style.css?v=3.27">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -66,6 +66,19 @@
           <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
         </section>
 
+        <section class="play-gather-toolbar hidden" id="playGatherToolbar" aria-label="Công cụ Tập hợp dân làng">
+          <div class="play-gather-toolbar-head">
+            <b>TẬP HỢP DÂN LÀNG</b>
+            <span id="playGatherCount" aria-live="polite">0 người</span>
+            <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
+          </div>
+          <div class="play-gather-toolbar-actions">
+            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
+            <button id="playGatherRandom" type="button"><span aria-hidden="true">⚄</span><b>NGẪU NHIÊN</b></button>
+            <button id="playGatherManual" type="button"><span aria-hidden="true">☝</span><b>THỦ CÔNG</b></button>
+            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
+          </div>
+        </section>
 
         <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
           <div class="play-sky-glow"></div>
@@ -111,11 +124,11 @@
 
 
         <nav class="gm-top-menu-v293 gm-bottom-menu-v325" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
-          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span><small>THOÁT</small></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span><small>AUTO GM</small></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span></button>
           <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">SẢNH CHỜ</b><small>CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span><small>AUDIO</small></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span><small>KẾT THÚC</small></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span></button>
         </nav>
       </div>
     </section>
@@ -591,7 +604,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.26"></script>
+<script src="app.js?v=3.27"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

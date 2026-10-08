@@ -2576,3 +2576,90 @@ body.play-immersive #start #gmTopMenu .gm-top-small-v293>small{
 #bottomNav{background:var(--gmww-glass-surface)!important;border-top:1px solid var(--gmww-glass-stroke)!important;box-shadow:0 -7px 23px rgba(0,22,34,.18)!important}
 @media(max-width:380px){#settings .settings-unified-box{padding:11px;gap:9px}#settings .gmww-ops-card .ops-tools{grid-template-columns:repeat(2,minmax(0,1fr))}#settings .gmww-task-item-head{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){#stage .page:not(#start) .settings-unified-box{transition:none}}
+
+
+/* V3.27 — smaller icon-only GM dock; glass matches the timeline. */
+body.play-immersive #start #gmTopMenu.gm-top-menu-v293{
+  grid-template-columns:46px 46px minmax(0,1fr) 46px 46px!important;
+  gap:5px!important;height:56px!important;min-height:56px!important;
+  padding:5px!important;max-width:760px!important;
+  border-radius:16px!important;
+  background:linear-gradient(155deg,rgba(5,39,58,.56),rgba(7,69,87,.48))!important;
+}
+body.play-immersive #start #gmTopMenu .gm-top-box-v293{
+  height:44px!important;min-height:44px!important;padding:2px!important;
+  border-radius:11px!important;
+}
+body.play-immersive #start #gmTopMenu .gm-top-small-v293>small{display:none!important}
+body.play-immersive #start #gmTopMenu .gm-top-icon-v293{
+  font-size:25px!important;line-height:1!important;
+}
+body.play-immersive #start #gmTopMenu .gm-top-info-v293{gap:3px!important;padding:3px 6px!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293 b{font-size:12px!important;line-height:16px!important}
+body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293 small{font-size:7px!important;margin-top:0!important}
+body.play-immersive #start #gmTopMenu .gm-step-forward-icon{font-size:18px!important}
+@media(max-width:360px){
+ body.play-immersive #start #gmTopMenu.gm-top-menu-v293{
+  grid-template-columns:42px 42px minmax(0,1fr) 42px 42px!important;gap:4px!important;
+ }
+ body.play-immersive #start #gmTopMenu .gm-top-info-copy-v293 b{font-size:11px!important}
+}
+/* Translate first; do not fade the bars out before their travel is visible. */
+body.play-immersive #start #playSetupStrip.play-setup-strip,
+body.play-immersive #start #gmTopMenu.gm-top-menu-v293,
+body.play-immersive #start #playGatherToolbar.play-gather-toolbar{
+  transition:transform .68s cubic-bezier(.22,.74,.18,1),opacity .68s linear!important;
+  transform:translate3d(0,0,0)!important;opacity:1!important;
+  will-change:transform!important;
+}
+body.play-immersive #start #playSetupStrip.play-setup-strip.is-auto-hidden,
+body.play-immersive #start #playGatherToolbar.play-gather-toolbar.is-auto-hidden{
+  transform:translate3d(0,calc(-100% - env(safe-area-inset-top) - 118px),0)!important;
+  opacity:.94!important;pointer-events:none!important;
+}
+body.play-immersive #start #gmTopMenu.gm-top-menu-v293.is-auto-hidden{
+  transform:translate3d(0,calc(100% + env(safe-area-inset-bottom) + 24px),0)!important;
+  opacity:.94!important;pointer-events:none!important;
+}
+/* Inline gathering controls: visible on the village itself, never a separate page. */
+body.play-immersive #start #playGatherToolbar.play-gather-toolbar{
+  position:absolute!important;z-index:94!important;
+  top:calc(env(safe-area-inset-top) + 98px)!important;
+  left:10px!important;right:10px!important;
+  width:auto!important;max-width:610px!important;margin:0 auto!important;
+  padding:6px!important;box-sizing:border-box!important;
+  border:1px solid rgba(186,240,250,.43)!important;border-radius:15px!important;
+  background:linear-gradient(155deg,rgba(5,39,58,.67),rgba(7,69,87,.57))!important;
+  backdrop-filter:blur(14px) saturate(145%)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(145%)!important;
+  box-shadow:0 8px 26px rgba(0,22,34,.20),inset 0 1px 0 rgba(255,255,255,.12)!important;
+}
+body.play-immersive #start #playGatherToolbar.hidden{display:none!important}
+#playGatherToolbar .play-gather-toolbar-head{
+ display:flex;align-items:center;gap:6px;min-height:18px;margin-bottom:5px;padding:0 2px;
+}
+#playGatherToolbar .play-gather-toolbar-head>b{font-size:10px;letter-spacing:.04em;color:#fff2c1}
+#playGatherToolbar #playGatherCount{margin-left:auto;color:#d7f3f4;font-size:9px;font-weight:750}
+#playGatherToolbar #playGatherClose{width:23px;height:22px;border:0;border-radius:9px;background:rgba(255,255,255,.12);color:#e8f9fb;font-size:17px;line-height:1}
+#playGatherToolbar .play-gather-toolbar-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+#playGatherToolbar .play-gather-toolbar-actions>button{
+ display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;
+ min-width:0;min-height:45px;border:1px solid rgba(173,234,242,.32);border-radius:10px;
+ background:linear-gradient(165deg,rgba(20,96,116,.65),rgba(6,54,76,.63));color:#edfbff;
+ touch-action:manipulation;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button>span{font-size:20px;line-height:1}
+#playGatherToolbar .play-gather-toolbar-actions>button>b{font-size:8px;line-height:1.1;font-weight:900;white-space:nowrap}
+#playGatherToolbar .play-gather-toolbar-actions>button:disabled{opacity:.45}
+#playGatherToolbar #playGatherConfirm{border-color:rgba(234,215,146,.56);color:#fff3c8}
+#playGatherToolbar button:focus-visible{outline:2px solid #ffe7a3;outline-offset:2px}
+@media(max-width:380px){
+ body.play-immersive #start #playGatherToolbar.play-gather-toolbar{left:7px!important;right:7px!important;top:calc(env(safe-area-inset-top) + 93px)!important}
+ #playGatherToolbar .play-gather-toolbar-head>b{font-size:9px}
+ #playGatherToolbar .play-gather-toolbar-actions>button>b{font-size:7.1px}
+}
+@media(prefers-reduced-motion:reduce){
+ body.play-immersive #start #playSetupStrip.play-setup-strip,
+ body.play-immersive #start #gmTopMenu.gm-top-menu-v293,
+ body.play-immersive #start #playGatherToolbar.play-gather-toolbar{transition:none!important}
+}
