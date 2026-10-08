@@ -189,6 +189,22 @@ test('manual direction is fixed, no world movement until turn completes or after
   assert.ok(sampleVillageRoute(TURN_MS+500,{mode:'down'}).position.y>0);
   assert.throws(()=>sampleVillageRoute(100,{mode:'diagonal'}),/UNKNOWN_DIRECTION/);
 });
+test('official full outfit uses source artwork for face vest flower shorts and sandals',()=>{
+  const markup=svgMarkup(SAMPLE_SKINS[0]);
+  for(const slot of ['original-head','original-vest-image','original-shorts-image','original-sandal-l','original-sandal-r','profile-vest','rear-torso'])assert.match(markup,new RegExp('data-'+slot));
+  assert.match(markup,/character01-original-vest-clip/);
+  assert.match(markup,/character01-original-shorts-clip/);
+});
+test('head remains perfectly level for all nine actions and result variations',()=>{
+  for(const action of ACTION_CATALOG)for(const time of [0,70,220,560,1000,1950,4900]){
+    for(const outcome of ['win','lose']){
+      assert.equal(sampleRigAction(action.id,time,{outcome}).headTilt,0,action.id+'@'+time);
+      assert.equal(sampleRigAction(action.id,time,{outcome,previousAction:'idle',transitionElapsedMs:65}).headTilt,0);
+    }
+  }
+  const renderSource=fs.readFileSync(new URL('../assets/village/rig-skin-renderer.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(renderSource,/rotate\(\$\{n\(pose\.headTilt\)\}\)/);
+});
 test('renderer actually contains separate rear and side appearances',()=>{
   const markup=svgMarkup(SAMPLE_SKINS[0]);
   assert.match(markup,/data-rear-head/);
