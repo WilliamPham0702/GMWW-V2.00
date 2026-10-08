@@ -6,11 +6,11 @@ export const TURN_MS=320;
 export const WALK_SEGMENT_MS=2050;
 export const RUN_SEGMENT_MS=1250;
 export const ROUTE_POINTS=Object.freeze([
-  Object.freeze({x:-.32,y:.055}),
-  Object.freeze({x:.32,y:.055}),
-  Object.freeze({x:.32,y:-.07}),
-  Object.freeze({x:-.32,y:-.07}),
-  Object.freeze({x:-.32,y:.055})
+  Object.freeze({x:-.20,y:.055}),
+  Object.freeze({x:.20,y:.055}),
+  Object.freeze({x:.20,y:-.07}),
+  Object.freeze({x:-.20,y:-.07}),
+  Object.freeze({x:-.20,y:.055})
 ]);
 export const ROUTE_DIRECTIONS=Object.freeze(['right','up','left','down']);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -27,11 +27,11 @@ export function sampleVillageRoute(elapsedMs,{mode='auto',run=false,speed=1}={})
     const turning=offset<TURN_MS;
     const progress=turning?0:clamp((offset-TURN_MS)/stride,0,1);
     return{direction:face,position:pos(ROUTE_POINTS[segment],ROUTE_POINTS[segment+1],progress),
-      turning,moving:!turning,progress,segment,animation:turning?'idle':run?'run':'walk'};
+      turning,moving:!turning,motionElapsedMs:Math.max(0,offset-TURN_MS),progress,segment,animation:turning?'idle':run?'run':'walk'};
   }
-  const endpoints={left:{x:-.30,y:0},right:{x:.30,y:0},up:{x:0,y:-.105},down:{x:0,y:.055}};
+  const endpoints={left:{x:-.20,y:0},right:{x:.20,y:0},up:{x:0,y:-.105},down:{x:0,y:.055}};
   const turning=t<TURN_MS,progress=turning?0:easing((t-TURN_MS)/stride);
   const moving=!turning&&t<TURN_MS+stride;
   return{direction:mode,position:pos({x:0,y:0},endpoints[mode],progress),
-    turning,moving,progress,segment:0,animation:moving?(run?'run':'walk'):'idle'};
+    turning,moving,motionElapsedMs:Math.max(0,t-TURN_MS),progress,segment:0,animation:moving?(run?'run':'walk'):'idle'};
 }
