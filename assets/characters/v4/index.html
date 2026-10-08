@@ -27,7 +27,7 @@
     a{color:#94f3e4}
     .lab-stage{position:relative;height:230px;border-radius:16px;overflow:hidden;border:1px solid #507d8c;background:radial-gradient(circle at center,#236b70 0,#164f63 55%,#0e3e58 100%)}
     .lab-stage:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 45px,#ffffff0c 46px 47px),repeating-linear-gradient(90deg,transparent 0 45px,#ffffff0c 46px 47px);pointer-events:none}
-    .lab-pin{width:56px;height:56px;position:absolute;left:50%;top:52%;display:grid;place-items:center;border:2px solid #9fe3d9;border-radius:50%;background:#102d43d9;box-shadow:0 7px 24px #06202ca6;transform:translate(-50%,-50%);will-change:left,top}
+    .lab-pin{width:90px;height:90px;position:absolute;left:50%;top:52%;display:grid;place-items:center;border:2px solid #9fe3d9;border-radius:50%;background:#102d43d9;box-shadow:0 7px 24px #06202ca6;transform:translate(-50%,-50%);will-change:left,top}
     .lab-pin .arrow{font-size:22px;line-height:1;display:block;will-change:transform}.lab-pin:after{content:"V4 TEST";position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);color:#caedea;font-weight:700;white-space:nowrap;font-size:9px}
     .lab-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:10px 0}
     .lab-control{color:#e6f8f8;background:#164b61;border:1px solid #6aa2a8;border-radius:9px;padding:9px 12px;min-height:41px;font:inherit;font-size:13px;cursor:pointer}
@@ -63,7 +63,7 @@
   <h2>Kiểm thử chuyển hướng và lệnh Action trên Web</h2>
   <p>Đây là <strong>mốc thử chuyển động bằng biểu tượng kỹ thuật</strong>, không phải Character-01 đã hoàn thành. Chạm chọn hướng, sau đó nhấn Đi bộ hoặc Chạy: biểu tượng sẽ quay đúng hướng <strong>trước khi</strong> di chuyển.</p>
   <div class="lab-stage" id="labStage" aria-label="Khu vực thử chuyển động bằng dấu chỉ hướng">
-    <div class="lab-pin" id="labPin"><span class="arrow" id="labArrow">↑</span></div>
+    <div class="lab-pin" id="labPin"><span class="arrow" id="labArrow">↓</span></div>
   </div>
   <p class="lab-status" id="labStatus" aria-live="polite">Sẵn sàng test logic — chưa có sprite Character mới.</p>
   <div class="lab-row" aria-label="Chọn hướng nhìn">
@@ -155,7 +155,7 @@ function frame(now){
  const model=controller.sample(now);
  pin.style.left=(model.position.x*100).toFixed(2)+'%';
  pin.style.top=(model.position.y*100).toFixed(2)+'%';
- arrow.style.transform='rotate('+model.headingDeg.toFixed(2)+'deg)';
+ arrow.style.transform='rotate('+(-model.headingDeg).toFixed(2)+'deg)';
  const phase=model.phase==='turn'?'Đang quay hướng':model.phase==='move'?'Đang di chuyển':model.phase==='done'?'Hoàn tất':'Đang thực hiện';
  status.textContent=actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+' · đầu thẳng 0°'+(model.actionId==='result'?' · '+document.getElementById('outcome').selectedOptions[0].text:'');
  requestAnimationFrame(frame);
