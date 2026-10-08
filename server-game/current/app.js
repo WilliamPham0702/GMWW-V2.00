@@ -1446,12 +1446,12 @@ function gmwwTaskReviewReturn(){
   gmwwTasksLastLoaded=0;
   gmwwTasksRefresh({silent:false});
 }
-window.addEventListener('focus',gmwwTaskReviewReturn);
-window.addEventListener('pageshow',gmwwTaskReviewReturn);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gmwwTaskReviewReturn()});
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
+window.addEventListener('focus',gmwwTaskReviewReturn);
+window.addEventListener('pageshow',gmwwTaskReviewReturn);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gmwwTaskReviewReturn()});
 const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:'',characterPreviewTimer:null};
 
 function gmHeaders(extra={}){return {...extra,Authorization:'Bearer '+GMWW_GM_AUTH}}
