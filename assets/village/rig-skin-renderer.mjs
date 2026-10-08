@@ -233,7 +233,7 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
   set(b['abs-middle'],'d',`M${n(sx)} ${n(sy+18)} L${n(sx)} ${n(hy-18)}`);
   set(b.necklace,'d',`M${n(sx-12)} ${n(sy+3)} Q${n(sx)} ${n(sy+19)} ${n(sx+12)} ${n(sy+3)}`);
   set(b.pendant,'cx',n(sx));set(b.pendant,'cy',n(sy+16));
-  set(b.head,'transform',`translate(${n(200+pose.head.x)} ${n(pose.head.y)}) rotate(${n(pose.headTilt)})`);
+  set(b.head,'transform',`translate(${n(200+pose.head.x)} ${n(pose.head.y)})`); // Hard upright head in all actions
   set(b.eyes,'opacity',String(1-pose.eyes));
   set(b.smile,'opacity',pose.mouth<0?'.28':'1');
 }
