@@ -34,7 +34,7 @@ function jointPose(){
     elbows:{L:v(-42,167),R:v(42,167)},hands:{L:v(-41,195),R:v(41,195)},
     knees:{L:v(-17,246),R:v(17,246)},ankles:{L:v(-19,286),R:v(19,286)},
     footX:{L:-19,R:19},footY:{L:294,R:294},footLift:{L:0,R:0},
-    mouth:0,eyes:0,shadow:1,alpha:1,hair:0,contact:{L:true,R:true},worldX:0
+    mouth:0,eyes:0,shadow:1,alpha:1,hair:0,sitBlend:0,contact:{L:true,R:true},worldX:0
   };
 }
 export function basePose(){return jointPose()}
@@ -49,7 +49,7 @@ const interpPose=(a,b,t)=>{
     out[key]={L:blendPoint(a[key].L,b[key].L,t),R:blendPoint(a[key].R,b[key].R,t)};
   }
   for(const key of ['footX','footY','footLift'])out[key]={L:lerp(a[key].L,b[key].L,t),R:lerp(a[key].R,b[key].R,t)};
-  for(const key of ['headTilt','torsoTilt','mouth','eyes','shadow','alpha','hair','worldX'])out[key]=lerp(a[key],b[key],t);
+  for(const key of ['headTilt','torsoTilt','mouth','eyes','shadow','alpha','hair','sitBlend','worldX'])out[key]=lerp(a[key],b[key],t);
   out.contact={L:t<.5?a.contact.L:b.contact.L,R:t<.5?a.contact.R:b.contact.R};
   return out;
 };
@@ -67,13 +67,13 @@ function kneeFor(hip,ankle,side){
 }
 function seatedPose(t){
   const p=jointPose(),b=Math.sin(t*TAU);
-  p.hip=v(0,265);p.shoulder=v(0,202);p.head=v(0,160);
-  p.knees={L:v(-37,281),R:v(37,281)};
+  p.hip=v(0,275);p.shoulder=v(0,211);p.head=v(0,169);p.sitBlend=1;
+  p.knees={L:v(-35,283),R:v(35,283)};
   // ankle feet overlap at center, knees stay close to torso rather than spread.
-  p.ankles={L:v(13,292),R:v(-13,291)};
-  p.footX={L:11,R:-11};p.footY={L:299,R:297};
-  p.elbows={L:v(-30,240),R:v(30,240)};
-  p.hands={L:v(-20,266),R:v(20,266)};
+  p.ankles={L:v(18,297),R:v(-18,297)};
+  p.footX={L:16,R:-16};p.footY={L:302,R:302};
+  p.elbows={L:v(-32,254),R:v(32,254)};
+  p.hands={L:v(-28,274),R:v(28,274)};
   p.headTilt=b*1.3;p.hair=-b*1.2;
   return p;
 }
