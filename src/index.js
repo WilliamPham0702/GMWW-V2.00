@@ -10,6 +10,7 @@ import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-v
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks } from "./gmww-task-board.js";
+import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V3.39",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-339",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
@@ -1032,6 +1033,7 @@ export default {async fetch(request,env){
       const currentVersion=VERSION.replace(/^V/i,"");
       const currentNativeShell=NATIVE_SHELL_VERSION===currentVersion;
       const validRuntime=m=>String(m?.releaseVersion||"")===currentVersion&&String(m?.releaseType||"")==="runtime"&&String(m?.runtimeVersion||"")===currentVersion&&String(m?.shellVersion||"")===String(NATIVE_SHELL_VERSION)&&Array.isArray(m?.runtime?.files)&&m.runtime.files.length>0;
+      const recoverOlderInstalledRuntime=()=>recoverLegacyRuntimeManifest({assets:env.ASSETS,requestUrl:request.url,version:currentVersion,shellVersion:NATIVE_SHELL_VERSION,installedVersion:url.searchParams.get("current")||""});
       const readVersionedManifest=async()=>{
         try{
           const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
@@ -1051,6 +1053,7 @@ export default {async fetch(request,env){
       const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
       const res=await env.ASSETS.fetch(new Request(manifestUrl.toString(),{method:"GET",headers:{"cache-control":"no-cache"}}));
       if(!res.ok){
+        if(!currentNativeShell){const rescue=await recoverOlderInstalledRuntime();if(rescue)return j(rescue);}
         return j({ok:false,error:currentNativeShell?"UPDATE_MANIFEST_NOT_FOUND":"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},currentNativeShell?404:503);
       }
       const manifest=await res.json();
@@ -1078,6 +1081,7 @@ export default {async fetch(request,env){
       const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
       if(!currentNativeShell){
         if(validRuntime(manifest))return j({ok:true,...manifest,checkedAt:new Date().toISOString()});
+        const rescue=await recoverOlderInstalledRuntime();if(rescue)return j(rescue);
         return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
       }
       if(latestMismatch||latestLostRuntime){
