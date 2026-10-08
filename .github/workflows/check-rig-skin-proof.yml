@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify JavaScript syntax and 39 approved actions
+      - name: Verify JavaScript syntax and 9 approved actions
         run: |
           node --check assets/village/rig-skin-core.mjs
           node --check assets/village/rig-skin-renderer.mjs
@@ -52,8 +52,8 @@ jobs:
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME"
           "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=3200             --dump-dom 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=walk' > /tmp/rig-walk-dom.html
-          grep -q 'data-joint="shinL"' /tmp/rig-walk-dom.html
-          grep -q 'data-joint="forearmR"' /tmp/rig-walk-dom.html
+          grep -q 'data-leg-l' /tmp/rig-walk-dom.html
+          grep -q 'data-arm-r' /tmp/rig-walk-dom.html
           grep -q '<option value="walk"' /tmp/rig-walk-dom.html
           "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=2800             --screenshot=rig-skin-walk.png 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=walk'
           "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=2500             --screenshot=rig-skin-sit.png 'http://127.0.0.1:8787/village/rig-skin-demo.html?action=sit'
