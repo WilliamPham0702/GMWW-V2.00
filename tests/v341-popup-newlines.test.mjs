@@ -12,24 +12,24 @@ test('OTA confirmation dialogs render actual newlines, not backslash characters'
     const match=app.match(new RegExp('if\\(confirm\\(([^;\\n]*?)\\)\\)'+name+'\\(\\)'));
     assert.ok(match, name+' popup not found');
     const message=vm.runInNewContext(match[1],{latest:'3.41'});
-    assert.match(message,/\\n\\n/,'native dialog needs paragraph spacing');
-    assert.ok(!message.includes(String.raw`\\n`), 'must not display literal slash-n');
+    assert.match(message,/\n\n/,'native dialog needs paragraph spacing');
+    assert.ok(!message.includes(String.raw`\n`), 'must not display literal slash-n');
   }
 });
 
 test('Room reset dialog has legible newlines too',()=>{
-  const match=app.match(/if\\(!confirm\\(('Trở về SẢNH CHỜ\\?[^;\\n]*?')\\)\\)return false/);
+  const match=app.match(/if\(!confirm\(('Trở về SẢNH CHỜ\?[^;\n]*?')\)\)return false/);
   assert.ok(match,'Room reset confirmation not found');
   const message=vm.runInNewContext(match[1]);
-  assert.match(message,/\\n/);
-  assert.ok(!message.includes(String.raw`\\n`));
+  assert.match(message,/\n/);
+  assert.ok(!message.includes(String.raw`\n`));
 });
 
 test('V3.41 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
   const server=fs.readFileSync('src/index.js','utf8');
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   assert.equal(pkg.version,'3.41.0');
-  assert.match(html,/<title>GMWW V3\\.41<\\/title>/);
-  assert.match(app,/const VERSION='3\\.41'/);
-  assert.match(server,/VERSION="V3\\.41",NATIVE_SHELL_VERSION="3\\.17",UPDATE_CHANNEL_REV="runtime-341"/);
+  assert.match(html,/<title>GMWW V3\.41<\/title>/);
+  assert.match(app,/const VERSION='3\.41'/);
+  assert.match(server,/VERSION="V3\.41",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-341"/);
 });
