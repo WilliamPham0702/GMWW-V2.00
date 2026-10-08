@@ -70,6 +70,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/game-templates/list"&&request.method==="GET")return this.gameTemplateList();
     if(url.pathname==="/game-templates/upsert"&&request.method==="PUT")return this.gameTemplateUpsert(await safeJson(request));
     if(url.pathname==="/game-templates/get"&&request.method==="GET")return this.gameTemplateGet(url.searchParams.get("id")||"");
+    if(url.pathname==="/game-templates/delete"&&request.method==="DELETE")return this.gameTemplateDelete(url.searchParams.get("id")||"");
     if(url.pathname==="/members/admin-reset-ranking"&&request.method==="POST")return this.memberResetRanking(request);
     if(url.pathname==="/members/admin-clear-history"&&request.method==="DELETE")return this.memberClearHistory(request);
     if(url.pathname==="/members/delete"&&request.method==="DELETE")return this.memberDelete(request,await safeJson(request));
@@ -297,6 +298,13 @@ export class RoomDurableObject extends DurableObject {
     id=String(id||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const rec=await this.ctx.storage.get("gameTemplate:"+id);if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     return j({ok:true,template:rec});
+  }
+  async gameTemplateDelete(id){
+    id=String(id||"").trim().slice(0,120);
+    if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
+    const key="gameTemplate:"+id,existing=await this.ctx.storage.get(key);
+    if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    await this.ctx.storage.delete(key);return j({ok:true,deleted:true,id});
   }
   async gameTemplateUpsert(body){
     const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
@@ -1203,6 +1211,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
+  if(gmTemplateGet&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch(new Request("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"}));}
   if(url.pathname==="/api/gm/lobby/reset"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     return gmLobbyResetAll(env,request);
