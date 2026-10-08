@@ -9,6 +9,7 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
+import { fetchGmwwTasks } from "./gmww-task-board.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V3.25",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-325",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
@@ -1012,6 +1013,10 @@ export default {async fetch(request,env){
     if(admissionResponse)return admissionResponse;
   }
   if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
+  if(url.pathname==="/api/operations/tasks"&&request.method==="GET"){
+    try{const work=await fetchGmwwTasks();return j({ok:true,source:"github_public_issues",generatedAt:new Date().toISOString(),...work})}
+    catch(error){return j({ok:false,error:"TASKS_TEMPORARILY_UNAVAILABLE",message:"Chưa truy xuất được công việc. Vui lòng thử tải lại."},503)}
+  }
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
   if(url.pathname==="/api/health/deep"&&request.method==="GET"){
     try{
