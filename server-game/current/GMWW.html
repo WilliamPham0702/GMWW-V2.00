@@ -376,6 +376,40 @@
           <small class="diagnostic-detail" id="diagnosticDetail">Tự chạy khi mở Cài Đặt và khi ứng dụng trở lại Online.</small>
         </div>
 
+        <div class="settings-card gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
+          <div class="health-v236-head">
+            <div><span class="ops-dot" id="opsDot"></span><b id="gmwwOpsTitle">Trung Tâm Vận Hành GMWW</b></div>
+            <span class="ops-pill" id="opsOverall">CHƯA KIỂM TRA</span>
+          </div>
+          <p class="ops-intro">Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản. Không cần vào GitHub.</p>
+          <div class="ops-status-grid" aria-live="polite">
+            <div><small>SERVER</small><b id="opsServerState">—</b></div>
+            <div><small>LƯU TRỮ</small><b id="opsStorageState">—</b></div>
+            <div><small>REALTIME</small><b id="opsRealtimeState">—</b></div>
+            <div><small>PHIÊN BẢN</small><b id="opsReleaseState">—</b></div>
+          </div>
+          <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
+            <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+            <button class="settings-action settings-action-server" id="opsExportReport" type="button"><span>▤</span><b>XUẤT BÁO CÁO</b></button>
+          </div>
+          <div class="ops-report" id="opsReport" aria-live="polite">
+            <div data-ops-check="server"><span>Cloudflare Worker</span><b>—</b><small>Đang chờ kiểm tra</small></div>
+            <div data-ops-check="storage"><span>Durable Objects</span><b>—</b><small>Kiểm tra đọc dữ liệu, không ghi đè</small></div>
+            <div data-ops-check="player"><span>Player Web</span><b>—</b><small>Chưa kiểm tra kết nối</small></div>
+            <div data-ops-check="update"><span>Runtime / IPA</span><b>—</b><small>Chưa đối chiếu phiên bản</small></div>
+            <div data-ops-check="room"><span>Phòng đang chọn</span><b>—</b><small>Chưa kiểm tra phòng</small></div>
+            <div data-ops-check="realtime"><span>WebSocket</span><b>—</b><small>Chưa kiểm tra kết nối realtime</small></div>
+            <div data-ops-check="characters"><span>Nhân vật / Artwork</span><b>—</b><small>Chưa kiểm tra kho nhân vật</small></div>
+            <div data-ops-check="runtime"><span>Lỗi ứng dụng</span><b>—</b><small>Chưa ghi nhận kết quả</small></div>
+          </div>
+          <div class="ops-advice" id="opsAdvice" role="status">Nhấn KIỂM TRA TỔNG để kiểm tra ngay trong GMWW.</div>
+          <label class="ops-auto"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra khi mở Cài Đặt và mỗi 2 phút</span></label>
+          <small class="ops-footnote" id="opsLastChecked">Chỉ kiểm tra và báo lỗi, không tự xoá dữ liệu, reset phòng hoặc cài IPA.</small>
+          <textarea id="opsReportFallback" class="ops-report-fallback hidden" readonly aria-label="Báo cáo chẩn đoán để sao chép" rows="5"></textarea>
+        </div>
+
         <div class="settings-card character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
