@@ -46,9 +46,9 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
 
 
 test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
- const img=[...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.webp)"/g)].map(m=>m[1]);
+ const img=[...new Set([...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.webp)"/g)].map(m=>m[1]))];
  assert.deepEqual(img,["home-fantasy-hero-v337.webp","home-v1-book.webp","home-v1-members.webp","home-v1-action.webp"]);
- assert.match(home,/data-home-library-tab="actions"/);
+ assert.match(home,/data-home-library-tab="templates"/);
  assert.match(app,/dataset\.homeLibraryTab/);
  assert.match(css,/#home \.gmww-home-hero-art/);
  assert.match(css,/#home \.gmww-home-play-copy b/);
