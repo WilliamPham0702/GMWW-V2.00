@@ -114,8 +114,8 @@ test('Automatic monitoring can be disabled without altering game saves',()=>{
   assert.equal(storageMap.size,1);
 });
 
-test('Cài Đặt loads self-check on opening and background monitoring only while settings visible',()=>{
-  assert.match(app,/setTimeout\(\(\)=>gmwwOpsRun\(\{kind:'all',silent:true\}\),450\)/);
-  assert.match(app,/gmwwOpsAutoEnabled\(\).*gmwwOpsRun\(\{kind:'all',silent:true\}\)/);
+test('Cài Đặt opens without synchronous diagnostics and offers an explicit Healthy Check',()=>{
+  assert.doesNotMatch(app,/setTimeout\(\(\)=>gmwwOpsRun\(\{kind:'all',silent:true\}\),450\)/);
+  assert.match(app,/getElementById\('settingsRunHealth'\)/);
   assert.doesNotMatch(block,/gmwwSendGmPresence\(|gmRoomReset\(|localStorage\.clear\(|sessionStorage\.clear\(/);
 });

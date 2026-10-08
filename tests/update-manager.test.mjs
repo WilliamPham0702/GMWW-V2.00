@@ -93,9 +93,9 @@ test('Production deploy verifies exact runtime, manifest and web-sync endpoint',
 
 test('Every new version can notify the GM with the required action',()=>{
   const js=fs.readFileSync('server-game/current/app.js','utf8');
-  assert.match(js,/Vui lòng CẬP NHẬT/);
-  assert.match(js,/cần cài lại IPA mới/);
-  assert.match(js,/Vui lòng ĐỒNG BỘ/);
+  assert.match(js,/gmwwReleaseNotesText\(manifest\)/);
+  assert.match(js,/Có phiên bản IPA V/);
+  assert.match(js,/Đồng bộ ngay\?/);
   assert.match(js,/visibilitychange/);
   assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
 });

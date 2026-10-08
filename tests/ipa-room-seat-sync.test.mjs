@@ -112,9 +112,8 @@ test('saved game templates are precompiled on server but remain GM-only until ro
   assert.match(server,/defaultActionSec/);
   assert.match(server,/actionDurationSec/);
   assert.match(app,/\/api\/gm\/game-templates/);
-  assert.match(html,/playVillageDiscussionSec/);
-  assert.match(html,/playWolfDiscussionSec/);
-  assert.match(html,/playDefaultActionSec/);
+  assert.doesNotMatch(html,/id="playVillageDiscussionSec"|id="playWolfDiscussionSec"|id="playDefaultActionSec"/);
+  assert.match(app,/data-role-count/);
   const start=server.indexOf('async publicState()'),end=server.indexOf('async gmAuthorized',start),publicState=server.slice(start,end);
   assert.doesNotMatch(publicState,/gameConfig|gameTemplate/);
 });

@@ -44,5 +44,6 @@ test('V3.37 IPA view announces real task-action readiness and reloads after succ
   assert.match(app,/querySelectorAll\('\.gmww-task-review-link\.completed'\)/);
   assert.match(app,/setTimeout\(\(\)=>\{if\(!gmwwNativePost\('restartRuntime'\)\)window\.location\.reload\(\)\},300\)/);
   assert.match(css,/\.gmww-task-review-health\[data-ready="false"\]/);
-  assert.match(app,/setTimeout\(\(\)=>gmwwTasksRefresh\(\{silent:false\}\),500\)/);
+  assert.doesNotMatch(app,/setTimeout\(\(\)=>gmwwTasksRefresh\(\{silent:false\}\),500\)/);
+  assert.match(app,/getElementById\('gmwwTasksReload'\)/);
 });
