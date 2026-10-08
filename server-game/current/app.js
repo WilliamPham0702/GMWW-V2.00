@@ -1872,7 +1872,7 @@ const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSh
 document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
 
 /* V3.36 — Trang Chủ: cảm hứng bố cục V1, tất cả số liệu dựa trên máy chủ thật. */
-let gmwwHomeBusy=false,gmwwHomeLastLoaded=0;
+let gmwwHomeBusy=false,gmwwHomeLastLoaded=0,gmwwHomeAllRecent=false,gmwwHomeCachedRows=[];
 function gmwwHomeText(id,text){
   const node=document.getElementById(id);
   if(node)node.textContent=String(text??'—');
@@ -1887,9 +1887,11 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
   const status=document.getElementById('gmwwHomeRecentResult');
   if(!target)return;
   target.replaceChildren();
+  gmwwHomeCachedRows=rows;
   const recent=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,member:m})))
     .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
-    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt)).slice(0,3);
+    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt)).slice(0,gmwwHomeAllRecent?50:3);
+  const more=document.getElementById('gmwwHomeOpenRanking');if(more)more.textContent=gmwwHomeAllRecent?'Thu gọn ❮':'Xem tất cả ❯';
   if(status)status.hidden=recent.length>0;
   const ago=t=>{
     const minutes=Math.max(0,Math.floor((Date.now()-Date.parse(t))/60000));
@@ -1910,7 +1912,7 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
       avatar.append(image);
     }else avatar.textContent='♟';
     const name=document.createElement('b');name.textContent=String(h.member.displayName||h.member.loginId||'Thành viên');
-    const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='lose'?'Đã kết thúc ván':'Tham gia ván chơi';
+    const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='loss'?'Đã kết thúc ván':'Tham gia ván chơi';
     const time=document.createElement('small');time.textContent=ago(h.playedAt);
     const arrow=document.createElement('i');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
     button.append(avatar,name,action,time,arrow);
@@ -1924,7 +1926,8 @@ function gmwwHomeRenderMembers(rows){
   gmwwHomeText('gmwwHomeMemberCount',rows.length);
   gmwwHomeText('gmwwHomeOnlineCount',rows.filter(m=>m?.online).length);
   const played=rows.reduce((sum,m)=>sum+memberStats(m).games,0);
-  gmwwHomeText('gmwwHomePlaysCount',played);
+  const matches=new Set(rows.flatMap(m=>Array.isArray(m.history)?m.history:[]).map(h=>String(h.matchId||'')).filter(Boolean));
+  gmwwHomeText('gmwwHomePlaysCount',matches.size||played);
   const ranking=[...rows].sort((a,b)=>{
     const A=memberStats(a),B=memberStats(b);
     return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId||'').localeCompare(String(b.displayName||b.loginId||''),'vi');
@@ -1937,7 +1940,7 @@ function gmwwHomeRenderMembers(rows){
     .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
     .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt))[0];
   gmwwHomeText('gmwwHomeRecentResult',last
-    ?String(last.memberName||'Thành viên')+' · '+(last.result==='win'?'Thắng':last.result==='lose'?'Thua':'Đã tham gia')+' · '+memberDate(last.playedAt,true)
+    ?String(last.memberName||'Thành viên')+' · '+(last.result==='win'?'Thắng':last.result==='loss'?'Thua':'Đã tham gia')+' · '+memberDate(last.playedAt,true)
     :'Chưa có lịch sử ván được ghi nhận.');  gmwwHomeRenderExtras(rows,ranking,leader);
 }
 
@@ -1979,8 +1982,8 @@ function gmwwHomeNavigate(target){
 document.getElementById('gmwwHomeEnterVillage')?.addEventListener('click',()=>gmwwHomeNavigate('start'));
 document.querySelectorAll('[data-home-destination]').forEach(button=>button.addEventListener('click',()=>{gmwwHomeNavigate(button.dataset.homeDestination);const tab=button.dataset.homeLibraryTab;if(tab&&button.dataset.homeDestination==='library')document.querySelector('#library .libtab[data-lib="'+tab+'"]')?.click()}));
 document.getElementById('gmwwHomeOpenRanking')?.addEventListener('click',()=>{
-  gmwwHomeNavigate('members');
-  setTimeout(()=>{const ranking=document.getElementById('memberGroupRanking');if(ranking){ranking.open=true;ranking.scrollIntoView({block:'start',behavior:'smooth'})}},120);
+  gmwwHomeAllRecent=!gmwwHomeAllRecent;
+  if(gmwwHomeCachedRows.length)gmwwHomeRenderMembers(gmwwHomeCachedRows);
 });
 document.getElementById('gmwwHomeRefresh')?.addEventListener('click',()=>gmwwHomeRefresh(true));
 document.querySelectorAll('#bottomNav .nav[data-page="home"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>gmwwHomeRefresh(false),35)));
