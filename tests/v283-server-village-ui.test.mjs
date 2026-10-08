@@ -21,7 +21,7 @@ test('V2.93 GM lobby uses websocket-first realtime with fallback polling',()=>{
 test('V3.25 auto-hides the top timeline and bottom five-control dock after 30 seconds',()=>{
   const ids=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
   let cursor=-1;for(const id of ids){const pos=html.indexOf('id="'+id+'"');assert.ok(pos>cursor);cursor=pos}
-  assert.match(html,/class="gm-top-menu-v293 gm-bottom-menu-v325"/);
+  assert.match(html,/class="gm-top-menu-v293 gm-bottom-menu-v325(?: gm-stage-dock-v330)?"/);
   assert.match(html,/id="playSetupStrip"/);
   assert.doesNotMatch(html,/<footer class="play-control-bar/);
   assert.match(css,/V3\.25: single seven-step top timeline and frosted five-control bottom dock/);

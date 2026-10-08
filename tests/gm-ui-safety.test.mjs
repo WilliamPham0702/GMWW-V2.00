@@ -8,7 +8,7 @@ const html=readFileSync(new URL('../server-game/current/GMWW.html',import.meta.u
 function section(first,next){return app.slice(app.indexOf(first),app.indexOf(next,app.indexOf(first)))}
 test('timeline at top and five primary actions at bottom keep their original IDs',()=>{
   const timeline=html.slice(html.indexOf('id="playSetupStrip"'),html.indexOf('</section>',html.indexOf('id="playSetupStrip"')));
-  const dock=html.slice(html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325"'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325"')));
+  const dock=html.slice(html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293 gm-bottom-menu-v325')));
   assert.ok(timeline.includes('data-play-step="lobby"'));
   assert.equal((timeline.match(/data-play-step=/g)||[]).length,7);
   assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="playWorld"'));
