@@ -10,7 +10,7 @@ const end=app.indexOf('\nwindow.GMWWUpdateNative={',begin);
 assert.ok(begin>0&&end>begin,'Update verifier is present');
 const source=app.slice(begin,end);
 
-function harness({healthFails=false,manifestFails=false,server='V3.41',manifestServer='3.41',latest='3.41',runtime='3.41'}={}){
+function harness({healthFails=false,manifestFails=false,server='V3.42',manifestServer='3.42',latest='3.42',runtime='3.42'}={}){
   const ui=[],actions=[],elements={
     retryUpdateCheck:{disabled:false,setAttribute(){},removeAttribute(){}},
     updateServerVersion:{textContent:'V—'}
@@ -38,15 +38,15 @@ function harness({healthFails=false,manifestFails=false,server='V3.41',manifestS
   vm.runInNewContext(source+'\nglobalThis.runCheck=checkAppUpdate;globalThis.getManifest=()=>gmwwUpdateManifest;',ctx);
   return{run:ctx.runCheck,manifest:ctx.getManifest,ui,actions,elements};
 }
-test('V3.41 only declares latest after Server and release version both agree',async()=>{
+test('V3.42 only declares latest after Server and release version both agree',async()=>{
   const h=harness(),m=await h.run();
-  assert.equal(m.releaseVersion,'3.41');
+  assert.equal(m.releaseVersion,'3.42');
   assert.equal(h.ui.at(-1)[0],'ok');
-  assert.equal(h.elements.updateServerVersion.textContent,'V3.41');
-  assert.match(h.ui.at(-1)[2],/phiên bản mới nhất/);
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.42');
+  assert.match(h.ui.at(-1)[2],/Game Runtime V3.42/);
   assert.equal(h.elements.retryUpdateCheck.disabled,false);
 });
-test('V3.41 never says latest when Server health cannot be verified',async()=>{
+test('V3.42 never says latest when Server health cannot be verified',async()=>{
   const h=harness({healthFails:true});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[0],'warn');
@@ -55,37 +55,37 @@ test('V3.41 never says latest when Server health cannot be verified',async()=>{
   assert.equal(h.elements.updateServerVersion.textContent,'V—');
   assert.equal(h.manifest(),null);
 });
-test('V3.41 shows a verified Server version even if release manifest fails',async()=>{
+test('V3.42 shows a verified Server version even if release manifest fails',async()=>{
   const h=harness({manifestFails:true});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[0],'warn');
-  assert.equal(h.elements.updateServerVersion.textContent,'V3.41');
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.42');
   assert.equal(h.manifest(),null);
 });
-test('V3.41 treats a mismatched deployment as unverified',async()=>{
+test('V3.42 treats a mismatched deployment as unverified',async()=>{
   const h=harness({manifestServer:'3.38'});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[1],'SERVER CHƯA ĐỒNG BỘ');
   assert.equal(h.manifest(),null);
 });
-test('V3.41 exposes explicit on-screen retry without IPA reinstall',()=>{
+test('V3.42 exposes explicit on-screen retry without IPA reinstall',()=>{
   assert.match(html,/id="retryUpdateCheck"/);
   assert.match(app,/retryUpdateCheck\.addEventListener\('click'/);
   assert.match(app,/else if\(kind==='unverified'\)/);
-  assert.match(html,/<title>GMWW V3\.41<\/title>/);
+  assert.match(html,/<title>GMWW V3\.42<\/title>/);
 });
 
-test('An existing V3.39 install is offered the immutable V3.41 runtime',async()=>{
+test('An existing V3.39 install is offered the immutable V3.42 runtime',async()=>{
  const h=harness({runtime:'3.39'}),m=await h.run();
- assert.equal(m.releaseVersion,'3.41');
+ assert.equal(m.releaseVersion,'3.42');
  assert.equal(h.actions.at(-1)[0],'runtime');
  assert.equal(h.ui.at(-1)[1],'CÓ CẬP NHẬT');
- assert.equal(h.elements.updateServerVersion.textContent,'V3.41');
+ assert.equal(h.elements.updateServerVersion.textContent,'V3.42');
 });
 
-test('An installed V3.40 sees a V3.41 update rather than falsely reporting latest',async()=>{
+test('An installed V3.40 sees a V3.42 update rather than falsely reporting latest',async()=>{
  const h=harness({runtime:'3.40'}),m=await h.run();
- assert.equal(m?.releaseVersion,'3.41');
+ assert.equal(m?.releaseVersion,'3.42');
  assert.equal(h.actions.at(-1)[0],'runtime');
  assert.equal(h.ui.at(-1)[1],'CÓ CẬP NHẬT');
 });
