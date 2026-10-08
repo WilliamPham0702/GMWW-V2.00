@@ -8,7 +8,6 @@ import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
-import { characterV4Status } from "./gmww-character-v4.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks } from "./gmww-task-board.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
@@ -263,6 +262,11 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberPresenceInternal(body){
     const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND"},404);
+    // On GM disband retries, do not evict someone who has since joined another room.
+    const expected=body?.expectedRoomCode?normalizeRoomCode(body.expectedRoomCode):null;
+    if(expected&&!body?.roomCode&&member.currentRoomCode&&normalizeRoomCode(member.currentRoomCode)!==expected){
+      return j({ok:true,skippedDifferentRoom:true,member:directoryMember(member)});
+    }
     member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();member.currentRoomCode=body?.roomCode?normalizeRoomCode(body.roomCode):null;member.ready=!!body?.ready;
     await this.ctx.storage.put("member:"+loginId,member);return j({ok:true,member:directoryMember(member)});
   }
@@ -593,8 +597,14 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     const evicted=new Set((await this.ctx.storage.get("evictedMembers"))||[]);
-    for(const p of removedPlayers)if(p?.loginId)evicted.add(normalizeLoginId(p.loginId));
-    for(const loginId of wanted.keys())evicted.delete(loginId);
+    const previousDisband=disbandAll?((await this.ctx.storage.get("pendingDisbandLogins"))||[]):[];
+    const pendingDisband=new Set(previousDisband.map(normalizeLoginId).filter(Boolean));
+    for(const p of removedPlayers)if(p?.loginId){
+      const lid=normalizeLoginId(p.loginId);evicted.add(lid);
+      if(disbandAll)pendingDisband.add(lid);
+    }
+    for(const loginId of wanted.keys()){evicted.delete(loginId);pendingDisband.delete(loginId)}
+    if(disbandAll)await this.ctx.storage.put("pendingDisbandLogins",[...pendingDisband].slice(-100));
     await this.ctx.storage.put("evictedMembers",[...evicted].slice(-100));
     if(disbandAll){
       for(const p of removedPlayers)if(p?.loginId){
@@ -621,7 +631,7 @@ export class RoomDurableObject extends DurableObject {
         if(removedIds.has(String(ws.deserializeAttachment()?.participantId||"")))ws.close(1000,"ROOM_DISBANDED");
       }catch{}
     }
-    return j({ok:true,room,players:publicPlayers,selectedCount:wanted.size,removedPlayers,disbanded:disbandAll,removedCount:removedPlayers.length})
+    return j({ok:true,room,players:publicPlayers,selectedCount:wanted.size,removedPlayers,disbanded:disbandAll,removedCount:removedPlayers.length,reconcileLogins:disbandAll?[...pendingDisband]:[]})
   }
   async gmRoomSettings(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1213,7 +1223,6 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/village"&&request.method==="GET")return memberStore(env).fetch('https://member.internal/village/state');
   if(url.pathname==="/api/village/move"&&request.method==="POST")return memberStore(env).fetch(new Request('https://member.internal/village/move',{method:'POST',headers:request.headers,body:JSON.stringify(await safeJson(request)||{})}));
   const seatSwapRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/seat-swap$/);if(seatSwapRoute&&request.method==='POST')return playerSeatSwapApi(env,seatSwapRoute[1],request);
-  if(url.pathname==="/api/game-characters/v4"&&request.method==="GET")return j(characterV4Status());
   if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,frameCount:6,characters:gameCharacterCatalog()});
   const gameCharacterFrameRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/frame\/([1-6])$/);if(gameCharacterFrameRoute&&request.method==="GET")return gameCharacterFrame(env,gameCharacterFrameRoute[1],Number(gameCharacterFrameRoute[2]),request);
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return gameCharacterImage(env,gameCharacterImageRoute[1],request);
@@ -1353,10 +1362,10 @@ async function gmRoomParticipants(env,raw,request){
   const res=await roomStub(env,code).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
   if(!res.ok)return res;
   const data=await res.clone().json().catch(()=>({}));
-  const syncPresence=async(loginId,roomCode,ready)=>{
+  const syncPresence=async(loginId,roomCode,ready,expectedRoomCode=null)=>{
     for(let attempt=0;attempt<3;attempt++){
       try{
-        const response=await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId,roomCode,ready})});
+        const response=await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId,roomCode,ready,expectedRoomCode})});
         if(response.ok)return true;
       }catch{}
     }
@@ -1364,7 +1373,11 @@ async function gmRoomParticipants(env,raw,request){
   };
   const failures=[];
   for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true))failures.push(p.loginId);
-  for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[]))if(p?.loginId&&!await syncPresence(p.loginId,null,false))failures.push(p.loginId);
+  // Retry both newly removed accounts and incomplete releases from an earlier disband.
+  // The storage guard preserves anyone who has already joined a different room.
+  const releaseLogins=new Set((Array.isArray(data?.removedPlayers)?data.removedPlayers:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean));
+  if(data?.disbanded)for(const loginId of (Array.isArray(data?.reconcileLogins)?data.reconcileLogins:[]))if(normalizeLoginId(loginId))releaseLogins.add(normalizeLoginId(loginId));
+  for(const loginId of releaseLogins)if(!await syncPresence(loginId,null,false,code))failures.push(loginId);
   await syncRoomDirectory(env,code);
   if(failures.length)return j({ok:false,error:"ROSTER_PRESENCE_PENDING",message:"Phòng đã giải tán, nhưng có tài khoản chưa xác nhận trở về Sảnh chờ.",pendingCount:failures.length,removedCount:Number(data.removedCount||0)},502);
   return res
