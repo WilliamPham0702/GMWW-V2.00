@@ -17,7 +17,7 @@ class ElementMock {
 }
 function descend(node){return [node,...node.children.flatMap(descend)]}
 
-test('V3.34 truly renders owner review buttons in a pending task card',()=>{
+test('V3.35 truly renders owner review buttons in a pending task card',()=>{
   const start=app.indexOf('function gmwwTaskReviewLink('),end=app.indexOf('async function gmwwTasksRefresh(',start);
   assert.ok(start>=0 && end>start,'task UI code located');
   const source=app.slice(start,end);
@@ -34,10 +34,10 @@ test('V3.34 truly renders owner review buttons in a pending task card',()=>{
   assert.equal(typeof actions[0].events.click,'function');
 });
 
-test('V3.34 IPA view announces real task-action readiness and reloads after successful OTA',()=>{
-  assert.equal(pkg.version,'3.34.0');
-  assert.match(worker,/VERSION="V3\.34",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-334"/);
-  assert.match(html,/<title>GMWW V3\.34<\/title>/);
+test('V3.35 IPA view announces real task-action readiness and reloads after successful OTA',()=>{
+  assert.equal(pkg.version,'3.35.0');
+  assert.match(worker,/VERSION="V3\.35",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-335"/);
+  assert.match(html,/<title>GMWW V3\.35<\/title>/);
   assert.match(html,/id="gmwwTaskReviewHealth"/);
   assert.match(html,/data-ready="false"/);
   assert.match(app,/reviewState\.dataset\.ready=ready\?'true':'false'/);
