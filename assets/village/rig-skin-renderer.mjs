@@ -1,111 +1,152 @@
 import {validateSkin,SAMPLE_SKINS,sampleRigAction,sampleSynchronizedAction} from './rig-skin-core.mjs';
 
-// Unlike the old renderer, every limb is a separately drawn skin attachment.
-// The hierarchy expresses hip -> thigh -> shin -> foot and chest -> upper arm -> forearm.
-function svgMarkup(skin){
-  const c=validateSkin(skin);
-  return `<svg class="rig-skin-svg" viewBox="0 0 400 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nhân vật mẫu với tay chân chuyển động bằng khớp">
-    <defs>
-      <linearGradient id="skinBody-${c.id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${c.body}"/><stop offset="1" stop-color="${c.shadow}"/></linearGradient>
-      <linearGradient id="skinFabric-${c.id}" x1="0" y1="0" x2="0.9" y2="1"><stop stop-color="${c.top}"/><stop offset="1" stop-color="${c.pants}"/></linearGradient>
-    </defs>
-    <ellipse data-shadow cx="200" cy="294" rx="38" ry="7" fill="#000000" opacity=".25"/>
-    <g data-joint="root" transform="translate(200 283)">
-      <g data-joint="thighL" transform="translate(-12 -79)">
-        <path d="M-11 -2 Q-18 16 -13 48 L10 48 Q18 15 12 -2 Z" fill="${c.pants}" stroke="${c.trim}" stroke-width="1"/>
-        <g data-joint="shinL" transform="translate(0 43)">
-          <path d="M-11 -2 Q-12 17 -9 41 L9 41 Q14 16 10 -2 Z" fill="${c.pants}"/>
-          <path d="M-11 20 L11 20" stroke="${c.trim}" stroke-width="2.8" opacity=".65"/>
-          <g data-joint="footL" transform="translate(0 39)">
-            <path d="M-11 -2 L11 -2 Q23 2 22 10 L-13 10 Q-16 5 -11 -2Z" fill="${c.boots}" stroke="${c.trim}" stroke-width="1"/>
-          </g>
-        </g>
-      </g>
-      <g data-joint="thighR" transform="translate(12 -79)">
-        <path d="M-12 -2 Q-17 17 -11 48 L12 48 Q18 14 11 -2 Z" fill="${c.pants}" stroke="${c.trim}" stroke-width="1"/>
-        <g data-joint="shinR" transform="translate(0 43)">
-          <path d="M-10 -2 Q-11 17 -9 41 L10 41 Q13 15 11 -2 Z" fill="${c.pants}"/>
-          <path d="M-10 20 L12 20" stroke="${c.trim}" stroke-width="2.8" opacity=".65"/>
-          <g data-joint="footR" transform="translate(0 39)">
-            <path d="M-10 -2 L10 -2 Q24 2 22 10 L-13 10 Q-16 5 -10 -2Z" fill="${c.boots}" stroke="${c.trim}" stroke-width="1"/>
-          </g>
-        </g>
-      </g>
-      <g data-joint="torso" transform="translate(0 -79)">
-        <g data-joint="upperArmL" transform="translate(-26 -49)">
-          <path d="M-10 -2 Q-20 5 -15 30 L-9 38 L11 37 Q17 15 9 1Z" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
-          <g data-joint="forearmL" transform="translate(0 32)">
-            <path d="M-9 -3 Q-13 13 -9 30 L10 30 Q13 11 10 -3Z" fill="url(#skinBody-${c.id})"/>
-            <ellipse cx="0" cy="31" rx="10" ry="11" fill="${c.body}"/>
-          </g>
-        </g>
-        <path d="M-27 -53 Q-39 -48 -33 -23 L-28 6 Q0 16 28 6 L33 -23 Q39 -49 26 -53 L17 -59 L-17 -59 Z" fill="url(#skinFabric-${c.id})" stroke="${c.trim}" stroke-width="2"/>
-        <path d="M-22 -43 Q0 -36 22 -43 M-20 -23 Q0 -16 20 -23" fill="none" stroke="${c.trim}" opacity=".45" stroke-width="2"/>
-        <path d="M-28 4 Q0 10 28 4" stroke="${c.belt}" stroke-width="8"/>
-        <rect x="-6" y="1" width="12" height="8" rx="2" fill="${c.trim}"/>
-        <g data-joint="upperArmR" transform="translate(26 -49)">
-          <path d="M-9 -2 Q-19 4 -13 30 L-9 38 L10 37 Q18 12 10 1Z" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
-          <g data-joint="forearmR" transform="translate(0 32)">
-            <path d="M-9 -3 Q-13 13 -10 30 L11 30 Q13 11 9 -3Z" fill="url(#skinBody-${c.id})"/>
-            <ellipse cx="0" cy="31" rx="10" ry="11" fill="${c.body}"/>
-          </g>
-        </g>
-        <g data-joint="head" transform="translate(0 -72)">
-          <rect x="-9" y="-5" width="18" height="17" rx="6" fill="${c.body}"/>
-          <ellipse cx="0" cy="-20" rx="32" ry="35" fill="url(#skinBody-${c.id})" stroke="${c.shadow}" stroke-width="1"/>
-          <ellipse cx="-32" cy="-17" rx="5" ry="9" fill="${c.body}"/>
-          <ellipse cx="32" cy="-17" rx="5" ry="9" fill="${c.body}"/>
-          <g data-joint="hair">
-            <path d="M-33 -27 Q-42 -57 -18 -62 Q-3 -76 22 -60 Q36 -54 34 -27 L25 -44 Q15 -37 6 -48 Q-5 -38 -16 -44 L-28 -30Z" fill="${c.hair}" stroke="${c.trim}" stroke-width="1"/>
-            <path d="M-32 -31 Q-35 -14 -25 -9 M33 -35 Q38 -15 26 -6" stroke="${c.hair}" stroke-width="7" stroke-linecap="round"/>
-          </g>
-          <g data-eyes>
-            <ellipse cx="-13" cy="-17" rx="3.5" ry="5.5" fill="${c.eye}"/>
-            <ellipse cx="13" cy="-17" rx="3.5" ry="5.5" fill="${c.eye}"/>
-            <circle cx="-14" cy="-19" r="1.2" fill="#fff"/><circle cx="12" cy="-19" r="1.2" fill="#fff"/>
-          </g>
-          <path d="M-7 -3 Q0 2 7 -3" stroke="${c.shadow}" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <ellipse data-mouth cx="0" cy="-3" rx="3" ry="1" fill="${c.eye}" opacity="0"/>
-        </g>
-      </g>
+// The 2D skin is drawn as continuous curved contours following anatomical joints.
+// No overlapping rectangular "limb cards", no clipping one full-body bitmap to create bones.
+const n=x=>Number(x).toFixed(2);
+const p=x=>n(x.x)+' '+n(x.y);
+const line=(a,b)=>'M'+p(a)+' L'+p(b);
+const curve=(a,b,c)=>'M'+p(a)+' Q'+p(b)+' '+p(c);
+const point=(x,y)=>({x,y});
+export function svgMarkup(s){
+  const c=validateSkin(s);
+  return `<svg class="rig-skin-svg" viewBox="95 18 210 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Chibi nam cơ bắp, tay và chân nối liền mạch">
+  <ellipse data-shadow cx="200" cy="297" rx="42" ry="6" fill="#133b38" opacity=".26"/>
+  <g data-body>
+    <g data-leg-left>
+      <path data-leg-l fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-leg-l-shade fill="none" stroke="${c.shade}" stroke-width="3" opacity=".32" stroke-linecap="round"/>
     </g>
-  </svg>`;
+    <g data-leg-right>
+      <path data-leg-r fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-leg-r-shade fill="none" stroke="${c.shade}" stroke-width="3" opacity=".32" stroke-linecap="round"/>
+    </g>
+    <g data-feet>
+      <path data-sandal-l fill="${c.sandal}" stroke="#083748" stroke-width="1.8" stroke-linejoin="round"/>
+      <path data-strap-l fill="none" stroke="${c.vestLight}" stroke-width="3.3" stroke-linecap="round"/>
+      <path data-sandal-r fill="${c.sandal}" stroke="#083748" stroke-width="1.8" stroke-linejoin="round"/>
+      <path data-strap-r fill="none" stroke="${c.vestLight}" stroke-width="3.3" stroke-linecap="round"/>
+    </g>
+    <path data-shorts fill="${c.shorts}" stroke="#138fa4" stroke-width="2" stroke-linejoin="round"/>
+    <path data-shorts-waist fill="none" stroke="${c.vestLight}" stroke-width="4"/>
+    <g data-shorts-pattern fill="${c.pattern}" opacity=".88">
+      <path data-flower-l d="M0 -6 Q4 -6 3 -1 Q8 -2 7 2 Q3 4 1 4 Q-2 9 -5 5 Q-5 3 -4 2 Q-10 1 -7 -3 Q-3 -4 0 -6Z"/>
+      <path data-flower-r d="M0 -5 Q5 -7 4 0 Q10 -1 8 4 Q3 5 1 5 Q-3 9 -5 5 Q-4 1 -5 1 Q-8 -1 -4 -4Z"/>
+    </g>
+    <g data-arm-left>
+      <path data-arm-l fill="none" stroke="${c.skin}" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-arm-l-highlight fill="none" stroke="${c.light}" stroke-width="3.5" opacity=".45" stroke-linecap="round"/>
+      <circle data-hand-l r="9" fill="${c.light}" stroke="${c.shade}" stroke-width="1.4"/>
+    </g>
+    <g data-torso>
+      <path data-chest fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4" stroke-linejoin="round"/>
+      <path data-vest-left fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <path data-vest-right fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <g data-abs fill="none" stroke="${c.shade}" opacity=".56" stroke-width="1.6" stroke-linecap="round">
+        <path data-abs-1/><path data-abs-2/><path data-abs-3/><path data-abs-middle/>
+      </g>
+      <path data-necklace fill="none" stroke="#ebc77f" stroke-width="1.8"/>
+      <circle data-pendant r="3.3" fill="#e4b755" stroke="#a7752d" stroke-width="1"/>
+    </g>
+    <g data-arm-right>
+      <path data-arm-r fill="none" stroke="${c.skin}" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-arm-r-highlight fill="none" stroke="${c.light}" stroke-width="3.5" opacity=".45" stroke-linecap="round"/>
+      <circle data-hand-r r="9" fill="${c.light}" stroke="${c.shade}" stroke-width="1.4"/>
+    </g>
+    <g data-head>
+      <path d="M-9 19L9 19L9 35L-9 35Z" fill="${c.skin}"/>
+      <ellipse cy="-1" rx="37" ry="37" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.5"/>
+      <circle cx="-36" cy="4" r="6" fill="${c.light}"/><circle cx="36" cy="4" r="6" fill="${c.light}"/>
+      <path d="M-35 -14L-45 -28L-29 -28L-35 -46L-20 -39L-23 -57L-7 -45L3 -62L11 -46L25 -57L25 -41L41 -43L33 -25L41 -18L27 -27L14 -29L5 -23L-10 -28L-22 -19Z" fill="${c.hair}" stroke="#45475a" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M-34 -17Q-24 -32 -9 -23 M5 -26Q19 -31 32 -18" fill="none" stroke="#101720" stroke-width="3.5" stroke-linecap="round"/>
+      <g data-eyes>
+        <ellipse cx="-15" cy="-1" rx="5" ry="8" fill="#fff"/>
+        <ellipse cx="15" cy="-1" rx="5" ry="8" fill="#fff"/>
+        <ellipse cx="-14" cy="0" rx="3" ry="6" fill="${c.eye}"/><ellipse cx="16" cy="0" rx="3" ry="6" fill="${c.eye}"/>
+        <circle cx="-15" cy="-2" r="1.6" fill="#fff"/><circle cx="15" cy="-2" r="1.6" fill="#fff"/>
+      </g>
+      <path d="M-9 15Q0 22 10 14Q9 27 -1 26Q-7 25 -9 15Z" data-smile fill="#73352e" stroke="#995b46" stroke-width="1"/>
+      <path d="M-6 17Q0 20 6 17" fill="none" stroke="#fff0e7" stroke-width="3"/>
+      <path d="M-24 14Q-18 17 -15 14 M15 14Q21 17 24 14" stroke="${c.shade}" stroke-width="1" fill="none" opacity=".4"/>
+    </g>
+  </g></svg>`;
 }
-function getJoints(svg){
-  const out={};
-  for(const node of svg.querySelectorAll('[data-joint]'))out[node.getAttribute('data-joint')]=node;
-  out.eyes=svg.querySelector('[data-eyes]');
-  out.mouth=svg.querySelector('[data-mouth]');
-  out.shadow=svg.querySelector('[data-shadow]');
-  return out;
+const byAttr=(svg,name)=>svg.querySelector('[data-'+name+']');
+function nodesFor(svg){
+  const n={};for(const attr of [
+    'body','shadow','leg-l','leg-r','leg-l-shade','leg-r-shade',
+    'sandal-l','sandal-r','strap-l','strap-r','shorts','shorts-waist',
+    'flower-l','flower-r','arm-l','arm-r','arm-l-highlight','arm-r-highlight',
+    'hand-l','hand-r','chest','vest-left','vest-right','abs-1','abs-2','abs-3','abs-middle',
+    'necklace','pendant','head','eyes','smile'
+  ])n[attr]=byAttr(svg,attr);return n;
 }
-const rot=(x,y,a)=>`translate(${x} ${y}) rotate(${Number(a).toFixed(2)})`;
-export function renderRigPose(joints,p){
-  if(!joints?.root)return;
-  joints.root.setAttribute('transform',`translate(${(200+p.rootX).toFixed(2)} ${(283+p.rootY).toFixed(2)}) rotate(${p.rootRotation.toFixed(2)}) scale(${p.scaleX.toFixed(3)} 1)`);
-  joints.root.setAttribute('opacity',String(p.alpha));
-  joints.torso.setAttribute('transform',rot(0,-79,p.torso));
-  joints.head.setAttribute('transform',rot(0,-72,p.head));
-  joints.hair.setAttribute('transform',rot(0,-15,p.hair));
-  for(const [side,x] of [['L',-12],['R',12]]){
-    joints['thigh'+side].setAttribute('transform',rot(x,-79,p['thigh'+side]));
-    joints['shin'+side].setAttribute('transform',rot(0,43,p['shin'+side]));
-    joints['foot'+side].setAttribute('transform',`translate(${p['footComp'+side].toFixed(2)} 39) rotate(${p['foot'+side].toFixed(2)})`);
-    joints['upperArm'+side].setAttribute('transform',rot(side==='L'?-26:26,-49,p['upperArm'+side]));
-    joints['forearm'+side].setAttribute('transform',rot(0,32,p['forearm'+side]));
+const set=(n,k,v)=>n?.setAttribute(k,v);
+export function renderRigPose(nodes,pose){
+  if(!nodes?.body)return;
+  const b=nodes;
+  set(b.body,'transform',`translate(${n(200+pose.root.x)} ${n(pose.root.y)})`);
+  set(b.body,'opacity',n(pose.alpha));
+  set(b.shadow,'rx',n(42*pose.shadow));
+
+  const hip=point(200+pose.hip.x,pose.hip.y), shoulder=point(200+pose.shoulder.x,pose.shoulder.y);
+  const sx=shoulder.x,sy=shoulder.y,hx=hip.x,hy=hip.y;
+  const joint={L:point(hx-13,hy),R:point(hx+13,hy)};
+  for(const side of ['L','R']){
+    const low=side.toLowerCase(),k=pose.knees[side],a=pose.ankles[side];
+    const knee=point(200+k.x,k.y),ankle=point(200+a.x,a.y),hipPoint=joint[side];
+    // One continuous skin envelope, not two visible disconnected cylinders.
+    const path=`M${p(hipPoint)} Q${n(knee.x+(hipPoint.x-knee.x)*.08)} ${n(knee.y-12)} ${p(knee)} Q${n(ankle.x)} ${n(knee.y+16)} ${p(ankle)}`;
+    set(b['leg-'+low],'d',path);
+    set(b['leg-'+low+'-shade'],'d',`M${n(knee.x+ (side==='L'?-6:6))} ${n(knee.y+5)} Q${n(ankle.x+ (side==='L'?-4:4))} ${n((knee.y+ankle.y)/2)} ${n(ankle.x+(side==='L'?-4:4))} ${n(ankle.y)}`);
+    const fx=200+pose.footX[side],fy=pose.footY[side];
+    set(b['sandal-'+low],'d',`M${n(fx-11)} ${n(fy-5)} Q${n(fx+4)} ${n(fy-10)} ${n(fx+13)} ${n(fy-3)} L${n(fx+17)} ${n(fy+3)} Q${n(fx+10)} ${n(fy+8)} ${n(fx-12)} ${n(fy+4)}Z`);
+    set(b['strap-'+low],'d',`M${n(fx-3)} ${n(fy-6)} Q${n(fx+4)} ${n(fy-1)} ${n(fx+11)} ${n(fy-5)}`);
   }
-  joints.eyes.setAttribute('transform',`translate(0 -17) scale(1 ${p.eyesClosed>.5?.12:1}) translate(0 17)`);
-  joints.mouth.setAttribute('opacity',p.mouth?'1':'0');
-  joints.shadow.setAttribute('rx',(38*p.shadowScale).toFixed(2));
+  // Rounded shorts cover both hip attachments so leg roots never form visible gaps.
+  set(b.shorts,'d',`M${n(hx-24)} ${n(hy-14)} Q${n(hx)} ${n(hy-4)} ${n(hx+24)} ${n(hy-14)}
+  L${n(hx+27)} ${n(hy+13)} Q${n(hx+15)} ${n(hy+19)} ${n(hx+6)} ${n(hy+12)}
+  L${n(hx)} ${n(hy+5)} L${n(hx-6)} ${n(hy+12)}
+  Q${n(hx-15)} ${n(hy+19)} ${n(hx-27)} ${n(hy+13)}Z`);
+  set(b['shorts-waist'],'d',`M${n(hx-22)} ${n(hy-11)} Q${n(hx)} ${n(hy-5)} ${n(hx+22)} ${n(hy-11)}`);
+  set(b['flower-l'],'transform',`translate(${n(hx-17)} ${n(hy+6)}) scale(.75)`);
+  set(b['flower-r'],'transform',`translate(${n(hx+17)} ${n(hy+6)}) scale(.65)`);
+
+  for(const side of ['L','R']){
+    const low=side.toLowerCase(),dir=side==='L'?-1:1;
+    const top=point(sx+dir*27,sy+1),e=point(200+pose.elbows[side].x,pose.elbows[side].y),h=point(200+pose.hands[side].x,pose.hands[side].y);
+    const arm=`M${p(top)} Q${n(e.x+dir*4)} ${n(e.y-5)} ${p(e)} Q${n((e.x+h.x)/2+dir*3)} ${n((e.y+h.y)/2)} ${p(h)}`;
+    set(b['arm-'+low],'d',arm);
+    set(b['arm-'+low+'-highlight'],'d',`M${n(e.x-dir*3)} ${n(e.y-9)} Q${n((e.x+h.x)/2)} ${n((e.y+h.y)/2)} ${n(h.x-dir*1)} ${n(h.y-5)}`);
+    set(b['hand-'+low],'cx',n(h.x));set(b['hand-'+low],'cy',n(h.y));
+  }
+  const left=sx-27,right=sx+27;
+  set(b.chest,'d',`M${n(left)} ${n(sy-1)} Q${n(sx)} ${n(sy-15)} ${n(right)} ${n(sy-1)}
+    Q${n(right+8)} ${n(sy+23)} ${n(hx+18)} ${n(hy-13)}
+    Q${n(hx)} ${n(hy-8)} ${n(hx-18)} ${n(hy-13)}
+    Q${n(left-8)} ${n(sy+23)} ${n(left)} ${n(sy-1)}Z`);
+  set(b['vest-left'],'d',`M${n(left-6)} ${n(sy+1)} Q${n(left+3)} ${n(sy-7)} ${n(sx-10)} ${n(sy+7)}
+    L${n(sx-15)} ${n(hy-17)} L${n(hx-24)} ${n(hy-15)} Q${n(left-16)} ${n(sy+22)} ${n(left-6)} ${n(sy+1)}Z`);
+  set(b['vest-right'],'d',`M${n(right+6)} ${n(sy+1)} Q${n(right-3)} ${n(sy-7)} ${n(sx+10)} ${n(sy+7)}
+    L${n(sx+15)} ${n(hy-17)} L${n(hx+24)} ${n(hy-15)} Q${n(right+16)} ${n(sy+22)} ${n(right+6)} ${n(sy+1)}Z`);
+  for(let i=1;i<=3;i++){
+    const y=sy+20+i*10,half=11;
+    set(b['abs-'+i],'d',`M${n(sx-half)} ${n(y)} Q${n(sx)} ${n(y+3)} ${n(sx+half)} ${n(y)}`);
+  }
+  set(b['abs-middle'],'d',`M${n(sx)} ${n(sy+18)} L${n(sx)} ${n(hy-18)}`);
+  set(b.necklace,'d',`M${n(sx-12)} ${n(sy+3)} Q${n(sx)} ${n(sy+19)} ${n(sx+12)} ${n(sy+3)}`);
+  set(b.pendant,'cx',n(sx));set(b.pendant,'cy',n(sy+16));
+  set(b.head,'transform',`translate(${n(200+pose.head.x)} ${n(pose.head.y)}) rotate(${n(pose.headTilt)})`);
+  set(b.eyes,'opacity',String(1-pose.eyes));
+  set(b.smile,'opacity',pose.mouth<0?'.28':'1');
 }
 export function mountRigSkin(host,{skin=SAMPLE_SKINS[0]}={}){
-  if(!host || typeof host.innerHTML!=='string')throw new TypeError('INVALID_RIG_HOST');
+  if(!host||typeof host.innerHTML!=='string')throw new TypeError('INVALID_RIG_HOST');
   host.innerHTML=svgMarkup(skin);
-  const svg=host.querySelector('svg'),joints=getJoints(svg);
+  const svg=host.querySelector('svg'),nodes=nodesFor(svg);
   return Object.freeze({
     svg,skinId:skin.id,
-    render:(pose)=>renderRigPose(joints,pose),
-    action:(id,elapsed,opts)=>renderRigPose(joints,sampleRigAction(id,elapsed,opts)),
-    synchronized:(cmd,now,clockOffset)=>renderRigPose(joints,sampleSynchronizedAction(cmd,now,clockOffset))
+    render:(pose)=>renderRigPose(nodes,pose),
+    action:(id,elapsed,opts)=>renderRigPose(nodes,sampleRigAction(id,elapsed,opts)),
+    synchronized:(cmd,now,clockOffset)=>renderRigPose(nodes,sampleSynchronizedAction(cmd,now,clockOffset))
   });
 }
