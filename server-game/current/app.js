@@ -2963,7 +2963,7 @@ function exitPlayImmersive(){
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
   const home=document.getElementById('home');if(home)home.scrollTop=0;
-  setTimeout(()=>gmwwHomeRefresh(false),50)
+  if(typeof gmwwHomeRefresh==='function')void gmwwHomeRefresh(false)
 }
 async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.lastTapCode='';playRoomUiState.lastTapAt=0;const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
 function initDraggablePlaySheets(){

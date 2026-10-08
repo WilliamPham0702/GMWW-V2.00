@@ -13,7 +13,7 @@ test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=
   for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeServerState","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])
     assert.equal(home.split('id="'+id+'"').length-1,1,id);
   for(const cls of ["gmww-home-hero","gmww-home-entry","gmww-home-explore","gmww-home-achievements","gmww-home-recent"])assert.match(home,new RegExp(cls));
-  assert.match(home,/src="gm\/gm-white-wolf.webp"/);
+  assert.match(home,/class="gmww-home-crest"/);
 });
 test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
   assert.match(home,/data-home-destination="members"/);

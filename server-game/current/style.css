@@ -3207,7 +3207,9 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
 #home .gmww-home-hero-copy>span{color:#fff0b7;font-size:8.5px;font-weight:900;letter-spacing:.11em}
 #home .gmww-home-hero-copy h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(22px,6vw,35px);line-height:1.17;margin:12px 0 8px;font-weight:800;color:#fff9e6}
 #home .gmww-home-hero-copy p{font-size:11px;line-height:1.45;color:#e1faff;margin:0;max-width:220px}
-#home .gmww-home-guardian{position:absolute;z-index:1;right:-3%;bottom:-7px;width:47%;height:98%;object-fit:contain;object-position:bottom right;filter:drop-shadow(0 8px 10px rgba(0,28,45,.34));pointer-events:none}
+#home .gmww-home-crest{position:absolute;right:5%;top:16%;width:36%;max-width:190px;aspect-ratio:1;display:grid;place-items:center;border-radius:50%;border:3px double rgba(255,240,164,.72);background:radial-gradient(circle,rgba(185,255,252,.31),rgba(25,152,174,.32) 44%,rgba(10,67,100,.40) 74%);box-shadow:0 0 0 8px rgba(152,239,241,.17),inset 0 0 23px rgba(198,255,244,.35),0 8px 25px rgba(0,45,68,.35);pointer-events:none}
+#home .gmww-home-crest:before{content:"";position:absolute;inset:13%;border-radius:50%;border:1px dashed rgba(255,240,164,.76)}
+#home .gmww-home-crest span{font-size:clamp(46px,14vw,85px);color:#fff0b0;text-shadow:0 0 20px rgba(255,240,164,.9);line-height:1}
 #home .gmww-home-hero-sun{position:absolute;right:13px;top:5px;color:#fff1be;font-size:24px;opacity:.8}
 #home .gmww-home-entry{display:flex;align-items:center;gap:9px;justify-content:space-between;padding:10px;border:1px solid rgba(190,238,246,.44);border-radius:15px;background:var(--gmww-glass-surface);box-shadow:var(--gmww-glass-shadow);backdrop-filter:blur(8px)}
 #home .gmww-home-entry-copy{min-width:0;display:grid;gap:5px}
@@ -3246,6 +3248,6 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
   #home .gmww-home-hero{min-height:270px}
   #home .gmww-home-hero-copy{padding:28px;max-width:440px}
   #home .gmww-home-hero-copy h1{font-size:38px}
-  #home .gmww-home-guardian{width:37%}
+  #home .gmww-home-crest{width:26%}
 }
 @media(prefers-reduced-motion:reduce){#home .gmww-home-play{transition:none}}
