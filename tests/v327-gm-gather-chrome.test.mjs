@@ -52,7 +52,7 @@ test('V3.27 displays working gathering tools directly inside village stage',()=>
  assert.match(app,/async function playGatherConfirm\(\)/);
  assert.match(app,/await playFinishSeating\(\)/);
  assert.match(app,/if\(step==='seats'\)\{playGatherToolsDismissed=false;renderPlayGatherToolbar\(\);return\}/);
- assert.match(app,/id=.{0,30}playGatherCall/);
+ assert.match(app,/getElementById\('playGatherCall'\)\?\.addEventListener/);
 });
 test('V3.27 tapping the active gathering step reopens its controls',async()=>{
  const from=app.indexOf('async function handlePlayTimelineStep(step)');
