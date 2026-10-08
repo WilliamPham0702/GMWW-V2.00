@@ -9,8 +9,8 @@ const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
 test('V3.17 runtime keeps offline/online room flow with GM-only seating',()=>{
-  assert.ok(app.includes("const VERSION='3.41';"));
-  assert.ok(html.includes('GMWW V3.41'));
+  assert.ok(app.includes("const VERSION='3.42';"));
+  assert.ok(html.includes('GMWW V3.42'));
   assert.match(app,/roomMode:playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
   assert.match(html,/id="playRoomModeToggle"/);
   assert.doesNotMatch(html,/data-play-room-mode=/);
@@ -112,9 +112,8 @@ test('saved game templates are precompiled on server but remain GM-only until ro
   assert.match(server,/defaultActionSec/);
   assert.match(server,/actionDurationSec/);
   assert.match(app,/\/api\/gm\/game-templates/);
-  assert.match(html,/playVillageDiscussionSec/);
-  assert.match(html,/playWolfDiscussionSec/);
-  assert.match(html,/playDefaultActionSec/);
+  assert.doesNotMatch(html,/id="playVillageDiscussionSec"|id="playWolfDiscussionSec"|id="playDefaultActionSec"/);
+  assert.match(app,/data-role-count/);
   const start=server.indexOf('async publicState()'),end=server.indexOf('async gmAuthorized',start),publicState=server.slice(start,end);
   assert.doesNotMatch(publicState,/gameConfig|gameTemplate/);
 });
