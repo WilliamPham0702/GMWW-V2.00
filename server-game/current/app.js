@@ -1680,7 +1680,7 @@ const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
 const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V263_PLAY_SCENE','GMWW_V257_PLAY_SCENE','GMWW_V256_PLAY_SCENE','GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
 const PLAY_STEPS=['lobby','room','seats','game','roles','deal','battle'];
 const PLAY_STEP_COPY={
-  lobby:{k:'SẢNH CHỜ',t:'Sảnh Chờ',x:'Mọi người tập trung tại làng. Nhấn Tiếp tục để vào bước Tạo phòng.',a:'TẠO PHÒNG'},
+  lobby:{k:'SẢNH CHỜ',t:'Tạo Phòng',x:'Mọi người tập trung tại làng. Nhấn Tiếp tục để vào bước Tạo phòng.',a:'TẠO PHÒNG'},
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
   game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
   seats:{k:'TẬP HỢP DÂN LÀNG',t:'Tập Hợp Dân Làng',x:'Gọi thành viên vào làng, sắp ngẫu nhiên ưu tiên 8 vị trí vòng trong hoặc GM bố trí thủ công.',a:'CHỐT VỊ TRÍ'},

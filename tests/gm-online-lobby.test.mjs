@@ -24,7 +24,7 @@ test('V3.09 keeps GM in the lobby until a room is explicitly active and scopes t
   assert.ok(app.includes("roomCode:online!==false&&isLivePlayRoom()?String(playSceneState.roomCode||''):null"));
   assert.ok(app.includes("roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null"));
   assert.ok(app.includes("if(saved.step==='members')saved.step='seats'"));
-  assert.ok(app.includes("if(saved.step==='room'&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))"));
+  assert.ok(app.includes("if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))"));
   assert.doesNotMatch(app,/PLAY_STEPS=\[[^\]]*'members'/);
   assert.ok(live.includes("gmRoomCode===viewerRoomCode"));
 });

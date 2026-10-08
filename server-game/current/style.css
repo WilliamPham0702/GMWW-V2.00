@@ -2312,3 +2312,22 @@ body.play-immersive #start .play-control-bar.play-control-bar-three>button,
 .ops-footnote{font-size:10px;line-height:1.45;color:#92afbf}
 .ops-report-fallback{width:100%;min-height:115px;border-radius:11px;padding:10px;color:#ddf5ff;background:#071a27;border:1px solid #5098b4;white-space:pre-wrap;font-family:monospace;font-size:10px}
 @media(max-width:370px){.gmww-ops-card{padding:11px!important}.gmww-ops-card .health-v236-head b{font-size:11px}.ops-pill{font-size:9px;min-width:0}.gmww-ops-card .ops-tools .settings-action b{font-size:10px!important}.ops-status-grid b{font-size:12px}}
+
+
+/* GMWW lobby stage: compact steps visible at top without leaving the 2D village. */
+body.play-immersive #start .play-shell[data-step="lobby"] .play-setup-strip,
+body.play-immersive #start .play-shell[data-step="room"] .play-setup-strip{
+  display:grid!important;position:absolute!important;z-index:44!important;
+  top:calc(env(safe-area-inset-top) + 76px)!important;left:8px!important;right:8px!important;
+  grid-template-columns:repeat(7,minmax(0,1fr))!important;column-gap:2px!important;
+  padding:5px 3px!important;border:1px solid rgba(216,255,255,.3)!important;
+  border-radius:14px!important;background:rgba(2,40,57,.75)!important;
+  box-shadow:0 4px 18px rgba(0,23,34,.23)!important;
+}
+body.play-immersive #start .play-shell[data-step="lobby"] .play-setup-strip button,
+body.play-immersive #start .play-shell[data-step="room"] .play-setup-strip button{
+  min-width:0!important;min-height:37px!important;padding:2px 0!important;
+}
+body.play-immersive #start .play-setup-strip span{width:20px;height:20px;font-size:9px}
+body.play-immersive #start .play-setup-strip b{font-size:7px;line-height:1.1;white-space:normal}
+body.play-immersive #start .play-shell[data-step="lobby"] .play-card-fan{display:none!important}

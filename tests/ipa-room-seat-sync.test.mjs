@@ -77,8 +77,8 @@ test('Player Web card preview keeps V2.52 art-title-info layout and compact fact
 });
 
 
-test('GM Play uses the current six-stage village flow without a Member tab',()=>{
-  assert.match(app,/PLAY_STEPS=\['room','seats','game','roles','deal','battle'\]/);
+test('GM Play uses the seven-stage village flow with a lobby and no Member tab',()=>{
+  assert.match(app,/PLAY_STEPS=\['lobby','room','seats','game','roles','deal','battle'\]/);
   assert.match(app,/function setPlayStep\(step\)\{if\(step==='members'\)step='seats'/);
   assert.match(html,/id="playExitVillage"/);
   assert.match(html,/data-play-step="seats"/);

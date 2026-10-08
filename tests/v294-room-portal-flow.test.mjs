@@ -26,7 +26,7 @@ test('V3.01 has one centered Create Room page and hides generated room code',()=
 });
 
 test('Create Room advances directly to seating without a Member tab',()=>{
-  assert.match(app,/PLAY_STEPS=\['room','seats','game','roles','deal','battle'\]/);
+  assert.match(app,/PLAY_STEPS=\['lobby','room','seats','game','roles','deal','battle'\]/);
   assert.match(app,/function setPlayStep\(step\)\{if\(step==='members'\)step='seats'/);
   assert.match(app,/seatMoveMode:'instant'/);
   assert.match(app,/THỦ CÔNG/);
