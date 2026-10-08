@@ -56,9 +56,9 @@ export function svgMarkup(s){
       <path data-flower-r d="M0 -5 Q5 -7 4 0 Q10 -1 8 4 Q3 5 1 5 Q-3 9 -5 5 Q-4 1 -5 1 Q-8 -1 -4 -4Z"/>
     </g>
     <g data-arm-left>
-      <path data-arm-l fill="none" stroke="${c.skin}" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-arm-l fill="none" stroke="${c.skin}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
       <path data-arm-l-highlight fill="none" stroke="${c.light}" stroke-width="3.5" opacity=".45" stroke-linecap="round"/>
-      <circle data-hand-l r="9" fill="${c.light}" stroke="${c.shade}" stroke-width="1.4"/>
+      <circle data-hand-l r="6.5" fill="${c.light}" stroke="${c.shade}" stroke-width=".5"/>
     </g>
     <g data-torso>
       <path data-chest fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4" stroke-linejoin="round"/>
@@ -82,12 +82,17 @@ export function svgMarkup(s){
         <path d="M-28 -3 Q0 -18 28 -3 L23 52 Q0 65 -23 52Z" fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2"/>
         <path d="M-14 6 Q0 14 14 6 M0 7 L0 48" fill="none" stroke="${c.vestLight}" stroke-width="3" opacity=".62"/>
         <path d="M-17 48 Q0 56 17 48" fill="none" stroke="${c.pattern}" stroke-width="3"/>
+        <path d="M-12 17 Q-20 14 -16 7 Q-12 9 -12 17 M-12 17 Q-6 8 -1 12 Q-1 19 -12 17
+          M14 36 Q7 31 10 24 Q18 27 14 36 M14 36 Q23 28 25 33 Q22 41 14 36"
+          fill="${c.vestLight}" opacity=".8"/>
+        <circle cx="-12" cy="18" r="3" fill="${c.pattern}"/><circle cx="13" cy="37" r="3" fill="${c.pattern}"/>
+        <path d="M-24 2 Q-10 -5 0 2 Q14 -5 26 3" stroke="${c.vestLight}" stroke-width="3" fill="none"/>
       </g>
     </g>
     <g data-arm-right>
-      <path data-arm-r fill="none" stroke="${c.skin}" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-arm-r fill="none" stroke="${c.skin}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
       <path data-arm-r-highlight fill="none" stroke="${c.light}" stroke-width="3.5" opacity=".45" stroke-linecap="round"/>
-      <circle data-hand-r r="9" fill="${c.light}" stroke="${c.shade}" stroke-width="1.4"/>
+      <circle data-hand-r r="6.5" fill="${c.light}" stroke="${c.shade}" stroke-width=".5"/>
     </g>
     <g data-head>
       <g data-vector-head opacity="0">
@@ -108,7 +113,7 @@ export function svgMarkup(s){
       </g>
       <!-- Official Character-01 hair/face, cropped from the existing source asset.
            Limbs and trunk remain independently skinned, never a translated full-body bitmap. -->
-      <g data-original-head opacity="1">
+      <g data-original-head opacity="1" transform="rotate(12)">
         <image href="../characters/v253/chibi-01.webp" x="-91" y="-52" width="182" height="227.5"
           preserveAspectRatio="none" clip-path="url(#character01-original-head-clip)"/>
       </g>
