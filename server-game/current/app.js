@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.21';
+const VERSION='3.22';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1012,8 +1012,8 @@ const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);setTimeout(()=>runSystemDiagnostics({silent:true}),220)}));
-window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();setTimeout(()=>runSystemDiagnostics({silent:true}),160)}});
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);setTimeout(()=>runSystemDiagnostics({silent:true}),220);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450)}));
+window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();setTimeout(()=>runSystemDiagnostics({silent:true}),160);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
 function setMaintenanceState(kind,text,detail){
@@ -1155,8 +1155,207 @@ async function checkPlayerWebNow(){
 const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
 const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
 const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
-setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active'))runSystemDiagnostics({silent:true})},120000);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){runSystemDiagnostics({silent:true});if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true})}},120000);
 
+
+/* GMWW Operations Center — Cài Đặt. Read-only health, room & release checks; no credential exposure. */
+const GMWW_OPS_AUTO_KEY='GMWW_OPS_AUTO_CHECK_V1';
+let gmwwOpsBusy=false,gmwwOpsSnapshot=null;
+function gmwwOpsAutoEnabled(){
+  try{return localStorage.getItem(GMWW_OPS_AUTO_KEY)!=='0'}catch{return true}
+}
+function gmwwOpsLine(key,kind,label,note){
+  const el=document.querySelector('#opsReport [data-ops-check="'+key+'"]');
+  if(!el)return;
+  el.className=kind||'idle';
+  const badge=el.querySelector('b'),caption=el.querySelector('small');
+  if(badge)badge.textContent=label||'—';
+  if(caption)caption.textContent=note||'';
+}
+function gmwwOpsTop(key,value,kind){
+  const el=document.getElementById(key);
+  if(el){el.textContent=value||'—';el.dataset.status=kind||'idle'}
+}
+function gmwwOpsResult(kind,label,note,extra={}){
+  return {kind,label,note,...extra};
+}
+function gmwwOpsServerPart(server,deep){
+  const v=String(server?.data?.version||'');
+  if(!server?.ok)return gmwwOpsResult('bad','LỖI SERVER','Không thể truy cập Cloudflare Worker.',{http:server?.status||0});
+  if(!deep?.ok||deep?.data?.checks?.memberStorage!=='ready')
+    return gmwwOpsResult('bad','LỖI DỮ LIỆU','Durable Objects chưa sẵn sàng.',{http:deep?.status||0,version:v});
+  return gmwwOpsResult('ok','ỔN ĐỊNH','Worker '+v+' • phản hồi '+server.latency+' ms',{http:server.status,latencyMs:server.latency,version:v});
+}
+function gmwwOpsRoomSnapshot(){
+  const selected=typeof isLivePlayRoom==='function'&&isLivePlayRoom();
+  if(!selected||!playSceneState?.roomCode)
+    return {room:gmwwOpsResult('idle','CHƯA CHỌN','Chưa có phòng được chọn trong Trang Chơi.'),
+      realtime:gmwwOpsResult('idle','CHƯA KẾT NỐI','Chưa có phòng để đo kết nối realtime.'),
+      players:0,seats:0,online:0};
+  const room=playSceneRuntime?.room||{},members=Array.isArray(playSceneRuntime?.players)?playSceneRuntime.players:[],
+    online=members.filter(p=>p?.online!==false).length,
+    seatCount=Math.max(0,Math.min(30,Number(room?.seatCount||playSceneState?.seatCount||0))),
+    socket=playSceneRuntime?.socket,
+    socketOpen=!!socket&&socket.readyState===1,
+    lastSync=Number(playSceneRuntime?.lastSyncAt||0),
+    syncAgeSec=lastSync>0?Math.max(0,Math.floor((Date.now()-lastSync)/1000)):null,
+    mode=String(room?.roomMode||playSceneState?.roomMode||'').toUpperCase(),
+    enabled=room?.enabled!==false;
+  return {
+    room:gmwwOpsResult(enabled?'ok':'warn',enabled?'PHÒNG ON':'PHÒNG OFF',
+      mode+' • '+members.length+'/'+seatCount+' vị trí • '+online+' online',
+      {mode,enabled,participants:members.length,seats:seatCount,online}),
+    realtime:socketOpen?gmwwOpsResult(syncAgeSec!==null&&syncAgeSec>90?'warn':'ok',syncAgeSec!==null&&syncAgeSec>90?'CHẬM ĐỒNG BỘ':'ĐÃ KẾT NỐI',
+      'WebSocket đang mở'+(syncAgeSec===null?'':' • cập nhật '+syncAgeSec+' giây trước'),{socketOpen,syncAgeSec})
+      :gmwwOpsResult('warn','CHƯA KẾT NỐI','Mở Trang Chơi để kết nối realtime; không tự reset phòng.',{socketOpen:false,syncAgeSec})
+  };
+}
+function gmwwOpsDraw(snapshot){
+  if(!snapshot)return;
+  const states=snapshot.checks||{};
+  for(const [key,value] of Object.entries(states))gmwwOpsLine(key,value.kind,value.label,value.note);
+  gmwwOpsTop('opsServerState',states.server?.label,states.server?.kind);
+  gmwwOpsTop('opsStorageState',states.storage?.label,states.storage?.kind);
+  gmwwOpsTop('opsRealtimeState',states.realtime?.label,states.realtime?.kind);
+  gmwwOpsTop('opsReleaseState',states.update?.label,states.update?.kind);
+  const values=Object.values(states),failed=values.filter(v=>v?.kind==='bad'),
+    warned=values.filter(v=>v?.kind==='warn'),
+    overall=failed.length?'bad':warned.length?'warn':'ok',
+    label=failed.length?'PHÁT HIỆN LỖI':warned.length?'CẦN CHÚ Ý':'HỆ THỐNG ỔN';
+  const dot=document.getElementById('opsDot'),pill=document.getElementById('opsOverall'),advice=document.getElementById('opsAdvice'),
+    time=document.getElementById('opsLastChecked');
+  if(dot)dot.className='ops-dot '+overall;
+  if(pill){pill.className='ops-pill '+overall;pill.textContent=label}
+  if(advice)advice.textContent=failed.length?'Có '+failed.length+' mục gặp lỗi. Xem chi tiết bên dưới; có thể sử dụng SỬA NHANH ở mục Tự chẩn đoán.'
+    :warned.length?'Có '+warned.length+' cảnh báo. Kiểm tra trạng thái phòng và phiên bản trước khi chơi.'
+    :'Kiểm tra đạt. Không cần xoá cache, reset phòng hoặc cài lại IPA.';
+  if(time)time.textContent='Lần kiểm tra: '+new Date(snapshot.checkedAt).toLocaleString('vi-VN')+' • Chỉ đọc, không thay đổi dữ liệu game.';
+}
+async function gmwwOpsRun({kind='all',silent=false}={}){
+  if(gmwwOpsBusy)return gmwwOpsSnapshot;
+  gmwwOpsBusy=true;
+  const buttonId=kind==='room'?'opsCheckRoom':kind==='release'?'opsCheckRelease':'opsRunFullAudit';
+  const button=document.getElementById(buttonId);
+  if(button)button.disabled=true;
+  const overall=document.getElementById('opsOverall');
+  if(overall&&!silent){overall.textContent='ĐANG KIỂM TRA';overall.className='ops-pill checking'}
+  try{
+    const checks={...(gmwwOpsSnapshot?.checks||{})},stamp=Date.now();
+    const runAll=kind==='all',runRoom=runAll||kind==='room',runRelease=runAll||kind==='release';
+    let server=null,deep=null,manifest=null;
+    if(runAll||runRelease){
+      const jobs=[
+        gmwwJsonProbe('/api/health?ops='+stamp,d=>d?.ok===true&&d?.project==='GMWW-V2.00'),
+        gmwwJsonProbe('/api/health/deep?ops='+stamp,d=>d?.ok===true&&d?.checks?.memberStorage==='ready'),
+        gmwwJsonProbe('/api/update/manifest?ops='+stamp,d=>d?.ok===true&&!!d?.releaseVersion)
+      ];
+      if(runAll)jobs.push(gmwwJsonProbe('/api/web-sync?ops='+stamp,d=>d?.ok===true),
+        gmwwJsonProbe('/api/game-characters?ops='+stamp,d=>Array.isArray(d?.characters)&&d.characters.length>=20));
+      const results=await Promise.all(jobs);
+      [server,deep,manifest]=results;
+      const combination=gmwwOpsServerPart(server,deep);
+      checks.server=server?.ok?gmwwOpsResult('ok','ONLINE','Cloudflare Worker '+String(server.data?.version||'')+' • '+server.latency+' ms',
+        {http:server.status,latencyMs:server.latency,version:String(server.data?.version||'')})
+        :gmwwOpsResult('bad','OFFLINE','Server không phản hồi hoặc sai cấu hình.',{http:server?.status||0});
+      checks.storage=deep?.ok?gmwwOpsResult('ok','SẴN SÀNG','Durable Objects phản hồi • chỉ đọc dữ liệu.',
+        {http:deep.status}):gmwwOpsResult('bad','KHÔNG SẴN SÀNG','Kiểm tra lưu trữ thất bại.',{http:deep?.status||0});
+      const serverVersion=String(server?.data?.version||'').replace(/^V/i,'');
+      const updateVersion=String(manifest?.data?.releaseVersion||'').replace(/^V/i,'');
+      const aligned=manifest?.ok&&server?.ok&&serverVersion===updateVersion;
+      const shell=typeof gmwwShellVersion==='function'?gmwwShellVersion():'—';
+      const runtime=typeof gmwwRuntimeVersion==='function'?gmwwRuntimeVersion():'—';
+      checks.update=aligned?gmwwOpsResult('ok','ĐỒNG BỘ','Server '+serverVersion+' • Runtime '+runtime+' • IPA '+shell,
+        {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest.status})
+        :gmwwOpsResult('warn','KIỂM TRA LẠI','Server và kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
+          {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest?.status||0});
+      if(runAll){
+        const [player,characters]=results.slice(3);
+        checks.player=player?.ok?gmwwOpsResult('ok','HOẠT ĐỘNG','Player Web và trạng thái đồng bộ phản hồi • '+player.latency+' ms',
+          {http:player.status,latencyMs:player.latency})
+          :gmwwOpsResult('bad','LỖI KẾT NỐI','Player Web không phản hồi.',{http:player?.status||0});
+        const count=Array.isArray(characters?.data?.characters)?characters.data.characters.length:0;
+        checks.characters=characters?.ok?gmwwOpsResult('ok','SẴN SÀNG',count+' nhân vật trong manifest.',
+          {http:characters.status,count}):gmwwOpsResult('warn','THIẾU DỮ LIỆU','Không đọc được đầy đủ danh sách nhân vật.',{http:characters?.status||0,count});
+      }
+    }
+    if(runRoom){
+      const state=gmwwOpsRoomSnapshot();
+      checks.room=state.room;checks.realtime=state.realtime;
+      if(state.room.kind!=='idle'&&playSceneState?.roomCode){
+        const roomCheck=await gmwwJsonProbe('/api/rooms/'+encodeURIComponent(playSceneState.roomCode)+'?ops='+stamp,
+          d=>d?.ok===true&&!!d?.room);
+        if(!roomCheck.ok)checks.room=gmwwOpsResult('bad','KHÔNG ĐỒNG BỘ','Không truy xuất được phòng đã chọn.',{http:roomCheck.status});
+        else{
+          const actual=roomCheck.data;
+          const participants=Array.isArray(actual?.players)?actual.players.length:0;
+          const online=Array.isArray(actual?.players)?actual.players.filter(p=>p?.online!==false).length:0;
+          const seatCount=Math.max(0,Math.min(30,Number(actual?.room?.seatCount)||0));
+          checks.room=gmwwOpsResult(actual?.room?.enabled===false?'warn':'ok',actual?.room?.enabled===false?'PHÒNG OFF':'PHÒNG ON',
+            String(actual?.room?.roomMode||'').toUpperCase()+' • '+participants+'/'+seatCount+' vị trí • '+online+' online',
+            {http:roomCheck.status,mode:String(actual?.room?.roomMode||''),enabled:actual?.room?.enabled!==false,
+              participants,seats:seatCount,online});
+        }
+      }
+    }
+    if(runAll){
+      const errorCount=Array.isArray(gmwwRuntimeErrors)?gmwwRuntimeErrors.length:0;
+      checks.runtime=gmwwOpsResult(errorCount?'warn':'ok',errorCount?errorCount+' CẢNH BÁO':'KHÔNG LỖI',
+        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi gần đây.':'Chưa ghi nhận lỗi JavaScript gần đây.',
+        {count:errorCount});
+    }
+    gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
+    gmwwOpsDraw(gmwwOpsSnapshot);
+    return gmwwOpsSnapshot;
+  }catch(_){
+    const advice=document.getElementById('opsAdvice');
+    if(advice)advice.textContent='Không hoàn tất được chẩn đoán. Kiểm tra mạng rồi thử lại.';
+    if(overall){overall.className='ops-pill bad';overall.textContent='KHÔNG KIỂM TRA ĐƯỢC'}
+    return null;
+  }finally{gmwwOpsBusy=false;if(button)button.disabled=false}
+}
+function gmwwOpsSafeReport(snapshot){
+  if(!snapshot)return null;
+  const fields=['kind','label','http','latencyMs','version','serverVersion','releaseVersion','runtimeVersion',
+    'shellVersion','mode','enabled','participants','seats','online','socketOpen','syncAgeSec','count'];
+  const checks={};
+  for(const [key,row] of Object.entries(snapshot.checks||{})){
+    checks[key]={};
+    for(const f of fields)if(Object.prototype.hasOwnProperty.call(row,f))checks[key][f]=row[f];
+  }
+  return {project:'GMWW-V2.00',type:'read-only-operations-report',checkedAt:snapshot.checkedAt,
+    clientVersion:String(VERSION||''),checks,
+    privacy:'No names, login IDs, player positions, room codes, IPs, tokens, or card roles included.'};
+}
+function gmwwOpsExport(){
+  const report=gmwwOpsSafeReport(gmwwOpsSnapshot),note=document.getElementById('opsAdvice'),
+    fallback=document.getElementById('opsReportFallback');
+  if(!report){if(note)note.textContent='Hãy nhấn KIỂM TRA TỔNG trước khi xuất báo cáo.';return}
+  const value=JSON.stringify(report,null,2);
+  try{
+    const blob=new Blob([value],{type:'application/json;charset=utf-8'}),
+      url=URL.createObjectURL(blob),anchor=document.createElement('a');
+    anchor.href=url;anchor.download='GMWW-Health-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.append(anchor);anchor.click();anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    if(note)note.textContent='Đã tạo báo cáo kỹ thuật, không gồm dữ liệu riêng tư. Kiểm tra mục Tệp/Downloads.';
+    if(fallback)fallback.classList.add('hidden');
+  }catch(_){
+    if(fallback){fallback.value=value;fallback.classList.remove('hidden');fallback.focus();fallback.select()}
+    if(note)note.textContent='Không thể lưu tệp trên thiết bị này. Sao chép nội dung báo cáo trong ô bên dưới.';
+  }
+}
+function gmwwOpsInitialize(){
+  const auto=document.getElementById('opsAutoCheck');
+  if(auto){auto.checked=gmwwOpsAutoEnabled();auto.addEventListener('change',()=>{
+    try{localStorage.setItem(GMWW_OPS_AUTO_KEY,auto.checked?'1':'0')}catch(_){}
+    if(auto.checked)gmwwOpsRun({kind:'all',silent:true});
+  })}
+  document.getElementById('opsRunFullAudit')?.addEventListener('click',()=>gmwwOpsRun({kind:'all'}));
+  document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
+  document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
+  document.getElementById('opsExportReport')?.addEventListener('click',gmwwOpsExport);
+}
+gmwwOpsInitialize();
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
