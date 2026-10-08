@@ -1877,6 +1877,48 @@ function gmwwHomeText(id,text){
   const node=document.getElementById(id);
   if(node)node.textContent=String(text??'—');
 }
+
+function gmwwHomeRenderExtras(rows,ranking,leader){
+  const totalLeader=document.getElementById('gmwwHomeLeaderWins');
+  if(totalLeader)totalLeader.textContent=leader?String(memberStats(leader).w):'—';
+  const label=document.getElementById('gmwwHomeLeaderboard');
+  if(label)label.textContent=leader?String(leader.displayName||leader.loginId||'Thành viên'):'Chưa xếp hạng';
+  const target=document.getElementById('gmwwHomeRecentRows');
+  const status=document.getElementById('gmwwHomeRecentResult');
+  if(!target)return;
+  target.replaceChildren();
+  const recent=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,member:m})))
+    .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
+    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt)).slice(0,3);
+  if(status)status.hidden=recent.length>0;
+  const ago=t=>{
+    const minutes=Math.max(0,Math.floor((Date.now()-Date.parse(t))/60000));
+    if(minutes<60)return minutes+' phút trước';
+    const hours=Math.floor(minutes/60);
+    if(hours<24)return hours+' giờ trước';
+    return Math.floor(hours/24)+' ngày trước';
+  };
+  for(const h of recent){
+    const button=document.createElement('button');
+    button.type='button';button.className='gmww-home-recent-row';
+    button.setAttribute('aria-label','Mở Thành Viên: '+String(h.member.displayName||h.member.loginId||''));
+    const avatar=document.createElement('div');avatar.className='gmww-home-recent-avatar';
+    const avatarId=String(h.member.gameCharacterId||h.member.avatarId||'');
+    if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
+      const image=document.createElement('img');image.src=memberAvatarUrl(avatarId);image.alt='';image.loading='lazy';
+      image.onerror=()=>{image.remove();avatar.textContent='♟'};
+      avatar.append(image);
+    }else avatar.textContent='♟';
+    const name=document.createElement('b');name.textContent=String(h.member.displayName||h.member.loginId||'Thành viên');
+    const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='lose'?'Đã kết thúc ván':'Tham gia ván chơi';
+    const time=document.createElement('small');time.textContent=ago(h.playedAt);
+    const arrow=document.createElement('i');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
+    button.append(avatar,name,action,time,arrow);
+    button.addEventListener('click',()=>gmwwHomeNavigate('members'));
+    target.append(button);
+  }
+}
+
 function gmwwHomeRenderMembers(rows){
   if(!Array.isArray(rows))return;
   gmwwHomeText('gmwwHomeMemberCount',rows.length);
@@ -1896,8 +1938,9 @@ function gmwwHomeRenderMembers(rows){
     .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt))[0];
   gmwwHomeText('gmwwHomeRecentResult',last
     ?String(last.memberName||'Thành viên')+' · '+(last.result==='win'?'Thắng':last.result==='lose'?'Thua':'Đã tham gia')+' · '+memberDate(last.playedAt,true)
-    :'Chưa có lịch sử ván được ghi nhận.');
+    :'Chưa có lịch sử ván được ghi nhận.');  gmwwHomeRenderExtras(rows,ranking,leader);
 }
+
 async function gmwwHomeRefresh(force=false){
   const home=document.getElementById('home');
   if(!home||gmwwHomeBusy||(!force&&gmwwHomeLastLoaded&&Date.now()-gmwwHomeLastLoaded<60000))return;
@@ -1920,6 +1963,9 @@ async function gmwwHomeRefresh(force=false){
       gmwwHomeText('gmwwHomeOnlineCount','—');
       gmwwHomeText('gmwwHomePlaysCount','—');
       gmwwHomeText('gmwwHomeLeaderboard','Chưa kết nối được dữ liệu thành viên.');
+      gmwwHomeText('gmwwHomeLeaderWins','—');
+      document.getElementById('gmwwHomeRecentRows')?.replaceChildren();
+      const msg=document.getElementById('gmwwHomeRecentResult');if(msg)msg.hidden=false;
       gmwwHomeText('gmwwHomeRecentResult','Không tải được lịch sử. Nhấn Làm mới để thử lại.');
     }
     gmwwHomeLastLoaded=Date.now();
