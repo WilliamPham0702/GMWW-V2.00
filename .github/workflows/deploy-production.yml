@@ -173,6 +173,26 @@ jobs:
               exit 1
             fi
             echo "Verify Production: GM rider hash PASS."
+            # Artwork must be available as exact bytes after OTA, not merely in GitHub.
+            echo "Verify Production: checking every Trang Chu artwork in live Runtime."
+            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp; do
+              REL="home-art/$ART"
+              ART_URL=$(node - "$REL" <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const file=m.runtime?.files?.find(f=>f.path===process.argv[2]);
+          if(!file?.url)process.exit(2);
+          process.stdout.write(file.url);
+          NODE
+              )
+              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"
+              EXPECTED_ART_SHA=$(shasum -a 256 "server-game/current/$REL" | awk '{print $1}')
+              LIVE_ART_SHA=$(shasum -a 256 "/tmp/$ART" | awk '{print $1}')
+              if test "$EXPECTED_ART_SHA" != "$LIVE_ART_SHA"; then
+                echo "::error::Production Home artwork mismatch: $ART"
+                exit 1
+              fi
+              echo "Verify Production: Home artwork $ART PASS."
+            done
           fi
           echo "Verify Production: checking task-review UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
