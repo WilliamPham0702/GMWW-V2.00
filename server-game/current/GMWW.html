@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.46</title>
-<link rel="stylesheet" href="style.css?v=3.46-compact-settings-1">
+<title>GMWW V3.47</title>
+<link rel="stylesheet" href="style.css?v=3.47-sea-home-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -20,17 +20,12 @@
           </button>
           <div class="gmww-home-top-actions">
             <button class="gmww-home-top-button" type="button" data-home-destination="members" aria-label="Mở Thành Viên" title="Thành Viên">✉</button>
-            <button class="gmww-home-top-button" type="button" data-home-destination="settings" aria-label="Mở thông báo và Công việc trong Cài Đặt" title="Công việc &amp; Tiến độ">♧</button>
+            <button class="gmww-home-top-button" type="button" data-home-destination="settings" aria-label="Mở thông báo và Công việc trong Cài Đặt" title="Công việc &amp; Tiến độ">🔔</button>
           </div>
           <span class="gmww-home-presence" id="gmwwHomeServerState" data-status="checking" role="status" aria-live="polite" hidden><i aria-hidden="true"></i><span>Đang kiểm tra</span></span>
         </header>
         <section class="gmww-home-hero" aria-label="Làng biển WilliamPham">
           <img class="gmww-home-hero-art" src="home-art/home-fantasy-hero-v337.webp" alt="Làng fantasy nhiệt đới với nhân vật chibi và sói trắng" decoding="async" fetchpriority="high">
-          <div class="gmww-home-brand" aria-label="WilliamPham Ma Sói Phiên Bản Biển">
-            <div class="gmww-home-brand-crest" aria-hidden="true">✦</div>
-            <div class="gmww-home-brand-title">WilliamPham</div>
-            <div class="gmww-home-brand-sub">MA SÓI <span>·</span> PHIÊN BẢN BIỂN</div>
-          </div>
         </section>
         <section class="gmww-home-entry" aria-label="Vào Làng">
           <button id="gmwwHomeEnterVillage" class="gmww-home-play" type="button" aria-label="Vào Làng và mở Trang Chơi">
@@ -530,7 +525,7 @@
     <button class="nav" data-page="members" aria-label="Thành Viên"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="16" r="8" fill="#d3f5ff"/><circle cx="9" cy="20" r="6" fill="#b3e8ff"/><circle cx="39" cy="20" r="6" fill="#b3e8ff"/><path d="M10 40c1-10 7-15 14-15s13 5 14 15v3H10zM1 41c0-8 4-13 10-14m36 14c0-8-4-13-10-14" fill="#bbeaff" stroke="#6db9df" stroke-width="2"/></svg></span><b>Thành Viên</b></button>
     <button class="nav start" data-page="start" aria-label="Chơi"><i><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 10q-2-2-2 4v21q0 5 4 3l21-12q4-2 0-4z" fill="#e8faff" stroke="#a1eeff" stroke-width="2" stroke-linejoin="round"/></svg></i><b>Chơi</b></button>
     <button class="nav" data-page="library" aria-label="Thư Viện"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 11c-7-5-15-5-21-3v31c9-2 16-1 21 4 6-5 13-6 21-4V8c-7-2-15-2-21 3zm0 0v32" fill="#d2f2ff" stroke="#62b9ed" stroke-width="2.5" stroke-linejoin="round"/><path d="M9 15q7-1 11 2M9 23q7-1 11 2m8-8q5-4 11-2m-11 10q5-4 11-2" fill="none" stroke="#378dc3" stroke-width="2" stroke-linecap="round"/></svg></span><b>Thư Viện</b></button>
-    <button class="nav gmww-hidden-settings-nav" data-page="settings" tabindex="-1" aria-hidden="true"><span>⚙</span><b>Cài Đặt</b></button>
+    <button class="nav gmww-settings-nav" data-page="settings" aria-label="Cài Đặt"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M21 5h6l2 6 5 2 6-2 4 6-5 5v5l5 4-4 7-7-1-4 3-2 5h-7l-2-6-5-2-6 2-4-6 5-5v-5l-5-4 4-7 7 1 4-3z" fill="#a4ebf8" stroke="#2c6d99" stroke-width="2"/><circle cx="24" cy="24" r="8" fill="#075b92" stroke="#fce7af" stroke-width="3"/></svg></span><b>Cài Đặt</b></button>
   </nav>
 </div>
 
@@ -689,7 +684,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.46-compact-settings-1"></script>
+<script src="app.js?v=3.47-sea-home-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

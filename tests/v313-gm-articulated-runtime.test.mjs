@@ -14,14 +14,14 @@ const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const asset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 
 test('V3.17 runtime is bundled in the V3.17 native shell',()=>{
-  assert.match(app,/const VERSION='3\.46'/);
-  assert.match(html,/<title>GMWW V3\.46<\/title>/);
-  assert.match(server,/VERSION="V3\.46",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-346"/);
+  assert.match(app,/const VERSION='3\.47'/);
+  assert.match(html,/<title>GMWW V3\.47<\/title>/);
+  assert.match(server,/VERSION="V3\.47",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-347"/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 317;/);
   assert.match(project,/MARKETING_VERSION = 3\.17;/);
-  assert.equal(pkg.version,'3.46.0');
-  assert.equal(lock.version,'3.46.0');
-  assert.equal(lock.packages?.['']?.version,'3.46.0');
+  assert.equal(pkg.version,'3.47.0');
+  assert.equal(lock.version,'3.47.0');
+  assert.equal(lock.packages?.['']?.version,'3.47.0');
 });
 
 test('GM has one runtime actor with articulated white-wolf segments in both views',()=>{
