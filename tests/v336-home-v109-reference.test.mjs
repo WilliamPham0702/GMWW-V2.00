@@ -18,7 +18,7 @@ test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=
 test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
   assert.match(home,/data-home-destination="members"/);
   assert.match(home,/data-home-destination="library"/);
-  assert.doesNotMatch(home,/data-home-destination="settings"/,"Trang Chủ không được chứa liên kết Cài đặt theo yêu cầu mới");
+  assert.doesNotMatch(home.slice(home.indexOf('class="gmww-home-explore"'),home.indexOf('class="gmww-home-achievements"')), /data-home-destination="settings"/,"Trang Chủ không được chứa liên kết Cài đặt theo yêu cầu mới");
   assert.match(home,/<b>WilliamPham<\/b>/,"Thương hiệu Trang Chủ phải là WilliamPham");
   assert.match(app,/function gmwwHomeNavigate\(target\)/);
   assert.match(app,/if\(nav\)nav\.click\(\)/);
@@ -58,11 +58,29 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
 });
 
 test("Trang Chủ v3.42 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
- const labels=[...home.matchAll(/class="gmww-home-tile-label">([^<]+)/g)].map(x=>x[1]);
- assert.deepEqual(labels,["BỘ BÀI","THÀNH VIÊN","HÀNH ĐỘNG"]);
+ const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
+ assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
  assert.match(html,/style\.css\?v=3\.42-settings-tasks-template-1/);
+});
+
+
+test("Trang Chủ V3.42 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
+ assert.match(home,/gmww-home-sea-v342/);
+ assert.match(home,/gmww-home-profile/);
+ assert.match(home,/gmww-home-brand-title">WilliamPham</);
+ assert.match(home,/Ma Sói|MA SÓI/);
+ assert.match(home,/gmww-home-hero-art/);
+ assert.match(home,/gmwwHomeEnterVillage/);
+ assert.match(home,/gmwwHomeLeaderWins/);
+ assert.match(home,/gmwwHomeRecentRows/);
+ assert.match(home,/data-home-library-tab="templates"/);
+ assert.match(app,/function gmwwHomeRenderExtras\(rows,ranking,leader\)/);
+ assert.match(app,/gmwwHomeRenderExtras\(rows,ranking,leader\)/);
+ assert.match(app,/document\.createElement\('button'\)/);
+ assert.match(css,/Trang Chủ Phiên Bản Biển/);
+ assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
 });
