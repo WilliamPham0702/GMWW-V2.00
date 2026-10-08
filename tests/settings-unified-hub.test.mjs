@@ -25,7 +25,7 @@ test('Settings has exactly five meaningful navigation groups and every previousl
     const button=settings.indexOf('id="settingsHubTab-'+group+'"');
     const panel=settings.indexOf('id="settingsHubPanel-'+group+'"');
     assert.ok(button>=0&&panel>button,group+' tab and panel exist');
-    const stop=settings.indexOf('data-settings-panel=',panel+25);
+    const stop=settings.indexOf('<div id="settingsHubPanel-',panel+25);
     const section=settings.slice(panel,stop>=0?stop:settings.length);
     for(const id of ids){
       assert.ok(section.includes('id="'+id+'"'),id+' must live in '+group);
