@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.38';
+const VERSION='3.39';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -869,6 +869,7 @@ function setUpdateAction(kind,context={}){
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
   else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
   else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
   else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
 }
 async function installRuntimeUpdate(){
@@ -927,58 +928,112 @@ async function syncPlayerWebUpdate(){
   }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);gmwwSetUpdateProgress('error',null,'Đồng bộ Web không thành công');setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
   finally{if(btn)btn.disabled=false}
 }
+/* Validate both release metadata and Worker health before claiming "latest". */
+let gmwwUpdateCheckSerial=0;
+async function gmwwUpdateProbe(path){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+    try{
+      const res=await fetch(GMWW_SERVER_BASE+path,{method:'GET',cache:'no-store',signal:controller.signal});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const body=await res.json();
+      if(!body||body.ok!==true)throw new Error(String(body?.error||body?.message||'Phản hồi không hợp lệ'));
+      return body;
+    }catch(error){lastError=error}
+    finally{clearTimeout(timer)}
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,350));
+  }
+  throw lastError||new Error('Không nhận được phản hồi');
+}
+function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
 async function checkAppUpdate({notify=false}={}){
-  if(gmwwUpdateBusy)return;
-  setUpdateUi('checking','ĐANG KIỂM TRA','Đang kiểm tra phiên bản mới…','');
+  if(gmwwUpdateBusy)return null;
+  const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
+  if(retry){retry.disabled=true;retry.setAttribute('aria-busy','true')}
+  if(serverEl)serverEl.textContent='V—';
+  setUpdateAction('unverified');
+  setUpdateUi('checking','ĐANG KIỂM TRA','Đang đối chiếu Server và gói cập nhật…','');
   try{
-    const stamp=Date.now(),[res,healthRes]=await Promise.all([
-      fetch(GMWW_SERVER_BASE+'/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp,{cache:'no-store'}),
-      fetch(GMWW_SERVER_BASE+'/api/health?update='+stamp,{cache:'no-store'})
+    const stamp=Date.now(),[manifestResult,healthResult]=await Promise.allSettled([
+      gmwwUpdateProbe('/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp),
+      gmwwUpdateProbe('/api/health?update='+stamp)
     ]);
-    const d=await res.json();if(!res.ok||d.ok!==true)throw new Error(d.error||('HTTP '+res.status));
-    let health={};try{if(healthRes.ok)health=await healthRes.json()}catch{}
-    gmwwUpdateManifest=d;
-    const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,'');
-    const server=String(health.serverVersion||health.version||d.serverVersion||latest||'—').replace(/^V/i,'');
-    const serverEl=document.getElementById('updateServerVersion');if(serverEl)serverEl.textContent=server==='—'?'V—':'V'+server;
-    const type=String(d.releaseType||'server_only').toLowerCase();
-    const runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion(),newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    const manifest=manifestResult.status==='fulfilled'?manifestResult.value:null;
+    const health=healthResult.status==='fulfilled'?healthResult.value:null;
+    const server=String(health?.serverVersion||health?.version||'').replace(/^V/i,'');
+    const latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+    const serverValid=health?.project==='GMWW-V2.00'&&gmwwVersionVerified(server);
+    const manifestValid=gmwwVersionVerified(latest)&&['runtime','native','server_only'].includes(String(manifest?.releaseType||'').toLowerCase());
+    if(serverEl)serverEl.textContent=serverValid?'V'+server:'V—';
+    // Never retain a previously fetched manifest after a failed version check.
+    gmwwUpdateManifest=null;
+    if(!serverValid||!manifestValid){
+      const cause=!serverValid?'Chưa xác minh được kết nối Server.':'Chưa đọc được gói cập nhật Runtime.';
+      const retryInfo=!serverValid?healthResult.reason:manifestResult.reason;
+      console.warn('GMWW_UPDATE_UNVERIFIED',cause,retryInfo||'');
+      setUpdateAction('unverified');
+      setUpdateUi('warn','CẦN KIỂM TRA LẠI',cause,'Phiên bản Runtime V'+gmwwRuntimeVersion()+' đang chạy. Nhấn ↻ để thử lại; chưa thể kết luận đây là bản mới nhất.');
+      return null;
+    }
+    const manifestServer=String(manifest.serverVersion||latest).replace(/^V/i,'');
+    if(!gmwwVersionVerified(manifestServer)||gmwwVersionCompare(manifestServer,server)!==0){
+      setUpdateAction('unverified');
+      setUpdateUi('warn','SERVER CHƯA ĐỒNG BỘ','Server V'+server+' và kênh cập nhật V'+manifestServer+' chưa khớp.','Nhấn ↻ kiểm tra lại sau khi hệ thống đồng bộ.');
+      return null;
+    }
+    gmwwUpdateManifest=manifest;
+    const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
+    const newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
     if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
-      setUpdateAction('restart',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
-      return d
+      setUpdateAction('restart',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
+      return manifest
     }
     if(!newer){
-      setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok',gmwwVersionCompare(shell,runtime)<0?'RUNTIME MỚI NHẤT':'MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Không cần cập nhật.');
-      return d
+      setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok',gmwwVersionCompare(shell,runtime)<0?'RUNTIME MỚI NHẤT':'MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Server V'+server+' đã xác minh. Không cần cập nhật.');
+      return manifest
     }
     if(type==='native'&&shellCurrent){
-      setUpdateAction('none',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
-      return d
+      setUpdateAction('none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
+      return manifest
     }
     if(type==='native'){
-      setUpdateAction('native',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CẦN IPA MỚI','Có GMWW V'+latest+' — phiên bản này cần cài ứng dụng mới.','Nhấn TẢI IPA để lưu file trực tiếp trên iPhone.');
+      setUpdateAction('native',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN IPA MỚI','Có GMWW V'+latest+' — phiên bản này cần cài ứng dụng mới.','Nhấn TẢI IPA để lưu file trực tiếp trên iPhone.');
     }else if(type==='runtime'){
-      setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — có thể cập nhật trực tiếp.','Không cần cài lại IPA.');
+      setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — có thể cập nhật trực tiếp.','Không cần cài lại IPA.');
     }else{
-      setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:d.ipa?.version});setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
+      setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
     }
     if(notify&&newer){
       const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
       if(!sessionStorage.getItem(key)){
         sessionStorage.setItem(key,'1');
         if(type==='runtime'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nVui lòng CẬP NHẬT để nhận phiên bản mới.\n\nCập nhật ngay?'))installRuntimeUpdate();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\\n\\nVui lòng CẬP NHẬT để nhận phiên bản mới.\\n\\nCập nhật ngay?'))installRuntimeUpdate();
         }else if(type==='native'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nPhiên bản này cần cài lại IPA mới.\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\\n\\nPhiên bản này cần cài lại IPA mới.\\n\\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
         }else{
-          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\n\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\\n\\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\\n\\nĐồng bộ ngay?'))syncPlayerWebUpdate();
         }
       }
     }
-    return d
+    return manifest
   }catch(e){
-    console.warn('GMWW_UPDATE_CHECK',e);setUpdateAction('none');setUpdateUi('bad','KHÔNG KIỂM TRA ĐƯỢC','Không thể kiểm tra bản cập nhật.','Game vẫn tiếp tục hoạt động bình thường.');
-  }finally{}
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    gmwwUpdateManifest=null;setUpdateAction('unverified');
+    setUpdateUi('warn','CẦN KIỂM TRA LẠI','Chưa xác nhận được bản cập nhật.','Kiểm tra kết nối rồi nhấn ↻ để thử lại. Game hiện tại vẫn có thể hoạt động.');
+    console.warn('GMWW_UPDATE_CHECK',e);
+    return null
+  }finally{
+    if(serial===gmwwUpdateCheckSerial&&retry){retry.disabled=false;retry.removeAttribute('aria-busy')}
+  }
 }
 window.GMWWUpdateNative={
   onProgress(event={}){
@@ -1040,6 +1095,8 @@ async function checkServerHealth(){
     setServerHealthState('bad','Mất kết nối','Không xác nhận được Server/Player Web',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
   }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
 }
+const retryUpdateCheck=document.getElementById('retryUpdateCheck');
+if(retryUpdateCheck)retryUpdateCheck.addEventListener('click',()=>{void checkAppUpdate({notify:false})});
 const refreshServerData=document.getElementById('refreshServerData');
 if(refreshServerData)refreshServerData.addEventListener('click',async()=>{refreshServerData.disabled=true;try{memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth()}finally{refreshServerData.disabled=false}});
 const openPlayerWeb=document.getElementById('openPlayerWeb');

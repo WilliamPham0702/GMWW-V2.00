@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.38</title>
-<link rel="stylesheet" href="style.css?v=3.38-gather-1">
+<title>GMWW V3.39</title>
+<link rel="stylesheet" href="style.css?v=3.39-health-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -380,7 +380,7 @@
           <div class="settings-unified-heading"><span class="settings-unified-index">01</span><div><h3>Cập nhật & đồng bộ</h3></div></div>
           <div class="settings-tool-inner update-manager-card" id="updateManagerCard">
           <div class="settings-operation-console settings-update-console" aria-label="Trạng thái cập nhật">
-          <div class="health-v236-head"><div><span class="update-dot checking" id="updateDot"></span><b>Cập Nhật Hệ Thống</b></div><span class="update-pill checking" id="updateStatus">ĐANG KIỂM TRA</span></div>
+          <div class="health-v236-head"><div><span class="update-dot checking" id="updateDot"></span><b>Cập Nhật Hệ Thống</b></div><div class="update-pill-group"><span class="update-pill checking" id="updateStatus">ĐANG KIỂM TRA</span><button type="button" id="retryUpdateCheck" class="update-retry" aria-label="Kiểm tra lại kết nối Server và phiên bản" title="Kiểm tra lại">↻</button></div></div>
           <div class="update-version-grid">
             <div><small>Ứng dụng</small><b id="updateShellVersion">V—</b></div>
             <div><small>Game Runtime</small><b id="updateRuntimeVersion">V—</b></div>
@@ -664,7 +664,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.38-gather-1"></script>
+<script src="app.js?v=3.39-health-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

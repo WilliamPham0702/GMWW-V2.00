@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const app=fs.readFileSync('server-game/current/app.js','utf8');
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const begin=app.indexOf('/* Validate both release metadata and Worker health');
+const end=app.indexOf('\nwindow.GMWWUpdateNative={',begin);
+assert.ok(begin>0&&end>begin,'Update verifier is present');
+const source=app.slice(begin,end);
+
+function harness({healthFails=false,manifestFails=false,server='V3.39',manifestServer='3.39',latest='3.39'}={}){
+  const ui=[],actions=[],elements={
+    retryUpdateCheck:{disabled:false,setAttribute(){},removeAttribute(){}},
+    updateServerVersion:{textContent:'V—'}
+  };
+  const health={ok:true,project:'GMWW-V2.00',version:server,serverVersion:server};
+  const manifest={ok:true,releaseVersion:latest,runtimeVersion:latest,serverVersion:manifestServer,releaseType:'runtime',ipa:null};
+  const ctx={
+    AbortController,
+    setTimeout,clearTimeout,
+    gmwwUpdateBusy:false,gmwwUpdateManifest:null,
+    GMWW_SERVER_BASE:'https://example.invalid',
+    document:{getElementById:id=>elements[id]||null},
+    gmwwRuntimeVersion:()=> '3.39',
+    gmwwShellVersion:()=> '3.17',
+    gmwwVersionCompare:(a,b)=>{const pa=String(a).split('.').map(Number),pb=String(b).split('.').map(Number);for(let i=0;i<3;i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return Math.sign(d)}return 0},
+    setUpdateAction:(...args)=>actions.push(args),
+    setUpdateUi:(...args)=>ui.push(args),
+    console:{warn(){}},
+    fetch:async url=>{
+      const isHealth=url.includes('/api/health');
+      if((isHealth&&healthFails)||(!isHealth&&manifestFails))throw new Error('OFFLINE');
+      return{ok:true,json:async()=>isHealth?health:manifest};
+    }
+  };
+  vm.runInNewContext(source+'\nglobalThis.runCheck=checkAppUpdate;globalThis.getManifest=()=>gmwwUpdateManifest;',ctx);
+  return{run:ctx.runCheck,manifest:ctx.getManifest,ui,actions,elements};
+}
+test('V3.39 only declares latest after Server and release version both agree',async()=>{
+  const h=harness(),m=await h.run();
+  assert.equal(m.releaseVersion,'3.39');
+  assert.equal(h.ui.at(-1)[0],'ok');
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.39');
+  assert.match(h.ui.at(-1)[2],/phiên bản mới nhất/);
+  assert.equal(h.elements.retryUpdateCheck.disabled,false);
+});
+test('V3.39 never says latest when Server health cannot be verified',async()=>{
+  const h=harness({healthFails:true});
+  assert.equal(await h.run(),null);
+  assert.equal(h.ui.at(-1)[0],'warn');
+  assert.doesNotMatch(h.ui.at(-1)[2],/mới nhất/);
+  assert.match(h.actions.at(-1)[0],/unverified/);
+  assert.equal(h.elements.updateServerVersion.textContent,'V—');
+  assert.equal(h.manifest(),null);
+});
+test('V3.39 shows a verified Server version even if release manifest fails',async()=>{
+  const h=harness({manifestFails:true});
+  assert.equal(await h.run(),null);
+  assert.equal(h.ui.at(-1)[0],'warn');
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.39');
+  assert.equal(h.manifest(),null);
+});
+test('V3.39 treats a mismatched deployment as unverified',async()=>{
+  const h=harness({manifestServer:'3.38'});
+  assert.equal(await h.run(),null);
+  assert.equal(h.ui.at(-1)[1],'SERVER CHƯA ĐỒNG BỘ');
+  assert.equal(h.manifest(),null);
+});
+test('V3.39 exposes explicit on-screen retry without IPA reinstall',()=>{
+  assert.match(html,/id="retryUpdateCheck"/);
+  assert.match(app,/retryUpdateCheck\.addEventListener\('click'/);
+  assert.match(app,/else if\(kind==='unverified'\)/);
+  assert.match(html,/<title>GMWW V3\.39<\/title>/);
+});
