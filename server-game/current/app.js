@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.36';
+const VERSION='3.37';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1860,7 +1860,7 @@ function gmwwHomeNavigate(target){
   if(nav)nav.click();
 }
 document.getElementById('gmwwHomeEnterVillage')?.addEventListener('click',()=>gmwwHomeNavigate('start'));
-document.querySelectorAll('[data-home-destination]').forEach(button=>button.addEventListener('click',()=>gmwwHomeNavigate(button.dataset.homeDestination)));
+document.querySelectorAll('[data-home-destination]').forEach(button=>button.addEventListener('click',()=>{gmwwHomeNavigate(button.dataset.homeDestination);const tab=button.dataset.homeLibraryTab;if(tab&&button.dataset.homeDestination==='library')document.querySelector('#library .libtab[data-lib="'+tab+'"]')?.click()}));
 document.getElementById('gmwwHomeOpenRanking')?.addEventListener('click',()=>{
   gmwwHomeNavigate('members');
   setTimeout(()=>{const ranking=document.getElementById('memberGroupRanking');if(ranking){ranking.open=true;ranking.scrollIntoView({block:'start',behavior:'smooth'})}},120);

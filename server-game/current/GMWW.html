@@ -3,34 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.36</title>
-<link rel="stylesheet" href="style.css?v=3.36-home-1">
+<title>GMWW V3.37</title>
+<link rel="stylesheet" href="style.css?v=3.37-fantasy-art-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
 <div id="app">
   <main id="stage">
     <section class="page active" id="home" aria-label="Trang Chủ GMWW">
-      <div class="gmww-home-v336">
+      <div class="gmww-home-v336 gmww-home-art-v337">
         <header class="gmww-home-top">
           <div class="gmww-home-identity"><span class="gmww-home-emblem" aria-hidden="true">✦</span><div><b>GMWW</b><small>LÀNG ASAHI</small></div></div>
           <span class="gmww-home-presence" id="gmwwHomeServerState" data-status="checking" role="status" aria-live="polite"><i aria-hidden="true"></i><span>Đang kiểm tra</span></span>
         </header>
-        <section class="gmww-home-hero" aria-label="Làng Ma Sói ven biển">
-          <div class="gmww-home-hero-copy"><span>HÀNH TRÌNH CỦA QUẢN TRÒ</span><h1>Chào mừng đến<br>Làng Asahi</h1><p>Mọi cuộc phiêu lưu bắt đầu từ ngôi làng này.</p></div>
-          <div class="gmww-home-crest" aria-hidden="true"><span>✦</span></div>
-          <span class="gmww-home-hero-sun" aria-hidden="true">✧</span>
+
+        <section class="gmww-home-hero" aria-label="Minh họa fantasy Làng Asahi">
+          <img class="gmww-home-hero-art" src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển fantasy với chàng trai chibi và sói trắng, minh họa được thiết kế riêng cho GMWW" decoding="async" fetchpriority="high">
         </section>
-        <section class="gmww-home-entry" aria-label="Bắt đầu chơi">
-          <div class="gmww-home-entry-copy"><b>Sẵn sàng điều hành ván mới?</b><small>Tiếp tục trận đang chơi hoặc mở sảnh chờ.</small></div>
-          <button id="gmwwHomeEnterVillage" class="gmww-home-play" type="button" aria-label="Vào Làng và mở Trang Chơi"><span aria-hidden="true">▶</span><b>VÀO LÀNG</b></button>
+        <section class="gmww-home-entry" aria-label="Vào Làng">
+          <button id="gmwwHomeEnterVillage" class="gmww-home-play" type="button" aria-label="Vào Làng và mở Trang Chơi">
+            <span class="gmww-home-play-mark" aria-hidden="true">▶</span>
+            <span class="gmww-home-play-copy"><b>VÀO LÀNG</b><small>Tạo phòng · Tiếp tục ván chơi</small></span>
+            <span class="gmww-home-play-arrow" aria-hidden="true">›</span>
+          </button>
         </section>
         <section class="gmww-home-explore" aria-label="Khám phá GMWW">
-          <div class="gmww-home-section-title"><b>✦ Khám phá</b><small>Truy cập nhanh</small></div>
+          <div class="gmww-home-section-title"><b>✦ Khám phá</b><small>Kho tàng Ma Sói</small></div>
           <div class="gmww-home-shortcuts">
-            <button type="button" data-home-destination="members" aria-label="Mở quản lý Thành Viên"><span class="gmww-home-shortcut-icon" aria-hidden="true">♟</span><b>THÀNH VIÊN</b><small>Người chơi</small></button>
-            <button type="button" data-home-destination="library" aria-label="Mở Thư Viện lá bài"><span class="gmww-home-shortcut-icon" aria-hidden="true">✧</span><b>BỘ BÀI</b><small>Vai trò &amp; Artifact</small></button>
-            <button type="button" data-home-destination="settings" aria-label="Mở Cài Đặt"><span class="gmww-home-shortcut-icon" aria-hidden="true">⚙</span><b>CÀI ĐẶT</b><small>Vận hành</small></button>
+            <button type="button" data-home-destination="library" data-home-library-tab="cards" aria-label="Mở Thư Viện Bộ Bài"><img src="home-art/home-v1-book.webp" alt="Bộ Bài" loading="lazy"></button>
+            <button type="button" data-home-destination="members" aria-label="Mở quản lý Thành Viên"><img src="home-art/home-v1-members.webp" alt="Thành Viên" loading="lazy"></button>
+            <button type="button" data-home-destination="library" data-home-library-tab="actions" aria-label="Mở Thư Viện Hành Động"><img src="home-art/home-v1-action.webp" alt="Hành Động" loading="lazy"></button>
           </div>
         </section>
         <section class="gmww-home-achievements" aria-label="Thành tích người chơi">
@@ -46,7 +48,7 @@
           <div class="gmww-home-section-title"><b>◷ Gần đây</b><button id="gmwwHomeRefresh" type="button" aria-label="Làm mới thông tin Trang Chủ">↻ Làm mới</button></div>
           <p id="gmwwHomeRecentResult">Đang kiểm tra lịch sử trận…</p>
         </section>
-        <footer class="gmww-home-footnote"><span id="gmwwHomeVersion">GMWW V3.36</span><span>Giao diện biển · Dữ liệu trực tiếp</span></footer>
+        <footer class="gmww-home-footnote"><span id="gmwwHomeVersion">GMWW V3.37</span><span>Fantasy Art · Dữ liệu trực tiếp</span></footer>
       </div>
     </section>
     <section class="page" id="members">
@@ -652,7 +654,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.36-home-1"></script>
+<script src="app.js?v=3.37-fantasy-art-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

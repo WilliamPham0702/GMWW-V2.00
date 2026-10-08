@@ -3251,3 +3251,81 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
   #home .gmww-home-crest{width:26%}
 }
 @media(prefers-reduced-motion:reduce){#home .gmww-home-play{transition:none}}
+
+
+/* GMWW V3.37: Fantasy artwork thật, khung ngọc trai và nút game; giữ logic/ID cũ. */
+#home{background:
+  linear-gradient(180deg,rgba(2,24,42,.12) 0%,rgba(3,37,59,.57) 43%,rgba(2,19,38,.81) 100%),
+  url("gmww-village-day-v260.webp") center 33% / cover no-repeat!important}
+#home .gmww-home-art-v337{gap:10px!important}
+#home .gmww-home-art-v337 .gmww-home-hero{
+  display:block!important;min-height:0!important;aspect-ratio:852/530!important;
+  border:2px solid rgba(255,235,160,.82)!important;border-radius:18px!important;
+  background:rgba(6,48,70,.72)!important;overflow:hidden!important;
+  box-shadow:0 0 0 2px rgba(7,59,86,.85),0 14px 33px rgba(0,21,43,.42),inset 0 0 0 1px rgba(255,255,255,.31)!important;
+}
+#home .gmww-home-hero-art{width:100%;height:100%;display:block;object-fit:cover;object-position:center center}
+#home .gmww-home-art-v337 .gmww-home-entry{
+  display:block!important;padding:0!important;background:none!important;
+  border:0!important;box-shadow:none!important;backdrop-filter:none!important
+}
+#home .gmww-home-art-v337 .gmww-home-play{
+  min-height:71px!important;min-width:0!important;width:100%!important;
+  border:2px solid rgba(255,238,175,.94)!important;border-radius:20px!important;
+  display:grid!important;grid-template-columns:52px minmax(0,1fr) 23px!important;
+  align-items:center!important;justify-content:stretch!important;
+  gap:10px!important;padding:8px 16px!important;
+  color:#fff!important;background:linear-gradient(180deg,#44dbfa 0%,#0b90c6 48%,#065887 100%)!important;
+  box-shadow:0 0 0 3px rgba(14,128,174,.34),0 11px 22px rgba(1,29,52,.5),inset 0 3px 0 rgba(255,255,255,.44),inset 0 -4px 0 rgba(0,45,97,.22)!important;
+  text-shadow:0 2px 3px rgba(0,40,75,.7)!important;
+}
+#home .gmww-home-play-mark{
+  display:grid!important;place-items:center;width:47px;height:47px;border-radius:50%;
+  border:1px solid rgba(239,253,255,.9);background:linear-gradient(145deg,#0a83bb,#053a79);
+  box-shadow:inset 0 2px 2px #ffffff4d,0 0 0 3px #a3edff4a;color:#f5fcff!important;font-size:23px!important;
+}
+#home .gmww-home-play-copy{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+#home .gmww-home-play-copy b{font-size:21px;font-weight:1000;letter-spacing:.065em;line-height:1}
+#home .gmww-home-play-copy small{font-size:9.5px;font-weight:750;line-height:1.1;color:#e3faff;text-shadow:0 1px 2px #064666}
+#home .gmww-home-play-arrow{font-size:29px;color:#f9efba}
+#home .gmww-home-art-v337 .gmww-home-explore{
+  position:relative;overflow:hidden!important;border:1px solid rgba(255,218,135,.69)!important;
+  background:linear-gradient(180deg,rgba(3,36,66,.91),rgba(5,25,51,.87))!important;
+  box-shadow:0 8px 24px rgba(2,15,36,.37),inset 0 1px 0 rgba(255,232,172,.13)!important
+}
+#home .gmww-home-explore:before{
+  content:"";position:absolute;inset:0 0 auto;height:3px;
+  background:linear-gradient(90deg,transparent,#f7da8b,transparent);pointer-events:none
+}
+#home .gmww-home-art-v337 .gmww-home-section-title>b{
+  font-family:Georgia,"Times New Roman",serif!important;font-size:16px!important;
+  color:#ffe7a1!important;text-shadow:0 2px 8px rgba(0,0,0,.6)
+}
+#home .gmww-home-art-v337 .gmww-home-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+#home .gmww-home-art-v337 .gmww-home-shortcuts button{
+  width:100%!important;min-width:0!important;min-height:0!important;padding:0!important;
+  border:1px solid rgba(247,199,113,.55)!important;border-radius:12px!important;overflow:hidden!important;
+  background:#071c35!important;display:block!important;aspect-ratio:105/125;
+  box-shadow:0 5px 11px rgba(0,8,25,.53),inset 0 1px 1px #fff5!important
+}
+#home .gmww-home-art-v337 .gmww-home-shortcuts button img{
+  display:block!important;width:100%!important;height:100%!important;object-fit:fill!important
+}
+#home .gmww-home-art-v337 .gmww-home-shortcuts button:active{transform:scale(.976)}
+#home .gmww-home-art-v337 .gmww-home-achievements,
+#home .gmww-home-art-v337 .gmww-home-recent{
+  border:1px solid rgba(240,219,160,.65)!important;
+  background:linear-gradient(160deg,rgba(3,49,76,.83),rgba(2,22,47,.91))!important;
+  box-shadow:0 9px 21px rgba(0,9,29,.39),inset 0 1px 0 #d9e8f32e!important
+}
+#home .gmww-home-art-v337 .gmww-home-stat-grid>div{
+  border:1px solid rgba(174,225,247,.4)!important;background:rgba(4,35,62,.67)!important
+}
+#home .gmww-home-art-v337 .gmww-home-stat-grid strong{color:#e8f9ff!important;text-shadow:0 0 8px #69b8ff44}
+@media(max-width:380px){
+  #home .gmww-home-art-v337 .gmww-home-play{min-height:64px!important;grid-template-columns:45px 1fr 18px!important;padding:7px 12px!important;gap:8px!important}
+  #home .gmww-home-play-mark{width:40px;height:40px;font-size:20px!important}
+  #home .gmww-home-play-copy b{font-size:18px}
+  #home .gmww-home-art-v337 .gmww-home-shortcuts{gap:5px!important}
+}
+@media(prefers-reduced-motion:reduce){#home .gmww-home-art-v337 .gmww-home-shortcuts button{transition:none!important}}

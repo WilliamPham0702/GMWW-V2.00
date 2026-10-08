@@ -50,6 +50,7 @@ copy('assets/backgrounds/gmww-village-day-v260.webp','gmww-village-day-v260.webp
 copy('assets/backgrounds/gmww-village-night-v260.webp','gmww-village-night-v260.webp');
 if(!leanRuntimePatch)copyDir('assets/characters/v253','game-characters');
 copyDir('assets/gm','gm');
+copyDir('server-game/current/home-art','home-art');
 
 // Canonical clean role artwork (63 originals, no old delivery/thumb variants).
 // deploy-production.yml restores this source from the pinned V2.52 release archive
@@ -151,7 +152,7 @@ const revisionedManifest=path.join(outRoot,'manifest-'+updateChannelRev+'.json')
 fs.writeFileSync(revisionedManifest,JSON.stringify(manifest,null,2)+'\n');
 if(version!==shell){
   if(releaseType!=='runtime')throw new Error('Runtime '+version+' on shell '+shell+' must publish as runtime');
-  const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp'];
+  const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp','home-art/home-fantasy-hero-v337.webp','home-art/home-v1-book.webp','home-art/home-v1-members.webp','home-art/home-v1-action.webp'];
   for(const p of required)if(!files.some(f=>f.path===p))throw new Error('Runtime package missing '+p);
   if(!fs.existsSync(revisionedManifest))throw new Error('Revisioned runtime manifest was not generated');
 }
