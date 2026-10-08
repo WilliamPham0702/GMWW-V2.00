@@ -28,10 +28,28 @@ test('Every useful settings control lives in one of five boxes on a single scrol
       assert.equal(settings.split('id="'+id+'"').length-1,1,'duplicate DOM id '+id);
     }
   }
+  assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupHealth'),'Update must be first');
   assert.ok(settings.indexOf('settingsGroupHealth')<settings.indexOf('settingsGroupTasks'));
   assert.ok(settings.indexOf('gmwwTasksOpenList')<settings.indexOf('gmwwTasksHistory'));
   assert.doesNotMatch(settings,/role="tablist"|role="tabpanel"|settingsHubTab-|settingsHubNav|data-settings-group=/);
   assert.doesNotMatch(settings,/data-settings-panel=|hidden>[\s\S]*settings-hub-panel/);
+});
+
+test('Settings removes redundant explanatory notes while keeping live status and all controls',()=>{
+  for(const note of [
+    'Tất cả công cụ trên cùng một trang',
+    'Server, Player Web, phòng chơi, realtime và tự chẩn đoán được đặt chung một nơi.',
+    'Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản.'
+  ])assert.ok(!settings.includes(note),'Redundant note remains: '+note);
+  assert.ok(settings.includes('id="settingsHubMiniHealth"'));
+  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupMaintenance','settingsGroupAppearance'];
+  const positions=order.map(id=>settings.indexOf('id="'+id+'"'));
+  assert.ok(positions.every(p=>p>=0));
+  assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
+  for(const [i,id] of order.entries()){
+    const box=settings.slice(positions[i],i+1<order.length?positions[i+1]:settings.length);
+    assert.ok(box.includes('<span class="settings-unified-index">'+(i+1<10?'0':'')+(i+1)+'</span>'),id+' has correct ordinal');
+  }
 });
 
 test('The broken export-report tool is fully removed and replaced with tracked work history',()=>{
