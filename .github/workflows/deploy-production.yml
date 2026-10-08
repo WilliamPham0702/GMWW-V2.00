@@ -167,6 +167,19 @@ jobs:
             curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
             test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')"
           fi
+          # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
+          TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
+          TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
+          test -n "$TASK_APP_URL" && test -n "$TASK_HTML_URL"
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
+          grep -Fq "const VERSION='$EXPECTED';" /tmp/gmww-ota-app.js
+          grep -Fq 'function gmwwTaskReviewLink' /tmp/gmww-ota-app.js
+          grep -Fq 'XÁC NHẬN HOÀN THÀNH' /tmp/gmww-ota-app.js
+          grep -Fq 'BỎ QUA' /tmp/gmww-ota-app.js
+          grep -Fq 'id="gmwwTasksOpenList"' /tmp/gmww-ota.html
+          grep -Fq "GMWW V$EXPECTED" /tmp/gmww-ota.html
+          echo "GMWW task review controls verified in live OTA runtime V$EXPECTED."
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
