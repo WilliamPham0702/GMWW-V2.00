@@ -126,6 +126,8 @@ test('independent review lab uses original source artwork and never changes live
   const live=fs.readFileSync(new URL('../assets/village/village.mjs',import.meta.url),'utf8');
   assert.match(demo,/Chọn Action \(9 hành động\)/);
   assert.match(demo,/chibi-01\.webp/);
+  assert.ok(demo.includes('id="smallActor"'));
+  assert.ok(demo.includes('pose.worldX*scale'));
   assert.doesNotMatch(live,/rig-skin-renderer\.mjs/);
   assert.ok(isLoopingAction('sit'));
   assert.equal(isLoopingAction('vote'),false);
