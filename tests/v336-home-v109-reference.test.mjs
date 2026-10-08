@@ -23,7 +23,7 @@ test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất tr�
   assert.match(app,/function gmwwHomeNavigate\(target\)/);
   assert.match(app,/if\(nav\)nav\.click\(\)/);
   assert.match(app,/gmwwHomeEnterVillage/);
-  assert.match(app,/ranking\.open=true/);
+  assert.match(app,/gmwwHomeAllRecent=!gmwwHomeAllRecent/);
 });
 test("Thông tin Trang Chủ lấy từ API và không bịa số liệu",()=>{
   assert.match(app,/function gmwwHomeRenderMembers\(rows\)/);
@@ -80,6 +80,8 @@ test("Trang Chủ V3.42 phản ánh thiết kế đã duyệt, không giả dữ
  assert.match(home,/data-home-library-tab="templates"/);
  assert.match(app,/function gmwwHomeRenderExtras\(rows,ranking,leader\)/);
  assert.match(app,/gmwwHomeRenderExtras\(rows,ranking,leader\)/);
+ assert.match(app,/matches\.size\|\|played/);
+ assert.match(app,/gmwwHomeAllRecent\?50:3/);
  assert.match(app,/document\.createElement\('button'\)/);
  assert.match(css,/Trang Chủ Phiên Bản Biển/);
  assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
