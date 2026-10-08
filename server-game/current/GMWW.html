@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.29</title>
-<link rel="stylesheet" href="style.css?v=3.29">
+<title>GMWW V3.30</title>
+<link rel="stylesheet" href="style.css?v=3.30">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -56,7 +56,7 @@
     <section class="page play-page" id="start">
       <div class="play-shell" id="playShell" data-phase="lobby">
 
-        <section class="play-setup-strip" id="playSetupStrip" aria-label="Luồng vào trận">
+        <section class="play-setup-strip gm-stage-timeline-v330" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
           <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
           <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
@@ -123,10 +123,10 @@
 
 
 
-        <nav class="gm-top-menu-v293 gm-bottom-menu-v325" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
+        <nav class="gm-top-menu-v293 gm-bottom-menu-v325 gm-stage-dock-v330" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span></button>
-          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle">SẢNH CHỜ</b><small>CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
+          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle" aria-live="polite">SẢNH CHỜ</b><small>CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span></button>
         </nav>
