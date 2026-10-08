@@ -9,7 +9,13 @@ const curve=(a,b,c)=>'M'+p(a)+' Q'+p(b)+' '+p(c);
 const point=(x,y)=>({x,y});
 export function svgMarkup(s){
   const c=validateSkin(s);
-  return `<svg class="rig-skin-svg" viewBox="95 18 210 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Character-01 GMWW có mặt và tóc từ artwork gốc, tay chân chuyển động mềm"><defs><clipPath id="character01-original-head-clip"><path d="M-11 -55 Q17 -66 35 -42 Q52 -22 43 5 Q37 30 15 39 Q-11 47 -33 29 Q-49 9 -48 -20 Q-45 -47 -11 -55Z"/></clipPath></defs>
+  return `<svg class="rig-skin-svg" viewBox="95 18 210 305" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Character-01 GMWW có mặt và tóc từ artwork gốc, tay chân chuyển động mềm"><defs>
+    <clipPath id="character01-original-head-clip"><path d="M-11 -55 Q17 -66 35 -42 Q52 -22 43 5 Q37 30 15 39 Q-11 47 -33 29 Q-49 9 -48 -20 Q-45 -47 -11 -55Z"/></clipPath>
+    <clipPath id="character01-original-vest-clip"><path data-original-vest-mask/></clipPath>
+    <clipPath id="character01-original-shorts-clip"><path data-original-shorts-mask/></clipPath>
+    <clipPath id="character01-original-sandal-left-clip"><path data-sandal-l-clip/></clipPath>
+    <clipPath id="character01-original-sandal-right-clip"><path data-sandal-r-clip/></clipPath>
+    </defs>
   <ellipse data-shadow cx="200" cy="297" rx="42" ry="6" fill="#133b38" opacity=".26"/>
   <g data-body>
     <g data-leg-left>
@@ -25,6 +31,10 @@ export function svgMarkup(s){
       <path data-strap-l fill="none" stroke="${c.vestLight}" stroke-width="3.3" stroke-linecap="round"/>
       <path data-sandal-r fill="${c.sandal}" stroke="#083748" stroke-width="1.8" stroke-linejoin="round"/>
       <path data-strap-r fill="none" stroke="${c.vestLight}" stroke-width="3.3" stroke-linecap="round"/>
+      <image data-original-sandal-l href="../characters/v253/chibi-01.webp" width="126" height="158" preserveAspectRatio="none"
+        clip-path="url(#character01-original-sandal-left-clip)"/>
+      <image data-original-sandal-r href="../characters/v253/chibi-01.webp" width="126" height="158" preserveAspectRatio="none"
+        clip-path="url(#character01-original-sandal-right-clip)"/>
     </g>
     <!-- Cross-legged pose is a dedicated soft silhouette, not a crouched standing leg rig.
          Opacity eases during sit-down/stand-up; no rigid disconnected kneecaps. -->
@@ -38,6 +48,9 @@ export function svgMarkup(s){
     </g>
     <path data-shorts fill="${c.shorts}" stroke="#138fa4" stroke-width="2" stroke-linejoin="round"/>
     <path data-shorts-waist fill="none" stroke="${c.vestLight}" stroke-width="4"/>
+    <!-- Front shorts retain original Hawaiian floral artwork, not approximated circles. -->
+    <image data-original-shorts-image href="../characters/v253/chibi-01.webp" x="109" y="65" width="182" height="229"
+      preserveAspectRatio="none" clip-path="url(#character01-original-shorts-clip)"/>
     <g data-shorts-pattern fill="${c.pattern}" opacity=".88">
       <path data-flower-l d="M0 -6 Q4 -6 3 -1 Q8 -2 7 2 Q3 4 1 4 Q-2 9 -5 5 Q-5 3 -4 2 Q-10 1 -7 -3 Q-3 -4 0 -6Z"/>
       <path data-flower-r d="M0 -5 Q5 -7 4 0 Q10 -1 8 4 Q3 5 1 5 Q-3 9 -5 5 Q-4 1 -5 1 Q-8 -1 -4 -4Z"/>
@@ -51,11 +64,20 @@ export function svgMarkup(s){
       <path data-chest fill="${c.skin}" stroke="${c.shade}" stroke-width="1.4" stroke-linejoin="round"/>
       <path data-vest-left fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
       <path data-vest-right fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <!-- Real source texture: open turquoise vest + exposed muscular chest + necklace. -->
+      <image data-original-vest-image href="../characters/v253/chibi-01.webp" x="109" y="61" width="182" height="229"
+        preserveAspectRatio="none" clip-path="url(#character01-original-vest-clip)"/>
       <g data-abs fill="none" stroke="${c.shade}" opacity=".56" stroke-width="1.6" stroke-linecap="round">
         <path data-abs-1/><path data-abs-2/><path data-abs-3/><path data-abs-middle/>
       </g>
       <path data-necklace fill="none" stroke="#ebc77f" stroke-width="1.8"/>
       <circle data-pendant r="3.3" fill="#e4b755" stroke="#a7752d" stroke-width="1"/>
+      <g data-profile-vest opacity="0">
+        <path d="M-13 -6 Q3 -10 16 0 L19 45 Q0 52 -17 45Z" fill="${c.skin}" stroke="${c.shade}" stroke-width="1.7"/>
+        <path d="M-18 -6 Q-4 -9 -2 -2 L-5 46 L-19 43 Q-25 13 -18 -6Z" fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2"/>
+        <path d="M12 -1 Q22 2 18 17 L18 44 L7 47 L7 13Z" fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2"/>
+        <path d="M-13 12 Q-7 16 -13 21 Q-20 17 -13 12Z M12 28 Q18 32 12 35 Q6 31 12 28Z" fill="${c.pattern}"/>
+      </g>
       <g data-rear-torso opacity="0">
         <path d="M-28 -3 Q0 -18 28 -3 L23 52 Q0 65 -23 52Z" fill="${c.vest}" stroke="${c.vestLight}" stroke-width="2"/>
         <path d="M-14 6 Q0 14 14 6 M0 7 L0 48" fill="none" stroke="${c.vestLight}" stroke-width="3" opacity=".62"/>
@@ -117,7 +139,7 @@ function nodesFor(svg){
     'sandal-l','sandal-r','strap-l','strap-r','shorts','shorts-waist',
     'flower-l','flower-r','arm-l','arm-r','arm-l-highlight','arm-r-highlight',
     'hand-l','hand-r','chest','vest-left','vest-right','abs-1','abs-2','abs-3','abs-middle',
-    'necklace','pendant','head','eyes','smile','rear-torso','profile-face','rear-head','original-head'
+    'necklace','pendant','head','eyes','smile','rear-torso','profile-vest','profile-face','rear-head','original-head','abs','original-vest-image','original-vest-mask','original-shorts-image','original-shorts-mask','original-sandal-l','original-sandal-r','sandal-l-clip','sandal-r-clip'
   ])n[attr]=byAttr(svg,attr);return n;
 }
 const set=(n,k,v)=>n?.setAttribute(k,v);
@@ -138,6 +160,12 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
   set(b['rear-torso'],'transform',`translate(${n(200+pose.shoulder.x)} ${n(pose.shoulder.y)})`);
   set(b['profile-face'],'opacity',n(profile/weights));
   set(b['original-head'],'opacity',n(front/weights));
+  set(b['original-vest-image'],'opacity',n(front/weights));
+  set(b['original-shorts-image'],'opacity',n(front/weights));
+  set(b['original-sandal-l'],'opacity',n(front/weights));
+  set(b['original-sandal-r'],'opacity',n(front/weights));
+  set(b['profile-vest'],'opacity',n(profile/weights));
+  set(b.abs,'opacity',n(.56*front/weights));
   if(b.svg){b.svg.dataset.facing=valid;b.svg.dataset.heading=String(Math.round(angle));}
   set(b.body,'opacity',n(pose.alpha));
   set(b.shadow,'rx',n(42*pose.shadow));
@@ -161,6 +189,10 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
     const fx=200+pose.footX[side],fy=pose.footY[side];
     set(b['sandal-'+low],'d',`M${n(fx-11)} ${n(fy-5)} Q${n(fx+4)} ${n(fy-10)} ${n(fx+13)} ${n(fy-3)} L${n(fx+17)} ${n(fy+3)} Q${n(fx+10)} ${n(fy+8)} ${n(fx-12)} ${n(fy+4)}Z`);
     set(b['strap-'+low],'d',`M${n(fx-3)} ${n(fy-6)} Q${n(fx+4)} ${n(fy-1)} ${n(fx+11)} ${n(fy-5)}`);
+    set(b['sandal-'+low+'-clip'],'d',b['sandal-'+low]?.getAttribute('d')||'');
+    const isL=side==='L';
+    set(b['original-sandal-'+low],'x',n(fx-(isL?96:217)*.45));
+    set(b['original-sandal-'+low],'y',n(fy-329*.45));
   }
   // Rounded shorts cover both hip attachments so leg roots never form visible gaps.
   set(b.shorts,'d',`M${n(hx-24)} ${n(hy-14)} Q${n(hx)} ${n(hy-4)} ${n(hx+24)} ${n(hy-14)}
@@ -168,6 +200,9 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
   L${n(hx)} ${n(hy+5)} L${n(hx-6)} ${n(hy+12)}
   Q${n(hx-15)} ${n(hy+19)} ${n(hx-27)} ${n(hy+13)}Z`);
   set(b['shorts-waist'],'d',`M${n(hx-22)} ${n(hy-11)} Q${n(hx)} ${n(hy-5)} ${n(hx+22)} ${n(hy-11)}`);
+  set(b['original-shorts-mask'],'d',b.shorts?.getAttribute('d')||'');
+  set(b['original-shorts-image'],'x',n(109+pose.hip.x));set(b['original-shorts-image'],'y',n(hy-142));
+  set(b['profile-vest'],'transform',`translate(${n(sx)} ${n(sy)})`);
   set(b['flower-l'],'transform',`translate(${n(hx-17)} ${n(hy+6)}) scale(.75)`);
   set(b['flower-r'],'transform',`translate(${n(hx+17)} ${n(hy+6)}) scale(.65)`);
 
@@ -186,6 +221,9 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
     Q${n(left-8)} ${n(sy+23)} ${n(left)} ${n(sy-1)}Z`);
   set(b['vest-left'],'d',`M${n(left-6)} ${n(sy+1)} Q${n(left+3)} ${n(sy-7)} ${n(sx-10)} ${n(sy+7)}
     L${n(sx-15)} ${n(hy-17)} L${n(hx-24)} ${n(hy-15)} Q${n(left-16)} ${n(sy+22)} ${n(left-6)} ${n(sy+1)}Z`);
+  set(b['original-vest-mask'],'d',b.chest?.getAttribute('d')||'');
+  set(b['original-vest-image'],'x',n(109+pose.shoulder.x));
+  set(b['original-vest-image'],'y',n(sy-80));
   set(b['vest-right'],'d',`M${n(right+6)} ${n(sy+1)} Q${n(right-3)} ${n(sy-7)} ${n(sx+10)} ${n(sy+7)}
     L${n(sx+15)} ${n(hy-17)} L${n(hx+24)} ${n(hy-15)} Q${n(right+16)} ${n(sy+22)} ${n(right+6)} ${n(sy+1)}Z`);
   for(let i=1;i<=3;i++){
