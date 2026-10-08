@@ -32,3 +32,10 @@
 2. Test Walk/Run (chân trụ, chân đưa, tay đánh), Sit/Sit-down/Stand-up, Vote/Wave, Result thắng/thua.
 3. Đánh giá sự mượt khi chuyển Action ở kích cỡ nhân vật thật trong làng.
 4. Khi đạt hình ảnh và chuyển động mới bắt đầu thiết kế Skin 2D chính thức từ artwork, kết nối gameplay và mở rộng sang các Character khác.
+
+
+## Ngày 08/10/2026 – nhận diện Character-01 và tư thế ngồi
+- Phần **gương mặt/tóc phía trước** lấy từ artwork gốc `assets/characters/v253/chibi-01.webp`, chỉ crop đầu; không crop toàn thân làm khớp.
+- Phần **cơ thể, góc nghiêng, góc sau** vẫn là Rig vector thử nghiệm, **chưa phải Skin phân lớp hoàn chỉnh**.
+- 9 Action giữ nguyên. Tư thế ngồi xếp bằng dùng lớp chân riêng và chuyển mờ theo `sitBlend` khi ngồi/đứng.
+- Phần xoay khi đi có heading liên tục, không bước ngang mặt trước. **Chỉ trên nhánh thử nghiệm, chưa Production hoặc IPA.**
