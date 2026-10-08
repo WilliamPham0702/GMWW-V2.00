@@ -7,7 +7,8 @@ test('Web-only V4 studio truthfully marks all 20 positions as awaiting artwork',
  assert.match(markup,/20 Character mới/);
  assert.match(markup,/Chờ asset V4/);
  assert.match(markup,/Chưa phát hành Character mới vào trận/);
- assert.ok(markup.includes('for(let i=1;i<=20;i++)'));
+ assert.ok(markup.includes('Array.from({length:20}'));
+ assert.ok(markup.includes("fetch('/api/game-characters/v4'"));
  assert.equal(manifest.characters.length,20);
 });
 test('New Web-only studio is not imported by live game or IPA',()=>{
