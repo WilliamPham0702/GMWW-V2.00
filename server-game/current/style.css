@@ -2331,3 +2331,40 @@ body.play-immersive #start .play-shell[data-step="room"] .play-setup-strip butto
 body.play-immersive #start .play-setup-strip span{width:20px;height:20px;font-size:9px}
 body.play-immersive #start .play-setup-strip b{font-size:7px;line-height:1.1;white-space:normal}
 body.play-immersive #start .play-shell[data-step="lobby"] .play-card-fan{display:none!important}
+
+
+/* Unified GMWW settings navigation: only one purpose-specific toolkit visible at a time. */
+#settings .settings-hub-head{margin-top:9px;padding:12px 13px;background:linear-gradient(145deg,rgba(14,71,91,.93),rgba(7,38,61,.96));border:1px solid rgba(129,224,238,.26);border-radius:15px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#settings .settings-hub-heading{display:grid;gap:4px;min-width:0}
+#settings .settings-hub-heading b{font-size:15px;line-height:1.2;color:#f2fdff}
+#settings .settings-hub-heading small{font-size:11px;line-height:1.45;color:#b7d9e8}
+#settings .settings-hub-mini-health{flex:0 0 auto;display:flex;align-items:center;gap:5px;max-width:44%;border-radius:999px;background:rgba(18,86,106,.4);padding:8px;border:1px solid rgba(141,217,231,.22)}
+#settings .settings-hub-mini-health span:last-child{font-weight:850;font-size:10px;color:#cee5f0;line-height:1.25}
+#settings .settings-hub-mini-dot{display:block;width:8px;height:8px;flex:0 0 auto;background:#9faeba;border-radius:50%}
+#settings .settings-hub-mini-health[data-status="ok"] .settings-hub-mini-dot{background:#79edaa}
+#settings .settings-hub-mini-health[data-status="warn"] .settings-hub-mini-dot{background:#f6cb69}
+#settings .settings-hub-mini-health[data-status="bad"] .settings-hub-mini-dot{background:#f1808a}
+#settings .settings-hub-tabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:9px 1px 5px;margin-top:4px;margin-bottom:5px}
+#settings .settings-hub-tabs::-webkit-scrollbar{display:none}
+#settings .settings-hub-tabs [role="tab"]{flex:0 0 auto;min-width:88px;min-height:48px;scroll-snap-align:start;display:flex;justify-content:center;align-items:center;gap:6px;padding:9px 11px;color:#cae2ee;background:linear-gradient(180deg,rgba(12,58,86,.93),rgba(5,31,51,.93));border:1px solid rgba(122,217,241,.21);border-radius:13px;box-shadow:none;cursor:pointer}
+#settings .settings-hub-tabs [role="tab"] span{font-size:17px}
+#settings .settings-hub-tabs [role="tab"] b{font-size:12px;line-height:1.25;font-weight:900;white-space:nowrap}
+#settings .settings-hub-tabs [role="tab"].is-active{color:#041d2a;background:linear-gradient(180deg,#b8f6f4,#35cee5);border-color:rgba(219,255,252,.84);box-shadow:0 5px 15px rgba(2,13,25,.18)}
+#settings .settings-hub-tabs [role="tab"]:focus-visible{outline:3px solid #f7d689;outline-offset:2px}
+#settings .settings-hub-guide{margin:0 0 9px;padding:0 5px;color:#b4d5e5;font-size:11.5px!important;line-height:1.5!important}
+#settings .settings-hub-panel[hidden]{display:none!important}
+#settings .settings-hub-panel{display:grid;gap:10px;min-width:0;animation:gmww-settings-reveal .17s ease-out both}
+@keyframes gmww-settings-reveal{from{opacity:.7;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+#settings .settings-hub-section-head{display:grid;gap:3px;margin:1px 3px 0}
+#settings .settings-hub-section-head h3{color:#f8fcff;font-size:14px;margin:0;font-weight:950}
+#settings .settings-hub-section-head p{font-size:11.5px!important;line-height:1.5!important;color:#afcee0;margin:0}
+#settings .settings-hub-panel>.settings-card{margin-top:0!important;margin-bottom:0!important;min-width:0}
+#settings .settings-hub-panel .health-v236-head b{font-size:max(12px,1em);line-height:1.35}
+#settings .settings-hub-panel .settings-action{min-height:45px}
+#settings .settings-hub-panel .settings-action b{font-size:max(10px,1em)}
+#settings .settings-hub-panel .diagnostic-list span{font-size:11px}
+#settings .settings-hub-panel .diagnostic-list b{font-size:10px}
+#settings .settings-hub-panel .diagnostic-detail{font-size:10px}
+#settings .settings-hub-panel .update-detail,#settings .settings-hub-panel .maintenance-detail{line-height:1.5;font-size:10.5px}
+@media(max-width:390px){#settings .settings-hub-head{padding:10px}#settings .settings-hub-heading b{font-size:13px}#settings .settings-hub-mini-health{max-width:45%;padding:6px}#settings .settings-hub-tabs [role="tab"]{min-width:80px;padding:8px 9px}#settings .settings-hub-tabs [role="tab"] b{font-size:11px}#settings .settings-hub-section-head h3{font-size:13px}}
+@media(prefers-reduced-motion:reduce){#settings .settings-hub-panel{animation:none!important}}
