@@ -41,7 +41,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.43<\/title>/);
+  assert.match(html,/<title>GMWW V3\.44<\/title>/);
 });
 
 
@@ -57,19 +57,24 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
 
-test("Trang Chủ v3.43 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
+test("Trang Chủ v3.44 có ba thẻ Khám phá gắn nhãn và menu 4 mục kiểu biển",()=>{
  const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
+ assert.match(html,/gmww-pearl-nav-v344/);
+ assert.match(html,/gmww-hidden-settings-nav/);
+ assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.43-release-bullets-1/);
+ assert.match(html,/style\.css\?v=3\.44-home-fidelity-1/);
 });
 
 
-test("Trang Chủ V3.43 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
+test("Trang Chủ V3.44 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
  assert.match(home,/gmww-home-sea-v342/);
+ assert.match(home,/gmww-home-poster/);
+ assert.match(home,/gmww-home-v344/);
  assert.match(home,/gmww-home-profile/);
  assert.match(home,/gmww-home-brand-title">WilliamPham</);
  assert.match(home,/Ma Sói|MA SÓI/);
@@ -84,5 +89,6 @@ test("Trang Chủ V3.43 phản ánh thiết kế đã duyệt, không giả dữ
  assert.match(app,/gmwwHomeAllRecent\?50:3/);
  assert.match(app,/document\.createElement\('button'\)/);
  assert.match(css,/Trang Chủ Phiên Bản Biển/);
+ assert.match(css,/screenshot-aligned continuous seaside scene/);
  assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
 });

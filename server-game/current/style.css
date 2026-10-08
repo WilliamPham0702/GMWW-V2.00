@@ -3563,3 +3563,65 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v342 .nav.start i{width:57px
 #settings #updateReleaseNotes .update-release-list li{padding:1px 0 2px;margin:0 0 4px;overflow-wrap:anywhere;word-break:normal}
 #settings #updateReleaseNotes .update-release-list li::marker{color:#5ee4c5}
 #settings #updateReleaseNotes .update-release-list li:last-child{margin-bottom:0}
+
+
+/* V3.44 HOME ONLY — screenshot-aligned continuous seaside scene; preserve other pages. */
+#home .gmww-home-v344{width:100%;max-width:700px!important;padding:0 11px 15px!important;gap:9px!important;overflow:visible}
+#home .gmww-home-v344 .gmww-home-poster{position:relative;isolation:isolate;display:block!important;width:calc(100% + 22px);margin:0 -11px 6px;aspect-ratio:1.03;min-height:320px;max-height:660px;overflow:visible}
+#home .gmww-home-v344 .gmww-home-hero{position:absolute!important;z-index:0;inset:0!important;width:100%!important;height:100%!important;aspect-ratio:auto!important;min-height:0!important;overflow:hidden!important;display:block!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:linear-gradient(165deg,#22aff0,#075d9e 78%,#043860)!important;pointer-events:none}
+#home .gmww-home-v344 .gmww-home-hero-art{width:100%!important;height:100%!important;object-fit:cover!important;object-position:50% 44%!important;transform:none!important}
+#home .gmww-home-v344 .gmww-home-hero:after{background:linear-gradient(180deg,rgba(0,50,94,.13) 0%,transparent 21%,transparent 71%,rgba(3,49,88,.48) 100%)!important}
+#home .gmww-home-v344 .gmww-home-top{position:absolute;z-index:5;top:12px;left:12px;right:12px;display:flex!important;align-items:flex-start!important;min-height:63px;margin:0!important;padding:0!important;gap:6px}
+#home .gmww-home-v344 .gmww-home-profile{height:60px;max-width:64%;width:min(65%,285px);padding-left:5px;border:2px solid #eed18c;border-radius:14px 21px 21px 14px;box-shadow:0 2px 2px #ffffff36,0 5px 16px #002d5080;background:linear-gradient(120deg,#042744ee,#0b5595e8 55%,#0283a6ce)}
+#home .gmww-home-v344 .gmww-home-profile-avatar{height:53px;width:53px;flex-basis:53px;border-color:#ffdda0;box-shadow:0 2px 8px #032e63c8}
+#home .gmww-home-v344 .gmww-home-profile-copy b{font-size:clamp(15px,4vw,22px);text-shadow:0 2px 3px #021d46}
+#home .gmww-home-v344 .gmww-home-profile-copy small{font-size:clamp(9px,2.5vw,12px)}
+#home .gmww-home-v344 .gmww-home-profile-level{left:14px;bottom:-10px;background:linear-gradient(#5e3f0b,#28190c);border:1px solid #f5d68c;font-size:11px}
+#home .gmww-home-v344 .gmww-home-top-actions{margin-left:auto!important;gap:9px}
+#home .gmww-home-v344 .gmww-home-top-button{width:45px;height:45px;border-color:#b6f6ff;box-shadow:0 2px 8px #003966,inset 0 1px 2px #fff9}
+#home .gmww-home-v344 .gmww-home-brand{top:40%;right:1.5%;width:51%;min-height:30%;z-index:2;border:2px ridge #ffdb81;border-radius:19px 19px 12px 12px;box-shadow:0 0 0 3px #004c77c9,0 9px 0 #643c1ca6,0 10px 20px #04294db3;background:linear-gradient(152deg,#083556e6,#00628cdb 43%,#042e5eeb)}
+#home .gmww-home-v344 .gmww-home-brand-crest{font-size:18px;line-height:1}
+#home .gmww-home-v344 .gmww-home-brand-title{font-size:clamp(21px,5.8vw,41px);white-space:nowrap;text-shadow:0 2px 0 #855312,0 5px 5px #001f42}
+#home .gmww-home-v344 .gmww-home-brand-sub{font-size:clamp(9px,2.6vw,17px);line-height:1.25}
+#home .gmww-home-v344 .gmww-home-entry{position:absolute!important;z-index:6;bottom:-17px;left:7%;right:7%;width:86%;margin:0!important;padding:0!important}
+#home .gmww-home-v344 .gmww-home-play{min-height:83px!important;display:flex!important;justify-content:center!important;gap:10px!important;padding:11px 16px!important;border:3px solid #ffdfa0!important;border-radius:44px!important;background:linear-gradient(180deg,#42e1ff 0%,#098cd6 31%,#026fba 75%,#005080 100%)!important;box-shadow:0 0 0 5px #0bbce4ac,0 7px 18px #02416aba,inset 0 3px 5px #ffffff91!important}
+#home .gmww-home-v344 .gmww-home-play:before{content:"🐚     ✦     ✧     ✦     🐚"!important;bottom:-10px;letter-spacing:1px;text-align:center;color:#ffe8a0}
+#home .gmww-home-v344 .gmww-home-play-mark{flex-basis:57px;width:57px;height:57px;border-color:#b2f2ff}
+#home .gmww-home-v344 .gmww-home-play-copy b{font-size:clamp(22px,6.5vw,39px)!important;line-height:1.05}
+#home .gmww-home-v344 .gmww-home-play-copy small{font-size:clamp(10px,2.65vw,15px)!important}
+#home .gmww-home-v344 .gmww-home-explore{position:relative!important;z-index:4;display:block!important;width:100%!important;margin:16px 0 0!important;padding:0!important;overflow:visible!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+#home .gmww-home-v344 .gmww-home-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+#home .gmww-home-v344 .gmww-home-shortcuts button{aspect-ratio:1.03!important;border:2px solid #c5f7ff!important;border-radius:14px!important;box-shadow:0 4px 10px #012c5c7a,inset 0 2px 2px #fff8!important}
+#home .gmww-home-v344 .gmww-home-shortcuts button .gmww-home-tile-label{min-height:36%!important;padding:6px 2px 7px!important;background:linear-gradient(180deg,#00204b00,#00315de0 20%,#042450f5 100%)!important}
+#home .gmww-home-v344 .gmww-home-tile-label b{font-size:clamp(13px,3.4vw,19px);font-weight:950;color:#fff!important}
+#home .gmww-home-v344 .gmww-home-tile-label small{font-size:clamp(8px,2.1vw,11px)}
+#home .gmww-home-v344 .gmww-home-achievements,#home .gmww-home-v344 .gmww-home-recent{margin:0!important;padding:10px 11px!important;border:1.5px solid #b1f7ff!important;border-radius:15px!important;background:linear-gradient(165deg,rgba(6,113,159,.78),rgba(0,48,88,.84))!important;box-shadow:0 2px 0 #68dbf27a,inset 0 1px 1px #ffffff75!important}
+#home .gmww-home-v344 .gmww-home-section-title{min-height:21px;margin:0 0 6px!important}
+#home .gmww-home-v344 .gmww-home-section-title>b{font-size:clamp(13px,3.6vw,17px)!important;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif!important;text-shadow:0 2px 3px #002141}
+#home .gmww-home-v344 .gmww-home-stat-grid{gap:5px!important}
+#home .gmww-home-v344 .gmww-home-stat-grid>div{display:grid!important;grid-template-columns:24px minmax(0,1fr);grid-template-rows:auto auto;column-gap:3px;row-gap:1px;justify-content:center;align-content:center;min-height:72px;padding:5px 3px!important;background:linear-gradient(145deg,#02365b8c,#002c55bd)!important;border:1px solid #84c8ed77!important}
+#home .gmww-home-v344 .gmww-home-stat-grid>div>span{grid-row:1 / span 2;align-self:center;font-size:19px!important;line-height:1}
+#home .gmww-home-v344 .gmww-home-stat-grid strong{grid-column:2;align-self:end;font-size:clamp(17px,4.4vw,25px)!important;text-align:center}
+#home .gmww-home-v344 .gmww-home-stat-grid small{grid-column:2;align-self:start;line-height:1.1;white-space:normal!important;word-break:normal;text-align:center;font-size:clamp(7px,2.15vw,11px)!important}
+#home .gmww-home-v344 .gmww-home-recent-row{min-height:42px!important;padding:3px 1px!important}
+#home .gmww-home-v344 .gmww-home-recent-avatar{width:28px;height:28px}
+#home .gmww-home-v344 .gmww-home-recent-row b{font-size:12px!important}
+#home .gmww-home-v344 .gmww-home-recent-row span,#home .gmww-home-v344 .gmww-home-recent-row small{font-size:10px!important}
+#home .gmww-home-v344 .gmww-home-refresh-mini{display:none!important}
+#home .gmww-home-version-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344{position:fixed!important;z-index:400;bottom:0!important;left:0;right:0;width:100%!important;height:calc(83px + env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;align-items:start!important;padding:7px 8px max(6px,env(safe-area-inset-bottom))!important;border:0!important;border-top:3px solid #7adcf2!important;border-radius:24px 24px 0 0!important;background:radial-gradient(ellipse at 40% 0%,#27cff48c,transparent 45%),linear-gradient(180deg,#0b77a3 0%,#025785 24%,#033c67 50%,#012747 100%)!important;box-shadow:0 -9px 30px #004f7d94,inset 0 3px 0 #ddfbff66!important;backdrop-filter:none!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344:before{content:"";position:absolute;top:-14px;left:0;right:0;height:18px;z-index:-1;border-radius:50% 50% 0 0;background:repeating-radial-gradient(ellipse at 50% 130%,transparent 0 17px,#12b9d7a3 18px 22px,transparent 23px 44px),linear-gradient(180deg,#058fb3b8,transparent)}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav{display:flex!important;min-width:0!important;min-height:65px!important;height:65px;padding:1px!important;gap:2px!important;align-items:center;justify-content:center;border:0!important;border-radius:12px!important;background:transparent!important;color:#cceaff!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.active:not(.start){background:transparent!important;color:#fff3af!important;border:0!important;box-shadow:none!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-dock-icon{display:grid!important;place-items:center;width:44px;height:44px;min-height:44px!important;filter:drop-shadow(0 4px 4px #042c54b0)}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-dock-icon svg{display:block;width:40px;height:40px;filter:drop-shadow(0 0 6px #86edff94)}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.active .gmww-dock-icon svg{filter:drop-shadow(0 0 9px #ffdb678a)}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav b{font-size:clamp(9px,2.65vw,13px)!important;line-height:1;font-weight:900;letter-spacing:0;color:inherit!important;text-shadow:0 2px 2px #002849;white-space:nowrap!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.start{transform:translateY(-17px)!important;gap:3px!important;justify-content:center;background:transparent!important;color:#fff!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.start i{width:65px!important;height:65px!important;display:grid!important;place-items:center!important;border:4px solid #ffdc92!important;border-radius:50%;background:radial-gradient(circle at 40% 27%,#67e8ff,#078fd4 59%,#044b91)!important;box-shadow:0 0 0 4px #6ce4fba1,0 0 0 7px #f7c96a67,0 7px 18px #003b6994,inset 0 3px 5px #ffffffa6!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.start i svg{width:47px;height:47px}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .nav.start b{position:relative;top:1px;padding:3px 10px;background:#043357a8;border-radius:99px!important}
+body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-nav{display:none!important}
+#home .gmww-home-v344{padding-bottom:calc(25px + env(safe-area-inset-bottom))!important}
+@media(max-width:380px){#home .gmww-home-v344 .gmww-home-poster{min-height:295px}#home .gmww-home-v344 .gmww-home-stat-grid>div{grid-template-columns:18px minmax(0,1fr)}#home .gmww-home-v344 .gmww-home-stat-grid>div>span{font-size:17px!important}}
+@media(min-width:740px){#home .gmww-home-v344 .gmww-home-poster{width:100%;margin:0 0 8px;max-height:600px}#home .gmww-home-v344{padding-top:10px!important}body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344{max-width:none!important}}
