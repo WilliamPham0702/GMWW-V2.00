@@ -38,7 +38,7 @@
 </header>
 <section class="panel" aria-label="Kiểm thử Character-01">
   <h2>Character Master-01 · Chờ nghiệm thu</h2>
-  <p style="margin-bottom:12px">Bốn góc nhìn sẽ hiển thị tại đây khi có **sprite mới hoàn chỉnh**. Không tái sử dụng ảnh cũ, không dùng ảnh minh họa tĩnh để giả nhân vật đang chuyển động.</p>
+  <p style="margin-bottom:12px">Bốn góc nhìn sẽ hiển thị tại đây khi có sprite mới hoàn chỉnh. Không tái sử dụng ảnh cũ, không dùng ảnh minh họa tĩnh để giả nhân vật đang chuyển động.</p>
   <div class="viewgrid" id="views">
   <div class="view"><div class="vacant"></div><strong>Trước</strong><small>Chờ asset V4</small></div>
   <div class="view"><div class="vacant"></div><strong>Trái</strong><small>Chờ asset V4</small></div>
@@ -63,13 +63,22 @@
 <section class="panel">
   <h2>Danh sách 20 nhân vật mới</h2>
   <div class="members" id="slots" aria-label="20 vị trí nhân vật đang được thiết kế"></div>
+  <p style="margin-top:10px" id="apiStatus" aria-live="polite">Đang kiểm tra danh sách V4…</p>
   <p style="margin-top:12px">Chỉ triển khai Character-02 đến Character-20 sau khi Character-01 được duyệt. Các ô chưa có artwork được đánh dấu rõ ràng, không phải nhân vật đã sẵn sàng.</p>
 </section>
 <footer><p>Phiên bản thử nghiệm Web — không thay đổi dữ liệu phòng chơi, vai trò hoặc tài khoản. <a href="https://github.com/WilliamPham0702/GMWW-V2.00/issues/106">Task #106</a></p></footer>
 </main>
 <script>
-  const slots=document.getElementById('slots');
-  for(let i=1;i<=20;i++){const d=document.createElement('div');d.className='slot';d.textContent=String(i).padStart(2,'0')+' · Chờ';slots.appendChild(d)}
+  const slots=document.getElementById('slots'),status=document.getElementById('apiStatus');
+  function showSlots(rows){slots.replaceChildren();for(const row of rows){const d=document.createElement('div');d.className='slot';d.textContent=String(row.id||'').slice(-2)+' · '+(row.approved?'Sẵn sàng':'Chờ');slots.appendChild(d)}}
+  showSlots(Array.from({length:20},(_,i)=>({id:'character-'+String(i+1).padStart(2,'0'),approved:false})));
+  fetch('/api/game-characters/v4',{cache:'no-store'}).then(async res=>{
+    if(!res.ok)throw Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data.ok||!Array.isArray(data.characters)||data.characters.length!==20)throw Error('Dữ liệu V4 chưa hợp lệ');
+    showSlots(data.characters);
+    status.textContent='API V4 đã kết nối · '+data.approvedCount+'/20 nhân vật được duyệt · IPA: chưa cập nhật';
+  }).catch(()=>{status.textContent='Trang kiểm thử đang hiển thị danh sách chờ. API V4 chưa kết nối.'});
 </script>
 </body>
 </html>
