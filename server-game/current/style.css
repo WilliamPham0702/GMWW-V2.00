@@ -2981,3 +2981,139 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
   #members .ranking-row{grid-template-columns:27px 39px minmax(0,1fr) 43px 42px!important;gap:4px}
   #members .ranking-row .rank-stats:last-child{display:none}
 }
+
+
+/* V3.34 — Thành Viên: bố cục tinh gọn theo Cài Đặt, không mở rộng ô và nút thao tác. */
+#members .member-page{padding:2px 0 96px!important}
+#members .member-page-head{margin:0 2px 7px!important}
+#members .member-page-head h2{font-size:20px!important}
+#members .member-page-head small{font-size:10px!important;margin-top:1px!important}
+#members .member-unified-box{
+  margin:8px 0!important;padding:10px 11px!important;gap:8px!important;
+  border-radius:15px!important;
+}
+#members .member-unified-heading{gap:8px!important;min-height:29px}
+#members .member-unified-index{width:29px;height:29px;flex-basis:29px;font-size:10px}
+#members .member-unified-heading h3{font-size:13px!important;font-weight:850!important}
+#members .member-summary{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:5px!important;margin:0!important;
+}
+#members .member-summary>div{
+  min-width:0!important;min-height:63px!important;padding:7px 5px!important;
+  border-radius:10px!important;text-align:center!important;
+}
+#members .member-summary small{
+  font-size:9px!important;line-height:1.25!important;min-height:22px;
+  display:flex!important;align-items:center;justify-content:center;
+}
+#members .member-summary b{font-size:20px!important;line-height:1.1!important;margin-top:3px!important}
+#members #memberGroupDirectory{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center}
+#members #memberGroupDirectory>.member-unified-heading{grid-column:1;grid-row:1}
+#members .member-head-actions{
+  grid-column:2;grid-row:1;display:flex!important;justify-content:flex-end;align-items:center;
+  gap:6px!important;margin:0!important
+}
+#members .member-head-actions button{
+  width:auto!important;min-width:0!important;height:34px!important;min-height:34px!important;
+  padding:4px 9px!important;border-radius:10px!important;gap:3px!important
+}
+#members .member-head-actions #refreshMembers{
+  flex:0 0 35px!important;width:35px!important;padding:0!important;font-size:19px!important
+}
+#members .member-head-actions #addMember{width:auto!important}
+#members .member-head-actions #addMember b{font-size:10px!important;white-space:nowrap}
+#members .member-head-actions button span{font-size:17px!important}
+#members #memberPane-directory{grid-column:1/-1;grid-row:2}
+#members .member-toolbar{margin:0 0 8px!important;padding:0!important}
+#members .member-search{height:38px!important;border-radius:10px!important;font-size:11px!important}
+#members .member-filter-row{
+  display:grid!important;grid-template-columns:.72fr 1.06fr 1.08fr 1.02fr!important;
+  gap:5px!important;margin-top:6px!important;overflow:visible!important
+}
+#members .member-filter-row button{
+  min-width:0!important;min-height:32px!important;height:32px!important;
+  padding:4px 2px!important;white-space:nowrap!important;font-size:9.5px!important;
+  border-radius:9px!important
+}
+#members .member-list,#members .ranking-list{gap:6px!important}
+#members #memberDirectoryList .member-card{
+  display:grid!important;grid-template-columns:47px minmax(0,1fr) 88px!important;
+  column-gap:8px!important;row-gap:0!important;
+  min-height:80px!important;padding:7px 8px!important;
+  border-radius:11px!important;
+}
+#members #memberDirectoryList .member-avatar{
+  grid-column:1;grid-row:1;width:47px!important;height:55px!important;
+  border-radius:8px!important;object-fit:contain!important;
+}
+#members #memberDirectoryList .member-card-main{
+  grid-column:2;grid-row:1;min-width:0!important;align-self:center!important
+}
+#members #memberDirectoryList .member-name-row{display:block!important}
+#members #memberDirectoryList .member-name-row b{font-size:12px!important;line-height:1.25!important}
+#members #memberDirectoryList .member-name-row small{font-size:9.5px!important;line-height:1.25!important}
+#members #memberDirectoryList .member-meta{margin-top:4px!important;gap:3px!important}
+#members #memberDirectoryList .member-meta span{font-size:8px!important;padding:2px 3px!important;line-height:1.2!important}
+#members #memberDirectoryList .member-flags{margin-top:3px!important;gap:3px!important}
+#members #memberDirectoryList .member-flag{font-size:8px!important;padding:2px 4px!important}
+#members #memberDirectoryList .member-card-actions{
+  grid-column:3!important;grid-row:1!important;display:flex!important;
+  flex-direction:column!important;justify-content:center!important;align-items:stretch!important;
+  gap:4px!important;margin:0!important;min-width:0!important
+}
+#members #memberDirectoryList .member-card-actions .member-status{
+  width:100%!important;display:block!important;text-align:center!important;
+  padding:3px 1px!important;font-size:7.5px!important;line-height:1.15!important;
+}
+#members #memberDirectoryList .member-card-actions button{
+  min-height:27px!important;height:27px!important;width:100%!important;
+  border-radius:7px!important;padding:3px 2px!important;font-size:9px!important;line-height:1!important
+}
+#members #memberGroupRanking{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start;
+}
+#members #memberGroupRanking>.member-unified-heading{grid-column:1;grid-row:1;align-self:center}
+#members #memberPane-ranking{
+  display:contents!important;
+}
+#members #memberPane-ranking .member-section-head{
+  grid-column:2;grid-row:1;display:flex!important;margin:0!important;align-items:center;justify-content:flex-end
+}
+#members #memberPane-ranking .member-tool-btn{
+  width:auto!important;max-width:none!important;min-height:33px!important;height:33px!important;
+  padding:6px 9px!important;font-size:9px!important;white-space:nowrap
+}
+#members #memberRankingList{grid-column:1/-1;grid-row:2;min-width:0}
+#members .ranking-row{
+  min-height:57px!important;gap:5px!important;padding:6px 7px!important;
+  grid-template-columns:23px 38px minmax(0,1fr) 42px 43px 31px!important;
+  border-radius:10px!important
+}
+#members .ranking-row .rank-no{font-size:12px!important}
+#members .ranking-row .rank-avatar{width:38px!important;height:42px!important}
+#members .ranking-row .rank-main b{font-size:11px!important}
+#members .ranking-row .rank-main small{font-size:9px!important}
+#members .ranking-row .rank-stats b{font-size:11px!important}
+#members .ranking-row .rank-stats small{font-size:8px!important}
+@media(max-width:380px){
+  #members #memberDirectoryList .member-card{
+    grid-template-columns:41px minmax(0,1fr) 77px!important;
+    column-gap:6px!important;padding:6px!important
+  }
+  #members #memberDirectoryList .member-avatar{width:41px!important;height:49px!important}
+  #members .member-filter-row button{font-size:9px!important}
+  #members .member-head-actions #addMember b{font-size:9px!important}
+  #members .ranking-row{
+    grid-template-columns:20px 32px minmax(0,1fr) 38px 41px!important;
+    gap:3px!important
+  }
+  #members .ranking-row .rank-avatar{width:32px!important;height:37px!important}
+  #members .ranking-row .rank-stats:last-child{display:none!important}
+}
+@media(max-width:330px){
+  #members .member-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #members .member-summary>div{min-height:54px!important}
+  #members .member-filter-row{display:flex!important;overflow-x:auto!important;scrollbar-width:none!important}
+  #members .member-filter-row button{flex:0 0 auto!important;padding:4px 9px!important}
+}

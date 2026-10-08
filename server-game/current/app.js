@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.33';
+const VERSION='3.34';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1573,11 +1573,12 @@ function renderMemberDirectory(){
       '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
       '<div class="member-flags"></div></div>'+
       '<div class="member-card-actions">'+
-      '<button data-act="reset" type="button">ĐẶT LẠI MẬT KHẨU</button><button data-act="delete" class="danger-mini" type="button">XÓA THÀNH VIÊN</button></div>';
+      '<button data-act="reset" type="button" aria-label="Đặt lại mật khẩu thành viên">Đặt lại MK</button><button data-act="delete" class="danger-mini" type="button" aria-label="Xóa thành viên">Xóa</button></div>';
     const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
     card.querySelector('.member-card-main small').textContent='@'+m.loginId;
     const status=card.querySelector('.member-status');status.textContent=m.online?'TRỰC TUYẾN':'NGOẠI TUYẾN';status.classList.toggle('online',!!m.online);
+    card.querySelector('.member-card-actions').prepend(status);
     card.querySelector('.member-room').textContent=m.currentRoomCode?('Phòng '+m.currentRoomCode+(m.ready?' • Sẵn sàng':'')):'Chưa vào phòng';
     const flags=card.querySelector('.member-flags');
     if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU ĐẶT LẠI</span>';

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.33</title>
-<link rel="stylesheet" href="style.css?v=3.33-member-vi-1">
+<title>GMWW V3.34</title>
+<link rel="stylesheet" href="style.css?v=3.34-member-compact-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -28,10 +28,10 @@
         </div>
 
         <div class="member-unified-box" id="memberGroupDirectory">
-          <div class="member-unified-heading"><span class="member-unified-index">02</span><div><h3>Quản lý thành viên</h3><p>Tìm kiếm, cập nhật thông tin và quản lý tài khoản.</p></div></div>
+          <div class="member-unified-heading"><span class="member-unified-index">02</span><div><h3>Quản lý thành viên</h3></div></div>
           <div class="member-head-actions">
-            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới danh sách"><span aria-hidden="true">↻</span><b>LÀM MỚI</b></button>
-            <button class="member-add-btn" id="addMember" type="button"><span aria-hidden="true">＋</span><b>THÊM THÀNH VIÊN</b></button>
+            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới danh sách" title="Làm mới"><span aria-hidden="true">↻</span></button>
+            <button class="member-add-btn" id="addMember" type="button" aria-label="Thêm thành viên"><span aria-hidden="true">＋</span><b>THÊM</b></button>
           </div>
           <section class="member-pane active" id="memberPane-directory" aria-label="Danh sách thành viên">
             <div class="member-toolbar">
@@ -40,7 +40,7 @@
                 <button class="active" data-member-filter="all" type="button">Tất cả</button>
                 <button data-member-filter="online" type="button">Trực tuyến</button>
                 <button data-member-filter="offline" type="button">Ngoại tuyến</button>
-                <button data-member-filter="reset" type="button">Yêu cầu đặt lại</button>
+                <button data-member-filter="reset" type="button">Đặt lại MK</button>
               </div>
             </div>
             <div class="member-list" id="memberDirectoryList"><div class="member-empty">Đang tải thành viên…</div></div>
@@ -48,9 +48,9 @@
         </div>
 
         <div class="member-unified-box" id="memberGroupRanking">
-          <div class="member-unified-heading"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3><p>Sắp xếp theo số trận thắng, tỷ lệ thắng và tổng số ván.</p></div></div>
+          <div class="member-unified-heading"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3></div></div>
           <section class="member-pane active" id="memberPane-ranking" aria-label="Bảng xếp hạng">
-            <div class="member-section-head"><span>Thống kê kết quả thi đấu</span><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Đặt lại xếp hạng">↻ ĐẶT LẠI XẾP HẠNG</button></div>
+            <div class="member-section-head"><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Đặt lại toàn bộ xếp hạng" title="Đặt lại xếp hạng">↻ ĐẶT LẠI</button></div>
             <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
           </section>
         </div>
@@ -609,7 +609,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.33-member-vi-1"></script>
+<script src="app.js?v=3.34-member-compact-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{
