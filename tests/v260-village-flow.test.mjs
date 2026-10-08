@@ -45,7 +45,9 @@ test('all 30 shared GM/Web positions are unique and inside the courtyard',()=>{
 
 test('seat layout fills 8 inner, 16 outer, then opens a third ring above 24',()=>{
   const p8=layout.positions(8),p24=layout.positions(24),p30=layout.positions(30);
-  assert.deepEqual(p8.map(p=>p.ring),Array(8).fill(0));
+  assert.equal(p8.length,24,'a new village displays 24 baseline leaves even with fewer players');
+  assert.equal(p8.filter(p=>p.ring===0).length,8);
+  assert.equal(p8.filter(p=>p.ring===1).length,16);
   assert.equal(p24.filter(p=>p.ring===0).length,8);
   assert.equal(p24.filter(p=>p.ring===1).length,16);
   assert.equal(p24.filter(p=>p.ring===2).length,0);
