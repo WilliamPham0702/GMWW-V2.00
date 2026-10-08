@@ -36,7 +36,8 @@ jobs:
             sleep 1
           done
           grep -q 'Character-01' /tmp/rig-lab.html
-          curl -fsS http://127.0.0.1:8787/village/rig-skin-core.mjs | grep -q 'ACTION_CATALOG'
+          curl -fsS http://127.0.0.1:8787/village/rig-skin-core.mjs > /tmp/rig-core.mjs
+          grep -q 'ACTION_CATALOG' /tmp/rig-core.mjs
       - name: Headless visual smoke for articulated skeleton
         shell: bash
         run: |
