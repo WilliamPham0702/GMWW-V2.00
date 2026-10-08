@@ -245,6 +245,12 @@ jobs:
           curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/index.html?verify=$(date +%s)" > /tmp/character-v4-web.html
           grep -Fq '20 Character mới' /tmp/character-v4-web.html
           grep -Fq 'Chưa phát hành Character mới vào trận' /tmp/character-v4-web.html
+          grep -Fq 'action-lab.mjs' /tmp/character-v4-web.html
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/action-lab.mjs?verify=$(date +%s)" > /tmp/character-v4-action-lab.mjs
+          node --check /tmp/character-v4-action-lab.mjs
+          grep -Fq 'export function sampleV4Action' /tmp/character-v4-action-lab.mjs
+          grep -Fq 'export function createV4StageController' /tmp/character-v4-action-lab.mjs
+          echo "Verify Production: V4 nine-action motion lab JavaScript PASS."
           curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/v4?verify=$(date +%s)" > /tmp/character-v4.json
           node - <<'NODE'
           const fs=require('node:fs');
