@@ -9,7 +9,7 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('V3.35 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
+test('V3.36 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
  assert.match(html,/id="playSetupStrip"/);
  assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="playWorld"'));
  assert.ok(html.indexOf('id="gmTopMenu"')>html.indexOf('id="playWorld"'));
@@ -23,7 +23,7 @@ test('V3.35 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
  assert.match(css,/height:44px!important;min-height:44px!important/);
  assert.match(css,/\.gm-top-small-v293>small\{display:none!important\}/);
 });
-test('V3.35 slides top timeline up and bottom dock down after 30 seconds, no abrupt opacity zero',()=>{
+test('V3.36 slides top timeline up and bottom dock down after 30 seconds, no abrupt opacity zero',()=>{
  assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=30000/);
  assert.match(app,/\[top,bottom,gather\]\.forEach/);
  assert.match(css,/transition:transform \.68s cubic-bezier/);
@@ -34,7 +34,7 @@ test('V3.35 slides top timeline up and bottom dock down after 30 seconds, no abr
  assert.match(app,/document\.addEventListener\('pointerdown',reveal/);
  assert.match(app,/document\.addEventListener\('touchstart',reveal/);
 });
-test('V3.35 displays working gathering tools directly inside village stage',()=>{
+test('V3.36 displays working gathering tools directly inside village stage',()=>{
  assert.match(html,/id="playGatherToolbar"/);
  assert.match(html,/id="playGatherCall"/);
  assert.match(html,/id="playGatherRandom"/);
@@ -54,7 +54,7 @@ test('V3.35 displays working gathering tools directly inside village stage',()=>
  assert.match(app,/if\(step==='seats'\)\{playGatherToolsDismissed=false;renderPlayGatherToolbar\(\);return\}/);
  assert.match(app,/getElementById\('playGatherCall'\)\?\.addEventListener/);
 });
-test('V3.35 tapping the active gathering step reopens its controls',async()=>{
+test('V3.36 tapping the active gathering step reopens its controls',async()=>{
  const from=app.indexOf('async function handlePlayTimelineStep(step)');
  const until=app.indexOf('function initPlayScene()',from);
  assert.ok(from>=0&&until>from);
@@ -66,8 +66,8 @@ test('V3.35 tapping the active gathering step reopens its controls',async()=>{
  assert.equal(ctx.playGatherToolsDismissed,false);
  assert.deepEqual(hits,['visible']);
 });
-test('V3.35 runtime updates V3.17 native shell without forcing IPA install',()=>{
- assert.equal(pkg.version,'3.35.0');
- assert.match(app,/const VERSION='3\.35'/);
- assert.match(worker,/VERSION="V3\.35",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-335"/);
+test('V3.36 runtime updates V3.17 native shell without forcing IPA install',()=>{
+ assert.equal(pkg.version,'3.36.0');
+ assert.match(app,/const VERSION='3\.36'/);
+ assert.match(worker,/VERSION="V3\.36",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-336"/);
 });
