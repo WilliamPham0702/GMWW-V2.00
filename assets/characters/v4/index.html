@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#092f47">
+  <title>GMWW • Character V4 – Kiểm thử Player Web</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+    *{box-sizing:border-box}body{margin:0;color:#eff9ff;background:radial-gradient(ellipse at 30% -15%,#148d99 0,#104a66 33%,#092638 70%);min-height:100vh}
+    main{max-width:940px;margin:auto;padding:20px 14px 100px;display:grid;gap:16px}
+    header{display:grid;gap:8px}.eyebrow{color:#8fecdf;font-weight:700;letter-spacing:.1em;font-size:11px}
+    h1{font-size:clamp(24px,4vw,34px);margin:0}p{margin:0;color:#c4dfeb;line-height:1.6;font-size:14px}
+    .panel{border:1px solid #547a91a6;background:#173f56b8;border-radius:17px;padding:15px}
+    h2{font-size:17px;margin:0 0 12px}.statuses{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{background:#275d6e;border:1px solid #578a97;border-radius:30px;padding:7px 11px;font-size:12px}
+    .amber{border-color:#aa865e;background:#594b3d;color:#fff1cc}
+    .viewgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    .view{background:linear-gradient(155deg,#1a5871,#0f3147);border:1px dashed #7bb8bf;border-radius:12px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;text-align:center;gap:10px}
+    .view strong{font-size:13px}.view small{color:#b3d5df;font-size:11px}
+    .vacant{width:48px;height:65px;border:2px dashed #74aabc;border-radius:40px 40px 20px 20px;opacity:.4}
+    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .action{border:1px solid #38687d;background:#113449;border-radius:10px;padding:10px;font-size:12px}
+    .action b{display:block;color:#f2f8ff;margin-bottom:3px}.action small{color:#9dc5d2}
+    .members{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
+    .slot{border:1px solid #355971;background:#102e43;padding:9px 1px;text-align:center;border-radius:9px;font-size:11px;color:#aac8d9}
+    a{color:#94f3e4}
+    @media(max-width:620px){.viewgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.members{grid-template-columns:repeat(5,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+<main>
+<header>
+  <span class="eyebrow">GMWW · PLAYER WEB FIRST · V4</span>
+  <h1>20 Character mới</h1>
+  <p>Bộ 42 Character cũ ngừng sử dụng làm mẫu thiết kế. Tài khoản và dữ liệu nhân vật đang tồn tại chưa bị xóa. Trang này để theo dõi và duyệt bản mới trên Web trước khi cập nhật IPA.</p>
+  <div class="statuses"><span class="pill">20 vị trí thiết kế</span><span class="pill">9 hành động chuẩn</span><span class="pill amber">Chưa phát hành Character mới vào trận</span></div>
+</header>
+<section class="panel" aria-label="Kiểm thử Character-01">
+  <h2>Character Master-01 · Chờ nghiệm thu</h2>
+  <p style="margin-bottom:12px">Bốn góc nhìn sẽ hiển thị tại đây khi có sprite mới hoàn chỉnh. Không tái sử dụng ảnh cũ, không dùng ảnh minh họa tĩnh để giả nhân vật đang chuyển động.</p>
+  <div class="viewgrid" id="views">
+  <div class="view"><div class="vacant"></div><strong>Trước</strong><small>Chờ asset V4</small></div>
+  <div class="view"><div class="vacant"></div><strong>Trái</strong><small>Chờ asset V4</small></div>
+  <div class="view"><div class="vacant"></div><strong>Phải</strong><small>Chờ asset V4</small></div>
+  <div class="view"><div class="vacant"></div><strong>Sau lưng</strong><small>Chờ asset V4</small></div>
+  </div>
+</section>
+<section class="panel">
+  <h2>9 Action bắt buộc</h2>
+  <div class="actions">
+  <div class="action"><b>1 · Đứng yên</b><small>Thở tự nhiên</small></div>
+  <div class="action"><b>2 · Đi bộ</b><small>4 hướng, không đi ngang</small></div>
+  <div class="action"><b>3 · Chạy nhẹ</b><small>4 hướng, chân bám đất</small></div>
+  <div class="action"><b>4 · Ngồi xếp bằng</b><small>Đầu thẳng, chân gọn</small></div>
+  <div class="action"><b>5 · Đứng → Ngồi</b><small>Chuyển tiếp tự nhiên</small></div>
+  <div class="action"><b>6 · Ngồi → Đứng</b><small>Chuyển tiếp tự nhiên</small></div>
+  <div class="action"><b>7 · Vẫy tay</b><small>Không rung đầu</small></div>
+  <div class="action"><b>8 · Giơ tay bỏ phiếu</b><small>Dễ thấy ở 90px</small></div>
+  <div class="action"><b>9 · Thắng / Thua</b><small>Hai biến thể cùng Action</small></div>
+  </div>
+</section>
+<section class="panel">
+  <h2>Danh sách 20 nhân vật mới</h2>
+  <div class="members" id="slots" aria-label="20 vị trí nhân vật đang được thiết kế"></div>
+  <p style="margin-top:10px" id="apiStatus" aria-live="polite">Đang kiểm tra danh sách V4…</p>
+  <p style="margin-top:12px">Chỉ triển khai Character-02 đến Character-20 sau khi Character-01 được duyệt. Các ô chưa có artwork được đánh dấu rõ ràng, không phải nhân vật đã sẵn sàng.</p>
+</section>
+<footer><p>Phiên bản thử nghiệm Web — không thay đổi dữ liệu phòng chơi, vai trò hoặc tài khoản. <a href="https://github.com/WilliamPham0702/GMWW-V2.00/issues/106">Task #106</a></p></footer>
+</main>
+<script>
+  const slots=document.getElementById('slots'),status=document.getElementById('apiStatus');
+  function showSlots(rows){slots.replaceChildren();for(const row of rows){const d=document.createElement('div');d.className='slot';d.textContent=String(row.id||'').slice(-2)+' · '+(row.approved?'Sẵn sàng':'Chờ');slots.appendChild(d)}}
+  showSlots(Array.from({length:20},(_,i)=>({id:'character-'+String(i+1).padStart(2,'0'),approved:false})));
+  fetch('/api/game-characters/v4',{cache:'no-store'}).then(async res=>{
+    if(!res.ok)throw Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data.ok||!Array.isArray(data.characters)||data.characters.length!==20)throw Error('Dữ liệu V4 chưa hợp lệ');
+    showSlots(data.characters);
+    status.textContent='API V4 đã kết nối · '+data.approvedCount+'/20 nhân vật được duyệt · IPA: chưa cập nhật';
+  }).catch(()=>{status.textContent='Trang kiểm thử đang hiển thị danh sách chờ. API V4 chưa kết nối.'});
+</script>
+</body>
+</html>

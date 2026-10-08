@@ -1,0 +1,33 @@
+name: Check Character V4 Redesign Contract
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/characters/v4/**'
+      - 'tests/character-v4-web-preview.test.mjs'
+      - 'tests/character-v4-api.test.mjs'
+      - 'src/gmww-character-v4.js'
+      - 'src/index.js'
+      - 'docs/character-v4-redesign.md'
+      - 'tests/character-v4-manifest.test.mjs'
+      - '.github/workflows/check-character-v4-redesign.yml'
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify Character V4 decision contract
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs
+      - name: Confirm no live app references new unapproved characters
+        run: |
+          test -s docs/character-v4-redesign.md
+          test -s assets/characters/v4/manifest.json
+          test -s assets/characters/v4/index.html
+          grep -q 'api/game-characters/v4' assets/characters/v4/index.html
+          ! grep -q 'assets/characters/v4' assets/village/village.mjs
+          ! grep -q 'assets/characters/v4' server-game/current/character-renderer.js
