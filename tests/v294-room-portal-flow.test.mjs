@@ -46,12 +46,17 @@ test('V3.01 only GM can assign seats',()=>{
   assert.doesNotMatch(live,/gmww:portal-click/);
 });
 
-test('V3.01 Player Web has Ready and Leave Seat only after GM assigns a seat',()=>{
-  assert.match(live,/RỜI GHẾ/);
-  assert.match(live,/SẴN SÀNG/);
-  assert.match(live,/async function releaseMySeat\(/);
-  assert.match(live,/rb\.hidden=!seated;sb\.hidden=!seated/);
-  assert.match(live,/Chờ GM xếp chỗ trước khi Sẵn Sàng/);
+test('V3.38 Player Web auto-ready from GM and keeps only Leave Seat and Leave Room',()=>{
+  const script=JSON.parse(live.trim().replace(/^export const gmwwMembersLiveScript = /,'').replace(/;$/,''));
+  const begin=script.indexOf('function ensureVillageReadyDock(){'),end=script.indexOf('function syncPlayerSetupState(){',begin);
+  const dock=script.slice(begin,end);
+  assert.match(dock,/RỜI GHẾ/);
+  assert.match(dock,/RỜI PHÒNG/);
+  assert.match(dock,/ĐÃ SẴN SÀNG/);
+  assert.match(dock,/sb\.hidden=!seated/);
+  assert.doesNotMatch(dock,/<button class="ready"/);
+  assert.doesNotMatch(script,/toggleReady\(/);
+  assert.match(server,/ready:true,reservedByGM:true/);
 });
 
 test('V3.01 removes Mystery Portal completely',()=>{
