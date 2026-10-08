@@ -30,6 +30,8 @@ test('master rig is a 2D continuous body skeleton with dedicated hand, knee and 
   assert.match(markup,/data-sandal-l/);
   assert.match(markup,/data-necklace/);
   assert.doesNotMatch(markup,/clip-path/);
+  const renderer=fs.readFileSync(new URL('../assets/village/rig-skin-renderer.mjs',import.meta.url),'utf8');
+  assert.ok(!renderer.includes('200+pose.root.x'), 'double root translation would clip the Character outside the SVG frame');
   assert.doesNotMatch(markup,/url\(#skinBody/);
 });
 test('all nine animation clips return finite smooth pose points',()=>{
