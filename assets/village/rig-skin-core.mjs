@@ -64,6 +64,8 @@ export function basePose(){return{
 };}
 function mixPose(a,b,weight){
   const t=clamp(Number(weight)||0,0,1),out={};
+  if(t<=0)return {...a};
+  if(t>=1)return {...b};
   for(const key of Object.keys(a))out[key]=lerp(a[key],b[key],t);
   return out;
 }
