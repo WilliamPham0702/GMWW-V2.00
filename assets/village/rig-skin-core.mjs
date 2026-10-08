@@ -71,7 +71,7 @@ function seatedPose(t){
   p.knees={L:v(-35,283),R:v(35,283)};
   // ankle feet overlap at center, knees stay close to torso rather than spread.
   p.ankles={L:v(18,297),R:v(-18,297)};
-  p.footX={L:16,R:-16};p.footY={L:302,R:302};
+  p.footX={L:13,R:-13};p.footY={L:302,R:302};
   p.elbows={L:v(-32,254),R:v(32,254)};
   p.hands={L:v(-28,274),R:v(28,274)};
   p.headTilt=b*1.3;p.hair=-b*1.2;
