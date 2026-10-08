@@ -143,6 +143,10 @@ function draw(now){
     frame=0;lastFpsAt=now;
   }
 }
+const demoParams=new URLSearchParams(location.search);
+const requestedAction=demoParams.get('action');
+if(requestedAction&&ACTION_CATALOG.some(a=>a.id===requestedAction&&a.type==='motion'))actionEl.value=requestedAction;
+if(demoParams.get('crowd')==='30')byId('crowdButton').click();
 selectAction();
 requestAnimationFrame(draw);
 </script></body></html>
