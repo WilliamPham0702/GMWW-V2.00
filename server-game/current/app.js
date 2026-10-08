@@ -1356,20 +1356,57 @@ function gmwwOpsInitialize(){
 }
 gmwwOpsInitialize();
 
-/* Work backlog: show actual unfinished GitHub Issues before history; no invented progress. */
-let gmwwTasksBusy=false,gmwwTasksLastLoaded=0;
+/* Work backlog: only GitHub owners can close/reopen Issues; never embed write credentials. */
+let gmwwTasksBusy=false,gmwwTasksLastLoaded=0,gmwwTaskReviewPending=false;
+function gmwwTaskReviewLink(task,mode){
+  const number=Number(task?.number);
+  if(!Number.isSafeInteger(number)||number<=0)return null;
+  const labels={
+    completed:'✓ XÁC NHẬN HOÀN THÀNH',
+    skipped:'↷ BỎ QUA',
+    reopen:'↶ XEM / MỞ LẠI'
+  };
+  const link=document.createElement('a');
+  link.className='gmww-task-review-link '+mode;
+  link.href='https://github.com/WilliamPham0702/GMWW-V2.00/issues/'+number;
+  link.target='_blank';
+  link.rel='noopener noreferrer';
+  link.textContent=labels[mode]||'XEM CÔNG VIỆC';
+  link.setAttribute('aria-label',(labels[mode]||'Xem công việc')+' #'+number+' trên GitHub');
+  if(mode==='completed'||mode==='skipped'){
+    link.addEventListener('click',event=>{
+      const instruction=mode==='completed'
+        ? 'Bạn xác nhận công việc #'+number+' đã đáp ứng yêu cầu và muốn chuyển sang Lịch sử hoàn tất?'
+        : 'Bạn chọn BỎ QUA công việc #'+number+' và không cần tiếp tục triển khai?';
+      if(!window.confirm(instruction+'\n\nỨng dụng sẽ mở GitHub. Đăng nhập tài khoản chủ dự án, chọn Close issue và lý do '+(mode==='completed'?'Completed (Hoàn thành).':'Not planned (Không thực hiện).')+'\n\nChỉ khi GitHub xác nhận đóng Issue thì trạng thái trên server mới thay đổi.')){
+        event.preventDefault();return;
+      }
+      gmwwTaskReviewPending=true;
+    });
+  }
+  return link;
+}
+function gmwwTaskReviewButtons(task){
+  const actions=document.createElement('div');actions.className='gmww-task-review-actions';
+  const open=['doing','pending'].includes(String(task.state||''));
+  const modes=open?['completed','skipped']:['reopen'];
+  for(const mode of modes){const link=gmwwTaskReviewLink(task,mode);if(link)actions.append(link)}
+  return actions;
+}
 function gmwwTaskItem(task){
   const row=document.createElement('article');
   row.className='gmww-task-item '+String(task.state||'pending');
   const heading=document.createElement('div');heading.className='gmww-task-item-head';
   const title=document.createElement('b');title.textContent=String(task.title||'Công việc GMWW');
   const status=document.createElement('span');status.className='gmww-task-status '+String(task.state||'pending');
-  status.textContent=task.state==='doing'?'ĐANG THỰC HIỆN':task.state==='completed'?'HOÀN TẤT':task.state==='closed'?'ĐÃ ĐÓNG':'CHƯA HOÀN THÀNH';
+  status.textContent=task.state==='doing'?'ĐANG THỰC HIỆN':task.state==='completed'?'HOÀN TẤT':task.state==='skipped'?'ĐÃ BỎ QUA':task.state==='closed'?'ĐÃ ĐÓNG':'CHƯA HOÀN THÀNH';
   heading.append(title,status);row.append(heading);
   const description=document.createElement('p');description.textContent=String(task.summary||'Đã ghi nhận yêu cầu.');row.append(description);
   const meta=document.createElement('small');const priority=task.priority?String(task.priority)+' · ':'';
   meta.textContent=priority+'Công việc #'+Number(task.number||0)+' · Cập nhật '+(task.updatedAt?new Date(task.updatedAt).toLocaleDateString('vi-VN'):'—');
   row.append(meta);
+  const actions=gmwwTaskReviewButtons(task);
+  if(actions.childElementCount)row.append(actions);
   return row;
 }
 async function gmwwTasksRefresh({silent=false}={}){
@@ -1386,7 +1423,7 @@ async function gmwwTasksRefresh({silent=false}={}){
     const data=await res.json();
     if(!data?.ok||!Array.isArray(data.open)||!Array.isArray(data.history))throw new Error('Danh sách không hợp lệ');
     const open=data.open.filter(x=>x.state==='pending'||x.state==='doing'),
-      done=data.history.filter(x=>x.state==='completed'||x.state==='closed');
+      done=data.history.filter(x=>x.state==='completed'||x.state==='closed'||x.state==='skipped');
     if(openList){openList.replaceChildren();if(open.length)for(const task of open)openList.append(gmwwTaskItem(task));else{
       const blank=document.createElement('p');blank.className='gmww-task-empty';blank.textContent='Không có công việc chưa hoàn thành được ghi nhận.';openList.append(blank)}}
     if(closedList){closedList.replaceChildren();if(done.length)for(const task of done)closedList.append(gmwwTaskItem(task));else{
@@ -1394,7 +1431,7 @@ async function gmwwTasksRefresh({silent=false}={}){
     const openCount=document.getElementById('gmwwTasksOpenCount'),doneCount=document.getElementById('gmwwTasksDoneCount');
     if(openCount)openCount.textContent=String(open.length);
     if(doneCount)doneCount.textContent=String(done.length);
-    if(summary)summary.textContent=open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử.';
+    if(summary)summary.textContent=open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử (gồm Hoàn tất/Bỏ qua).';
     gmwwTasksLastLoaded=Date.now();
   }catch(error){
     if(summary)summary.textContent='Chưa lấy được tiến độ. Nhấn LÀM MỚI TIẾN ĐỘ để thử lại.';
@@ -1402,6 +1439,16 @@ async function gmwwTasksRefresh({silent=false}={}){
   }finally{clearTimeout(timeout);gmwwTasksBusy=false;if(refresh)refresh.disabled=false}
 }
 document.getElementById('gmwwTasksReload')?.addEventListener('click',()=>gmwwTasksRefresh());
+function gmwwTaskReviewReturn(){
+  if(!gmwwTaskReviewPending)return;
+  if(!document.getElementById('settings')?.classList.contains('active'))return;
+  gmwwTaskReviewPending=false;
+  gmwwTasksLastLoaded=0;
+  gmwwTasksRefresh({silent:false});
+}
+window.addEventListener('focus',gmwwTaskReviewReturn);
+window.addEventListener('pageshow',gmwwTaskReviewReturn);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gmwwTaskReviewReturn()});
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
