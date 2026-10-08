@@ -67,13 +67,13 @@ function kneeFor(hip,ankle,side){
 }
 function seatedPose(t){
   const p=jointPose(),b=Math.sin(t*TAU);
-  p.hip=v(0,275);p.shoulder=v(0,211);p.head=v(0,169);p.sitBlend=1;
-  p.knees={L:v(-35,283),R:v(35,283)};
+  p.hip=v(0,281);p.shoulder=v(0,218);p.head=v(0,176);p.sitBlend=1;
+  p.knees={L:v(-34,291),R:v(34,291)};
   // ankle feet overlap at center, knees stay close to torso rather than spread.
   p.ankles={L:v(18,297),R:v(-18,297)};
   p.footX={L:13,R:-13};p.footY={L:302,R:302};
-  p.elbows={L:v(-32,254),R:v(32,254)};
-  p.hands={L:v(-28,274),R:v(28,274)};
+  p.elbows={L:v(-32,263),R:v(32,263)};
+  p.hands={L:v(-28,288),R:v(28,288)};
   p.headTilt=b*1.3;p.hair=-b*1.2;
   return p;
 }
