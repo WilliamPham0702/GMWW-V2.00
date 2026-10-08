@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Trang Cài đặt mở mượt hơn; chuyển kiểm tra nặng sang thao tác chủ động","Gộp Bảo trì và Kiểm tra; bổ sung Healthy Check và thanh công cụ cuộn ngang","Công việc & Tiến độ có dữ liệu dự phòng khi GitHub tạm lỗi","Kích thước nhân vật hiển thị trên một hàng","Kết thúc ván quay về Sảnh chờ","Ván Mẫu chỉ chọn lá bài ★, số lượng, thứ tự và thời gian mặc định 30 giây; hỗ trợ Lưu/Hủy/Xóa","Thông báo cập nhật hiển thị nội dung mới"],
+  releaseNotes:["Trang Cài đặt mở mượt hơn; chuyển kiểm tra nặng sang thao tác chủ động","Gộp Bảo trì và Kiểm tra; bổ sung Healthy Check và thanh công cụ cuộn ngang","Công việc & Tiến độ có dữ liệu dự phòng khi GitHub tạm lỗi","Kích thước nhân vật hiển thị trên một hàng","Kết thúc ván quay về Sảnh chờ","Ván Mẫu chỉ chọn lá bài ★, số lượng, thứ tự và thời gian mặc định 30 giây; hỗ trợ Lưu/Hủy/Xóa","Thông báo cập nhật hiển thị nội dung mới","Mục Có gì mới tách từng thay đổi thành gạch đầu dòng gọn gàng"],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
