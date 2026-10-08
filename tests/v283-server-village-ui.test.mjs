@@ -18,7 +18,7 @@ test('V2.93 GM lobby uses websocket-first realtime with fallback polling',()=>{
   assert.match(app,/connectPlaySocket\(\);ensurePlayRealtimePoll\(\)/);
 });
 
-test('V3.25 auto-hides the top timeline and bottom five-control dock after 20 seconds',()=>{
+test('V3.25 auto-hides the top timeline and bottom five-control dock after 30 seconds',()=>{
   const ids=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
   let cursor=-1;for(const id of ids){const pos=html.indexOf('id="'+id+'"');assert.ok(pos>cursor);cursor=pos}
   assert.match(html,/class="gm-top-menu-v293 gm-bottom-menu-v325"/);
@@ -28,7 +28,7 @@ test('V3.25 auto-hides the top timeline and bottom five-control dock after 20 se
   assert.match(css,/#playSetupStrip\.play-setup-strip\.is-auto-hidden/);
   assert.match(css,/#gmTopMenu\.gm-top-menu-v293\.is-auto-hidden/);
   assert.ok(css.includes('transform:translateY(calc(100% + env(safe-area-inset-bottom) + 18px))!important;'));
-  assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=20000/);
+  assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=30000/);
   assert.ok(app.includes("const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu')"));
   assert.match(app,/\[top,bottom\]\.forEach/);
   assert.match(app,/setPlayGameChromeHidden\(false\);clearPlayGameChromeIdle\(\)/);
