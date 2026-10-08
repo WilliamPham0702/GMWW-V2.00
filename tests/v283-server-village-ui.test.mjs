@@ -30,7 +30,7 @@ test('V3.25 auto-hides the top timeline and bottom five-control dock after 30 se
   assert.ok(css.includes('transform:translateY(calc(100% + env(safe-area-inset-bottom) + 18px))!important;'));
   assert.match(app,/const PLAY_GAME_CHROME_IDLE_MS=30000/);
   assert.ok(app.includes("const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu')"));
-  assert.match(app,/\[top,bottom\]\.forEach/);
+  assert.match(app,/\[top,bottom,gather\]\.forEach/);
   assert.match(app,/setPlayGameChromeHidden\(false\);clearPlayGameChromeIdle\(\)/);
   assert.match(app,/setPlayGameChromeHidden\(true\)/);
   assert.match(app,/document\.addEventListener\('pointerdown',reveal/);
