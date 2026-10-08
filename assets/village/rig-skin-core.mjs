@@ -147,8 +147,11 @@ export function sampleRigAction(actionId,elapsedMs,{speed=1,personality='balance
   const target=sampleInternal(actionId,runtime,{personality,footLock,outcome});
   if(previousAction && ACTION_SET.has(previousAction)&&previousAction!==actionId){
     const prev=sampleInternal(previousAction,Math.min(clipDuration(previousAction),runtime),{personality,footLock,outcome});
-    return interpPose(prev,target,smooth((Number(transitionElapsedMs)||0)/Math.max(1,blendMs)));
+    const blended=interpPose(prev,target,smooth((Number(transitionElapsedMs)||0)/Math.max(1,blendMs)));
+    blended.headTilt=0;
+    return blended;
   }
+  target.headTilt=0; // Character-01: head remains level in ALL nine actions and every facing.
   return target;
 }
 export function sampleSynchronizedAction(command,localNowMs,serverClockOffsetMs=0){
