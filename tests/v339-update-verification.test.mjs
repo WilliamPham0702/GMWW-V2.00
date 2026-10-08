@@ -10,7 +10,7 @@ const end=app.indexOf('\nwindow.GMWWUpdateNative={',begin);
 assert.ok(begin>0&&end>begin,'Update verifier is present');
 const source=app.slice(begin,end);
 
-function harness({healthFails=false,manifestFails=false,server='V3.39',manifestServer='3.39',latest='3.39'}={}){
+function harness({healthFails=false,manifestFails=false,server='V3.40',manifestServer='3.40',latest='3.40',runtime='3.40'}={}){
   const ui=[],actions=[],elements={
     retryUpdateCheck:{disabled:false,setAttribute(){},removeAttribute(){}},
     updateServerVersion:{textContent:'V—'}
@@ -23,7 +23,7 @@ function harness({healthFails=false,manifestFails=false,server='V3.39',manifestS
     gmwwUpdateBusy:false,gmwwUpdateManifest:null,
     GMWW_SERVER_BASE:'https://example.invalid',
     document:{getElementById:id=>elements[id]||null},
-    gmwwRuntimeVersion:()=> '3.39',
+    gmwwRuntimeVersion:()=>runtime,
     gmwwShellVersion:()=> '3.17',
     gmwwVersionCompare:(a,b)=>{const pa=String(a).split('.').map(Number),pb=String(b).split('.').map(Number);for(let i=0;i<3;i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return Math.sign(d)}return 0},
     setUpdateAction:(...args)=>actions.push(args),
@@ -38,15 +38,15 @@ function harness({healthFails=false,manifestFails=false,server='V3.39',manifestS
   vm.runInNewContext(source+'\nglobalThis.runCheck=checkAppUpdate;globalThis.getManifest=()=>gmwwUpdateManifest;',ctx);
   return{run:ctx.runCheck,manifest:ctx.getManifest,ui,actions,elements};
 }
-test('V3.39 only declares latest after Server and release version both agree',async()=>{
+test('V3.40 only declares latest after Server and release version both agree',async()=>{
   const h=harness(),m=await h.run();
-  assert.equal(m.releaseVersion,'3.39');
+  assert.equal(m.releaseVersion,'3.40');
   assert.equal(h.ui.at(-1)[0],'ok');
-  assert.equal(h.elements.updateServerVersion.textContent,'V3.39');
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.40');
   assert.match(h.ui.at(-1)[2],/phiên bản mới nhất/);
   assert.equal(h.elements.retryUpdateCheck.disabled,false);
 });
-test('V3.39 never says latest when Server health cannot be verified',async()=>{
+test('V3.40 never says latest when Server health cannot be verified',async()=>{
   const h=harness({healthFails:true});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[0],'warn');
@@ -55,22 +55,30 @@ test('V3.39 never says latest when Server health cannot be verified',async()=>{
   assert.equal(h.elements.updateServerVersion.textContent,'V—');
   assert.equal(h.manifest(),null);
 });
-test('V3.39 shows a verified Server version even if release manifest fails',async()=>{
+test('V3.40 shows a verified Server version even if release manifest fails',async()=>{
   const h=harness({manifestFails:true});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[0],'warn');
-  assert.equal(h.elements.updateServerVersion.textContent,'V3.39');
+  assert.equal(h.elements.updateServerVersion.textContent,'V3.40');
   assert.equal(h.manifest(),null);
 });
-test('V3.39 treats a mismatched deployment as unverified',async()=>{
+test('V3.40 treats a mismatched deployment as unverified',async()=>{
   const h=harness({manifestServer:'3.38'});
   assert.equal(await h.run(),null);
   assert.equal(h.ui.at(-1)[1],'SERVER CHƯA ĐỒNG BỘ');
   assert.equal(h.manifest(),null);
 });
-test('V3.39 exposes explicit on-screen retry without IPA reinstall',()=>{
+test('V3.40 exposes explicit on-screen retry without IPA reinstall',()=>{
   assert.match(html,/id="retryUpdateCheck"/);
   assert.match(app,/retryUpdateCheck\.addEventListener\('click'/);
   assert.match(app,/else if\(kind==='unverified'\)/);
-  assert.match(html,/<title>GMWW V3\.39<\/title>/);
+  assert.match(html,/<title>GMWW V3\.40<\/title>/);
+});
+
+test('An existing V3.39 install is offered the immutable V3.40 runtime',async()=>{
+ const h=harness({runtime:'3.39'}),m=await h.run();
+ assert.equal(m.releaseVersion,'3.40');
+ assert.equal(h.actions.at(-1)[0],'runtime');
+ assert.equal(h.ui.at(-1)[1],'CÓ CẬP NHẬT');
+ assert.equal(h.elements.updateServerVersion.textContent,'V3.40');
 });
