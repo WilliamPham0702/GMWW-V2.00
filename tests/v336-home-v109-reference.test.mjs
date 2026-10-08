@@ -18,7 +18,8 @@ test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=
 test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
   assert.match(home,/data-home-destination="members"/);
   assert.match(home,/data-home-destination="library"/);
-  assert.match(home,/data-home-destination="settings"/);
+  assert.doesNotMatch(home,/data-home-destination="settings"/,"Trang Chủ không được chứa liên kết Cài đặt theo yêu cầu mới");
+  assert.match(home,/<b>WilliamPham<\/b>/,"Thương hiệu Trang Chủ phải là WilliamPham");
   assert.match(app,/function gmwwHomeNavigate\(target\)/);
   assert.match(app,/if\(nav\)nav\.click\(\)/);
   assert.match(app,/gmwwHomeEnterVillage/);
