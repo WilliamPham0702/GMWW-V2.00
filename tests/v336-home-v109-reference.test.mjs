@@ -56,3 +56,13 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  assert.match(prep,/copyDir\('server-game\/current\/home-art','home-art'\)/);
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
+
+test("Trang Chủ v3.39 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
+ const labels=[...home.matchAll(/class="gmww-home-tile-label">([^<]+)/g)].map(x=>x[1]);
+ assert.deepEqual(labels,["BỘ BÀI","THÀNH VIÊN","HÀNH ĐỘNG"]);
+ assert.match(html,/id="bottomNav"/);
+ assert.match(css,/Pearl-coast five-action dock/);
+ assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
+ assert.match(css,/#home \.gmww-home-tile-label/);
+ assert.match(html,/style\.css\?v=3\.39-home-dock-2/);
+});

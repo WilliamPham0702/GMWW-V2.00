@@ -3369,3 +3369,74 @@ body.play-immersive #start .play-player-token.is-seat-occupied:not(.is-gm-rider)
 #settings .update-retry{display:grid;place-items:center;width:31px;height:30px;flex:0 0 31px;border:1px solid rgba(158,230,245,.45);border-radius:9px;background:rgba(6,76,99,.72);color:#ebfbff;font-size:21px;line-height:1;touch-action:manipulation}
 #settings .update-retry:disabled{opacity:.55}
 #settings .update-retry:focus-visible{outline:2px solid #fff0b6;outline-offset:2px}
+
+
+/* Player Web / GMWW V3.39 — Pearl-coast five-action dock and Explore tile captions.
+   Keep all old navigation hooks; no blur in the 2D game. */
+body:not(.play-immersive) #bottomNav{
+  --gmww-dock-edge:rgba(255,231,161,.55);
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  align-items:center!important;
+  gap:3px!important;
+  height:calc(72px + env(safe-area-inset-bottom))!important;
+  padding:6px 8px max(5px,env(safe-area-inset-bottom))!important;
+  background:linear-gradient(180deg,rgba(5,66,89,.98) 0%,rgba(4,43,68,.99) 54%,#061d39 100%)!important;
+  border-top:1px solid var(--gmww-dock-edge)!important;
+  box-shadow:0 -6px 24px rgba(0,22,40,.35),inset 0 2px 0 rgba(210,251,255,.12)!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+body:not(.play-immersive) #bottomNav .nav{
+  position:relative;min-width:0;min-height:54px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:1px solid transparent;border-radius:13px;
+  color:#cfedf7;background:transparent;
+  text-shadow:0 1px 3px rgba(0,21,39,.7);
+  -webkit-tap-highlight-color:transparent;
+}
+body:not(.play-immersive) #bottomNav .nav:not(.start).active{
+  color:#fff6cb!important;
+  background:linear-gradient(180deg,rgba(31,174,204,.34),rgba(5,70,105,.58))!important;
+  border-color:rgba(249,220,147,.54)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2)!important;
+}
+body:not(.play-immersive) #bottomNav .nav:not(.start) span{
+  font-size:24px;line-height:1;display:block;min-height:25px;
+  filter:drop-shadow(0 2px 2px rgba(0,20,39,.5));
+}
+body:not(.play-immersive) #bottomNav .nav b{
+  font-size:10px;line-height:1.2;font-weight:850;white-space:nowrap;letter-spacing:.01em;
+}
+body:not(.play-immersive) #bottomNav .nav.start{
+  transform:translateY(-8px);background:none!important;border-color:transparent!important;
+  color:#ffeeb1!important;
+}
+body:not(.play-immersive) #bottomNav .nav.start i{
+  width:52px;height:52px;display:grid;place-items:center;
+  border:3px solid #f6d48e;
+  border-radius:50%;font-size:21px;font-weight:1000;font-style:normal;
+  color:#ffffff;background:linear-gradient(155deg,#57e8ef 0%,#178bb9 57%,#05537b 100%);
+  box-shadow:0 4px 0 #06415c,0 7px 15px rgba(0,13,35,.38),inset 0 3px 4px rgba(255,255,255,.54);
+}
+body:not(.play-immersive) #bottomNav .nav:focus-visible{
+  outline:2px solid #ffebad;outline-offset:-2px;
+}
+#home .gmww-home-art-v337 .gmww-home-shortcuts button{position:relative!important;isolation:isolate}
+#home .gmww-home-art-v337 .gmww-home-shortcuts button img{object-fit:cover!important;object-position:center top}
+#home .gmww-home-art-v337 .gmww-home-tile-label{
+  position:absolute;inset:auto 0 0;display:grid;place-items:center;
+  min-height:31px;padding:6px 2px;
+  background:linear-gradient(180deg,rgba(3,42,68,.15),rgba(2,22,48,.95) 48%,rgba(2,22,48,.98));
+  color:#fff4c2;font:900 9.5px/1.15 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  letter-spacing:.055em;text-shadow:0 1px 3px #021329;
+  pointer-events:none;
+}
+@media(max-width:370px){
+ body:not(.play-immersive) #bottomNav{gap:0!important;padding-inline:4px!important}
+ body:not(.play-immersive) #bottomNav .nav b{font-size:9px}
+ body:not(.play-immersive) #bottomNav .nav.start i{width:47px;height:47px}
+ #home .gmww-home-art-v337 .gmww-home-tile-label{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ body:not(.play-immersive) #bottomNav .nav{transition:none!important}
+}
