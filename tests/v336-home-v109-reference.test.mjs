@@ -40,7 +40,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.37<\/title>/);
+  assert.match(html,/<title>GMWW V3\.38<\/title>/);
 });
 
 
