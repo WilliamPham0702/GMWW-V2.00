@@ -16,7 +16,9 @@ const bundle=await build({
   bundle:true,write:false,format:'iife',platform:'browser',target:['safari16','chrome109'],minify:false
 });
 const js=bundle.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
-const final=html.replace(regex,'<script>'+js+'</script>');
-if(!final.includes('data-joint') || final.includes("from './rig-skin-core.mjs'"))throw new Error('BUNDLE_INVALID');
+const artwork=await fs.readFile(path.join(root,'assets/characters/v253/chibi-01.webp'));
+const final=html.replace(regex,'<script>'+js+'</script>').replace('../characters/v253/chibi-01.webp','data:image/webp;base64,'+artwork.toString('base64'));
+
+if(!final.includes('data-leg-l') || !final.includes('data:image/webp;base64,') || final.includes("from './rig-skin-core.mjs'"))throw new Error('BUNDLE_INVALID');
 await fs.writeFile(output,final);
 console.log('RIG_SKIN_OFFLINE_READY',path.basename(output),(await fs.stat(output)).size);
