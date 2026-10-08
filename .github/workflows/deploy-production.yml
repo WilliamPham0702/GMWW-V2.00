@@ -182,13 +182,26 @@ jobs:
           curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
           curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
           echo "Verify Production: OTA app and HTML fetched."
-          grep -Fq "const VERSION='$EXPECTED';" /tmp/gmww-ota-app.js
-          grep -Fq 'function gmwwTaskReviewLink' /tmp/gmww-ota-app.js
-          grep -Fq 'XÁC NHẬN HOÀN THÀNH' /tmp/gmww-ota-app.js
-          grep -Fq 'BỎ QUA' /tmp/gmww-ota-app.js
-          grep -Fq 'id="gmwwTasksOpenList"' /tmp/gmww-ota.html
-          grep -Fq "GMWW V$EXPECTED" /tmp/gmww-ota.html
-          echo "GMWW task review controls verified in live OTA runtime V$EXPECTED."
+          node - "$EXPECTED" <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=text=>crypto.createHash('sha256').update(text).digest('hex');
+          const expectedSha=p=>manifest.runtime.files.find(f=>f.path===p)?.sha256;
+          const checks={
+            'JS version':app.includes("const VERSION='"+version+"';"),
+            'task review function':app.includes('function gmwwTaskReviewLink'),
+            'complete button':app.includes('XÁC NHẬN HOÀN THÀNH'),
+            'skip button':app.includes('BỎ QUA'),
+            'HTML work list':html.includes('id="gmwwTasksOpenList"'),
+            'HTML version':html.includes('GMWW V'+version),
+            'manifest JS SHA':sha(app)===expectedSha('app.js'),
+            'manifest HTML SHA':sha(html)===expectedSha('GMWW.html')
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('GMWW OTA asset check: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(x=>!x))process.exit(1);
+          console.log('GMWW task review controls verified in live OTA runtime V'+version);
+          NODE
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
