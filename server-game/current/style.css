@@ -3654,3 +3654,55 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-n
 #home .gmww-home-v344 .gmww-home-explore{margin-top:13px!important}
 #home .gmww-home-v344 .gmww-home-play-arrow{display:none!important}
 #home .gmww-home-v344 .gmww-home-play:before{content:"🐚   ✦   🐚"!important}
+
+/* V3.46 — Ván Mẫu theo luồng thiết lập đầy đủ V1.09, mobile-first */
+#playGameSheet .play-game-sheet-card{width:min(96vw,680px);max-height:min(92dvh,920px);padding:16px;gap:0;background:linear-gradient(165deg,#06283a 0%,#041c2b 100%);border:1px solid rgba(149,224,243,.48)}
+#playGameSheet .play-game-sheet-card>.sheet-head{flex:none;padding-bottom:9px;border-bottom:1px solid rgba(149,224,243,.18)}
+#playGameSheet .play-template-scroll{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:4px 2px 16px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+#playGameSheet .play-roster-actions{flex:none;margin-top:8px;padding-top:10px;border-top:1px solid rgba(157,224,255,.2);display:flex;gap:7px;align-items:center}
+#playGameSheet .play-roster-actions>button{min-width:0;flex:1;min-height:45px}
+#playGameSheet .play-roster-actions #playGameSave{flex:1.5}
+#playGameSheet .play-template-editor-only{display:block}
+#playGameSheet .play-template-play-review{display:none}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-editor-only{display:none}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-play-review{display:block;padding:16px 10px;line-height:1.55;color:#c8e8f5}
+#playGameSheet .play-template-play-review>b{font-size:15px;color:#fff}
+#playGameSheet .play-template-play-review p{font-size:12px;margin:8px 0;color:#b0d6e5}
+#playTemplatePlaySummary{display:block;padding:9px 11px;border-radius:10px;background:#0e3a4c;font-size:12px;color:#c6f5ed}
+#playGameSheet .play-game-name-label{font-size:12px;letter-spacing:0;text-transform:none;padding-top:10px}
+#playGameSheet .play-game-name-label input,#playGameSheet .play-game-name-label select{min-height:43px;border:1px solid rgba(160,222,244,.35);border-radius:11px;background:#041b2b;color:#fff;font-size:14px;padding:9px 12px}
+#playGameSheet .play-template-section-title{display:flex;justify-content:space-between;align-items:baseline;gap:7px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(121,204,226,.25)}
+#playGameSheet .play-template-section-title b{font-size:12px;color:#f7e6ad;letter-spacing:.02em}
+#playGameSheet .play-template-section-title span{font-size:10px;color:#a0d4e4;text-align:right}
+#playGameSheet .play-template-filters{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:7px;align-items:center}
+#playGameSheet .play-template-filters>input,#playGameSheet .play-template-filters>select{height:40px;min-width:0;border:1px solid #3b8aa5;border-radius:10px;background:#061b2b;color:#e9fdff;padding:7px 9px;font-size:12px}
+#playGameSheet .play-template-star-filter{grid-column:1/-1;display:flex;gap:7px;align-items:center;font-size:11px;color:#c8edf5}
+#playGameSheet .play-template-star-filter input,#playGameSheet .play-template-artifact input{width:17px;height:17px;accent-color:#2ec3e4}
+#playGameSheet .play-template-catalog{max-height:198px;overflow:auto;border:1px solid rgba(101,184,206,.3);border-radius:12px;padding:5px;margin-top:8px;display:grid;gap:5px;scrollbar-width:thin}
+#playGameSheet .play-template-pick{width:100%;display:flex;align-items:center;gap:9px;min-height:43px;text-align:left;padding:5px 9px;border-radius:9px;border:1px solid rgba(99,184,204,.2);background:#09293c;color:#f1fbff}
+#playGameSheet .play-template-pick.is-picked{border-color:#45cee1;background:#0a354b}
+#playGameSheet .play-template-pick-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:#13506b;color:#f7e6ad;font-size:16px}
+#playGameSheet .play-template-pick-label{flex:1;min-width:0}
+#playGameSheet .play-template-pick-label b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#playGameSheet .play-template-pick-label small{display:block;font-size:10px;color:#98c3d3}
+#playGameSheet .play-template-pick>strong{font-size:11px;color:#86eeff;white-space:nowrap}
+#playGameSheet .play-template-help{font-size:11px;line-height:1.4;color:#aec9d8;margin:5px 1px 9px}
+#playGameSheet #playGameRoleList{min-height:0;max-height:none;overflow:visible;display:grid;gap:7px;padding:2px 0}
+#playGameSheet .play-template-selected-row{border:1px solid rgba(128,212,231,.32);border-radius:12px;background:#09293d;padding:8px;display:grid;gap:8px}
+#playGameSheet .play-template-role-identity{display:flex;align-items:center;gap:8px;min-width:0}
+#playGameSheet .play-template-role-number{flex:none;display:grid;place-items:center;background:#114e64;color:#cef5fa;width:27px;height:27px;border-radius:50%;font-weight:800;font-size:12px}
+#playGameSheet .play-template-role-identity>.play-game-role-copy{flex:1;min-width:0}
+#playGameSheet .play-template-role-identity .play-game-role-copy b{font-size:13px}
+#playGameSheet .play-template-arrows{display:flex;gap:4px}
+#playGameSheet .play-template-arrows button{width:31px;height:31px;border:1px solid #579db0;background:#123c50;border-radius:8px;color:#e3ffff;font-size:18px}
+#playGameSheet .play-template-arrows button:disabled{opacity:.3}
+#playGameSheet .play-template-role-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 32px;gap:7px;align-items:end}
+#playGameSheet .play-template-role-values label{font-size:10px;color:#accfe0;min-width:0;display:grid;gap:4px}
+#playGameSheet .play-template-role-values input{height:35px;width:100%;min-width:0;border:1px solid #4f9eb8;border-radius:8px;background:#0f3c51;color:#fff;text-align:center;font-size:13px}
+#playGameSheet .play-template-role-values [data-role-remove]{height:35px;border-radius:8px;border:1px solid #a05d63;background:#442334;color:#ffccd3;font-size:19px}
+#playGameSheet .play-timing-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#playGameSheet .play-timing-grid label{font-size:11px;line-height:1.3;color:#c4e5ec;font-weight:650}
+#playGameSheet .play-timing-grid input[type="number"]{height:39px;width:100%;font-size:13px;text-align:center;background:#0b3349;border:1px solid #4e9db7}
+#playGameSheet .play-auto-advance-field{padding-top:0;display:flex!important;align-items:center;justify-content:flex-start}
+#playGameSheet .play-template-artifact{display:flex;align-items:center;gap:8px;font-size:12px;color:#e5f5fa;padding:5px 0}
+@media(max-width:400px){#playGameSheet .play-game-sheet-card{padding:12px}#playGameSheet .play-template-filters{grid-template-columns:minmax(0,1fr) 113px}#playGameSheet .play-template-section-title{align-items:flex-start}#playGameSheet .play-template-section-title span{max-width:43%}}
