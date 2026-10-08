@@ -2568,6 +2568,8 @@ body.play-immersive #start #gmTopMenu .gm-top-small-v293>small{
 #settings .gmww-task-history[open]>.gmww-task-list{margin-top:10px}
 #settings .gmww-task-empty,#settings .gmww-task-source{color:#bfdae4;font-size:11px;line-height:1.5;margin:0}
 #settings .gmww-task-actions .settings-action{width:100%;min-height:45px}
+#settings .gmww-task-review-health{margin:0;padding:8px 10px;border-radius:10px;border:1px solid rgba(163,229,243,.38);color:#d5f1fa;background:rgba(8,70,88,.38);font-size:11px;line-height:1.5;font-weight:700}
+#settings .gmww-task-review-health[data-ready="false"]{border-color:rgba(255,202,133,.48);color:#ffe0ad}
 #settings .gmww-task-review-help{margin:0;padding:9px 10px;border-radius:10px;background:rgba(9,64,82,.30);border:1px solid rgba(160,223,240,.28);color:#d8edf4;font-size:11px;line-height:1.5}
 #settings .gmww-task-review-help b{color:#f6f2cb}
 #settings .gmww-task-review-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:4px}
