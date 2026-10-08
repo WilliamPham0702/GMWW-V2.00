@@ -6,6 +6,7 @@ import {
   basePose,clipDuration,isLoopingAction,sampleRigAction,sampleSynchronizedAction,validateSkin
 } from '../assets/village/rig-skin-core.mjs';
 import {svgMarkup} from '../assets/village/rig-skin-renderer.mjs';
+import {sampleVillageRoute,ROUTE_DIRECTIONS,TURN_MS,WALK_SEGMENT_MS} from '../assets/village/rig-skin-navigation.mjs';
 const approx=(a,b,eps=1e-7)=>assert.ok(Math.abs(a-b)<eps,`${a} !== ${b}`);
 test('owner-approved catalogue contains precisely 9 actions in four groups',()=>{
   assert.equal(RIG_SKIN_VERSION,'0.2.0');
@@ -127,8 +128,66 @@ test('independent review lab uses original source artwork and never changes live
   assert.match(demo,/Chọn Action \(9 hành động\)/);
   assert.match(demo,/chibi-01\.webp/);
   assert.ok(demo.includes('id="smallActor"'));
-  assert.ok(demo.includes('pose.worldX*scale'));
+  assert.ok(demo.includes('sampleVillageRoute(elapsed'));
+  assert.ok(!demo.includes('pose.worldX*scale'));
+  assert.ok(demo.includes('id="direction"'));
   assert.doesNotMatch(live,/rig-skin-renderer\.mjs/);
   assert.ok(isLoopingAction('sit'));
   assert.equal(isLoopingAction('vote'),false);
+});
+
+test('four-direction travel rotates BEFORE translation and never slides sideways',()=>{
+  assert.deepEqual(ROUTE_DIRECTIONS,['right','up','left','down']);
+  const segmentMs=TURN_MS+WALK_SEGMENT_MS;
+  const origin=sampleVillageRoute(0);
+  const turningRight=sampleVillageRoute(TURN_MS*.85);
+  const walkingRight=sampleVillageRoute(TURN_MS+WALK_SEGMENT_MS*.5);
+  assert.equal(turningRight.direction,'right');
+  assert.equal(turningRight.turning,true);
+  assert.equal(turningRight.animation,'idle');
+  assert.deepEqual(turningRight.position,origin.position);
+  assert.equal(walkingRight.animation,'walk');
+  assert.ok(walkingRight.position.x>origin.position.x);
+  assert.equal(walkingRight.position.y,origin.position.y);
+  const turnUp=sampleVillageRoute(segmentMs+TURN_MS*.6);
+  const goUp=sampleVillageRoute(segmentMs+TURN_MS+WALK_SEGMENT_MS*.7);
+  assert.equal(turnUp.direction,'up');
+  assert.equal(turnUp.turning,true);
+  assert.deepEqual(turnUp.position,sampleVillageRoute(segmentMs).position);
+  assert.ok(goUp.position.y<turnUp.position.y);
+  assert.equal(goUp.position.x,turnUp.position.x);
+  const left=sampleVillageRoute(2*segmentMs+TURN_MS+500);
+  const down=sampleVillageRoute(3*segmentMs+TURN_MS+500);
+  assert.equal(left.direction,'left');
+  assert.equal(down.direction,'down');
+  assert.ok(left.position.x<sampleVillageRoute(2*segmentMs).position.x);
+  assert.ok(down.position.y>sampleVillageRoute(3*segmentMs).position.y);
+});
+test('manual direction is fixed, no world movement until turn completes or after arrival',()=>{
+  for(const direction of ['left','right','up','down']){
+    const turn=sampleVillageRoute(120,{mode:direction});
+    const step=sampleVillageRoute(TURN_MS+200,{mode:direction});
+    const complete=sampleVillageRoute(5000,{mode:direction});
+    assert.equal(turn.turning,true);
+    assert.deepEqual(turn.position,{x:0,y:0});
+    assert.equal(step.direction,direction);
+    assert.equal(step.moving,true);
+    assert.equal(complete.moving,false);
+    assert.equal(complete.animation,'idle');
+  }
+  assert.ok(sampleVillageRoute(TURN_MS+500,{mode:'left'}).position.x<0);
+  assert.ok(sampleVillageRoute(TURN_MS+500,{mode:'right'}).position.x>0);
+  assert.ok(sampleVillageRoute(TURN_MS+500,{mode:'up'}).position.y<0);
+  assert.ok(sampleVillageRoute(TURN_MS+500,{mode:'down'}).position.y>0);
+  assert.throws(()=>sampleVillageRoute(100,{mode:'diagonal'}),/UNKNOWN_DIRECTION/);
+});
+test('renderer actually contains separate rear and side appearances',()=>{
+  const markup=svgMarkup(SAMPLE_SKINS[0]);
+  assert.match(markup,/data-rear-head/);
+  assert.match(markup,/data-profile-face/);
+  assert.match(markup,/data-rear-torso/);
+  const source=fs.readFileSync(new URL('../assets/village/rig-skin-renderer.mjs',import.meta.url),'utf8');
+  assert.ok(source.includes("valid==='up'?'1':'0'"));
+  assert.ok(source.includes("valid==='left'?-.7"));
+  assert.ok(source.includes("b.svg.dataset.facing=valid"));
 });
