@@ -63,7 +63,7 @@ jobs:
           test -s rig-skin-30.png
           "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1100,760 --virtual-time-budget=1800 \
             --dump-dom "file://$PWD/rig-skin-character01-offline.html" > /tmp/rig-offline-dom.html
-          grep -q 'data-joint="shinL"' /tmp/rig-offline-dom.html
+          grep -q 'data-leg-l' /tmp/rig-offline-dom.html
           grep -q '<option value="walk"' /tmp/rig-offline-dom.html
       - name: Upload motion-proof screenshots
         uses: actions/upload-artifact@v4
