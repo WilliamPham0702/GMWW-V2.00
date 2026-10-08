@@ -78,7 +78,8 @@ test("Trang Chủ V3.47 phản ánh thiết kế đã duyệt, không giả dữ
  assert.match(home,/gmww-home-v344/);
  assert.match(home,/gmww-home-profile/);
  assert.doesNotMatch(home,/class="gmww-home-brand"/);
- assert.match(home,/Ma Sói|MA SÓI/);
+ assert.match(home,/home-fantasy-hero-v337\.webp/);
+ assert.doesNotMatch(home,/class="gmww-home-brand"/);
  assert.match(home,/gmww-home-hero-art/);
  assert.match(home,/gmwwHomeEnterVillage/);
  assert.match(home,/gmwwHomeLeaderWins/);
