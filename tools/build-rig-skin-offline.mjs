@@ -17,7 +17,7 @@ const bundle=await build({
 });
 const js=bundle.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
 const artwork=await fs.readFile(path.join(root,'assets/characters/v253/chibi-01.webp'));
-const final=html.replace(regex,'<script>'+js+'</script>').replace('../characters/v253/chibi-01.webp','data:image/webp;base64,'+artwork.toString('base64'));
+const final=html.replace(regex,'<script>'+js+'</script>').replaceAll('../characters/v253/chibi-01.webp','data:image/webp;base64,'+artwork.toString('base64'));
 
 if(!final.includes('data-leg-l') || !final.includes('data:image/webp;base64,') || final.includes("from './rig-skin-core.mjs'"))throw new Error('BUNDLE_INVALID');
 await fs.writeFile(output,final);
