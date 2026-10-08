@@ -1167,6 +1167,65 @@ const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(check
 setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){runSystemDiagnostics({silent:true});if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true})}},120000);
 
 
+/* GMWW Settings Hub — the single navigation surface for ALL existing settings tools. */
+const GMWW_SETTINGS_GROUP_KEY='GMWW_SETTINGS_GROUP_V1';
+const GMWW_SETTINGS_GROUPS=Object.freeze(['overview','connection','updates','maintenance','display']);
+const GMWW_SETTINGS_HINTS=Object.freeze({
+  overview:'Xem sức khỏe toàn hệ thống, kiểm tra phòng và xuất báo cáo trước khi xử lý sự cố.',
+  connection:'Kiểm tra đường truyền Server, đồng bộ danh sách thành viên hoặc mở Player Web.',
+  updates:'Kiểm tra phiên bản trước khi cập nhật Runtime, đồng bộ Web hoặc tải IPA.',
+  maintenance:'Quét sâu khi có lỗi. Chỉ sửa kết nối và dọn cache sau khi đã kiểm tra.',
+  display:'Tùy chỉnh kích thước nhân vật. Không làm thay đổi phòng hoặc dữ liệu game.'
+});
+function gmwwSettingsHubSelect(group,{persist=true,focus=false}={}){
+  const selected=GMWW_SETTINGS_GROUPS.includes(group)?group:'overview';
+  for(const key of GMWW_SETTINGS_GROUPS){
+    const btn=document.getElementById('settingsHubTab-'+key),panel=document.getElementById('settingsHubPanel-'+key),
+      active=key===selected;
+    if(btn){
+      btn.classList.toggle('is-active',active);
+      btn.setAttribute('aria-selected',String(active));
+      btn.tabIndex=active?0:-1;
+      if(active&&focus)btn.focus();
+    }
+    if(panel){panel.hidden=!active;panel.classList.toggle('is-active',active)}
+  }
+  const hint=document.getElementById('settingsHubGuide');
+  if(hint)hint.textContent=GMWW_SETTINGS_HINTS[selected];
+  if(persist){try{localStorage.setItem(GMWW_SETTINGS_GROUP_KEY,selected)}catch(_){}}
+  if(selected==='connection')setTimeout(checkServerHealth,10);
+  else if(selected==='updates')setTimeout(()=>checkAppUpdate({notify:false}),10);
+  return selected;
+}
+function gmwwSettingsHubHealth(kind,message){
+  const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
+  if(box)box.dataset.status=kind||'idle';
+  if(label)label.textContent=message||'Chưa kiểm tra';
+}
+function gmwwSettingsHubInit(){
+  const nav=document.getElementById('settingsHubNav');
+  if(!nav)return;
+  nav.addEventListener('click',event=>{
+    const btn=event.target.closest?.('[data-settings-group]');
+    if(btn&&nav.contains(btn))gmwwSettingsHubSelect(btn.dataset.settingsGroup);
+  });
+  nav.addEventListener('keydown',event=>{
+    if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;
+    const current=document.activeElement?.closest?.('[data-settings-group]');
+    if(!current||!nav.contains(current))return;
+    event.preventDefault();
+    const i=GMWW_SETTINGS_GROUPS.indexOf(current.dataset.settingsGroup);
+    const next=event.key==='Home'?0:event.key==='End'?GMWW_SETTINGS_GROUPS.length-1
+      :event.key==='ArrowRight'?(i+1)%GMWW_SETTINGS_GROUPS.length
+      :(i+GMWW_SETTINGS_GROUPS.length-1)%GMWW_SETTINGS_GROUPS.length;
+    gmwwSettingsHubSelect(GMWW_SETTINGS_GROUPS[next],{focus:true});
+  });
+  let saved='overview';
+  try{saved=localStorage.getItem(GMWW_SETTINGS_GROUP_KEY)||'overview'}catch(_){}
+  gmwwSettingsHubSelect(saved,{persist:false});
+}
+gmwwSettingsHubInit();
+
 /* GMWW Operations Center — Cài Đặt. Read-only health, room & release checks; no credential exposure. */
 const GMWW_OPS_AUTO_KEY='GMWW_OPS_AUTO_CHECK_V1';
 let gmwwOpsBusy=false,gmwwOpsSnapshot=null;
@@ -1239,6 +1298,8 @@ function gmwwOpsDraw(snapshot){
     :warned.length?'Có '+warned.length+' cảnh báo. Kiểm tra trạng thái phòng và phiên bản trước khi chơi.'
     :'Kiểm tra đạt. Không cần xoá cache, reset phòng hoặc cài lại IPA.';
   if(time)time.textContent='Lần kiểm tra: '+new Date(snapshot.checkedAt).toLocaleString('vi-VN')+' • Chỉ đọc, không thay đổi dữ liệu game.';
+  if(typeof gmwwSettingsHubHealth==='function')gmwwSettingsHubHealth(overall,
+    failed.length?failed.length+' lỗi cần kiểm tra':warned.length?warned.length+' cảnh báo':'Server & game hoạt động tốt');
 }
 async function gmwwOpsRun({kind='all',silent=false}={}){
   if(gmwwOpsBusy)return gmwwOpsSnapshot;
