@@ -3555,3 +3555,11 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v342 .nav.start i{width:57px
  #home .gmww-home-sea-v342 .gmww-home-hero{aspect-ratio:1.5!important}
 }
 @media(prefers-reduced-motion:reduce){#home .gmww-home-sea-v342 *{transition:none!important}}
+
+/* V3.43: one update per bullet; compact scrollable section on mobile. */
+#settings #updateReleaseNotes.update-release-notes{display:block;min-width:0;margin:2px 0 4px;padding:10px 2px 6px;border-top:1px solid rgba(162,221,218,.25);font-size:11.5px;line-height:1.45;color:#dff6ed}
+#settings #updateReleaseNotes .update-release-title{display:block;font-size:12px;line-height:1.35;font-weight:900;color:#f2fbfb;margin:0 0 5px}
+#settings #updateReleaseNotes .update-release-list{list-style:disc outside;margin:0;padding:0 3px 0 19px;max-height:166px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+#settings #updateReleaseNotes .update-release-list li{padding:1px 0 2px;margin:0 0 4px;overflow-wrap:anywhere;word-break:normal}
+#settings #updateReleaseNotes .update-release-list li::marker{color:#5ee4c5}
+#settings #updateReleaseNotes .update-release-list li:last-child{margin-bottom:0}
