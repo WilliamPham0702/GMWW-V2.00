@@ -1,7 +1,7 @@
-/* Signed recovery for legacy Runtime V3.38/V3.39/V3.40 installed on IPA shell 3.17.
+/* Signed recovery for legacy Runtime V3.38–V3.45 installed on IPA shell 3.17.
  * Used only when a full immutable manifest cannot be read at an edge. */
 export async function recoverLegacyRuntimeManifest({assets,requestUrl,version,shellVersion,installedVersion}={}){
-  if(!assets?.fetch||version!=='3.45'||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44'].includes(String(installedVersion).replace(/^V/i,'')))return null;
+  if(!assets?.fetch||version!=='3.46'||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44','3.45'].includes(String(installedVersion).replace(/^V/i,'')))return null;
   const files=[];
   try{
     for(const path of ['GMWW.html','app.js','style.css']){
