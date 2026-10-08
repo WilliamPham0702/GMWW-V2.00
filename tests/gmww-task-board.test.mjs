@@ -15,7 +15,7 @@ test("Workboard sorts unfinished work and separates accurate history",()=>{
   assert.equal(d.open[0].state,"doing");
   assert.equal(d.open[1].priority,"P0");
   assert.deepEqual(d.history.map(x=>x.number),[54,53]);
-  assert.equal(d.history[0].state,"closed");
+  assert.equal(d.history[0].state,"skipped");
   assert.equal(d.history[1].state,"completed");
   assert.equal(d.totals.open,3);
 });
@@ -85,4 +85,33 @@ test("Workboard never truncates completed history",()=>{
 test("Workboard rejects unsafe pagination links",async()=>{
   const fake=async()=>new Response("[]",{headers:{link:'<https://evil.example/issues?page=2>; rel="next"'}});
   await assert.rejects(fetchGmwwTasks(fake),/TASK_SOURCE_PAGE_INVALID/);
+});
+
+test("GitHub review reasons distinguish approval and intentional skip",()=>{
+  const data=normalizeGmwwTasks([
+    {number:101,title:"Đã nghiệm thu",state:"closed",state_reason:"completed"},
+    {number:102,title:"Không triển khai",state:"closed",state_reason:"not_planned"},
+    {number:103,title:"Đã đóng, chưa rõ lý do",state:"closed"}
+  ]);
+  assert.equal(data.history.find(x=>x.number===101).state,"completed");
+  assert.equal(data.history.find(x=>x.number===102).state,"skipped");
+  assert.equal(data.history.find(x=>x.number===103).state,"closed");
+  assert.equal(data.open.length,0);
+});
+
+test("Task review is owner-confirmed on GitHub, without a public write endpoint",async()=>{
+  const {readFileSync}=await import("node:fs");
+  const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
+  const html=readFileSync(new URL("../server-game/current/GMWW.html",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../server-game/current/style.css",import.meta.url),"utf8");
+  const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
+  assert.match(app,/function gmwwTaskReviewLink\(task,mode\)/);
+  assert.match(app,/XÁC NHẬN HOÀN THÀNH/);
+  assert.match(app,/BỎ QUA/);
+  assert.match(app,/Not planned \(Không thực hiện\)/);
+  assert.match(app,/gmwwTaskReviewReturn/);
+  assert.match(app,/data\.history\.filter\(x=>x\.state==='completed'\|\|x\.state==='closed'\|\|x\.state==='skipped'\)/);
+  assert.match(html,/gmww-task-review-help/);
+  assert.match(css,/\.gmww-task-review-link\.skipped/);
+  assert.doesNotMatch(worker,/url\.pathname==="\/api\/operations\/tasks"&&request\.method==="POST"/);
 });
