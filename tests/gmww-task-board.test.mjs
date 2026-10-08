@@ -38,3 +38,18 @@ test("Source errors are explicit instead of fabricated progress",async()=>{
   await assert.rejects(fetchGmwwTasks(async()=>new Response("Unavailable",{status:503})),/TASK_SOURCE_HTTP_503/);
   assert.throws(()=>normalizeGmwwTasks({}),/TASK_SOURCE_INVALID/);
 });
+
+test("Worker exposes tracked requests on a read-only public GET endpoint",async()=>{
+  const {readFileSync}=await import("node:fs");
+  const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
+  const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
+  assert.match(worker,/url\.pathname==="\/api\/operations\/tasks"&&request\.method==="GET"/);
+  assert.match(worker,/await fetchGmwwTasks\(\)/);
+  assert.match(app,/gmwwTasksRefresh/);
+  assert.match(app,/gmwwTasksOpenList/);
+  assert.match(app,/gmwwTasksDoneList/);
+});
+test("An explicit in-progress title reflects tracked ongoing work without requiring labels",()=>{
+  const x=normalizeGmwwTasks([{number:61,title:"P1 — Đang thực hiện: nhân vật ngồi xếp bằng",state:"open",labels:[]}]);
+  assert.equal(x.open[0].state,"doing");
+});
