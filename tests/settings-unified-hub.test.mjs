@@ -28,7 +28,8 @@ test('Every useful settings control lives in one of five boxes on a single scrol
       assert.equal(settings.split('id="'+id+'"').length-1,1,'duplicate DOM id '+id);
     }
   }
-  assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupHealth'),'Update must be first');
+  assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupMaintenance'),'Update must be first');
+  assert.ok(settings.indexOf('settingsGroupMaintenance')<settings.indexOf('settingsGroupHealth'));
   assert.ok(settings.indexOf('settingsGroupHealth')<settings.indexOf('settingsGroupTasks'));
   assert.ok(settings.indexOf('gmwwTasksOpenList')<settings.indexOf('gmwwTasksHistory'));
   assert.doesNotMatch(settings,/role="tablist"|role="tabpanel"|settingsHubTab-|settingsHubNav|data-settings-group=/);
@@ -42,7 +43,7 @@ test('Settings removes redundant explanatory notes while keeping live status and
     'Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản.'
   ])assert.ok(!settings.includes(note),'Redundant note remains: '+note);
   assert.ok(settings.includes('id="settingsHubMiniHealth"'));
-  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupMaintenance','settingsGroupAppearance'];
+  const order=['settingsGroupUpdate','settingsGroupMaintenance','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
   const positions=order.map(id=>settings.indexOf('id="'+id+'"'));
   assert.ok(positions.every(p=>p>=0));
   assert.deepEqual([...positions].sort((a,b)=>a-b),positions);

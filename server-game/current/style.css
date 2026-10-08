@@ -3117,3 +3117,73 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
   #members .member-filter-row{display:flex!important;overflow-x:auto!important;scrollbar-width:none!important}
   #members .member-filter-row button{flex:0 0 auto!important;padding:4px 9px!important}
 }
+
+
+/* V3.35 — Màn quản trị nhỏ gọn + công cụ vận hành đồng hàng. */
+#members #memberGroupRanking{display:block!important;padding:9px 11px!important}
+#members #memberGroupRanking>summary{display:flex!important;list-style:none;cursor:pointer;min-height:30px;user-select:none}
+#members #memberGroupRanking>summary::-webkit-details-marker{display:none}
+#members #memberGroupRanking .member-ranking-chevron{margin-left:auto;color:#d9f4fb;font-size:20px;transition:transform .2s}
+#members #memberGroupRanking[open] .member-ranking-chevron{transform:rotate(180deg)}
+#members #memberPane-ranking{display:block!important;margin-top:9px}
+#members #memberGroupRanking:not([open]) #memberPane-ranking{display:none!important}
+#members #memberGroupRanking .member-section-head{justify-content:flex-end!important;margin-bottom:7px!important}
+#members #memberRankingList{display:grid!important}
+#members #memberDirectoryList .member-card{
+  grid-template-columns:39px minmax(0,1fr) 35px!important;
+  min-height:52px!important;padding:4px 6px!important;column-gap:6px!important;row-gap:0!important
+}
+#members #memberDirectoryList .member-avatar{width:39px!important;height:44px!important;border-radius:7px!important}
+#members #memberDirectoryList .member-name-row{
+  display:flex!important;align-items:flex-start!important;justify-content:flex-start!important;gap:6px!important
+}
+#members #memberDirectoryList .member-name-row b{font-size:11.5px!important}
+#members #memberDirectoryList .member-name-row small{font-size:9px!important}
+#members #memberDirectoryList .member-status{
+  flex:0 0 9px!important;display:inline-block!important;width:9px!important;height:9px!important;min-width:9px!important;
+  margin-top:2px!important;padding:0!important;border-radius:50%!important;
+  border:1px solid #ffd1d6!important;background:#ff4860!important;
+  box-shadow:0 0 0 2px rgba(255,72,96,.14)!important
+}
+#members #memberDirectoryList .member-status.online{
+  border-color:#b0ffcc!important;background:#24dd7e!important;
+  box-shadow:0 0 0 2px rgba(36,221,126,.16)!important
+}
+#members #memberDirectoryList .member-meta{gap:2px!important;margin-top:3px!important}
+#members #memberDirectoryList .member-meta span{font-size:7.5px!important;padding:1px 2px!important}
+#members #memberDirectoryList .member-flags{margin-top:2px!important;gap:2px!important}
+#members #memberDirectoryList .member-flag{font-size:7.5px!important;padding:1px 3px!important}
+#members #memberDirectoryList .member-card-actions{
+  display:grid!important;grid-template-columns:1fr!important;gap:3px!important;grid-row:1!important;grid-column:3!important
+}
+#members #memberDirectoryList .member-card-actions button{
+  width:100%!important;min-width:0!important;min-height:21px!important;height:21px!important;
+  padding:0!important;font-size:12px!important;line-height:1!important;border-radius:6px!important
+}
+@media(max-width:380px){
+  #members #memberDirectoryList .member-card{grid-template-columns:35px minmax(0,1fr) 31px!important;column-gap:5px!important}
+  #members #memberDirectoryList .member-avatar{width:35px!important;height:42px!important}
+}
+#settings #gmwwOpsCenter .ops-tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;align-items:stretch}
+#settings #gmwwOpsCenter .ops-tools .settings-action{min-height:54px!important;padding:5px 2px!important;gap:2px!important;flex-direction:column}
+#settings #gmwwOpsCenter .ops-tools .settings-action b{font-size:9px!important;line-height:1.17!important}
+#settings #gmwwOpsCenter .ops-tools .settings-action span{font-size:15px}
+#settings #gmwwOpsCenter .ops-tools .ops-auto{
+  display:flex!important;flex-direction:column!important;align-items:center;justify-content:center;min-height:54px!important;
+  padding:4px 2px!important;gap:3px!important;margin:0!important;border:1px solid rgba(163,229,243,.38);
+  border-radius:12px;background:var(--gmww-glass-inner);font-size:9px!important;line-height:1.15!important;text-align:center
+}
+#settings #gmwwOpsCenter .ops-tools .ops-auto input{width:18px!important;height:18px!important;margin:0;flex-shrink:0}
+#settings #gmwwOpsCenter .ops-tools .ops-auto span{display:block;min-width:0}
+#settings #gmwwOpsCenter .ops-tools .ops-auto b{font-weight:900;white-space:nowrap}
+#settings .update-progress{display:grid;gap:5px;margin-top:4px;color:#d9f5fe}
+#settings .update-progress-head{display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:10px}
+#settings .update-progress-head b{font-size:12px;color:#ecfaff;font-variant-numeric:tabular-nums}
+#settings .update-progress-track{height:10px;border-radius:999px;background:rgba(2,20,33,.7);border:1px solid rgba(177,231,244,.38);overflow:hidden}
+#settings .update-progress-track>span{display:block;height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#1499bd,#4beac5);transition:width .2s ease}
+#settings .update-progress[data-state="running"]:not([aria-valuenow]) .update-progress-track>span{width:36%!important;animation:gmwwUpdateScan 1.25s ease-in-out infinite alternate;opacity:.8}
+#settings .update-progress[data-state="done"] .update-progress-track>span{background:linear-gradient(90deg,#21cfa9,#a1ffdd)}
+#settings .update-progress[data-state="error"] .update-progress-track>span{background:#f47a8a}
+#settings .update-progress-range{display:flex;justify-content:space-between;color:#b5d9e5;font-size:9px}
+@keyframes gmwwUpdateScan{from{transform:translateX(-105%)}to{transform:translateX(280%)}}
+@media(prefers-reduced-motion:reduce){#settings .update-progress-track>span{animation:none!important}}

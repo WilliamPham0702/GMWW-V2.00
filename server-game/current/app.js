@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.34';
+const VERSION='3.35';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -826,6 +826,21 @@ window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
 
 /* UPDATE MANAGER V1 — prepared off-main */
 let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
+
+/* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
+function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
+  const root=document.getElementById('updateProgress'),fill=document.getElementById('updateProgressFill'),
+        value=document.getElementById('updateProgressPercent'),title=document.getElementById('updateProgressTitle');
+  if(!root)return;
+  const valid=typeof percent==='number'&&Number.isFinite(percent);
+  const n=valid?Math.max(0,Math.min(100,Math.round(percent))):null;
+  root.dataset.state=status;
+  if(valid){root.setAttribute('aria-valuenow',String(n));root.removeAttribute('aria-valuetext')}
+  else{root.removeAttribute('aria-valuenow');root.setAttribute('aria-valuetext','Đang tải, chưa có dữ liệu phần trăm thực tế')}
+  if(fill)fill.style.width=valid?n+'%':'0%';
+  if(value)value.textContent=valid?n+'%':'—';
+  if(title)title.textContent=label||({idle:'Chưa bắt đầu',running:'Đang thực hiện…',done:'Đã hoàn tất',error:'Có lỗi khi thực hiện'}[status]||'');
+}
 const gmwwRuntimeVersion=()=>String(VERSION||'').replace(/^V/i,'');
 const gmwwShellVersion=()=>String(window.GMWW_NATIVE_SHELL_VERSION||VERSION||'').replace(/^V/i,'');
 function gmwwVersionParts(v){return String(v||'').replace(/^V/i,'').split('.').map(x=>Math.max(0,Number.parseInt(x,10)||0))}
@@ -860,9 +875,9 @@ async function installRuntimeUpdate(){
   if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
   const files=gmwwUpdateManifest?.runtime?.files;
   if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
-  gmwwUpdateBusy=true;setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
+  gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
   if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
-    gmwwUpdateBusy=false;setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
+    gmwwUpdateBusy=false;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
   }
   return true
 }
@@ -872,6 +887,7 @@ function downloadUpdateIPA(){
     setUpdateUi('warn','CHƯA CÓ IPA','Server chưa công bố file IPA mới để tải.','Không tải lại IPA cũ trong máy.');
     return false;
   }
+  gmwwSetUpdateProgress('running',null,'Đang tải IPA • chờ dữ liệu thực tế');
   setUpdateUi('checking','ĐANG TẢI IPA','Đang tải GMWW V'+version+'…','File sẽ mở bảng chia sẻ trên iPhone.');
   if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
   return true;
@@ -883,13 +899,16 @@ async function updateDataNow(){
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
     if(newer&&type==='runtime'){await installRuntimeUpdate();return}
     if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
+    gmwwSetUpdateProgress('running',0,'Đang cập nhật dữ liệu thành viên và máy chủ');
     memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth();
+    gmwwSetUpdateProgress('done',100,'Dữ liệu đã cập nhật');
     setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
-  }catch(e){console.warn('GMWW_UPDATE_DATA',e);setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
+  }catch(e){console.warn('GMWW_UPDATE_DATA',e);gmwwSetUpdateProgress('error',null,'Không thể cập nhật dữ liệu');setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
   finally{if(btn&&!gmwwUpdateBusy)btn.disabled=false}
 }
 async function syncPlayerWebUpdate(){
   const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
+  gmwwSetUpdateProgress('running',0,'Đang gửi yêu cầu đồng bộ Web');
   setUpdateUi('checking','ĐANG ĐỒNG BỘ','Đang gửi tín hiệu đồng bộ tới Player Web…','');
   try{
     const stamp=Date.now();
@@ -903,8 +922,9 @@ async function syncPlayerWebUpdate(){
     if(!res.ok||d.ok!==true)throw new Error(d.message||d.error||('HTTP '+res.status));
     const webVersion=String(d.webVersion||d.version||'').replace(/^V/i,'');
     const serverEl=document.getElementById('updateServerVersion');if(serverEl&&webVersion)serverEl.textContent='V'+webVersion;
+    gmwwSetUpdateProgress('done',100,'Máy chủ đã xác nhận đồng bộ Web');
     setUpdateAction('none');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
-  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
+  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);gmwwSetUpdateProgress('error',null,'Đồng bộ Web không thành công');setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
   finally{if(btn)btn.disabled=false}
 }
 async function checkAppUpdate({notify=false}={}){
@@ -961,19 +981,28 @@ async function checkAppUpdate({notify=false}={}){
   }finally{}
 }
 window.GMWWUpdateNative={
+  onProgress(event={}){
+    // Đọc tiến độ thật chỉ khi trình tải bản địa cung cấp dữ liệu hợp lệ.
+    if(!['installRuntime','downloadIPA'].includes(String(event.action||'')))return;
+    const percent=Number(event.percent);
+    if(!Number.isFinite(percent)||event.percent===null||event.percent===undefined)return;
+    gmwwSetUpdateProgress('running',percent,event.action==='installRuntime'?'Đang cài Runtime':'Đang tải IPA');
+  },
   onResult(result={}){
     gmwwUpdateBusy=false;
     if(result.ok&&result.action==='installRuntime'){
+      gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
       setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Khởi động lại game để dùng phiên bản mới.');
       setTimeout(()=>{if(!gmwwNativePost('restartRuntime'))window.location.reload()},300);
       return
     }
     if(result.ok&&result.action==='downloadIPA'){
+      gmwwSetUpdateProgress('done',100,'Đã tải xong IPA');
       setUpdateUi('ok','ĐÃ TẢI IPA','File IPA đã sẵn sàng.','Chọn Lưu vào Tệp hoặc ứng dụng cài đặt trong bảng chia sẻ.');
       return
     }
-    if(result.ok===false)setUpdateUi('bad','CẬP NHẬT LỖI','Không thể hoàn tất cập nhật.',String(result.error||'Đã giữ nguyên phiên bản hiện tại.'));
+    if(result.ok===false){gmwwSetUpdateProgress('error',null,'Tác vụ không thành công');setUpdateUi('bad','CẬP NHẬT LỖI','Không thể hoàn tất cập nhật.',String(result.error||'Đã giữ nguyên phiên bản hiện tại.'));}
   }
 };
 
@@ -1573,12 +1602,12 @@ function renderMemberDirectory(){
       '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
       '<div class="member-flags"></div></div>'+
       '<div class="member-card-actions">'+
-      '<button data-act="reset" type="button" aria-label="Đặt lại mật khẩu thành viên">Đặt lại MK</button><button data-act="delete" class="danger-mini" type="button" aria-label="Xóa thành viên">Xóa</button></div>';
+      '<button data-act="reset" type="button" aria-label="Đặt lại mật khẩu thành viên" title="Đặt lại mật khẩu">↻</button><button data-act="delete" class="danger-mini" type="button" aria-label="Xóa thành viên" title="Xóa tài khoản">✕</button></div>';
     const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
     card.querySelector('.member-card-main small').textContent='@'+m.loginId;
-    const status=card.querySelector('.member-status');status.textContent=m.online?'TRỰC TUYẾN':'NGOẠI TUYẾN';status.classList.toggle('online',!!m.online);
-    card.querySelector('.member-card-actions').prepend(status);
+    const status=card.querySelector('.member-status');status.textContent='';status.classList.toggle('online',!!m.online);
+    status.setAttribute('aria-label',m.online?'Trực tuyến':'Ngoại tuyến');status.title=m.online?'Trực tuyến':'Ngoại tuyến';
     card.querySelector('.member-room').textContent=m.currentRoomCode?('Phòng '+m.currentRoomCode+(m.ready?' • Sẵn sàng':'')):'Chưa vào phòng';
     const flags=card.querySelector('.member-flags');
     if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU ĐẶT LẠI</span>';

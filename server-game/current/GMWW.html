@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.34</title>
-<link rel="stylesheet" href="style.css?v=3.34-member-compact-1">
+<title>GMWW V3.35</title>
+<link rel="stylesheet" href="style.css?v=3.35-compact-settings-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -47,13 +47,13 @@
           </section>
         </div>
 
-        <div class="member-unified-box" id="memberGroupRanking">
-          <div class="member-unified-heading"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3></div></div>
+        <details class="member-unified-box member-ranking-collapse" id="memberGroupRanking">
+          <summary class="member-unified-heading" aria-label="Mở hoặc thu gọn bảng xếp hạng"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3></div><span class="member-ranking-chevron" aria-hidden="true">⌄</span></summary>
           <section class="member-pane active" id="memberPane-ranking" aria-label="Bảng xếp hạng">
             <div class="member-section-head"><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Đặt lại toàn bộ xếp hạng" title="Đặt lại xếp hạng">↻ ĐẶT LẠI</button></div>
             <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
           </section>
-        </div>
+        </details>
       </div>
     </section>
     <section class="page play-page" id="start">
@@ -347,6 +347,11 @@
           <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
           <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
           <small class="update-detail" id="updateDetail">—</small>
+          <div class="update-progress" id="updateProgress" role="progressbar" aria-label="Tiến trình cập nhật và đồng bộ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-state="idle">
+            <div class="update-progress-head"><span id="updateProgressTitle">Chưa bắt đầu</span><b id="updateProgressPercent">0%</b></div>
+            <div class="update-progress-track"><span id="updateProgressFill"></span></div>
+            <div class="update-progress-range"><small>0%</small><small>100%</small></div>
+          </div>
           </div>
           <div class="health-v236-actions update-actions update-actions-three">
             <button class="settings-action settings-action-server" id="installRuntimeUpdate" type="button"><span>⬇</span><b>CẬP NHẬT RUNTIME</b></button>
@@ -355,8 +360,22 @@
           </div>
         </div>
         </div>
+        <div class="settings-unified-box" id="settingsGroupMaintenance">
+          <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Bảo trì & khắc phục</h3></div></div>
+          <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
+          <div class="health-v236-actions maintenance-actions">
+            <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
+            <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
+            <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
+          </div>
+          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
+          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
+          <small class="maintenance-detail" id="maintenanceDetail">—</small>
+          </div>
+        </div>
+        </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
-          <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & kết nối</h3></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Kiểm tra & kết nối</h3></div></div>
           <div class="settings-operations-tools">
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
               <b class="settings-operation-tool-heading">Vận hành</b>
@@ -364,8 +383,8 @@
                 <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
                 <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
                 <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra <b>2 phút</b></span></label>
               </div>
-              <label class="ops-auto"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra mỗi 2 phút</span></label>
             </div>
             <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
               <b class="settings-operation-tool-heading">Server</b>
@@ -421,7 +440,7 @@
           </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupTasks">
-          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Công việc & Tiến độ</h3></div></div>
           <div class="settings-operation-console settings-task-console" aria-label="Trạng thái công việc">
           <div class="gmww-task-summary" id="gmwwTasksSummary" role="status" aria-live="polite">Đang tải công việc từ GitHub…</div>
           <p class="gmww-task-review-health" id="gmwwTaskReviewHealth" role="status" aria-live="polite" data-ready="false">Bộ xác nhận V3.32 đang kiểm tra giao diện và dữ liệu công việc…</p>
@@ -433,20 +452,6 @@
           </div>
           <div class="gmww-task-actions"><button class="settings-action settings-action-server" id="gmwwTasksReload" type="button"><span>↻</span><b>LÀM MỚI TIẾN ĐỘ</b></button></div>
           <small class="gmww-task-source" id="gmwwTasksSource">Quyền xác nhận thuộc tài khoản GitHub quản trị dự án. Ứng dụng không lưu mật khẩu hoặc mã truy cập GitHub. Việc hoàn thành và bỏ qua được lưu trong Lịch sử đúng lý do đóng Issue.</small>
-        </div>
-        <div class="settings-unified-box" id="settingsGroupMaintenance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Bảo trì & khắc phục</h3></div></div>
-          <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
-          <div class="health-v236-actions maintenance-actions">
-            <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
-            <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
-            <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
-          </div>
-          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
-          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
-          <small class="maintenance-detail" id="maintenanceDetail">—</small>
-          </div>
-        </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupAppearance">
           <div class="settings-unified-heading"><span class="settings-unified-index">05</span><div><h3>Giao diện & nhân vật</h3></div></div>
@@ -609,7 +614,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.34-member-compact-1"></script>
+<script src="app.js?v=3.35-compact-settings-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

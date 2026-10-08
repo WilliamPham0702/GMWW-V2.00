@@ -15,8 +15,8 @@ test("Thống kê một hàng, bộ lọc một hàng, member gọn và nút đ�
   assert.match(css,/#members \.member-filter-row\{[\s\S]*?grid-template-columns:\.72fr 1\.06fr/);
   assert.match(css,/#members #memberDirectoryList \.member-card\{[\s\S]*?grid-template-columns:47px minmax\(0,1fr\) 88px!important/);
   assert.match(css,/#members #memberDirectoryList \.member-card-actions\{[\s\S]*?grid-column:3!important/);
-  assert.match(app,/card\.querySelector\('\.member-card-actions'\)\.prepend\(status\)/);
-  assert.match(app,/Đặt lại MK/);
+  assert.match(app,/status\\.setAttribute\\('aria-label'/);
+  assert.match(app,/aria-label=\\"Đặt lại mật khẩu thành viên\\"/);
 });
 test("Bố cục tinh gọn có hỗ trợ điện thoại hẹp và không can thiệp ảnh làng",()=>{
   assert.match(css,/@media\(max-width:380px\)/);
