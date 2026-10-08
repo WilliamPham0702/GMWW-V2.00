@@ -180,7 +180,7 @@ jobs:
           TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
           test -n "$TASK_APP_URL" && test -n "$TASK_HTML_URL"
           curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
-          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
           echo "Verify Production: OTA app and HTML fetched."
           node - "$EXPECTED" <<'NODE'
           const fs=require('node:fs'),crypto=require('node:crypto');
