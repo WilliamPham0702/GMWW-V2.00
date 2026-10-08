@@ -84,7 +84,7 @@ const set=(n,k,v)=>n?.setAttribute(k,v);
 export function renderRigPose(nodes,pose){
   if(!nodes?.body)return;
   const b=nodes;
-  set(b.body,'transform',`translate(${n(200+pose.root.x)} ${n(pose.root.y)})`);
+  set(b.body,'transform',`translate(${n(pose.root.x)} ${n(pose.root.y)})`);
   set(b.body,'opacity',n(pose.alpha));
   set(b.shadow,'rx',n(42*pose.shadow));
 
