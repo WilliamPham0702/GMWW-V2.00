@@ -8,12 +8,12 @@ const VIETNAMESE_ISSUE_SUMMARIES={
 };
 const summary=(body,number,title)=>{
   if(VIETNAMESE_ISSUE_SUMMARIES[number])return VIETNAMESE_ISSUE_SUMMARIES[number];
-  const lines=String(body||"").split(/\\r?\\n/).map(s=>s.trim()).filter(s=>s&&!s.startsWith("#")&&!s.startsWith("- [")&&!s.startsWith(String.fromCharCode(96))&&s.length>19)
-    .map(s=>s.replace(/^[-*]\\s+/,"").replace(/[_*]/g,"").slice(0,180));
+  const lines=String(body||"").split(/\r?\n/).map(s=>s.trim()).filter(s=>s&&!s.startsWith("#")&&!s.startsWith("- [")&&!s.startsWith(String.fromCharCode(96))&&s.length>19)
+    .map(s=>s.replace(/^[-*]\s+/,"").replace(/[_*]/g,"").slice(0,180));
   const first=lines[0]||"";
-  const englishClues=(first.match(/\\b(?:the|and|with|current|remaining|required|requirements|work|performance|issue|should|must|existing|deployments?|authentication)\\b/gi)||[]).length;
+  const englishClues=(first.match(/\b(?:the|and|with|current|remaining|required|requirements|work|performance|issue|should|must|existing|deployments?|authentication)\b/gi)||[]).length;
   if(englishClues>=2){
-    const viTitle=String(title||"").replace(/^P[012]\\s*[—:-]?\\s*/i,"").trim();
+    const viTitle=String(title||"").replace(/^P[012]\s*[—:-]?\s*/i,"").trim();
     return /[à-ỹđ]/i.test(viTitle)?"Nội dung cần kiểm tra và thực hiện: "+viTitle.slice(0,145)+".":"Công việc cần được đối chiếu với yêu cầu gốc trước khi nghiệm thu.";
   }
   return first||"Yêu cầu được ghi nhận và đang được theo dõi.";
