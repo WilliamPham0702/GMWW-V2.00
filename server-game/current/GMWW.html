@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.44</title>
-<link rel="stylesheet" href="style.css?v=3.44-home-fidelity-1">
+<title>GMWW V3.45</title>
+<link rel="stylesheet" href="style.css?v=3.45-compact-settings-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -400,7 +400,7 @@
           </div>
           <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
           <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
-          <small class="update-detail" id="updateDetail">—</small>
+          <small class="update-detail" id="updateDetail" hidden></small>
           <div class="update-release-notes" id="updateReleaseNotes" aria-live="polite" aria-label="Có gì mới"><b class="update-release-title">Có gì mới</b><ul class="update-release-list"><li>Đang tải thông tin cập nhật…</li></ul></div>
           <div class="update-progress" id="updateProgress" role="progressbar" aria-label="Tiến trình cập nhật và đồng bộ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-state="idle">
             <div class="update-progress-head"><span id="updateProgressTitle">Chưa bắt đầu</span><b id="updateProgressPercent">0%</b></div>
@@ -425,10 +425,7 @@
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
             <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
           </div>
-          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
-          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
-          <small class="maintenance-detail" id="maintenanceDetail">—</small>
-          </div>
+          
         </div>
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
               <b class="settings-operation-tool-heading">Vận hành</b>
@@ -455,6 +452,10 @@
                 <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
               </div>
             </div>
+          </div>
+          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
+          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
+          <small class="maintenance-detail" id="maintenanceDetail">—</small>
           </div>
           <div class="settings-operation-console settings-operations-console" id="settingsOperationResults" aria-label="Kết quả vận hành" role="region" aria-live="polite">
             <div class="settings-operation-console-heading"><span class="ops-dot" id="opsDot"></span><b id="gmwwOpsTitle">KẾT QUẢ VẬN HÀNH</b><span class="ops-pill" id="opsOverall">CHƯA KIỂM TRA</span></div>
@@ -665,7 +666,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.44-home-fidelity-1"></script>
+<script src="app.js?v=3.45-compact-settings-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

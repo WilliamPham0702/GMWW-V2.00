@@ -3625,3 +3625,18 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-hidden-settings-n
 #home .gmww-home-v344{padding-bottom:calc(25px + env(safe-area-inset-bottom))!important}
 @media(max-width:380px){#home .gmww-home-v344 .gmww-home-poster{min-height:295px}#home .gmww-home-v344 .gmww-home-stat-grid>div{grid-template-columns:18px minmax(0,1fr)}#home .gmww-home-v344 .gmww-home-stat-grid>div>span{font-size:17px!important}}
 @media(min-width:740px){#home .gmww-home-v344 .gmww-home-poster{width:100%;margin:0 0 8px;max-height:600px}#home .gmww-home-v344{padding-top:10px!important}body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344{max-width:none!important}}
+
+/* V3.45 · Compact horizontal Settings operations; three to four visible buttons. */
+#settings .settings-operations-tools{display:flex!important;flex-flow:row nowrap!important;gap:7px!important;align-items:stretch!important;overflow-x:auto!important;overflow-y:hidden!important;padding:6px 2px 12px!important;scroll-snap-type:x proximity;scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+#settings .settings-operations-tools>.settings-tool-inner,#settings .settings-operations-tools .health-v236-actions,#settings .settings-operations-tools .ops-tools{display:contents!important}
+#settings .settings-operations-tools .settings-operation-tool-heading{display:none!important}
+#settings .settings-operations-tools :is(.settings-action,.ops-auto){box-sizing:border-box!important;display:flex!important;flex:0 0 calc((100% - 21px)/3.35)!important;width:calc((100% - 21px)/3.35)!important;min-width:0!important;max-width:none!important;height:76px!important;min-height:76px!important;margin:0!important;padding:7px 4px!important;gap:4px!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;border-radius:13px!important;border:1px solid rgba(170,237,245,.49)!important;background:linear-gradient(150deg,rgba(11,95,122,.59),rgba(4,48,79,.70))!important;box-shadow:inset 0 1px rgba(255,255,255,.12)!important;scroll-snap-align:start;white-space:normal!important}
+#settings .settings-operations-tools .settings-action>span{font-size:21px!important;line-height:1!important;flex:0 0 auto!important}
+#settings .settings-operations-tools .settings-action>b,#settings .settings-operations-tools .ops-auto span{display:block;font-size:10px!important;line-height:1.15!important;font-weight:800!important;white-space:normal!important;overflow-wrap:anywhere;text-align:center!important}
+#settings .settings-operations-tools .ops-auto input{width:18px;height:18px;margin:0!important;flex:0 0 auto}
+#settings #settingsGroupHealth .settings-maintenance-console{margin:0 0 9px!important}
+#settings #updateDetail[hidden]{display:none!important}
+#settings #updateManagerCard .update-actions-three{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;width:100%!important}
+#settings #updateManagerCard .update-actions-three>.settings-action{width:100%!important;min-width:0!important}
+@media(max-width:360px){#settings .settings-operations-tools :is(.settings-action,.ops-auto){flex-basis:calc((100% - 14px)/3.07)!important;width:calc((100% - 14px)/3.07)!important;height:72px!important;min-height:72px!important}#settings .settings-operations-tools .settings-action>b,#settings .settings-operations-tools .ops-auto span{font-size:9.5px!important}}
+@media(min-width:450px){#settings .settings-operations-tools :is(.settings-action,.ops-auto){flex-basis:calc((100% - 24px)/4.12)!important;width:calc((100% - 24px)/4.12)!important}}

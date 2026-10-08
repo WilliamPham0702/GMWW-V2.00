@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.44';
+const VERSION='3.45';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -853,7 +853,7 @@ function setUpdateUi(kind,status,message,detail=''){
   if(dot)dot.className='update-dot '+kind;
   if(pill){pill.className='update-pill '+kind;pill.textContent=status}
   if(msg)msg.textContent=message||'';
-  if(det)det.textContent=detail||'';
+  if(det){const repeated=/^(?:Bản cập nhật|Có gì mới)\s*:/.test(String(detail||''));det.textContent=repeated?'':detail||'';det.hidden=repeated||!detail;}
   const put=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   put('updateShellVersion','V'+gmwwShellVersion());
   put('updateRuntimeVersion','V'+gmwwRuntimeVersion());
@@ -889,7 +889,7 @@ function downloadUpdateIPA(){
     return false;
   }
   gmwwSetUpdateProgress('running',null,'Đang tải IPA • chờ dữ liệu thực tế');
-  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải IPA V'+version+' · '+gmwwReleaseNotesText(gmwwUpdateManifest),'Có gì mới: '+gmwwReleaseNotesText(gmwwUpdateManifest));
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải IPA V'+version,'');
   if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
   return true;
 }
@@ -1009,23 +1009,23 @@ async function checkAppUpdate({notify=false}={}){
     }
     if(!newer){
       setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Game Runtime V'+runtime+' · Server V'+server+'.','Bản cập nhật: '+gmwwReleaseNotesText(manifest));
+      setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Game Runtime V'+runtime+' · Server V'+server+'.','');
       return manifest
     }
     if(type==='native'&&shellCurrent){
       setUpdateAction('none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok','ĐÃ CÀI IPA','Đã cài IPA V'+shell+' · '+gmwwReleaseNotesText(manifest),'Phiên bản IPA hiện tại.');
+      setUpdateUi('ok','ĐÃ CÀI IPA','Đã cài IPA V'+shell,'Phiên bản IPA hiện tại.');
       return manifest
     }
     if(type==='native'){
       setUpdateAction('native',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('warn','CẦN IPA MỚI','IPA V'+latest+': '+gmwwReleaseNotesText(manifest),'Nhấn TẢI IPA để cài phiên bản ứng dụng.');
+      setUpdateUi('warn','CẦN IPA MỚI','Có IPA V'+latest+' mới.','Nhấn TẢI IPA để cài phiên bản ứng dụng.');
     }else if(type==='runtime'){
       setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — '+gmwwReleaseNotesText(manifest),'Cập nhật Game Runtime để nhận thay đổi.');
+      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' mới.','Cập nhật Game Runtime để nhận thay đổi.');
     }else{
       setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web V'+latest+': '+gmwwReleaseNotesText(manifest),'Tải lại Player Web để xem thay đổi.');
+      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Tải lại Player Web để xem thay đổi.');
     }
     if(notify&&newer){
       const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
