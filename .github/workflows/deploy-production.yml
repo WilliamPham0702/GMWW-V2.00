@@ -241,3 +241,15 @@ jobs:
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
+          echo "Verify Production: checking isolated Character V4 Web studio."
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/index.html?verify=$(date +%s)" > /tmp/character-v4-web.html
+          grep -Fq '20 Character mới' /tmp/character-v4-web.html
+          grep -Fq 'Chưa phát hành Character mới vào trận' /tmp/character-v4-web.html
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/v4?verify=$(date +%s)" > /tmp/character-v4.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const v4=JSON.parse(fs.readFileSync('/tmp/character-v4.json','utf8'));
+          if(!v4.ok||v4.webOnly!==true||v4.ipaDeployed!==false||v4.count!==20||v4.approvedCount!==0||v4.characters?.length!==20)process.exit(1);
+          if(!v4.characters.every(c=>c.status==='awaiting-artwork'&&!c.approved))process.exit(2);
+          console.log('Verify Production: Character V4 Web-only 20-slot staging PASS.');
+          NODE
