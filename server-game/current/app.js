@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.25';
+const VERSION='3.26';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1021,7 +1021,7 @@ const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450)}));
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450);if(Date.now()-gmwwTasksLastLoaded>120000)setTimeout(()=>gmwwTasksRefresh({silent:true}),500)}));
 window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
@@ -1164,68 +1164,15 @@ async function checkPlayerWebNow(){
 const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
 const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
 const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
-setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true})}},120000);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true});if(Date.now()-gmwwTasksLastLoaded>120000)gmwwTasksRefresh({silent:true})}},120000);
 
 
-/* GMWW Settings Hub — the single navigation surface for ALL existing settings tools. */
-const GMWW_SETTINGS_GROUP_KEY='GMWW_SETTINGS_GROUP_V1';
-const GMWW_SETTINGS_GROUPS=Object.freeze(['overview','connection','updates','maintenance','display']);
-const GMWW_SETTINGS_HINTS=Object.freeze({
-  overview:'Xem sức khỏe toàn hệ thống, kiểm tra phòng và xuất báo cáo trước khi xử lý sự cố.',
-  connection:'Kiểm tra đường truyền Server, đồng bộ danh sách thành viên hoặc mở Player Web.',
-  updates:'Kiểm tra phiên bản trước khi cập nhật Runtime, đồng bộ Web hoặc tải IPA.',
-  maintenance:'Quét sâu khi có lỗi. Chỉ sửa kết nối và dọn cache sau khi đã kiểm tra.',
-  display:'Tùy chỉnh kích thước nhân vật. Không làm thay đổi phòng hoặc dữ liệu game.'
-});
-function gmwwSettingsHubSelect(group,{persist=true,focus=false}={}){
-  const selected=GMWW_SETTINGS_GROUPS.includes(group)?group:'overview';
-  for(const key of GMWW_SETTINGS_GROUPS){
-    const btn=document.getElementById('settingsHubTab-'+key),panel=document.getElementById('settingsHubPanel-'+key),
-      active=key===selected;
-    if(btn){
-      btn.classList.toggle('is-active',active);
-      btn.setAttribute('aria-selected',String(active));
-      btn.tabIndex=active?0:-1;
-      if(active&&focus)btn.focus();
-    }
-    if(panel){panel.hidden=!active;panel.classList.toggle('is-active',active)}
-  }
-  const hint=document.getElementById('settingsHubGuide');
-  if(hint)hint.textContent=GMWW_SETTINGS_HINTS[selected];
-  if(persist){try{localStorage.setItem(GMWW_SETTINGS_GROUP_KEY,selected)}catch(_){}}
-  if(selected==='connection')setTimeout(checkServerHealth,10);
-  else if(selected==='updates')setTimeout(()=>checkAppUpdate({notify:false}),10);
-  else if(selected==='maintenance')setTimeout(()=>runSystemDiagnostics({silent:true}),80);
-  return selected;
-}
+/* GMWW Settings: one continuous scrolling screen with consistent health status. */
 function gmwwSettingsHubHealth(kind,message){
   const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
   if(box)box.dataset.status=kind||'idle';
   if(label)label.textContent=message||'Chưa kiểm tra';
 }
-function gmwwSettingsHubInit(){
-  const nav=document.getElementById('settingsHubNav');
-  if(!nav)return;
-  nav.addEventListener('click',event=>{
-    const btn=event.target.closest?.('[data-settings-group]');
-    if(btn&&nav.contains(btn))gmwwSettingsHubSelect(btn.dataset.settingsGroup);
-  });
-  nav.addEventListener('keydown',event=>{
-    if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;
-    const current=document.activeElement?.closest?.('[data-settings-group]');
-    if(!current||!nav.contains(current))return;
-    event.preventDefault();
-    const i=GMWW_SETTINGS_GROUPS.indexOf(current.dataset.settingsGroup);
-    const next=event.key==='Home'?0:event.key==='End'?GMWW_SETTINGS_GROUPS.length-1
-      :event.key==='ArrowRight'?(i+1)%GMWW_SETTINGS_GROUPS.length
-      :(i+GMWW_SETTINGS_GROUPS.length-1)%GMWW_SETTINGS_GROUPS.length;
-    gmwwSettingsHubSelect(GMWW_SETTINGS_GROUPS[next],{focus:true});
-  });
-  let saved='overview';
-  try{saved=localStorage.getItem(GMWW_SETTINGS_GROUP_KEY)||'overview'}catch(_){}
-  gmwwSettingsHubSelect(saved,{persist:false});
-}
-gmwwSettingsHubInit();
 
 /* GMWW Operations Center — Cài Đặt. Read-only health, room & release checks; no credential exposure. */
 const GMWW_OPS_AUTO_KEY='GMWW_OPS_AUTO_CHECK_V1';
@@ -1397,24 +1344,6 @@ function gmwwOpsSafeReport(snapshot){
     clientVersion:String(VERSION||''),checks,
     privacy:'No names, login IDs, player positions, room codes, IPs, tokens, or card roles included.'};
 }
-function gmwwOpsExport(){
-  const report=gmwwOpsSafeReport(gmwwOpsSnapshot),note=document.getElementById('opsAdvice'),
-    fallback=document.getElementById('opsReportFallback');
-  if(!report){if(note)note.textContent='Hãy nhấn KIỂM TRA TỔNG trước khi xuất báo cáo.';return}
-  const value=JSON.stringify(report,null,2);
-  try{
-    const blob=new Blob([value],{type:'application/json;charset=utf-8'}),
-      url=URL.createObjectURL(blob),anchor=document.createElement('a');
-    anchor.href=url;anchor.download='GMWW-Health-'+new Date().toISOString().slice(0,10)+'.json';
-    document.body.append(anchor);anchor.click();anchor.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),10000);
-    if(note)note.textContent='Đã tạo báo cáo kỹ thuật, không gồm dữ liệu riêng tư. Kiểm tra mục Tệp/Downloads.';
-    if(fallback)fallback.classList.add('hidden');
-  }catch(_){
-    if(fallback){fallback.value=value;fallback.classList.remove('hidden');fallback.focus();fallback.select()}
-    if(note)note.textContent='Không thể lưu tệp trên thiết bị này. Sao chép nội dung báo cáo trong ô bên dưới.';
-  }
-}
 function gmwwOpsInitialize(){
   const auto=document.getElementById('opsAutoCheck');
   if(auto){auto.checked=gmwwOpsAutoEnabled();auto.addEventListener('change',()=>{
@@ -1424,9 +1353,55 @@ function gmwwOpsInitialize(){
   document.getElementById('opsRunFullAudit')?.addEventListener('click',()=>gmwwOpsRun({kind:'all'}));
   document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
   document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
-  document.getElementById('opsExportReport')?.addEventListener('click',gmwwOpsExport);
 }
 gmwwOpsInitialize();
+
+/* Work backlog: show actual unfinished GitHub Issues before history; no invented progress. */
+let gmwwTasksBusy=false,gmwwTasksLastLoaded=0;
+function gmwwTaskItem(task){
+  const row=document.createElement('article');
+  row.className='gmww-task-item '+String(task.state||'pending');
+  const heading=document.createElement('div');heading.className='gmww-task-item-head';
+  const title=document.createElement('b');title.textContent=String(task.title||'Công việc GMWW');
+  const status=document.createElement('span');status.className='gmww-task-status '+String(task.state||'pending');
+  status.textContent=task.state==='doing'?'ĐANG THỰC HIỆN':task.state==='completed'?'HOÀN TẤT':task.state==='closed'?'ĐÃ ĐÓNG':'CHƯA HOÀN THÀNH';
+  heading.append(title,status);row.append(heading);
+  const description=document.createElement('p');description.textContent=String(task.summary||'Đã ghi nhận yêu cầu.');row.append(description);
+  const meta=document.createElement('small');const priority=task.priority?String(task.priority)+' · ':'';
+  meta.textContent=priority+'Công việc #'+Number(task.number||0)+' · Cập nhật '+(task.updatedAt?new Date(task.updatedAt).toLocaleDateString('vi-VN'):'—');
+  row.append(meta);
+  return row;
+}
+async function gmwwTasksRefresh({silent=false}={}){
+  if(gmwwTasksBusy)return;
+  gmwwTasksBusy=true;
+  const refresh=document.getElementById('gmwwTasksReload'),summary=document.getElementById('gmwwTasksSummary'),
+    openList=document.getElementById('gmwwTasksOpenList'),closedList=document.getElementById('gmwwTasksDoneList');
+  if(refresh)refresh.disabled=true;
+  if(summary&&!silent)summary.textContent='Đang cập nhật tiến độ công việc…';
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/operations/tasks?ts='+Date.now(),{method:'GET',cache:'no-store',signal:controller.signal});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data?.ok||!Array.isArray(data.open)||!Array.isArray(data.history))throw new Error('Danh sách không hợp lệ');
+    const open=data.open.filter(x=>x.state==='pending'||x.state==='doing'),
+      done=data.history.filter(x=>x.state==='completed'||x.state==='closed');
+    if(openList){openList.replaceChildren();if(open.length)for(const task of open)openList.append(gmwwTaskItem(task));else{
+      const blank=document.createElement('p');blank.className='gmww-task-empty';blank.textContent='Không có công việc chưa hoàn thành được ghi nhận.';openList.append(blank)}}
+    if(closedList){closedList.replaceChildren();if(done.length)for(const task of done)closedList.append(gmwwTaskItem(task));else{
+      const blank=document.createElement('p');blank.className='gmww-task-empty';blank.textContent='Chưa có công việc đóng được ghi nhận.';closedList.append(blank)}}
+    const openCount=document.getElementById('gmwwTasksOpenCount'),doneCount=document.getElementById('gmwwTasksDoneCount');
+    if(openCount)openCount.textContent=String(open.length);
+    if(doneCount)doneCount.textContent=String(done.length);
+    if(summary)summary.textContent=open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử.';
+    gmwwTasksLastLoaded=Date.now();
+  }catch(error){
+    if(summary)summary.textContent='Chưa lấy được tiến độ. Nhấn LÀM MỚI TIẾN ĐỘ để thử lại.';
+    if(!gmwwTasksLastLoaded&&openList){openList.replaceChildren();const p=document.createElement('p');p.className='gmww-task-empty';p.textContent='Nguồn công việc tạm thời không truy cập được; không thể xác nhận tiến độ.';openList.append(p)}
+  }finally{clearTimeout(timeout);gmwwTasksBusy=false;if(refresh)refresh.disabled=false}
+}
+document.getElementById('gmwwTasksReload')?.addEventListener('click',()=>gmwwTasksRefresh());
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */

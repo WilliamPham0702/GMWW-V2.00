@@ -56,13 +56,14 @@ function context({selected=false,storageMap=new Map(),socketOpen=true}={}){
 test('Operations tools are visibly integrated into the existing GM settings page, not a separate web dashboard',()=>{
   const start=html.indexOf('<section class="page" id="settings">'),end=html.indexOf('</section>',start);
   const settings=html.slice(start,end);
-  for(const id of ['gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsExportReport',
+  for(const id of ['gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease',
     'opsAutoCheck','opsServerState','opsStorageState','opsRealtimeState','opsReleaseState','opsReport'])
     assert.match(settings,new RegExp('id="'+id+'"'));
   assert.ok(settings.indexOf('gmwwOpsCenter')<settings.indexOf('systemDiagnosticsCard'));
   assert.match(css,/\.gmww-ops-card/);
   assert.match(css,/\.ops-status-grid/);
   assert.match(css,/\.ops-tools/);
+  assert.doesNotMatch(settings,/opsExportReport|XUẤT BÁO CÁO/);
 });
 
 test('Integrated full audit is read-only and displays Worker, storage, web, release and character status',async()=>{
