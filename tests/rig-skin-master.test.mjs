@@ -30,7 +30,9 @@ test('master rig is a 2D continuous body skeleton with dedicated hand, knee and 
   assert.match(markup,/data-shorts/);
   assert.match(markup,/data-sandal-l/);
   assert.match(markup,/data-necklace/);
-  assert.doesNotMatch(markup,/clip-path/);
+  // Cropping the official HEAD image is valid; clipping the whole body to fabricate limbs is not.
+  assert.match(markup,/clipPath id="character01-original-head-clip"/);
+  assert.doesNotMatch(markup,/clip-path="url\(#skinBody/);
   const renderer=fs.readFileSync(new URL('../assets/village/rig-skin-renderer.mjs',import.meta.url),'utf8');
   assert.ok(!renderer.includes('200+pose.root.x'), 'double root translation would clip the Character outside the SVG frame');
   assert.doesNotMatch(markup,/url\(#skinBody/);
