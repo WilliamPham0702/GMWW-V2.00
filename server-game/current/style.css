@@ -2663,3 +2663,9 @@ body.play-immersive #start #playGatherToolbar.hidden{display:none!important}
  body.play-immersive #start #gmTopMenu.gm-top-menu-v293,
  body.play-immersive #start #playGatherToolbar.play-gather-toolbar{transition:none!important}
 }
+
+
+/* V3.28 — compact Settings heading: keep the health badge and remove redundant prose. */
+#settings .settings-page-head{align-items:flex-start;flex-wrap:wrap;gap:8px}
+#settings .settings-page-head .settings-hub-mini-health{max-width:100%;flex:0 0 auto;min-height:31px}
+#settings .settings-unified-heading>div:has(>h3){gap:0}
