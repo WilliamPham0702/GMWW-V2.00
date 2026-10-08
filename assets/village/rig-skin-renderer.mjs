@@ -26,6 +26,16 @@ export function svgMarkup(s){
       <path data-sandal-r fill="${c.sandal}" stroke="#083748" stroke-width="1.8" stroke-linejoin="round"/>
       <path data-strap-r fill="none" stroke="${c.vestLight}" stroke-width="3.3" stroke-linecap="round"/>
     </g>
+    <!-- Cross-legged pose is a dedicated soft silhouette, not a crouched standing leg rig.
+         Opacity eases during sit-down/stand-up; no rigid disconnected kneecaps. -->
+    <g data-seated-legs opacity="0">
+      <path d="M-13 1 Q-44 -6 -45 17 Q-39 28 14 27" fill="none" stroke="${c.shade}" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M-13 -1 Q-42 -8 -43 15 Q-34 25 17 25" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13 1 Q44 -6 45 17 Q39 29 -14 28" fill="none" stroke="${c.shade}" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13 -1 Q42 -8 43 15 Q34 25 -17 26" fill="none" stroke="${c.skin}" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 21 Q20 15 29 24 L30 29 Q22 34 8 29Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M-8 21 Q-20 15 -29 24 L-30 29 Q-22 34 -8 29Z" fill="${c.sandal}" stroke="${c.vestLight}" stroke-width="2" stroke-linejoin="round"/>
+    </g>
     <path data-shorts fill="${c.shorts}" stroke="#138fa4" stroke-width="2" stroke-linejoin="round"/>
     <path data-shorts-waist fill="none" stroke="${c.vestLight}" stroke-width="4"/>
     <g data-shorts-pattern fill="${c.pattern}" opacity=".88">
@@ -103,7 +113,7 @@ export function svgMarkup(s){
 const byAttr=(svg,name)=>svg.querySelector('[data-'+name+']');
 function nodesFor(svg){
   const n={svg};for(const attr of [
-    'body','shadow','leg-l','leg-r','leg-l-shade','leg-r-shade',
+    'body','shadow','leg-left','leg-right','feet','seated-legs','leg-l','leg-r','leg-l-shade','leg-r-shade',
     'sandal-l','sandal-r','strap-l','strap-r','shorts','shorts-waist',
     'flower-l','flower-r','arm-l','arm-r','arm-l-highlight','arm-r-highlight',
     'hand-l','hand-r','chest','vest-left','vest-right','abs-1','abs-2','abs-3','abs-middle',
@@ -131,6 +141,12 @@ export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
   if(b.svg){b.svg.dataset.facing=valid;b.svg.dataset.heading=String(Math.round(angle));}
   set(b.body,'opacity',n(pose.alpha));
   set(b.shadow,'rx',n(42*pose.shadow));
+  const sitting=Math.max(0,Math.min(1,pose.sitBlend||0));
+  set(b['leg-left'],'opacity',n(1-sitting));
+  set(b['leg-right'],'opacity',n(1-sitting));
+  set(b.feet,'opacity',n(1-sitting));
+  set(b['seated-legs'],'opacity',n(sitting));
+  set(b['seated-legs'],'transform',`translate(${n(200+pose.hip.x)} ${n(pose.hip.y)})`);
 
   const hip=point(200+pose.hip.x,pose.hip.y), shoulder=point(200+pose.shoulder.x,pose.shoulder.y);
   const sx=shoulder.x,sy=shoulder.y,hx=hip.x,hy=hip.y;
