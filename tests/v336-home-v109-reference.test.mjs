@@ -63,6 +63,6 @@ test("Trang Chủ v3.39 có ba thẻ Khám phá gắn nhãn và menu 5 mục ki�
  assert.match(html,/id="bottomNav"/);
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
- assert.match(css,/#home \.gmww-home-tile-label/);
+ assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
  assert.match(html,/style\.css\?v=3\.39-home-dock-2/);
 });
