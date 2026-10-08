@@ -1,0 +1,302 @@
+{
+  "version": "4.0.0-prototype",
+  "project": "GMWW",
+  "issue": 106,
+  "policy": {
+    "replacesDirection": "42-legacy-characters",
+    "preserveLegacyAssetsUntilMigration": true,
+    "mergeProductionBeforeApproval": false,
+    "requireMasterApprovalBeforeScaling": true,
+    "neverUseOldCharacterAssetsAsRig": true,
+    "headTiltDegrees": 0,
+    "directionViews": [
+      "front",
+      "left",
+      "right",
+      "back"
+    ],
+    "actionIds": [
+      "idle",
+      "walk",
+      "run",
+      "sit",
+      "sit-down",
+      "stand-up",
+      "wave",
+      "vote",
+      "result"
+    ],
+    "resultVariants": [
+      "win",
+      "lose"
+    ],
+    "reviewSizesPx": [
+      70,
+      90,
+      110
+    ],
+    "maxConcurrentPlayers": 30
+  },
+  "characters": [
+    {
+      "id": "character-01",
+      "role": "master",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-02",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-03",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-04",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-05",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-06",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-07",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-08",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-09",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-10",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-11",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-12",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-13",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-14",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-15",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-16",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-17",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-18",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-19",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    },
+    {
+      "id": "character-20",
+      "role": "pending-master-approval",
+      "designStatus": "not-approved",
+      "views": {
+        "front": null,
+        "left": null,
+        "right": null,
+        "back": null
+      },
+      "rig": null,
+      "reviewedByOwner": false
+    }
+  ]
+}
