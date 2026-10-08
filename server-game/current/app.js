@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.42';
+const VERSION='3.43';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -947,9 +947,20 @@ async function gmwwUpdateProbe(path){
   throw lastError||new Error('Không nhận được phản hồi');
 }
 function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
-function gmwwReleaseNotesText(manifest){
-  const notes=Array.isArray(manifest?.releaseNotes)?manifest.releaseNotes.filter(x=>typeof x==='string').slice(0,8):[];
-  return notes.length?notes.join(' • '):'Cải thiện giao diện và độ ổn định của Game Runtime.';
+function gmwwReleaseNotesList(manifest){
+  const notes=Array.isArray(manifest?.releaseNotes)
+    ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean).slice(0,8):[];
+  return notes.length?notes:['Cải thiện giao diện và độ ổn định của Game Runtime.'];
+}
+function gmwwReleaseNotesText(manifest){return gmwwReleaseNotesList(manifest).join(' • ')}
+function gmwwRenderReleaseNotes(manifest){
+  const box=document.getElementById('updateReleaseNotes');if(!box)return;
+  const title=document.createElement('b');title.className='update-release-title';title.textContent='Có gì mới';
+  const list=document.createElement('ul');list.className='update-release-list';
+  for(const note of gmwwReleaseNotesList(manifest)){
+    const item=document.createElement('li');item.textContent=note;list.appendChild(item);
+  }
+  box.replaceChildren(title,list);
 }
 async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return null;
@@ -988,7 +999,7 @@ async function checkAppUpdate({notify=false}={}){
       return null;
     }
     gmwwUpdateManifest=manifest;
-    const notesElement=document.getElementById('updateReleaseNotes');if(notesElement)notesElement.textContent='Có gì mới: '+gmwwReleaseNotesText(manifest);
+    gmwwRenderReleaseNotes(manifest);
     const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
     const newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
     if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
