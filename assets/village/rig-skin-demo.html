@@ -25,6 +25,10 @@
     .actor{position:absolute;left:50%;bottom:0;width:min(84%,390px);height:340px;transform:translateX(-50%);
       pointer-events:none;will-change:transform}
     .actor svg{display:block;width:100%;height:100%}
+    .reference{display:flex;align-items:center;gap:12px;background:#122d44;border:1px solid #38637a;border-radius:12px;padding:10px;margin-top:12px}
+    .reference img{width:76px;height:100px;object-fit:contain;flex:none}
+    .reference p{font-size:12px;line-height:1.5;margin:0}
+    .reference strong{color:#ffe5a2}
     .caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:.8rem;color:#a9c9d8;margin-top:9px}
     #crowd{display:none;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;height:220px;align-items:end}
     #crowd.on{display:grid}#crowd .mini{min-width:0;height:90px;overflow:hidden}
@@ -37,23 +41,23 @@
 </head>
 <body><main>
   <header><h1>Character-01 • Action Rig + Skin Lab</h1>
-    <p>Mẫu chuyển động khớp thật: đùi → cẳng chân → bàn chân; vai → cánh tay → cẳng tay. Một Rig có thể thay Skin.</p>
-    <p class="notice">Bản kiểm chứng độc lập. Chưa thay nhân vật trong Production, chưa áp dụng đồng loạt 42 Character.</p>
+    <p>Bản mẫu 9 Action. Cơ thể vẽ liền nét, chân có nhịp nhấc và bám đất; đối chiếu ảnh Character-01 gốc bên dưới.</p>
+    <p class="notice">Bản kiểm chứng độc lập: 9 Action theo yêu cầu, Skin vector chỉ dùng thử. Chưa thay nhân vật trong Production và chưa cập nhật IPA.</p>
   </header>
   <section class="layout">
     <form id="controls" class="panel controls" autocomplete="off">
-      <label>Chọn Action (33 chuyển động)
+      <label>Chọn Action (9 hành động)
         <select id="action" aria-label="Chọn hành động"></select>
       </label>
       <label>Thay Skin – giữ nguyên Rig
-        <select id="skin"><option value="0">Chiến binh biển</option><option value="1">Chiến binh rừng</option></select>
+        <select id="skin"><option value="0">Phong cách biển Character-01</option><option value="1">Skin biến thể</option></select>
       </label>
       <label>Phong cách chuyển động
         <select id="personality"><option value="balanced">Cân bằng</option><option value="bold">Mạnh mẽ</option><option value="calm">Điềm tĩnh</option></select>
       </label>
       <label>Tốc độ <output id="speedLabel">1.00×</output><input id="speed" type="range" min="0.25" max="3" step="0.25" value="1"></label>
-      <label class="inline"><input id="secondary" type="checkbox" checked> Tóc và phụ kiện chuyển động</label>
-      <label class="inline"><input id="footLock" type="checkbox" checked> Bù chuyển động chân khi bước</label>
+      <label id="outcomeWrap" hidden>Kết quả ván<select id="outcome"><option value="win">Chiến thắng</option><option value="lose">Thất bại</option></select></label>
+      <label class="inline"><input id="footLock" type="checkbox" checked> Giữ bàn chân ở vị trí tiếp đất</label>
       <label class="inline"><input id="smooth" type="checkbox" checked> Chuyển mượt giữa các Action</label>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <button type="button" id="replay" class="primary">Phát lại Action</button>
@@ -65,8 +69,9 @@
     <section class="panel">
       <div class="stage" id="stage"><div class="fire" aria-hidden="true">🔥</div><div class="actor" id="actor"></div></div>
       <div class="caption"><span id="status">Action: Idle</span><span class="metric" id="fps">FPS: —</span></div>
+      <div class="reference"><img src="../characters/v253/chibi-01.webp" alt="Artwork Character-01 gốc từ GMWW" width="94" height="120"><p><strong>Đối chiếu Character-01 gốc</strong> — tóc đen, cơ bắp, áo xanh ngọc, quần đi biển. Skin bên trên mới là bản vector thử nghiệm, chưa thay thế được artwork gốc.</p></div>
       <div id="crowd" aria-label="Đo tải giả lập 30 nhân vật cùng dùng master Rig"></div>
-      <p style="margin-top:10px">30 Character trong thử nghiệm dùng chung Action Rig và thay Skin thông số. Chỉ là phép thử renderer; chưa xác nhận khả năng chịu tải của Player Web thực tế.</p>
+      <p style="margin-top:10px">Đoạn đi/chạy minh họa có dịch chuyển vị trí để kiểm tra chân có bám đất. 30 nhân vật chỉ để thử tải; chưa là xác nhận trên iPhone thật.</p>
     </section>
   </section>
 </main>
@@ -78,7 +83,6 @@ const actionEl=byId('action'),skinEl=byId('skin'),speedEl=byId('speed'),status=b
 for(const group of ACTION_GROUPS){
   const optgroup=document.createElement('optgroup');optgroup.label=group.name;
   for(const [id,label] of group.actions){
-    if(ACTION_CATALOG.find(a=>a.id===id)?.type==='system')continue;
     const option=document.createElement('option');option.value=id;option.textContent=label;optgroup.append(option);
   }
   if(optgroup.children.length)actionEl.append(optgroup);
@@ -99,6 +103,7 @@ function addCrowd(){
 }
 function selectAction(){
   previous=selected;selected=actionEl.value;
+  byId('outcomeWrap').hidden=selected!=='result';
   actionStart=performance.now();blendStart=actionStart;
   const label=ACTION_CATALOG.find(a=>a.id===selected)?.label||selected;
   status.textContent='Action: '+label;
@@ -121,22 +126,22 @@ function draw(now){
   if(paused)return;
   const elapsed=now-actionStart,options={
     speed:Number(speedEl.value),personality:byId('personality').value,
-    secondaryMotion:byId('secondary').checked,footLock:byId('footLock').checked,
+    footLock:byId('footLock').checked,outcome:byId('outcome').value,
     previousAction:byId('smooth').checked?previous:null,
     transitionElapsedMs:now-blendStart,blendMs:220
   };
-  rig.render(sampleRigAction(selected,elapsed,options));
+  const pose=sampleRigAction(selected,elapsed,options);rig.render(pose);
   for(let i=0;i<rigs.length;i++){
     const crowdId=i%3===0?'walk':i%3===1?'idle':'sit';
     rigs[i].render(sampleRigAction(crowdId,elapsed+i*173,{
       speed:options.speed,personality:options.personality,
-      secondaryMotion:options.secondaryMotion,footLock:options.footLock
+      footLock:options.footLock,outcome:options.outcome
     }));
   }
-  if(selected==='walk'||selected==='run'||selected==='wander'){
-    const stride=selected==='run'?28:15;
-    const travel=(elapsed/1300)%2;
-    byId('actor').style.transform='translateX(calc(-50% + '+(Math.sin(travel*Math.PI)*stride).toFixed(2)+'px))';
+  if(selected==='walk'||selected==='run'){
+    // World translation and stance-foot local counter-translation are driven by the SAME stride.
+    const distance=pose.worldX;const track=((distance+95)%190)-95;
+    byId('actor').style.transform='translateX(calc(-50% + '+track.toFixed(2)+'px))';
   }else{byId('actor').style.transform='translateX(-50%)'}
   frame++;if(now-lastFpsAt>1000){
     if(lastFpsAt)byId('fps').textContent='FPS mẫu: '+Math.round(frame*1000/(now-lastFpsAt));
