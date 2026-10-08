@@ -144,6 +144,7 @@ test('four-direction travel rotates BEFORE translation and never slides sideways
   const walkingRight=sampleVillageRoute(TURN_MS+WALK_SEGMENT_MS*.5);
   assert.equal(turningRight.direction,'right');
   assert.equal(turningRight.turning,true);
+  assert.ok(turningRight.headingDeg>0&&turningRight.headingDeg<90);
   assert.equal(turningRight.animation,'idle');
   assert.deepEqual(turningRight.position,origin.position);
   assert.equal(walkingRight.animation,'walk');
@@ -153,6 +154,7 @@ test('four-direction travel rotates BEFORE translation and never slides sideways
   const goUp=sampleVillageRoute(segmentMs+TURN_MS+WALK_SEGMENT_MS*.7);
   assert.equal(turnUp.direction,'up');
   assert.equal(turnUp.turning,true);
+  assert.ok(turnUp.headingDeg>90&&turnUp.headingDeg<180);
   assert.deepEqual(turnUp.position,sampleVillageRoute(segmentMs).position);
   assert.ok(goUp.position.y<turnUp.position.y);
   assert.equal(goUp.position.x,turnUp.position.x);
@@ -169,6 +171,7 @@ test('manual direction is fixed, no world movement until turn completes or after
     const step=sampleVillageRoute(TURN_MS+200,{mode:direction});
     const complete=sampleVillageRoute(5000,{mode:direction});
     assert.equal(turn.turning,true);
+    assert.ok(Math.abs(turn.headingDeg)>0||direction==='down');
     assert.deepEqual(turn.position,{x:0,y:0});
     assert.equal(step.direction,direction);
     assert.equal(step.moving,true);
@@ -187,7 +190,9 @@ test('renderer actually contains separate rear and side appearances',()=>{
   assert.match(markup,/data-profile-face/);
   assert.match(markup,/data-rear-torso/);
   const source=fs.readFileSync(new URL('../assets/village/rig-skin-renderer.mjs',import.meta.url),'utf8');
-  assert.ok(source.includes("valid==='up'?'1':'0'"));
-  assert.ok(source.includes("valid==='left'?-.7"));
+  assert.ok(source.includes("set(b['rear-head'],'opacity',n(back/weights))"));
+  assert.ok(source.includes('headingDeg'));
   assert.ok(source.includes("b.svg.dataset.facing=valid"));
+  assert.match(markup,/data-original-head/);
+  assert.match(markup,/chibi-01\.webp/);
 });
