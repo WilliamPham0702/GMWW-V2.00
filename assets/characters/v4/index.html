@@ -25,6 +25,19 @@
     .members{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
     .slot{border:1px solid #355971;background:#102e43;padding:9px 1px;text-align:center;border-radius:9px;font-size:11px;color:#aac8d9}
     a{color:#94f3e4}
+    .lab-stage{position:relative;height:230px;border-radius:16px;overflow:hidden;border:1px solid #507d8c;background:radial-gradient(circle at center,#236b70 0,#164f63 55%,#0e3e58 100%)}
+    .lab-stage:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 45px,#ffffff0c 46px 47px),repeating-linear-gradient(90deg,transparent 0 45px,#ffffff0c 46px 47px);pointer-events:none}
+    .lab-pin{width:56px;height:56px;position:absolute;left:50%;top:52%;display:grid;place-items:center;border:2px solid #9fe3d9;border-radius:50%;background:#102d43d9;box-shadow:0 7px 24px #06202ca6;transform:translate(-50%,-50%);will-change:left,top}
+    .lab-pin .arrow{font-size:22px;line-height:1;display:block;will-change:transform}.lab-pin:after{content:"V4 TEST";position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);color:#caedea;font-weight:700;white-space:nowrap;font-size:9px}
+    .lab-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:10px 0}
+    .lab-control{color:#e6f8f8;background:#164b61;border:1px solid #6aa2a8;border-radius:9px;padding:9px 12px;min-height:41px;font:inherit;font-size:13px;cursor:pointer}
+    .lab-control:focus-visible{outline:3px solid #72fbd8;outline-offset:2px}.lab-control:active{transform:scale(.98)}
+    .lab-control[aria-pressed="true"]{background:#087d92;border-color:#c8fff4}
+    .lab-status{font-weight:600;color:#cbf7e8;min-height:23px}
+    .lab-caption{font-size:12px;color:#aed9d7}
+    .lab-actor{position:absolute;display:block;width:9px;height:9px;border-radius:50%;background:#92e7df;opacity:.6}
+    .lab-actor:first-child{background:#fff}
+
     @media(max-width:620px){.viewgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.members{grid-template-columns:repeat(5,minmax(0,1fr))}}
   </style>
 </head>
@@ -45,6 +58,39 @@
   <div class="view"><div class="vacant"></div><strong>Phải</strong><small>Chờ asset V4</small></div>
   <div class="view"><div class="vacant"></div><strong>Sau lưng</strong><small>Chờ asset V4</small></div>
   </div>
+</section>
+<section class="panel" id="action-lab">
+  <h2>Kiểm thử chuyển hướng và lệnh Action trên Web</h2>
+  <p>Đây là <strong>mốc thử chuyển động bằng biểu tượng kỹ thuật</strong>, không phải Character-01 đã hoàn thành. Chạm chọn hướng, sau đó nhấn Đi bộ hoặc Chạy: biểu tượng sẽ quay đúng hướng <strong>trước khi</strong> di chuyển.</p>
+  <div class="lab-stage" id="labStage" aria-label="Khu vực thử chuyển động bằng dấu chỉ hướng">
+    <div class="lab-pin" id="labPin"><span class="arrow" id="labArrow">↑</span></div>
+  </div>
+  <p class="lab-status" id="labStatus" aria-live="polite">Sẵn sàng test logic — chưa có sprite Character mới.</p>
+  <div class="lab-row" aria-label="Chọn hướng nhìn">
+    <button class="lab-control" type="button" data-dir="front" aria-pressed="true">↓ Xuống (trước)</button>
+    <button class="lab-control" type="button" data-dir="left" aria-pressed="false">← Trái</button>
+    <button class="lab-control" type="button" data-dir="right" aria-pressed="false">→ Phải</button>
+    <button class="lab-control" type="button" data-dir="back" aria-pressed="false">↑ Lên (sau)</button>
+  </div>
+  <div class="lab-row" aria-label="Bộ hành động cơ bản">
+    <button class="lab-control" type="button" data-action="idle">Đứng yên</button>
+    <button class="lab-control" type="button" data-action="walk">Đi bộ</button>
+    <button class="lab-control" type="button" data-action="run">Chạy nhẹ</button>
+    <button class="lab-control" type="button" data-action="sit">Ngồi xếp bằng</button>
+    <button class="lab-control" type="button" data-action="sit-down">Đứng → ngồi</button>
+    <button class="lab-control" type="button" data-action="stand-up">Ngồi → đứng</button>
+    <button class="lab-control" type="button" data-action="wave">Vẫy tay</button>
+    <button class="lab-control" type="button" data-action="vote">Giơ tay bỏ phiếu</button>
+    <button class="lab-control" type="button" data-action="result">Thắng / Thua</button>
+  </div>
+  <div class="lab-row">
+    <label for="outcome">Kết quả</label>
+    <select class="lab-control" id="outcome"><option value="win">Thắng</option><option value="lose">Thua</option></select>
+    <button class="lab-control" id="labCrowd" type="button" aria-pressed="false">Thử 30 vị trí</button>
+    <label for="actorSize">Kích thước</label>
+    <select class="lab-control" id="actorSize"><option value="70">70 px</option><option value="90" selected>90 px</option><option value="110">110 px</option></select>
+  </div>
+  <p class="lab-caption">Quy tắc cố định: đầu luôn thẳng; không đi ngang kiểu cua; chỉ đúng 9 Action. Tư thế, dáng ngồi và trang phục chỉ được nghiệm thu khi đã có artwork/sprite V4 hoàn chỉnh.</p>
 </section>
 <section class="panel">
   <h2>9 Action bắt buộc</h2>
@@ -79,6 +125,42 @@
     showSlots(data.characters);
     status.textContent='API V4 đã kết nối · '+data.approvedCount+'/20 nhân vật được duyệt · IPA: chưa cập nhật';
   }).catch(()=>{status.textContent='Trang kiểm thử đang hiển thị danh sách chờ. API V4 chưa kết nối.'});
+</script>
+<script type="module">
+import {createV4StageController,V4_FACE_LABELS} from './action-lab.mjs';
+const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),arrow=document.getElementById('labArrow'),status=document.getElementById('labStatus');
+const controller=createV4StageController(),directions=[...document.querySelectorAll('[data-dir]')];
+const actionLabels={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy nhẹ',sit:'Ngồi xếp bằng','sit-down':'Đứng → ngồi','stand-up':'Ngồi → đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
+let selectedDirection='front',crowd=false,crowdTokens=[];
+for(const button of directions)button.addEventListener('click',()=>{
+ selectedDirection=button.dataset.dir;
+ for(const b of directions)b.setAttribute('aria-pressed',String(b===button));
+ status.textContent='Đã chọn '+V4_FACE_LABELS[selectedDirection]+' — bấm Đi bộ hoặc Chạy để thử';
+});
+for(const button of document.querySelectorAll('[data-action]'))button.addEventListener('click',()=>{
+ const actionId=button.dataset.action;
+ controller.start(actionId,performance.now(),{targetFacing:selectedDirection,result:document.getElementById('outcome').value});
+});
+document.getElementById('labCrowd').addEventListener('click',()=>{
+ crowd=!crowd;const button=document.getElementById('labCrowd');button.setAttribute('aria-pressed',String(crowd));
+ crowdTokens.forEach(x=>x.remove());crowdTokens=[];
+ if(crowd)for(let i=0;i<30;i++){const element=document.createElement('span');element.className='lab-actor';
+ element.style.left=(12+(i%6)*15)+'%';element.style.top=(14+Math.floor(i/6)*17)+'%';
+ stage.appendChild(element);crowdTokens.push(element);}
+});
+document.getElementById('actorSize').addEventListener('change',event=>{
+ const px=Number(event.target.value);pin.style.width=px+'px';pin.style.height=px+'px';
+});
+function frame(now){
+ const model=controller.sample(now);
+ pin.style.left=(model.position.x*100).toFixed(2)+'%';
+ pin.style.top=(model.position.y*100).toFixed(2)+'%';
+ arrow.style.transform='rotate('+model.headingDeg.toFixed(2)+'deg)';
+ const phase=model.phase==='turn'?'Đang quay hướng':model.phase==='move'?'Đang di chuyển':model.phase==='done'?'Hoàn tất':'Đang thực hiện';
+ status.textContent=actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+' · đầu thẳng 0°'+(model.actionId==='result'?' · '+document.getElementById('outcome').selectedOptions[0].text:'');
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
