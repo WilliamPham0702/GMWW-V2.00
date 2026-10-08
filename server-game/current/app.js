@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.40';
+const VERSION='3.41';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1016,11 +1016,11 @@ async function checkAppUpdate({notify=false}={}){
       if(!sessionStorage.getItem(key)){
         sessionStorage.setItem(key,'1');
         if(type==='runtime'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\\n\\nVui lòng CẬP NHẬT để nhận phiên bản mới.\\n\\nCập nhật ngay?'))installRuntimeUpdate();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nVui lòng CẬP NHẬT để nhận phiên bản mới.\n\nCập nhật ngay?'))installRuntimeUpdate();
         }else if(type==='native'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\\n\\nPhiên bản này cần cài lại IPA mới.\\n\\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nPhiên bản này cần cài lại IPA mới.\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
         }else{
-          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\\n\\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\\n\\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\n\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
         }
       }
     }
@@ -3011,7 +3011,7 @@ function playApplyLobbyStage(generation){
 }
 async function playReturnToLobby(){
   if(playSceneRuntime.busy||playSceneState.step==='lobby')return false;
-  if(!confirm('Trở về SẢNH CHỜ?\\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
+  if(!confirm('Trở về SẢNH CHỜ?\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
   playSetBusy(true);
   try{
     const data=await gmApi('/api/gm/lobby/reset',{method:'POST',body:JSON.stringify({source:'GM_BACK'})});

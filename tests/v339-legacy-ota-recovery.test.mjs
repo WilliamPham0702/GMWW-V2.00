@@ -4,7 +4,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {recoverLegacyRuntimeManifest} from '../src/gmww-runtime-recovery.js';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
-const root='https://gmww-v2-00.williampham0702.workers.dev',version='3.40';
+const root='https://gmww-v2-00.williampham0702.workers.dev',version='3.41';
 const src=new Map(['GMWW.html','app.js','style.css'].map(x=>[x,readFileSync('server-game/current/'+x)]));
 const cfg={requestUrl:root+'/api/update/manifest?current=3.38',version,shellVersion:'3.17',installedVersion:'3.38'};
 function mock(block,override={}){return{fetch:async req=>{
@@ -12,22 +12,22 @@ function mock(block,override={}){return{fetch:async req=>{
  const bytes=override[filename]||src.get(filename);
  return filename===block||!bytes?new Response('Missing',{status:404}):new Response(bytes);
 }};}
-test('Rescue OTA installs verified V3.40 app, HTML and CSS on IPA V3.17',async()=>{
+test('Rescue OTA installs verified V3.41 app, HTML and CSS on IPA V3.17',async()=>{
  const manifest=await recoverLegacyRuntimeManifest({...cfg,assets:mock()});
  assert.equal(manifest?.releaseType,'runtime');
- assert.equal(manifest.runtimeVersion,'3.40');
+ assert.equal(manifest.runtimeVersion,'3.41');
  assert.equal(manifest.shellVersion,'3.17');
  assert.equal(manifest.runtime.files.length,3);
  for(const file of manifest.runtime.files){
-  assert.ok(file.url.startsWith(root+'/updates/runtime/V3.40/'));
+  assert.ok(file.url.startsWith(root+'/updates/runtime/V3.41/'));
   assert.equal(file.sha256,createHash('sha256').update(src.get(file.path)).digest('hex'));
  }
 });
 test('Rescue rejects older or future client runtimes',async()=>{
- for(const v of ['3.17','3.37','3.40','unknown']){
+ for(const v of ['3.17','3.37','3.41','unknown']){
   assert.equal(await recoverLegacyRuntimeManifest({...cfg,installedVersion:v,assets:mock()}),null);
  }
- assert.equal(await recoverLegacyRuntimeManifest({...cfg,version:'3.41',assets:mock()}),null);
+ assert.equal(await recoverLegacyRuntimeManifest({...cfg,version:'3.42',assets:mock()}),null);
 });
 test('Rescue fails closed for absent or invalid files',async()=>{
  assert.equal(await recoverLegacyRuntimeManifest({...cfg,assets:mock('app.js')}),null);
@@ -42,6 +42,12 @@ test('Worker uses rescue if either normal manifest channel is unreadable',()=>{
 
 test('Rescue OTA also repairs an installed V3.39 runtime',async()=>{
  const m=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.39',assets:mock()});
- assert.equal(m?.releaseVersion,'3.40');
+ assert.equal(m?.releaseVersion,'3.41');
  assert.deepEqual(m?.runtime?.files?.map(f=>f.path),['GMWW.html','app.js','style.css']);
+});
+
+test('Rescue OTA upgrades an installed V3.40 runtime with verified files',async()=>{
+ const manifest=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.40',assets:mock()});
+ assert.equal(manifest?.runtimeVersion,'3.41');
+ assert.equal(manifest?.runtime?.files?.length,3);
 });
