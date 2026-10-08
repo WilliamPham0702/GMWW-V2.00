@@ -26,7 +26,7 @@ export class RoomDurableObject extends DurableObject {
   async fetch(request){
     const path=new URL(request.url).pathname;
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -565,7 +565,9 @@ export class RoomDurableObject extends DurableObject {
     const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},requested=String(body?.participantId||""),loginId=normalizeLoginId(body?.loginId),id=requested||(loginId?("member:"+loginId):"");
     const p=players[id];if(!id||!p)return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Không tìm thấy Người Chơi trong Phòng."},404);
     delete players[id];await this.ctx.storage.put("players",players);
-    if(p?.loginId){const lid=normalizeLoginId(p.loginId);await this.ctx.storage.delete("role:"+lid);await this.ctx.storage.delete("roles:"+lid);await this.ctx.storage.delete("artifact:"+lid);const rows=(await this.ctx.storage.get("assignments"))||[],next=rows.filter(a=>normalizeLoginId(a?.loginId)!==lid);if(next.length!==rows.length)await this.ctx.storage.put("assignments",next)}
+    if(p?.loginId){
+      const evicted=(await this.ctx.storage.get("evictedMembers"))||[];
+      await this.ctx.storage.put("evictedMembers",[...new Set([...evicted,normalizeLoginId(p.loginId)])].slice(-100));const lid=normalizeLoginId(p.loginId);await this.ctx.storage.delete("role:"+lid);await this.ctx.storage.delete("roles:"+lid);await this.ctx.storage.delete("artifact:"+lid);const rows=(await this.ctx.storage.get("assignments"))||[],next=rows.filter(a=>normalizeLoginId(a?.loginId)!==lid);if(next.length!==rows.length)await this.ctx.storage.put("assignments",next)}
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     for(const ws of this.ctx.getWebSockets())try{if(ws.deserializeAttachment()?.participantId===id){ws.send(JSON.stringify({type:"player_kicked",participantId:id,reason:"GM_KICK"}));ws.close(1000,"PLAYER_KICKED")}}catch{}
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
@@ -580,12 +582,23 @@ export class RoomDurableObject extends DurableObject {
       const loginId=normalizeLoginId(raw?.loginId);if(!LOGIN_RE.test(loginId))continue;
       wanted.set(loginId,{loginId,displayName:normalizeDisplayName(raw?.displayName||loginId).slice(0,24),avatarId:String(raw?.avatarId||"").slice(0,160),gameCharacterId:normalizeGameCharacterId(raw?.gameCharacterId),seatId:normalizeSeatId(raw?.seatId,meta.seatCount)});
     }
-    const removedPlayers=[];
+    const removedPlayers=[],disbandAll=replace&&incoming.length===0;
     if(replace){
       for(const [id,p] of Object.entries(players)){
-        if(p?.kind!=="member")continue;
+        // Disband removes all participants, including guests, offline and unseated.
+        if(!disbandAll&&p?.kind!=="member")continue;
         const lid=normalizeLoginId(p?.loginId);
-        if(!wanted.has(lid)){removedPlayers.push(publicPlayer(p));delete players[id]}
+        if(disbandAll||!wanted.has(lid)){removedPlayers.push(publicPlayer(p));delete players[id]}
+      }
+    }
+    const evicted=new Set((await this.ctx.storage.get("evictedMembers"))||[]);
+    for(const p of removedPlayers)if(p?.loginId)evicted.add(normalizeLoginId(p.loginId));
+    for(const loginId of wanted.keys())evicted.delete(loginId);
+    await this.ctx.storage.put("evictedMembers",[...evicted].slice(-100));
+    if(disbandAll){
+      for(const p of removedPlayers)if(p?.loginId){
+        const lid=normalizeLoginId(p.loginId);
+        for(const prefix of ["role:","roles:","artifact:"])await this.ctx.storage.delete(prefix+lid);
       }
     }
     for(const m of wanted.values()){
@@ -598,8 +611,16 @@ export class RoomDurableObject extends DurableObject {
     const selected=new Set(wanted.keys()),assignments=(await this.ctx.storage.get("assignments"))||[],nextAssignments=assignments.filter(a=>selected.has(normalizeLoginId(a?.loginId)));
     if(nextAssignments.length!==assignments.length)await this.ctx.storage.put("assignments",nextAssignments);
     meta.playerCount=wanted.size;meta.locked=false;meta.seatsLocked=false;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
-    const publicPlayers=Object.values(players).map(publicPlayer),room=publicRoom(meta);this.broadcast({type:"room_state",room,players:publicPlayers,rosterUpdated:true});
-    return j({ok:true,room,players:publicPlayers,selectedCount:wanted.size,removedPlayers})
+    const publicPlayers=Object.values(players).map(publicPlayer),room=publicRoom(meta);
+    this.broadcast({type:"room_state",room,players:publicPlayers,rosterUpdated:true,disbandAll});
+    if(disbandAll){
+      this.broadcast({type:"room_disbanded",roomCode:meta.code,reason:"GM_DISBAND",removedCount:removedPlayers.length});
+      const removedIds=new Set(removedPlayers.map(p=>String(p.participantId)));
+      for(const ws of this.ctx.getWebSockets())try{
+        if(removedIds.has(String(ws.deserializeAttachment()?.participantId||"")))ws.close(1000,"ROOM_DISBANDED");
+      }catch{}
+    }
+    return j({ok:true,room,players:publicPlayers,selectedCount:wanted.size,removedPlayers,disbanded:disbandAll,removedCount:removedPlayers.length})
   }
   async gmRoomSettings(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -855,7 +876,8 @@ export class RoomDurableObject extends DurableObject {
   async playerState(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
     const phase=String(meta?.phase||"lobby").toLowerCase(),key="member:"+loginId,member=body?.member&&typeof body.member==="object"?body.member:null;let players=(await this.ctx.storage.get("players"))||{},p=players[key];
-    const canRestore=!!member&&normalizeLoginId(member.loginId)===loginId&&normalizeRoomCode(member.currentRoomCode||"")===normalizeRoomCode(meta.code||"")&&!["deleted","closed","archived"].includes(phase);
+    const evicted=(await this.ctx.storage.get("evictedMembers"))||[];
+    const canRestore=!!member&&!evicted.includes(loginId)&&normalizeLoginId(member.loginId)===loginId&&normalizeRoomCode(member.currentRoomCode||"")===normalizeRoomCode(meta.code||"")&&!["deleted","closed","archived"].includes(phase);
     if(!p&&canRestore){const now=new Date().toISOString();p={participantId:key,kind:"member",loginId,displayName:normalizeDisplayName(member.displayName||loginId),avatarId:String(member.avatarId||""),gameCharacterId:normalizeGameCharacterId(member.gameCharacterId)||null,seatId:null,ready:false,joinedAt:now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:now};players[key]=p;await this.ctx.storage.put("players",players);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),resumed:loginId})}
     if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn chưa ở trong phòng này."},403);
     p.lastSeenAt=new Date().toISOString();p.lastHeartbeatAt=Date.now();if(member){p.displayName=normalizeDisplayName(member.displayName||p.displayName||loginId);p.avatarId=String(member.avatarId||p.avatarId||"");p.gameCharacterId=normalizeGameCharacterId(member.gameCharacterId)||normalizeGameCharacterId(p.gameCharacterId)||null}players[key]=p;await this.ctx.storage.put("players",players);
@@ -989,7 +1011,7 @@ export class RoomDurableObject extends DurableObject {
   async join(body){
     const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
     let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;const now=new Date().toISOString(),phase=String(meta.phase||"lobby").toLowerCase(),inProgress=["role_delivery","running","started","game","playing"].includes(phase);let player;
-    if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
+    if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,evicted=(await this.ctx.storage.get("evictedMembers"))||[];if(evicted.includes(normalizeLoginId(m.loginId))&&!players[key])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"GM đã mời bạn ra khỏi Phòng. Hãy chờ GM gọi lại."},403);const resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
     else{const displayName=normalizeDisplayName(body?.guest?.displayName),avatarId=String(body?.guest?.avatarId||"");if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_GUEST_NAME"},400);if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR"},400);const guestId=String(body?.guest?.guestId||crypto.randomUUID()),key="guest:"+guestId;if(meta.enabled===false&&!players[key])return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!players[key])return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Người ngoài không thể tham gia giữa trận."},423);player={participantId:key,kind:"guest",guestId,displayName,avatarId,gameCharacterId:normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:players[key]?.ready||false,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now()};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
     if(!normalizeSeatId(player?.seatId,meta.seatCount)&&player?.positionX==null&&player?.movementStatus!=="moving"){
       const portalNow=Date.now(),from={x:50,y:12},to={x:50,y:23};
@@ -1153,7 +1175,26 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/members/profile"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/profile",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/me"&&request.method==="GET")return memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(url.pathname==="/api/members/logout"&&request.method==="POST")return memberStore(env).fetch(new Request("https://member.internal/members/logout",{method:"POST",headers:request.headers}));
-  if(url.pathname==="/api/members/presence"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/presence",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
+  if(url.pathname==="/api/members/presence"&&request.method==="POST"){
+    const body=await safeJson(request)||{},code=normalizeRoomCode(body.roomCode||"");let revoked=false;
+    if(isValidRoomCode(code)){
+      const authRes=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+      if(!authRes.ok)return authRes;
+      const own=await authRes.json().catch(()=>({})),lid=normalizeLoginId(own?.member?.loginId);
+      try{
+        const res=await roomStub(env,code).fetch("https://room.internal/state");
+        if(res.ok){
+          const state=await res.json().catch(()=>({}));
+          if(Array.isArray(state.players)&&!state.players.some(p=>normalizeLoginId(p?.loginId)===lid)){
+            body.roomCode=null;body.ready=false;revoked=true;
+          }
+        }else if(res.status===404){body.roomCode=null;body.ready=false;revoked=true}
+      }catch{}
+    }
+    const res=await memberStore(env).fetch(new Request("https://member.internal/members/presence",{method:"POST",headers:request.headers,body:JSON.stringify(body)}));
+    if(revoked&&res.ok){const data=await res.json().catch(()=>({ok:true}));return j({...data,roomRevoked:true})}
+    return res
+  }
   if(url.pathname==="/api/gm/reset/939"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmReset939(env,request);}
   if(url.pathname==="/api/gm/members"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/members/directory");}
   if(url.pathname==="/api/gm/members/reset-ranking"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset-ranking",{method:"POST",headers:request.headers}));}
@@ -1306,13 +1347,24 @@ async function gmLobbyResetAll(env,request){
 }
 async function gmRoomsPurge(env,request){const listing=await memberStore(env).fetch("https://member.internal/directory/rooms/list"),data=await listing.json().catch(()=>({rooms:[]})),rooms=Array.isArray(data?.rooms)?data.rooms:[],results=[];for(const r of rooms){const code=normalizeRoomCode(r?.code);if(!isValidRoomCode(code))continue;try{const res=await gmRoomDelete(env,code,request),body=await res.clone().json().catch(()=>({}));if(res.status===404){await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code})});results.push({code,ok:true,status:404,staleDirectoryRemoved:true});continue}results.push({code,ok:res.ok,status:res.status,error:body?.error||null})}catch(e){results.push({code,ok:false,status:0,error:String(e?.message||e)})}}const failed=results.filter(x=>!x.ok);return j({ok:failed.length===0,purged:failed.length===0,deleted:results.length-failed.length,failed:failed.length,results},failed.length?500:200)}
 async function gmRoomParticipants(env,raw,request){
-  const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
-  if(res.ok){
-    const data=await res.clone().json().catch(()=>({}));
-    for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:c,ready:true})})}catch{}}
-    for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}
-    await syncRoomDirectory(env,c);
-  }
+  const code=normalizeRoomCode(raw),body=await safeJson(request);
+  const res=await roomStub(env,code).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
+  if(!res.ok)return res;
+  const data=await res.clone().json().catch(()=>({}));
+  const syncPresence=async(loginId,roomCode,ready)=>{
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        const response=await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId,roomCode,ready})});
+        if(response.ok)return true;
+      }catch{}
+    }
+    return false
+  };
+  const failures=[];
+  for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true))failures.push(p.loginId);
+  for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[]))if(p?.loginId&&!await syncPresence(p.loginId,null,false))failures.push(p.loginId);
+  await syncRoomDirectory(env,code);
+  if(failures.length)return j({ok:false,error:"ROSTER_PRESENCE_PENDING",message:"Phòng đã giải tán, nhưng có tài khoản chưa xác nhận trở về Sảnh chờ.",pendingCount:failures.length,removedCount:Number(data.removedCount||0)},502);
   return res
 }
 async function gmRoomConfig(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/config",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok)await syncRoomDirectory(env,c);return res}
