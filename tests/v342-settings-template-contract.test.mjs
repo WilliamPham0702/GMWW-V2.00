@@ -38,15 +38,15 @@ test('Workboard fallback is a real recorded public issue snapshot',()=>{
  assert.match(app,/data\.fallback\?'BẢN DỰ PHÒNG/);
 });
 
-test('Game template editing only exposes selected starred cards, quantity, order, time and delete',()=>{
+test('Game template editing restores V1.09-style roles, timings, artifacts and deletion',()=>{
  const part=html.slice(html.indexOf('id="playGameSheet"'),html.indexOf('id="playEndSheet"'));
- assert.match(part,/id="playGameRoleList"/);
- assert.match(part,/id="playGameDelete"/);
- assert.doesNotMatch(part,/id="playVillageDiscussionSec"|id="playWolfDiscussionSec"|id="playAutoAdvance"|id="playArtifactsEnabled"|id="playGameSuggest"/);
- assert.match(app,/prefs\.cards\?\.\[role\.id\]\?\.starred/);
- for(const field of ['data-role-count','data-role-order','data-role-duration','data-role-select'])assert.ok(app.includes(field),field);
- assert.match(app,/actionDurationSec:clamp\(playSceneState\.roleDurations\?\.\[r\.id\]\?\?30\)/);
- assert.match(app,/gameTiming=\{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:30,autoAdvance:true\}/);
+ for(const id of ['playGameRoleList','playGameRolePicker','playGameDelete','playTemplateRoleSearch','playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playArtifactsEnabled'])assert.ok(part.includes('id="'+id+'"'),id);
+ for(const field of ['data-role-count','data-role-order','data-role-duration','data-role-remove','data-move-up','data-move-down'])assert.ok(app.includes(field),field);
+ assert.match(app,/function playTemplateRenderCatalog\(\)/);
+ assert.match(app,/function playTemplateMoveRole\(id,delta\)/);
+ assert.match(app,/playSceneState\.gameTiming=\{/);
+ assert.match(app,/playFavoriteArtifacts\(\)\.map/);
+ assert.doesNotMatch(app,/playSceneState\.artifactsEnabled=false;\s*playSceneState\.gameTiming=\{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:30,autoAdvance:true\};\s*const cfg=/);
 });
 
 test('Authenticated template deletion removes only the requested stored template',async()=>{
