@@ -2,7 +2,7 @@
 export const DEFAULT_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';
 
 export function assertGmwwHealth(health,deep,manifest,sync){
-  if(health?.ok!==true||health?.project!=='GMWW-V2.00'||!/^V\\d+\\.\\d+$/.test(String(health.version||'')))
+  if(health?.ok!==true||health?.project!=='GMWW-V2.00'||!/^V\d+\.\d+$/.test(String(health.version||'')))
     throw new Error('Worker health is not a valid GMWW release');
   if(deep?.ok!==true||deep?.checks?.memberStorage!=='ready')
     throw new Error('Durable Object storage readiness failed');
