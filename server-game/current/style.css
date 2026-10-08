@@ -3440,3 +3440,35 @@ body:not(.play-immersive) #bottomNav .nav:focus-visible{
 @media(prefers-reduced-motion:reduce){
  body:not(.play-immersive) #bottomNav .nav{transition:none!important}
 }
+
+/* V3.42: lightweight Settings, merged maintenance/health and horizontal tool rails. */
+#settings .settings-unified-box,#settings .settings-unified-box .settings-tool-inner,
+#settings .settings-operation-console{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#settings .settings-operations-tools{display:flex!important;flex-flow:row nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;gap:8px!important;scroll-snap-type:x proximity;padding:3px 2px 10px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+#settings .settings-operations-tools>.settings-tool-inner{flex:0 0 min(76vw,252px)!important;min-width:0!important;scroll-snap-align:start}
+#settings .settings-health-action{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#settings .settings-health-action #settingsRunHealth{width:auto;min-height:45px;flex:0 0 auto}
+#settings #settingsHealthSummary{font-size:11px;color:#bfecf2}
+#settings #characterScaleChoices{display:flex!important;flex-wrap:nowrap!important;gap:7px;overflow-x:auto!important;overflow-y:hidden;scrollbar-width:thin;padding:3px 2px 8px}
+#settings #characterScaleChoices button{flex:0 0 auto!important;min-width:59px;min-height:38px}
+#settings #characterScaleCard .settings-title{flex-wrap:nowrap!important;gap:8px}
+#settings .ops-report{overflow-x:auto}
+#settings .settings-tool-inner .health-v236-actions,#settings .settings-tool-inner .maintenance-actions,
+#settings .settings-tool-inner .diagnostic-actions,#settings .settings-tool-inner .ops-tools{
+ display:flex!important;flex-flow:row nowrap!important;gap:5px!important;overflow-x:auto!important;padding:3px 0 6px}
+#settings .settings-tool-inner .settings-action{min-width:67px;flex:0 0 auto!important}
+#settings .ops-auto{flex:0 0 auto!important}
+#settings .settings-operations-tools>*{backdrop-filter:none!important}
+.play-template-minimal-note{font-size:12px;line-height:1.45;color:#d4f3f5;margin:6px 0 10px}
+#playGameSheet .play-game-role-row{display:grid!important;grid-template-columns:24px 38px minmax(0,1fr) 54px 55px 65px!important;gap:5px!important;align-items:center;min-height:65px;padding:7px!important}
+#playGameSheet .play-game-role-row :is(.play-role-count,.play-role-order,.play-role-duration){display:flex;flex-flow:column nowrap;gap:2px;min-width:0}
+#playGameSheet .play-game-role-row label small{font-size:8px;color:#bbdfe4;white-space:nowrap}
+#playGameSheet .play-game-role-row input[type=number]{width:100%;min-width:0;text-align:center;font-size:11px;padding:6px 1px;background:#103951;border:1px solid #75c2d7;border-radius:7px;color:white}
+#playGameSheet .play-game-role-row input[type=checkbox]{width:20px;height:20px;accent-color:#35c1dd}
+#playGameSheet .play-roster-actions{display:grid;grid-template-columns:1fr 1fr 1fr}
+#playGameSheet #playGameDelete:not([hidden]){display:block;color:#ffe0ce;border-color:#a96361}
+#playGameSheet #playGameDelete[hidden]{display:none!important}
+@media(max-width:390px){#playGameSheet .play-game-role-row{grid-template-columns:21px 34px minmax(0,1fr) 47px 45px 57px!important;gap:3px!important}#playGameSheet .play-game-role-copy b{font-size:10px}}
+
+#settings #updateReleaseNotes{display:block;font-size:11px;color:#ddf6d8;line-height:1.55;padding:8px 0;border-top:1px solid rgba(162,221,218,.25)}
+#settings .settings-health-action #settingsRunHealth:disabled{opacity:.55}

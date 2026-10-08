@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.41</title>
-<link rel="stylesheet" href="style.css?v=3.41-popup-fix-1">
+<title>GMWW V3.42</title>
+<link rel="stylesheet" href="style.css?v=3.42-settings-tasks-template-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -45,7 +45,7 @@
           <div class="gmww-home-section-title"><b>◷ Gần đây</b><button id="gmwwHomeRefresh" type="button" aria-label="Làm mới thông tin Trang Chủ">↻ Làm mới</button></div>
           <p id="gmwwHomeRecentResult">Đang kiểm tra lịch sử trận…</p>
         </section>
-        <footer class="gmww-home-footnote"><span id="gmwwHomeVersion">GMWW V3.41</span><span>Fantasy Art · Dữ liệu trực tiếp</span></footer>
+        <footer class="gmww-home-footnote"><span id="gmwwHomeVersion">GMWW V3.42</span><span>Fantasy Art · Dữ liệu trực tiếp</span></footer>
       </div>
     </section>
     <section class="page" id="members">
@@ -385,6 +385,7 @@
           <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
           <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
           <small class="update-detail" id="updateDetail">—</small>
+          <small class="update-release-notes" id="updateReleaseNotes" aria-live="polite">Có gì mới: Đang tải thông tin cập nhật…</small>
           <div class="update-progress" id="updateProgress" role="progressbar" aria-label="Tiến trình cập nhật và đồng bộ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-state="idle">
             <div class="update-progress-head"><span id="updateProgressTitle">Chưa bắt đầu</span><b id="updateProgressPercent">0%</b></div>
             <div class="update-progress-track"><span id="updateProgressFill"></span></div>
@@ -398,9 +399,11 @@
           </div>
         </div>
         </div>
-        <div class="settings-unified-box" id="settingsGroupMaintenance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Bảo trì & khắc phục</h3></div></div>
-          <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
+        <div class="settings-unified-box" id="settingsGroupHealth">
+          <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
+          <div class="settings-health-action"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK TOÀN HỆ THỐNG</b></button><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
+          <div class="settings-operations-tools">
+<div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
           <div class="health-v236-actions maintenance-actions">
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
@@ -411,17 +414,13 @@
           <small class="maintenance-detail" id="maintenanceDetail">—</small>
           </div>
         </div>
-        </div>
-        <div class="settings-unified-box" id="settingsGroupHealth">
-          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Kiểm tra & kết nối</h3></div></div>
-          <div class="settings-operations-tools">
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
               <b class="settings-operation-tool-heading">Vận hành</b>
               <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
                 <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
                 <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
                 <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
-                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox" checked><span>Tự kiểm tra <b>2 phút</b></span></label>
+                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
               </div>
             </div>
             <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
@@ -478,7 +477,7 @@
           </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupTasks">
-          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Công việc & Tiến độ</h3></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3></div></div>
           <div class="settings-operation-console settings-task-console" aria-label="Trạng thái công việc">
           <div class="gmww-task-summary" id="gmwwTasksSummary" role="status" aria-live="polite">Đang tải công việc từ GitHub…</div>
           <p class="gmww-task-review-health" id="gmwwTaskReviewHealth" role="status" aria-live="polite" data-ready="false">Bộ xác nhận V3.32 đang kiểm tra giao diện và dữ liệu công việc…</p>
@@ -492,7 +491,7 @@
           <small class="gmww-task-source" id="gmwwTasksSource">Quyền xác nhận thuộc tài khoản GitHub quản trị dự án. Ứng dụng không lưu mật khẩu hoặc mã truy cập GitHub. Việc hoàn thành và bỏ qua được lưu trong Lịch sử đúng lý do đóng Issue.</small>
         </div>
         <div class="settings-unified-box" id="settingsGroupAppearance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">05</span><div><h3>Giao diện & nhân vật</h3></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Giao diện & nhân vật</h3></div></div>
           <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
@@ -529,23 +528,13 @@
       <select id="playGameTemplateSelect"><option value="">Tạo Ván Mẫu mới</option></select>
     </label>
     <label class="play-game-name-label">Tên Ván Mẫu<input id="playGameName" maxlength="48" value="Ván GMWW"></label>
-    <div class="play-timing-grid">
-      <label>Thảo luận Làng (giây)<input id="playVillageDiscussionSec" type="number" min="0" max="3600" value="180"></label>
-      <label>Thảo luận Bầy Sói (giây)<input id="playWolfDiscussionSec" type="number" min="0" max="3600" value="60"></label>
-      <label>Thời gian chức năng mặc định (giây)<input id="playDefaultActionSec" type="number" min="0" max="3600" value="45"></label>
-      <label class="play-auto-advance-field"><input id="playAutoAdvance" type="checkbox" checked><span>Tự qua lượt khi hết giờ</span></label>
-    </div>
-    <small class="play-template-preload-note">Khi lưu, Server chuẩn bị sẵn cấu hình Ván Mẫu. Player Web chưa nhận dữ liệu Vai Trò cho đến bước Phát Vai.</small>
-    <label class="play-artifact-toggle">
-      <input id="playArtifactsEnabled" type="checkbox">
-      <span><b>Bật Artifact</b><small id="playArtifactPoolHint">Dùng các Artifact đã đánh ★ trong Thư Viện</small></span>
-      <i aria-hidden="true"></i>
-    </label>
-    <div class="play-game-summary"><span id="playGameRoleCount">0/0 Vai Trò</span><button id="playGameSuggest" type="button">Gợi ý nhanh</button><button id="playGameClear" type="button">Xóa chọn</button></div>
+    <p class="play-template-minimal-note">Chỉ hiển thị lá bài đánh dấu ★ trong Bộ Bài. Chọn lá để thêm (mặc định 1), sau đó chỉnh số lượng, thứ tự và thời gian thực hiện (mặc định 30 giây).</p>
+    <div class="play-game-summary"><span id="playGameRoleCount">0 Vai Trò</span></div>
     <div class="play-game-role-list" id="playGameRoleList"></div>
     <div class="button-row play-roster-actions">
-      <button class="secondary" id="playGameCancel" type="button">Hủy</button>
-      <button class="primary" id="playGameSave" type="button">XÁC NHẬN VÁN</button>
+      <button class="secondary" id="playGameCancel" type="button">HỦY</button>
+      <button class="secondary" id="playGameDelete" type="button" hidden>XÓA</button>
+      <button class="primary" id="playGameSave" type="button">LƯU</button>
     </div>
   </div>
 </div>
@@ -660,7 +649,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.41-popup-fix-1"></script>
+<script src="app.js?v=3.42-settings-tasks-template-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

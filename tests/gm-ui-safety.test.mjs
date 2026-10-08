@@ -61,13 +61,13 @@ test('confirmed force End resets match and clears members without requiring winn
      isLivePlayRoom:()=>true,playSetBusy(on){ctx.playSceneRuntime.busy=on},
      document:{getElementById(){return{disabled:false}}},
      async playRoomApi(path,opts){requests.push({path,body:JSON.parse(opts.body)});return {ok:true,hardReset:true,playersCount:0,room:{...room,phase:'lobby',seatsLocked:false,resetVersion:6}}},
-     savePlayScene(){},closePlayEndSheet(){},async playSyncRoom(){},renderPlayScene(){},playFlashError(){}};
+     savePlayScene(){},closePlayEndSheet(){},async playSyncRoom(){},disconnectPlaySocket(){},gmwwSendGmPresence(){},renderPlayScene(){},playFlashError(){}};
   await vm.runInNewContext(section('async function confirmPlayEndGame()','function playRosterSelectedIds()')+';confirmPlayEndGame()',ctx);
   assert.equal(requests.length,1);assert.equal(requests[0].path,'/reset');
   assert.equal(requests[0].body.forceEnd,true);
   assert.equal(requests[0].body.preserveParticipants,false);
   assert.equal(requests[0].body.expectedResetVersion,5);
-  assert.equal(ctx.playSceneState.step,'room');
+  assert.equal(ctx.playSceneState.step,'lobby');
   assert.equal(ctx.playSceneState.night,0);
   assert.equal(ctx.playSceneState.matchId,'');
   assert.equal(ctx.playSceneRuntime.players.length,0);

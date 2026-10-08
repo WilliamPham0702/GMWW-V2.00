@@ -9,15 +9,14 @@ const a=html.indexOf('<section class="page" id="settings">');
 const b=html.indexOf('</section>',a);
 const settings=html.slice(a,b);
 const groups={
-  settingsGroupHealth:['gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','serverHealthCard','checkServerHealth','refreshServerData','openPlayerWeb','systemDiagnosticsCard','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'],
+  settingsGroupHealth:['settingsRunHealth','quickMaintenanceCard','auditLocalData','clearRuntimeCache','reloadApp','gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','serverHealthCard','checkServerHealth','refreshServerData','openPlayerWeb','systemDiagnosticsCard','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'],
   settingsGroupTasks:['gmwwTasksSummary','gmwwTasksOpenList','gmwwTasksHistory','gmwwTasksDoneList','gmwwTasksReload'],
   settingsGroupUpdate:['updateManagerCard','installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate'],
-  settingsGroupMaintenance:['quickMaintenanceCard','auditLocalData','clearRuntimeCache','reloadApp'],
   settingsGroupAppearance:['characterScaleCard','characterScaleChoices']
 };
 
-test('Every useful settings control lives in one of five boxes on a single scroll screen',()=>{
-  assert.equal(Object.keys(groups).length,5);
+test('Every useful settings control lives in one of four boxes on a single scroll screen',()=>{
+  assert.equal(Object.keys(groups).length,4);
   for(const [box,ids] of Object.entries(groups)){
     const start=settings.indexOf('id="'+box+'"');
     assert.ok(start>=0,'group missing '+box);
@@ -28,8 +27,7 @@ test('Every useful settings control lives in one of five boxes on a single scrol
       assert.equal(settings.split('id="'+id+'"').length-1,1,'duplicate DOM id '+id);
     }
   }
-  assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupMaintenance'),'Update must be first');
-  assert.ok(settings.indexOf('settingsGroupMaintenance')<settings.indexOf('settingsGroupHealth'));
+  assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupHealth'),'Update must be first');
   assert.ok(settings.indexOf('settingsGroupHealth')<settings.indexOf('settingsGroupTasks'));
   assert.ok(settings.indexOf('gmwwTasksOpenList')<settings.indexOf('gmwwTasksHistory'));
   assert.doesNotMatch(settings,/role="tablist"|role="tabpanel"|settingsHubTab-|settingsHubNav|data-settings-group=/);
@@ -43,7 +41,7 @@ test('Settings removes redundant explanatory notes while keeping live status and
     'Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản.'
   ])assert.ok(!settings.includes(note),'Redundant note remains: '+note);
   assert.ok(settings.includes('id="settingsHubMiniHealth"'));
-  const order=['settingsGroupUpdate','settingsGroupMaintenance','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
   const positions=order.map(id=>settings.indexOf('id="'+id+'"'));
   assert.ok(positions.every(p=>p>=0));
   assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
@@ -93,8 +91,8 @@ test('Timeline chrome is applied across settings, members and library but leaves
   assert.match(css,/filter:none!important;backdrop-filter:none!important/);
 });
 
-test('Auto diagnostics remain enabled without creating an expensive room watcher',()=>{
-  assert.match(app,/if\(gmwwOpsAutoEnabled\(\)\)setTimeout\(\(\)=>gmwwOpsRun\(\{kind:'all',silent:true\}\),450\)/);
-  assert.match(app,/if\(Date\.now\(\)-gmwwTasksLastLoaded>120000\)/);
+test('Settings navigation defers expensive operations while permitting an opt-in watcher',()=>{
+  assert.doesNotMatch(app,/if\(gmwwOpsAutoEnabled\(\)\)setTimeout\(\(\)=>gmwwOpsRun\(\{kind:'all',silent:true\}\),450\)/);
+  assert.match(app,/getElementById\('settingsRunHealth'\)/);
   assert.doesNotMatch(app,/gmwwSettingsHubSelect\(|GMWW_SETTINGS_GROUP_KEY|settingsHubNav/);
 });

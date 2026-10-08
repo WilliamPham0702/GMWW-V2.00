@@ -93,9 +93,9 @@ test('Production deploy verifies exact runtime, manifest and web-sync endpoint',
 
 test('Every new version can notify the GM with the required action',()=>{
   const js=fs.readFileSync('server-game/current/app.js','utf8');
-  assert.match(js,/Vui lòng CẬP NHẬT/);
-  assert.match(js,/cần cài lại IPA mới/);
-  assert.match(js,/Vui lòng ĐỒNG BỘ/);
+  assert.match(js,/gmwwReleaseNotesText\(manifest\)/);
+  assert.match(js,/Có phiên bản IPA V/);
+  assert.match(js,/Đồng bộ ngay\?/);
   assert.match(js,/visibilitychange/);
   assert.match(js,/checkAppUpdate\(\{notify:true\}\)/);
 });
@@ -169,7 +169,7 @@ test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   assert.match(worker,/validRuntime=/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
-  assert.match(worker,/NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-341"/);
+  assert.match(worker,/NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-342"/);
   assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
   assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });

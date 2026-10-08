@@ -102,3 +102,5 @@ test('forced End UI requires a confirmation sheet but no winner or running phase
   assert.match(wrapper,/removedPlayers/);
   assert.match(wrapper,/roomCode:null,ready:true/);
 });
+
+test('GM returns to first lobby step after force ending a match',()=>{const part=app.slice(app.indexOf('async function confirmPlayEndGame(){'),app.indexOf('function playRosterSelectedIds()'));assert.match(part,/playSceneState\.step='lobby'/);assert.match(part,/disconnectPlaySocket\(\)/)});

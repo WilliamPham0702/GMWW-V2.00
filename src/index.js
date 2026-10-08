@@ -10,10 +10,11 @@ import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-v
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { characterV4Status } from "./gmww-character-v4.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
-import { fetchGmwwTasks } from "./gmww-task-board.js";
+import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
+import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.41",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-341",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.42",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-342",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -71,6 +72,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/game-templates/list"&&request.method==="GET")return this.gameTemplateList();
     if(url.pathname==="/game-templates/upsert"&&request.method==="PUT")return this.gameTemplateUpsert(await safeJson(request));
     if(url.pathname==="/game-templates/get"&&request.method==="GET")return this.gameTemplateGet(url.searchParams.get("id")||"");
+    if(url.pathname==="/game-templates/delete"&&request.method==="DELETE")return this.gameTemplateDelete(url.searchParams.get("id")||"");
     if(url.pathname==="/members/admin-reset-ranking"&&request.method==="POST")return this.memberResetRanking(request);
     if(url.pathname==="/members/admin-clear-history"&&request.method==="DELETE")return this.memberClearHistory(request);
     if(url.pathname==="/members/delete"&&request.method==="DELETE")return this.memberDelete(request,await safeJson(request));
@@ -303,6 +305,13 @@ export class RoomDurableObject extends DurableObject {
     id=String(id||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const rec=await this.ctx.storage.get("gameTemplate:"+id);if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     return j({ok:true,template:rec});
+  }
+  async gameTemplateDelete(id){
+    id=String(id||"").trim().slice(0,120);
+    if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
+    const key="gameTemplate:"+id,existing=await this.ctx.storage.get(key);
+    if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    await this.ctx.storage.delete(key);return j({ok:true,deleted:true,id});
   }
   async gameTemplateUpsert(body){
     const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
@@ -1050,7 +1059,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
   if(url.pathname==="/api/operations/tasks"&&request.method==="GET"){
     try{const work=await fetchGmwwTasks();return j({ok:true,source:"github_public_issues",generatedAt:new Date().toISOString(),...work})}
-    catch(error){return j({ok:false,error:"TASKS_TEMPORARILY_UNAVAILABLE",message:"Chưa truy xuất được công việc. Vui lòng thử tải lại."},503)}
+    catch(error){const backup=normalizeGmwwTasks(GMWW_TASK_SNAPSHOT);return j({ok:true,source:"github_public_snapshot",fallback:true,generatedAt:GMWW_TASK_SNAPSHOT_GENERATED_AT,...backup})}
   }
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
   if(url.pathname==="/api/health/deep"&&request.method==="GET"){
@@ -1215,6 +1224,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
+  if(gmTemplateGet&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch(new Request("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"}));}
   if(url.pathname==="/api/gm/lobby/reset"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     return gmLobbyResetAll(env,request);
