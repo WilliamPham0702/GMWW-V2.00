@@ -35,8 +35,10 @@ jobs:
             if curl -fsS http://127.0.0.1:8787/village/rig-skin-demo.html > /tmp/rig-lab.html; then break; fi
             sleep 1
           done
+          echo 'Lab response bytes:'; wc -c /tmp/rig-lab.html; head -c 220 /tmp/rig-lab.html; echo
           grep -q 'Character-01' /tmp/rig-lab.html
           curl -fsS http://127.0.0.1:8787/village/rig-skin-core.mjs > /tmp/rig-core.mjs
+          echo 'Core response bytes:'; wc -c /tmp/rig-core.mjs; head -c 140 /tmp/rig-core.mjs; echo
           grep -q 'ACTION_CATALOG' /tmp/rig-core.mjs
       - name: Headless visual smoke for articulated skeleton
         shell: bash
