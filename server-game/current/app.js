@@ -889,7 +889,7 @@ function downloadUpdateIPA(){
     return false;
   }
   gmwwSetUpdateProgress('running',null,'Đang tải IPA • chờ dữ liệu thực tế');
-  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải GMWW V'+version+'…','File sẽ mở bảng chia sẻ trên iPhone.');
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải IPA V'+version+' · '+gmwwReleaseNotesText(gmwwUpdateManifest),'Có gì mới: '+gmwwReleaseNotesText(gmwwUpdateManifest));
   if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
   return true;
 }
@@ -947,6 +947,10 @@ async function gmwwUpdateProbe(path){
   throw lastError||new Error('Không nhận được phản hồi');
 }
 function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
+function gmwwReleaseNotesText(manifest){
+  const notes=Array.isArray(manifest?.releaseNotes)?manifest.releaseNotes.filter(x=>typeof x==='string').slice(0,8):[];
+  return notes.length?notes.join(' • '):'Cải thiện giao diện và độ ổn định của Game Runtime.';
+}
 async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return null;
   const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
@@ -984,6 +988,7 @@ async function checkAppUpdate({notify=false}={}){
       return null;
     }
     gmwwUpdateManifest=manifest;
+    const notesElement=document.getElementById('updateReleaseNotes');if(notesElement)notesElement.textContent='Có gì mới: '+gmwwReleaseNotesText(manifest);
     const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
     const newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
     if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
@@ -993,34 +998,34 @@ async function checkAppUpdate({notify=false}={}){
     }
     if(!newer){
       setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok',gmwwVersionCompare(shell,runtime)<0?'RUNTIME MỚI NHẤT':'MỚI NHẤT','GMWW đang ở phiên bản mới nhất.','Server V'+server+' đã xác minh. Không cần cập nhật.');
+      setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Game Runtime V'+runtime+' · Server V'+server+'.','Bản cập nhật: '+gmwwReleaseNotesText(manifest));
       return manifest
     }
     if(type==='native'&&shellCurrent){
       setUpdateAction('none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok','ĐÃ CÀI IPA','Ứng dụng V'+shell+' đã được cài.','Không cần tải hoặc cài IPA lại.');
+      setUpdateUi('ok','ĐÃ CÀI IPA','Đã cài IPA V'+shell+' · '+gmwwReleaseNotesText(manifest),'Phiên bản IPA hiện tại.');
       return manifest
     }
     if(type==='native'){
       setUpdateAction('native',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('warn','CẦN IPA MỚI','Có GMWW V'+latest+' — phiên bản này cần cài ứng dụng mới.','Nhấn TẢI IPA để lưu file trực tiếp trên iPhone.');
+      setUpdateUi('warn','CẦN IPA MỚI','IPA V'+latest+': '+gmwwReleaseNotesText(manifest),'Nhấn TẢI IPA để cài phiên bản ứng dụng.');
     }else if(type==='runtime'){
       setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — có thể cập nhật trực tiếp.','Không cần cài lại IPA.');
+      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' — '+gmwwReleaseNotesText(manifest),'Cập nhật Game Runtime để nhận thay đổi.');
     }else{
       setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
-      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Ứng dụng GM không cần cài lại.');
+      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web V'+latest+': '+gmwwReleaseNotesText(manifest),'Tải lại Player Web để xem thay đổi.');
     }
     if(notify&&newer){
       const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
       if(!sessionStorage.getItem(key)){
         sessionStorage.setItem(key,'1');
         if(type==='runtime'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nVui lòng CẬP NHẬT để nhận phiên bản mới.\n\nCập nhật ngay?'))installRuntimeUpdate();
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nCập nhật ngay?'))installRuntimeUpdate();
         }else if(type==='native'){
-          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\nPhiên bản này cần cài lại IPA mới.\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+          if(confirm('Có phiên bản IPA V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
         }else{
-          if(confirm('Player Web/Server đã có phiên bản V'+latest+' mới.\n\nVui lòng ĐỒNG BỘ để áp dụng cho Player Web.\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+          if(confirm('Player Web/Server V'+latest+' đã cập nhật.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
         }
       }
     }
@@ -1048,7 +1053,7 @@ window.GMWWUpdateNative={
     if(result.ok&&result.action==='installRuntime'){
       gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
-      setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Khởi động lại game để dùng phiên bản mới.');
+      setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Có gì mới: '+gmwwReleaseNotesText(gmwwUpdateManifest));
       setTimeout(()=>{if(!gmwwNativePost('restartRuntime'))window.location.reload()},300);
       return
     }
@@ -1107,7 +1112,8 @@ const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{setTimeout(checkServerHealth,60);setTimeout(()=>checkAppUpdate({notify:false}),120);if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),450);setTimeout(()=>gmwwTasksRefresh({silent:false}),500)}));
+// Settings navigation stays lightweight; diagnostics and the GitHub board are loaded on demand.
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>gmwwSettingsHubHealth('idle','Chọn HEALTHY CHECK để kiểm tra')));
 window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
@@ -1250,7 +1256,7 @@ async function checkPlayerWebNow(){
 const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
 const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
 const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
-setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true});if(Date.now()-gmwwTasksLastLoaded>120000)gmwwTasksRefresh({silent:true})}},120000);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true});false /* Workboard refreshes only when requested */}},120000);
 
 
 /* GMWW Settings: one continuous scrolling screen with consistent health status. */
@@ -1264,7 +1270,7 @@ function gmwwSettingsHubHealth(kind,message){
 const GMWW_OPS_AUTO_KEY='GMWW_OPS_AUTO_CHECK_V1';
 let gmwwOpsBusy=false,gmwwOpsSnapshot=null;
 function gmwwOpsAutoEnabled(){
-  try{return localStorage.getItem(GMWW_OPS_AUTO_KEY)!=='0'}catch{return true}
+  try{return localStorage.getItem(GMWW_OPS_AUTO_KEY)==='1'}catch{return false}
 }
 function gmwwOpsLine(key,kind,label,note){
   const el=document.querySelector('#opsReport [data-ops-check="'+key+'"]');
@@ -1439,6 +1445,14 @@ function gmwwOpsInitialize(){
   document.getElementById('opsRunFullAudit')?.addEventListener('click',()=>gmwwOpsRun({kind:'all'}));
   document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
   document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
+  document.getElementById('settingsRunHealth')?.addEventListener('click',async()=>{
+    const button=document.getElementById('settingsRunHealth'),note=document.getElementById('settingsHealthSummary');
+    if(button?.disabled)return;if(button)button.disabled=true;
+    if(note)note.textContent='Đang kiểm tra bảo trì, Server, realtime và chẩn đoán…';
+    try{auditLocalData();await gmwwOpsRun({kind:'all'});await checkServerHealth();await runSystemDiagnostics();if(note)note.textContent='Hoàn tất quét. Kết quả và cảnh báo hiển thị bên dưới.'}
+    catch(e){if(note)note.textContent='Còn mục chưa kiểm tra: '+String(e?.message||'Vui lòng thử lại.')}
+    finally{if(button)button.disabled=false}
+  });
 }
 gmwwOpsInitialize();
 
