@@ -38,6 +38,13 @@ export const MASTER_RIG_SEGMENTS=Object.freeze([
   Object.freeze({id:'head',className:'head'})
 ]);
 
+export const SITTING_RIG_SEGMENTS=Object.freeze([
+  Object.freeze({id:'sit-thigh-back',className:'sit-thigh-back sit-part'}),
+  Object.freeze({id:'sit-shin-back',className:'sit-shin-back sit-part'}),
+  Object.freeze({id:'sit-thigh-front',className:'sit-thigh-front sit-part'}),
+  Object.freeze({id:'sit-shin-front',className:'sit-shin-front sit-part'})
+]);
+
 export function idlePhaseMsFor(characterId){
   const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;
   return -((n*431+137)%6800);
@@ -145,7 +152,7 @@ export function mountCharacterRenderer(host,{characterId=MASTER_CHARACTER_ID,com
   root.append(shadow);
 
   const texture=masterTextureUrl(characterId,normalized.facing);
-  for(const segment of MASTER_RIG_SEGMENTS){
+  for(const segment of [...MASTER_RIG_SEGMENTS,...SITTING_RIG_SEGMENTS]){
     const part=document.createElement('span');
     part.className='gmww-rig-part gmww-rig-'+segment.className;
     part.dataset.rigPart=segment.id;
