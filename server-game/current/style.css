@@ -2782,3 +2782,17 @@ body.play-immersive #start #playGatherToolbar.hidden{display:none!important}
   #settings .settings-operation-console .ops-report>div{grid-template-columns:minmax(0,1fr) minmax(85px,auto)}
   #settings .settings-operations-tools .ops-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* V3.29 — output values are plain text; only controls are individual boxed tap targets. */
+#settings .settings-operation-console :is(.ops-pill,.update-pill,.maintenance-pill,.diagnostic-pill,.health-pill){
+  border:0!important;background:none!important;box-shadow:none!important;
+  border-radius:0!important;padding:0!important;
+}
+#settings .settings-operation-console .diagnostic-list b,
+#settings .settings-task-console .gmww-task-status{
+  border:0!important;background:none!important;border-radius:0!important;
+  padding:0!important;box-shadow:none!important;
+}
+#settings .settings-operation-console .update-version-grid b{
+  font-size:14px!important;
+}
