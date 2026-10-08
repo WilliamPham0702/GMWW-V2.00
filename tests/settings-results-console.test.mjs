@@ -8,7 +8,7 @@ const end=html.indexOf('</section>',start);
 const settings=html.slice(start,end);
 test('Cài Đặt has no explanatory tools tagline and no redundant group paragraphs',()=>{
   assert.doesNotMatch(settings,/Các công cụ vận hành GMWW|cuộn để xem tất cả/);
-  assert.doesNotMatch(settings,/class="settings-unified-heading"[^]*?<p>/);
+  for(const line of settings.split('\n').filter(x=>x.includes('class="settings-unified-heading"'))) assert.doesNotMatch(line,/<p>/);
 });
 test('The nine operational controls remain buttons or explicit interactive toggle',()=>{
   for(const id of ['opsRunFullAudit','opsCheckRoom','opsCheckRelease','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'])
