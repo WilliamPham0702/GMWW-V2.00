@@ -79,6 +79,9 @@ test('sitting is compact and overlapping feet, not the earlier wide bent-knee st
   const sit=sampleRigAction('sit',300),stand=basePose();
   assert.ok(sit.hip.y>stand.hip.y+45);
   assert.ok(Math.abs(sit.knees.L.x)<42);
+  assert.equal(sit.sitBlend,1);
+  assert.equal(stand.sitBlend,0);
+  assert.ok(sampleRigAction('sit-down',450).sitBlend>0&&sampleRigAction('sit-down',450).sitBlend<1);
   assert.ok(Math.abs(sit.knees.R.x)<42);
   assert.ok(sit.ankles.L.x>0&&sit.ankles.R.x<0);
   assert.ok(Math.abs(sit.footX.L-sit.footX.R)<30);
@@ -196,5 +199,6 @@ test('renderer actually contains separate rear and side appearances',()=>{
   assert.ok(source.includes('headingDeg'));
   assert.ok(source.includes("b.svg.dataset.facing=valid"));
   assert.match(markup,/data-original-head/);
+  assert.match(markup,/data-seated-legs/);
   assert.match(markup,/chibi-01\.webp/);
 });
