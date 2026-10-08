@@ -109,13 +109,13 @@ function nodesFor(svg){
   ])n[attr]=byAttr(svg,attr);return n;
 }
 const set=(n,k,v)=>n?.setAttribute(k,v);
-export function renderRigPose(nodes,pose,{facing='down'}={}){
+export function renderRigPose(nodes,pose,{facing='down',headingDeg=null}={}){
   if(!nodes?.body)return;
   const b=nodes;
   // Keep world displacement separate from body orientation. Never side-step with a front-facing sprite.
   const valid=['left','right','up','down'].includes(facing)?facing:'down';
   const facingDegrees={down:0,right:90,up:180,left:270};
-  const angle=Number.isFinite(arguments[2]?.headingDeg)?arguments[2].headingDeg:facingDegrees[valid];
+  const angle=Number.isFinite(headingDeg)?headingDeg:facingDegrees[valid];
   const rad=angle*Math.PI/180,front=Math.max(0,Math.cos(rad)),back=Math.max(0,-Math.cos(rad)),profile=Math.abs(Math.sin(rad));
   const weights=front+profile+back||1;
   const xScale=(Math.sin(rad)<-.0001?-1:1)*(1-.3*profile);
