@@ -7,7 +7,7 @@ export function normalizeGmwwTasks(rows){
   const tasks=rows.filter(item=>item&&!item.pull_request&&Number.isInteger(item.number)&&item.number>0)
     .map(item=>{
       const labels=Array.isArray(item.labels)?item.labels.map(x=>String(x?.name||"").toLowerCase()):[],
-        active=labels.some(x=>/in.progress|doing|wip|đang.thực.hiện|đang.xử.lý/.test(x)),
+        active=labels.some(x=>/in.progress|doing|wip|đang.thực.hiện|đang.xử.lý/.test(x))||/đang\s+thực\s+hiện/i.test(String(item.title||"")),
         done=item.state==="closed",
         state=done?(item.state_reason==="completed"?"completed":"closed"):(active?"doing":"pending"),
         priority=urgency(item.title);
