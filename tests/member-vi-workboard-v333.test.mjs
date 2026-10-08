@@ -31,7 +31,8 @@ test("Thành Viên giữ nguyên công cụ và cả danh sách, bảng xếp h�
   assert.match(memberHtml,/memberPane-ranking/);
   assert.match(css,/#members \.member-pane,#members \.member-pane.active\{display:block/);
   assert.match(app,/function switchMemberTab\(tab\)/);
-  assert.match(app,/Đặt lại MK/);\n  assert.match(app,/aria-label=\"Đặt lại mật khẩu thành viên\"/);
+  assert.match(app,/Đặt lại MK/);
+  assert.match(app,/aria-label=\"Đặt lại mật khẩu thành viên\"/);
 });
 
 test("Nội dung công việc cũ tiếng Anh hiển thị bằng tiếng Việt",()=>{
