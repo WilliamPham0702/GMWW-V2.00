@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.32';
+const VERSION='3.33';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1573,14 +1573,14 @@ function renderMemberDirectory(){
       '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
       '<div class="member-flags"></div></div>'+
       '<div class="member-card-actions">'+
-      '<button data-act="reset" type="button">Reset MK</button><button data-act="delete" class="danger-mini" type="button">Xoá</button></div>';
+      '<button data-act="reset" type="button">ĐẶT LẠI MẬT KHẨU</button><button data-act="delete" class="danger-mini" type="button">XÓA THÀNH VIÊN</button></div>';
     const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
     card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
     card.querySelector('.member-card-main small').textContent='@'+m.loginId;
-    const status=card.querySelector('.member-status');status.textContent=m.online?'ONLINE':'OFFLINE';status.classList.toggle('online',!!m.online);
+    const status=card.querySelector('.member-status');status.textContent=m.online?'TRỰC TUYẾN':'NGOẠI TUYẾN';status.classList.toggle('online',!!m.online);
     card.querySelector('.member-room').textContent=m.currentRoomCode?('Phòng '+m.currentRoomCode+(m.ready?' • Sẵn sàng':'')):'Chưa vào phòng';
     const flags=card.querySelector('.member-flags');
-    if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU RESET</span>';
+    if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU ĐẶT LẠI</span>';
     if(m.source)flags.innerHTML+='<span class="member-flag">'+memberEsc(m.source)+'</span>';
     const bindAction=(btn,handler)=>{if(!btn)return;btn.onclick=e=>{e.preventDefault();e.stopPropagation();if(memberAdminState.busy)return;handler()}};
     bindAction(card.querySelector('[data-act="reset"]'),()=>resetMemberPassword(m));
@@ -1642,10 +1642,12 @@ function renderMemberHistory(){
   }
 }
 function switchMemberTab(tab){
+  // Trang Thành Viên luôn hiện đủ các nhóm; không còn chia tab ẩn nội dung.
   memberAdminState.tab=tab;
-  document.querySelectorAll('#memberTabs [data-member-tab]').forEach(b=>b.classList.toggle('active',b.dataset.memberTab===tab));
-  document.querySelectorAll('.member-pane').forEach(p=>p.classList.toggle('active',p.id==='memberPane-'+tab));
-  if(tab==='history')renderMemberHistory();if(tab==='ranking')renderMemberRanking();
+  if(tab==='history')renderMemberHistory();
+  if(tab==='ranking')renderMemberRanking();
+  const target=document.getElementById(tab==='ranking'?'memberGroupRanking':'memberGroupDirectory');
+  if(target&&tab!=='directory')target.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function openMemberSheet(mode,m=null){
   memberAdminState.sheetMode=mode;memberAdminState.sheetMember=m;

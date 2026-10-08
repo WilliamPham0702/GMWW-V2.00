@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.32</title>
-<link rel="stylesheet" href="style.css?v=3.32-task-review-2">
+<title>GMWW V3.33</title>
+<link rel="stylesheet" href="style.css?v=3.33-member-vi-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -14,43 +14,46 @@
     <section class="page" id="members">
       <div class="member-page">
         <div class="member-page-head">
-          <div><h2>👥 Thành Viên</h2><small>Quản lý Thành Viên • Xếp Hạng</small></div>
+          <div><h2>👥 Thành Viên</h2><small>Quản lý thành viên • Theo dõi kết quả</small></div>
+        </div>
+
+        <div class="member-unified-box" id="memberGroupOverview">
+          <div class="member-unified-heading"><span class="member-unified-index">01</span><div><h3>Tổng quan thành viên</h3></div></div>
+          <div class="member-summary" aria-label="Số liệu thành viên">
+            <div><small>Tổng thành viên</small><b id="memberTotal">0</b></div>
+            <div><small>Đang trực tuyến</small><b id="memberOnline">0</b></div>
+            <div><small>Tổng số ván</small><b id="memberGames">0</b></div>
+            <div><small>Yêu cầu đặt lại mật khẩu</small><b id="memberResetRequests">0</b></div>
+          </div>
+        </div>
+
+        <div class="member-unified-box" id="memberGroupDirectory">
+          <div class="member-unified-heading"><span class="member-unified-index">02</span><div><h3>Quản lý thành viên</h3><p>Tìm kiếm, cập nhật thông tin và quản lý tài khoản.</p></div></div>
           <div class="member-head-actions">
-            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới">↻</button>
-            <button class="member-add-btn" id="addMember" type="button">＋ THÊM</button>
+            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới danh sách"><span aria-hidden="true">↻</span><b>LÀM MỚI</b></button>
+            <button class="member-add-btn" id="addMember" type="button"><span aria-hidden="true">＋</span><b>THÊM THÀNH VIÊN</b></button>
           </div>
-        </div>
-
-        <div class="member-summary">
-          <div><small>Tổng Thành Viên</small><b id="memberTotal">0</b></div>
-          <div><small>Đang Online</small><b id="memberOnline">0</b></div>
-          <div><small>Tổng Ván</small><b id="memberGames">0</b></div>
-          <div><small>Yêu cầu Reset</small><b id="memberResetRequests">0</b></div>
-        </div>
-
-        <div class="member-tabs" id="memberTabs">
-          <button class="active" data-member-tab="directory" type="button">Thành Viên</button>
-          <button data-member-tab="ranking" type="button">Xếp Hạng</button>
-        </div>
-
-        <section class="member-pane active" id="memberPane-directory">
-          <div class="member-toolbar">
-            <input id="memberSearch" class="member-search" type="search" placeholder="Tìm tên hoặc Member ID">
-            <div class="member-filter-row" id="memberFilterRow">
-              <button class="active" data-member-filter="all" type="button">Tất cả</button>
-              <button data-member-filter="online" type="button">Online</button>
-              <button data-member-filter="offline" type="button">Offline</button>
-              <button data-member-filter="reset" type="button">Yêu cầu Reset</button>
+          <section class="member-pane active" id="memberPane-directory" aria-label="Danh sách thành viên">
+            <div class="member-toolbar">
+              <input id="memberSearch" class="member-search" type="search" placeholder="Tìm tên hoặc mã thành viên" aria-label="Tìm thành viên">
+              <div class="member-filter-row" id="memberFilterRow" aria-label="Lọc thành viên">
+                <button class="active" data-member-filter="all" type="button">Tất cả</button>
+                <button data-member-filter="online" type="button">Trực tuyến</button>
+                <button data-member-filter="offline" type="button">Ngoại tuyến</button>
+                <button data-member-filter="reset" type="button">Yêu cầu đặt lại</button>
+              </div>
             </div>
-          </div>
-          <div class="member-list" id="memberDirectoryList"><div class="member-empty">Đang tải Thành Viên…</div></div>
-        </section>
+            <div class="member-list" id="memberDirectoryList"><div class="member-empty">Đang tải thành viên…</div></div>
+          </section>
+        </div>
 
-        <section class="member-pane" id="memberPane-ranking">
-          <div class="member-section-head"><div><h3>🏆 Xếp Hạng</h3><small>Xếp theo số trận thắng, tỷ lệ thắng và số ván</small></div><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Xếp hạng lại">↻ Xếp hạng lại</button></div>
-          <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
-        </section>
-
+        <div class="member-unified-box" id="memberGroupRanking">
+          <div class="member-unified-heading"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3><p>Sắp xếp theo số trận thắng, tỷ lệ thắng và tổng số ván.</p></div></div>
+          <section class="member-pane active" id="memberPane-ranking" aria-label="Bảng xếp hạng">
+            <div class="member-section-head"><span>Thống kê kết quả thi đấu</span><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Đặt lại xếp hạng">↻ ĐẶT LẠI XẾP HẠNG</button></div>
+            <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
+          </section>
+        </div>
       </div>
     </section>
     <section class="page play-page" id="start">
@@ -606,7 +609,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.32-task-review-2"></script>
+<script src="app.js?v=3.33-member-vi-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

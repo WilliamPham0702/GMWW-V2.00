@@ -2894,3 +2894,90 @@ body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330>button:focus-v
 @media(prefers-reduced-motion:reduce){
  body.play-immersive #start #gmTopMenu.gm-stage-dock-v330>.gm-top-box-v293{transition:none!important}
 }
+
+
+/* V3.33 — Thành Viên dùng cùng ngôn ngữ thiết kế kính biển với Cài Đặt. */
+#members .member-page{padding:4px 0 105px;min-width:0}
+#members .member-page-head{margin:0 2px 10px;display:flex;align-items:center;justify-content:space-between}
+#members .member-page-head h2{font-size:21px;line-height:1.3}
+#members .member-page-head small{font-size:11px;color:#c4deea!important}
+#members .member-unified-box{
+  display:grid;gap:12px;min-width:0;margin:12px 0;padding:14px;
+  border:1px solid var(--gmww-glass-stroke)!important;
+  border-radius:17px!important;background:var(--gmww-glass-surface)!important;
+  box-shadow:var(--gmww-glass-shadow)!important;
+  backdrop-filter:blur(13px) saturate(145%);
+  -webkit-backdrop-filter:blur(13px) saturate(145%);
+}
+#members .member-unified-heading{display:flex;align-items:center;gap:11px;min-width:0}
+#members .member-unified-heading>div{display:grid;gap:3px;min-width:0}
+#members .member-unified-heading h3{font-size:14px;line-height:1.3;margin:0;color:#f7feff}
+#members .member-unified-heading p{font-size:11px;line-height:1.45;color:#c7e5ec;margin:0}
+#members .member-unified-index{
+  display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
+  border:1px solid rgba(255,244,180,.52);border-radius:50%;
+  background:rgba(32,96,111,.42);color:#fff3b7;font-size:11px;font-weight:1000;
+}
+#members .member-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+#members .member-summary>div{min-width:0;min-height:81px;padding:12px!important;border:1px solid rgba(163,229,243,.27)!important;border-radius:13px!important;background:var(--gmww-glass-inner)!important}
+#members .member-summary small{font-size:11px;line-height:1.35;color:#c6e0ea!important}
+#members .member-summary b{font-size:25px;line-height:1.1;margin-top:7px}
+#members .member-head-actions{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin:0}
+#members .member-head-actions button,#members .member-tool-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:46px;height:auto;
+  padding:9px 7px;border:1px solid rgba(163,229,243,.38)!important;border-radius:12px!important;
+  background:var(--gmww-glass-inner)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.13)!important;
+  color:#f5fcff!important;font-size:10.5px;font-weight:900;line-height:1.25;text-align:center;
+}
+#members .member-head-actions button span{font-size:20px;line-height:1}
+#members .member-head-actions button b{font-size:10.5px}
+#members .member-head-actions button:disabled{opacity:.55}
+#members .member-icon-btn.is-busy span{animation:settingsSpin .7s linear infinite}
+#members .member-pane,#members .member-pane.active{display:block;min-width:0}
+#members .member-toolbar{padding:0;margin:0 0 11px;border:0;background:transparent;border-radius:0}
+#members .member-search{height:46px;border-radius:12px;background:var(--gmww-glass-inner);border:1px solid rgba(163,229,243,.29);color:#f4fbff;font-size:12px;padding:0 12px}
+#members .member-search::placeholder{color:#a9cad7;opacity:1}
+#members .member-filter-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:8px;margin-top:9px}
+#members .member-filter-row button{white-space:normal;min-height:40px;border-radius:11px;border:1px solid rgba(163,229,243,.28);background:var(--gmww-glass-inner);color:#d0e8f2;font-size:11px;padding:6px}
+#members .member-filter-row button.active{border-color:rgba(255,228,151,.65);color:#fff5d7;background:rgba(27,101,120,.64)}
+#members .member-list,#members .ranking-list{gap:9px}
+#members #memberDirectoryList .member-card{
+  display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;
+  column-gap:11px!important;row-gap:9px!important;align-items:center;
+  min-height:0!important;padding:11px!important;
+  border:1px solid rgba(163,229,243,.28)!important;border-radius:13px!important;
+  background:var(--gmww-glass-inner)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
+}
+#members #memberDirectoryList .member-avatar{width:56px!important;height:62px!important;object-fit:contain!important;background:rgba(1,19,29,.35)!important}
+#members #memberDirectoryList .member-name-row b{font-size:14px!important}
+#members #memberDirectoryList .member-name-row small{font-size:10.5px!important}
+#members #memberDirectoryList .member-status{font-size:8.5px!important;padding:3px 5px!important}
+#members #memberDirectoryList .member-meta{gap:4px!important;margin-top:6px!important}
+#members #memberDirectoryList .member-meta span{font-size:9px!important;padding:3px 5px!important;white-space:normal!important}
+#members #memberDirectoryList .member-card-actions{
+  grid-column:1/-1!important;grid-row:auto!important;display:grid!important;
+  grid-template-columns:1fr 1fr!important;gap:8px!important;
+  flex-direction:unset!important;margin:0!important;
+}
+#members #memberDirectoryList .member-card-actions button{
+  width:100%!important;min-height:40px!important;padding:7px 5px!important;
+  border-radius:10px!important;font-size:10px!important;
+  background:rgba(10,73,90,.43);border-color:rgba(163,229,243,.38);
+}
+#members #memberDirectoryList .member-card-actions .danger-mini{background:rgba(79,31,42,.42)!important;border-color:rgba(255,150,150,.34)!important}
+#members .member-section-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:0}
+#members .member-section-head span{min-width:0;color:#c4deea;font-size:10.5px;line-height:1.4}
+#members .member-tool-btn{flex:0 0 auto;min-height:40px;padding:7px 9px;font-size:9px;max-width:54%}
+#members .ranking-row{background:var(--gmww-glass-inner);border-color:rgba(163,229,243,.28);border-radius:13px}
+#members .ranking-row.podium{background:linear-gradient(135deg,rgba(107,93,38,.28),rgba(5,48,70,.65));border-color:rgba(255,227,162,.39)}
+#members .ranking-row .rank-avatar{object-fit:contain;background:rgba(1,19,29,.25)}
+#members button:focus-visible,#members input:focus-visible{outline:2px solid #fff1a2;outline-offset:2px}
+@media(max-width:380px){
+  #members .member-unified-box{padding:12px;gap:10px}
+  #members #memberDirectoryList .member-card{grid-template-columns:48px minmax(0,1fr)!important}
+  #members #memberDirectoryList .member-avatar{width:48px!important;height:56px!important}
+  #members .member-head-actions button b{font-size:9.5px}
+  #members .ranking-row{grid-template-columns:27px 39px minmax(0,1fr) 43px 42px!important;gap:4px}
+  #members .ranking-row .rank-stats:last-child{display:none}
+}
