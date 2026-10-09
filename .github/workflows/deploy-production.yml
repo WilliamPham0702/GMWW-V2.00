@@ -440,4 +440,23 @@ jobs:
           grep -Fq 'skin-master-v415.html' /tmp/v4-skin-preview-v414.html
           echo "Verify Production: V4.15 8 full-body masters + 17 transparent layers exporter exact SHA PASS."
 
+          echo "Verify Production: Character V4.16 art QA is staging-only."
+          for F in artwork-intake-v416.html artwork-intake-v416.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?assetverify=$(date +%s)-$ATTEMPT" > "/tmp/v416-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v416-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.16 $F does not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v416-artwork-intake-v416.mjs
+          grep -Fq 'CHƯA THAY CHARACTER TRONG GAME' /tmp/v416-artwork-intake-v416.html
+          grep -Fq 'artwork-intake-v416.mjs' /tmp/v416-artwork-intake-v416.html
+          grep -Fq 'artwork-intake-v416.html' /tmp/v4-skin-master-v415.html
+          echo "Verify Production: V4.16 staging artwork validator exact-byte SHA PASS."
+
+
 
