@@ -161,6 +161,43 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
+          # Verify that an actually installed IPA V3.17 Runtime receives the correct small OTA,
+          # not just the full package used by deployment validation.
+          if [ "$EXPECTED" = "3.53" ]; then
+            for FROM in 3.51 3.52; do
+              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/update/manifest?current=$FROM&otacheck=$(date +%s)" > "/tmp/ota-from-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          const required=['GMWW.html','app.js','style.css',...(from==='3.51'?['home-art/home-sea-portal-v352.svg']:[])];
+          if(m.ok!==true||m.releaseVersion!=='3.53'||m.runtimeVersion!=='3.53'||m.shellVersion!=='3.17'
+             ||m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from
+             ||JSON.stringify(m.runtime?.files?.map(f=>f.path))!==JSON.stringify(required))process.exit(4);
+          if(!m.runtime.files.every(f=>f.url==='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.53/'+f.path
+             && /^[a-f0-9]{64}$/i.test(f.sha256)))process.exit(5);
+          console.log('Production OTA V'+from+' -> V3.53 verified '+required.length+' files PASS.');
+          NODE
+              for REL in GMWW.html app.js style.css; do
+                OTA_URL=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.url||'');
+          NODE
+                )
+                test -n "$OTA_URL"
+                curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$OTA_URL?sha-check=$(date +%s)" > /tmp/gmww-delta-file
+                LOCAL_SHA=$(shasum -a 256 /tmp/gmww-delta-file | awk '{print $1}')
+                EXPECTED_SHA=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.sha256||'');
+          NODE
+                )
+                test "$LOCAL_SHA" = "$EXPECTED_SHA"
+              done
+              echo "Verify Production: IPA V3.17 OTA V$FROM SHA-256 PASS."
+            done
+          fi
           if test "$EXPECTED" != "$EXPECTED_SHELL"; then
             RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
             test -n "$RIDER_URL"
