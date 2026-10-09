@@ -949,8 +949,12 @@ async function gmwwUpdateProbe(path){
 function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
 function gmwwReleaseNotesList(manifest){
   const notes=Array.isArray(manifest?.releaseNotes)
-    ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean).slice(0,8):[];
-  return notes.length?notes:['Cải thiện giao diện và độ ổn định của Game Runtime.'];
+    ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean):[];
+  const current=gmwwRuntimeVersion(), latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+  if(!latest||gmwwVersionCompare(latest,current)<=0)return ['Không có thay đổi mới so với phiên bản đang sử dụng.'];
+  const previous=String(manifest?.previousVersion||manifest?.fromVersion||'').replace(/^V/i,'');
+  if(previous&&gmwwVersionCompare(previous,current)!==0)return ['Phiên bản V'+latest+' có bản cập nhật mới. Chưa có ghi chú riêng cho bước nâng cấp từ V'+current+'.'];
+  return notes.length?notes.slice(0,6):['Có bản cập nhật V'+latest+'. Chưa có ghi chú thay đổi riêng cho phiên bản này.'];
 }
 function gmwwReleaseNotesText(manifest){return gmwwReleaseNotesList(manifest).join(' • ')}
 function gmwwRenderReleaseNotes(manifest){

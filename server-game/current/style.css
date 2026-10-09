@@ -3802,3 +3802,10 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #playGameSheet .play-template-catalog{display:flex!important;flex-flow:row nowrap!important;align-items:stretch;gap:9px;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:6px 5px 12px}
 #playGameSheet .play-template-catalog>.play-template-card{flex:0 0 clamp(102px,27vw,132px);width:clamp(102px,27vw,132px);scroll-snap-align:start}
 @media(max-width:390px){#playGameSheet .play-template-catalog{display:flex!important;flex-flow:row nowrap!important}}
+
+/* Compact four controls in one visible row; no horizontal clipped buttons. */
+#settings #settingsGroupHealth .settings-health-action{display:block!important;margin:0 0 4px!important}
+#settings #settingsGroupHealth .maintenance-actions{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;margin-top:5px!important}
+#settings #settingsGroupHealth .maintenance-actions>.settings-action{min-width:0!important;width:100%!important;height:48px!important;min-height:48px!important;padding:3px 2px!important;display:flex!important;flex-direction:column!important;gap:2px!important;justify-content:center!important}
+#settings #settingsGroupHealth .maintenance-actions>.settings-action span{font-size:16px!important}
+#settings #settingsGroupHealth .maintenance-actions>.settings-action b{font-size:9px!important;line-height:1.1!important;white-space:normal!important}
