@@ -37,7 +37,7 @@ test('Worker uses rescue if either normal manifest channel is unreadable',()=>{
  const code=readFileSync('src/index.js','utf8');
  assert.match(code,/recoverOlderInstalledRuntime=\(\)=>recoverLegacyRuntimeManifest/);
  assert.match(code,/if\(!res\.ok\)\{\s*if\(!currentNativeShell\)\{const rescue=await recoverOlderInstalledRuntime\(\)/);
- assert.match(code,/if\(validRuntime\(manifest\)\)return j\(\{ok:true,/);
+ assert.match(code,/if\(validRuntime\(manifest\)&&await runtimeReady\(manifest\)\)return j\(\{ok:true,/);
 });
 
 test('Rescue OTA also repairs an installed V3.39 runtime',async()=>{
