@@ -22,5 +22,5 @@ test('Five banner zones and new artwork linked',()=>{
  for(const key of ['gmww-home-scene-v351','gmww-home-enter-banner-v352','gmww-home-discover-banner-v352','gmww-home-stats-v350','gmww-home-activity-v350'])assert.ok(home.includes(key));
  assert.equal((home.match(/id="gmwwHomeEnterVillage"/g)||[]).length,1);
  assert.ok(fs.existsSync('server-game/current/home-art/home-sea-portal-v352.svg'));
- assert.ok(home.includes('src="home-art/home-sea-portal-v352.svg"'));
+ assert.ok(home.includes('src="home-art/home-sea-portal-v354.svg"'));
 });

@@ -84,3 +84,25 @@ export function selectVerifiedRuntimeV353Delta(manifest,installedVersion){
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
     message:'Đồng bộ thanh bước GM với timeline phía trên; giữ nguyên dữ liệu và artwork.'};
 }
+
+/** Verified minimal 3.53 -> 3.54 homepage artwork overlay; all older releases use complete manifest. */
+export function selectVerifiedRuntimeV354Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.53'||String(manifest?.releaseVersion||'')!=='3.54'
+    ||String(manifest?.runtimeVersion||'')!=='3.54'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const names=['GMWW.html','app.js','style.css','home-art/home-sea-portal-v354.svg',
+   'home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg'];
+  const selected=[];
+  for(const path of names){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const value=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.54/'+path;
+    if(value.url!==url||!/^[a-f0-9]{64}$/i.test(String(value.sha256||'')))return null;
+    selected.push({path,url,sha256:String(value.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+    optimizedFromVersion:'3.53',upgradeMode:'verified-overlay',
+    message:'Cập nhật Trang Chủ biển V3.54 gồm 4 hình mới; giữ dữ liệu, cài đặt và các tính năng GM.'};
+}
