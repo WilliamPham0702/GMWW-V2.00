@@ -3920,3 +3920,27 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #home .gmww-home-portal-action-v352:focus-visible,#home .gmww-home-tiles-v350 button:focus-visible{outline:3px solid #ffe3a4;outline-offset:3px}
 @media(min-width:701px){#home .gmww-home-rebuild-v352{max-width:920px}}
 @media(max-width:380px){#home .gmww-home-rebuild-v352{gap:10px!important;padding-inline:9px!important}#home .gmww-home-enter-banner-v352 .gmww-home-portal-action-v352{height:132px!important}#home .gmww-home-discover-banner-v352{padding:10px 6px}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350{gap:5px}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 b{font-size:12px}}
+
+
+/* GMWW V3.53 — reviewed banner artwork, semantic links, full scroll clearance. */
+#home.gmww-home-active-v353,#home:has(.gmww-home-rebuild-v353){overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain;scroll-padding-bottom:calc(128px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+#home .gmww-home-rebuild-v353{padding-bottom:calc(188px + env(safe-area-inset-bottom))!important;gap:13px!important}
+#home .gmww-home-scene-v351 .gmww-home-hero-artboard-v351{aspect-ratio:720/490!important}
+#home .gmww-home-name-v353,#home .gmww-home-plaque-v351.gmww-home-name-v353{top:7%!important;right:2.5%!important;width:48%!important;min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;text-align:right!important;display:block!important}
+#home .gmww-home-name-v353:before{content:none!important}
+#home .gmww-home-name-v353 strong{font-family:Georgia,serif;font-size:clamp(21px,5vw,37px)!important;letter-spacing:-.025em!important;color:#ffe9a9!important;white-space:nowrap;text-shadow:0 2px 0 #794e2c,0 4px 5px #002e55,0 0 8px #003d67!important;-webkit-text-stroke:.5px #3c5880}
+#home .gmww-home-portal-action-v352:before{background:linear-gradient(90deg,#003b6ae9,#036184bb 43%,transparent 77%)!important}
+#home .gmww-home-portal-action-v352 .gmww-home-portal-art-v352{object-fit:cover;object-position:65% center}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-action-v352{height:clamp(152px,27vw,208px)!important;border-color:#f8e2a8!important;box-shadow:0 6px 18px #002d537d,inset 0 1px 4px #fffff1!important}
+#home .gmww-home-portal-action-v352 strong{color:#ffe4a1!important;text-shadow:0 3px 3px #03466c,0 0 8px #003651;font-size:clamp(26px,6.4vw,45px)!important}
+#home .gmww-home-discover-banner-v352{border-color:#f2d78e!important;background:linear-gradient(160deg,#036b9be8,#014673ee)!important}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 button{aspect-ratio:1 / 1.12!important;border-color:#fbe3ab!important;border-width:2px!important;background:#004b78!important;box-shadow:0 5px 11px #0025408f,inset 0 0 9px #edffff6e!important}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 img{object-fit:cover;object-position:center top}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 button:after{inset:61% 0 0!important;background:linear-gradient(180deg,#003f7100,#003c67cc 36%,#002950ff)!important}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 b{font-family:Georgia,serif;font-size:clamp(13px,3.55vw,22px)!important;color:#fff7e0}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 small{font-size:clamp(9px,2.3vw,12px)!important;color:#e0fcff}
+#home .gmww-home-panel-v352{border-color:#9adcf4!important;background:linear-gradient(155deg,#075e88e8,#003e6fe8)!important}
+#home .gmww-home-stats-grid-v350>div,#home .gmww-home-recent-rows{min-width:0}
+#home .gmww-home-recent-row{overflow:hidden;max-width:100%}
+@media(max-width:390px){#home .gmww-home-rebuild-v353{padding-bottom:calc(185px + env(safe-area-inset-bottom))!important}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350{gap:5px}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 b{font-size:13px!important}#home .gmww-home-name-v353 strong{font-size:clamp(20px,5.7vw,27px)!important}}
+@media(prefers-reduced-motion:reduce){#home .gmww-home-rebuild-v353 *{scroll-behavior:auto!important}}
