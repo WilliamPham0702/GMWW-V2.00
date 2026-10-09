@@ -932,6 +932,7 @@ function setUpdateAction(kind,context={}){
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
   else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
   else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
   else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
   else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
 }
@@ -999,9 +1000,12 @@ async function gmwwUpdateProbe(path){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
     try{
       const res=await fetch(GMWW_SERVER_BASE+path,{method:'GET',cache:'no-store',signal:controller.signal});
-      if(!res.ok)throw new Error('HTTP '+res.status);
-      const body=await res.json();
-      if(!body||body.ok!==true)throw new Error(String(body?.error||body?.message||'Phản hồi không hợp lệ'));
+      let body=null;try{body=await res.json()}catch{}
+      if(!res.ok||!body||body.ok!==true){
+        const error=new Error(String(body?.error||body?.message||('HTTP '+res.status)));
+        error.code=String(body?.error||'');error.status=res.status;
+        throw error;
+      }
       return body;
     }catch(error){lastError=error}
     finally{clearTimeout(timer)}
@@ -1052,6 +1056,13 @@ async function checkAppUpdate({notify=false}={}){
     // Never retain a previously fetched manifest after a failed version check.
     gmwwUpdateManifest=null;
     if(!serverValid||!manifestValid){
+      const publishing=serverValid&&manifestResult.status==='rejected'&&
+        ['RUNTIME_MANIFEST_NOT_READY','UPDATE_MANIFEST_NOT_FOUND'].includes(String(manifestResult.reason?.code||''));
+      if(publishing){
+        setUpdateAction('pending');
+        setUpdateUi('checking','ĐANG PHÁT HÀNH','Server V'+server+' đã chạy nhưng gói cập nhật chưa sẵn sàng.','Chưa cần nhấn Cập nhật. Hệ thống sẽ kiểm tra lại khi bạn mở ứng dụng hoặc bấm ↻.');
+        return null;
+      }
       const cause=!serverValid?'Chưa xác minh được kết nối Server.':'Chưa đọc được gói cập nhật Runtime.';
       const retryInfo=!serverValid?healthResult.reason:manifestResult.reason;
       console.warn('GMWW_UPDATE_UNVERIFIED',cause,retryInfo||'');
