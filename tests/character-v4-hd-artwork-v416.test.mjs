@@ -28,7 +28,7 @@ test('transparent PNG validator enforces actual 1024x1536 master size and 2:3 as
  assert.equal(validateDimensions(1200,1920).ok,true,'existing 5:8 V4.15 technical masters remain supported');
  assert.equal(validateDimensions(2048,3072).ok,true);
  assert.equal(validateDimensions(800,1200).error,'RESOLUTION_TOO_SMALL');
- assert.equal(validateDimensions(1024,1024).error,'RATIO_MISMATCH');
+ assert.equal(validateDimensions(1536,1536).error,'RATIO_MISMATCH');
  const w=16,h=16,p=new Uint8ClampedArray(w*h*4);
  for(let y=4;y<12;y++)for(let x=4;x<12;x++)p[(y*w+x)*4+3]=255;
  assert.equal(alphaDiagnostics({width:w,height:h,data:p}).valid,true);
