@@ -731,6 +731,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .play-roster-sheet-card .sheet-head{flex:0 0 auto}.play-roster-sheet-card .sheet-head h3{margin:0}.play-roster-sheet-card .sheet-head small{display:block;margin-top:2px;color:var(--muted);font-size:10px}
 .play-roster-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px 7px;border-bottom:1px solid var(--line);flex:0 0 auto}
 .play-roster-toolbar span{font-size:10px;font-weight:900;color:#9deeff}.play-roster-toolbar button{border:1px solid rgba(79,220,255,.22);background:#0c2a40;color:#c9f8ff;border-radius:999px;padding:6px 9px;font-size:9px;font-weight:900}
+.play-roster-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:7px;padding:9px 2px 6px;flex:0 0 auto}
+.play-roster-filters button{min-width:0;min-height:36px;padding:7px 6px;border-radius:11px;border:1px solid rgba(79,220,255,.24);background:#0b263a;color:#b4d8e7;font-size:11px;font-weight:850;touch-action:manipulation}
+.play-roster-filters button.active{background:linear-gradient(145deg,#27bddb,#1485ae);border-color:#64e5ff;color:#041d2e;box-shadow:0 0 0 1px rgba(100,229,255,.18)}
 .play-roster-list{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:7px;padding:9px 1px 4px;min-height:180px}
 .play-roster-row{width:100%;border:1px solid rgba(157,224,255,.14);background:linear-gradient(180deg,#0d263a,#091d2e);color:#effcff;border-radius:14px;padding:7px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:8px;text-align:left}
 .play-roster-row img,.play-roster-avatar-fallback{width:42px;height:42px;border-radius:50%;object-fit:cover;background:linear-gradient(145deg,#95f1ee,#28a8c7);border:2px solid rgba(255,255,255,.38)}
