@@ -68,3 +68,17 @@ test('Runtime version bumps and preserves native shell',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  assert.match(worker,/VERSION="V3\.55",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-355"/);
 });
+
+test('Live IPA Theme verifier JavaScript parses before Cloudflare deployment',()=>{
+ const yml=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+ const marker='echo "Verify Production: connected Theme editor controls on live IPA Runtime."';
+ const pos=yml.indexOf(marker);
+ assert.ok(pos>0,'the versioned asset verifier is present');
+ const tail=yml.slice(pos);
+ const start=tail.indexOf("node - <<'NODE'");
+ const end=tail.indexOf('\n          NODE',start);
+ assert.ok(start>=0&&end>start,'the verifier has a proper heredoc');
+ const script=tail.slice(start+"node - <<'NODE'".length,end).split('\n').map(x=>x.trimStart()).join('\n');
+ assert.doesNotThrow(()=>new vm.Script(script),'the deployed asset verifier must compile');
+ assert.match(script,/const actual=block\.split/);
+});
