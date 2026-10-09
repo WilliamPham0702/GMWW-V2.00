@@ -44,7 +44,7 @@ test('Player tapping their own character no longer opens information',()=>{
   assert.ok(live.includes('profileButton.onclick=openVillageProfile'));
   assert.doesNotMatch(live,/showPlayerSeatChoice/);
   assert.doesNotMatch(live,/if\(id===selfId\)openVillageProfile\(\)/);
-  assert.ok(village.includes('if(String(data.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage'));
+  assert.ok(village.includes('if(String(player.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage'));
 });
 
 test('Player profile is compact, password-free, keeps stats and exposes collapsible history',()=>{

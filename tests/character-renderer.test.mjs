@@ -17,7 +17,7 @@ import {
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Character-01 is the segmented skeletal master and does not sequence walk frames',()=>{
-  assert.equal(CHARACTER_RENDERER_VERSION,'0.4.0');
+  assert.equal(CHARACTER_RENDERER_VERSION,'0.4.1-perf');
   assert.equal(rendererKind('character-01',{sitting:true}),'segmented-skeletal');
   assert.equal(MASTER_CHARACTER_ID,'character-01');
   assert.equal(rendererKind('character-01'),'segmented-skeletal');
@@ -56,7 +56,7 @@ test('Player Web preserves server Character Engine payload and mounts the master
   assert.ok(village.includes('characterAnimation:mapCharacterAnimation(p)'));
   assert.ok(village.includes('mountCharacterRenderer(avatar'));
   assert.ok(village.includes('updateCharacterRenderer(avatar,semantic)'));
-  assert.ok(village.includes('animationCommandFor(data,pos)'));
+  assert.ok(village.includes('animationCommandFor({...data,gameCharacterId:renderedId},pos)'));
 });
 
 test('master rig animation is body-part driven and never runtime mirrored',()=>{
@@ -74,7 +74,7 @@ test('master rig animation is body-part driven and never runtime mirrored',()=>{
 test('village loads renderer CSS and renderer module as part of the live scene',()=>{
   const html=read('assets/village/index.html');
   assert.ok(html.includes('./character-renderer.css?v=ce7'));
-  assert.ok(html.includes('./village.mjs?v=ce4'));
+  assert.ok(html.includes('./village.mjs?v=perf2'));
 });
 
 

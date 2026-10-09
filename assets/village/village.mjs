@@ -241,7 +241,7 @@ if(game){
     for(const data of all){
       if(data?.movementStatus!=="moving")continue;
       const el=mountedPlayerNodes.get(String(data.id));if(!el||!el.isConnected)continue;
-      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving||pos.sitting;
+      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
       const avatar=el.querySelector(".portrait.game-character"),renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId,
       semantic=animationCommandFor({...data,gameCharacterId:renderedId},pos);
       const rigUpdated=!!avatar?.querySelector('[data-character-renderer="segmented-skeletal"]');
