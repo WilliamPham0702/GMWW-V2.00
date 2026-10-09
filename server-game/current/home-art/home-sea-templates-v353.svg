@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 350"><defs>
-<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#7deaff"/><stop offset=".45" stop-color="#059cd2"/><stop offset="1" stop-color="#004c86"/></linearGradient>
-<linearGradient id="sea" x2="0" y2="1"><stop stop-color="#53e2e6"/><stop offset=".57" stop-color="#0784be"/><stop offset="1" stop-color="#003869"/></linearGradient>
-<linearGradient id="gold" x1=".1" y1="0" x2=".9" y2="1"><stop stop-color="#fff8c9"/><stop offset=".48" stop-color="#f5c36a"/><stop offset="1" stop-color="#a35f26"/></linearGradient>
-<linearGradient id="blue" x2="1" y2="1"><stop stop-color="#a4fbff"/><stop offset=".32" stop-color="#0bc2e5"/><stop offset=".78" stop-color="#064e97"/><stop offset="1" stop-color="#08204f"/></linearGradient>
+<linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="#7deaff"/><stop offset=".45" stop-color="#059cd2"/><stop offset="1" stop-color="#004c86"/></linearGradient>
+<linearGradient id="sea" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="#53e2e6"/><stop offset=".57" stop-color="#0784be"/><stop offset="1" stop-color="#003869"/></linearGradient>
+<linearGradient id="gold" x1="10%" y1="0%" x2="90%" y2="100%"><stop stop-color="#fff8c9"/><stop offset=".48" stop-color="#f5c36a"/><stop offset="1" stop-color="#a35f26"/></linearGradient>
+<linearGradient id="blue" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#a4fbff"/><stop offset=".32" stop-color="#0bc2e5"/><stop offset=".78" stop-color="#064e97"/><stop offset="1" stop-color="#08204f"/></linearGradient>
 <radialGradient id="glow"><stop stop-color="#e8ffff"/><stop offset=".4" stop-color="#6ee8ff" stop-opacity=".85"/><stop offset="1" stop-color="#0cd0e9" stop-opacity="0"/></radialGradient>
 </defs><rect width="420" height="350" rx="23" fill="url(#sky)"/><circle cx="280" cy="71" r="127" fill="url(#glow)" opacity=".6"/>
 <path d="M0 198q68-32 123-6t105 0q69-31 117-8t75 3v163H0Z" fill="#35cbd7" opacity=".65"/>

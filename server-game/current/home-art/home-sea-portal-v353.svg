@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420"><defs>
-<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#91efff"/><stop offset=".5" stop-color="#19abd7"/><stop offset="1" stop-color="#0c6394"/></linearGradient>
-<linearGradient id="water" x2="0" y2="1"><stop stop-color="#b2ffff"/><stop offset=".3" stop-color="#17b9d1"/><stop offset="1" stop-color="#07548b"/></linearGradient>
-<linearGradient id="stone" x2="1" y2="1"><stop stop-color="#fff0ca"/><stop offset=".33" stop-color="#85dde2"/><stop offset=".68" stop-color="#0d8eb3"/><stop offset="1" stop-color="#084579"/></linearGradient>
-<linearGradient id="gold" x2="1" y2="1"><stop stop-color="#fff5c5"/><stop offset=".5" stop-color="#f4bd60"/><stop offset="1" stop-color="#9c6327"/></linearGradient>
+<linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="#91efff"/><stop offset=".5" stop-color="#19abd7"/><stop offset="1" stop-color="#0c6394"/></linearGradient>
+<linearGradient id="water" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="#b2ffff"/><stop offset=".3" stop-color="#17b9d1"/><stop offset="1" stop-color="#07548b"/></linearGradient>
+<linearGradient id="stone" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#fff0ca"/><stop offset=".33" stop-color="#85dde2"/><stop offset=".68" stop-color="#0d8eb3"/><stop offset="1" stop-color="#084579"/></linearGradient>
+<linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#fff5c5"/><stop offset=".5" stop-color="#f4bd60"/><stop offset="1" stop-color="#9c6327"/></linearGradient>
 <radialGradient id="magic"><stop stop-color="#fff"/><stop offset=".18" stop-color="#d1ffff"/><stop offset=".48" stop-color="#70efff"/><stop offset=".72" stop-color="#079ada"/><stop offset="1" stop-color="#005283"/></radialGradient>
 <filter id="glow"><feGaussianBlur stdDeviation="17"/></filter></defs>
 <rect width="1200" height="420" fill="url(#sky)"/><path d="M0 177q135-91 257-18t231-8t211 2t243 1t258 16v250H0Z" fill="#b6f7f2" opacity=".6"/>
