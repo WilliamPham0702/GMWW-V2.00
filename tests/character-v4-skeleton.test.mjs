@@ -23,7 +23,7 @@ test('sitting is compact with inward crossing feet and distinct transitions',()=
 test('wave, vote, walk, run and outcomes visibly change distinct joints',()=>{
  const idle=skeletonPose({action:'idle'});
  const wave=skeletonPose({action:'wave',elapsedMs:300});
- const vote=skeletonPose({action:'vote'});
+ const vote=skeletonPose({action:'vote',elapsedMs:700});
  assert.ok(wave.rightArm[2].y<idle.rightArm[2].y);
  assert.ok(vote.rightArm[2].y<wave.rightArm[2].y);
  assert.notDeepEqual(skeletonPose({action:'walk',elapsedMs:100}).leftLeg,skeletonPose({action:'walk',elapsedMs:330}).leftLeg);
