@@ -13,6 +13,7 @@ on:
       - 'tests/character-v4-skin-preview.test.mjs'
       - 'tests/character-v4-highres-master.test.mjs'
       - 'tests/character-v4-premium-artwork.test.mjs'
+      - 'tests/character-v4-hd-artwork-v416.test.mjs'
       - 'tests/character-v4-api.test.mjs'
       - 'src/gmww-character-v4.js'
       - 'src/index.js'
@@ -30,7 +31,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
@@ -45,6 +46,10 @@ jobs:
           node --check assets/characters/v4/skin-v414.mjs
           node --check assets/characters/v4/skin-master-v415.mjs
           node --check assets/characters/v4/artwork-intake-v416.mjs
+          node --check assets/characters/v4/artwork-v416.mjs
+          test -s assets/characters/v4/artwork-v416.html
+          test -s assets/characters/v4/artwork-v416-manifest.json
+          grep -Fq 'CHƯA GẮN VÀO GAME' assets/characters/v4/artwork-v416.html
           test -s assets/characters/v4/artwork-intake-v416.html
           grep -Fq 'CHƯA THAY CHARACTER TRONG GAME' assets/characters/v4/artwork-intake-v416.html
           test -s assets/characters/v4/skin-master-v415.html

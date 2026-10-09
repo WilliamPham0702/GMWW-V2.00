@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "version": "4.16-highres-artwork-draft",
+  "masterResolution": {
+    "width": 1024,
+    "height": 1536
+  },
+  "directions": [
+    "front",
+    "left",
+    "right",
+    "back"
+  ],
+  "characters": [
+    {
+      "id": "character-01",
+      "name": "Chàng Biển",
+      "identity": "Dark navy tousled hair, blue floral Hawaiian shirt, beige shorts and blue sandals"
+    },
+    {
+      "id": "character-02",
+      "name": "Nàng Biển",
+      "identity": "Platinum blonde long hair, straw sunhat with blue ribbon, blue-white beach dress and sandals"
+    }
+  ],
+  "drafts": [
+    {
+      "id": "character-01",
+      "direction": "front",
+      "file": "character-01-front.png",
+      "sha256": "fefe16599c584265e14354a4e6cd679dff375a1e10f219264561bb31860594f3",
+      "source": "off-repository conversation artwork ZIP"
+    },
+    {
+      "id": "character-01",
+      "direction": "right",
+      "file": "character-01-right.png",
+      "sha256": "04427d846a8db6ea6cae3792e131d0287ef5993b7d93fa6ca7b14d3c05c15f15",
+      "source": "off-repository conversation artwork ZIP"
+    },
+    {
+      "id": "character-02",
+      "direction": "front",
+      "file": "character-02-front.png",
+      "sha256": "d5279fa1d42f740a76e7e8c4ab20d182714f5f05e638a29af667fa6f89bee7b1",
+      "source": "off-repository conversation artwork ZIP"
+    }
+  ],
+  "limitations": {
+    "artworkViewsCreated": 3,
+    "requiredViews": 8,
+    "individualRigLayersAvailable": false,
+    "importedIntoRepository": false,
+    "motionRigged": false,
+    "ownerApproved": false,
+    "productionSkinEnabled": false
+  },
+  "notes": [
+    "All draft originals are downloaded separately as a ZIP in the ChatGPT conversation; they are not included in the Cloudflare deployment.",
+    "Existing V4.14 skeletal 9-action renderer stays unchanged and approved; do not substitute static artwork for moving 17-layer rigs.",
+    "No art is reflected in game rooms or IPA until 4 views, 17 layers, QA and owner visual approval pass."
+  ]
+}

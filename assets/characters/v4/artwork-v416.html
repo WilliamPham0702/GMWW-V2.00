@@ -1,0 +1,123 @@
+<!doctype html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073f56">
+<title>Character V4.16 · Kiểm tra Artwork HD | GMWW</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;background:#062c3c;color:#eefcfd}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 45% -20%,#2b9da8,#0c5166 44%,#062b3e)}
+main{margin:auto;max-width:1180px;padding:22px 14px 88px;display:grid;gap:16px}
+header{display:grid;gap:8px}
+h1{margin:0;font-size:clamp(25px,4vw,36px);line-height:1.2}
+h2{margin:0 0 9px;font-size:17px}
+p{margin:0;color:#cce9eb;line-height:1.5;font-size:14px}
+strong{color:#fff}
+.panel{background:#0b4258d8;border:1px solid #79b8c288;border-radius:17px;padding:16px}
+.chip{display:inline-block;font-size:11px;color:#ffe9a7;border:1px solid #e2c37d;border-radius:24px;padding:7px 11px;width:fit-content}
+.status{font-size:15px;font-weight:730;color:#c7faf3}
+.progress{height:10px;background:#18495b;border-radius:99px;overflow:hidden;margin:10px 0}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#17bda9,#8ff7d3);transition:width .2s}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.file-button{cursor:pointer;display:inline-flex;padding:12px 15px;background:#087d8d;border:1px solid #a6ece5;border-radius:10px;font-weight:700}
+.file-button input{position:absolute;width:1px;height:1px;opacity:0}
+button{background:#0e6079;color:white;font:inherit;border:1px solid #79c7cf;border-radius:10px;padding:11px 13px;min-height:43px;cursor:pointer}
+button:focus-visible,input:focus-visible+span{outline:2px solid #f6ce79}
+input[type=file]:focus-visible{outline:2px solid gold}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.frame{padding:10px;background:#174b62;border-radius:14px;border:1px solid #71abb2;min-width:0}
+.frame header{display:block;font-weight:780;font-size:12px;color:#edf8f1}
+.frame figure{margin:9px 0;border-radius:8px;position:relative;overflow:hidden;aspect-ratio:2/3;
+ background-color:#c0dbe3;background-image:linear-gradient(45deg,#dbeef2 25%,transparent 25%,transparent 75%,#dbeef2 75%,#dbeef2),linear-gradient(45deg,#dbeef2 25%,transparent 25%,transparent 75%,#dbeef2 75%,#dbeef2);
+ background-position:0 0,12px 12px;background-size:24px 24px}
+.frame img{display:block;width:100%;height:100%;object-fit:contain}
+.empty{height:100%;display:flex;justify-content:center;align-items:center;text-align:center;color:#33627b;padding:7px;font-size:12px}
+small{color:#b7d8da;display:block;font-size:11px;line-height:1.4}
+.note{border-left:3px solid #f2d58a;padding-left:12px}
+a{color:#adfff1}
+.log{font-size:13px;white-space:pre-line;max-height:135px;overflow:auto}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){main{padding:18px 10px 85px}.panel{padding:13px}.grid{gap:8px}.frame{padding:7px}.frame header{font-size:11px}}
+</style></head><body><main>
+<header>
+<p>GMWW · CHARACTER 2D · V4.16</p>
+<h1>Kiểm tra Artwork độ phân giải cao</h1>
+<span class="chip">BẢN THỬ NGUỒN ẢNH · CHƯA GẮN VÀO GAME</span>
+<p>Ảnh nguồn gốc 1024 × 1536 px, PNG trong suốt, 4 hướng cho mỗi nhân vật. Có 3 bản thảo đã tạo ngoài GitHub: Chàng Biển (Trước/Phải) và Nàng Biển (Trước); còn 5 hướng phải thiết kế riêng. V4.14 tiếp tục đảm nhiệm 9 Action; ảnh tĩnh này chưa phải Skin 17 lớp.</p>
+</header>
+<section class="panel">
+<h2>Nhập và nghiệm thu nguồn hình</h2>
+<p>Chọn các PNG trong bộ ZIP V4.16 đã nhận. Mỗi file được kiểm tra kích thước, tỷ lệ, nền trong suốt và đúng tên vị trí; dữ liệu chỉ lưu cục bộ trên thiết bị của bạn, không tải lên Cloudflare hoặc thay nhân vật của người chơi.</p>
+<div class="actions"><label class="file-button"><input id="selectFiles" type="file" accept="image/png,.png" multiple>Chọn PNG để kiểm tra</label><button id="clearLocal" type="button">Xóa bản thử trên thiết bị</button></div>
+<div class="status" id="status" aria-live="polite">Chờ kiểm tra trên thiết bị…</div>
+<div class="progress"><span id="progress"></span></div>
+<div id="log" class="log" aria-live="polite"></div>
+</section>
+<section class="panel"><h2>01 · Chàng Biển</h2><div class="grid" id="character-01"></div></section>
+<section class="panel"><h2>02 · Nàng Biển</h2><div class="grid" id="character-02"></div></section>
+<section class="panel">
+<h2>Điều kiện để thay Skin trong game</h2>
+<p class="note">Đủ tám hướng chỉ là bước đầu. Còn phải tách đủ 17 lớp hoạt hình, liên kết đúng vai–cẳng tay và đùi–cẳng chân với bộ xương, kiểm tra 9 Action ở cả bốn hướng, thử thực tế trên iPhone, tối ưu khi hiển thị 30 nhân vật và được chủ dự án duyệt. Không tự động kích hoạt các asset này trong Player Web hoặc IPA.</p>
+<p style="margin-top:12px"><a href="./skin-preview-v414.html">Xem chuyển động 9 Action V4.14</a> · <a href="./skin-master-v415.html">Master kỹ thuật V4.15</a></p>
+</section>
+</main>
+<script type="module">
+import {V416_SLOTS,V416_VERSION,inspectArtworkFile,readLocalArtwork,storeLocalArtwork,draftReviewState} from './artwork-v416.mjs';
+const els=new Map(),loaded=new Map(),urls=new Map();
+const status=document.getElementById('status'),bar=document.getElementById('progress'),log=document.getElementById('log');
+function appendLog(message){
+ const p=document.createElement('p');p.textContent=message;log.prepend(p);
+ while(log.children.length>15)log.lastElementChild.remove();
+}
+for(const slot of V416_SLOTS){
+ const card=document.createElement('div');card.className='frame';
+ const heading=document.createElement('header');heading.textContent=slot.label.split(' · ')[1];
+ const figure=document.createElement('figure'),empty=document.createElement('div');
+ empty.className='empty';empty.textContent='Chưa nạp ảnh '+slot.label.split(' · ')[1];
+ figure.append(empty);
+ const footer=document.createElement('small');footer.textContent='Thiếu ảnh trên thiết bị';
+ card.append(heading,figure,footer);
+ document.getElementById(slot.characterId).append(card);
+ els.set(slot.id,{figure,footer,empty});
+}
+function paintSlot(id,blob,info){
+ const e=els.get(id);
+ if(!e)return;
+ if(urls.has(id))URL.revokeObjectURL(urls.get(id));
+ const url=URL.createObjectURL(blob);urls.set(id,url);
+ const img=document.createElement('img');img.src=url;img.alt=id;
+ e.figure.replaceChildren(img);
+ e.footer.textContent=(info||'1024 × 1536')+' · PNG nền trong suốt';
+ loaded.set(id,blob);
+ update();
+}
+function update(){
+ const state=draftReviewState(loaded.keys());
+ status.textContent=V416_VERSION+' · '+state.validSlots+'/8 ảnh trên thiết bị · Skin động chưa nghiệm thu';
+ bar.style.width=(100*state.validSlots/8)+'%';
+}
+async function intake(files){
+ for(const file of files){
+  try{
+   const check=await inspectArtworkFile(file);
+   if(!check.ok){appendLog('Không nhận '+file.name+': '+check.code);continue;}
+   paintSlot(check.slot.id,file,check.width+' × '+check.height);
+   try{await storeLocalArtwork(check.slot.id,file);}catch(err){appendLog(file.name+' đã xem được nhưng chưa lưu qua lần mở sau: '+err.message);}
+   appendLog('Đạt kiểm tra ảnh nguồn: '+file.name);
+  }catch(err){appendLog('Lỗi '+file.name+': '+err.message);}
+ }
+}
+document.getElementById('selectFiles').addEventListener('change',e=>intake([...e.currentTarget.files]));
+document.getElementById('clearLocal').addEventListener('click',()=>{
+ if(!confirm('Xóa bộ ảnh xem thử đã lưu trên thiết bị? Không ảnh hưởng game chính.'))return;
+ try{const r=indexedDB.deleteDatabase('GMWW-V416-ARTWORK-DRAFTS');
+  r.onsuccess=()=>location.reload();
+  r.onerror=()=>appendLog('Không xóa được dữ liệu cục bộ.');r.onblocked=()=>appendLog('Vui lòng đóng tab Studio khác rồi thử lại.');
+ }catch(err){appendLog(err.message);}
+});
+try{
+ for(const item of await readLocalArtwork()){
+  if(!els.has(item.id)||!item.blob)continue;
+  paintSlot(item.id,item.blob);
+ }
+}catch(err){appendLog('Trình duyệt chưa hỗ trợ lưu ảnh cục bộ: '+err.message);}
+update();
+</script></body></html>
