@@ -5,13 +5,13 @@
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;background:#062c3c;color:#eefcfd}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 45% -20%,#2b9da8,#0c5166 44%,#062b3e)}
-main{margin:auto;max-width:1180px;padding:22px 14px 88px;display:grid;gap:16px}
-header{display:grid;gap:8px}
+main{margin:auto;max-width:1180px;min-height:100dvh;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(25px + env(safe-area-inset-bottom,0px));display:grid;align-content:start;gap:10px}
+header{display:grid;gap:5px}
 h1{margin:0;font-size:clamp(25px,4vw,36px);line-height:1.2}
 h2{margin:0 0 9px;font-size:17px}
 p{margin:0;color:#cce9eb;line-height:1.5;font-size:14px}
 strong{color:#fff}
-.panel{background:#0b4258d8;border:1px solid #79b8c288;border-radius:17px;padding:16px}
+.panel{background:#0b4258d8;border:1px solid #79b8c288;border-radius:14px;padding:13px}
 .chip{display:inline-block;font-size:11px;color:#ffe9a7;border:1px solid #e2c37d;border-radius:24px;padding:7px 11px;width:fit-content}
 .status{font-size:15px;font-weight:730;color:#c7faf3}
 .progress{height:10px;background:#18495b;border-radius:99px;overflow:hidden;margin:10px 0}
@@ -35,8 +35,8 @@ small{color:#b7d8da;display:block;font-size:11px;line-height:1.4}
 a{color:#adfff1}
 .log{font-size:13px;white-space:pre-line;max-height:135px;overflow:auto}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:540px){main{padding:18px 10px 85px}.panel{padding:13px}.grid{gap:8px}.frame{padding:7px}.frame header{font-size:11px}}
-</style></head><body><main>
+@media(max-width:540px){main{padding:calc(7px + env(safe-area-inset-top,0px)) 7px calc(70px + env(safe-area-inset-bottom,0px));gap:8px}.panel{padding:10px}.grid{gap:6px}.frame{padding:6px}.frame header{font-size:12px}.frame figure{margin:5px 0}.frame small{font-size:10px}.actions{gap:7px;margin:8px 0}.file-button,button{padding:8px 10px;font-size:12px}h1{font-size:22px}}
+.frame img{cursor:zoom-in}.frame:focus-visible{outline:3px solid #ffe7a7}.zoom-view{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(20px + env(safe-area-inset-bottom,0px));border:0;background:#061e2df2;color:#f5fefa}.zoom-view::backdrop{background:#051d29d9}.zoom-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.zoom-view img{display:block;max-height:80dvh;max-width:100%;width:auto;height:auto;object-fit:contain;margin:6px auto 0}.zoom-view button{min-width:65px}</style></head><body><main>
 <header>
 <p>GMWW · CHARACTER 2D · V4.16</p>
 <h1>Kiểm tra Artwork độ phân giải cao</h1>
@@ -56,13 +56,17 @@ a{color:#adfff1}
 <section class="panel">
 <h2>Điều kiện để thay Skin trong game</h2>
 <p class="note">Đủ tám hướng chỉ là bước đầu. Còn phải tách đủ 17 lớp hoạt hình, liên kết đúng vai–cẳng tay và đùi–cẳng chân với bộ xương, kiểm tra 9 Action ở cả bốn hướng, thử thực tế trên iPhone, tối ưu khi hiển thị 30 nhân vật và được chủ dự án duyệt. Không tự động kích hoạt các asset này trong Player Web hoặc IPA.</p>
-<p style="margin-top:12px"><a href="./skin-preview-v414.html">Xem chuyển động 9 Action V4.14</a> · <a href="./skin-master-v415.html">Master kỹ thuật V4.15</a></p>
+<p style="margin-top:12px"><a href="./skin-motion-v417.html">Thử Skin 17 lớp × 9 Action V4.17</a> · <a href="./skin-preview-v414.html">Xem chuyển động 9 Action V4.14</a> · <a href="./skin-master-v415.html">Master kỹ thuật V4.15</a></p>
 </section>
-</main>
+</main><dialog id="zoom" class="zoom-view" aria-label="Ảnh nhân vật phóng to"><div class="zoom-top"><strong id="zoomTitle">Ảnh lớn</strong><button id="zoomClose" type="button">Đóng ✕</button></div><img id="zoomImage" alt="Ảnh xem chi tiết nhân vật"></dialog>
 <script type="module">
 import {V416_SLOTS,V416_VERSION,inspectArtworkFile,readLocalArtwork,storeLocalArtwork,draftReviewState} from './artwork-v416.mjs';
 const els=new Map(),loaded=new Map(),urls=new Map();
 const status=document.getElementById('status'),bar=document.getElementById('progress'),log=document.getElementById('log');
+const zoom=document.getElementById('zoom'),zoomImage=document.getElementById('zoomImage');
+document.getElementById('zoomClose').addEventListener('click',()=>zoom.close());
+zoom.addEventListener('click',e=>{if(e.target===zoom)zoom.close();});
+function openZoom(id){const slot=V416_SLOTS.find(x=>x.id===id);if(!urls.has(id)||!slot)return;zoomImage.src=urls.get(id);zoomImage.alt=slot.label;document.getElementById('zoomTitle').textContent=slot.label;zoom.showModal();}
 function appendLog(message){
  const p=document.createElement('p');p.textContent=message;log.prepend(p);
  while(log.children.length>15)log.lastElementChild.remove();
@@ -83,7 +87,7 @@ function paintSlot(id,blob,info){
  if(!e)return;
  if(urls.has(id))URL.revokeObjectURL(urls.get(id));
  const url=URL.createObjectURL(blob);urls.set(id,url);
- const img=document.createElement('img');img.src=url;img.alt=id;
+ const img=document.createElement('img');img.src=url;img.alt=id;img.tabIndex=0;img.title='Nhấn để phóng to';img.addEventListener('click',()=>openZoom(id));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openZoom(id);}});
  e.figure.replaceChildren(img);
  e.footer.textContent=(info||'1024 × 1536')+' · PNG nền trong suốt';
  loaded.set(id,blob);
