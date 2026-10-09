@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.60';
+const VERSION='3.61';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2905,11 +2905,32 @@ async function renderPlayGameRoles(){
     list.appendChild(row);
   }
   if(!roles.length)list.innerHTML='<div class="member-empty">Chưa chọn vai trò. Chạm vào ảnh một Lá Bài phía trên để thêm vào ván.</div>';
+  renderPlayGameRoleTimings();
+}
+function playRoleDurationSec(roleId,defaultSec){
+  const values=playSceneState.roleDurations||{};
+  const own=Object.prototype.hasOwnProperty.call(values,String(roleId));
+  const seconds=own?values[String(roleId)]:defaultSec;
+  return Math.max(0,Math.min(3600,Math.trunc(Number(seconds)||0)));
 }
 function renderPlayGameRoleTimings(){
-  // One shared duration applies to every role; legacy per-role controls are retired.
-  const list=document.getElementById('playGameRoleTimingList');
-  if(list){list.hidden=true;list.replaceChildren()}
+  const list=document.getElementById('playGameRoleTimingList');if(!list)return;
+  list.hidden=false;list.replaceChildren();
+  const roles=playTemplateSelectedRoles();
+  const defaultSec=Math.max(0,Math.min(3600,Math.trunc(Number(document.getElementById('playDefaultActionSec')?.value??playSceneState.gameTiming?.defaultActionSec??30)||0)));
+  for(const role of roles){
+    const roleId=String(role.id),custom=Object.prototype.hasOwnProperty.call(playSceneState.roleDurations||{},roleId);
+    const row=document.createElement('label');row.className='play-template-role-timing'+(custom?' is-custom':'');
+    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+'</span><span class="play-role-time-input"><input type="number" inputmode="numeric" min="0" max="3600" value="'+playRoleDurationSec(roleId,defaultSec)+'" aria-label="Thời gian sử dụng '+playEsc(role.name||'Vai Trò')+' (giây)"><small>giây</small></span>';
+    row.querySelector('input').onchange=e=>{
+      const value=Math.max(0,Math.min(3600,Math.trunc(Number(e.target.value)||0)));
+      const customTimes={...(playSceneState.roleDurations||{})};
+      if(value===defaultSec)delete customTimes[roleId];else customTimes[roleId]=value;
+      playSceneState.roleDurations=customTimes;savePlayScene();renderPlayGameRoleTimings();
+    };
+    list.appendChild(row);
+  }
+  if(!roles.length)list.innerHTML='<p class="play-template-help">Hãy chọn một Ván Mẫu để thiết lập thời gian riêng.</p>';
 }
 function playTemplateSelectedArtifacts(){
   const allowed=new Set(Array.isArray(playSceneState.artifactIds)?playSceneState.artifactIds.map(String):[]);
@@ -2964,12 +2985,12 @@ async function applyPlayGameTemplate(id){
   try{
     const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)return;
     playSceneState.gameTemplateId=id;playSceneState.gameName=String(cfg.name||'Ván GMWW');playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};
-    for(const r of (cfg.roles||[])){if(r?.roleId){playSceneState.rolePlan[String(r.roleId)]=Math.max(0,Number(r.count)||0);playSceneState.roleOrders[String(r.roleId)]=Math.max(1,Number(r.order)||1)}}
+    for(const r of (cfg.roles||[])){if(r?.roleId){playSceneState.rolePlan[String(r.roleId)]=Math.max(0,Number(r.count)||0);playSceneState.roleOrders[String(r.roleId)]=Math.max(1,Number(r.order)||1);const commonSec=Math.max(0,Math.min(3600,Number(cfg?.timing?.defaultActionSec??30)||0)),individualSec=Math.max(0,Math.min(3600,Number(r.actionDurationSec??commonSec)||0));if(individualSec!==commonSec)playSceneState.roleDurations[String(r.roleId)]=individualSec}}
     const templateArtifactIds=(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean);
     const favoriteArtifactIds=playFavoriteArtifacts().map(a=>String(a.id));
     playSceneState.artifactsEnabled=templateArtifactIds.length>0||favoriteArtifactIds.length>0;
     playSceneState.artifactIds=templateArtifactIds.length?templateArtifactIds:favoriteArtifactIds;
-    playSceneState.gameTiming={villageDiscussionSec:300,wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??60)||0),defaultActionSec:30,artifactActionSec:30,autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
+    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
     const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
     updatePlayArtifactToggle();await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(err){playFlashError(err.message)}
@@ -3013,7 +3034,7 @@ async function savePlayGame(){
       const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
       const configured={
         ...base,
-        roles:(base.roles||[]).map(r=>({...r,actionDurationSec:timing.defaultActionSec})),
+        roles:(base.roles||[]).map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),
         timing,
         artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0))),
         artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1}))
@@ -3038,14 +3059,14 @@ async function savePlayGame(){
   const chosen=roles.map((r,i)=>({roleId:r.id,roleName:r.name,faction:playFactionLabel(r),
     description:r.information||'',count:Math.max(1,Number(playSceneState.rolePlan[r.id])||1),
     order:Math.max(1,Number(playSceneState.roleOrders?.[r.id])||i+1),
-    actionDurationSec:clamp(playSceneState.gameTiming?.defaultActionSec??30)})).sort((a,b)=>a.order-b.order);
+    actionDurationSec:playRoleDurationSec(r.id,playSceneState.gameTiming?.defaultActionSec??30)})).sort((a,b)=>a.order-b.order);
   const gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),
     templateId=playSceneState.gameTemplateId||('template-'+Date.now().toString(36));
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
   const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
-  const cfg={id:templateId,name:gameName,playerCount:total,roles:chosen.map(r=>({...r,actionDurationSec:timing.defaultActionSec})),artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),timing,artifactLimitPerCycle};
+  const cfg={id:templateId,name:gameName,playerCount:total,roles:chosen.map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),timing,artifactLimitPerCycle};
   playSceneState.gameTiming=timing;playSceneState.artifactLimitPerCycle=artifactLimitPerCycle;
   playSetBusy(true);try{const cached=await gmApi('/api/gm/game-templates',{method:'PUT',body:JSON.stringify({id:templateId,gameConfig:cfg})});playSceneState.gameTemplateId=String(cached?.template?.id||templateId);playSceneState.gameName=gameName;savePlayScene();closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary()}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
@@ -3515,7 +3536,7 @@ function initPlayScene(){
     playSceneState.gameTiming=playSceneState.gameTiming||{};
     const key={playVillageDiscussionSec:'villageDiscussionSec',playWolfDiscussionSec:'wolfDiscussionSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
     playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
-    savePlayScene();
+    savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
   document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{playSceneState.artifactsEnabled=!!e.currentTarget.checked;if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length)playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));savePlayScene();updatePlayArtifactToggle()});
   document.getElementById('playArtifactLimitPerCycle')?.addEventListener('change',e=>{const n=Math.max(0,Math.min(30,Math.trunc(Number(e.currentTarget.value)||0)));e.currentTarget.value=String(n);playSceneState.artifactLimitPerCycle=n;savePlayScene()});

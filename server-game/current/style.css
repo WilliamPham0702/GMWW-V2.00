@@ -4028,3 +4028,13 @@ body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-do
 body:not(.play-immersive) #bottomNav{background-image:linear-gradient(180deg,#0782a5 0%,#035b84 48%,#032f58 100%)!important;background-repeat:no-repeat!important;background-size:cover!important;isolation:isolate!important}
 body:not(.play-immersive) #bottomNav:before,body:not(.play-immersive) #bottomNav:after{background-image:none!important;content:none!important}
 body:not(.play-immersive) #bottomNav>.nav{z-index:2!important}
+
+/* V3.61: restored editable, scrollable per-role action durations. */
+#playGameSheet .play-game-sheet-card[data-mode="play"] #playGameRoleTimingList{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important;max-height:235px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:8px 0 15px;padding:2px 2px 7px}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-role-time-section{margin-top:13px}
+#playGameSheet .play-role-time-help{margin:6px 0 8px!important}
+#playGameSheet .play-template-role-timing{display:flex!important;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:6px 9px;border:1px solid rgba(100,191,215,.35);border-radius:10px;background:#092c42;color:#eaf9ff;font-size:12px;font-weight:650}
+#playGameSheet .play-template-role-timing.is-custom{border-color:#63dced;background:#0d3e51}
+#playGameSheet .play-role-time-input{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto}
+#playGameSheet .play-role-time-input input[type="number"]{box-sizing:border-box;width:69px;min-width:69px;height:35px;min-height:35px;text-align:center;font-size:14px;padding:3px 6px;border:1px solid #60b5ce;border-radius:8px;color:#fff;background:#123b50}
+#playGameSheet .play-role-time-input small{color:#bfeaf5;font-size:11px}
