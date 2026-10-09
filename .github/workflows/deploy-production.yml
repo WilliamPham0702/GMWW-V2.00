@@ -358,3 +358,23 @@ jobs:
           console.log('Verify Production: rejected Skin disabled; premium layered redesign required before release.');
           NODE
           echo "Verify Production: skeleton-only fallback and rejected Skin exact-byte check PASS."
+
+          echo "Verify Production: checking joint-bound Character V4.14 isolated skin lab."
+          for F in skin-preview-v414.html skin-v414.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinpreview=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.14 $F did not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v4-skin-v414.mjs
+          grep -Fq "skin-v414.mjs" /tmp/v4-skin-preview-v414.html
+          grep -Fq "BẢN THỬ HÌNH VẼ" /tmp/v4-skin-preview-v414.html
+          grep -Fq "17 lớp" /tmp/v4-skin-preview-v414.html
+          grep -Fq "skin-preview-v414.html" /tmp/v4-skin.html
+          echo "Verify Production: isolated V4.14 Skin preview exact-byte SHA check PASS."
+
