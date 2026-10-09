@@ -266,9 +266,9 @@ jobs:
           const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
           const allowed=['bg.home','bg.play','bg.library','bg.settings',
             'banner.home','ui.homePortal','ui.exploreDeck','ui.exploreMembers','ui.exploreTemplates','ui.bottomNavArt'];
-          const block=app.match(/const THEME_UI_GROUPS=([\\s\\S]*?);\\n\\nconst DEFAULT_STATE=/)?.[1];
+          const block=app.match(/const THEME_UI_GROUPS=([\s\S]*?);\n\nconst DEFAULT_STATE=/)?.[1];
           if(!block)throw Error('Active theme UI control list missing');
-          const actual=[...block.matchAll(/\\['([^']+)',/g)].map(m=>m[1]);
+          const actual=[...block.matchAll(/\['([^']+)',/g)].map(m=>m[1]);
           if(actual.length!==allowed.length||actual.some(x=>!allowed.includes(x)))
             throw Error('Dead or unlinked theme UI slots visible: '+actual.join(', '));
           for(const slot of allowed)if(!actual.includes(slot))throw Error('Missing linked theme slot '+slot);
