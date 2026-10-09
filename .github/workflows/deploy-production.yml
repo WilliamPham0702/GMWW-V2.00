@@ -256,6 +256,24 @@ jobs:
           const fs=require('node:fs');
           const v4=JSON.parse(fs.readFileSync('/tmp/character-v4.json','utf8'));
           if(!v4.ok||v4.webOnly!==true||v4.ipaDeployed!==false||v4.count!==20||v4.approvedCount!==0||v4.characters?.length!==20)process.exit(1);
-          if(!v4.characters.every(c=>c.status==='awaiting-artwork'&&!c.approved))process.exit(2);
-          console.log('Verify Production: Character V4 Web-only 20-slot staging PASS.');
+          if(v4.previewCount!==2||!v4.characters.every(c=>!c.approved))process.exit(2);
+          if(!v4.characters.slice(0,2).every(c=>c.hasArtwork&&c.status==='preview-artwork'))process.exit(3);
+          if(!v4.characters.slice(2).every(c=>!c.hasArtwork&&c.status==='awaiting-artwork'))process.exit(4);
+          console.log('Verify Production: Character V4 two actual artwork previews + 18 pending PASS.');
           NODE
+          echo "Verify Production: checking real Character 01/02 four-direction artwork."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/approved-two-characters.avif?verify=$(date +%s)" > /tmp/v4-two-characters.avif
+          test "$(wc -c </tmp/v4-two-characters.avif)" -gt 10000
+          test "$(shasum -a 256 assets/characters/v4/approved-two-characters.avif | awk '{print $1}')" = "$(shasum -a 256 /tmp/v4-two-characters.avif | awk '{print $1}')"
+          for VIEW in front left right back; do
+            curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-01/image?dir=$VIEW" > "/tmp/char01-$VIEW.svg"
+            grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char01-$VIEW.svg"
+            grep -Fq 'data:image/avif;base64,' "/tmp/char01-$VIEW.svg"
+            curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-02/image?dir=$VIEW" > "/tmp/char02-$VIEW.svg"
+            grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char02-$VIEW.svg"
+            grep -Fq 'data:image/avif;base64,' "/tmp/char02-$VIEW.svg"
+          done
+          grep -Fq 'x="-200" y="-145"' /tmp/char02-back.svg
+          grep -Fq 'x="0" y="0"' /tmp/char01-front.svg
+          grep -Fq 'id="labCharacter"' /tmp/character-v4-web.html
+          echo "Verify Production: Character 01 + 02, four directions each, new real artwork PASS."
