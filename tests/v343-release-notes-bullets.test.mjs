@@ -21,8 +21,8 @@ test('Có gì mới shows each note in a dedicated safe bullet',()=>{
  assert.ok(css.includes('#settings #updateReleaseNotes .update-release-list'));
  assert.ok(css.includes('max-height:166px;overflow-y:auto'));
 });
-test('V3.48 is a separate OTA release on IPA 3.17',()=>{
- assert.ok(html.includes('<title>GMWW V3.48</title>'));
- assert.ok(app.includes("const VERSION='3.48'"));
- assert.ok(worker.includes('VERSION="V3.48",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-348"'));
+test('V3.49 is a separate OTA release on IPA 3.17',()=>{
+ assert.ok(html.includes('<title>GMWW V3.49</title>'));
+ assert.ok(app.includes("const VERSION='3.49'"));
+ assert.ok(worker.includes('VERSION="V3.49",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-349"'));
 });
