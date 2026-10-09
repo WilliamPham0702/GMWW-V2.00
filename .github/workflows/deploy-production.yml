@@ -292,8 +292,21 @@ jobs:
           NODE
           echo "Verify Production: Character V4 skeleton Skin preview for Character 01/02."
           for F in skeleton.html skeleton-rig.mjs skin.html skeleton-skin.mjs; do
-            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinverify=$(date +%s)" > "/tmp/v4-$F"
-            test "$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')" = "$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')"
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 15); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinverify=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then
+                echo "Verify Production: $F exact bytes match on attempt $ATTEMPT."
+                MATCHED=1
+                break
+              fi
+              echo "::warning::$F hash mismatch on attempt $ATTEMPT expected $EXPECTED_HASH observed $LIVE_HASH, $(wc -c < "/tmp/v4-$F") bytes"
+              if [ "$ATTEMPT" -eq 1 ]; then head -c 120 "/tmp/v4-$F"; echo; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::Character V4 file $F did not synchronize to the approved commit."; exit 1; fi
           done
           node --check /tmp/v4-skeleton-skin.mjs
           grep -Fq 'id="boy"' /tmp/v4-skin.html
