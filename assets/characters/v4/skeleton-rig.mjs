@@ -2,7 +2,7 @@
 // Coordinates in 100x160 virtual space. Each anatomical limb is a unique joint chain.
 export const SKELETON_ACTIONS=Object.freeze(['idle','walk','run','sit','sit-down','stand-up','wave','vote','result']);
 export const SKELETON_DIRECTIONS=Object.freeze(['front','left','right','back']);
-export const SKELETON_VERSION='4.10-skeleton-proposal';
+export const SKELETON_VERSION='4.11-footstep-gait';
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t;
 const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -14,15 +14,18 @@ export function skeletonPose({action='idle',direction='front',elapsedMs=0,progre
  if(!['win','lose'].includes(outcome))throw Error('INVALID_OUTCOME');
  const t=Math.max(0,Number(elapsedMs)||0),p=smooth(progress),phase=t*(action==='run'?.016:.010);
  const stride=(action==='walk'||action==='run')?Math.sin(phase):0;
+ const stepLift=(action==='walk'||action==='run')?Math.max(0,Math.cos(phase)):0;
+ const oppositeLift=(action==='walk'||action==='run')?Math.max(0,-Math.cos(phase)):0;
  const speed=action==='run'?1.35:1;
  const sit=action==='sit'?1:action==='sit-down'?p:action==='stand-up'?1-p:0;
  const isSide=direction==='left'||direction==='right',side=direction==='left'?-1:1;
  const sway=action==='idle'?Math.sin(t*.003)*.7:0;
  const hipY=92+23*sit+(action==='result'&&outcome==='lose'?6:0);
- const shoulderY=58+20*sit+sway;
- const head=pt(50,29+20*sit+sway);
- const neck=pt(50,51+20*sit+sway);
- const pelvis=pt(50,hipY);
+ const gaitBounce=(action==='walk'||action==='run')?Math.abs(Math.sin(phase))*1.8:0;
+ const shoulderY=58+20*sit+sway-gaitBounce;
+ const head=pt(50,29+20*sit+sway-gaitBounce);
+ const neck=pt(50,51+20*sit+sway-gaitBounce);
+ const pelvis=pt(50,hipY-gaitBounce);
  const shoulderL=pt(isSide?48:36,shoulderY),shoulderR=pt(isSide?52:64,shoulderY);
  const hipL=pt(isSide?47:44,hipY),hipR=pt(isSide?53:56,hipY);
  let elbowL=pt(24,80+20*sit),handL=pt(22,101+20*sit);
@@ -52,13 +55,24 @@ export function skeletonPose({action='idle',direction='front',elapsedMs=0,progre
   handR=pt(mix(handR.x,61,sit),mix(handR.y,130,sit));
  }
  if(action==='walk'||action==='run'){
-  kneeL=pt(39+stride*12*speed,117+Math.max(0,-stride)*5);
-  footL=pt(35+stride*20*speed,149-Math.max(0,-stride)*11*speed);
-  kneeR=pt(61-stride*12*speed,117+Math.max(0,stride)*5);
-  footR=pt(65-stride*20*speed,149-Math.max(0,stride)*11*speed);
+  // Forward stepping cycle: one foot lifts and advances while the other plants.
+  // Front/back use depth (Y) and knee flexion; side views use horizontal travel.
+  const depth=direction==='back'?-1:1;
+  if(isSide){
+   const travel=side*speed;
+   kneeL=pt(46+stride*10*travel,116-stepLift*7);
+   footL=pt(45+stride*18*travel,149-stepLift*15*speed);
+   kneeR=pt(54-stride*10*travel,116-oppositeLift*7);
+   footR=pt(55-stride*18*travel,149-oppositeLift*15*speed);
+  }else{
+   kneeL=pt(42,117+stride*5*depth-stepLift*6);
+   footL=pt(41,149+stride*10*depth-stepLift*15*speed);
+   kneeR=pt(58,117-stride*5*depth-oppositeLift*6);
+   footR=pt(59,149-stride*10*depth-oppositeLift*15*speed);
+  }
  }
  if(isSide){
-  const projection=.45;
+  const projection=(action==='walk'||action==='run')?1:.45;
   for(const q of [shoulderL,shoulderR,hipL,hipR,elbowL,elbowR,handL,handR,kneeL,kneeR,footL,footR])q.x=50+(q.x-50)*projection*side;
  }
  return Object.freeze({action,direction,sit,head,neck,pelvis,
