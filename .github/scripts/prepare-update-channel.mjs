@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Trang Chủ V3.52 chia thành banner riêng: Làng biển, Vào Làng, Khám Phá, Thống Kê, Hoạt Động","Bổ sung artwork cổng biển cho Vào Làng và giữ ba ô Bộ Bài, Thành Viên, Ván Mẫu với liên kết thật","Cập nhật từ V3.51 chỉ tải 4 tệp thay đổi, giữ nguyên dữ liệu và cài đặt"],
+  releaseNotes:["Trang Chủ: bỏ bảng tên trùng nội dung, đưa WilliamPham vào vùng trời không che sói trắng","Thiết kế artwork mới cho Vào Làng và ba ô Bộ Bài, Thành Viên, Ván Mẫu theo phong cách biển","Tăng khoảng cuộn để xem đủ Thống Kê và Hoạt Động phía trên menu dưới","Runtime V3.52 cập nhật trực tiếp V3.53 bằng 7 tệp đã kiểm tra checksum"],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],

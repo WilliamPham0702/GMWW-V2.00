@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 const url=process.argv[2],version=process.argv[3];
-if(!['3.51','3.52'].includes(version)){console.log('Incremental OTA test skipped '+version);process.exit(0)}
+if(!['3.51','3.52','3.53'].includes(version)){console.log('Incremental OTA test skipped '+version);process.exit(0)}
 if(!/^https:\/\/gmww-v2-00\.williampham0702\.workers\.dev$/.test(url||''))throw Error('Untrusted Production origin');
-const installed=version==='3.52'?'3.51':'3.50';
+const installed=version==='3.53'?'3.52':version==='3.52'?'3.51':'3.50';
 const response=await fetch(url+'/api/update/manifest?current='+installed+'&verify-lean='+Date.now(),{signal:AbortSignal.timeout(25000),headers:{'cache-control':'no-cache'}});
 assert.equal(response.status,200,'V3.50 update manifest must be readable');
 const manifest=await response.json();
@@ -20,6 +20,7 @@ assert.equal(manifest.optimizedFromVersion,installed);
 assert.equal(manifest.upgradeMode,'verified-overlay');
 const expected=['GMWW.html','app.js','style.css'];
 if(version==='3.52')expected.push('home-art/home-sea-portal-v352.svg');
+if(version==='3.53')expected.push('home-art/home-sea-portal-v353.svg','home-art/home-sea-cards-v353.svg','home-art/home-sea-members-v353.svg','home-art/home-sea-templates-v353.svg');
 assert.deepEqual(manifest.runtime.files.map(x=>x.path),expected);
 assert.deepEqual(manifest.delete,[]);
 let total=0;
