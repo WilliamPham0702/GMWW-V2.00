@@ -328,3 +328,18 @@ export function drawV414Skin(ctx,pose,{characterId='character-01',width=240,heig
  return Object.freeze({characterId,direction:pose.direction,skinApplied:true,
   layersDrawn:Object.freeze(drawn),headTiltDeg:0,previewOnly:true});
 }
+
+/** Draw ONE independently transparent, skeleton-bound anatomical layer.
+ * Used only for high-resolution artwork export; the approved live 9-action
+ * render loop remains unchanged. Every file aligns to the same master canvas.
+ */
+export function drawV414SkinLayer(ctx,pose,{characterId='character-01',layerName,width=1200,height=1920}={}){
+ if(!ctx||typeof ctx.save!=='function')throw Error('SKIN_CANVAS_REQUIRED');
+ const binding=skinBinding(pose,characterId);
+ if(!V414_LAYERS.includes(layerName))throw Error('INVALID_SKIN_LAYER');
+ if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)throw Error('INVALID_EXPORT_SIZE');
+ ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(width/100,height/160);
+ drawPart(ctx,pose,characterId,layerName);
+ ctx.restore();
+ return Object.freeze({characterId,direction:binding.direction,layerName,transparent:true,headTiltDeg:0,previewOnly:true});
+}

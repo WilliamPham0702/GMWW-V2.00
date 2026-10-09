@@ -398,3 +398,23 @@ jobs:
           grep -Fq "skin-preview-v414.html" /tmp/v4-skin.html
           echo "Verify Production: isolated V4.14 Skin preview exact-byte SHA check PASS."
 
+          echo "Verify Production: checking V4.15 1200x1920 layered master exporter."
+          for F in skin-master-v415.html skin-master-v415.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?masterverify=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.15 $F did not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v4-skin-master-v415.mjs
+          grep -Fq '1200 × 1920' /tmp/v4-skin-master-v415.html
+          grep -Fq 'export8MasterPNGs' /tmp/v4-skin-master-v415.html
+          grep -Fq 'export17Layers' /tmp/v4-skin-master-v415.html
+          grep -Fq 'skin-master-v415.html' /tmp/v4-skin-preview-v414.html
+          echo "Verify Production: V4.15 8 full-body masters + 17 transparent layers exporter exact SHA PASS."
+
+

@@ -10,7 +10,8 @@ on:
       - 'tests/character-v4-web-preview.test.mjs'
       - 'tests/character-v4-skeleton.test.mjs'
       - 'tests/character-v4-skin.test.mjs'
-      - 'tests/character-v4-skin-preview.test.mjs'
+      - 'tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs'
+      - 'tests/character-v4-highres-master.test.mjs'
       - 'tests/character-v4-api.test.mjs'
       - 'src/gmww-character-v4.js'
       - 'src/index.js'
@@ -41,6 +42,9 @@ jobs:
           node --check assets/characters/v4/animated-sprite.mjs
           node --check assets/characters/v4/skeleton-rig.mjs
           node --check assets/characters/v4/skin-v414.mjs
+          node --check assets/characters/v4/skin-master-v415.mjs
+          test -s assets/characters/v4/skin-master-v415.html
+          grep -Fq 'MASTER KỸ THUẬT' assets/characters/v4/skin-master-v415.html
           test -s assets/characters/v4/skin-preview-v414.html
           grep -Fq 'skin-v414.mjs' assets/characters/v4/skin-preview-v414.html
           test ! -e assets/characters/v4/skeleton-skin.mjs
