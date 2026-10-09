@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>GMWW · Duyệt khung xương Character V4</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#effaff;background:#092c40}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 50% 0%,#176d78,#0a2e46 70%);min-height:100vh}
+main{max-width:860px;margin:auto;padding:18px 14px 90px;display:grid;gap:14px}
+h1{font-size:clamp(24px,5vw,34px);margin:0}h2{font-size:17px;margin:0 0 8px}
+p{line-height:1.55;color:#c3e1e7;margin:6px 0;font-size:14px}
+.panel{background:#123f57cc;border:1px solid #54899b;border-radius:18px;padding:16px}
+.stage{min-height:375px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:radial-gradient(ellipse at center,#28767e,#0b344b);position:relative;overflow:hidden}
+canvas{width:240px;height:360px;max-width:90%;image-rendering:auto}
+.controls{display:flex;flex-wrap:wrap;gap:7px}
+button,select{font:inherit;background:#17516a;color:white;border:1px solid #83bfc5;border-radius:11px;padding:10px 12px;min-height:43px;cursor:pointer}
+button[aria-pressed=true]{background:#0695a4;border-color:#d3fff7;color:#fff}
+.small{font-size:12px;color:#b3e1e6}.state{font-weight:700;color:#f8dc99;min-height:26px}
+a{color:#91f2ed}.badge{font-size:12px;color:#f4e4aa;border:1px solid #b39b64;border-radius:25px;padding:6px 10px;display:inline-block}
+</style></head><body><main>
+<header><p>GMWW · CHARACTER V4 · GIAI ĐOẠN 1</p><h1>Duyệt khung xương trước khi đắp Skin</h1><p class="badge">Bản thử Web · Chưa đắp Skin · Chưa vào game chính / IPA</p></header>
+<section class="panel"><h2>Khung que chuẩn · 9 Action · 4 hướng</h2>
+<p>Mỗi nhân vật chỉ có đúng hai tay và hai chân. Không sử dụng ảnh nhân vật nguyên khối, vì vậy không còn tay chân gốc chồng với tay chân chuyển động. Tư thế ngồi có hai bàn chân gập vào giữa, đầu luôn thẳng.</p>
+<div class="stage"><canvas id="rig" width="240" height="360" aria-label="Khung xương đang chuyển động"></canvas></div>
+<p class="state" id="status" aria-live="polite">Đang khởi tạo khung xương…</p>
+<h2>Chọn hướng</h2><div class="controls" id="directions">
+<button data-dir="front" aria-pressed="true">↓ Trước</button><button data-dir="left" aria-pressed="false">← Trái</button><button data-dir="right" aria-pressed="false">→ Phải</button><button data-dir="back" aria-pressed="false">↑ Sau</button></div>
+<h2 style="margin-top:16px">Kiểm tra 9 Action</h2><div class="controls" id="actions">
+<button data-action="idle" aria-pressed="true">1 · Đứng yên</button><button data-action="walk">2 · Đi bộ</button><button data-action="run">3 · Chạy</button>
+<button data-action="sit">4 · Ngồi xếp bằng</button><button data-action="sit-down">5 · Đứng → Ngồi</button><button data-action="stand-up">6 · Ngồi → Đứng</button>
+<button data-action="wave">7 · Vẫy tay</button><button data-action="vote">8 · Bỏ phiếu</button><button data-action="result">9 · Thắng / Thua</button></div>
+<p><label for="outcome">Kết quả: </label><select id="outcome"><option value="win">Thắng</option><option value="lose">Thua</option></select>
+<label for="speed">Tốc độ: </label><select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option></select></p>
+<p class="small">Duyệt khung xương và chuyển động trước; sau khi đạt mới thiết kế các lớp Skin riêng của Chàng Biển và Nàng Biển. Khung này chỉ là đề xuất kỹ thuật, chưa nghiệm thu.</p></section>
+<section class="panel"><h2>Tiêu chí nghiệm thu</h2><p>Đúng 2 tay, 2 chân · khớp vai/khuỷu/cổ tay, hông/gối/cổ chân rõ ràng · chân không xoạc ngang khi ngồi · đầu không nghiêng · đi/chạy có đổi chân · 4 hướng · 9 Action · không đè lên nhân vật game hiện hành.</p>
+<p><a href="./index.html">Xem lại studio Character V4 hiện hành</a></p></section>
+</main>
+<script type="module">
+import {skeletonPose,drawSkeleton} from './skeleton-rig.mjs';
+const canvas=document.getElementById('rig'),ctx=canvas.getContext('2d'),status=document.getElementById('status');
+const names={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy',sit:'Ngồi xếp bằng','sit-down':'Đứng → Ngồi','stand-up':'Ngồi → Đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
+let action='idle',direction='front',started=performance.now();
+for(const b of document.querySelectorAll('[data-dir]'))b.onclick=()=>{direction=b.dataset.dir;document.querySelectorAll('[data-dir]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));};
+for(const b of document.querySelectorAll('[data-action]'))b.onclick=()=>{action=b.dataset.action;started=performance.now();document.querySelectorAll('[data-action]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));};
+const duration={'sit-down':1200,'stand-up':1200,vote:1100,wave:1600,result:1700};
+function tick(now){
+ const elapsed=(now-started)*Number(document.getElementById('speed').value),d=duration[action]||1200;
+ const progress=Math.min(1,elapsed/d);
+ const pose=skeletonPose({action,direction,elapsedMs:elapsed,progress,outcome:document.getElementById('outcome').value});
+ drawSkeleton(ctx,pose);
+ status.textContent=names[action]+' · '+direction+' · '+(pose.sit>0?'Độ ngồi '+Math.round(pose.sit*100)+'%':'Đang đứng')+' · 2 tay / 2 chân · Chưa đắp Skin';
+ requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script></body></html>
