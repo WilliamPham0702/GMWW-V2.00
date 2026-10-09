@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.61';
+const VERSION='3.62';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2696,6 +2696,7 @@ function renderPlayGatherToolbar(){
   if(confirm){confirm.disabled=!!playSceneRuntime.busy;const b=confirm.querySelector('b');if(b)b.textContent=locked?'MỞ KHÓA':'CHỐT VỊ TRÍ';}
   const disband=document.getElementById('playGatherDisband');if(disband)disband.disabled=!!playSceneRuntime.busy||!members.length;
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
+  if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
 async function playGatherCallMembers(){
   if(playSceneRuntime.busy||!isLivePlayRoom())return;
@@ -3451,6 +3452,89 @@ function exitPlayImmersive(){
   if(typeof gmwwHomeRefresh==='function')void gmwwHomeRefresh(false)
 }
 async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.lastTapCode='';playRoomUiState.lastTapAt=0;const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
+const GMWW_GATHER_DRAG_KEY='GMWW_GATHER_DRAG_OFFSET_V1';
+function playGatherBoundCorrection(rect,bounds){
+  const shift=(start,end,minimum,maximum)=>{
+    if(end-start>maximum-minimum)return minimum-start;
+    if(start<minimum)return minimum-start;
+    if(end>maximum)return maximum-end;
+    return 0;
+  };
+  return {x:shift(rect.left,rect.right,bounds.left,bounds.right),
+          y:shift(rect.top,rect.bottom,bounds.top,bounds.bottom)};
+}
+function initDraggablePlayGatherToolbar(){
+  const bar=document.getElementById('playGatherToolbar'),handle=bar?.querySelector('.play-gather-toolbar-head');
+  if(!bar||!handle||bar.dataset.dragBound==='1')return;
+  bar.dataset.dragBound='1';
+  handle.style.touchAction='none';
+  handle.style.cursor='grab';
+  let x=0,y=0,drag=null;
+  try{
+    const saved=JSON.parse(localStorage.getItem(GMWW_GATHER_DRAG_KEY)||'null');
+    if(Number.isFinite(saved?.x)&&Number.isFinite(saved?.y)){
+      x=Math.max(-2000,Math.min(2000,saved.x));y=Math.max(-2000,Math.min(2000,saved.y));
+    }
+  }catch{}
+  const apply=()=>{
+    bar.style.setProperty('--gmww-gather-drag-x',x+'px');
+    bar.style.setProperty('--gmww-gather-drag-y',y+'px');
+  };
+  const boundaries=()=>{
+    const viewport=window.visualViewport;
+    const vx=Number(viewport?.offsetLeft||0),vy=Number(viewport?.offsetTop||0);
+    const vw=Number(viewport?.width||window.innerWidth),vh=Number(viewport?.height||window.innerHeight);
+    const timeline=document.getElementById('playSetupStrip');
+    const bottomDock=document.getElementById('gmTopMenu');
+    const timelineEnd=timeline&&!timeline.classList.contains('is-auto-hidden')?timeline.getBoundingClientRect().bottom+8:vy+8;
+    const dockStart=bottomDock&&!bottomDock.classList.contains('is-auto-hidden')?bottomDock.getBoundingClientRect().top-8:vy+vh-8;
+    return {left:vx+7,right:vx+vw-7,top:Math.max(vy+8,timelineEnd),bottom:Math.min(vy+vh-8,dockStart)};
+  };
+  const clampOnscreen=()=>{
+    if(bar.classList.contains('hidden')||!bar.getClientRects().length)return;
+    const fix=playGatherBoundCorrection(bar.getBoundingClientRect(),boundaries());
+    if(fix.x||fix.y){x+=fix.x;y+=fix.y;apply()}
+  };
+  bar.gmwwGatherClampOnscreen=clampOnscreen;
+  apply();
+  const save=()=>{try{localStorage.setItem(GMWW_GATHER_DRAG_KEY,JSON.stringify({x,y}))}catch{}};
+  handle.addEventListener('pointerdown',e=>{
+    if(bar.classList.contains('hidden')||e.target.closest('button,input,textarea,select,a'))return;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,baseX:x,baseY:y};
+    bar.classList.add('is-dragging');
+    handle.style.cursor='grabbing';
+    try{handle.setPointerCapture(e.pointerId)}catch{}
+    e.preventDefault();
+  });
+  handle.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    x=drag.baseX+e.clientX-drag.startX;
+    y=drag.baseY+e.clientY-drag.startY;
+    apply();clampOnscreen();
+    e.preventDefault();
+  });
+  const end=e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    drag=null;bar.classList.remove('is-dragging');handle.style.cursor='grab';
+    try{handle.releasePointerCapture(e.pointerId)}catch{}
+    clampOnscreen();save();
+  };
+  handle.addEventListener('pointerup',end);
+  handle.addEventListener('pointercancel',end);
+  handle.addEventListener('dblclick',e=>{
+    if(e.target.closest('button,input,textarea,select,a'))return;
+    x=0;y=0;apply();clampOnscreen();save();e.preventDefault();
+  });
+  handle.addEventListener('keydown',e=>{
+    const arrows={ArrowLeft:[-12,0],ArrowRight:[12,0],ArrowUp:[0,-12],ArrowDown:[0,12]};
+    const d=arrows[e.key];if(!d)return;
+    x+=d[0];y+=d[1];apply();clampOnscreen();save();e.preventDefault();
+  });
+  window.addEventListener('resize',clampOnscreen,{passive:true});
+  window.visualViewport?.addEventListener('resize',clampOnscreen,{passive:true});
+  requestAnimationFrame(clampOnscreen);
+}
 function initDraggablePlaySheets(){
   document.querySelectorAll('.sheet .sheet-card').forEach(card=>{
     if(card.dataset.dragBound==='1')return;card.dataset.dragBound='1';
@@ -3487,6 +3571,7 @@ function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   initPlayGameChromeAutoHide();
   initDraggablePlaySheets();
+  initDraggablePlayGatherToolbar();
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherRandom')?.addEventListener('click',()=>{void playGatherRandomize()});
   document.getElementById('playGatherManual')?.addEventListener('click',playGatherManual);

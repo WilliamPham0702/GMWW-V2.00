@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.61</title>
-<link rel="stylesheet" href="style.css?v=3.61-role-timings">
+<title>GMWW V3.62</title>
+<link rel="stylesheet" href="style.css?v=3.62-gather-drag">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -92,7 +92,8 @@
         </section>
 
         <section class="play-gather-toolbar hidden" id="playGatherToolbar" aria-label="Công cụ Tập hợp dân làng">
-          <div class="play-gather-toolbar-head">
+          <div class="play-gather-toolbar-head" title="Giữ và kéo để di chuyển • Chạm đúp để về vị trí đầu" tabindex="0" aria-label="Kéo để di chuyển thanh Tập hợp dân làng">
+            <span class="play-gather-drag-grip" aria-hidden="true">⠿</span>
             <b>TẬP HỢP DÂN LÀNG</b>
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
@@ -672,7 +673,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.61-role-timings"></script>
+<script src="app.js?v=3.62-gather-drag"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

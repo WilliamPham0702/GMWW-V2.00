@@ -4038,3 +4038,30 @@ body:not(.play-immersive) #bottomNav>.nav{z-index:2!important}
 #playGameSheet .play-role-time-input{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto}
 #playGameSheet .play-role-time-input input[type="number"]{box-sizing:border-box;width:69px;min-width:69px;height:35px;min-height:35px;text-align:center;font-size:14px;padding:3px 6px;border:1px solid #60b5ce;border-radius:8px;color:#fff;background:#123b50}
 #playGameSheet .play-role-time-input small{color:#bfeaf5;font-size:11px}
+
+
+/* V3.62 — Move the gathering menu over the 2D village without moving the timeline.
+   The higher-specificity custom transform overrides legacy fixed-position animations. */
+body.play-immersive #start #playShell[data-step="seats"] #playGatherToolbar.play-gather-toolbar{
+  transform:translate3d(var(--gmww-gather-drag-x,0px),var(--gmww-gather-drag-y,0px),0)!important;
+}
+body.play-immersive #start #playShell[data-step="seats"] #playGatherToolbar.play-gather-toolbar.is-dragging{
+  transition:none!important;will-change:transform!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-head{
+  cursor:grab;touch-action:none!important;user-select:none!important;-webkit-user-select:none!important;
+  min-height:26px!important;outline-offset:2px;
+}
+body.play-immersive #start #playGatherToolbar.is-dragging .play-gather-toolbar-head{cursor:grabbing}
+#playGatherToolbar .play-gather-toolbar-head .play-gather-drag-grip{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;
+  height:21px;border:1px solid rgba(181,236,247,.32);border-radius:7px;
+  background:rgba(78,165,185,.19);color:#bdeff5;font-size:17px;line-height:1;
+  pointer-events:none;
+}
+#playGatherToolbar .play-gather-toolbar-head:focus-visible{
+  outline:2px solid #ffebaa;outline-offset:2px;border-radius:8px;
+}
+@media(prefers-reduced-motion:reduce){
+  body.play-immersive #start #playShell[data-step="seats"] #playGatherToolbar.play-gather-toolbar{transition:none!important}
+}
