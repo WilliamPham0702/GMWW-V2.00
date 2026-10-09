@@ -19,7 +19,7 @@ test('GM publishes timeline and setup transitions',()=>{
   assert.match(gm,/playStagePublishQueue=playStagePublishQueue\.then\(write,write\)/);
   for(const stage of ['seats','game','roles','deal','battle'])
     assert.ok(gm.includes("playPublishStage('"+stage+"')"),stage+' published');
-  assert.match(gm,/room\.gmStage\)playSceneState\.step=room\.gmStage/);
+  assert.match(gm,/playSceneState\.step=room\.gmStage/);
 });
 test('Player top menu matches GM timeline stages',()=>{
   const start=player.indexOf('function playerTopMenuStatus()');

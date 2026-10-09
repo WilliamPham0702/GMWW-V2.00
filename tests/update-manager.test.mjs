@@ -169,7 +169,7 @@ test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   assert.match(worker,/validRuntime=/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
-  assert.match(worker,/NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-355"/);
+  assert.match(worker,/NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-356"/);
   assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
   assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });
