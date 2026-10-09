@@ -168,3 +168,43 @@ export function selectVerifiedRuntimeV360Delta(manifest,installedVersion){
     optimizedFromVersion:'3.59',upgradeMode:'verified-overlay',
     message:'V3.60: thời gian thảo luận 300s, Vai Trò 30s, Artifact 30s; cài đặt chung, không đặt từng lá.'};
 }
+
+/** V3.60 → V3.61 verified three-file overlay for installed IPA V3.17. */
+export function selectVerifiedRuntimeV361Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.60'||String(manifest?.releaseVersion||'')!=='3.61'
+    ||String(manifest?.runtimeVersion||'')!=='3.61'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0],expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.61/'+path;
+    if(file.url!==expected||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url:expected,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:'3.60',upgradeMode:'verified-overlay',
+    message:'V3.61: chỉnh giây chung cho Vai Trò và thời gian riêng từng lá Vai Trò; giữ nguyên Artifact và Artwork.'};
+}
+
+/** V3.61 → V3.62 — small signed GM gather-toolbar drag update. */
+export function selectVerifiedRuntimeV362Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.61'||String(manifest?.releaseVersion||'')!=='3.62'
+    ||String(manifest?.runtimeVersion||'')!=='3.62'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const found=manifest.runtime.files.filter(x=>x?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.62/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:'3.61',upgradeMode:'verified-overlay',
+    message:'V3.62: Có thể kéo thả menu Tập hợp dân làng, giữ vị trí, không che timeline hoặc thanh điều khiển.'};
+}

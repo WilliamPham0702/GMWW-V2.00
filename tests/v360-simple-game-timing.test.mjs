@@ -7,15 +7,15 @@ const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
 const worker=readFileSync('src/index.js','utf8');
 
-test('Chọn Ván shows shared 300/30/30 settings and no per-role timings',()=>{
+test('Chọn Ván uses shared defaults and allows per-role overrides',()=>{
   const sheet=html.slice(html.indexOf('<div class="play-template-play-review">'),html.indexOf('<div class="sheet hidden" id="playEndSheet">'));
   assert.match(sheet,/id="playVillageDiscussionSec"[^>]*value="300"/);
   assert.match(sheet,/id="playDefaultActionSec"[^>]*value="30"/);
   assert.match(sheet,/id="playArtifactActionSec"[^>]*value="30"/);
   assert.match(sheet,/id="playArtifactsEnabled"/);
-  assert.doesNotMatch(sheet,/THỜI GIAN RIÊNG TỪNG VAI/);
+  assert.match(sheet,/THỜI GIAN RIÊNG TỪNG VAI/);
   assert.match(css,/#playGameSheet \.play-game-sheet-card\[data-mode="play"\] \.play-timing-grid\{display:grid!important/);
-  assert.match(app,/roles:\(base\.roles\|\|\[\]\)\.map\(r=>\(\{\.\.\.r,actionDurationSec:timing\.defaultActionSec\}\)\)/);
+  assert.match(app,/roles:\(base\.roles\|\|\[\]\)\.map\(r=>\(\{\.\.\.r,actionDurationSec:playRoleDurationSec\(r\.roleId,timing\.defaultActionSec\)\}\)\)/);
 });
 test('Server accepts separate Artifact duration and uses it for early/main turns',()=>{
   assert.match(worker,/artifactActionSec:clampSec\(v\?\.timing\?\.artifactActionSec\?\?30\)/);

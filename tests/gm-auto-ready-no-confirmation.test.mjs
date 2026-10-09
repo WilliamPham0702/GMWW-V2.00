@@ -36,9 +36,9 @@ test('Player Web displays automatic status without manual Sẵn Sàng controls',
   const dock = player.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.doesNotMatch(dock, /<button class="ready"/);
-  assert.match(dock, /ĐÃ SẴN SÀNG/);
-  assert.match(dock, /RỜI GHẾ/);
-  assert.match(dock, /RỜI PHÒNG/);
+  assert.ok(dock.includes("state.ready=!!me.ready"));
+  assert.ok(dock.includes("updatePlayerTopMenu();"));
+  assert.doesNotMatch(dock, /ĐÃ SẴN SÀNG|RỜI GHẾ|RỜI PHÒNG/);
   assert.doesNotMatch(player, /readyButton|toggleReady\(/);
   assert.match(player, /#gmwwVillageReadyDock \.leave\{display:block\}/);
 });

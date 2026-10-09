@@ -55,8 +55,8 @@ test('Lobby HUD is absent before start; only game shows day/night controls',()=>
 
 test('Simplified player lobby uses existing info boxes, hides unoccupied leaves and extra exit buttons',()=>{
  assert.match(live,/bar\.hidden=true/);
- assert.match(live,/d\.querySelector\('\.seat'\)\.hidden=true/);
- assert.match(live,/d\.querySelector\('\.leave'\)\.hidden=true/);
+ assert.match(live,/const d=\$\('#gmwwVillageReadyDock'\);if\(d\)d\.remove\(\)/);
+ assert.doesNotMatch(live,/document\.body\.appendChild\(d\)/);
  assert.match(live,/showSeats:!!state\.roomCode&&room\.enabled!==false&&!publicPlayers\.some\(p=>Number\(p\.seatId\|\|0\)>0\)/);
  assert.match(live,/if\(!confirm\('Thoát Player Web và rời phòng hiện tại\?'\)\)return/);
 });
@@ -70,4 +70,21 @@ test('Assigned characters remain on the village when all empty seat leaves are h
   assert.match(render,/const pos=movementPosition\(data,p\),button=stablePlayerNode\(data,pos,seatId,i\);desiredPlayers\.push\(button\)/,'seated player characters must be retained');
   assert.doesNotMatch(render,/setupState\.showSeats===false\?\[\]:ps/,'seat visibility must never gate character rendering');
   assert.match(render,/for\(const data of unseated\)/,'unseated characters and GM still render');
+});
+
+test('Player lobby does not create a persistent bottom ready/status bar; seat readiness stays in top info',()=>{
+ const start=live.indexOf('function ensureVillageReadyDock(){');
+ const end=live.indexOf('function syncPlayerSetupState(){',start);
+ assert.ok(start>=0&&end>start);
+ const section=live.slice(start,end);
+ assert.ok(!section.includes('createElement')&&!section.includes('appendChild')&&!section.includes('classList.toggle'));
+ assert.ok(section.includes('updatePlayerTopMenu();'));
+ assert.ok(live.includes('info.textContent=playerTopMenuStatus()'));
+ const ctx={state:{participantId:'member:safari',ready:false},currentRoomPlayer:()=>({ready:true}),updatePlayerTopMenu:()=>ctx.topUpdates++,
+   $:()=>({remove:()=>ctx.bottomRemoved++}),bottomRemoved:0,topUpdates:0};
+ vm.runInNewContext(section+';this.cleanDock=ensureVillageReadyDock;',ctx);
+ assert.equal(ctx.cleanDock(),null);
+ assert.equal(ctx.bottomRemoved,1);
+ assert.equal(ctx.topUpdates,1);
+ assert.equal(ctx.state.ready,true);
 });
