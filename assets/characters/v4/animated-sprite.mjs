@@ -1,6 +1,6 @@
 // GMWW Character V4 Web-only articulated preview. Uses only the approved 01/02 4-direction atlas.
 // This is a mechanical segmented-raster prototype, NOT a hand-drawn 9-action spritesheet.
-export const V4_SPRITE_VERSION='v4.03-limbs';
+export const V4_SPRITE_VERSION='v4.04-motion';
 export const V4_SPRITE_ACTIONS=Object.freeze(['idle','walk','run','sit','sit-down','stand-up','wave','vote','result']);
 const TAU=Math.PI*2;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -41,10 +41,10 @@ export function v4ActionPose(action,elapsedMs=0,progress=0,result='win'){
   sit=action==='sit'?1:action==='sit-down'?p:1-p;
   legL=-1.12*sit;legR=1.12*sit;armL=.18*sit;armR=-.18*sit;
  }
- if(action==='wave'){armR=-1.8+.30*Math.sin(TAU*t/450);}
- if(action==='vote'){armR=-2.55*Math.sin(Math.PI*clamp(progress*1.6,0,1)*.5);}
+ if(action==='wave'){armR=-1.65+.24*Math.sin(TAU*t/450);}
+ if(action==='vote'){armR=-2.25*smooth(clamp(progress*2.2,0,1));}
  if(action==='result'){
-  if(result==='win'){armL=1.75;armR=-1.75;jump=5*Math.sin(Math.PI*p);legL=.2*Math.sin(TAU*t/300);legR=-legL;}
+  if(result==='win'){armL=1.65;armR=-1.65;jump=3*Math.sin(Math.PI*p);legL=.14*Math.sin(TAU*t/300);legR=-legL;}
   else{sit=.36;armL=-.22;armR=.22;}
  }
  return {armL,armR,legL,legR,sit,jump,breath,headTiltDeg:0};
@@ -69,10 +69,11 @@ export function createV4SpriteRenderer(canvas,src='./approved-two-characters.avi
    // Independent legs and arm rotations produce actual visible stride and gesture changes.
    paint(ctx,atlas,sx,sy,j.legL,{pivot:j.hl,angle:pose.legL,dy:-7*pose.sit});
    paint(ctx,atlas,sx,sy,j.legR,{pivot:j.hr,angle:pose.legR,dy:-7*pose.sit});
-   if(j.hair)paint(ctx,atlas,sx,sy,j.hair,{dy:lower*.32});
+   // Long hair is part of the original raster; do not redraw a broad overlapping hair rectangle
+   // on top of the limbs, which caused duplicate arms/torso in Character 02.
+   paint(ctx,atlas,sx,sy,j.body,{pivot:[51,78],dy:lower,sxScale:pose.breath,syScale:1-.05*pose.sit});
    paint(ctx,atlas,sx,sy,j.armL,{pivot:j.pl,angle:pose.armL,dy:lower});
    paint(ctx,atlas,sx,sy,j.armR,{pivot:j.pr,angle:pose.armR,dy:lower});
-   paint(ctx,atlas,sx,sy,j.body,{pivot:[51,78],dy:lower,sxScale:pose.breath,syScale:1-.05*pose.sit});
    // Never rotate the head. It is translated vertically only for stand/sit changes.
    paint(ctx,atlas,sx,sy,j.head,{dy:lower});
    if(actionId==='result'&&result==='win'){
