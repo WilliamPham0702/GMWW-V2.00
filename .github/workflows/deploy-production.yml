@@ -476,11 +476,11 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs');
           const j=JSON.parse(fs.readFileSync('/tmp/v416-artwork-v416-manifest.json','utf8'));
-          if(j.drafts?.length!==3||j.limitations?.requiredViews!==8||
+          if(j.drafts?.length!==4||j.limitations?.requiredViews!==8||
              j.limitations?.individualRigLayersAvailable!==false||
              j.limitations?.productionSkinEnabled!==false||
              j.limitations?.ownerApproved!==false)process.exit(1);
-          console.log('Verify Production: 3 source PNGs documented (off-repository), 5 views pending, 17-layer rig disabled PASS.');
+          console.log('Verify Production: 4 source PNGs documented (off-repository), 4 views pending, 17-layer rig disabled PASS.');
           NODE
           echo "Verify Production: HD V4.16 local-only source gallery SHA PASS."
 

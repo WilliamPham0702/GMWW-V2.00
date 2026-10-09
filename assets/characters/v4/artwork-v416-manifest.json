@@ -44,10 +44,17 @@
       "file": "character-02-front.png",
       "sha256": "d5279fa1d42f740a76e7e8c4ab20d182714f5f05e638a29af667fa6f89bee7b1",
       "source": "off-repository conversation artwork ZIP"
+    },
+    {
+      "id": "character-01",
+      "direction": "back",
+      "file": "character-01-back.png",
+      "sha256": "9635b7db6a5a0ae143e47489962008224c5192e81802558db654814aa751245e",
+      "source": "off-repository conversation artwork ZIP V4.17"
     }
   ],
   "limitations": {
-    "artworkViewsCreated": 3,
+    "artworkViewsCreated": 4,
     "requiredViews": 8,
     "individualRigLayersAvailable": false,
     "importedIntoRepository": false,
@@ -56,8 +63,9 @@
     "productionSkinEnabled": false
   },
   "notes": [
-    "All draft originals are downloaded separately as a ZIP in the ChatGPT conversation; they are not included in the Cloudflare deployment.",
+    "Four independently drawn HD view masters delivered separately as conversation ZIP; binary images are not hosted on Cloudflare",
     "Existing V4.14 skeletal 9-action renderer stays unchanged and approved; do not substitute static artwork for moving 17-layer rigs.",
-    "No art is reflected in game rooms or IPA until 4 views, 17 layers, QA and owner visual approval pass."
+    "No art is reflected in game rooms or IPA until 4 views, 17 layers, QA and owner visual approval pass.",
+    "Chàng Biển back view completed in V4.17; missing Chàng Biển left and Nàng Biển left/right/back. Rig PNG layers remain pending."
   ]
 }
