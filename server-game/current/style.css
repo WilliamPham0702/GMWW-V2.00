@@ -3943,3 +3943,17 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #home .gmww-home-recent-row{overflow:hidden;max-width:100%}
 @media(max-width:390px){#home .gmww-home-rebuild-v354{padding-bottom:calc(185px + env(safe-area-inset-bottom))!important}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350{gap:5px}#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 b{font-size:13px!important}#home .gmww-home-name-v354 strong{font-size:clamp(20px,5.7vw,27px)!important}}
 @media(prefers-reduced-motion:reduce){#home .gmww-home-rebuild-v354 *{scroll-behavior:auto!important}}
+
+/* V3.57: navigation arrows for maintenance rail, retaining horizontal layout. */
+#settings .settings-tools-navigation{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:3px 2px 1px;min-width:0}
+#settings .settings-tools-hint{flex:1 1 140px;color:#b9f1ff;font-size:11px;line-height:1.4;font-weight:800}
+#settings .settings-tools-nav-controls{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 0 auto}
+#settings .settings-tools-arrow{display:grid;place-items:center!important;width:44px!important;min-width:44px!important;height:43px!important;min-height:43px!important;padding:0!important;border-radius:13px!important;border:1px solid rgba(186,245,255,.8)!important;background:linear-gradient(135deg,#167fa4,#06445f)!important;color:#f2fcff!important;font-size:24px!important;font-weight:900!important;line-height:1!important;box-shadow:0 0 0 1px rgba(96,210,234,.2),0 5px 13px rgba(0,18,42,.27)!important;touch-action:manipulation}
+#settings .settings-tools-arrow:disabled{opacity:.34!important;box-shadow:none!important;cursor:default}
+#settings .settings-tools-arrow:not(:disabled):active{transform:scale(.94)}
+#settings .settings-tools-arrow:focus-visible{outline:3px solid #ffe9a6;outline-offset:2px}
+#settings #settingsToolsRange{min-width:69px;text-align:center;color:#f4fcff;font-size:12px;font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
+#settings .settings-tools-progress{height:5px;min-height:5px;border-radius:99px;overflow:hidden;background:rgba(174,229,241,.22);border:1px solid rgba(159,224,238,.17)}
+#settings #settingsToolsScrollFill{display:block;height:100%;width:20%;border-radius:99px;background:linear-gradient(90deg,#35d4ef,#a6fff3);box-shadow:0 0 8px rgba(69,234,242,.6);transition:width .12s linear}
+#settings .settings-operations-tools{margin-top:0!important}
+@media(max-width:380px){#settings .settings-tools-navigation{gap:6px}#settings .settings-tools-hint{font-size:10px}#settings .settings-tools-nav-controls{gap:5px}#settings .settings-tools-arrow{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important}}
