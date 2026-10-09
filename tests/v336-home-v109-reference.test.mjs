@@ -40,13 +40,13 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.53<\/title>/);
+  assert.match(html,/<title>GMWW V3\.54<\/title>/);
 });
 
 
 test("Trang Chủ dùng artwork thật trong thư mục home-art",()=>{
  const images=[...home.matchAll(/src="home-art\/([^"]+\.(?:webp|svg))"/g)].map(m=>m[1]);
- assert.deepEqual(images,["home-fantasy-hero-v337.webp","home-sea-portal-v352.svg","home-sea-cards-v348.svg","home-sea-members-v348.svg","home-sea-templates-v348.svg"]);
+ assert.deepEqual(images,["home-fantasy-hero-v337.webp","home-sea-portal-v354.svg","home-sea-cards-v354.svg","home-sea-members-v354.svg","home-sea-templates-v354.svg"]);
  for(const file of images)assert.ok(fs.existsSync("server-game/current/home-art/"+file));
  assert.match(home,/data-home-library-tab="templates"/);
 });
@@ -54,7 +54,7 @@ test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",(
  const labels=["Bộ Bài","Thành Viên","Ván Mẫu"].filter(label=>home.includes("<b>"+label+"</b>"));
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
- assert.ok(html.includes("style.css?v=3.53-stage-sync"));
+ assert.ok(html.includes("style.css?v=3.54-home-art"));
  assert.match(home,/gmww-home-rebuild-v350/);
  for(const n of [3,6,1])assert.ok(!home.includes(">"+n+"</strong>"),"No fabricated counters");
  assert.ok(app.includes("function gmwwHomeRenderExtras(rows,ranking,leader)"));
