@@ -213,7 +213,7 @@ function frame(now){
  const movingAction=cmd.actionId==='walk'||cmd.actionId==='run';
  // Animate limbs continuously while the character actually moves, not the unchanging bitmap.
  const progress=movingAction&&model.phase==='turn'?0:model.progress;
- const actionId=model.phase==='turn'?'idle':cmd.actionId;
+ const actionId=(model.phase==='turn'||(movingAction&&model.completed))?'idle':cmd.actionId;
  const drawn=sprite.render({characterId:activeCharacter,facing:model.facing,actionId,elapsedMs:Math.max(0,elapsedMs-cmd.turnMs),progress,result:cmd.result});
  const phase=model.phase==='turn'?'Đang đổi hướng':model.phase==='move'?'Đang bước chân':model.phase==='done'?'Đã hoàn tất':'Đang thực hiện';
  status.textContent=(activeCharacter==='character-01'?'Chàng Biển':'Nàng Biển')+' · '+actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+' · '+(drawn?'Tay/chân có chuyển động · bản rig thử':'Đang tải ảnh gốc'+(sprite.failed?' (lỗi tải atlas)':''));
