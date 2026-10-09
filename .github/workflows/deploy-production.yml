@@ -484,6 +484,25 @@ jobs:
           NODE
           echo "Verify Production: HD V4.16 local-only source gallery SHA PASS."
 
+          echo "Verify Production: 17-part Character V4.17 bone-bound motion lab."
+          for F in skin-motion-v417.html layered-skin-v417.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?motionverify=$(date +%s)-$ATTEMPT" > "/tmp/v417-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v417-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.17 $F does not match this deployment"; exit 1; fi
+          done
+          node --check /tmp/v417-layered-skin-v417.mjs
+          grep -Fq 'CHƯA VÀO GAME' /tmp/v417-skin-motion-v417.html
+          grep -Fq '17 lớp' /tmp/v417-skin-motion-v417.html
+          grep -Fq 'skin-motion-v417.html' /tmp/v416-artwork-v416.html
+          echo "Verify Production: V4.17 real joint-layer pipeline and iPhone Studio exact SHA PASS."
+
+
 
 
 
