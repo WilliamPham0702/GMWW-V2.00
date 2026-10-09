@@ -38,15 +38,22 @@ test('Workboard fallback is a real recorded public issue snapshot',()=>{
  assert.match(app,/data\.fallback\?'BẢN DỰ PHÒNG/);
 });
 
-test('Game template editing restores V1.09-style roles, timings, artifacts and deletion',()=>{
+test('Ván Mẫu uses thumbnail toggle selection; timing and Artifact settings only appear during Chọn Ván',()=>{
  const part=html.slice(html.indexOf('id="playGameSheet"'),html.indexOf('id="playEndSheet"'));
- for(const id of ['playGameRoleList','playGameRolePicker','playGameDelete','playTemplateRoleSearch','playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playArtifactsEnabled'])assert.ok(part.includes('id="'+id+'"'),id);
- for(const field of ['data-role-count','data-role-order','data-role-duration','data-role-remove','data-move-up','data-move-down'])assert.ok(app.includes(field),field);
- assert.match(app,/function playTemplateRenderCatalog\(\)/);
- assert.match(app,/function playTemplateMoveRole\(id,delta\)/);
- assert.match(app,/playSceneState\.gameTiming=\{/);
- assert.match(app,/playFavoriteArtifacts\(\)\.map/);
- assert.doesNotMatch(app,/playSceneState\.artifactsEnabled=false;\s*playSceneState\.gameTiming=\{villageDiscussionSec:180,wolfDiscussionSec:60,defaultActionSec:30,autoAdvance:true\};\s*const cfg=/);
+ const editor=part.slice(part.indexOf('<div class="play-template-editor-only">'),part.indexOf('<div class="play-template-play-review">'));
+ const play=part.slice(part.indexOf('<div class="play-template-play-review">'));
+ for(const id of ['playGameRolePicker','playGameRoleList','playGameRoleCount','playTemplateRoleSearch','playTemplateTeamSummary'])assert.ok(editor.includes('id="'+id+'"'),id);
+ for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playArtifactsEnabled','playGameArtifactPicker','playGameRoleTimingList'])assert.ok(play.includes('id="'+id+'"'),id);
+ assert.doesNotMatch(editor,/id="playVillageDiscussionSec"|id="playArtifactsEnabled"|id="playAutoAdvance"/);
+ assert.match(app,/resolveArtwork\('cards',role\.id,'thumb'\)/);
+ assert.match(app,/button\.onclick=\(\)=>playTemplateSetCount\(role\.id,chosen\?0:1\)/);
+ assert.match(app,/className='play-template-card'/);
+ assert.match(app,/function renderPlayGameRoleTimings\(\)/);
+ assert.match(app,/function renderPlayArtifactPicker\(\)/);
+ assert.match(app,/gameConfig:configured,matchId/);
+ assert.match(app,/artifacts:\[\],timing:\{villageDiscussionSec:180/);
+ for(const field of ['data-role-count','data-role-order','data-role-remove','data-move-up','data-move-down'])assert.ok(app.includes(field),field);
+ assert.doesNotMatch(editor,/data-role-duration/);
 });
 
 test('Authenticated template deletion removes only the requested stored template',async()=>{
