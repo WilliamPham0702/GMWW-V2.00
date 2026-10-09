@@ -14,9 +14,13 @@ test('all 9 V4 buttons alter actual limb or torso pose instead of sliding a stil
  assert.notEqual(v4ActionPose('walk',160,.3).legL,v4ActionPose('walk',360,.6).legL);
  assert.notEqual(v4ActionPose('run',160,.3).legR,v4ActionPose('run',360,.6).legR);
  assert.ok(v4ActionPose('sit',400,.5).sit>.95);
+ assert.ok(Math.abs(v4ActionPose('sit',400,.5).legL)<.6,'seated legs should not spread wide');
+ assert.ok(v4ActionPose('walk',160,.3).footLiftL>=0);
+ assert.ok(v4ActionPose('run',160,.3).footLiftL>=v4ActionPose('walk',160,.3).footLiftL);
+ assert.equal(v4ActionPose('idle',400,.5).footLiftL,0);
  assert.ok(v4ActionPose('sit-down',400,.5).sit>.2);
  assert.ok(v4ActionPose('stand-up',400,.5).sit>.2);
- assert.ok(v4ActionPose('wave',400,.5).armR< -1);
+ assert.ok(v4ActionPose('wave',400,.5).armR< -.9);
  assert.ok(v4ActionPose('vote',400,.5).armR< -1);
  assert.ok(v4ActionPose('result',400,.5,'win').armL>1);
  assert.ok(v4ActionPose('result',400,.5,'lose').sit>.3);

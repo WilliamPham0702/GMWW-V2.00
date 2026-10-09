@@ -173,9 +173,9 @@ for(const view of views.querySelectorAll('[data-view]')){
 </script>
 <script type="module">
 import {createV4StageController,V4_FACE_LABELS} from './action-lab.mjs';
-import {createV4SpriteRenderer} from './animated-sprite.mjs?v=403';
+import {createV4SpriteRenderer} from './animated-sprite.mjs?v=405';
 const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),actor=document.getElementById('labCharacter'),status=document.getElementById('labStatus');
-const controller=createV4StageController(),sprite=createV4SpriteRenderer(actor,'./approved-two-characters.avif?v=403'),directions=[...document.querySelectorAll('[data-dir]')];
+const controller=createV4StageController(),sprite=createV4SpriteRenderer(actor,'./approved-two-characters.avif?v=405'),directions=[...document.querySelectorAll('[data-dir]')];
 const actionLabels={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy nhẹ',sit:'Ngồi xếp bằng','sit-down':'Đứng → ngồi','stand-up':'Ngồi → đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
 let selectedDirection='front',activeCharacter='character-01',crowd=false,crowdTokens=[];
 window.addEventListener('gmww-v4-select-character',e=>{
