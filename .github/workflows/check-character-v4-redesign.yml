@@ -6,6 +6,7 @@ on:
       - 'assets/characters/v4/**'
       - 'tests/character-v4-action-lab.test.mjs'
       - 'tests/character-v4-media.test.mjs'
+      - 'tests/character-v4-sprite-actions.test.mjs'
       - 'tests/character-v4-web-preview.test.mjs'
       - 'tests/character-v4-api.test.mjs'
       - 'src/gmww-character-v4.js'
@@ -24,7 +25,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
@@ -34,5 +35,7 @@ jobs:
           grep -q 'api/game-characters/v4' assets/characters/v4/index.html
           grep -q 'action-lab.mjs' assets/characters/v4/index.html
           node --check assets/characters/v4/action-lab.mjs
+          node --check assets/characters/v4/animated-sprite.mjs
+          grep -q 'animated-sprite.mjs' assets/characters/v4/index.html
           ! grep -q 'assets/characters/v4' assets/village/village.mjs
           ! grep -q 'assets/characters/v4' server-game/current/character-renderer.js
