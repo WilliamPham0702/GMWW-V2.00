@@ -13,6 +13,7 @@ on:
       - "wrangler.jsonc"
       - "package.json"
       - ".github/workflows/check-player-web.yml"
+      - ".github/scripts/**"
   workflow_dispatch:
 
 concurrency:
@@ -32,6 +33,7 @@ jobs:
       - name: Verify synchronized GMWW version numbers
         run: node .github/scripts/verify-gmww-versions.mjs
       - run: node --check server-game/current/app.js
+      - run: node --check .github/scripts/prepare-update-channel.mjs
       - run: node --check assets/village/village.mjs
       - run: npm test
       - name: Smoke-test Player Web locally
