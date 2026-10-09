@@ -3992,3 +3992,18 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #playGameSheet .play-template-artifact-quota{display:grid;grid-template-columns:minmax(0,1fr) 78px;align-items:center;gap:5px 12px;margin:12px 0;color:#d5f7ff;font-size:12px;font-weight:800}
 #playGameSheet .play-template-artifact-quota input{width:78px;min-height:36px;padding:6px;border:1px solid #7bd9ec;border-radius:9px;background:#06273c;color:#fff;text-align:center;font-size:15px}
 #playGameSheet .play-template-artifact-quota small{grid-column:1/-1;color:#a9d4e0;font-size:10px;font-weight:500}
+
+/* V3.59 — GM pregame dock: hide Auto GM and Audio until the match begins.
+   Keep the remaining three buttons large and avoid blank grid columns. */
+body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-dock-v330{
+  grid-template-columns:48px minmax(0,1fr) 48px!important;
+}
+body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-dock-v330 > #playAutoGM,
+body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-dock-v330 > #playAudioTop{
+  display:none!important;
+}
+@media(max-width:380px){
+ body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-dock-v330{
+  grid-template-columns:44px minmax(0,1fr) 44px!important;
+ }
+}
