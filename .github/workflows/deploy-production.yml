@@ -259,6 +259,26 @@ jobs:
           if(Object.values(checks).some(x=>!x))process.exit(1);
           console.log('GMWW task review controls verified in live OTA runtime V'+version);
           NODE
+          echo "Verify Production: connected Theme editor controls on live IPA Runtime."
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const allowed=['bg.home','bg.play','bg.library','bg.settings',
+            'banner.home','ui.homePortal','ui.exploreDeck','ui.exploreMembers','ui.exploreTemplates','ui.bottomNavArt'];
+          const block=app.match(/const THEME_UI_GROUPS=([\\s\\S]*?);\\n\\nconst DEFAULT_STATE=/)?.[1];
+          if(!block)throw Error('Active theme UI control list missing');
+          const actual=[...block.matchAll(/\\['([^']+)',/g)].map(m=>m[1]);
+          if(actual.length!==allowed.length||actual.some(x=>!allowed.includes(x)))
+            throw Error('Dead or unlinked theme UI slots visible: '+actual.join(', '));
+          for(const slot of allowed)if(!actual.includes(slot))throw Error('Missing linked theme slot '+slot);
+          for(const marker of ['ACTIVE_THEME_IMAGE_TARGETS','ACTIVE_THEME_BACKGROUND_TARGETS','ACTIVE_THEME_NAV_TARGETS',
+            "ui.exploreTemplates","img.setAttribute('src',src||img.dataset.themeDefaultSrc)"])
+            if(!app.includes(marker))throw Error('Theme consumer missing: '+marker);
+          if(!html.includes('data-home-library-tab="templates"')||!html.includes('id="gmwwHomeEnterVillage"'))
+            throw Error('Homepage does not provide active theme targets');
+          console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
+          NODE
           node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
