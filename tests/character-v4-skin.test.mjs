@@ -62,3 +62,13 @@ test('Skin approval page offers independent skeleton comparison but does not tou
  assert.ok(!ipa.includes('skeleton-skin.mjs'));
  assert.match(skeleton,/4\.12-action-review/);
 });
+
+test('Production verifies exactly served Skin assets with bounded retries and checksum diagnostics',()=>{
+ const yaml=fs.readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ assert.match(yaml,/skeleton\.html skeleton-rig\.mjs skin\.html skeleton-skin\.mjs/);
+ assert.match(yaml,/EXPECTED_HASH=/);
+ assert.match(yaml,/LIVE_HASH=/);
+ assert.match(yaml,/skinverify=/);
+ assert.match(yaml,/for ATTEMPT in/);
+ assert.match(yaml,/MATCHED/);
+});
