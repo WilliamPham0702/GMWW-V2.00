@@ -25,7 +25,7 @@ test('PNG filename mapping only accepts known direction slots; never guesses, fl
 });
 test('transparent PNG validator enforces actual 1024x1536 master size and 2:3 aspect',()=>{
  assert.equal(validateDimensions(1024,1536).ok,true);
- assert.equal(validateDimensions(1200,1920).ok,false,'1200x1920 is 5:8, not 2:3');
+ assert.equal(validateDimensions(1200,1920).ok,true,'existing 5:8 V4.15 technical masters remain supported');
  assert.equal(validateDimensions(2048,3072).ok,true);
  assert.equal(validateDimensions(800,1200).error,'RESOLUTION_TOO_SMALL');
  assert.equal(validateDimensions(1024,1024).error,'RATIO_MISMATCH');
