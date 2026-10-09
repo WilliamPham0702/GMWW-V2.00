@@ -1,5 +1,5 @@
 {
-  "version": "4.0.0-prototype",
+  "version": "4.1.0-web-first-two-avatars",
   "project": "GMWW",
   "issue": 106,
   "policy": {
@@ -41,28 +41,30 @@
     {
       "id": "character-01",
       "role": "master",
-      "designStatus": "not-approved",
+      "designStatus": "preview-artwork",
       "views": {
-        "front": null,
-        "left": null,
-        "right": null,
-        "back": null
+        "front": "/api/game-characters/character-01/image?dir=front",
+        "left": "/api/game-characters/character-01/image?dir=left",
+        "right": "/api/game-characters/character-01/image?dir=right",
+        "back": "/api/game-characters/character-01/image?dir=back"
       },
       "rig": null,
-      "reviewedByOwner": false
+      "reviewedByOwner": false,
+      "artworkTestReady": true
     },
     {
       "id": "character-02",
       "role": "pending-master-approval",
-      "designStatus": "not-approved",
+      "designStatus": "preview-artwork",
       "views": {
-        "front": null,
-        "left": null,
-        "right": null,
-        "back": null
+        "front": "/api/game-characters/character-02/image?dir=front",
+        "left": "/api/game-characters/character-02/image?dir=left",
+        "right": "/api/game-characters/character-02/image?dir=right",
+        "back": "/api/game-characters/character-02/image?dir=back"
       },
       "rig": null,
-      "reviewedByOwner": false
+      "reviewedByOwner": false,
+      "artworkTestReady": true
     },
     {
       "id": "character-03",

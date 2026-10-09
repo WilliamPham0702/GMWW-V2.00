@@ -9,7 +9,9 @@ test('new characters: 20 unique fresh identities awaiting master approval',()=>{
  assert.equal(m.characters[0].id,'character-01');
  assert.equal(m.characters[0].role,'master');
  assert.ok(m.characters.slice(1).every(x=>x.role==='pending-master-approval'));
- assert.ok(m.characters.every(x=>x.designStatus==='not-approved'&&!x.reviewedByOwner));
+ assert.ok(m.characters.every(x=>!x.reviewedByOwner));
+ assert.ok(m.characters.slice(0,2).every(x=>x.designStatus==='preview-artwork'&&x.artworkTestReady));
+ assert.ok(m.characters.slice(2).every(x=>x.designStatus==='not-approved'));
 });
 test('4 anatomically distinct view placeholders and exactly 9 allowed actions',()=>{
  assert.deepEqual(m.policy.directionViews,['front','left','right','back']);
