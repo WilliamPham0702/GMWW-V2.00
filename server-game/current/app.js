@@ -2580,6 +2580,7 @@ async function playUpdateRoomSettings(patch={}){
 async function playAddSeat(){const {seatCount}=playSeatStats();if(seatCount>=30){playFlashError('Phòng đã đạt tối đa 30 vị trí.');return}await playUpdateRoomSettings({seatCount:seatCount+1})}
 function renderPlayContext(){
   const k=document.getElementById('playContextKicker'),t=document.getElementById('playContextTitle'),x=document.getElementById('playContextText'),actions=document.getElementById('playContextActions'),step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;
+  const artifactMax=Math.max(0,Math.min(30,Number(playSceneRuntime.artifactCycle?.max??playSceneRuntime.gameConfig?.artifactLimitPerCycle??3)||0));
   if(playSceneState.phase==='night'){
     const runtime=playSceneRuntime.nightRuntime,current=runtime&&!runtime.completed?runtime.queue?.[runtime.cursor]:null,total=runtime?.queue?.length||0,done=Math.min(total,Number(runtime?.cursor||0));
     if(k)k.textContent='ĐÊM '+Math.max(1,playSceneState.night)+(total?' • '+Math.min(done+1,total)+'/'+total:'');
