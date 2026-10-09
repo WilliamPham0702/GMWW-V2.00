@@ -46,7 +46,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
 
 
 test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
- const img=[...new Set([...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.webp)"/g)].map(m=>m[1]))];
+ const img=[...new Set([...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.(?:webp|svg))"/g)].map(m=>m[1]))];
  assert.deepEqual(img,["home-fantasy-hero-v337.webp","home-sea-cards-v348.svg","home-sea-members-v348.svg","home-sea-templates-v348.svg"]);
  assert.match(home,/data-home-library-tab="templates"/);
  assert.match(app,/dataset\.homeLibraryTab/);
@@ -68,7 +68,7 @@ test("Trang Chủ v3.49 có ba thẻ Khám phá gắn nhãn và menu 5 mục ki�
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.49-sea-home-1/);
+ assert.match(html,/style\.css\?v=3\.49-template-1/);
 });
 
 
@@ -95,4 +95,4 @@ test("Trang Chủ V3.49 phản ánh thiết kế đã duyệt, không giả dữ
  assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
 });
 
-test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.49: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
+test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.47: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
