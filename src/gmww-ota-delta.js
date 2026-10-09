@@ -37,3 +37,25 @@ export function selectLegacyV350RuntimeDelta(manifest,installedVersion){
     message:'Cập nhật 3 tệp mới lên V3.51; giữ nguyên hình ảnh, dữ liệu và cài đặt.'
   };
 }
+
+/** Fail-closed verified overlay for installed V3.51 -> V3.52. */
+export function selectVerifiedRuntimeV352Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(from!=='3.51'||String(manifest?.releaseVersion||'')!=='3.52'
+      ||String(manifest?.runtimeVersion||'')!=='3.52'
+      ||String(manifest?.shellVersion||'')!=='3.17'
+      ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+      ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const paths=['GMWW.html','app.js','style.css','home-art/home-sea-portal-v352.svg'];
+  const found=[];
+  for(const path of paths){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const f=matches[0],expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.52/'+path;
+    if(!/^[a-f0-9]{64}$/i.test(String(f.sha256||''))||f.url!==expected)return null;
+    found.push({path,url:expected,sha256:String(f.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files:found},delete:[],
+    optimizedFromVersion:'3.51',upgradeMode:'verified-overlay',
+    message:'Cập nhật Trang Chủ biển V3.52 bằng 4 tệp; giữ nguyên dữ liệu và cài đặt.'};
+}

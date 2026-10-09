@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Sửa Lá Bài ★ Thường Dùng: cuộn ngang một hàng trên IPA, chạm để chọn hoặc bỏ chọn","Trang Chủ bỏ thanh hồ sơ và thư/chuông, sửa ảnh nền giữ đúng tỷ lệ, thiết kế mới ba ô Bộ Bài/Thành Viên/Ván Mẫu","Trang Chủ biển mới: bỏ bảng tên trùng, hiện đủ 5 nút menu dưới và cải thiện bố cục toàn màn hình","Trang Cài đặt mở mượt hơn; chuyển kiểm tra nặng sang thao tác chủ động","Gộp Bảo trì và Kiểm tra; bổ sung Healthy Check và thanh công cụ cuộn ngang","Công việc & Tiến độ có dữ liệu dự phòng khi GitHub tạm lỗi","Kích thước nhân vật hiển thị trên một hàng","Kết thúc ván quay về Sảnh chờ","Ván Mẫu theo V1.09: chạm thumbnail chọn hoặc bỏ; thời gian và Artifact được thiết lập riêng tại bước Chọn Ván khi chơi","Thông báo cập nhật hiển thị nội dung mới","Có gì mới chỉ hiển thị một lần; công cụ cài đặt theo hàng ngang 3–4 box","Mục Có gì mới tách từng thay đổi thành gạch đầu dòng gọn gàng"],
+  releaseNotes:["Trang Chủ V3.52 chia thành banner riêng: Làng biển, Vào Làng, Khám Phá, Thống Kê, Hoạt Động","Bổ sung artwork cổng biển cho Vào Làng và giữ ba ô Bộ Bài, Thành Viên, Ván Mẫu với liên kết thật","Cập nhật từ V3.51 chỉ tải 4 tệp thay đổi, giữ nguyên dữ liệu và cài đặt"],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
