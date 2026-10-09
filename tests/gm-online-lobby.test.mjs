@@ -61,7 +61,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
   assert.match(app,/GMWW_GM_AUTO_HOLD_MS=15000/);
   assert.match(live,/manualUntil/);
   assert.match(live,/gm_manual/);
-  assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},1000\)/);
+  assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},2500\)/);
   assert.match(gmStyle,/\.play-player-token\.is-gm-rider/);
   assert.match(gmStyle,/width:56px;height:74px/);
 });
