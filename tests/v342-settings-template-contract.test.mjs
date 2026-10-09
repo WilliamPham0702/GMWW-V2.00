@@ -52,7 +52,10 @@ test('Ván Mẫu uses thumbnail toggle selection; timing and Artifact settings o
  assert.match(app,/function renderPlayGameRoleTimings\(\)/);
  assert.match(app,/function renderPlayArtifactPicker\(\)/);
  assert.match(app,/gameConfig:configured,matchId/);
- assert.match(app,/artifacts:\[\],timing:\{villageDiscussionSec:180/);
+ assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,roles:/);
+ assert.match(app,/artifacts:selectedArtifacts\.map\(/);
+ assert.match(app,/artifactLimitPerCycle/);
+ assert.match(html,/id="playVillageDiscussionSec"[^>]*value="300"/);
  for(const field of ['data-role-count','data-role-order','data-role-remove','data-move-up','data-move-down'])assert.ok(app.includes(field),field);
  assert.doesNotMatch(editor,/data-role-duration/);
 });
