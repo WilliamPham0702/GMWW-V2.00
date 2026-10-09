@@ -182,5 +182,5 @@ test('Runtime update lookup prefers the immutable versioned manifest before late
   const latest=route.indexOf('manifestUrl.pathname="/updates/latest.json"');
   assert.ok(versioned>=0&&latest>=0&&versioned<latest);
   assert.ok(route.includes('manifest-"+UPDATE_CHANNEL_REV+".json"'));
-  assert.match(route,/if\(validRuntime\(versioned\)\)return j\(\{ok:true/);
+  assert.match(route,/if\(validRuntime\(versioned\)&&await runtimeReady\(versioned\)\)return j\(\{ok:true/);
 });
