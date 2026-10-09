@@ -51,6 +51,8 @@ test('Theme update immediately uses local or URL artwork and can reset to shippe
  assert.match(app,/async function clearUiSlot\(/);
  assert.match(app,/const local=await blobUrlFor\(uiBlobKey\(themeId,slotId\)\)/);
  assert.match(app,/function addTheme\(/,'theme additions preserved');
+ assert.match(app,/style\.setProperty\('background-image',[\s\S]*?'important'\)/);
+ assert.match(app,/style\.removeProperty\('background-image'\)/);
 });
 test('Existing saved theme images are only hidden, never deleted by slot list cleanup',()=>{
  assert.match(app,/t\.ui=t\.ui\|\|\{\}/);
