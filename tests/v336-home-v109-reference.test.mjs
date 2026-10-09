@@ -10,7 +10,7 @@ const home=html.slice(start,end);
 test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=>{
   assert.ok(start>0&&end>start);
   assert.doesNotMatch(home,/Sẽ xây dựng sau|Quản Trò Ma Sói<\/h1>/);
-  for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeServerState","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])
+  for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])
     assert.equal(home.split('id="'+id+'"').length-1,1,id);
   for(const cls of ["gmww-home-hero","gmww-home-entry","gmww-home-explore","gmww-home-achievements","gmww-home-recent"])assert.match(home,new RegExp(cls));
   assert.match(home,/src="home-art\/home-fantasy-hero-v337.webp"/);
@@ -19,7 +19,7 @@ test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất tr�
   assert.match(home,/data-home-destination="members"/);
   assert.match(home,/data-home-destination="library"/);
   assert.doesNotMatch(home.slice(home.indexOf('class="gmww-home-explore"'),home.indexOf('class="gmww-home-achievements"')), /data-home-destination="settings"/,"Trang Chủ không được chứa liên kết Cài đặt theo yêu cầu mới");
-  assert.match(home,/<b>WilliamPham<\/b>/,"Thương hiệu Trang Chủ phải là WilliamPham");
+  assert.doesNotMatch(home,/class="gmww-home-top"/,"Trang Chủ không còn hồ sơ trên cùng");
   assert.match(app,/function gmwwHomeNavigate\(target\)/);
   assert.match(app,/if\(nav\)nav\.click\(\)/);
   assert.match(app,/gmwwHomeEnterVillage/);
@@ -41,7 +41,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.48<\/title>/);
+  assert.match(html,/<title>GMWW V3\.49<\/title>/);
 });
 
 
@@ -57,7 +57,7 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
 
-test("Trang Chủ v3.48 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
+test("Trang Chủ v3.49 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
  const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
@@ -68,11 +68,11 @@ test("Trang Chủ v3.48 có ba thẻ Khám phá gắn nhãn và menu 5 mục ki�
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.48-sea-home-1/);
+ assert.match(html,/style\.css\?v=3\.49-sea-home-1/);
 });
 
 
-test("Trang Chủ V3.48 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
+test("Trang Chủ V3.49 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
  assert.match(home,/gmww-home-sea-v342/);
  assert.match(home,/gmww-home-poster/);
  assert.match(home,/gmww-home-v344/);
@@ -95,4 +95,4 @@ test("Trang Chủ V3.48 phản ánh thiết kế đã duyệt, không giả dữ
  assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
 });
 
-test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.48: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
+test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.49: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
