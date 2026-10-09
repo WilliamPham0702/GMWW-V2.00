@@ -3749,3 +3749,51 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #home .gmww-home-v344 .gmww-home-shortcuts button:before{content:none!important}
 #home .gmww-home-v344 .gmww-home-shortcuts button:after{background:linear-gradient(180deg,transparent 52%,#00365aa8 100%)!important}
 #home .gmww-home-v344 .gmww-home-tile-label{color:#fff!important;text-shadow:0 2px 4px #00284e!important}
+
+/* V3.49 — V1.09-style thumbnail picker; configuration only on Chọn Ván */
+#playGameSheet .play-game-sheet-card{max-height:min(92dvh,930px)}
+#playGameSheet .play-template-catalog,#playGameSheet .play-template-artifact-gallery{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+  max-height:292px;overflow-y:auto;overflow-x:hidden;margin-top:9px;padding:5px;
+  border:0;background:transparent
+}
+#playGameSheet .play-template-artifact-gallery[hidden]{display:none!important}
+#playGameSheet .play-template-card{
+  width:100%;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:5px;
+  padding:5px;border-radius:13px;border:2px solid #31516c;
+  background:linear-gradient(180deg,#102b41,#071b2f);color:#77c9ff;position:relative;text-align:center;
+  box-shadow:0 2px 8px #0003
+}
+#playGameSheet .play-template-card.is-picked{border-color:#ffffff;outline:2px solid #d53541;outline-offset:-2px;background:#143750;box-shadow:0 0 0 2px #b6243e55}
+#playGameSheet .play-template-artwork{display:block;position:relative;width:100%;aspect-ratio:4/5;border-radius:7px;overflow:hidden;background:#102838}
+#playGameSheet .play-template-artwork img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+#playGameSheet .play-template-select-indicator{position:absolute;top:2px;right:2px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#0b415e;color:#b0e5f2;font-weight:950;font-size:12px;box-shadow:0 1px 4px #001a2b}
+#playGameSheet .play-template-card.is-picked .play-template-select-indicator{background:#cf1b32;color:#fff;font-size:16px}
+#playGameSheet .play-template-card-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;color:#8ccfff;font-size:11px;font-weight:850;line-height:1.18;min-height:27px;word-break:break-word}
+#playGameSheet .play-template-team-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0}
+#playGameSheet .play-template-team-summary span{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:9px 4px;border:1px solid #355977;border-radius:10px;background:#091e30;color:#96b6c8;font-size:10px}
+#playGameSheet .play-template-team-summary b{font-size:18px;color:#fff}
+#playGameSheet .play-template-selected-row{display:flex;align-items:center;gap:10px;padding:8px}
+#playGameSheet .play-template-role-identity{flex:1;min-width:0}
+#playGameSheet .play-template-selected-thumb{width:46px;height:52px;flex:none;object-fit:cover;border-radius:9px;border:1px solid #5f9eb9;background:#12324a}
+#playGameSheet .play-template-role-values{display:flex;align-items:end;gap:5px;flex:none}
+#playGameSheet .play-template-role-values label{width:49px;text-align:center;gap:3px}
+#playGameSheet .play-template-role-values input{width:100%;height:32px;font-size:13px}
+#playGameSheet .play-template-arrows{display:flex;gap:3px;align-items:center}
+#playGameSheet .play-template-arrows button{width:27px;height:32px;font-size:16px}
+#playGameSheet .play-template-role-values [data-role-remove]{width:29px;height:32px}
+#playGameSheet .play-template-play-review{padding:4px 1px 12px!important}
+#playGameSheet .play-template-role-timings{display:grid;gap:5px;max-height:210px;overflow:auto}
+#playGameSheet .play-template-role-timing{display:grid;grid-template-columns:minmax(0,1fr) 75px;gap:8px;align-items:center;min-height:42px;padding:5px 8px;border:1px solid #23516b;border-radius:9px;background:#092a3f;color:#f4ffff;font-size:12px}
+#playGameSheet .play-template-role-timing span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#playGameSheet .play-template-role-timing input{min-width:0;width:100%;height:32px;border-radius:7px;border:1px solid #52a2ba;background:#123e52;color:#fff;text-align:center}
+#playGameSheet .play-template-play-review .play-timing-grid{margin-top:10px}
+#playGameSheet .play-template-artifact-gallery{max-height:185px}
+@media(max-width:390px){
+ #playGameSheet .play-template-catalog,#playGameSheet .play-template-artifact-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #playGameSheet .play-template-role-values label{width:42px}
+ #playGameSheet .play-template-selected-thumb{width:38px;height:46px}
+ #playGameSheet .play-template-arrows button{width:23px}
+ #playGameSheet .play-template-role-values [data-role-remove]{width:25px}
+ #playGameSheet .play-template-selected-row{gap:5px;padding:6px}
+}
