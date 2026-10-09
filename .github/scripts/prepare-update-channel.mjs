@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Trang Chủ: loại bỏ bảng tên trùng nội dung và không che nhân vật sói trắng","Thiết kế lại artwork cổng Vào Làng và ba ô Bộ Bài, Thành Viên, Ván Mẫu theo chủ đề fantasy biển","Thêm khoảng cuộn để hiển thị đủ Thống Kê Nhanh và Hoạt Động phía trên menu dưới","Cập nhật V3.53 lên V3.54 bằng 7 tệp xác minh SHA-256; bảo toàn dữ liệu và tính năng GM"],
+  releaseNotes:["Công cụ Chủ Đề: chỉ hiển thị các vị trí ảnh được kết nối với giao diện thực tế","Thay đổi hình Banner Làng Biển, Vào Làng, ba ô Khám Phá và thanh điều hướng ngay từ mục Chủ Đề","Ảnh mặc định được hiển thị trong preview; khôi phục về mặc định không làm mất dữ liệu đã lưu","Cập nhật Runtime V3.54 lên V3.55 mà không cần cài lại IPA"],,
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
