@@ -49,6 +49,6 @@ test('Player Web reuses character rigs and measures real rendering work',()=>{
  assert.match(reporter,/sceneNodesReused/);
  assert.match(reporter,/fps,longTasks,worstLongTask/);
  assert.match(html,/village\.mjs\?v=perf2/);
- assert.match(player,/iframe\.src='\/village\/\?embed=1&v=302'/);
+ assert.match(player,/iframe\.src='\/village\/\?embed=1&v=303'/);
  assert.match(player,/mountedCharacters:Number\(d\.mountedCharacters\|\|0\)/);
 });

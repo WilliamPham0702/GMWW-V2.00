@@ -424,3 +424,6 @@ html.embedded .player .player-over .name{font-size:11px}
 .seat-empty.selected .seat-dot{filter:drop-shadow(0 0 10px rgba(255,229,126,.95)) drop-shadow(0 4px 4px rgba(0,0,0,.34))!important}
 .seat-empty.reserved .seat-dot{animation:none!important;filter:drop-shadow(0 0 8px rgba(255,217,122,.82)) drop-shadow(0 4px 4px rgba(0,0,0,.32))!important}
 @media(max-width:390px){.seat-empty{width:52px!important;min-width:52px!important;height:38px!important}.seat-empty .seat-dot{width:48px!important;height:36px!important}}
+
+/* Player-only preparation: keep the same 2D characters and seating, without showing gameplay HUD. */
+html.embedded body.player-prep .hud{display:none!important}

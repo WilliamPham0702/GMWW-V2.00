@@ -21,15 +21,21 @@ test('GM publishes timeline and setup transitions',()=>{
     assert.ok(gm.includes("playPublishStage('"+stage+"')"),stage+' published');
   assert.match(gm,/playSceneState\.step=room\.gmStage/);
 });
-test('Player top menu matches GM timeline stages',()=>{
-  const start=player.indexOf('function playerTopMenuStatus()');
+test('Player pregame top menu stays in lobby through all GM setup stages',()=>{
+  const start=player.indexOf('function playerScenePolicy(room={})');
   const end=player.indexOf('function updatePlayerTopMenu()',start);
   assert.ok(start>0&&end>start);
   const segment=player.slice(start,end);
-  for(const [step,label] of Object.entries({room:'TẠO PHÒNG',seats:'TẬP HỢP DÂN LÀNG',game:'CHỌN VÁN MẪU',roles:'PHÂN VAI',deal:'PHÁT VAI',battle:'VÀO TRẬN'})){
-    const ctx={state:{roomCode:'ABCDEF',room:{phase:'lobby',gmStage:step},villageCycle:{}}};
-    assert.equal(vm.runInNewContext(segment+'\nplayerTopMenuStatus()',ctx),label);
+  for(const gmStage of ['room','seats','game','roles','deal','battle']){
+    const ctx={state:{roomCode:'ABCDEF',room:{phase:'lobby',gmStage},villageCycle:{}},currentRoomPlayer:()=>null};
+    assert.equal(vm.runInNewContext(segment+'\nplayerTopMenuStatus()',ctx),'PHÒNG CHỜ · CHỜ GM');
   }
+  const seated={state:{roomCode:'ABCDEF',room:{phase:'lobby',gmStage:'roles'},villageCycle:{}},currentRoomPlayer:()=>({seatId:5})};
+  assert.equal(vm.runInNewContext(segment+'\nplayerTopMenuStatus()',seated),'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ');
+  const deal={state:{roomCode:'ABCDEF',room:{phase:'role_delivery',gmStage:'deal'},villageCycle:{}},currentRoomPlayer:()=>({seatId:5})};
+  assert.equal(vm.runInNewContext(segment+'\nplayerTopMenuStatus()',deal),'PHÒNG CHỜ · ĐÃ PHÁT VAI');
+  const battle={state:{roomCode:'ABCDEF',room:{phase:'running',gmStage:'battle'},villageCycle:{phase:'night',night:2}},currentRoomPlayer:()=>({seatId:5})};
+  assert.equal(vm.runInNewContext(segment+'\nplayerTopMenuStatus()',battle),'ĐÊM 2');
   assert.match(player,/gmStage:String\(room\.gmStage\|\|''\)/);
   assert.match(player,/state\.ws\.onmessage=e=>/);
 });
