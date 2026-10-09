@@ -52,3 +52,11 @@ test('Lobby HUD is absent before start; only game shows day/night controls',()=>
   assert.match(html,/village\.mjs\?v=prep303/);
   assert.match(live,/iframe\.src='\/village\/\?embed=1&v=303'/);
 });
+
+test('Simplified player lobby uses existing info boxes, hides unoccupied leaves and extra exit buttons',()=>{
+ assert.match(live,/bar\.hidden=true/);
+ assert.match(live,/d\.querySelector\('\.seat'\)\.hidden=true/);
+ assert.match(live,/d\.querySelector\('\.leave'\)\.hidden=true/);
+ assert.match(live,/showSeats:!!state\.roomCode&&room\.enabled!==false&&!publicPlayers\.some\(p=>Number\(p\.seatId\|\|0\)>0\)/);
+ assert.match(live,/if\(!confirm\('Thoát Player Web và rời phòng hiện tại\?'\)\)return/);
+});
