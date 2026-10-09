@@ -262,7 +262,7 @@ export class RoomDurableObject extends DurableObject {
   async memberPresence(request,body){
     const token=bearer(request);if(!token)return j({ok:false,error:"UNAUTHORIZED"},401);const key="session:"+await sha256(token),ses=await this.ctx.storage.get(key);
     if(!ses||ses.expiresAt<=Date.now())return j({ok:false,error:"SESSION_EXPIRED"},401);
-    return this.memberPresenceInternal({loginId:ses.loginId,roomCode:body?.roomCode??null,ready:!!body?.ready});
+    return this.memberPresenceInternal({loginId:ses.loginId,roomCode:body?.roomCode??null,ready:!!body?.ready,preserveGmCall:true});
   }
   async memberPresenceInternal(body){
     const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND"},404);
@@ -271,7 +271,14 @@ export class RoomDurableObject extends DurableObject {
     if(expected&&!body?.roomCode&&member.currentRoomCode&&normalizeRoomCode(member.currentRoomCode)!==expected){
       return j({ok:true,skippedDifferentRoom:true,member:directoryMember(member)});
     }
-    member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();member.currentRoomCode=body?.roomCode?normalizeRoomCode(body.roomCode):null;member.ready=!!body?.ready;
+    const requestedRoomCode=body?.roomCode?normalizeRoomCode(body.roomCode):null,calledRoomCode=normalizeRoomCode(member.gmCalledRoomCode||"");
+    // The GM call must survive Player Web lobby presence heartbeats and reconnects.
+    const keepGmCall=body?.preserveGmCall===true&&!requestedRoomCode&&isValidRoomCode(calledRoomCode)&&calledRoomCode===normalizeRoomCode(member.currentRoomCode||"");
+    if(body?.calledByGM===true&&isValidRoomCode(requestedRoomCode))member.gmCalledRoomCode=requestedRoomCode;
+    else if(!keepGmCall&&(!requestedRoomCode||(calledRoomCode&&calledRoomCode!==requestedRoomCode)))member.gmCalledRoomCode=null;
+    member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
+    member.currentRoomCode=keepGmCall?calledRoomCode:requestedRoomCode;
+    member.ready=keepGmCall?true:!!body?.ready;
     await this.ctx.storage.put("member:"+loginId,member);return j({ok:true,member:directoryMember(member)});
   }
   async memberRecordResult(body){
@@ -1375,17 +1382,17 @@ async function gmRoomParticipants(env,raw,request){
   const res=await roomStub(env,code).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
   if(!res.ok)return res;
   const data=await res.clone().json().catch(()=>({}));
-  const syncPresence=async(loginId,roomCode,ready,expectedRoomCode=null)=>{
+  const syncPresence=async(loginId,roomCode,ready,expectedRoomCode=null,calledByGM=false)=>{
     for(let attempt=0;attempt<3;attempt++){
       try{
-        const response=await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId,roomCode,ready,expectedRoomCode})});
+        const response=await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId,roomCode,ready,expectedRoomCode,calledByGM})});
         if(response.ok)return true;
       }catch{}
     }
     return false
   };
   const failures=[];
-  for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true))failures.push(p.loginId);
+  for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true,null,true))failures.push(p.loginId);
   // Retry both newly removed accounts and incomplete releases from an earlier disband.
   // The storage guard preserves anyone who has already joined a different room.
   const releaseLogins=new Set((Array.isArray(data?.removedPlayers)?data.removedPlayers:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean));
