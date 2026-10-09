@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>GMWW V3.50</title>
-<link rel="stylesheet" href="style.css?v=3.50-home-isolated-1">
+<link rel="stylesheet" href="style.css?v=3.50-template-swipe-fix-2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -522,7 +522,7 @@
           <select id="playTemplateRoleFaction" aria-label="Lọc phe"><option value="all">Tất cả phe</option><option value="Phe Dân">Phe Dân</option><option value="Phe Sói">Phe Sói</option><option value="Phe Ba">Phe Ba / Khác</option></select>
           <label class="play-template-star-filter"><input type="checkbox" id="playTemplateOnlyStarred" checked> ★ Thường dùng</label>
         </div>
-        <div class="play-template-catalog" id="playGameRolePicker" aria-label="Thư viện thumbnail các Lá Bài"></div>
+        <div class="play-template-catalog" id="playGameRolePicker" role="region" tabindex="0" aria-label="Danh sách lá bài thường dùng, vuốt ngang để xem tiếp" style="display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch"></div>
         <div class="play-template-section-title"><b>VAI TRÒ ĐÃ CHỌN</b><span id="playGameRoleCount">0 lá • 0 vai</span></div>
         <div class="play-template-team-summary" id="playTemplateTeamSummary" role="status"></div>
         <div class="play-game-role-list" id="playGameRoleList"></div>
