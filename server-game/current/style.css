@@ -3842,3 +3842,28 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #home .gmww-home-version-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @media(min-width:701px){#home .gmww-home-rebuild-v350{max-width:960px;padding-inline:18px}#home .gmww-home-scene-v350{width:calc(100% + 36px);margin-inline:-18px}#home .gmww-home-tiles-v350 button{max-height:210px;min-height:170px}}
 @media(max-width:370px){#home .gmww-home-rebuild-v350{padding-inline:8px;gap:9px}#home .gmww-home-scene-v350{width:calc(100% + 16px);margin-inline:-8px}#home .gmww-home-tiles-v350{gap:5px}#home .gmww-home-tiles-v350 button{min-height:126px;border-radius:12px}#home .gmww-home-cta-v350{min-height:62px;grid-template-columns:45px 1fr}#home .gmww-home-cta-v350>span{font-size:21px}}
+
+/* V3.51 – each homepage area is an independent, responsive seaside banner. */
+#home .gmww-home-rebuild-v351{gap:10px;padding-bottom:118px;background:linear-gradient(180deg,#00679a 0%,#034976 40%,#00375f 100%)}
+#home .gmww-home-scene-v351{aspect-ratio:auto!important;width:calc(100% + 24px);margin:0 -12px!important;background:transparent;overflow:hidden}
+#home .gmww-home-hero-artboard-v351{position:relative;width:100%;aspect-ratio:720/448;overflow:hidden;background:#017ba6}
+#home .gmww-home-scene-v351 .gmww-home-scene-image-v350{display:block;width:100%;height:100%;object-fit:cover;object-position:center;filter:none;transform:none}
+#home .gmww-home-plaque-v351{position:absolute;right:2%;top:31%;width:43%;min-height:31%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:10px 6px;border:3px ridge #ffe1a4;border-radius:16px;background:linear-gradient(150deg,#075a8eea,#002f61f5);box-shadow:0 4px 0 #744722,0 5px 15px #002d4fba,inset 0 0 12px #4edaff;transform:rotate(-1deg);text-align:center}
+#home .gmww-home-plaque-v351 strong{font-family:Georgia,serif;font-size:clamp(18px,5.4vw,34px);color:#ffe3a0;text-shadow:0 2px 3px #3b220c;white-space:nowrap;letter-spacing:-.045em}
+#home .gmww-home-plaque-v351 span{font-family:Georgia,serif;font-size:clamp(9px,2.15vw,15px);font-weight:700;color:#fff3c8}
+#home .gmww-home-cta-wrap-v351{width:100%;margin:0 0 5px;padding:0 4px;position:relative}
+#home .gmww-home-cta-wrap-v351 .gmww-home-cta-v350{position:relative!important;inset:auto!important;width:100%!important;min-height:72px!important;grid-template-columns:64px 1fr;box-shadow:0 4px 14px #001e43a3,inset 0 2px 9px #d5ffff}
+#home .gmww-home-tiles-v351{gap:8px}
+#home .gmww-home-tiles-v351 button{aspect-ratio:1.14/1;min-height:0!important;border-color:#d4faff;border-radius:14px;background:linear-gradient(155deg,#10a8d3,#003e76)}
+#home .gmww-home-tiles-v351 img{width:100%;height:100%;object-fit:cover}
+#home .gmww-home-stats-v351,#home .gmww-home-activity-v351{margin:0;padding:10px;border:1.5px solid #b4faff;border-radius:15px;background:linear-gradient(120deg,#0072a0d9,#003e71e8)}
+#home .gmww-home-stats-v351 .gmww-home-stats-grid-v350>div{min-height:66px;gap:2px}
+#home .gmww-home-activity-v351 .gmww-home-recent-rows{display:flex;flex-direction:column;gap:0;overflow:hidden}
+#home .gmww-home-activity-v351 .gmww-home-recent-row{display:grid!important;grid-template-columns:36px minmax(0,1fr) minmax(0,1.35fr) auto 12px;align-items:center;gap:7px;min-height:48px;width:100%;margin:0!important;padding:5px 2px!important;border:0!important;border-bottom:1px solid #8dd7ed57!important;border-radius:0!important;background:transparent!important;text-align:left;color:#fff}
+#home .gmww-home-activity-v351 .gmww-home-recent-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;overflow:hidden}
+#home .gmww-home-activity-v351 .gmww-home-recent-avatar img{width:100%;height:100%;object-fit:cover}
+#home .gmww-home-activity-v351 .gmww-home-recent-row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+#home .gmww-home-activity-v351 .gmww-home-recent-row span{min-width:0;font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+#home .gmww-home-activity-v351 .gmww-home-recent-row small{font-size:10px;white-space:nowrap}
+#home .gmww-home-activity-v351 .gmww-home-recent-row i{font-size:19px;font-style:normal}
+@media(max-width:380px){#home .gmww-home-plaque-v351{padding:5px 3px;border-width:2px}#home .gmww-home-activity-v351 .gmww-home-recent-row{grid-template-columns:28px minmax(0,.85fr) minmax(0,1.1fr) auto 8px;gap:4px}#home .gmww-home-activity-v351 .gmww-home-recent-avatar{width:28px;height:28px}#home .gmww-home-activity-v351 .gmww-home-recent-row small{font-size:9px}}
