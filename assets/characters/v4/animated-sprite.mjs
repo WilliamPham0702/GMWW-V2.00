@@ -46,7 +46,7 @@ export function v4ActionPose(action,elapsedMs=0,progress=0,result='win'){
  if(action==='vote'){armR=-2.55*Math.sin(Math.PI*clamp(progress*1.6,0,1)*.5);}
  if(action==='result'){
   if(result==='win'){armL=1.75;armR=-1.75;jump=5*Math.sin(Math.PI*p);legL=.2*Math.sin(TAU*t/300);legR=-legL;}
-  else{sit=.20;armL=-.22;armR=.22;}
+  else{sit=.36;armL=-.22;armR=.22;}
  }
  return {armL,armR,legL,legR,sit,jump,breath,headTiltDeg:0};
 }
