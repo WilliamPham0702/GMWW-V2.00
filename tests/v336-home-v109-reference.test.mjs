@@ -56,7 +56,7 @@ test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",(
  assert.match(html,/id="bottomNav"/);
  assert.match(html,/style\\.css\\?v=3\\.50-template-swipe-fix-2/);
  assert.match(home,/gmww-home-rebuild-v350/);
- assert.doesNotMatch(home,/>3<\\/strong>|>6<\\/strong>|>1<\\/strong>/);
+ for(const n of [3,6,1])assert.ok(!home.includes(">"+n+"</strong>"),"No fabricated counters");
  assert.match(app,/function gmwwHomeRenderExtras\\(rows,ranking,leader\\)/);
 });
 test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.47: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
