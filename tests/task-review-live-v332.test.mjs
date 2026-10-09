@@ -35,9 +35,9 @@ test('V3.37 truly renders owner review buttons in a pending task card',()=>{
 });
 
 test('V3.37 IPA view announces real task-action readiness and reloads after successful OTA',()=>{
-  assert.equal(pkg.version,'3.54.0');
-  assert.match(worker,/VERSION="V3\.54",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-354"/);
-  assert.match(html,/<title>GMWW V3\.54<\/title>/);
+  assert.equal(pkg.version,'3.55.0');
+  assert.match(worker,/VERSION="V3\.55",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-355"/);
+  assert.match(html,/<title>GMWW V3\.55<\/title>/);
   assert.match(html,/id="gmwwTaskReviewHealth"/);
   assert.match(html,/data-ready="false"/);
   assert.match(app,/reviewState\.dataset\.ready=ready\?'true':'false'/);
