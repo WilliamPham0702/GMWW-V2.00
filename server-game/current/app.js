@@ -562,9 +562,17 @@ async function applyActiveThemeUi(){
     const selector=ACTIVE_THEME_BACKGROUND_TARGETS[slot];
     if(selector){
       const el=$(selector);if(!el)continue;
-      el.style.backgroundImage=src?'linear-gradient(rgba(3,12,21,.50),rgba(3,12,21,.70)),'+themeImageUrl(src):'';
-      el.style.backgroundSize=src?'cover':'';
-      el.style.backgroundPosition=src?'center':'';
+      // Several Home/Settings CSS backgrounds are !important: a plain inline
+      // style silently loses the cascade, making the editor appear disconnected.
+      if(src){
+        el.style.setProperty('background-image','linear-gradient(rgba(3,12,21,.50),rgba(3,12,21,.70)),'+themeImageUrl(src),'important');
+        el.style.setProperty('background-size','cover','important');
+        el.style.setProperty('background-position','center','important');
+      }else{
+        el.style.removeProperty('background-image');
+        el.style.removeProperty('background-size');
+        el.style.removeProperty('background-position');
+      }
       continue;
     }
     const imageSelector=ACTIVE_THEME_IMAGE_TARGETS[slot];
@@ -577,9 +585,15 @@ async function applyActiveThemeUi(){
     const navSelector=ACTIVE_THEME_NAV_TARGETS[slot];
     if(navSelector){
       const el=$(navSelector);if(!el)continue;
-      el.style.backgroundImage=src?themeImageUrl(src):'';
-      el.style.backgroundSize=src?'cover':'';
-      el.style.backgroundPosition=src?'center':'';
+      if(src){
+        el.style.setProperty('background-image',themeImageUrl(src),'important');
+        el.style.setProperty('background-size','cover','important');
+        el.style.setProperty('background-position','center','important');
+      }else{
+        el.style.removeProperty('background-image');
+        el.style.removeProperty('background-size');
+        el.style.removeProperty('background-position');
+      }
     }
   }
 }
