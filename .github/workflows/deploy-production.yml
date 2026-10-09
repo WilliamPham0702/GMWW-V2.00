@@ -458,5 +458,32 @@ jobs:
           grep -Fq 'artwork-intake-v416.html' /tmp/v4-skin-master-v415.html
           echo "Verify Production: V4.16 staging artwork validator exact-byte SHA PASS."
 
+          echo "Verify Production: checking Character V4.16 HD source intake metadata."
+          for F in artwork-v416.html artwork-v416.mjs artwork-v416-manifest.json; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?sourceverify=$(date +%s)-$ATTEMPT" > "/tmp/v416-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v416-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.16 $F artwork source QA byte mismatch"; exit 1; fi
+          done
+          node --check /tmp/v416-artwork-v416.mjs
+          grep -Fq 'CHƯA GẮN VÀO GAME' /tmp/v416-artwork-v416.html
+          grep -Fq 'artwork-v416.html' /tmp/v416-artwork-intake-v416.html
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const j=JSON.parse(fs.readFileSync('/tmp/v416-artwork-v416-manifest.json','utf8'));
+          if(j.drafts?.length!==3||j.limitations?.requiredViews!==8||
+             j.limitations?.individualRigLayersAvailable!==false||
+             j.limitations?.productionSkinEnabled!==false||
+             j.limitations?.ownerApproved!==false)process.exit(1);
+          console.log('Verify Production: 3 source PNGs documented (off-repository), 5 views pending, 17-layer rig disabled PASS.');
+          NODE
+          echo "Verify Production: HD V4.16 local-only source gallery SHA PASS."
+
+
 
 
