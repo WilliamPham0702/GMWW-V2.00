@@ -222,6 +222,7 @@ jobs:
           if(Object.values(checks).some(x=>!x))process.exit(1);
           console.log('GMWW task review controls verified in live OTA runtime V'+version);
           NODE
+          node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
