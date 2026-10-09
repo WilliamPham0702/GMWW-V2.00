@@ -301,5 +301,5 @@ jobs:
           grep -Fq 'approved-two-characters.avif' /tmp/v4-skin.html
           grep -Fq 'skeleton-skin.mjs' /tmp/v4-skin.html
           grep -Fq 'renderV4Skin' /tmp/v4-skeleton-skin.mjs
-          grep -Fq 'head-only' /tmp/v4-skeleton-skin.mjs
+          grep -Fq 'sourceHead(ctx' /tmp/v4-skeleton-skin.mjs
           echo "Verify Production: Character V4 skinned skeleton studio exact-byte check PASS."
