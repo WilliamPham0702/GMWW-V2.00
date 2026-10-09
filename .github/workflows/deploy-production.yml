@@ -290,3 +290,16 @@ jobs:
           if(!html.includes('sprite.render({')||html.includes('actor.src=imageUrl('))process.exit(1);
           console.log('Verify Production: V4 canvas articulated limb animation wired to Action controls PASS.');
           NODE
+          echo "Verify Production: Character V4 skeleton Skin preview for Character 01/02."
+          for F in skeleton.html skeleton-rig.mjs skin.html skeleton-skin.mjs; do
+            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinverify=$(date +%s)" > "/tmp/v4-$F"
+            test "$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')" = "$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')"
+          done
+          node --check /tmp/v4-skeleton-skin.mjs
+          grep -Fq 'id="boy"' /tmp/v4-skin.html
+          grep -Fq 'id="girl"' /tmp/v4-skin.html
+          grep -Fq 'approved-two-characters.avif' /tmp/v4-skin.html
+          grep -Fq 'skeleton-skin.mjs' /tmp/v4-skin.html
+          grep -Fq 'renderV4Skin' /tmp/v4-skeleton-skin.mjs
+          grep -Fq 'sourceHead(ctx' /tmp/v4-skeleton-skin.mjs
+          echo "Verify Production: Character V4 skinned skeleton studio exact-byte check PASS."
