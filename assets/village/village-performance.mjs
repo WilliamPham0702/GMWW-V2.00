@@ -12,7 +12,11 @@ export function startVillagePerformanceReporter({target=window.parent,targetOrig
   const report=()=>{
     if(stopped)return;
     const mem=performance.memory;
+    const scene=window.GMWWVillageRenderMetrics||{};
     const payload={type:"gmww:village-perf",fps,longTasks,worstLongTask,
+      sceneRenders:Number(scene.renders||0),sceneNodesCreated:Number(scene.created||0),
+      sceneNodesReused:Number(scene.reused||0),movementFrames:Number(scene.movementFrames||0),
+      mountedCharacters:Number(scene.mounted||0),
       nodes:document.getElementsByTagName("*").length,
       width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1,
       heapMB:mem&&Number.isFinite(mem.usedJSHeapSize)?Math.round(mem.usedJSHeapSize/1048576):null,

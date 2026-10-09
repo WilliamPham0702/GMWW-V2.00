@@ -1,4 +1,4 @@
-export const CHARACTER_RENDERER_VERSION='0.4.0';
+export const CHARACTER_RENDERER_VERSION='0.4.1-perf';
 export const MASTER_CHARACTER_ID='character-01';
 export const SHARED_RIG_BATCH_IDS=Object.freeze(Array.from({length:20},(_,i)=>`character-${String(i+1).padStart(2,'0')}`));
 export const SHARED_RIG_PROOF_IDS=SHARED_RIG_BATCH_IDS;
@@ -20,13 +20,13 @@ export function liveIdleMotionAt(characterId,now=Date.now()){
 export function tickLiveIdle(now=Date.now()){
   for(const root of [...LIVE_IDLE_ROOTS]){
     if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}
-    if(root.dataset.state==='idle')root.dataset.motion=liveIdleMotionAt(root.dataset.characterId,now);
+    if(root.dataset.state==='idle'){const motion=liveIdleMotionAt(root.dataset.characterId,now);if(root.dataset.motion!==motion)root.dataset.motion=motion;}
   }
   return LIVE_IDLE_ROOTS.size;
 }
 function ensureLiveIdleTicker(){
   if(liveIdleTimer||typeof setInterval!=='function')return;
-  liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240);
+  liveIdleTimer=setInterval(()=>{if(typeof document==='undefined'||!document.hidden)tickLiveIdle(Date.now())},320);
 }
 
 export const MASTER_RIG_SEGMENTS=Object.freeze([
@@ -100,18 +100,21 @@ export function rendererKind(characterId,{sitting=false}={}){
 function applyCommand(root,command){
   if(!root)return;
   const c=normalizeRendererCommand(command,root.dataset.characterId||MASTER_CHARACTER_ID);
-  root.dataset.characterId=c.characterId;
-  root.dataset.state=c.state;
-  root.dataset.motion=c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion;
-  root.dataset.facing=c.facing;
-  root.dataset.activity=c.activity;
-  root.dataset.rigId=c.rigId;
-  root.dataset.engineVersion=c.engineVersion;
-  applyMotionProfile(root,c.state,c.rigId);
-  if(root.dataset.textureFacing!==c.facing){
+  const setChanged=(key,value)=>{if(root.dataset[key]!==value)root.dataset[key]=value};
+  setChanged('characterId',c.characterId);
+  setChanged('state',c.state);
+  setChanged('motion',c.state==='idle'?liveIdleMotionAt(c.characterId,Date.now()):c.motion);
+  setChanged('facing',c.facing);
+  setChanged('activity',c.activity);
+  setChanged('rigId',c.rigId);
+  setChanged('engineVersion',c.engineVersion);
+  const gaitKey=c.state+':'+c.rigId;
+  if(root.dataset.gaitKey!==gaitKey){root.dataset.gaitKey=gaitKey;applyMotionProfile(root,c.state,c.rigId)}
+  if(root.dataset.textureFacing!==c.facing||root.dataset.textureCharacterId!==c.characterId){
     root.dataset.textureFacing=c.facing;
+    root.dataset.textureCharacterId=c.characterId;
     const src=masterTextureUrl(c.characterId,c.facing);
-    root.querySelectorAll('img[data-rig-texture]').forEach(img=>{if(img.src!==src)img.src=src});
+    root.querySelectorAll('img[data-rig-texture]').forEach(img=>{if(img.getAttribute('src')!==src)img.setAttribute('src',src)});
   }
 }
 
