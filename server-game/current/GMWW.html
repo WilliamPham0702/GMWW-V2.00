@@ -582,6 +582,11 @@
   <div class="sheet-card play-roster-sheet-card">
     <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
     <div class="play-roster-toolbar"><span id="playRosterCount">0 đã chọn</span><button id="playRosterSelectAll" type="button">Chọn tất cả</button></div>
+    <div class="play-roster-filters" id="playRosterFilters" role="group" aria-label="Lọc thành viên theo trạng thái">
+      <button type="button" class="active" data-play-roster-filter="all" aria-pressed="true">Tất cả</button>
+      <button type="button" data-play-roster-filter="online" aria-pressed="false">Online</button>
+      <button type="button" data-play-roster-filter="offline" aria-pressed="false">Offline</button>
+    </div>
     <div class="play-roster-list" id="playRosterList"></div>
     <div class="button-row play-roster-actions">
       <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
