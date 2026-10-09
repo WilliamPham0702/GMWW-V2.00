@@ -1,0 +1,156 @@
+<!doctype html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#093b54"><title>Character V4.17 · Skin động 17 lớp | GMWW</title>
+<style>
+:root{font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:#effaff;background:#07344a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#147c92,#0e5068 47%,#072d45)}
+main{max-width:850px;min-height:100dvh;margin:auto;display:grid;align-content:start;gap:11px;padding:calc(10px + env(safe-area-inset-top,0px)) 11px calc(20px + env(safe-area-inset-bottom,0px))}
+h1{font-size:clamp(19px,4vw,25px);line-height:1.2;margin:0}h2{font-size:15px;margin:0 0 9px}
+p{margin:3px 0;color:#cce6eb}strong{color:#fff}
+.panel{padding:12px;border-radius:14px;background:#0b3d55e8;border:1px solid #5aa9bb8c;min-width:0}
+.head{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:space-between}
+.tag{color:#ffe5a0;font-size:11px;font-weight:750;padding:4px 8px;border-radius:99px;border:1px solid #f1c77f}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,button,.pick{min-height:41px;max-width:100%;padding:8px 11px;color:#fff;font:inherit;border:1px solid #73bcc9;border-radius:10px;background:#095d77}
+button,.pick{cursor:pointer}button[aria-pressed=true],button.selected{background:#05a0a7;border-color:#fae0a1;font-weight:750}
+button:focus-visible,select:focus-visible,.pick:focus-within{outline:3px solid #f5da9f}
+.pick{display:inline-flex;align-items:center;position:relative;font-weight:700}.pick input{position:absolute;opacity:0;width:1px;height:1px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:10px}
+.stage{display:grid;place-items:center;min-height:370px;position:relative;overflow:hidden;background:linear-gradient(#45a2b2,#19758b 73%,#dec88d 73%);border-radius:11px}
+.stage::after{content:"";position:absolute;bottom:16%;left:17%;right:17%;height:8px;background:#093b4688;filter:blur(8px);border-radius:50%}
+.stage canvas{width:min(100%,245px);height:auto;position:relative;z-index:1;filter:drop-shadow(0 3px 2px #123d5899)}
+.meta{display:grid;align-content:start;gap:8px}
+.progress{height:8px;border-radius:50px;background:#275a70;overflow:hidden}
+.progress>span{display:block;height:100%;background:#18cfb3;width:0;transition:width .2s}
+.stat{font-variant-numeric:tabular-nums;font-weight:800;color:#bdf7e7}
+.missing{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.missing small{font-size:11px;overflow-wrap:anywhere;color:#c0e7ed}
+.missing small.done{color:#8ff4c5}
+.subtle{font-size:12px;color:#c0dbe4}
+.controls{display:flex;flex-wrap:wrap;gap:6px}
+.controls button{padding:7px 9px;min-height:39px;font-size:12px}
+.warn{border-left:3px solid #f4d28d;padding-left:9px;color:#ffe6ae;font-size:12px}
+.log{max-height:130px;overflow:auto;font-size:12px;color:#d6e9ed;white-space:pre-line}
+a{color:#9bf6e9}
+@media(max-width:620px){
+ main{padding:calc(6px + env(safe-area-inset-top,0px)) 7px calc(78px + env(safe-area-inset-bottom,0px));gap:8px}
+ .panel{padding:9px;border-radius:11px}.layout{grid-template-columns:minmax(0,1fr) minmax(0,.75fr);gap:6px}
+ .stage{min-height:0;aspect-ratio:5/8}.stage canvas{width:100%;max-width:none}
+ .meta{gap:5px}.row{gap:5px}select,.pick{min-height:40px;padding:7px}
+ .missing small{font-size:10px}.controls button{font-size:11px;min-height:37px}
+ .head .tag{font-size:10px}.subtle{font-size:11px}
+}
+@media(max-width:350px){.layout{grid-template-columns:1fr}.stage{max-width:260px;margin:auto}.missing{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style></head><body><main>
+<header class="panel head"><div><p>GMWW / Character Studio</p><h1>Skin động V4.17</h1></div><span class="tag">BẢN THỬ · CHƯA VÀO GAME</span></header>
+<section class="panel">
+<div class="row">
+<select id="character" aria-label="Nhân vật"><option value="character-01">01 · Chàng Biển</option><option value="character-02">02 · Nàng Biển</option></select>
+<select id="direction" aria-label="Hướng"><option value="front">Trước</option><option value="left">Trái</option><option value="right">Phải</option><option value="back">Sau</option></select>
+<label class="pick" for="files">Nạp 17 lớp PNG<input id="files" type="file" multiple accept="image/png,image/webp"></label>
+</div>
+<p class="subtle">Nạp các tệp <strong>character-01_front_hair_back.png</strong> và 16 lớp tương ứng. Cần đủ 17 lớp của đúng nhân vật/hướng để bật Skin ảnh thật. Chưa đủ sẽ dùng hình vector V4.14, không giả ảnh tĩnh là chuyển động.</p>
+</section>
+<section class="panel layout">
+<div class="stage"><canvas id="actor" width="300" height="480" aria-label="Nhân vật chuyển động 2D"></canvas></div>
+<div class="meta">
+<div class="stat" id="coverage">0/17 lớp · Chưa đủ</div>
+<div class="progress" aria-label="Mức độ đủ lớp"><span id="progress"></span></div>
+<div id="mode" class="warn">Đang dùng Skin vector V4.14</div>
+<div class="subtle">Chuyển động <strong id="fps">— FPS</strong> · <span id="memory">0 MB</span></div>
+<label class="subtle"><input id="anchors" type="checkbox"> Hiển thị khớp</label>
+<div class="missing" id="layers"></div>
+</div>
+</section>
+<section class="panel">
+<h2>9 Action · 4 hướng · 2 nhân vật</h2>
+<div class="controls" id="actions">
+<button type="button" data-action="idle" aria-pressed="true">Đứng</button>
+<button type="button" data-action="walk">Đi</button><button type="button" data-action="run">Chạy</button>
+<button type="button" data-action="sit">Ngồi</button><button type="button" data-action="sit-down">Đứng → Ngồi</button>
+<button type="button" data-action="stand-up">Ngồi → Đứng</button><button type="button" data-action="wave">Vẫy tay</button>
+<button type="button" data-action="vote">Giơ tay</button><button type="button" data-action="result">Thắng / Thua</button>
+</div>
+<div class="row" style="margin-top:9px">
+<label for="speed">Tốc độ</label><select id="speed"><option value=".5">0,5×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option></select>
+<label for="outcome">Kết quả</label><select id="outcome"><option value="win">Thắng</option><option value="lose">Thua</option></select>
+<button id="clear" type="button">Xóa ảnh nạp</button>
+</div>
+<p class="subtle" id="status" role="status" aria-live="polite">Đang chuẩn bị khung chuyển động…</p>
+<div class="log" id="log"></div>
+</section>
+<section class="panel">
+<h2>Artwork V4.16 & điều kiện nghiệm thu</h2>
+<p>Còn 5 hình HD độc lập và đủ 136 lớp ảnh cho 8 hướng. Studio này kiểm tra việc gắn các lớp thật vào khung xương 9 Action; không tự tách ảnh toàn thân thành các lớp và không thay Player Web, game GM hoặc IPA.</p>
+<p style="margin-top:7px"><a href="./artwork-v416.html">Kiểm tra 8 góc artwork</a> · <a href="./artwork-intake-v416.html">Kiểm tra file Skin 144 PNG</a> · <a href="./skin-preview-v414.html">Skin vector V4.14 đã tạm duyệt</a></p>
+</section>
+</main>
+<script type="module">
+import {skeletonPose} from './skeleton-rig.mjs';
+import {V417_LAYERS,rigCoverage,drawReviewSkin,decodeLayerFile,disposeLayerSet} from './layered-skin-v417.mjs';
+const $=id=>document.getElementById(id),canvas=$('actor'),ctx=canvas.getContext('2d',{alpha:true});
+const assets=new Map();
+let action='idle',started=performance.now(),lastFrame=0,rateTime=0,rendered=0,rate=0,importing=false;
+const labels={hair_back:'Tóc sau',head:'Đầu',hair_front:'Tóc trước',torso:'Thân',pelvis:'Hông',
+ upper_arm_left:'Cánh tay trái',forearm_left:'Cẳng tay trái',hand_left:'Bàn tay trái',
+ upper_arm_right:'Cánh tay phải',forearm_right:'Cẳng tay phải',hand_right:'Bàn tay phải',
+ thigh_left:'Đùi trái',shin_left:'Cẳng chân trái',foot_left:'Bàn chân trái',
+ thigh_right:'Đùi phải',shin_right:'Cẳng chân phải',foot_right:'Bàn chân phải'};
+function log(s){
+ const div=document.createElement('div');div.textContent=s;$('log').prepend(div);
+ while($('log').children.length>13)$('log').lastElementChild.remove();
+}
+function update(){
+ const c=rigCoverage(assets,$('character').value,$('direction').value);
+ $('coverage').textContent=c.present+'/17 lớp · '+(c.complete?'Sẵn sàng thử Skin':'Chưa đủ');
+ $('progress').style.width=(c.present/17*100)+'%';
+ $('mode').textContent=c.complete?'Skin ảnh thật: 17 lớp gắn khớp':'Skin vector V4.14 (chờ '+c.missing.length+' lớp ảnh thật)';
+ $('layers').replaceChildren();
+ for(const n of V417_LAYERS){
+  const v=document.createElement('small');v.textContent=(c.missing.includes(n)?'○ ':'✓ ')+labels[n];
+  v.className=c.missing.includes(n)?'':'done';$('layers').append(v);
+ }
+ const bytes=[...assets.values()].reduce((n,a)=>n+(a.decodedBytes||0),0);
+ $('memory').textContent=(bytes/1024/1024).toFixed(1)+' MB ảnh đã nạp';
+}
+for(const id of ['character','direction'])$(id).addEventListener('change',()=>{started=performance.now();update();});
+for(const b of $('actions').querySelectorAll('[data-action]'))b.addEventListener('click',()=>{
+ action=b.dataset.action;started=performance.now();
+ for(const el of $('actions').querySelectorAll('button'))el.setAttribute('aria-pressed',String(el===b));
+});
+$('files').addEventListener('change',async e=>{
+ if(importing)return;importing=true;e.currentTarget.disabled=true;
+ const chosen=[...e.currentTarget.files].slice(0,144);
+ let accepted=0;
+ for(const file of chosen){
+  try{
+   const asset=await decodeLayerFile(file);
+   const old=assets.get(asset.key);old?.image?.close?.();assets.set(asset.key,asset);accepted++;
+  }catch(err){log(file.name+': '+String(err.message||err));}
+  if(accepted%8===0)update();
+ }
+ e.currentTarget.value='';e.currentTarget.disabled=false;importing=false;update();
+ $('status').textContent='Đã nạp '+accepted+' lớp hợp lệ trên thiết bị. Không tải lên server.';
+});
+$('clear').addEventListener('click',()=>{disposeLayerSet(assets);update();$('status').textContent='Đã xóa ảnh của phiên thử. Game chính không bị thay đổi.';});
+const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function frame(now){
+ requestAnimationFrame(frame);
+ if(document.hidden)return;
+ if(now-lastFrame<(reduced?100:16))return;
+ lastFrame=now;const t=(now-started)*Number($('speed').value);
+ const pose=skeletonPose({action,direction:$('direction').value,elapsedMs:t,
+ progress:Math.min(1,t/1200),outcome:$('outcome').value});
+ try{
+  drawReviewSkin(ctx,pose,assets,{characterId:$('character').value,
+   width:canvas.width,height:canvas.height,showAnchors:$('anchors').checked});
+ }catch(err){$('status').textContent='Không vẽ được Skin: '+err.message;return;}
+ rendered++;
+ if(now-rateTime>=1200){
+  rate=Math.round(rendered*1000/(now-rateTime||1000));$('fps').textContent=rate+' FPS';
+  rendered=0;rateTime=now;
+ }
+}
+update();requestAnimationFrame(frame);
+</script></body></html>
