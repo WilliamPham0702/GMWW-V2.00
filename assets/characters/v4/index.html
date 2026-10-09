@@ -47,6 +47,7 @@
     .lab-pin:after{content:"CHAR V4";bottom:-8px}.lab-pin .arrow{display:none}
     .lab-pin .lab-real-sprite{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 7px 6px #03233488)}
     .lab-actor{background:none;width:27px;height:39px;opacity:.8;object-fit:contain}
+    .lab-pin canvas.lab-real-sprite{width:100%;height:100%;display:block;filter:drop-shadow(0 7px 5px #03233488)}
     .v4-active-name{color:#bdfbea;font-weight:700}
 
     @media(max-width:620px){.viewgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.members{grid-template-columns:repeat(5,minmax(0,1fr))}}
@@ -72,11 +73,11 @@
 </section>
 <section class="panel" id="action-lab">
   <h2>Thử Character thật trong làng · Điều khiển 9 Action</h2>
-  <p>Đây là <strong>hai nhân vật thật lấy từ bản thiết kế đã duyệt</strong>. Đi/chạy đã điều khiển được hướng và tọa độ bằng hình nhân vật; tay, chân và tư thế trong 9 Action hiện <strong>chưa có bộ frame hoạt ảnh hoàn chỉnh</strong>, nên chưa thể nghiệm thu chuyển động.</p>
+  <p>Đây là <strong>hai nhân vật thật lấy từ bản thiết kế đã duyệt</strong>. Bản thử mới chia hình thành phần thân, hai tay và hai chân để có bước chân và cử chỉ thật sự thay vì kéo nguyên hình. <strong>Đây là bản rig thử bằng ảnh raster, chưa phải hoạt ảnh 9 Action vẽ tay hoàn chỉnh.</strong></p>
   <div class="lab-stage" id="labStage" aria-label="Khu vực thử hình Character 01 và 02 bốn hướng">
-    <div class="lab-pin" id="labPin"><img id="labCharacter" class="lab-real-sprite" src="/api/game-characters/character-01/image?dir=front" alt="Character đang thử chuyển động"></div>
+    <div class="lab-pin" id="labPin"><canvas id="labCharacter" class="lab-real-sprite" width="200" height="290" role="img" aria-label="Character V4 đang thực hiện hành động"></canvas></div>
   </div>
-  <p class="lab-status" id="labStatus" aria-live="polite">Sẵn sàng test Character 01 · bốn hướng có ảnh thật; các hành động khác chưa có frame riêng.</p>
+  <p class="lab-status" id="labStatus" aria-live="polite">Đang tải sprite chuyển động thử nghiệm Character V4…</p>
   <div class="lab-row" aria-label="Chọn hướng nhìn">
     <button class="lab-control" type="button" data-dir="front" aria-pressed="true">↓ Xuống (trước)</button>
     <button class="lab-control" type="button" data-dir="left" aria-pressed="false">← Trái</button>
@@ -101,7 +102,7 @@
     <label for="actorSize">Kích thước</label>
     <select class="lab-control" id="actorSize"><option value="70">70 px</option><option value="90" selected>90 px</option><option value="110">110 px</option></select>
   </div>
-  <p class="lab-caption">Đã thay biểu tượng thử nghiệm bằng hình hai Character; điều hướng đi/chạy là chuyển vị trí sprite chứ chưa phải hoạt ảnh bước chân. 9 Action chỉ nghiệm thu sau khi có frame tương ứng, đầu không nghiêng.</p>
+  <p class="lab-caption">9 nút đã điều khiển khớp tay, chân hoặc thân bằng các lớp ảnh nguyên gốc. Giữ đầu thẳng; chất lượng rig phân mảnh vẫn cần duyệt và nâng cấp thành sprite vẽ riêng trước khi tích hợp game chính.</p>
 </section>
 <section class="panel">
   <h2>9 Action bắt buộc</h2>
@@ -172,19 +173,20 @@ for(const view of views.querySelectorAll('[data-view]')){
 </script>
 <script type="module">
 import {createV4StageController,V4_FACE_LABELS} from './action-lab.mjs';
+import {createV4SpriteRenderer} from './animated-sprite.mjs?v=403';
 const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),actor=document.getElementById('labCharacter'),status=document.getElementById('labStatus');
-const controller=createV4StageController(),directions=[...document.querySelectorAll('[data-dir]')];
+const controller=createV4StageController(),sprite=createV4SpriteRenderer(actor,'./approved-two-characters.avif?v=403'),directions=[...document.querySelectorAll('[data-dir]')];
 const actionLabels={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy nhẹ',sit:'Ngồi xếp bằng','sit-down':'Đứng → ngồi','stand-up':'Ngồi → đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
-let selectedDirection='front',activeCharacter='character-01',crowd=false,crowdTokens=[],lastFacing='';
+let selectedDirection='front',activeCharacter='character-01',crowd=false,crowdTokens=[];
 window.addEventListener('gmww-v4-select-character',e=>{
- activeCharacter=e.detail.id;lastFacing='';
+ activeCharacter=e.detail.id;
  for(const token of crowdTokens)token.src=imageUrl(activeCharacter,token.dataset.dir||'front');
 });
 for(const button of directions)button.addEventListener('click',()=>{
  selectedDirection=button.dataset.dir;
  for(const b of directions)b.setAttribute('aria-pressed',String(b===button));
  controller.start('idle',performance.now(),{targetFacing:selectedDirection});
- lastFacing='';actor.src=imageUrl(activeCharacter,selectedDirection);
+
 });
 for(const button of document.querySelectorAll('[data-action]'))button.addEventListener('click',()=>{
  controller.start(button.dataset.action,performance.now(),{targetFacing:selectedDirection,result:document.getElementById('outcome').value});
@@ -206,10 +208,15 @@ function frame(now){
  const model=controller.sample(now);
  pin.style.left=(model.position.x*100).toFixed(2)+'%';
  pin.style.top=(model.position.y*100).toFixed(2)+'%';
- if(model.facing!==lastFacing){actor.src=imageUrl(activeCharacter,model.facing);lastFacing=model.facing;}
- const phase=model.phase==='turn'?'Đang quay hướng':model.phase==='move'?'Đang di chuyển (sprite tĩnh)':model.phase==='done'?'Hoàn tất điều khiển':'Đang thử lệnh';
- const desc=(model.actionId==='walk'||model.actionId==='run')?' · chân chưa có frame chuyển động':' · tư thế hành động đang chờ sprite riêng';
- status.textContent=(activeCharacter==='character-01'?'Chàng Biển':'Nàng Biển')+' · '+actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+desc;
+ const cmd=controller.command;
+ const elapsedMs=now-cmd.startAt;
+ const movingAction=cmd.actionId==='walk'||cmd.actionId==='run';
+ // Animate limbs continuously while the character actually moves, not the unchanging bitmap.
+ const progress=movingAction&&model.phase==='turn'?0:model.progress;
+ const actionId=model.phase==='turn'?'idle':cmd.actionId;
+ const drawn=sprite.render({characterId:activeCharacter,facing:model.facing,actionId,elapsedMs:Math.max(0,elapsedMs-cmd.turnMs),progress,result:cmd.result});
+ const phase=model.phase==='turn'?'Đang đổi hướng':model.phase==='move'?'Đang bước chân':model.phase==='done'?'Đã hoàn tất':'Đang thực hiện';
+ status.textContent=(activeCharacter==='character-01'?'Chàng Biển':'Nàng Biển')+' · '+actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+' · '+(drawn?'Tay/chân có chuyển động · bản rig thử':'Đang tải ảnh gốc'+(sprite.failed?' (lỗi tải atlas)':''));
  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
