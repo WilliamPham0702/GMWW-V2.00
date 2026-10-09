@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "project": "GMWW Character V4",
+  "task": 106,
+  "rejectedSkinVersion": "4.13-skeleton-skin-review",
+  "skinStatus": "rejected-awaiting-redesign",
+  "approvedMotionVersion": "4.12-action-review",
+  "target": "Player Web approval studio only; do not integrate with main game or IPA",
+  "assetReference": "assets/characters/v4/approved-two-characters.avif",
+  "referenceUse": "palette-and-character-identity-only; not accepted as final layered skin (tiny static atlas)",
+  "characters": [
+    {
+      "id": "character-01",
+      "name": "Chàng Biển",
+      "identity": "chibi anime boy, dark tousled hair, turquoise floral Hawaiian shirt, light shorts, blue sandals"
+    },
+    {
+      "id": "character-02",
+      "name": "Nàng Biển",
+      "identity": "chibi anime girl, warm blonde hair, straw sun hat with blue accent, white and blue summer dress, light sandals"
+    }
+  ],
+  "artDirection": {
+    "style": "premium cohesive tropical anime/chibi, organic silhouettes, fluid fabric, nuanced shading",
+    "geometry": "NOT rectangles, tubes, toy mannequin limbs, or circular shoulder plugs",
+    "pose": "full-body standing master image for each direction; clothing, hair, proportions match approved identity",
+    "proportion": "one consistent head/body scale across all views and both characters; avoid oversized pasted face with narrow rectangular neck and blocky trunk",
+    "minimumMasterViewSizePx": [
+      1024,
+      1536
+    ],
+    "transparentBackground": true,
+    "boneBinding": "all arms and legs consist of 2 bone segments each with separate wrist/ankle cap; one single anatomical limb per side",
+    "disallowed": [
+      "pasting a small pixelated static avatar head over generic geometry",
+      "painting polygonal clothing on top of stroke-only limbs",
+      "static artwork already containing hands/arms under separate moving arms",
+      "cutting the full-body still photo into uncontrolled overlapping masks",
+      "making visual or deployment success claims from unit tests alone"
+    ]
+  },
+  "directions": [
+    "front",
+    "left",
+    "right",
+    "back"
+  ],
+  "riggedActions": [
+    "idle",
+    "walk",
+    "run",
+    "sit",
+    "sit-down",
+    "stand-up",
+    "wave",
+    "vote",
+    "result"
+  ],
+  "mandatoryLayers": [
+    "hair_back",
+    "head",
+    "hair_front",
+    "torso",
+    "pelvis",
+    "upper_arm_left",
+    "forearm_left",
+    "hand_left",
+    "upper_arm_right",
+    "forearm_right",
+    "hand_right",
+    "thigh_left",
+    "shin_left",
+    "foot_left",
+    "thigh_right",
+    "shin_right",
+    "foot_right"
+  ],
+  "rendering": [
+    "prepare cohesive 4-direction master character portraits",
+    "split master artwork into transparent layers whose boundaries overlap only under joint seams",
+    "set anchors on shoulder, elbow, wrist, hip, knee and ankle from approved skeleton",
+    "draw each anatomical layer exactly once; never draw an original static full-body image underneath",
+    "validate seam continuity at all action extremes and front, left, right and back",
+    "render and review 9 actions x 4 views x 2 characters on Player Web",
+    "obtain owner's visual approval before integration into main gameplay"
+  ],
+  "deliveryGate": {
+    "allLayerAssetsReady": false,
+    "jointAnchorsReviewed": false,
+    "mobileMotionReviewed": false,
+    "ownerApproved": false,
+    "productionSkinEnabled": false,
+    "currentPreview": "skeleton-only"
+  }
+}

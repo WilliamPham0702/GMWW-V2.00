@@ -39,8 +39,11 @@ jobs:
           node --check assets/characters/v4/action-lab.mjs
           node --check assets/characters/v4/animated-sprite.mjs
           node --check assets/characters/v4/skeleton-rig.mjs
-          node --check assets/characters/v4/skeleton-skin.mjs
-          grep -Fq 'skeleton-skin.mjs' assets/characters/v4/skin.html
+          test ! -e assets/characters/v4/skeleton-skin.mjs
+          grep -Fq 'KHÔNG ĐẠT NGHIỆM THU' assets/characters/v4/skin.html
+          grep -Fq 'skeleton-rig.mjs' assets/characters/v4/skin.html
+          ! grep -Fq 'skeleton-skin.mjs' assets/characters/v4/skin.html
+          test -s assets/characters/v4/skin-art-spec.json
           test -s assets/characters/v4/skin.html
           grep -q 'animated-sprite.mjs' assets/characters/v4/index.html
           ! grep -q 'assets/characters/v4' assets/village/village.mjs

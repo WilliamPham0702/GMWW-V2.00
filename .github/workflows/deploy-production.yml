@@ -290,8 +290,8 @@ jobs:
           if(!html.includes('sprite.render({')||html.includes('actor.src=imageUrl('))process.exit(1);
           console.log('Verify Production: V4 canvas articulated limb animation wired to Action controls PASS.');
           NODE
-          echo "Verify Production: Character V4 skeleton Skin preview for Character 01/02."
-          for F in skeleton.html skeleton-rig.mjs skin.html skeleton-skin.mjs; do
+          echo "Verify Production: rejected Skin 4.13 withdrawn; show skeleton only."
+          for F in skeleton.html skeleton-rig.mjs skin.html skin-art-spec.json; do
             EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
             MATCHED=0
             for ATTEMPT in $(seq 1 15); do
@@ -308,11 +308,16 @@ jobs:
             done
             if [ "$MATCHED" -ne 1 ]; then echo "::error::Character V4 file $F did not synchronize to the approved commit."; exit 1; fi
           done
-          node --check /tmp/v4-skeleton-skin.mjs
-          grep -Fq 'id="boy"' /tmp/v4-skin.html
-          grep -Fq 'id="girl"' /tmp/v4-skin.html
-          grep -Fq 'approved-two-characters.avif' /tmp/v4-skin.html
-          grep -Fq 'skeleton-skin.mjs' /tmp/v4-skin.html
-          grep -Fq 'renderV4Skin' /tmp/v4-skeleton-skin.mjs
-          grep -Fq 'sourceHead(ctx' /tmp/v4-skeleton-skin.mjs
-          echo "Verify Production: Character V4 skinned skeleton studio exact-byte check PASS."
+          node --check /tmp/v4-skeleton-rig.mjs
+          grep -Fq 'KHÔNG ĐẠT NGHIỆM THU' /tmp/v4-skin.html
+          grep -Fq 'Skin 4.13 đã bị loại' /tmp/v4-skin.html
+          grep -Fq 'skeleton-rig.mjs' /tmp/v4-skin.html
+          ! grep -Fq 'skeleton-skin.mjs' /tmp/v4-skin.html
+          ! grep -Fq 'renderV4Skin' /tmp/v4-skin.html
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const c=JSON.parse(fs.readFileSync('/tmp/v4-skin-art-spec.json','utf8'));
+          if(c.skinStatus!=='rejected-awaiting-redesign' || c.deliveryGate.productionSkinEnabled!==false || c.deliveryGate.ownerApproved!==false)process.exit(1);
+          console.log('Verify Production: rejected Skin disabled; premium layered redesign required before release.');
+          NODE
+          echo "Verify Production: skeleton-only fallback and rejected Skin exact-byte check PASS."
