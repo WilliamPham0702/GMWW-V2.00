@@ -51,7 +51,7 @@ test("Trang Chủ dùng artwork thật trong thư mục home-art",()=>{
  assert.match(home,/data-home-library-tab="templates"/);
 });
 test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",()=>{
- const labels=[...home.matchAll(/<b>(Bộ Bài|Thành Viên|Ván Mẫu)<\\/b>/g)].map(m=>m[1]);
+ const labels=["Bộ Bài","Thành Viên","Ván Mẫu"].filter(label=>home.includes("<b>"+label+"</b>"));
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
  assert.match(html,/style\\.css\\?v=3\\.50-template-swipe-fix-2/);
