@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.50';
+const VERSION='3.51';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -3110,7 +3110,7 @@ async function playCallOnlineMembers(){
   if(!isLivePlayRoom()||playSceneRuntime.busy)return;
   playSetBusy(true);
   try{
-    await loadMembers(false);
+    await playLoadFreshRosterMembers();
     const existing=playLiveMembers(),byId=new Map(existing.map(m=>[String(m.loginId),m]));
     const online=(memberAdminState.members||[]).filter(m=>m?.online===true&&(!m.currentRoomCode||String(m.currentRoomCode)===String(playSceneState.roomCode)));
     const ids=new Set([...byId.keys(),...online.map(m=>String(m.loginId))]);
@@ -3183,23 +3183,53 @@ async function confirmPlayEndGame(){
 }
 function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
 function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
+async function playLoadFreshRosterMembers(){
+  const data=await gmApi('/api/gm/members');
+  if(!Array.isArray(data?.members))throw new Error('Không nhận được danh sách Thành Viên mới nhất.');
+  memberAdminState.members=data.members;memberAdminState.loaded=true;
+  return data.members;
+}
+let playRosterPresenceTimer=null;
+async function playRefreshRosterPresence(){
+  const sheet=document.getElementById('playRosterSheet');
+  if(!sheet||sheet.classList.contains('hidden'))return;
+  try{
+    const members=await playLoadFreshRosterMembers();
+    if(sheet.classList.contains('hidden'))return;
+    const live=new Map(members.map(m=>[String(m.loginId),m]));
+    document.querySelectorAll('#playRosterList .play-roster-row').forEach(row=>{
+      const member=live.get(String(row.dataset.loginId||'')),online=member?.online===true;
+      const dot=row.querySelector('.play-roster-presence');
+      if(!dot)return;
+      dot.classList.toggle('is-online',online);dot.classList.toggle('is-offline',!online);
+      dot.setAttribute('aria-label',online?'Đang trực tuyến':'Đang ngoại tuyến');
+      dot.title=online?'Đang trực tuyến':'Đang ngoại tuyến';
+    });
+  }catch(err){console.warn('[GMWW roster presence]',err)}
+}
 async function openPlayRosterSheet(){
   if(!isLivePlayRoom()){await playCreateRoom();return}
   const sheet=document.getElementById('playRosterSheet'),list=document.getElementById('playRosterList');if(!sheet||!list)return;
-  try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
-  const selected=new Set((playSceneState.selectedMemberIds||[]).map(String)),rows=Array.isArray(memberAdminState.members)?memberAdminState.members:[];
+  list.innerHTML='<div class="member-empty">Đang đồng bộ trạng thái Thành Viên…</div>';
+  let rows;
+  try{rows=await playLoadFreshRosterMembers()}
+  catch(err){list.innerHTML='<div class="member-empty member-error">'+playEsc(err.message||'Không đồng bộ được trạng thái.')+'</div>';sheet.classList.remove('hidden');return}
+  const selected=new Set((playSceneState.selectedMemberIds||[]).map(String));
   document.getElementById('playRosterRoomLabel').textContent='Phòng '+playSceneState.roomCode;list.innerHTML='';
   for(const m of rows){
     const b=document.createElement('button');b.type='button';b.className='play-roster-row'+(selected.has(String(m.loginId))?' selected':'');b.dataset.loginId=String(m.loginId);
     const initial=(String(m.displayName||m.loginId||'?').trim().charAt(0)||'?').toUpperCase();
-    b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b><small>'+playEsc(m.loginId)+' • '+(m.gameCharacterId?'Nhân vật cố định':'Chưa chọn nhân vật')+' • '+(m.online?'Online':'Offline')+'</small></div><span class="play-roster-check">✓</span>';
+    const online=m.online===true,status=online?'Đang trực tuyến':'Đang ngoại tuyến';
+    b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b></div><span class="play-roster-presence '+(online?'is-online':'is-offline')+'" role="img" aria-label="'+status+'" title="'+status+'"></span><span class="play-roster-check">✓</span>';
     const img=b.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);img.src=characterSrc||memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{if(characterSrc&&img.src!==memberAvatarUrl(m.gameCharacterId||m.avatarId)){img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);return}const s=document.createElement('span');s.className='play-roster-avatar-fallback';s.textContent=initial;img.replaceWith(s)};
     b.onclick=()=>{b.classList.toggle('selected');updatePlayRosterCount()};list.appendChild(b);
   }
   if(!rows.length)list.innerHTML='<div class="member-empty">Chưa có Thành Viên trong danh bạ.</div>';
   sheet.classList.remove('hidden');updatePlayRosterCount();
+  if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);
+  playRosterPresenceTimer=setInterval(()=>{if(!document.hidden)void playRefreshRosterPresence()},10000);
 }
-function closePlayRosterSheet(){document.getElementById('playRosterSheet')?.classList.add('hidden')}
+function closePlayRosterSheet(){if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);playRosterPresenceTimer=null;document.getElementById('playRosterSheet')?.classList.add('hidden')}
 async function savePlayRosterIds(ids){
   if(playSceneRuntime.busy)return;ids=[...new Set((ids||[]).map(String).filter(Boolean))];if(!ids.length){playFlashError('Hãy chọn ít nhất 1 Người Chơi.');return}
   const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=memberAdminState.members||[],chosen=source.filter(m=>ids.includes(String(m.loginId))).map(m=>({loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,seatId:existing.get(String(m.loginId))?.seatId||null}));
