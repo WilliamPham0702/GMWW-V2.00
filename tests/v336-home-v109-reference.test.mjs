@@ -11,7 +11,7 @@ test("Trang Chủ V3.50 giữ nút Vào Làng, ba thẻ và dữ liệu thật",
  assert.ok(start>0&&end>start);
  assert.match(home,/gmww-home-rebuild-v350/);
  for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])assert.equal(home.split('id="'+id+'"').length-1,1,id);
- assert.match(home,/home-fantasy-hero-v337\\.webp/);
+ assert.ok(home.includes("home-fantasy-hero-v337.webp"));
  assert.equal((home.match(/class="gmww-home-tiles-v350"/g)||[]).length,1);
 });
 test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
@@ -54,7 +54,7 @@ test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",(
  const labels=["Bộ Bài","Thành Viên","Ván Mẫu"].filter(label=>home.includes("<b>"+label+"</b>"));
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
- assert.match(html,/style\\.css\\?v=3\\.50-template-swipe-fix-2/);
+ assert.ok(html.includes("style.css?v=3.50-template-swipe-fix-2"));
  assert.match(home,/gmww-home-rebuild-v350/);
  for(const n of [3,6,1])assert.ok(!home.includes(">"+n+"</strong>"),"No fabricated counters");
  assert.match(app,/function gmwwHomeRenderExtras\\(rows,ranking,leader\\)/);
