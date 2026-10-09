@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.54';
+const VERSION='3.55';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -13,23 +13,18 @@ const DB_STORE='assets';
 const LEGACY_V1_ASSET_DBS=['GMWW_ASSETS_921','GMWW_THEME_ASSETS_946','GMWW_THEME_UI_987','GMWW_MATCH_CACHE_933','GMWW_AUDIO_LIBRARY'];
 
 const THEME_UI_GROUPS=[
-  {id:'background',title:'🌌 Hình nền',slots:[
-    ['bg.home','Nền Trang Chủ'],['bg.deck','Nền Bộ Bài'],['bg.play','Nền Chơi'],['bg.library','Nền Thư Viện'],['bg.settings','Nền Cài Đặt']
+  // Only publish controls with an actual consumer in applyActiveThemeUi.
+  {id:'background',title:'🌌 Hình nền đang sử dụng',slots:[
+    ['bg.home','Nền Trang Chủ'],['bg.play','Nền Chơi'],
+    ['bg.library','Nền Thư Viện'],['bg.settings','Nền Cài Đặt']
   ]},
-  {id:'banner',title:'🌄 Banner',slots:[
-    ['banner.home','Banner Trang Chủ'],['banner.deck','Banner Bộ Bài'],['banner.play','Banner Chơi'],['banner.library','Banner Thư Viện'],['banner.settings','Banner Cài Đặt'],['banner.dawn','Làng Ơi! Dậy Đi']
-  ]},
-  {id:'large',title:'🐺 Icon / Hình lớn',slots:[
-    ['ui.brandAvatar','Avatar Logo Trên Cùng'],['ui.homeMiniWolf','Avatar Trang Chủ'],['ui.homeStartWolf','Hình Nút Bắt Đầu'],['ui.homeRecentWolf','Hình Ván Gần Đây']
-  ]},
-  {id:'button',title:'◈ Nút / Điều hướng',slots:[
-    ['ui.exploreDeck','Nút Khám Phá • Bộ Bài'],['ui.exploreMembers','Nút Khám Phá • Thành Viên'],['ui.exploreActions','Nút Khám Phá • Hành Động'],['ui.exploreFactions','Nút Khám Phá • Phe Phái'],['ui.exploreLibrary','Nút Khám Phá • Thư Viện'],['ui.exploreSettings','Nút Khám Phá • Cài Đặt'],['ui.bottomNavArt','Hình Thanh Điều Hướng']
-  ]},
-  {id:'library',title:'🗂 Giao diện Thư Viện',slots:[
-    ['ui.libraryHeader','Đầu trang Thư Viện'],['ui.libraryTabs','Nền Tabs Thư Viện'],['ui.cardTile','Nền ô Vai Trò'],['ui.artifactTile','Nền ô ARTIFACTS'],['ui.actionTile','Nền ô Hành Động'],['ui.effectTile','Nền ô Hiệu Ứng'],['ui.themeTile','Nền ô Chủ Đề'],['ui.audioTile','Nền ô Âm Thanh']
-  ]},
-  {id:'game',title:'🎮 Giao diện Server Game',slots:[
-    ['ui.memberPanel','Khung Thành Viên'],['ui.startPanel','Khung Bắt Đầu'],['ui.gamePanel','Khung Điều Khiển Ván'],['ui.nightPanel','Khung Ban Đêm'],['ui.morningPanel','Khung Buổi Sáng'],['ui.summaryPanel','Khung Tổng Kết'],['ui.waitingRoom','Khung Phòng Chờ']
+  {id:'home',title:'🏝️ Hình ảnh Trang Chủ',slots:[
+    ['banner.home','Banner Làng Biển'],
+    ['ui.homePortal','Hình Nút Vào Làng'],
+    ['ui.exploreDeck','Khám Phá • Bộ Bài'],
+    ['ui.exploreMembers','Khám Phá • Thành Viên'],
+    ['ui.exploreTemplates','Khám Phá • Ván Mẫu'],
+    ['ui.bottomNavArt','Hình Thanh Điều Hướng']
   ]}
 ];
 
@@ -529,10 +524,64 @@ async function resolveArtwork(kind,id,assetKind){
 }
 
 async function resolveUiSlot(themeId,slotId){const local=await blobUrlFor(uiBlobKey(themeId,slotId));if(local)return local;const t=themeById(themeId),u=String(t.ui?.[slotId]?.url||'').trim();return u}
+
+// Exactly these slots have image consumers. Hidden legacy slot values are
+// preserved in state/IndexedDB; only nonfunctional *controls* disappear.
+const ACTIVE_THEME_BACKGROUND_TARGETS={
+  'bg.home':'#home',
+  'bg.play':'#start',
+  'bg.library':'#library',
+  'bg.settings':'#settings'
+};
+const ACTIVE_THEME_IMAGE_TARGETS={
+  'banner.home':'#home .gmww-home-scene-image-v350',
+  'ui.homePortal':'#gmwwHomeEnterVillage .gmww-home-portal-art-v352',
+  'ui.exploreDeck':'#home [data-home-library-tab="cards"] img',
+  'ui.exploreMembers':'#home [data-home-destination="members"] img',
+  'ui.exploreTemplates':'#home [data-home-library-tab="templates"] img'
+};
+const ACTIVE_THEME_NAV_TARGETS={'ui.bottomNavArt':'#bottomNav'};
+let activeThemeApplyToken=0;
+function themeImageUrl(value){return 'url("'+String(value).replace(/["\\\n\r]/g,'')+'")'}
+function defaultThemeSlotPreview(slot){
+  const selector=ACTIVE_THEME_IMAGE_TARGETS[slot];
+  if(!selector)return '';
+  const img=document.querySelector(selector);
+  return img?.dataset.themeDefaultSrc||img?.getAttribute('src')||'';
+}
 async function applyActiveThemeUi(){
-  const id=state.themes.activeId||'theme-sea';
-  const map={'bg.home':'#home','bg.play':'#start','bg.library':'#library','bg.settings':'#settings'};
-  for(const [slot,sel] of Object.entries(map)){const el=$(sel);if(!el)continue;const src=await resolveUiSlot(id,slot);if(src){el.style.backgroundImage='linear-gradient(rgba(3,12,21,.50),rgba(3,12,21,.70)),url("'+src.replace(/"/g,'\"')+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else{el.style.backgroundImage=''}}
+  const id=state.themes.activeId||'theme-sea',token=++activeThemeApplyToken;
+  const targets=[
+    ...Object.keys(ACTIVE_THEME_BACKGROUND_TARGETS),
+    ...Object.keys(ACTIVE_THEME_IMAGE_TARGETS),
+    ...Object.keys(ACTIVE_THEME_NAV_TARGETS)
+  ];
+  const assets=await Promise.all(targets.map(async slot=>[slot,await resolveUiSlot(id,slot)]));
+  if(token!==activeThemeApplyToken)return;
+  for(const [slot,src] of assets){
+    const selector=ACTIVE_THEME_BACKGROUND_TARGETS[slot];
+    if(selector){
+      const el=$(selector);if(!el)continue;
+      el.style.backgroundImage=src?'linear-gradient(rgba(3,12,21,.50),rgba(3,12,21,.70)),'+themeImageUrl(src):'';
+      el.style.backgroundSize=src?'cover':'';
+      el.style.backgroundPosition=src?'center':'';
+      continue;
+    }
+    const imageSelector=ACTIVE_THEME_IMAGE_TARGETS[slot];
+    if(imageSelector){
+      const img=$(imageSelector);if(!img)continue;
+      if(!img.dataset.themeDefaultSrc)img.dataset.themeDefaultSrc=img.getAttribute('src')||'';
+      img.setAttribute('src',src||img.dataset.themeDefaultSrc);
+      continue;
+    }
+    const navSelector=ACTIVE_THEME_NAV_TARGETS[slot];
+    if(navSelector){
+      const el=$(navSelector);if(!el)continue;
+      el.style.backgroundImage=src?themeImageUrl(src):'';
+      el.style.backgroundSize=src?'cover':'';
+      el.style.backgroundPosition=src?'center':'';
+    }
+  }
 }
 
 function entityTileHtml(kind,e){
@@ -684,7 +733,7 @@ function renderThemeSeg(){const holder=$('#themeSeg');holder.innerHTML=state.the
 async function renderTheme(){
   renderThemeSeg();const themeId=state.themes.selectedEditorId||state.themes.activeId||'theme-sea';
   const sections=$('#themeUiSections');sections.innerHTML='';
-  for(const group of THEME_UI_GROUPS){const sec=document.createElement('details');sec.className='theme-section theme-collapsible';sec.innerHTML='<summary class="theme-section-head"><h3>'+esc(group.title)+'</h3></summary><div class="theme-slot-list"></div>';sections.appendChild(sec);const list=$('.theme-slot-list',sec);for(const [slotId,label] of group.slots){const src=await resolveUiSlot(themeId,slotId);const row=document.createElement('div');row.className='theme-slot';row.dataset.slotId=slotId;row.innerHTML='<img class="theme-slot-preview" alt=""><div class="theme-slot-main"><b>'+esc(label)+'</b><input type="url" placeholder="Link ảnh (không bắt buộc)" value="'+esc(themeById(themeId).ui?.[slotId]?.url||'')+'"></div><div class="theme-slot-actions"><button data-upload-slot="'+esc(slotId)+'" title="Tải ảnh">↑</button><button data-clear-slot="'+esc(slotId)+'" title="Mặc định">↺</button></div>';$('.theme-slot-preview',row).src=src||'';list.appendChild(row);$('input',row).onchange=()=>saveUiSlotUrl(themeId,slotId,$('input',row).value);$('[data-upload-slot]',row).onclick=()=>pickUiSlotFile(themeId,slotId);$('[data-clear-slot]',row).onclick=()=>clearUiSlot(themeId,slotId)}}
+  for(const group of THEME_UI_GROUPS){const sec=document.createElement('details');sec.className='theme-section theme-collapsible';sec.innerHTML='<summary class="theme-section-head"><h3>'+esc(group.title)+'</h3></summary><div class="theme-slot-list"></div>';sections.appendChild(sec);const list=$('.theme-slot-list',sec);for(const [slotId,label] of group.slots){const src=await resolveUiSlot(themeId,slotId);const row=document.createElement('div');row.className='theme-slot';row.dataset.slotId=slotId;row.innerHTML='<img class="theme-slot-preview" alt=""><div class="theme-slot-main"><b>'+esc(label)+'</b><input type="url" placeholder="Link ảnh (không bắt buộc)" value="'+esc(themeById(themeId).ui?.[slotId]?.url||'')+'"></div><div class="theme-slot-actions"><button data-upload-slot="'+esc(slotId)+'" title="Tải ảnh">↑</button><button data-clear-slot="'+esc(slotId)+'" title="Mặc định">↺</button></div>';$('.theme-slot-preview',row).src=src||defaultThemeSlotPreview(slotId)||'';$('.theme-slot-preview',row).title=src?'Ảnh đang áp dụng':'Ảnh mặc định (đã liên kết)';list.appendChild(row);$('input',row).onchange=()=>saveUiSlotUrl(themeId,slotId,$('input',row).value);$('[data-upload-slot]',row).onclick=()=>pickUiSlotFile(themeId,slotId);$('[data-clear-slot]',row).onclick=()=>clearUiSlot(themeId,slotId)}}
   await renderThemeEntityRows(themeId,'cards',$('#themeCardRows'));
   await renderThemeEntityRows(themeId,'artifacts',$('#themeArtifactRows'));
 }
