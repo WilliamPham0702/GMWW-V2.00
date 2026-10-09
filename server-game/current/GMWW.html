@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.59</title>
-<link rel="stylesheet" href="style.css?v=3.59-game-setup">
+<title>GMWW V3.60</title>
+<link rel="stylesheet" href="style.css?v=3.60-game-timings">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -533,16 +533,16 @@
         <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
         <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
         <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
-        <div class="play-timing-grid">
-          <label>Thảo luận dân làng<input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></label>
-          <label>Thảo luận bầy sói<input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="60"></label>
-          <label>Thời gian chung mỗi chức năng<input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30"></label>
-          <label class="play-auto-advance-field"><input type="checkbox" id="playAutoAdvance" checked> Tự chuyển khi hết giờ</label>
+        <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
+          <label>Thời gian thảo luận <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"><small>giây</small></span></label>
+          <label>Thời gian sử dụng Vai Trò <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30"><small>giây</small></span></label>
+          <input id="playWolfDiscussionSec" type="hidden" value="60">
+          <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
-        <div class="play-template-section-title"><b>THỜI GIAN RIÊNG TỪNG VAI</b><span>Giây / lượt</span></div>
-        <div class="play-template-role-timings" id="playGameRoleTimingList"></div>
-        <div class="play-template-section-title"><b>ARTIFACT TRONG TRẬN</b><span>Tùy chọn</span></div>
-        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Phân phát Artifact khi Phát Vai</label>
+        <div class="play-template-role-timings" id="playGameRoleTimingList" hidden></div>
+        <div class="play-template-section-title"><b>ARTIFACT TRONG TRẬN</b><span>Cài đặt chung</span></div>
+        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Có sử dụng Artifact</label>
+        <label class="play-template-artifact-time">Thời gian sử dụng Artifact <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"><small>giây</small></span></label>
         <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
           <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
           <small>Hạn mức riêng cho mỗi chu kỳ; 0 = không cho sử dụng.</small>
@@ -670,7 +670,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.59-game-setup"></script>
+<script src="app.js?v=3.60-game-timings"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

@@ -4007,3 +4007,14 @@ body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-do
   grid-template-columns:44px minmax(0,1fr) 44px!important;
  }
 }
+
+/* V3.60 – simple three-setting panel; override legacy play-mode rule hiding timing. */
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-timing-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin:9px 0 12px!important}
+#playGameSheet .play-timing-grid>label,#playGameSheet .play-template-artifact-time{display:flex!important;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:8px 11px;border:1px solid rgba(108,214,236,.35);border-radius:11px;background:#082c41;color:#e9fbff;font-size:12px;font-weight:750;line-height:1.35}
+#playGameSheet .play-timing-value{display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;flex:none;font-weight:650}
+#playGameSheet .play-timing-value input[type="number"]{box-sizing:border-box;width:69px;min-width:69px;height:37px;min-height:37px;padding:4px 6px;border-radius:9px;border:1px solid #68cde3;background:#103c51;color:#fff;font-size:15px;text-align:center}
+#playGameSheet .play-timing-value small{font-size:11px;color:#c4e9f3}
+#playGameSheet #playGameRoleTimingList[hidden]{display:none!important}
+#playGameSheet .play-template-artifact-time{margin:7px 0 12px}
+#playGameSheet .play-template-artifact-time:has(input:disabled){opacity:.48}
+#playGameSheet .play-timing-grid>input[type="hidden"],#playGameSheet .play-timing-grid>input[hidden]{display:none!important}

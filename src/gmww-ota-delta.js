@@ -148,3 +148,23 @@ export function selectVerifiedRuntimeV359Delta(manifest,installedVersion){
     optimizedFromVersion:'3.58',upgradeMode:'verified-overlay',
     message:'V3.59: Chọn Ván 300 giây, cấu hình hạn mức Artifact, thẻ ★ vuốt ngang, nhãn nhân vật gọn.'};
 }
+
+/** V3.59 → V3.60, verify the three UI assets before overlaying on IPA V3.17. */
+export function selectVerifiedRuntimeV360Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.59'||String(manifest?.releaseVersion||'')!=='3.60'
+    ||String(manifest?.runtimeVersion||'')!=='3.60'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0],expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.60/'+path;
+    if(file.url!==expected||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url:expected,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:'3.59',upgradeMode:'verified-overlay',
+    message:'V3.60: thời gian thảo luận 300s, Vai Trò 30s, Artifact 30s; cài đặt chung, không đặt từng lá.'};
+}
