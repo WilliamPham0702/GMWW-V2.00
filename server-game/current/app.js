@@ -932,6 +932,7 @@ function setUpdateAction(kind,context={}){
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
   else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
   else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
   else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
   else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
 }
