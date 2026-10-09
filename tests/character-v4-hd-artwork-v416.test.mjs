@@ -39,7 +39,7 @@ test('transparent PNG validator enforces actual 1024x1536 master size and 2:3 as
 test('source manifest acknowledges only 3 independent views and no real rig integration',()=>{
  const manifest=JSON.parse(read('assets/characters/v4/artwork-v416-manifest.json'));
  assert.equal(manifest.version,'4.16-highres-artwork-draft');
- assert.equal(manifest.drafts.length,3);
+ assert.equal(manifest.drafts.length,4);
  assert.equal(new Set(manifest.drafts.map(x=>x.id+'-'+x.direction)).size,3);
  assert.ok(manifest.drafts.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)));
  assert.equal(manifest.limitations.requiredViews,8);
@@ -47,7 +47,7 @@ test('source manifest acknowledges only 3 independent views and no real rig inte
  assert.equal(manifest.limitations.individualRigLayersAvailable,false);
  assert.equal(manifest.limitations.productionSkinEnabled,false);
  const state=draftReviewState(manifest.drafts.map(x=>x.id+'-'+x.direction));
- assert.deepEqual({valid:state.validSlots,total:state.totalSlots,approved:state.ownerApproved}, {valid:3,total:8,approved:false});
+ assert.deepEqual({valid:state.validSlots,total:state.totalSlots,approved:state.ownerApproved}, {valid:4,total:8,approved:false});
  assert.equal(state.allViewsReady,false);
  assert.equal(state.motionIntegrated,false);
  assert.equal(draftReviewState(V416_SLOTS.map(s=>s.id)).productionSkinEnabled,false);
