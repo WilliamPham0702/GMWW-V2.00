@@ -102,7 +102,7 @@
     <label for="actorSize">Kích thước</label>
     <select class="lab-control" id="actorSize"><option value="70">70 px</option><option value="90" selected>90 px</option><option value="110">110 px</option></select>
   </div>
-  <p class="lab-caption">9 nút đã điều khiển khớp tay, chân hoặc thân bằng các lớp ảnh nguyên gốc. Giữ đầu thẳng; chất lượng rig phân mảnh vẫn cần duyệt và nâng cấp thành sprite vẽ riêng trước khi tích hợp game chính.</p>
+  <p class="lab-caption">Bản V4.04: đã sửa lớp tóc chồng lên tay/thân ở Nàng Biển, cải thiện giơ tay bỏ phiếu và thứ tự lớp cơ thể. 9 nút điều khiển khớp tay, chân hoặc thân bằng các lớp ảnh nguyên gốc. Giữ đầu thẳng; chất lượng rig phân mảnh vẫn cần duyệt và nâng cấp thành sprite vẽ riêng trước khi tích hợp game chính.</p>
 </section>
 <section class="panel">
   <h2>9 Action bắt buộc</h2>
@@ -173,9 +173,9 @@ for(const view of views.querySelectorAll('[data-view]')){
 </script>
 <script type="module">
 import {createV4StageController,V4_FACE_LABELS} from './action-lab.mjs';
-import {createV4SpriteRenderer} from './animated-sprite.mjs?v=403';
+import {createV4SpriteRenderer} from './animated-sprite.mjs?v=404';
 const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),actor=document.getElementById('labCharacter'),status=document.getElementById('labStatus');
-const controller=createV4StageController(),sprite=createV4SpriteRenderer(actor,'./approved-two-characters.avif?v=403'),directions=[...document.querySelectorAll('[data-dir]')];
+const controller=createV4StageController(),sprite=createV4SpriteRenderer(actor,'./approved-two-characters.avif?v=404'),directions=[...document.querySelectorAll('[data-dir]')];
 const actionLabels={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy nhẹ',sit:'Ngồi xếp bằng','sit-down':'Đứng → ngồi','stand-up':'Ngồi → đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
 let selectedDirection='front',activeCharacter='character-01',crowd=false,crowdTokens=[];
 window.addEventListener('gmww-v4-select-character',e=>{
