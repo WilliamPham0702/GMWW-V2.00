@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Công cụ Chủ Đề: chỉ hiển thị các vị trí ảnh được kết nối với giao diện thực tế","Thay đổi hình Banner Làng Biển, Vào Làng, ba ô Khám Phá và thanh điều hướng ngay từ mục Chủ Đề","Ảnh mặc định được hiển thị trong preview; khôi phục về mặc định không làm mất dữ liệu đã lưu","Cập nhật Runtime V3.54 lên V3.55 mà không cần cài lại IPA"],,
+  releaseNotes:["Công cụ Chủ Đề: chỉ hiển thị các vị trí ảnh được kết nối với giao diện thực tế","Thay đổi hình Banner Làng Biển, Vào Làng, ba ô Khám Phá và thanh điều hướng ngay từ mục Chủ Đề","Ảnh mặc định được hiển thị trong preview; khôi phục về mặc định không làm mất dữ liệu đã lưu","Cập nhật Runtime V3.54 lên V3.55 mà không cần cài lại IPA"],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
