@@ -37,6 +37,17 @@
     .lab-caption{font-size:12px;color:#aed9d7}
     .lab-actor{position:absolute;display:block;width:9px;height:9px;border-radius:50%;background:#92e7df;opacity:.6}
     .lab-actor:first-child{background:#fff}
+    .v4-portrait{display:block;width:min(100%,116px);height:150px;object-fit:contain;filter:drop-shadow(0 5px 9px #031b2b88);image-rendering:auto}
+    .v4-view{cursor:pointer}.v4-view[aria-pressed="true"]{border-color:#a2fce8;box-shadow:0 0 0 2px #6aebc54d}
+    .v4-hero{display:grid;place-items:center;min-height:150px}.v4-hero img{max-height:145px}
+    .slot{cursor:default;min-height:55px}.slot.available{background:linear-gradient(150deg,#176d7b,#134861);border-color:#93e5d4;cursor:pointer;color:white}
+    .slot.available[aria-pressed="true"]{box-shadow:0 0 0 2px #ffe2a0;border-color:#ffdc75}
+    .slot .thumb{width:48px;height:65px;display:block;object-fit:contain;margin:0 auto 2px}
+    .lab-pin{border:0;background:none;box-shadow:none;border-radius:0;width:90px;height:131px;transform:translate(-50%,-90%);pointer-events:none}
+    .lab-pin:after{content:"CHAR V4";bottom:-8px}.lab-pin .arrow{display:none}
+    .lab-pin .lab-real-sprite{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 7px 6px #03233488)}
+    .lab-actor{background:none;width:27px;height:39px;opacity:.8;object-fit:contain}
+    .v4-active-name{color:#bdfbea;font-weight:700}
 
     @media(max-width:620px){.viewgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.members{grid-template-columns:repeat(5,minmax(0,1fr))}}
   </style>
@@ -50,22 +61,22 @@
   <div class="statuses"><span class="pill">20 vị trí thiết kế</span><span class="pill">9 hành động chuẩn</span><span class="pill amber">Chưa phát hành Character mới vào trận</span></div>
 </header>
 <section class="panel" aria-label="Kiểm thử Character-01">
-  <h2>Character Master-01 · Chờ nghiệm thu</h2>
-  <p style="margin-bottom:12px">Bốn góc nhìn sẽ hiển thị tại đây khi có sprite mới hoàn chỉnh. Không tái sử dụng ảnh cũ, không dùng ảnh minh họa tĩnh để giả nhân vật đang chuyển động.</p>
+  <h2 id="activeCharacterTitle">Character 01 – Chàng Biển · Đang test</h2>
+  <p style="margin-bottom:12px">Hai nhân vật từ mẫu đã duyệt có <strong>bốn ảnh nhìn thật</strong> trên Player Web. Chọn Chàng Biển hoặc Nàng Biển ở danh sách dưới rồi chạm từng hướng để xem; 9 hoạt ảnh cơ thể vẫn đang hoàn thiện.</p>
   <div class="viewgrid" id="views">
-  <div class="view"><div class="vacant"></div><strong>Trước</strong><small>Chờ asset V4</small></div>
-  <div class="view"><div class="vacant"></div><strong>Trái</strong><small>Chờ asset V4</small></div>
-  <div class="view"><div class="vacant"></div><strong>Phải</strong><small>Chờ asset V4</small></div>
-  <div class="view"><div class="vacant"></div><strong>Sau lưng</strong><small>Chờ asset V4</small></div>
+  <div class="view v4-view" data-view="front" aria-pressed="true"><img class="v4-portrait" alt="Mặt trước Character 01 – Chàng Biển" src="/api/game-characters/character-01/image?dir=front"><strong>Trước</strong></div>
+  <div class="view v4-view" data-view="left" aria-pressed="false"><img class="v4-portrait" alt="Mặt trái Character 01 – Chàng Biển" src="/api/game-characters/character-01/image?dir=left"><strong>Trái</strong></div>
+  <div class="view v4-view" data-view="right" aria-pressed="false"><img class="v4-portrait" alt="Mặt phải Character 01 – Chàng Biển" src="/api/game-characters/character-01/image?dir=right"><strong>Phải</strong></div>
+  <div class="view v4-view" data-view="back" aria-pressed="false"><img class="v4-portrait" alt="Sau lưng Character 01 – Chàng Biển" src="/api/game-characters/character-01/image?dir=back"><strong>Sau lưng</strong></div>
   </div>
 </section>
 <section class="panel" id="action-lab">
-  <h2>Kiểm thử chuyển hướng và lệnh Action trên Web</h2>
-  <p>Đây là <strong>mốc thử chuyển động bằng biểu tượng kỹ thuật</strong>, không phải Character-01 đã hoàn thành. Chạm chọn hướng, sau đó nhấn Đi bộ hoặc Chạy: biểu tượng sẽ quay đúng hướng <strong>trước khi</strong> di chuyển.</p>
-  <div class="lab-stage" id="labStage" aria-label="Khu vực thử chuyển động bằng dấu chỉ hướng">
-    <div class="lab-pin" id="labPin"><span class="arrow" id="labArrow">↓</span></div>
+  <h2>Thử Character thật trong làng · Điều khiển 9 Action</h2>
+  <p>Đây là <strong>hai nhân vật thật lấy từ bản thiết kế đã duyệt</strong>. Đi/chạy đã điều khiển được hướng và tọa độ bằng hình nhân vật; tay, chân và tư thế trong 9 Action hiện <strong>chưa có bộ frame hoạt ảnh hoàn chỉnh</strong>, nên chưa thể nghiệm thu chuyển động.</p>
+  <div class="lab-stage" id="labStage" aria-label="Khu vực thử hình Character 01 và 02 bốn hướng">
+    <div class="lab-pin" id="labPin"><img id="labCharacter" class="lab-real-sprite" src="/api/game-characters/character-01/image?dir=front" alt="Character đang thử chuyển động"></div>
   </div>
-  <p class="lab-status" id="labStatus" aria-live="polite">Sẵn sàng test logic — chưa có sprite Character mới.</p>
+  <p class="lab-status" id="labStatus" aria-live="polite">Sẵn sàng test Character 01 · bốn hướng có ảnh thật; các hành động khác chưa có frame riêng.</p>
   <div class="lab-row" aria-label="Chọn hướng nhìn">
     <button class="lab-control" type="button" data-dir="front" aria-pressed="true">↓ Xuống (trước)</button>
     <button class="lab-control" type="button" data-dir="left" aria-pressed="false">← Trái</button>
@@ -90,7 +101,7 @@
     <label for="actorSize">Kích thước</label>
     <select class="lab-control" id="actorSize"><option value="70">70 px</option><option value="90" selected>90 px</option><option value="110">110 px</option></select>
   </div>
-  <p class="lab-caption">Quy tắc cố định: đầu luôn thẳng; không đi ngang kiểu cua; chỉ đúng 9 Action. Tư thế, dáng ngồi và trang phục chỉ được nghiệm thu khi đã có artwork/sprite V4 hoàn chỉnh.</p>
+  <p class="lab-caption">Đã thay biểu tượng thử nghiệm bằng hình hai Character; điều hướng đi/chạy là chuyển vị trí sprite chứ chưa phải hoạt ảnh bước chân. 9 Action chỉ nghiệm thu sau khi có frame tương ứng, đầu không nghiêng.</p>
 </section>
 <section class="panel">
   <h2>9 Action bắt buộc</h2>
@@ -110,54 +121,95 @@
   <h2>Danh sách 20 nhân vật mới</h2>
   <div class="members" id="slots" aria-label="20 vị trí nhân vật đang được thiết kế"></div>
   <p style="margin-top:10px" id="apiStatus" aria-live="polite">Đang kiểm tra danh sách V4…</p>
-  <p style="margin-top:12px">Chỉ triển khai Character-02 đến Character-20 sau khi Character-01 được duyệt. Các ô chưa có artwork được đánh dấu rõ ràng, không phải nhân vật đã sẵn sàng.</p>
+  <p style="margin-top:12px">Character 01 và 02 có hình để test bốn góc nhìn. Character 03–20 đang chờ thiết kế; cả hai nhân vật đầu tiên vẫn cần hoàn thiện 9 Action trước khi nghiệm thu.</p>
 </section>
 <footer><p>Phiên bản thử nghiệm Web — không thay đổi dữ liệu phòng chơi, vai trò hoặc tài khoản. <a href="https://github.com/WilliamPham0702/GMWW-V2.00/issues/106">Task #106</a></p></footer>
 </main>
 <script>
-  const slots=document.getElementById('slots'),status=document.getElementById('apiStatus');
-  function showSlots(rows){slots.replaceChildren();for(const row of rows){const d=document.createElement('div');d.className='slot';d.textContent=String(row.id||'').slice(-2)+' · '+(row.approved?'Sẵn sàng':'Chờ');slots.appendChild(d)}}
-  showSlots(Array.from({length:20},(_,i)=>({id:'character-'+String(i+1).padStart(2,'0'),approved:false})));
-  fetch('/api/game-characters/v4',{cache:'no-store'}).then(async res=>{
-    if(!res.ok)throw Error('HTTP '+res.status);
-    const data=await res.json();
-    if(!data.ok||!Array.isArray(data.characters)||data.characters.length!==20)throw Error('Dữ liệu V4 chưa hợp lệ');
-    showSlots(data.characters);
-    status.textContent='API V4 đã kết nối · '+data.approvedCount+'/20 nhân vật được duyệt · IPA: chưa cập nhật';
-  }).catch(()=>{status.textContent='Trang kiểm thử đang hiển thị danh sách chờ. API V4 chưa kết nối.'});
+const slots=document.getElementById('slots'),apiStatus=document.getElementById('apiStatus'),views=document.getElementById('views');
+const names={'character-01':'Chàng Biển','character-02':'Nàng Biển'};
+let currentId='character-01';
+const imageUrl=(id,dir='front')=>'/api/game-characters/'+id+'/image?dir='+dir+'&v=art-v4-02';
+function displayViews(id){
+ currentId=id;
+ document.getElementById('activeCharacterTitle').textContent='Character '+id.slice(-2)+' – '+names[id]+' · Đang test';
+ for(const view of views.querySelectorAll('[data-view]')){
+  const dir=view.dataset.view,img=view.querySelector('img');
+  img.src=imageUrl(id,dir);img.alt=names[id]+' – '+dir;
+ }
+ for(const tile of slots.querySelectorAll('button[data-character]')){
+  tile.setAttribute('aria-pressed',String(tile.dataset.character===id));
+ }
+ window.dispatchEvent(new CustomEvent('gmww-v4-select-character',{detail:{id,name:names[id]}}));
+}
+function showSlots(rows){
+ slots.replaceChildren();
+ for(const row of rows){
+  const usable=['character-01','character-02'].includes(row.id);
+  const box=document.createElement(usable?'button':'div');
+  box.className='slot'+(usable?' available':'');box.dataset.character=row.id;
+  if(usable){
+   box.type='button';box.setAttribute('aria-pressed',String(row.id===currentId));
+   const thumb=document.createElement('img');thumb.className='thumb';thumb.alt=names[row.id];thumb.loading='lazy';thumb.src=imageUrl(row.id);
+   box.append(thumb,document.createTextNode(row.id.slice(-2)+' · '+names[row.id]));
+   box.addEventListener('click',()=>displayViews(row.id));
+  }else box.textContent=row.id.slice(-2)+' · Chờ';
+  slots.appendChild(box);
+ }
+}
+const fallbackRows=Array.from({length:20},(_,i)=>({id:'character-'+String(i+1).padStart(2,'0')}));
+showSlots(fallbackRows);
+fetch('/api/game-characters/v4',{cache:'no-store'}).then(async response=>{
+ if(!response.ok)throw Error('HTTP '+response.status);
+ const data=await response.json();
+ if(!data.ok||!Array.isArray(data.characters)||data.characters.length!==20)throw Error('Invalid V4 data');
+ showSlots(data.characters);
+ apiStatus.textContent='Player Web: '+(data.previewCount??2)+' Character có ảnh · '+data.approvedCount+'/20 hoàn thành 9 Action · IPA: chưa cập nhật';
+}).catch(()=>{apiStatus.textContent='Character 01 và 02 có thể test ảnh; danh mục V4 tạm thời chưa kết nối.'});
+for(const view of views.querySelectorAll('[data-view]')){
+ view.addEventListener('click',()=>{for(const v of views.querySelectorAll('[data-view]'))v.setAttribute('aria-pressed',String(v===view));});
+}
 </script>
 <script type="module">
 import {createV4StageController,V4_FACE_LABELS} from './action-lab.mjs';
-const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),arrow=document.getElementById('labArrow'),status=document.getElementById('labStatus');
+const stage=document.getElementById('labStage'),pin=document.getElementById('labPin'),actor=document.getElementById('labCharacter'),status=document.getElementById('labStatus');
 const controller=createV4StageController(),directions=[...document.querySelectorAll('[data-dir]')];
 const actionLabels={idle:'Đứng yên',walk:'Đi bộ',run:'Chạy nhẹ',sit:'Ngồi xếp bằng','sit-down':'Đứng → ngồi','stand-up':'Ngồi → đứng',wave:'Vẫy tay',vote:'Giơ tay bỏ phiếu',result:'Thắng / Thua'};
-let selectedDirection='front',crowd=false,crowdTokens=[];
+let selectedDirection='front',activeCharacter='character-01',crowd=false,crowdTokens=[],lastFacing='';
+window.addEventListener('gmww-v4-select-character',e=>{
+ activeCharacter=e.detail.id;lastFacing='';
+ for(const token of crowdTokens)token.src=imageUrl(activeCharacter,token.dataset.dir||'front');
+});
 for(const button of directions)button.addEventListener('click',()=>{
  selectedDirection=button.dataset.dir;
  for(const b of directions)b.setAttribute('aria-pressed',String(b===button));
- status.textContent='Đã chọn '+V4_FACE_LABELS[selectedDirection]+' — bấm Đi bộ hoặc Chạy để thử';
+ controller.start('idle',performance.now(),{targetFacing:selectedDirection});
+ lastFacing='';actor.src=imageUrl(activeCharacter,selectedDirection);
 });
 for(const button of document.querySelectorAll('[data-action]'))button.addEventListener('click',()=>{
- const actionId=button.dataset.action;
- controller.start(actionId,performance.now(),{targetFacing:selectedDirection,result:document.getElementById('outcome').value});
+ controller.start(button.dataset.action,performance.now(),{targetFacing:selectedDirection,result:document.getElementById('outcome').value});
 });
 document.getElementById('labCrowd').addEventListener('click',()=>{
- crowd=!crowd;const button=document.getElementById('labCrowd');button.setAttribute('aria-pressed',String(crowd));
- crowdTokens.forEach(x=>x.remove());crowdTokens=[];
- if(crowd)for(let i=0;i<30;i++){const element=document.createElement('span');element.className='lab-actor';
- element.style.left=(12+(i%6)*15)+'%';element.style.top=(14+Math.floor(i/6)*17)+'%';
- stage.appendChild(element);crowdTokens.push(element);}
+ crowd=!crowd;document.getElementById('labCrowd').setAttribute('aria-pressed',String(crowd));
+ crowdTokens.forEach(t=>t.remove());crowdTokens=[];
+ if(crowd)for(let i=0;i<30;i++){
+  const img=document.createElement('img');img.className='lab-actor';img.alt='';
+  img.dataset.dir=['front','left','right','back'][i%4];img.src=imageUrl(i%2?'character-02':'character-01',img.dataset.dir);
+  img.style.left=(9+(i%6)*16)+'%';img.style.top=(11+Math.floor(i/6)*17)+'%';
+  stage.appendChild(img);crowdTokens.push(img);
+ }
 });
 document.getElementById('actorSize').addEventListener('change',event=>{
- const px=Number(event.target.value);pin.style.width=px+'px';pin.style.height=px+'px';
+ const px=Number(event.target.value);pin.style.width=px+'px';pin.style.height=Math.round(px*1.45)+'px';
 });
 function frame(now){
  const model=controller.sample(now);
  pin.style.left=(model.position.x*100).toFixed(2)+'%';
  pin.style.top=(model.position.y*100).toFixed(2)+'%';
- arrow.style.transform='rotate('+(-model.headingDeg).toFixed(2)+'deg)';
- const phase=model.phase==='turn'?'Đang quay hướng':model.phase==='move'?'Đang di chuyển':model.phase==='done'?'Hoàn tất':'Đang thực hiện';
- status.textContent=actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+' · đầu thẳng 0°'+(model.actionId==='result'?' · '+document.getElementById('outcome').selectedOptions[0].text:'');
+ if(model.facing!==lastFacing){actor.src=imageUrl(activeCharacter,model.facing);lastFacing=model.facing;}
+ const phase=model.phase==='turn'?'Đang quay hướng':model.phase==='move'?'Đang di chuyển (sprite tĩnh)':model.phase==='done'?'Hoàn tất điều khiển':'Đang thử lệnh';
+ const desc=(model.actionId==='walk'||model.actionId==='run')?' · chân chưa có frame chuyển động':' · tư thế hành động đang chờ sprite riêng';
+ status.textContent=(activeCharacter==='character-01'?'Chàng Biển':'Nàng Biển')+' · '+actionLabels[model.actionId]+' · '+phase+' · '+V4_FACE_LABELS[model.desiredFacing]+desc;
  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
