@@ -3,6 +3,7 @@ const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
+import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
 import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
@@ -1082,7 +1083,7 @@ export default {async fetch(request,env){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
     if(admissionResponse)return admissionResponse;
   }
-  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(gmwwMembersLiveScript.replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
+  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(patchPrivatePlayerCards(gmwwMembersLiveScript).replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
   if(url.pathname==="/api/operations/tasks"&&request.method==="GET"){
     try{const work=await fetchGmwwTasks();return j({ok:true,source:"github_public_issues",generatedAt:new Date().toISOString(),...work})}
     catch(error){const backup=normalizeGmwwTasks(GMWW_TASK_SNAPSHOT);return j({ok:true,source:"github_public_snapshot",fallback:true,generatedAt:GMWW_TASK_SNAPSHOT_GENERATED_AT,...backup})}
