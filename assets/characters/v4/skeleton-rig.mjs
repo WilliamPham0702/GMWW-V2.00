@@ -2,7 +2,7 @@
 // Coordinates in 100x160 virtual space. Each anatomical limb is a unique joint chain.
 export const SKELETON_ACTIONS=Object.freeze(['idle','walk','run','sit','sit-down','stand-up','wave','vote','result']);
 export const SKELETON_DIRECTIONS=Object.freeze(['front','left','right','back']);
-export const SKELETON_VERSION='4.11-footstep-gait';
+export const SKELETON_VERSION='4.12-action-review';
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t;
 const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -19,28 +19,39 @@ export function skeletonPose({action='idle',direction='front',elapsedMs=0,progre
  const speed=action==='run'?1.35:1;
  const sit=action==='sit'?1:action==='sit-down'?p:action==='stand-up'?1-p:0;
  const isSide=direction==='left'||direction==='right',side=direction==='left'?-1:1;
- const sway=action==='idle'?Math.sin(t*.003)*.7:0;
+ const breathing=action==='idle'?Math.sin(t*.003)*1.1:0;
+ const sway=breathing;
+ const celebrate=action==='result'&&outcome==='win'?Math.abs(Math.sin(t*.009))*3:0;
+ const disappointed=action==='result'&&outcome==='lose'?Math.min(1,t/650):0;
  const hipY=92+23*sit+(action==='result'&&outcome==='lose'?6:0);
  const gaitBounce=(action==='walk'||action==='run')?Math.abs(Math.sin(phase))*1.8:0;
- const shoulderY=58+20*sit+sway-gaitBounce;
- const head=pt(50,29+20*sit+sway-gaitBounce);
- const neck=pt(50,51+20*sit+sway-gaitBounce);
- const pelvis=pt(50,hipY-gaitBounce);
+ const shoulderY=58+20*sit+sway-gaitBounce-celebrate+disappointed*4;
+ const head=pt(50,29+20*sit+sway-gaitBounce-celebrate+disappointed*4);
+ const neck=pt(50,51+20*sit+sway-gaitBounce-celebrate+disappointed*4);
+ const pelvis=pt(50,hipY-gaitBounce-celebrate);
  const shoulderL=pt(isSide?48:36,shoulderY),shoulderR=pt(isSide?52:64,shoulderY);
  const hipL=pt(isSide?47:44,hipY),hipR=pt(isSide?53:56,hipY);
  let elbowL=pt(24,80+20*sit),handL=pt(22,101+20*sit);
  let elbowR=pt(76,80+20*sit),handR=pt(78,101+20*sit);
  if(action==='walk'||action==='run'){
-  elbowL=pt(27+stride*11*speed,78);handL=pt(24+stride*17*speed,99);
-  elbowR=pt(73-stride*11*speed,78);handR=pt(76-stride*17*speed,99);
+  const armSwing=action==='run'?1.35:1;
+  elbowL=pt(27+stride*11*armSwing,action==='run'?73:78);handL=pt(24+stride*17*armSwing,action==='run'?85:99);
+  elbowR=pt(73-stride*11*armSwing,action==='run'?73:78);handR=pt(76-stride*17*armSwing,action==='run'?85:99);
  }
  if(action==='wave'||action==='vote'){
-  elbowR=pt(77,action==='vote'?40:47);
-  handR=pt(action==='vote'?76:84,action==='vote'?13:23+Math.sin(t*.014)*5);
+  const rise=action==='vote'?smooth(t/520):smooth(t/360);
+  const waveSwing=action==='wave'?Math.sin(t*.017)*7:0;
+  elbowR=pt(mix(76,77,rise),mix(80,action==='vote'?42:48,rise));
+  handR=pt(mix(78,action==='vote'?76:84+waveSwing,rise),mix(101,action==='vote'?13:22,rise));
  }
  if(action==='result'&&outcome==='win'){
-  elbowL=pt(22,43);handL=pt(13,22+Math.sin(t*.01)*3);
-  elbowR=pt(78,43);handR=pt(87,22+Math.sin(t*.01)*3);
+  const cheer=smooth(t/420);
+  elbowL=pt(mix(24,22,cheer),mix(80,43,cheer));handL=pt(mix(22,13,cheer),mix(101,22+Math.sin(t*.01)*3,cheer));
+  elbowR=pt(mix(76,78,cheer),mix(80,43,cheer));handR=pt(mix(78,87,cheer),mix(101,22+Math.sin(t*.01)*3,cheer));
+ }
+ if(action==='result'&&outcome==='lose'){
+  elbowL=pt(29,82+disappointed*7);handL=pt(38,102+disappointed*8);
+  elbowR=pt(71,82+disappointed*7);handR=pt(62,102+disappointed*8);
  }
  let kneeL=pt(39,117),footL=pt(35,149),kneeR=pt(61,117),footR=pt(65,149);
  if(sit>0){
