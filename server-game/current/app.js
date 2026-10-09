@@ -2889,8 +2889,44 @@ function suggestPlayGameRoles(){
 async function savePlayGame(){
   const card=document.querySelector('.play-game-sheet-card'),mode=card?.dataset.mode||'play',clamp=x=>Math.max(0,Math.min(3600,Number(x)||0));
   if(mode==='play'){
-    const id=String(document.getElementById('playGameTemplateSelect')?.value||'');if(!id){playFlashError('Hãy chọn Ván Mẫu đã tạo trong Thư Viện.');return}await applyPlayGameTemplate(id);const need=playLiveMembers().length,total=playRolePlanTotal();if(total!==need){playFlashError('Ván Mẫu này dành cho '+total+' người nhưng Phòng hiện có '+need+' Người Chơi.');return}
-    playSetBusy(true);try{const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),compiled=template?.template?.compiledConfig||template?.template?.gameConfig;if(!compiled)throw new Error('Không tải được Ván Mẫu.');const matchId='match-'+Date.now().toString(36),data=await playRoomApi('/config',{method:'POST',body:JSON.stringify({gameConfig:compiled,matchId,matchRevision:Number(playSceneRuntime.room?.matchRevision||0)+1})});playSceneRuntime.gameConfig=data.gameConfig||compiled;playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.gameTemplateId=id;playSceneState.gameName=compiled.name||'Ván GMWW';playSceneState.matchId=matchId;playSceneState.assignmentsPreview=[];playSceneState.step='roles';savePlayScene();closePlayGameSheet();renderPlayScene()}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}return;
+    const id=String(document.getElementById('playGameTemplateSelect')?.value||'');
+    if(!id){playFlashError('Hãy chọn Ván Mẫu đã lưu trong Thư Viện.');return}
+    const need=playLiveMembers().length,total=playRolePlanTotal();
+    if(total!==need){playFlashError('Ván Mẫu có '+total+' lá, nhưng phòng có '+need+' người. Hãy chọn Ván Mẫu phù hợp.');return}
+    if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length){playFlashError('Hãy chọn ít nhất một Artifact hoặc tắt Artifact.');return}
+    const timing={
+      villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value),
+      wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value),
+      defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value),
+      autoAdvance:!!document.getElementById('playAutoAdvance')?.checked
+    };
+    playSceneState.gameTiming=timing;
+    playSetBusy(true);
+    try{
+      const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));
+      const base=template?.template?.compiledConfig||template?.template?.gameConfig;
+      if(!base)throw new Error('Không tải được Ván Mẫu.');
+      const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
+      const configured={
+        ...base,
+        roles:(base.roles||[]).map(r=>({...r,actionDurationSec:clamp(playSceneState.roleDurations?.[String(r.roleId)]??timing.defaultActionSec)})),
+        timing,
+        artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1}))
+      };
+      const matchId='match-'+Date.now().toString(36);
+      const data=await playRoomApi('/config',{method:'POST',body:JSON.stringify({
+        gameConfig:configured,matchId,matchRevision:Number(playSceneRuntime.room?.matchRevision||0)+1
+      })});
+      playSceneRuntime.gameConfig=data.gameConfig||configured;
+      playSceneRuntime.room=data.room||playSceneRuntime.room;
+      playSceneState.gameTemplateId=id;
+      playSceneState.gameName=configured.name||'Ván GMWW';
+      playSceneState.matchId=matchId;
+      playSceneState.assignmentsPreview=[];
+      playSceneState.step='roles';
+      savePlayScene();closePlayGameSheet();renderPlayScene();
+    }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+    return;
   }
   const total=playRolePlanTotal();if(total<1){playFlashError('Ván Mẫu phải có ít nhất một Lá Bài được chọn.');return}
   const roles=playSortedRoles().filter(r=>Number(playSceneState.rolePlan?.[r.id])>0);
@@ -3340,7 +3376,7 @@ function initPlayScene(){
     playSceneState.gameTiming=playSceneState.gameTiming||{};
     const key={playVillageDiscussionSec:'villageDiscussionSec',playWolfDiscussionSec:'wolfDiscussionSec',playDefaultActionSec:'defaultActionSec',playAutoAdvance:'autoAdvance'}[id];
     playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
-    savePlayScene();if(id==='playDefaultActionSec')void renderPlayGameRoles();
+    savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
   document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{playSceneState.artifactsEnabled=!!e.currentTarget.checked;savePlayScene();updatePlayArtifactToggle()});
   document.getElementById('playGameSuggest')?.addEventListener('click',suggestPlayGameRoles);
