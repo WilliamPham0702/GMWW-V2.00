@@ -4018,3 +4018,13 @@ body.play-immersive #start #playShell[data-phase="lobby"] #gmTopMenu.gm-stage-do
 #playGameSheet .play-template-artifact-time{margin:7px 0 12px}
 #playGameSheet .play-template-artifact-time:has(input:disabled){opacity:.48}
 #playGameSheet .play-timing-grid>input[type="hidden"],#playGameSheet .play-timing-grid>input[hidden]{display:none!important}
+
+/* GMWW home iPhone artwork containment and single interactive dock — 2026-10-10 */
+#home .gmww-home-scene-v351 .gmww-home-hero-artboard-v351{aspect-ratio:720/490!important;overflow:hidden!important;background:#047da5!important}
+#home .gmww-home-scene-v351 .gmww-home-scene-image-v350{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center center!important;transform:none!important}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-art-v352{object-fit:cover!important;object-position:center!important}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-action-v352{isolation:isolate!important}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-action-v352:before{z-index:1!important}
+body:not(.play-immersive) #bottomNav{background-image:linear-gradient(180deg,#0782a5 0%,#035b84 48%,#032f58 100%)!important;background-repeat:no-repeat!important;background-size:cover!important;isolation:isolate!important}
+body:not(.play-immersive) #bottomNav:before,body:not(.play-immersive) #bottomNav:after{background-image:none!important;content:none!important}
+body:not(.play-immersive) #bottomNav>.nav{z-index:2!important}
