@@ -21,7 +21,7 @@ export function slotForFilename(name){
 export function validateDimensions(width,height){
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<V416_MIN_SIZE.width||height<V416_MIN_SIZE.height)
   return {ok:false,error:'RESOLUTION_TOO_SMALL'};
- if(Math.abs(width/height-2/3)>.004)return {ok:false,error:'RATIO_MISMATCH'};
+ if(!([2/3,5/8].some(aspect=>Math.abs(width/height-aspect)<=.004)))return {ok:false,error:'RATIO_MISMATCH'};
  return {ok:true};
 }
 export function alphaDiagnostics(imageData){
