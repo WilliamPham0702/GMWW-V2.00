@@ -3867,3 +3867,26 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #home .gmww-home-activity-v351 .gmww-home-recent-row small{font-size:10px;white-space:nowrap}
 #home .gmww-home-activity-v351 .gmww-home-recent-row i{font-size:19px;font-style:normal}
 @media(max-width:380px){#home .gmww-home-plaque-v351{padding:5px 3px;border-width:2px}#home .gmww-home-activity-v351 .gmww-home-recent-row{grid-template-columns:28px minmax(0,.85fr) minmax(0,1.1fr) auto 8px;gap:4px}#home .gmww-home-activity-v351 .gmww-home-recent-avatar{width:28px;height:28px}#home .gmww-home-activity-v351 .gmww-home-recent-row small{font-size:9px}}
+
+/* V3.51 sea-art direction revision: independent banner composition, compact glass panels. */
+#home .gmww-home-rebuild-v351{gap:8px!important;background:linear-gradient(180deg,#048fbc 0%,#007ca7 24%,#005b86 58%,#003e69 100%)!important}
+#home .gmww-home-hero-artboard-v351{aspect-ratio:720/490!important;background:#008bb9}
+#home .gmww-home-hero-artboard-v351:after{content:"";position:absolute;right:0;top:0;bottom:0;width:39%;background:linear-gradient(90deg,transparent,#04769b25 22%,#005c8a55);pointer-events:none}
+#home .gmww-home-scene-v351 .gmww-home-scene-image-v350{object-fit:cover!important;object-position:39% 50%!important}
+#home .gmww-home-plaque-v351{z-index:2;top:28%!important;right:2%!important;width:45%!important;min-height:35%!important;transform:none!important;border:3px solid #fbe3a5!important;border-radius:19px!important;background:radial-gradient(ellipse at 40% 5%,#0f8db6 0%,#005582 65%,#00385e 100%)!important;box-shadow:0 0 0 4px #006a8d,0 0 0 6px #d3b976,0 6px 20px #00354fba,inset 0 2px 15px #50edff66!important}
+#home .gmww-home-plaque-v351:before{content:"⚓";position:absolute;top:-19px;left:calc(50% - 17px);display:grid;place-items:center;width:34px;height:34px;border:2px solid #ffdb8d;border-radius:50%;background:#0075a4;color:#ffe8b4;font-size:20px}
+#home .gmww-home-plaque-v351 strong{font-size:clamp(17px,5.1vw,33px)!important;letter-spacing:-.035em!important}
+#home .gmww-home-cta-wrap-v351{padding:0 7px!important}
+#home .gmww-home-cta-wrap-v351 .gmww-home-cta-v350{min-height:66px!important;border-color:#ffe2a4!important;background:linear-gradient(180deg,#67edff 0%,#05a8dc 20%,#007bb8 65%,#00517f 100%)!important}
+#home .gmww-home-tiles-v351 button{aspect-ratio:1.15/1!important;border:2px solid #b3f9ff!important;box-shadow:0 2px 10px #002e5caa,inset 0 1px 5px #fff8!important}
+#home .gmww-home-tiles-v351 button:after{inset:35% 0 0!important;background:linear-gradient(180deg,transparent 0%,#005078a6 38%,#00395f 100%)!important}
+#home .gmww-home-stats-v351,#home .gmww-home-activity-v351{padding:9px 10px!important;border:1.5px solid #b9faff!important;border-radius:14px!important;background:linear-gradient(110deg,#067ba5c9,#00456ecf)!important;box-shadow:0 2px 9px #002c5570,inset 0 1px 6px #8af3ff4a!important}
+#home .gmww-home-stats-v351 .gmww-home-stats-grid-v350>div{min-height:61px!important;padding:4px 2px!important;border-radius:10px!important}
+#home .gmww-home-stats-v351 .gmww-home-stats-grid-v350 strong{font-size:19px!important}
+#home .gmww-home-stats-v351 .gmww-home-stats-grid-v350 small{font-size:10px!important}
+#home .gmww-home-activity-v351 .gmww-home-recent-row{display:grid!important;grid-template-columns:32px minmax(0,.9fr) minmax(0,1.3fr) auto 10px!important;gap:6px!important;min-height:45px!important}
+#home .gmww-home-activity-v351 .gmww-home-recent-row b,#home .gmww-home-activity-v351 .gmww-home-recent-row span,#home .gmww-home-activity-v351 .gmww-home-recent-row small{display:block!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+#home .gmww-home-activity-v351 .gmww-home-recent-row span{font-size:10px!important}
+#home .gmww-home-activity-v351 .gmww-home-recent-row small{font-size:9px!important}
+#home .gmww-home-activity-v351 .gmww-home-recent-rows{max-height:148px;overflow-y:auto!important}
+@media(max-width:380px){#home .gmww-home-activity-v351 .gmww-home-recent-row{grid-template-columns:27px minmax(0,.8fr) minmax(0,1.1fr) auto 8px!important;gap:3px!important}}
