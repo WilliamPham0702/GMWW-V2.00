@@ -1,0 +1,141 @@
+<!doctype html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Character V4.16 · Artwork chất lượng cao | GMWW</title>
+<meta name="theme-color" content="#09394c">
+<style>
+:root{font:15px/1.4 system-ui,-apple-system,sans-serif;color:#effcfa;background:#072d40}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#258e99,#0f5066 48%,#072a3d);min-height:100vh}
+main{max-width:1100px;margin:auto;padding:20px 13px 80px;display:grid;gap:15px}
+h1{font-size:clamp(25px,5vw,35px);line-height:1.2;margin:5px 0}h2{font-size:19px;margin:0 0 9px}
+p{font-size:14px;line-height:1.55;color:#d1ecec;margin:5px 0}small{font-size:12px;color:#c6e2e7}
+section{background:#0d3e54e3;border:1px solid #70a7b6;border-radius:17px;padding:17px}
+.banner{border:0;background:transparent;padding:5px}
+.tag{display:inline-flex;color:#ffe6ad;border:1px solid #ddb86f;padding:6px 10px;border-radius:40px;font-size:12px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{padding:11px;border-radius:11px;background:#1b5d7380;border:1px solid #76aab7}
+.stat strong{display:block;font-size:25px;margin-top:4px;color:#fff}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+button,select,input[type=file]{border-radius:10px;background:#0d667a;color:#f7feff;font:inherit;border:1px solid #89caca;padding:10px 12px;max-width:100%}
+button{cursor:pointer;font-weight:700;min-height:42px}
+button:disabled{opacity:.42;cursor:default}
+label{font-size:13px;font-weight:600}
+.note{color:#f9dda6} .muted{font-size:12px;color:#bbdce4}
+pre{font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;background:#092c3c;padding:11px;border-radius:9px;max-height:230px;overflow:auto}
+.assets{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.asset{background:linear-gradient(145deg,#176782,#10485b);padding:8px;border-radius:13px;min-width:0}
+.asset img{width:100%;aspect-ratio:2/3;object-fit:contain;background:conic-gradient(#bad2d5 25%,#e2eeef 0 50%,#bad2d5 0 75%,#e2eeef 0) 0 0 / 20px 20px;border-radius:8px}
+.asset figcaption{font-size:12px;text-align:center;margin-top:6px}
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.preview{position:relative;overflow:hidden;border:1px solid #72aebc;border-radius:11px;background:linear-gradient(#3a92a5,#153e55);display:grid;justify-items:center}
+.preview canvas{width:100%;aspect-ratio:5/8;height:auto}
+.preview span{font-size:11px;padding:5px}
+a{color:#adf5ed}
+@media(max-width:640px){main{padding:10px 8px 75px}section{padding:11px}.stats{gap:6px}.stat{padding:8px}.stat strong{font-size:19px}.gallery{gap:4px}.preview span{font-size:10px}}
+</style></head><body>
+<main>
+<header class="banner">
+<p>GMWW · Character Studio</p>
+<h1>Artwork V4.16 · Kiểm thử chất lượng cao</h1>
+<span class="tag">STAGING · CHƯA THAY CHARACTER TRONG GAME</span>
+<p>Chuẩn bị bộ Skin 2D mới cho Chàng Biển và Nàng Biển, 4 góc nhìn thật và 17 lớp khớp mỗi góc. Khung xương 9 Action đã tạm đạt V4.14 tiếp tục được giữ nguyên.</p>
+</header>
+<section>
+<h2>Kiểm tra bộ đồ họa</h2>
+<div class="stats">
+<div class="stat"><small>Master ≥1024×1536</small><strong id="masters">0 / 8</strong></div>
+<div class="stat"><small>Lớp Skin trong suốt</small><strong id="layers">0 / 136</strong></div>
+<div class="stat"><small>Nghiệm thu Production</small><strong id="approval">Chờ</strong></div>
+</div>
+<p class="muted">Đây là tiến độ của các file ảnh mới nạp để kiểm thử, không phải số lượng ảnh đã có trong Runtime. 8 master = 2 nhân vật × 4 hướng; 136 lớp = 2 × 4 × 17 lớp.</p>
+</section>
+<section>
+<h2>Hai nhân vật · Kiểm tra 4 hướng</h2>
+<p>Đây là bản Skin vector V4.14 đang được bảo toàn để so sánh; không trình bày nó là artwork cao cấp đã hoàn thành.</p>
+<div class="assets">
+<div><strong>01 · Chàng Biển</strong><div class="gallery" id="maleViews"></div></div>
+<div><strong>02 · Nàng Biển</strong><div class="gallery" id="femaleViews"></div></div>
+</div>
+</section>
+<section>
+<h2>Nhận artwork cao cấp từ tệp gốc</h2>
+<p>Đọc PNG hoặc WebP trên thiết bị, yêu cầu kích thước tối thiểu <strong>1024×1536</strong> và nền trong suốt. Mỗi tệp được kiểm tra trước khi dùng; xử lý cục bộ trong trình duyệt, không tải tự động lên server.</p>
+<p>Quy tắc tên tệp: <code>character-01_front.png</code> (toàn thân) hoặc <code>character-01_front_hair_back.png</code> (lớp tóc sau). Dùng <code>character-02</code> cho Nàng Biển, và <code>left</code>, <code>right</code>, <code>back</code> cho 3 hướng còn lại.</p>
+<div class="row" style="margin-top:12px">
+<label for="files">Chọn nhiều tệp PNG / WebP</label>
+<input type="file" id="files" accept="image/png,image/webp" multiple>
+</div>
+<div class="row" style="margin-top:12px">
+<label><input type="checkbox" id="matte"> Tách nền cùng màu, chỉ xóa vùng nối với mép ảnh</label>
+<label for="tol">Ngưỡng màu</label><select id="tol"><option value="24">Nhẹ 24</option><option value="38" selected>Chuẩn 38</option><option value="55">Mạnh 55</option></select>
+</div>
+<p class="note">Tách nền tự động chỉ hỗ trợ ảnh phông trơn, cần kiểm tra các mép tóc/áo sau xử lý. Không thể tự biến một ảnh toàn thân thành 17 lớp chuyển động hoàn chỉnh.</p>
+<div class="row" style="margin-top:12px">
+<button type="button" id="export" disabled>Xuất ZIP 144 PNG khi đủ bộ</button>
+<button type="button" id="clear">Xóa tệp đã nạp khỏi phiên</button>
+</div>
+<p id="status" role="status" aria-live="polite" style="margin-top:10px">Sẵn sàng kiểm tra.</p>
+<div class="assets" id="uploadedAssets" style="margin-top:12px"></div>
+<details style="margin-top:10px"><summary>Chi tiết tệp / lỗi</summary><pre id="report">Chưa có tệp nào.</pre></details>
+</section>
+<section>
+<h2>Nguồn artwork 2 nhân vật</h2>
+<p>Artwork tham khảo đã được tạo tại Canva, nhưng chưa được xuất thành tệp PNG nền trong suốt và chưa được nhập vào GitHub. Các ảnh này mới là nguồn thiết kế, chưa thay thế Skin đang chạy.</p>
+<p><a href="https://www.canva.com/M/MAHXh7QRhj4" target="_blank" rel="noopener noreferrer">Artwork Chàng Biển mới (Canva)</a> · <a href="https://www.canva.com/M/MAHXh6E1qMA" target="_blank" rel="noopener noreferrer">Artwork Nàng Biển mới (Canva)</a></p>
+<p><a href="./skin-preview-v414.html">Thử 9 Action Skin V4.14</a> · <a href="./skin-master-v415.html">Xuất bộ vector V4.15</a></p>
+</section>
+</main>
+<script type="module">
+import {V414_DIRECTIONS} from './skin-v414.mjs';
+import {paintMaster} from './skin-master-v415.mjs';
+import {ARTWORK_QA_VERSION,normalizeArtworkFile,checkCoverage,exportValidatedAssets} from './artwork-intake-v416.mjs';
+const $=id=>document.getElementById(id),storage=new Map();
+const labels={front:'Trước',left:'Trái',right:'Phải',back:'Sau'};
+for(const [id,target] of [['character-01','maleViews'],['character-02','femaleViews']]){
+ for(const dir of V414_DIRECTIONS){
+  const fig=document.createElement('div');fig.className='preview';
+  const c=document.createElement('canvas');c.width=180;c.height=288;
+  paintMaster(c.getContext('2d'),id,dir,{width:180,height:288});
+  const text=document.createElement('span');text.textContent=labels[dir];
+  fig.append(c,text);$(target).append(fig);
+ }
+}
+const logs=[];function log(s){logs.unshift(new Date().toLocaleTimeString('vi-VN')+'  '+s);$('report').textContent=logs.slice(0,150).join('\n');}
+function refresh(){
+ const c=checkCoverage(storage.keys());
+ $('masters').textContent=c.mastersReady+' / '+c.totalMaster;
+ $('layers').textContent=c.layersReady+' / '+c.totalLayers;
+ $('approval').textContent='Chờ';
+ $('export').disabled=!c.complete;
+ const grid=$('uploadedAssets');grid.replaceChildren();
+ for(const item of [...storage.values()].filter(x=>x.layer===null).slice(0,8)){
+  const fig=document.createElement('figure');fig.className='asset';
+  const image=document.createElement('img');image.src=item.objectUrl;image.alt='Master '+item.id+' '+item.direction;
+  const label=document.createElement('figcaption');label.textContent=item.id+' · '+labels[item.direction]+' · '+item.width+'×'+item.height;
+  fig.append(image,label);grid.append(fig);
+ }
+ $('status').textContent='Hợp lệ: '+c.mastersReady+'/8 master, '+c.layersReady+'/136 lớp; còn thiếu '+(c.missingMasters.length+c.missingLayers.length)+' tệp.';
+}
+$('files').addEventListener('change',async e=>{
+ const items=[...e.target.files||[]];
+ $('files').disabled=true;
+ for(const file of items){
+  try{
+   const asset=await normalizeArtworkFile(file,{matte:$('matte').checked,tolerance:Number($('tol').value)});
+   const old=storage.get(asset.key);if(old)URL.revokeObjectURL(old.objectUrl);
+   storage.set(asset.key,asset);log('ĐẠT '+file.name+' '+asset.width+'×'+asset.height);
+  }catch(err){log('KHÔNG ĐẠT '+file.name+': '+String(err?.message||err));}
+ }
+ $('files').value='';$('files').disabled=false;refresh();
+});
+$('clear').addEventListener('click',()=>{
+ for(const asset of storage.values())URL.revokeObjectURL(asset.objectUrl);
+ storage.clear();log('Đã xóa mọi ảnh của phiên thử');refresh();
+});
+$('export').addEventListener('click',async()=>{
+ $('export').disabled=true;
+ try{const x=await exportValidatedAssets(storage.values(),(i,n)=>{$('status').textContent='Đang đóng gói '+i+'/'+n;});log('Xuất '+x.files+' PNG · '+x.bytes+' bytes');}
+ catch(e){log('Lỗi ZIP '+String(e.message||e));}
+ finally{refresh();}
+});
+refresh();document.documentElement.dataset.artwork=ARTWORK_QA_VERSION;
+</script></body></html>
