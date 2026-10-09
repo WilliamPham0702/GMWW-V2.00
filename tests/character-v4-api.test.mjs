@@ -9,7 +9,10 @@ test('V4 preview API yields exactly 20 new character slots, none falsely approve
  assert.equal(obj.ipaDeployed,false);
  assert.equal(obj.characters.length,20);
  assert.equal(obj.approvedCount,0);
- assert.ok(obj.characters.every(c=>c.status==='awaiting-artwork'&&!c.approved));
+ assert.equal(obj.previewCount,2);
+ assert.ok(obj.characters.every(c=>!c.approved));
+ assert.ok(obj.characters.slice(0,2).every(c=>c.status==='preview-artwork'&&c.hasArtwork));
+ assert.ok(obj.characters.slice(2).every(c=>c.status==='awaiting-artwork'&&!c.hasArtwork));
  assert.equal(new Set(obj.characters.map(c=>c.id)).size,20);
 });
 test('V4 preview retains approved direction and action contracts',()=>{
