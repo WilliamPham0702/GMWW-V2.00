@@ -1,0 +1,90 @@
+// Skeleton-first GMWW V4. No raster artwork, no legacy game/IPA coupling.
+// Coordinates in 100x160 virtual space. Each anatomical limb is a unique joint chain.
+export const SKELETON_ACTIONS=Object.freeze(['idle','walk','run','sit','sit-down','stand-up','wave','vote','result']);
+export const SKELETON_DIRECTIONS=Object.freeze(['front','left','right','back']);
+export const SKELETON_VERSION='4.10-skeleton-proposal';
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const mix=(a,b,t)=>a+(b-a)*t;
+const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+const pt=(x,y)=>({x,y});
+const chain=(a,b,c)=>[a,b,c];
+export function skeletonPose({action='idle',direction='front',elapsedMs=0,progress=.5,outcome='win'}={}){
+ if(!SKELETON_ACTIONS.includes(action))throw Error('INVALID_ACTION');
+ if(!SKELETON_DIRECTIONS.includes(direction))throw Error('INVALID_DIRECTION');
+ if(!['win','lose'].includes(outcome))throw Error('INVALID_OUTCOME');
+ const t=Math.max(0,Number(elapsedMs)||0),p=smooth(progress),phase=t*(action==='run'?.016:.010);
+ const stride=(action==='walk'||action==='run')?Math.sin(phase):0;
+ const speed=action==='run'?1.35:1;
+ const sit=action==='sit'?1:action==='sit-down'?p:action==='stand-up'?1-p:0;
+ const isSide=direction==='left'||direction==='right',side=direction==='left'?-1:1;
+ const sway=action==='idle'?Math.sin(t*.003)*.7:0;
+ const hipY=92+23*sit+(action==='result'&&outcome==='lose'?6:0);
+ const shoulderY=58+20*sit+sway;
+ const head=pt(50,29+20*sit+sway);
+ const neck=pt(50,51+20*sit+sway);
+ const pelvis=pt(50,hipY);
+ const shoulderL=pt(isSide?48:36,shoulderY),shoulderR=pt(isSide?52:64,shoulderY);
+ const hipL=pt(isSide?47:44,hipY),hipR=pt(isSide?53:56,hipY);
+ let elbowL=pt(24,80+20*sit),handL=pt(22,101+20*sit);
+ let elbowR=pt(76,80+20*sit),handR=pt(78,101+20*sit);
+ if(action==='walk'||action==='run'){
+  elbowL=pt(27+stride*11*speed,78);handL=pt(24+stride*17*speed,99);
+  elbowR=pt(73-stride*11*speed,78);handR=pt(76-stride*17*speed,99);
+ }
+ if(action==='wave'||action==='vote'){
+  elbowR=pt(77,action==='vote'?40:47);
+  handR=pt(action==='vote'?76:84,action==='vote'?13:23+Math.sin(t*.014)*5);
+ }
+ if(action==='result'&&outcome==='win'){
+  elbowL=pt(22,43);handL=pt(13,22+Math.sin(t*.01)*3);
+  elbowR=pt(78,43);handR=pt(87,22+Math.sin(t*.01)*3);
+ }
+ let kneeL=pt(39,117),footL=pt(35,149),kneeR=pt(61,117),footR=pt(65,149);
+ if(sit>0){
+  // Knees move outward moderately, feet cross INWARD below the pelvis.
+  kneeL=pt(mix(39,31,sit),mix(117,127,sit));
+  kneeR=pt(mix(61,69,sit),mix(117,127,sit));
+  footL=pt(mix(35,57,sit),mix(149,141,sit));
+  footR=pt(mix(65,43,sit),mix(149,141,sit));
+  elbowL=pt(mix(elbowL.x,31,sit),mix(elbowL.y,95+20*sit,sit));
+  handL=pt(mix(handL.x,39,sit),mix(handL.y,130,sit));
+  elbowR=pt(mix(elbowR.x,69,sit),mix(elbowR.y,95+20*sit,sit));
+  handR=pt(mix(handR.x,61,sit),mix(handR.y,130,sit));
+ }
+ if(action==='walk'||action==='run'){
+  kneeL=pt(39+stride*12*speed,117+Math.max(0,-stride)*5);
+  footL=pt(35+stride*20*speed,149-Math.max(0,-stride)*11*speed);
+  kneeR=pt(61-stride*12*speed,117+Math.max(0,stride)*5);
+  footR=pt(65-stride*20*speed,149-Math.max(0,stride)*11*speed);
+ }
+ if(isSide){
+  const projection=.45;
+  for(const q of [shoulderL,shoulderR,hipL,hipR,elbowL,elbowR,handL,handR,kneeL,kneeR,footL,footR])q.x=50+(q.x-50)*projection*side;
+ }
+ return Object.freeze({action,direction,sit,head,neck,pelvis,
+  leftArm:chain(shoulderL,elbowL,handL),rightArm:chain(shoulderR,elbowR,handR),
+  leftLeg:chain(hipL,kneeL,footL),rightLeg:chain(hipR,kneeR,footR),
+  torso:[neck,pelvis],headTiltDeg:0,skinApplied:false});
+}
+export function drawSkeleton(ctx,pose,{width=240,height=360}={}){
+ ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(width/100,height/160);
+ const line=(points,color='#69e9f2',weight=3.3)=>{
+  ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+  for(const p of points.slice(1))ctx.lineTo(p.x,p.y);
+  ctx.strokeStyle=color;ctx.lineWidth=weight;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+ };
+ // Back limbs first, then torso, then foreground limbs: exactly 2 arms and 2 legs.
+ line(pose.leftLeg,'#f3be82',4);line(pose.rightLeg,'#f3be82',4);
+ line(pose.leftArm,'#8ce0fa',3.7);line(pose.rightArm,'#8ce0fa',3.7);
+ line(pose.torso,'#fff3cb',5);
+ ctx.beginPath();ctx.arc(pose.head.x,pose.head.y,15,0,Math.PI*2);
+ ctx.fillStyle='#f3d2a2';ctx.fill();ctx.strokeStyle='#fff4d5';ctx.lineWidth=2;ctx.stroke();
+ for(const part of [pose.leftArm,pose.rightArm,pose.leftLeg,pose.rightLeg]){
+  for(const q of part){ctx.beginPath();ctx.arc(q.x,q.y,2.7,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();}
+ }
+ // Face direction marker (never rotates head geometry).
+ ctx.fillStyle='#164458';ctx.beginPath();
+ const d=pose.direction==='back'?-1:1;
+ ctx.arc(pose.head.x+(pose.direction==='left'?-8:pose.direction==='right'?8:0),pose.head.y+3*d,2.5,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
