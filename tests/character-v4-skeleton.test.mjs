@@ -37,3 +37,17 @@ test('web studio is separate from live player and IPA',()=>{
  const ctx=new Proxy({}, {get:(o,k)=>o[k]||(o[k]=()=>{}),set:(o,k,v)=>{o[k]=v;return true;}});
  assert.doesNotThrow(()=>drawSkeleton(ctx,skeletonPose({action:'sit'})));
 });
+
+test('front and back gait lifts alternating feet instead of skating sideways',()=>{
+ for(const direction of ['front','back']){
+  const a=skeletonPose({action:'walk',direction,elapsedMs:0});
+  const b=skeletonPose({action:'walk',direction,elapsedMs:Math.PI/.010});
+  assert.equal(a.leftLeg[2].x,b.leftLeg[2].x,'front/back feet stay in their own lanes');
+  assert.notEqual(a.leftLeg[2].y,b.leftLeg[2].y,'left foot lifts on alternating step');
+  assert.notEqual(a.rightLeg[2].y,b.rightLeg[2].y,'right foot lifts on alternating step');
+ }
+ const a=skeletonPose({action:'walk',direction:'front',elapsedMs:0});
+ assert.ok(a.leftLeg[2].y<a.rightLeg[2].y,'left foot airborne while right is planted');
+ const b=skeletonPose({action:'walk',direction:'front',elapsedMs:Math.PI/.010});
+ assert.ok(b.rightLeg[2].y<b.leftLeg[2].y,'right foot airborne while left is planted');
+});
