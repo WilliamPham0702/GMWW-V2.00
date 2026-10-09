@@ -23,6 +23,10 @@ test('reject Skin V4.13 fully, disable all body-overlay renderers and keep activ
  assert.doesNotMatch(preview,/renderV4Skin/);
  assert.doesNotMatch(preview,/data-mode="skin"/);
  assert.ok(!preview.includes('/api/rooms'));
+ const live=fs.readFileSync(new URL('../assets/village/village.mjs',import.meta.url),'utf8');
+ const ipa=fs.readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
+ assert.doesNotMatch(live,/skeleton-skin\.mjs|renderV4Skin/);
+ assert.doesNotMatch(ipa,/skeleton-skin\.mjs|renderV4Skin/);
 });
 
 test('new skin contract demands coherent 4-view high-resolution rig layers before publication',()=>{
