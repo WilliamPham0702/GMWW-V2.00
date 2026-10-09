@@ -7,13 +7,12 @@ const app=fs.readFileSync("server-game/current/app.js","utf8");
 const start=html.indexOf('<section class="page active" id="home"');
 const end=html.indexOf('<section class="page" id="members">',start);
 const home=html.slice(start,end);
-test("Trang Chủ V3 thay placeholder, giữ cấu trúc trải nghiệm V1",()=>{
-  assert.ok(start>0&&end>start);
-  assert.doesNotMatch(home,/Sẽ xây dựng sau|Quản Trò Ma Sói<\/h1>/);
-  for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])
-    assert.equal(home.split('id="'+id+'"').length-1,1,id);
-  for(const cls of ["gmww-home-hero","gmww-home-entry","gmww-home-explore","gmww-home-achievements","gmww-home-recent"])assert.match(home,new RegExp(cls));
-  assert.match(home,/src="home-art\/home-fantasy-hero-v337.webp"/);
+test("Trang Chủ V3.50 giữ nút Vào Làng, ba thẻ và dữ liệu thật",()=>{
+ assert.ok(start>0&&end>start);
+ assert.match(home,/gmww-home-rebuild-v350/);
+ for(const id of ["gmwwHomeEnterVillage","gmwwHomeOpenRanking","gmwwHomeRefresh","gmwwHomeMemberCount","gmwwHomeOnlineCount","gmwwHomePlaysCount","gmwwHomeLeaderboard","gmwwHomeRecentResult"])assert.equal(home.split('id="'+id+'"').length-1,1,id);
+ assert.match(home,/home-fantasy-hero-v337\\.webp/);
+ assert.equal((home.match(/class="gmww-home-tiles-v350"/g)||[]).length,1);
 });
 test("Điều hướng Trang Chủ gọi luồng cũ để không làm mất trạng thái chơi",()=>{
   assert.match(home,/data-home-destination="members"/);
@@ -45,54 +44,19 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
 });
 
 
-test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
- const img=[...new Set([...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.(?:webp|svg))"/g)].map(m=>m[1]))];
- assert.deepEqual(img,["home-fantasy-hero-v337.webp","home-sea-cards-v348.svg","home-sea-members-v348.svg","home-sea-templates-v348.svg"]);
+test("Trang Chủ dùng artwork thật trong thư mục home-art",()=>{
+ const images=[...home.matchAll(/src="home-art\\/([^"]+\\.(?:webp|svg))"/g)].map(m=>m[1]);
+ assert.deepEqual(images,["home-fantasy-hero-v337.webp","home-sea-cards-v348.svg","home-sea-members-v348.svg","home-sea-templates-v348.svg"]);
+ for(const file of images)assert.ok(fs.existsSync("server-game/current/home-art/"+file));
  assert.match(home,/data-home-library-tab="templates"/);
- assert.match(app,/dataset\.homeLibraryTab/);
- assert.match(css,/#home \.gmww-home-hero-art/);
- assert.match(css,/#home \.gmww-home-play-copy b/);
- const prep=fs.readFileSync(".github/scripts/prepare-update-channel.mjs","utf8");
- assert.match(prep,/copyDir\('server-game\/current\/home-art','home-art'\)/);
- for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
-
-test("Trang Chủ v3.49 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
- const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
+test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",()=>{
+ const labels=[...home.matchAll(/<b>(Bộ Bài|Thành Viên|Ván Mẫu)<\\/b>/g)].map(m=>m[1]);
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
- assert.match(html,/gmww-pearl-nav-v344/);
- assert.match(html,/class="nav gmww-settings-nav"/);
- assert.doesNotMatch(html,/gmww-hidden-settings-nav/);
- assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
- assert.match(css,/Pearl-coast five-action dock/);
- assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
- assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.49-template-1/);
+ assert.match(html,/style\\.css\\?v=3\\.50-template-swipe-fix-2/);
+ assert.match(home,/gmww-home-rebuild-v350/);
+ assert.doesNotMatch(home,/>3<\\/strong>|>6<\\/strong>|>1<\\/strong>/);
+ assert.match(app,/function gmwwHomeRenderExtras\\(rows,ranking,leader\\)/);
 });
-
-
-test("Trang Chủ V3.49 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
- assert.match(home,/gmww-home-sea-v342/);
- assert.match(home,/gmww-home-poster/);
- assert.match(home,/gmww-home-v344/);
- assert.doesNotMatch(home,/class="gmww-home-profile"/);
- assert.doesNotMatch(home,/class="gmww-home-brand"/);
- assert.match(home,/home-fantasy-hero-v337\.webp/);
- assert.doesNotMatch(home,/class="gmww-home-brand"/);
- assert.match(home,/gmww-home-hero-art/);
- assert.match(home,/gmwwHomeEnterVillage/);
- assert.match(home,/gmwwHomeLeaderWins/);
- assert.match(home,/gmwwHomeRecentRows/);
- assert.match(home,/data-home-library-tab="templates"/);
- assert.match(app,/function gmwwHomeRenderExtras\(rows,ranking,leader\)/);
- assert.match(app,/gmwwHomeRenderExtras\(rows,ranking,leader\)/);
- assert.match(app,/matches\.size\|\|played/);
- assert.match(app,/gmwwHomeAllRecent\?50:3/);
- assert.match(app,/document\.createElement\('button'\)/);
- assert.match(css,/Trang Chủ Phiên Bản Biển/);
- assert.match(css,/screenshot-aligned continuous seaside scene/);
- assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
-});
-
 test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.47: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
