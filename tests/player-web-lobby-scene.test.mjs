@@ -77,12 +77,12 @@ test('Player lobby does not create a persistent bottom ready/status bar; seat re
  const end=live.indexOf('function syncPlayerSetupState(){',start);
  assert.ok(start>=0&&end>start);
  const section=live.slice(start,end);
- assert.doesNotMatch(section,/createElement|appendChild|classList\\.toggle/);
- assert.match(section,/updatePlayerTopMenu\\(\\)/);
- assert.match(live,/info\\.textContent=playerTopMenuStatus\\(\\)/);
+ assert.ok(!section.includes('createElement')&&!section.includes('appendChild')&&!section.includes('classList.toggle'));
+ assert.ok(section.includes('updatePlayerTopMenu();'));
+ assert.ok(live.includes('info.textContent=playerTopMenuStatus()'));
  const ctx={state:{participantId:'member:safari',ready:false},currentRoomPlayer:()=>({ready:true}),updatePlayerTopMenu:()=>ctx.topUpdates++,
    $:()=>({remove:()=>ctx.bottomRemoved++}),bottomRemoved:0,topUpdates:0};
- vm.runInNewContext(section+'\\nthis.cleanDock=ensureVillageReadyDock;',ctx);
+ vm.runInNewContext(section+';this.cleanDock=ensureVillageReadyDock;',ctx);
  assert.equal(ctx.cleanDock(),null);
  assert.equal(ctx.bottomRemoved,1);
  assert.equal(ctx.topUpdates,1);
