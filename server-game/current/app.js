@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.52';
+const VERSION='3.53';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2215,9 +2215,20 @@ function playRoomDisplayName(){
   return playReadableRoomName(hit?.roomName)
 }
 function playReadableRoomName(value){const name=String(value||'').trim();return !name||/^(Phòng GMWW|Phòng Online)$/i.test(name)?'Làng Asahi':name}
+function playVisibleStageLabel(){
+  if(playSceneState.phase==='night')return 'Đêm '+Math.max(1,Number(playSceneState.night)||1);
+  if(playSceneState.phase==='day')return 'Ngày '+Math.max(1,Number(playSceneState.night)||1);
+  // The top timeline is the single authoritative label for all seven setup stages.
+  const key=PLAY_STEPS.includes(playSceneState.step)?playSceneState.step:'lobby';
+  const timelineButton=Array.from(document.querySelectorAll('[data-play-step]')).find(el=>el.dataset?.playStep===key);
+  return String(timelineButton?.querySelector('b')?.textContent||PLAY_STEP_COPY[key]?.t||'Sảnh chờ').trim();
+}
 function renderPlayRealtimeHeader(){
-  const phase=playSceneState.phase,title=document.getElementById('playPhaseTitle');
-  if(phase==='lobby'&&title)title.textContent=playRoomDisplayName();
+  // Room-state / presence websocket events must never replace the current stage with the room name.
+  const label=playVisibleStageLabel(),title=document.getElementById('playPhaseTitle');
+  if(title)title.textContent=label;
+  const next=document.getElementById('playPhasePill');
+  if(next)next.setAttribute('aria-label','Bước hiện tại '+label+' · Chạm để tiếp tục');
 }
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}
 const PLAY_ROOM_REGISTRY_KEY='gmww_v306_room_registry';
@@ -2705,11 +2716,11 @@ function renderPlayScene(){
   put('playRoomCode',playSceneState.roomCode||'—');put('playArtifactCount',Math.min(3,Math.max(0,Number(playSceneState.artifactCount)||0))+'/3');
   const auto=document.getElementById('playAutoGM');if(auto){auto.classList.toggle('is-on',!!playSceneState.autoGM);auto.setAttribute('aria-pressed',String(!!playSceneState.autoGM));auto.setAttribute('aria-label',playSceneState.autoGM?'Auto GM đang bật':'Auto GM đang tắt');auto.title=playSceneState.autoGM?'Auto GM: Bật':'Auto GM: Tắt'}
   applyPlayAudioState();
-  if(phase==='night'){const rt=playSceneRuntime.nightRuntime,cur=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;put('playPhaseOrb','☾');put('playPhaseTitle','Đêm '+Math.max(1,night));put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',cur?.kind==='early-artifact'?'ARTIFACT GỌI SỚM':cur?.kind==='artifact-main'?'ARTIFACT':cur?.kind==='role'?'VAI TRÒ':night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',cur?.label||'HOÀN TẤT ĐÊM '+Math.max(1,night));put('playCoreHint',rt?.completed?'Đã xong toàn bộ lượt. Có thể chuyển sang Ban Ngày.':cur?.kind==='wolf-introduction'?'Bầy Sói nhìn mặt nhau trước khi vào lượt chức năng.':'Thực hiện bước hiện tại rồi nhấn Tiếp theo.')}
-  else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseTitle','Ngày '+Math.max(1,night));put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
-  else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;put('playPhaseOrb','◉');put('playPhaseTitle',step.t);put('playCycleBadge',step.t.toUpperCase());put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
+  if(phase==='night'){const rt=playSceneRuntime.nightRuntime,cur=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;put('playPhaseOrb','☾');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',cur?.kind==='early-artifact'?'ARTIFACT GỌI SỚM':cur?.kind==='artifact-main'?'ARTIFACT':cur?.kind==='role'?'VAI TRÒ':night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',cur?.label||'HOÀN TẤT ĐÊM '+Math.max(1,night));put('playCoreHint',rt?.completed?'Đã xong toàn bộ lượt. Có thể chuyển sang Ban Ngày.':cur?.kind==='wolf-introduction'?'Bầy Sói nhìn mặt nhau trước khi vào lượt chức năng.':'Thực hiện bước hiện tại rồi nhấn Tiếp theo.')}
+  else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
+  else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;put('playPhaseOrb','◉');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge',playVisibleStageLabel().toUpperCase());put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
   document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur);if(idx===cur)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
-  const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Trạng thái '+String(document.getElementById('playPhaseTitle')?.textContent||'')+' · Chạm để tiếp tục');
+  const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Bước hiện tại '+playVisibleStageLabel()+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=step.t.toUpperCase()}
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}

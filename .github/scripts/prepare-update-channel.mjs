@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Trang Chủ V3.52 chia thành banner riêng: Làng biển, Vào Làng, Khám Phá, Thống Kê, Hoạt Động","Bổ sung artwork cổng biển cho Vào Làng và giữ ba ô Bộ Bài, Thành Viên, Ván Mẫu với liên kết thật","Cập nhật từ V3.51 chỉ tải 4 tệp thay đổi, giữ nguyên dữ liệu và cài đặt"],
+  releaseNotes:["Đồng bộ nhãn thanh điều khiển dưới với bước đang chọn trên timeline; không bị tên phòng ghi đè sau đồng bộ thời gian thực."],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],

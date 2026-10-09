@@ -67,7 +67,7 @@ test('GM can be manually steered while retaining autonomous roaming',()=>{
 });
 
 test('V3.17 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
-  assert.match(app,/const VERSION='3\.52'/);
+  assert.match(app,/const VERSION='3\.53'/);
   assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
   assert.match(app,/activePlayerId='gm:online'/);
   assert.match(app,/gmSelected=activeId==='gm:online'/);
@@ -108,7 +108,7 @@ test('GM can be steered before room creation and wolf visibly leaps instead of g
 
 test('V3.17 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
   const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-352"/);
+  assert.match(server,/UPDATE_CHANNEL_REV="runtime-353"/);
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
   assert.match(deploy,/Native IPA filename is stale/);

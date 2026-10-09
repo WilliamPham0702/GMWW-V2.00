@@ -59,3 +59,28 @@ export function selectVerifiedRuntimeV352Delta(manifest,installedVersion){
     optimizedFromVersion:'3.51',upgradeMode:'verified-overlay',
     message:'Cập nhật Trang Chủ biển V3.52 bằng 4 tệp; giữ nguyên dữ liệu và cài đặt.'};
 }
+
+/** Verified minimal patches for V3.51/V3.52 -> V3.53 on the V3.17 IPA.
+ * Missing or unsafe hashes/urls, unknown base, mismatched release: fall back to full manifest.
+ * Native Swift copies the previous runtime before overlaying these files.
+ */
+export function selectVerifiedRuntimeV353Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(!['3.51','3.52'].includes(from)||String(manifest?.releaseVersion||'')!=='3.53'
+    ||String(manifest?.runtimeVersion||'')!=='3.53'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const paths=['GMWW.html','app.js','style.css',...(from==='3.51'?['home-art/home-sea-portal-v352.svg']:[])];
+  const selected=[];
+  for(const path of paths){
+    const matched=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matched.length!==1)return null;
+    const file=matched[0];
+    const expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.53/'+path;
+    if(String(file?.url||'')!==expected||!/^[a-f0-9]{64}$/i.test(String(file?.sha256||'')))return null;
+    selected.push({path,url:expected,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'Đồng bộ thanh bước GM với timeline phía trên; giữ nguyên dữ liệu và artwork.'};
+}
