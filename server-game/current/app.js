@@ -2752,47 +2752,88 @@ function playTemplateMoveRole(id,delta){
 }
 function playTemplateRenderCatalog(){
   const picker=document.getElementById('playGameRolePicker');if(!picker)return;
-  const search=String(document.getElementById('playTemplateRoleSearch')?.value||'').trim().toLocaleLowerCase('vi'),
+  const term=String(document.getElementById('playTemplateRoleSearch')?.value||'').trim().toLocaleLowerCase('vi'),
     faction=document.getElementById('playTemplateRoleFaction')?.value||'all',
     starred=!!document.getElementById('playTemplateOnlyStarred')?.checked;
-  const roles=playSortedRoles().filter(r=>(!search||String(r.name||'').toLocaleLowerCase('vi').includes(search))&&(faction==='all'||playFactionLabel(r)===faction)&&(!starred||!!prefs.cards?.[r.id]?.starred));
+  const roles=playSortedRoles().filter(r=>(!term||(String(r.name||'')+' '+playFactionLabel(r)).toLocaleLowerCase('vi').includes(term))&&(faction==='all'||playFactionLabel(r)===faction)&&(!starred||!!prefs.cards?.[r.id]?.starred));
   picker.replaceChildren();
   for(const role of roles){
-    const count=Math.max(0,Number(playSceneState.rolePlan?.[role.id])||0);
+    const count=Math.max(0,Number(playSceneState.rolePlan?.[role.id])||0),chosen=count>0;
     const button=document.createElement('button');button.type='button';
-    button.className='play-template-pick'+(count?' is-picked':'');
-    button.innerHTML='<span class="play-template-pick-icon">'+(prefs.cards?.[role.id]?.starred?'★':'+')+'</span><span class="play-template-pick-label"><b>'+playEsc(role.name||'Vai Trò')+'</b><small>'+playEsc(playFactionLabel(role))+'</small></span><strong>'+(count?count+' lá':'+ THÊM')+'</strong>';
-    button.setAttribute('aria-label','Thêm '+String(role.name||'Vai Trò')+' vào Ván Mẫu');
-    button.onclick=()=>playTemplateSetCount(role.id,count+1);
+    button.className='play-template-card'+(chosen?' is-picked':'');
+    button.setAttribute('aria-pressed',String(chosen));
+    button.setAttribute('aria-label',(chosen?'Bỏ chọn ':'Chọn ')+String(role.name||'Vai Trò'));
+    button.innerHTML='<span class="play-template-artwork"><img loading="lazy" alt=""><span class="play-template-select-indicator" aria-hidden="true">'+(chosen?'✓':'+')+'</span></span><span class="play-template-card-name">'+playEsc(role.name||'Vai Trò')+'</span>';
+    const img=button.querySelector('img');
+    void resolveArtwork('cards',role.id,'thumb').then(url=>{if(img.isConnected)img.src=url||'default-artwork.webp'}).catch(()=>{if(img.isConnected)img.src='default-artwork.webp'});
+    img.onerror=()=>{img.onerror=null;img.src='default-artwork.webp'};
+    button.onclick=()=>playTemplateSetCount(role.id,chosen?0:1);
     picker.appendChild(button);
   }
-  if(!roles.length)picker.innerHTML='<p class="play-template-help">Không tìm thấy vai phù hợp. Có thể chọn tất cả phe hoặc bỏ lọc ★.</p>';
+  if(!roles.length)picker.innerHTML='<p class="play-template-help">Không tìm thấy lá bài. Hãy bỏ chọn bộ lọc ★ hoặc chọn tất cả phe.</p>';
 }
 async function renderPlayGameRoles(){
   const list=document.getElementById('playGameRoleList');if(!list)return;list.replaceChildren();
   playSceneState.roleOrders=playSceneState.roleOrders||{};
   playTemplateRenderCatalog();
-  const roles=playTemplateSelectedRoles(),defaultSec=Math.max(0,Number(playSceneState.gameTiming?.defaultActionSec??30)||0);
+  const roles=playTemplateSelectedRoles();
   for(let i=0;i<roles.length;i++){
     const role=roles[i],count=Math.max(1,Number(playSceneState.rolePlan?.[role.id])||1),
-      order=Math.max(1,Math.min(99,Number(playSceneState.roleOrders?.[role.id])||i+1)),
-      duration=Math.max(0,Math.min(3600,Number(playSceneState.roleDurations?.[role.id]??defaultSec)||0));
+      order=Math.max(1,Math.min(99,Number(playSceneState.roleOrders?.[role.id])||i+1));
     const row=document.createElement('div');row.className='play-template-selected-row';row.dataset.roleId=role.id;
-    row.innerHTML='<div class="play-template-role-identity"><span class="play-template-role-number">'+(i+1)+'</span><div class="play-game-role-copy"><b>'+playEsc(role.name||'Vai Trò')+'</b><small>'+playEsc(playFactionLabel(role))+'</small></div><div class="play-template-arrows"><button type="button" data-move-up aria-label="Đưa lên">↑</button><button type="button" data-move-down aria-label="Đưa xuống">↓</button></div></div><div class="play-template-role-values"><label>Số lá <input data-role-count type="number" inputmode="numeric" min="1" max="20" value="'+count+'"></label><label>Thứ tự <input data-role-order type="number" inputmode="numeric" min="1" max="99" value="'+order+'"></label><label>Giây <input data-role-duration type="number" inputmode="numeric" min="0" max="3600" value="'+duration+'"></label><button type="button" data-role-remove aria-label="Bỏ vai khỏi Ván Mẫu">×</button></div>';
+    row.innerHTML='<div class="play-template-role-identity"><img class="play-template-selected-thumb" loading="lazy" alt=""><div class="play-game-role-copy"><b>'+playEsc(role.name||'Vai Trò')+'</b><small>'+playEsc(playFactionLabel(role))+'</small></div></div><div class="play-template-role-values"><label>Số lá<input data-role-count type="number" inputmode="numeric" min="1" max="20" value="'+count+'"></label><label>Thứ tự<input data-role-order type="number" inputmode="numeric" min="1" max="99" value="'+order+'"></label><div class="play-template-arrows"><button type="button" data-move-up aria-label="Đưa lên">↑</button><button type="button" data-move-down aria-label="Đưa xuống">↓</button></div><button type="button" data-role-remove aria-label="Bỏ vai khỏi Ván Mẫu">×</button></div>';
+    const img=row.querySelector('img');
+    void resolveArtwork('cards',role.id,'thumb').then(url=>{if(img.isConnected)img.src=url||'default-artwork.webp'}).catch(()=>{if(img.isConnected)img.src='default-artwork.webp'});
+    img.onerror=()=>{img.onerror=null;img.src='default-artwork.webp'};
     row.querySelector('[data-role-count]').onchange=e=>playTemplateSetCount(role.id,e.target.value);
     row.querySelector('[data-role-order]').onchange=e=>{playSceneState.roleOrders[role.id]=Math.max(1,Math.min(99,Number(e.target.value)||1));savePlayScene();void renderPlayGameRoles()};
-    row.querySelector('[data-role-duration]').onchange=e=>{playSceneState.roleDurations={...(playSceneState.roleDurations||{}),[role.id]:Math.max(0,Math.min(3600,Number(e.target.value)||0))};savePlayScene()};
     row.querySelector('[data-role-remove]').onclick=()=>playTemplateSetCount(role.id,0);
     row.querySelector('[data-move-up]').onclick=()=>playTemplateMoveRole(role.id,-1);
     row.querySelector('[data-move-down]').onclick=()=>playTemplateMoveRole(role.id,1);
     row.querySelector('[data-move-up]').disabled=i===0;row.querySelector('[data-move-down]').disabled=i===roles.length-1;
     list.appendChild(row);
   }
-  if(!roles.length)list.innerHTML='<div class="member-empty">Chưa chọn Vai Trò. Nhấn + THÊM trong danh sách ở trên.</div>';
+  if(!roles.length)list.innerHTML='<div class="member-empty">Chưa chọn vai trò. Chạm vào ảnh một Lá Bài phía trên để thêm vào ván.</div>';
+}
+function renderPlayGameRoleTimings(){
+  const list=document.getElementById('playGameRoleTimingList');if(!list)return;
+  list.replaceChildren();
+  const roles=playTemplateSelectedRoles(),defaultSec=Math.max(0,Number(playSceneState.gameTiming?.defaultActionSec??30)||0);
+  for(const role of roles){
+    const duration=playSceneState.roleDurations?.[role.id]??defaultSec, row=document.createElement('label');
+    row.className='play-template-role-timing';
+    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+'</span><input type="number" inputmode="numeric" min="0" max="3600" value="'+duration+'" aria-label="Thời gian '+playEsc(role.name||'Vai Trò')+'">';
+    row.querySelector('input').onchange=e=>{playSceneState.roleDurations={...(playSceneState.roleDurations||{}),[role.id]:Math.max(0,Math.min(3600,Number(e.target.value)||0))};e.target.value=String(playSceneState.roleDurations[role.id]);savePlayScene()};
+    list.appendChild(row);
+  }
+  if(!roles.length)list.innerHTML='<p class="play-template-help">Hãy chọn một Ván Mẫu.</p>';
+}
+function playTemplateSelectedArtifacts(){
+  const allowed=new Set(Array.isArray(playSceneState.artifactIds)?playSceneState.artifactIds.map(String):[]);
+  return playFavoriteArtifacts().filter(a=>allowed.has(String(a.id)));
+}
+function renderPlayArtifactPicker(){
+  const picker=document.getElementById('playGameArtifactPicker');if(!picker)return;
+  picker.replaceChildren();
+  const pool=playFavoriteArtifacts(),selected=new Set((playSceneState.artifactIds||[]).map(String));
+  if(!playSceneState.artifactsEnabled){picker.hidden=true;return}
+  picker.hidden=false;
+  for(const artifact of pool){
+    const active=selected.has(String(artifact.id)),button=document.createElement('button');
+    button.type='button';button.className='play-template-card'+(active?' is-picked':'');
+    button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',(active?'Bỏ chọn ':'Chọn ')+String(artifact.name||'Artifact'));
+    button.innerHTML='<span class="play-template-artwork"><img loading="lazy" alt=""><span class="play-template-select-indicator" aria-hidden="true">'+(active?'✓':'+')+'</span></span><span class="play-template-card-name">'+playEsc(artifact.name||'Artifact')+'</span>';
+    const img=button.querySelector('img');
+    void resolveArtwork('artifacts',artifact.id,'thumb').then(url=>{if(img.isConnected)img.src=url||'default-artwork.webp'}).catch(()=>{if(img.isConnected)img.src='default-artwork.webp'});
+    img.onerror=()=>{img.onerror=null;img.src='default-artwork.webp'};
+    button.onclick=()=>{const next=new Set((playSceneState.artifactIds||[]).map(String));if(next.has(String(artifact.id)))next.delete(String(artifact.id));else next.add(String(artifact.id));playSceneState.artifactIds=[...next];savePlayScene();updatePlayArtifactToggle()};
+    picker.appendChild(button);
+  }
+  if(!pool.length)picker.innerHTML='<p class="play-template-help">Chưa có Artifact ★. Hãy đánh dấu trong Thư Viện trước.</p>';
 }
 
 function updatePlayGameRoleCount(){
-  const mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play',need=playLiveMembers().length,total=playRolePlanTotal(),el=document.getElementById('playGameRoleCount');if(el){el.textContent=mode==='library'?(total+' lá • '+playTemplateSelectedRoles().length+' vai'):(total+'/'+need+' lá');el.style.color=mode==='library'||total===need?'#fff1a5':'#ffb4a9'} const review=document.getElementById('playTemplatePlaySummary');if(review)review.textContent=total+' vai/lá cho '+need+' người • '+(total===need?'Phù hợp':'Chưa khớp số người')
+  const mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play',need=playLiveMembers().length,total=playRolePlanTotal(),el=document.getElementById('playGameRoleCount');if(el){el.textContent=total+' lá • '+playTemplateSelectedRoles().length+' vai';el.style.color='#fff1a5'} const review=document.getElementById('playTemplatePlaySummary');if(review)review.textContent=total+' lá cho '+need+' người • '+(total===need?'Đủ số lượng':'Không khớp số người');const summary=document.getElementById('playTemplateTeamSummary');if(summary&&mode==='library'){const roles=playTemplateSelectedRoles(),counts={'Phe Dân':0,'Phe Sói':0,'Phe Ba':0};for(const role of roles)counts[playFactionLabel(role)]+=Number(playSceneState.rolePlan[role.id])||0;summary.innerHTML='<span><b>'+total+'</b>Tổng vai</span><span><b>'+counts['Phe Dân']+'</b>Dân</span><span><b>'+counts['Phe Sói']+'</b>Sói</span><span><b>'+counts['Phe Ba']+'</b>Phe Ba</span>'}
 }
 async function migrateV109GameTemplates(){
   if(localStorage.getItem('GMWW_V263_TEMPLATE_MIGRATION_DONE')==='1')return;
