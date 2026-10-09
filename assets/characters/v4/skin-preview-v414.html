@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d3950">
+<title>Character V4.14 – thử Skin gắn khớp | GMWW</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#e9fdff;background:#092838}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#1e8b95,#0e4960 55%,#072937);min-height:100vh}
+main{max-width:970px;padding:17px 13px 90px;margin:auto;display:grid;gap:13px}
+h1{font-size:clamp(24px,4.7vw,33px);line-height:1.15;margin:8px 0}h2{font-size:17px;margin:0 0 10px}
+p{color:#cce6e5;font-size:14px;line-height:1.55;margin:5px 0}
+header,.panel{padding:15px;border-radius:17px;background:#0a3e53ce;border:1px solid #63a7ad}
+header{background:transparent;border:0;padding:7px}
+.tag{color:#ffe8aa;border:1px solid #d6a85a;border-radius:30px;padding:6px 11px;font-size:12px;font-weight:700;display:inline-flex}
+a{color:#abf4e9}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,.65fr);gap:12px}
+.stage{min-height:430px;border-radius:15px;display:grid;place-items:center;position:relative;overflow:hidden;
+ background:radial-gradient(ellipse at 50% 18%,#4cb2be,#1c7385 51%,#0f485d)}
+.stage:before{content:"";position:absolute;inset:0;opacity:.4;background:linear-gradient(0deg,#e8d8a75e 0 14%,transparent 14%)}
+canvas{display:block;position:relative;filter:drop-shadow(0 11px 9px #052e3b85)}
+#mainCanvas{height:404px;width:252px;max-width:92%}
+.preview{border-radius:12px;display:flex;align-items:center;justify-content:center;gap:12px;flex-direction:column;background:#113f55;padding:12px;min-height:178px}
+#smallCanvas{width:90px;height:144px}.mini{color:#c1e2dd;font-size:12px;text-align:center}
+.controls{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+button,select{appearance:none;font:inherit;font-size:13px;color:#f3feff;background:#14526a;min-height:40px;padding:8px 12px;border:1px solid #78b8be;border-radius:11px;cursor:pointer}
+button[aria-pressed="true"],button:focus-visible{background:#058b98;border-color:#fff5cc;outline:1px solid #fff5cc}
+label{font-size:13px;color:#d7eef0}
+.status{font-size:13px;color:#bdeee1;font-weight:650;min-height:26px}
+.notice{font-size:12px;color:#f5e1ad}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.stage{min-height:375px}#mainCanvas{width:232px;height:370px}.preview{min-height:180px}}
+</style></head><body>
+<main>
+<header>
+<p>GMWW · CHARACTER V4.14 · WEB STAGING ONLY</p>
+<h1>Skin gắn khớp 17 lớp</h1>
+<span class="tag">BẢN THỬ HÌNH VẼ • CHƯA NGHIỆM THU</span>
+<p>Skin minh họa V4.14 được vẽ riêng theo khớp của bộ xương V4.12, có 2 mẫu, đủ 4 hướng và 9 Action. Không dùng đầu ảnh cũ, không chồng nhân vật tĩnh, không đưa vào phòng chơi hay IPA.</p>
+</header>
+<section class="panel">
+<h2>Chàng Biển / Nàng Biển – kiểm thử Skin thực sự đi theo xương</h2>
+<div class="controls"><label for="character">Nhân vật</label><select id="character"><option value="character-01">01 · Chàng Biển</option><option value="character-02">02 · Nàng Biển</option></select>
+<label for="mode">Hiển thị</label><select id="mode"><option value="skin">Skin</option><option value="anchors">Skin + khớp</option><option value="skeleton">Chỉ khung xương</option></select></div>
+<div class="grid"><div class="stage"><canvas id="mainCanvas" width="320" height="512" aria-label="Skin nhân vật chuyển động theo khung xương"></canvas></div>
+<div class="preview"><strong>Kích thước trong game</strong><canvas id="smallCanvas" width="90" height="144" aria-label="Nhân vật 90 pixel"></canvas><span class="mini">90 × 144 px · kiểm tra đường nét</span></div></div>
+<div class="controls" id="directions" aria-label="Hướng nhân vật">
+<button data-dir="front" aria-pressed="true">↓ Trước</button><button data-dir="left">← Trái</button><button data-dir="right">→ Phải</button><button data-dir="back">↑ Sau lưng</button>
+</div>
+<div class="controls" id="actions" aria-label="9 hoạt ảnh">
+<button data-action="idle" aria-pressed="true">Đứng / Thở</button>
+<button data-action="walk">Đi bộ</button><button data-action="run">Chạy nhẹ</button>
+<button data-action="sit">Ngồi xếp bằng</button>
+<button data-action="sit-down">Đứng → Ngồi</button><button data-action="stand-up">Ngồi → Đứng</button>
+<button data-action="wave">Vẫy tay</button><button data-action="vote">Giơ tay</button>
+<button data-action="result">Thắng / Thua</button>
+</div>
+<div class="controls"><label for="outcome">Kết quả</label><select id="outcome"><option value="win">Thắng</option><option value="lose">Thua</option></select>
+<label for="speed">Tốc độ</label><select id="speed"><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option></select></div>
+<p id="status" class="status" aria-live="polite">Đang khởi tạo Skin V4.14…</p>
+<p class="notice">Lưu ý: Đây là bản thử gắn Skin bằng hình vẽ vector phân lớp. Chưa có master PNG/AVIF 1024 × 1536 từng hướng; chưa phải artwork cuối. Chỉ dùng nghiệm thu chuyển động và khớp trước khi chế tác bộ asset cao cấp.</p>
+</section>
+<section class="panel"><h2>Điều kiện đưa vào game</h2>
+<p>Đầu không nghiêng; bốn hướng khác nhau; tóc, trang phục, tay, chân không chồng lớp; ngồi khép chân; đi/chạy chân luân phiên; thực hiện đúng 9 Action. Chủ dự án cần duyệt ngoại hình và chuyển động; sau đó mới chuẩn hóa asset độ phân giải cao, test tối đa 30 nhân vật và cập nhật Player Web/IPA.</p>
+<p><a href="./skeleton.html">Khung xương được duyệt</a> · <a href="./skin.html">Lý do loại Skin 4.13</a> · <a href="./index.html">Studio V4 gốc</a></p>
+</section></main>
+<script type="module">
+import {skeletonPose,drawSkeleton} from './skeleton-rig.mjs';
+import {drawV414Skin,V414_SKIN_VERSION} from './skin-v414.mjs';
+const main=document.getElementById('mainCanvas'),small=document.getElementById('smallCanvas');
+const ctx=main.getContext('2d'),tiny=small.getContext('2d');
+const read=id=>document.getElementById(id).value;
+let direction='front',action='idle',started=performance.now();
+for(const button of document.querySelectorAll('[data-dir]'))button.addEventListener('click',()=>{
+ direction=button.dataset.dir;
+ document.querySelectorAll('[data-dir]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+});
+for(const button of document.querySelectorAll('[data-action]'))button.addEventListener('click',()=>{
+ action=button.dataset.action;started=performance.now();
+ document.querySelectorAll('[data-action]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+});
+const durations={'sit-down':1200,'stand-up':1200};
+function frame(t){
+ const elapsed=(t-started)*Number(read('speed')),duration=durations[action]||1300;
+ const pose=skeletonPose({action,direction,elapsedMs:elapsed,progress:Math.min(1,elapsed/duration),outcome:read('outcome')});
+ const opts={characterId:read('character'),showAnchors:read('mode')==='anchors'};
+ if(read('mode')==='skeleton'){
+  drawSkeleton(ctx,pose,{width:main.width,height:main.height});
+  drawSkeleton(tiny,pose,{width:small.width,height:small.height});
+ }else{
+  drawV414Skin(ctx,pose,{...opts,width:main.width,height:main.height});
+  drawV414Skin(tiny,pose,{...opts,showAnchors:false,width:small.width,height:small.height});
+ }
+ document.getElementById('status').textContent=V414_SKIN_VERSION+' · '+(read('character')==='character-01'?'Chàng Biển':'Nàng Biển')+' · '+direction+' · '+action+' · 17 lớp, 0° nghiêng đầu · Chưa đưa vào game';
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></body></html>
