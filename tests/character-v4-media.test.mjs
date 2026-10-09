@@ -19,7 +19,7 @@ test('Worker crop maps front / left / back / right and retains fallback for othe
  assert.match(worker,/walk-v263/);
 });
 test('V4 gallery shows 2 artwork cards, 4 portraits and interactive avatar in action lab',()=>{
- assert.match(page,/approved-two-characters/,{message:'page includes media linkage'});
+ assert.match(worker,/approved-two-characters\\.avif/);
  assert.match(page,/data-view="front"/);
  assert.match(page,/data-view="left"/);
  assert.match(page,/data-view="back"/);
