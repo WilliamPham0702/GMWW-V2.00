@@ -57,3 +57,15 @@ test('Web-only demo uses animated canvas frames, never frozen src assignments',(
  assert.ok(!markup.includes('actor.src=imageUrl('));
  assert.ok(!markup.includes('chân chưa có frame chuyển động'));
 });
+
+test('cross-legged sitting folds feet inward and head remains upright for both transitions',()=>{
+ for(const action of ['sit','sit-down','stand-up']){
+  const pose=v4ActionPose(action,450,.65,'win');
+  assert.ok(pose.legL>=0 && pose.legR<=0,action+' feet must fold inward');
+  assert.equal(pose.headTiltDeg,0);
+  assert.ok(pose.sit>=0 && pose.sit<=1);
+ }
+ const seated=v4ActionPose('sit',900,1);
+ assert.ok(seated.legL>0 && seated.legR<0);
+ assert.ok(Math.abs(seated.legL)<.8 && Math.abs(seated.legR)<.8);
+});
