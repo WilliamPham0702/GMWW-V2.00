@@ -10,14 +10,15 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('Settings renders exactly four numbered groups and one horizontal Health tools rail',()=>{
+test('Settings renders exactly four numbered groups and a vertical 14-tool grid',()=>{
  const section=html.slice(html.indexOf('<section class="page" id="settings">'),html.indexOf('</section>',html.indexOf('<section class="page" id="settings">')));
  const ids=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
  assert.deepEqual([...section.matchAll(/id="(settingsGroup\w+)"/g)].map(m=>m[1]),ids);
  assert.doesNotMatch(section,/id="settingsGroupMaintenance"/);
  for(const control of ['settingsRunHealth','quickMaintenanceCard','gmwwOpsCenter','serverHealthCard','systemDiagnosticsCard','characterScaleChoices'])
    assert.equal(section.split('id="'+control+'"').length-1,1,control);
- assert.match(css,/#settings \.settings-operations-tools\{display:flex!important;flex-flow:row nowrap!important;overflow-x:auto!important/);
+ assert.match(css,/#settings #settingsToolsRail\.settings-operations-tools\{/);
+ assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
  assert.match(css,/#settings #characterScaleChoices\{display:flex!important;flex-wrap:nowrap!important/);
 });
 

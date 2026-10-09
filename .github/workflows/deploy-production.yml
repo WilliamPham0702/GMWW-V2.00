@@ -239,6 +239,29 @@ jobs:
           curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
           curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
           echo "Verify Production: OTA app and HTML fetched."
+          echo "Verify Production: checking V3.58 Settings grid directly in deployed Runtime."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/updates/runtime/V$EXPECTED/style.css?settings-grid-check=$(date +%s)" > /tmp/gmww-ota-settings.css
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const css=fs.readFileSync('/tmp/gmww-ota-settings.css','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const expected=manifest.runtime.files.find(f=>f.path==='style.css')?.sha256;
+          const ids=['settingsRunHealth','auditLocalData','clearRuntimeCache','reloadApp','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'];
+          const settings=html.slice(html.indexOf('id="settingsGroupHealth"'),html.indexOf('id="settingsGroupTasks"'));
+          const checks={
+            '14 distinct tools':ids.every(id=>settings.split('id="'+id+'"').length===2),
+            'single visible grid':settings.includes('id="settingsToolsRail"'),
+            'no horizontal navigation':!settings.includes('id="settingsToolsNext"')&&!settings.includes('id="settingsToolsPrev"'),
+            'three columns':css.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),
+            'no horizontal clipping':css.includes('overflow-x:visible!important'),
+            'CSS manifest checksum':Boolean(expected)&&sha(css)===expected
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('Production Settings grid: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(pass=>!pass))process.exit(1);
+          NODE
+          echo "Verify Production: all 14 Settings tools visible via responsive grid PASS."
           node - "$EXPECTED" <<'NODE'
           const fs=require('node:fs'),crypto=require('node:crypto');
           const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');

@@ -106,3 +106,24 @@ export function selectVerifiedRuntimeV354Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'Cập nhật V3.54 gồm 4 hình biển và đồng bộ tiến trình GM; bảo toàn dữ liệu người dùng.'};
 }
+
+/** Safe lightweight V3.57 -> V3.58 UI-only update, preserving all game media and storage. */
+export function selectVerifiedRuntimeV358Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.57'||String(manifest?.releaseVersion||'')!=='3.58'
+    ||String(manifest?.runtimeVersion||'')!=='3.58'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0];
+    const expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.58/'+path;
+    if(String(file.url||'')!==expected||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url:expected,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:'3.57',upgradeMode:'verified-overlay',
+    message:'Hiển thị đầy đủ 14 công cụ bảo trì dạng lưới; giữ nguyên dữ liệu và artwork.'};
+}
