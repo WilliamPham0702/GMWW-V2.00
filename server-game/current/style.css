@@ -3737,3 +3737,15 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav{disp
 body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmww-dock-icon{display:grid!important}
 @media(max-width:360px){#home .gmww-home-sea-v342.gmww-home-v344{padding-inline:7px!important}#home .gmww-home-v344 .gmww-home-poster{width:calc(100% + 14px)!important;margin-inline:-7px!important}#home .gmww-home-v344 .gmww-home-play{min-height:70px!important}#home .gmww-home-v344 .gmww-home-play-mark{width:44px!important;height:44px!important;flex-basis:44px!important}}
 @media(min-width:700px){#home .gmww-home-v344 .gmww-home-poster{aspect-ratio:1.15!important}}
+
+/* V3.48 - no header, no image stretching, new illustrated sea shortcut tiles. */
+#home .gmww-home-top,#home .gmww-home-profile,#home .gmww-home-top-actions{display:none!important}
+#home .gmww-home-v344 .gmww-home-poster{aspect-ratio:720 / 448!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+#home .gmww-home-v344 .gmww-home-hero{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;mask-image:none!important;-webkit-mask-image:none!important;overflow:hidden!important}
+#home .gmww-home-v344 .gmww-home-hero-art{display:block!important;position:static!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center center!important;transform:none!important;filter:none!important;image-rendering:auto!important}
+#home .gmww-home-v344 .gmww-home-entry{bottom:-38px!important}
+#home .gmww-home-v344 .gmww-home-explore{margin-top:47px!important}
+#home .gmww-home-v344 .gmww-home-shortcuts img{filter:none!important;object-fit:cover!important;object-position:center!important}
+#home .gmww-home-v344 .gmww-home-shortcuts button:before{content:none!important}
+#home .gmww-home-v344 .gmww-home-shortcuts button:after{background:linear-gradient(180deg,transparent 52%,#00365aa8 100%)!important}
+#home .gmww-home-v344 .gmww-home-tile-label{color:#fff!important;text-shadow:0 2px 4px #00284e!important}

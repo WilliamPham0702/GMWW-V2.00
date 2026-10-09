@@ -41,13 +41,13 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.47<\/title>/);
+  assert.match(html,/<title>GMWW V3\.48<\/title>/);
 });
 
 
 test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  const img=[...new Set([...home.matchAll(/<img[^>]+src="home-art\/([^"]+\.webp)"/g)].map(m=>m[1]))];
- assert.deepEqual(img,["home-fantasy-hero-v337.webp","home-v1-book.webp","home-v1-members.webp","home-v1-action.webp"]);
+ assert.deepEqual(img,["home-fantasy-hero-v337.webp","home-sea-cards-v348.svg","home-sea-members-v348.svg","home-sea-templates-v348.svg"]);
  assert.match(home,/data-home-library-tab="templates"/);
  assert.match(app,/dataset\.homeLibraryTab/);
  assert.match(css,/#home \.gmww-home-hero-art/);
@@ -57,7 +57,7 @@ test("Trang Chủ V3.37 hiển thị artwork thật và tile hình V1",()=>{
  for(const file of img)assert.ok(fs.existsSync("server-game/current/home-art/"+file),"Artwork thiếu: "+file);
 });
 
-test("Trang Chủ v3.47 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
+test("Trang Chủ v3.48 có ba thẻ Khám phá gắn nhãn và menu 5 mục kiểu biển",()=>{
  const labels=[...home.matchAll(/class="gmww-home-tile-label"><b>([^<]+)/g)].map(x=>x[1]);
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
@@ -68,15 +68,15 @@ test("Trang Chủ v3.47 có ba thẻ Khám phá gắn nhãn và menu 5 mục ki�
  assert.match(css,/Pearl-coast five-action dock/);
  assert.match(css,/body:not\(\.play-immersive\) #bottomNav/);
  assert.match(css,/#home \.gmww-home-art-v337 \.gmww-home-tile-label/);
- assert.match(html,/style\.css\?v=3\.47-sea-home-1/);
+ assert.match(html,/style\.css\?v=3\.48-sea-home-1/);
 });
 
 
-test("Trang Chủ V3.47 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
+test("Trang Chủ V3.48 phản ánh thiết kế đã duyệt, không giả dữ liệu",()=>{
  assert.match(home,/gmww-home-sea-v342/);
  assert.match(home,/gmww-home-poster/);
  assert.match(home,/gmww-home-v344/);
- assert.match(home,/gmww-home-profile/);
+ assert.doesNotMatch(home,/class="gmww-home-profile"/);
  assert.doesNotMatch(home,/class="gmww-home-brand"/);
  assert.match(home,/home-fantasy-hero-v337\.webp/);
  assert.doesNotMatch(home,/class="gmww-home-brand"/);
@@ -95,4 +95,4 @@ test("Trang Chủ V3.47 phản ánh thiết kế đã duyệt, không giả dữ
  assert.doesNotMatch(home,/>3<\/strong>|>6<\/strong>|>1<\/strong>/,"Không được gán trước chỉ số minh họa");
 });
 
-test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.47: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
+test('Trang Chủ biển: 5 chức năng menu thực, bảng hiệu không chồng lớp và 2D không khung',()=>{const nav=html.slice(html.indexOf('<nav id="bottomNav"'),html.indexOf('</nav>',html.indexOf('<nav id="bottomNav"')));assert.deepEqual([...nav.matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','members','start','library','settings']);assert.doesNotMatch(nav,/aria-hidden="true"[^>]*data-page="settings"/);assert.match(css,/GMWW V3\.48: edge-to-edge fantasy coast/);assert.doesNotMatch(home,/class="gmww-home-brand"/);});
