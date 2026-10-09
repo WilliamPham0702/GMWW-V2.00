@@ -15,13 +15,13 @@ export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   return queue;
 }
 export function artifactCycleKey(matchId,night){return String(matchId)+":night:"+Math.max(1,Number(night)||1)}
-export function reserveArtifactActivation(state,{requestId,playerId,artifactId,cycleKey,eligible}){
+export function reserveArtifactActivation(state,{requestId,playerId,artifactId,cycleKey,eligible,limit=3}){
   // Call only within a single serialized Durable Object transaction/turn.
   if(state?.cycleKey && state.cycleKey!==cycleKey)return {ok:false,error:"CYCLE_MISMATCH",state};
   const previous=Array.isArray(state?.accepted)?state.accepted:[];
   if(previous.some(x=>x.requestId===requestId))return {ok:true,idempotent:true,state};
   if(!eligible)return {ok:false,error:"ARTIFACT_NOT_ELIGIBLE",state};
-  if(previous.length>=3)return {ok:false,error:"ARTIFACT_CYCLE_LIMIT",state};
+  if(previous.length>=Math.max(0,Math.min(30,Math.trunc(Number(limit)||0))))return {ok:false,error:"ARTIFACT_CYCLE_LIMIT",state};
   if(previous.some(x=>x.playerId===playerId&&x.artifactId===artifactId))return {ok:false,error:"ARTIFACT_ALREADY_USED",state};
   const next={cycleKey,accepted:[...previous,{requestId,playerId,artifactId}]};
   return {ok:true,count:next.accepted.length,state:next};

@@ -3984,3 +3984,11 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
 #settings #settingsToolsRail .ops-auto{cursor:pointer}
 @media(max-width:350px){#settings #settingsToolsRail.settings-operations-tools{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(min-width:600px){#settings #settingsToolsRail.settings-operations-tools{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+
+/* GMWW: Artifact ★ picker uses one swipeable row on iPhone, never a tall card grid. */
+#playGameSheet .play-template-artifact-gallery:not([hidden]){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;min-width:0!important;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;gap:9px!important;padding:7px 4px 12px!important}
+#playGameSheet .play-template-artifact-gallery[hidden]{display:none!important}
+#playGameSheet .play-template-artifact-gallery .play-template-card{flex:0 0 clamp(80px,24vw,108px)!important;min-width:0;scroll-snap-align:start}
+#playGameSheet .play-template-artifact-quota{display:grid;grid-template-columns:minmax(0,1fr) 78px;align-items:center;gap:5px 12px;margin:12px 0;color:#d5f7ff;font-size:12px;font-weight:800}
+#playGameSheet .play-template-artifact-quota input{width:78px;min-height:36px;padding:6px;border:1px solid #7bd9ec;border-radius:9px;background:#06273c;color:#fff;text-align:center;font-size:15px}
+#playGameSheet .play-template-artifact-quota small{grid-column:1/-1;color:#a9d4e0;font-size:10px;font-weight:500}

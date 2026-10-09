@@ -534,7 +534,7 @@
         <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
         <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
         <div class="play-timing-grid">
-          <label>Thảo luận dân làng<input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="180"></label>
+          <label>Thảo luận dân làng<input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></label>
           <label>Thảo luận bầy sói<input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="60"></label>
           <label>Thời gian chung mỗi chức năng<input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30"></label>
           <label class="play-auto-advance-field"><input type="checkbox" id="playAutoAdvance" checked> Tự chuyển khi hết giờ</label>
@@ -543,8 +543,12 @@
         <div class="play-template-role-timings" id="playGameRoleTimingList"></div>
         <div class="play-template-section-title"><b>ARTIFACT TRONG TRẬN</b><span>Tùy chọn</span></div>
         <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Phân phát Artifact khi Phát Vai</label>
-        <p class="play-template-help" id="playArtifactPoolHint">Chọn Artifact sẽ sử dụng trong trận này.</p>
-        <div class="play-template-artifact-gallery" id="playGameArtifactPicker" aria-label="Chọn Artifact trong trận"></div>
+        <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
+          <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
+          <small>Hạn mức riêng cho mỗi chu kỳ; 0 = không cho sử dụng.</small>
+        </label>
+        <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
+        <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
         <p class="play-template-help">Thay đổi ở đây chỉ áp dụng cho trận hiện tại, không sửa Ván Mẫu đã lưu và chưa phát vai xuống Player Web.</p>
       </div>
     </div>

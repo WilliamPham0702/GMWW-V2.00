@@ -466,7 +466,7 @@ export class RoomDurableObject extends DurableObject {
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3,accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-3):[]},nightRuntime,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -930,7 +930,7 @@ export class RoomDurableObject extends DurableObject {
     const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),roleRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)).slice(-10),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest);
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=storedArtifact?privateArtifact(storedArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:3},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerRoleViewed(body){
     const loginId=normalizeLoginId(body?.loginId),wantedIndex=Number.isInteger(Number(body?.roleIndex))?Math.max(0,Number(body.roleIndex)):null,wantedRoleId=String(body?.roleId||""),stored=await this.ctx.storage.get("roles:"+loginId),legacy=await this.ctx.storage.get("role:"+loginId),roles=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
@@ -956,6 +956,7 @@ export class RoomDurableObject extends DurableObject {
     if(!["running","started","game","playing"].includes(String(meta.phase||"").toLowerCase()))return j({ok:false,error:"GAME_NOT_RUNNING"},409);
     if(!requestId)return j({ok:false,error:"REQUEST_ID_REQUIRED"},400);
     const cycleKey=currentArtifactCycleKey(meta),now=new Date().toISOString();
+    const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)||0)));
     const result=await this.ctx.storage.transaction(async txn=>{
       const artifact=await txn.get("artifact:"+loginId);
       if(!artifact)return{ok:false,status:404,error:"ARTIFACT_NOT_FOUND"};
@@ -963,22 +964,22 @@ export class RoomDurableObject extends DurableObject {
       if(meta.matchId&&artifact.matchId&&String(meta.matchId)!==String(artifact.matchId))return{ok:false,status:409,error:"STALE_ARTIFACT"};
       const artifactId=String(artifact.artifactId||""),playerId="member:"+loginId,useKey="artifactUse:"+loginId+":"+artifactId,oldUse=await txn.get(useKey),cycle=(await txn.get("artifactCycle:"+cycleKey))||{cycleKey,accepted:[]};
       if(artifact.singleUse===true&&oldUse)return{ok:false,status:409,error:"ARTIFACT_ALREADY_USED"};
-      const reservation=reserveArtifactActivation(cycle,{requestId,playerId,artifactId,cycleKey,eligible:true});
+      const reservation=reserveArtifactActivation(cycle,{requestId,playerId,artifactId,cycleKey,eligible:true,limit:artifactLimitPerCycle});
       const accepted=Array.isArray(reservation?.state?.accepted)?reservation.state.accepted:[];
       if(!reservation.ok){
         const status=reservation.error==="ARTIFACT_NOT_ELIGIBLE"?403:409;
-        return{ok:false,status,error:reservation.error,count:accepted.length,max:3,remaining:Math.max(0,3-accepted.length)};
+        return{ok:false,status,error:reservation.error,count:accepted.length,max:artifactLimitPerCycle,remaining:Math.max(0,artifactLimitPerCycle-accepted.length)};
       }
       if(reservation.idempotent){
         const prior=accepted.find(x=>String(x?.requestId||"")===requestId&&String(x?.playerId||"")===playerId);
-        return{ok:true,idempotent:true,activation:prior||null,count:accepted.length,max:3,remaining:Math.max(0,3-accepted.length)};
+        return{ok:true,idempotent:true,activation:prior||null,count:accepted.length,max:artifactLimitPerCycle,remaining:Math.max(0,artifactLimitPerCycle-accepted.length)};
       }
       const activation={requestId,playerId,loginId,artifactId,artifactName:String(artifact.artifactName||""),matchId:String(meta.matchId||""),cycleKey,night:Math.max(1,Number(meta.cycleNight||1)),phase:String(meta.cyclePhase||""),originalTargetId:String(body?.targetId||body?.originalTargetId||"").slice(0,160),finalTargetId:String(body?.finalTargetId||body?.targetId||"").slice(0,160),status:"accepted",createdAt:now};
       const nextAccepted=accepted.slice();nextAccepted[nextAccepted.length-1]=activation;
       const nextCycle={...reservation.state,accepted:nextAccepted,updatedAt:now};
       await txn.put("artifactCycle:"+cycleKey,nextCycle);await txn.put(useKey,{...activation,usedAt:now});
       artifact.usedAt=now;artifact.lastActivation=activation;await txn.put("artifact:"+loginId,artifact);
-      return{ok:true,activation,count:nextAccepted.length,max:3,remaining:Math.max(0,3-nextAccepted.length)};
+      return{ok:true,activation,count:nextAccepted.length,max:artifactLimitPerCycle,remaining:Math.max(0,artifactLimitPerCycle-nextAccepted.length)};
     });
     if(!result.ok)return j(result,result.status||409);
     const rows=(await this.ctx.storage.get("assignments"))||[],row=rows.find(x=>normalizeLoginId(x?.loginId)===loginId);if(row){row.artifactUsedAt=result.activation?.createdAt||now;await this.ctx.storage.put("assignments",rows)}
@@ -1447,8 +1448,8 @@ function sanitizeGameConfig(v){
     const actionDurationSec=clampSec(src.actionDurationSec??src.durationSec??defaultActionSec);
     return {roleId,roleName,faction,description,count:Math.max(1,Math.min(20,Number(src.count||1))),order:Number(src.order||0),actionDurationSec};
   }):[];
-  const timing={villageDiscussionSec:clampSec(v?.timing?.villageDiscussionSec??v?.villageDiscussionSec??180),wolfDiscussionSec:clampSec(v?.timing?.wolfDiscussionSec??v?.wolfDiscussionSec??60),defaultActionSec,autoAdvance:v?.timing?.autoAdvance!==false};
-  return{id:String(v.id||"").slice(0,120),name:String(v.name||"Game Online").slice(0,120),playerCount:Math.max(0,Math.min(100,Number(v.playerCount||0))),roles,artifacts:Array.isArray(v.artifacts)?v.artifacts.slice(0,100).map(a=>({artifactId:String(a?.artifactId||"").slice(0,100),order:Number(a?.order||0)})):[],timing}
+  const timing={villageDiscussionSec:clampSec(v?.timing?.villageDiscussionSec??v?.villageDiscussionSec??300),wolfDiscussionSec:clampSec(v?.timing?.wolfDiscussionSec??v?.wolfDiscussionSec??60),defaultActionSec,autoAdvance:v?.timing?.autoAdvance!==false};
+  return{id:String(v.id||"").slice(0,120),name:String(v.name||"Game Online").slice(0,120),playerCount:Math.max(0,Math.min(100,Number(v.playerCount||0))),roles,artifacts:Array.isArray(v.artifacts)?v.artifacts.slice(0,100).map(a=>({artifactId:String(a?.artifactId||"").slice(0,100),order:Number(a?.order||0)})):[],artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(v.artifactLimitPerCycle??3)||0))),timing}
 }
 function validImageDataUrl(v){return typeof v==="string"&&/^data:image\/(?:webp|png|jpeg);base64,/i.test(v)&&v.length<1900000}
 function normalizeRoleImage(v){
@@ -1472,7 +1473,7 @@ function sanitizePlayerArtifactCard(v){
   return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,artworkAssetId,artworkId:artworkAssetId}
 }
 function privateArtifact(a){return{matchId:a.matchId||null,matchRevision:Number(a.matchRevision||0),artifactId:a.artifactId,artifactName:a.artifactName,description:a.description,artifactImage:a.artifactImage||null,artworkAssetId:a.artworkAssetId||a.artworkId||null,artworkId:a.artworkAssetId||a.artworkId||null,artworkAvailable:a.artworkAvailable!==false,artifactCard:a.artifactCard||null,singleUse:a.singleUse===true,deliveredAt:a.deliveredAt||null,viewedAt:a.viewedAt||null,usedAt:a.usedAt||null,lastActivation:a.lastActivation||null}}
-function currentArtifactCycleKey(meta){return artifactCycleKey(meta?.matchId||"match",Math.max(1,Number(meta?.cycleNight||1)))}
+function currentArtifactCycleKey(meta){const n=Math.max(1,Number(meta?.cycleNight||1)),phase=String(meta?.cyclePhase||"").toLowerCase();return phase==="day"||phase==="morning"?String(meta?.matchId||"match")+":day:"+n:artifactCycleKey(meta?.matchId||"match",n)}
 function gameLabelKey(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function sanitizePlayerRoleCard(v){
   const x=(v&&typeof v==="object")?v:{};
