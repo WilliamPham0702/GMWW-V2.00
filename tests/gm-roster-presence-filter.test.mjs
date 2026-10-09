@@ -120,3 +120,26 @@ test('ONLINE room validation and existing save remain intact',()=>{
   assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\./);
   assert.match(app,/async function savePlayRoster\(\)\{return savePlayRosterIds\(playRosterSelectedIds\(\)\)\}/);
 });
+
+test('V3.63 incremental OTA installs only verified GM UI files on V3.62',async()=>{
+  const {selectVerifiedRuntimeV363Delta}=await import('../src/gmww-ota-delta.js');
+  const origin='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.63/';
+  const all=['GMWW.html','app.js','style.css','gm/gm-white-wolf.webp'];
+  const manifest={
+    releaseVersion:'3.63',runtimeVersion:'3.63',shellVersion:'3.17',releaseType:'runtime',
+    runtime:{files:all.map(path=>({path,url:origin+path,sha256:'a'.repeat(64)}))},delete:[]
+  };
+  const delta=selectVerifiedRuntimeV363Delta(manifest,'3.62');
+  assert.equal(delta.upgradeMode,'verified-overlay');
+  assert.deepEqual(delta.runtime.files.map(file=>file.path),all.slice(0,3));
+  assert.equal(delta.optimizedFromVersion,'3.62');
+  for(const from of ['3.61','3.63','3.17'])assert.equal(selectVerifiedRuntimeV363Delta(manifest,from),null);
+  const corrupt={...manifest,runtime:{files:manifest.runtime.files.map(file=>({...file}))}};
+  corrupt.runtime.files[0].sha256='INVALID';
+  assert.equal(selectVerifiedRuntimeV363Delta(corrupt,'3.62'),null);
+  assert.equal(app.includes("const VERSION='3.63';"),true);
+  const worker=fs.readFileSync('src/index.js','utf8');
+  assert.match(worker,/selectVerifiedRuntimeV363Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
+  assert.match(worker,/selectVerifiedRuntimeV363Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
+  assert.match(fs.readFileSync('src/gmww-runtime-recovery.js','utf8'),/'3\.63'\]\.includes\(version\)/);
+});
