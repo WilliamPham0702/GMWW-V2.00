@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.56</title>
-<link rel="stylesheet" href="style.css?v=3.56-stage-realtime">
+<title>GMWW V3.57</title>
+<link rel="stylesheet" href="style.css?v=3.57-settings-tools">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -387,7 +387,15 @@
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
           <div class="settings-health-action"><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
-          <div class="settings-operations-tools">
+<div class="settings-tools-navigation" aria-label="Điều hướng công cụ tối ưu">
+<span class="settings-tools-hint" id="settingsToolsHint">↔ Vuốt ngang để xem thêm công cụ</span>
+<div class="settings-tools-nav-controls">
+<button type="button" id="settingsToolsPrev" class="settings-tools-arrow" aria-label="Xem công cụ phía trước" disabled>←</button>
+<output id="settingsToolsRange" aria-live="polite">1–3 / 14</output>
+<button type="button" id="settingsToolsNext" class="settings-tools-arrow" aria-label="Xem công cụ tiếp theo">→</button>
+</div></div>
+<div class="settings-tools-progress" aria-hidden="true"><span id="settingsToolsScrollFill"></span></div>
+          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="14 công cụ, cuộn ngang để xem thêm">
 <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
           <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
@@ -665,7 +673,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.55-theme-home"></script>
+<script src="app.js?v=3.56-stage-realtime"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{
@@ -728,6 +736,52 @@
     setInterval(syncLobbyState,1000);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+<script id="gmww-settings-tools-navigation">
+(()=>{
+ 'use strict';
+ function init(){
+   const rail=document.getElementById('settingsToolsRail');
+   const previous=document.getElementById('settingsToolsPrev'),next=document.getElementById('settingsToolsNext');
+   const number=document.getElementById('settingsToolsRange'),hint=document.getElementById('settingsToolsHint');
+   const fill=document.getElementById('settingsToolsScrollFill');
+   if(!rail||!previous||!next||!number||!hint||!fill)return;
+   const tiles=Array.from(rail.querySelectorAll('button.settings-action, label.ops-auto'));
+   function refresh(){
+     if(!rail.clientWidth)return;
+     const max=Math.max(0,rail.scrollWidth-rail.clientWidth);
+     const position=Math.max(0,rail.scrollLeft);
+     const moreLeft=position>3,moreRight=position<max-3;
+     previous.disabled=!moreLeft;
+     next.disabled=!moreRight;
+     rail.dataset.moreLeft=String(moreLeft);
+     rail.dataset.moreRight=String(moreRight);
+     const viewport=rail.getBoundingClientRect();
+     const visible=tiles.map((element,i)=>({i,box:element.getBoundingClientRect()}))
+       .filter(t=>t.box.right>viewport.left+10&&t.box.left<viewport.right-10).map(t=>t.i);
+     const first=visible.length?visible[0]+1:0;
+     const last=visible.length?visible[visible.length-1]+1:0;
+     number.textContent=first+'–'+last+' / '+tiles.length;
+     hint.textContent=moreRight?'↔ Còn '+Math.max(0,tiles.length-last)+' công cụ phía sau':moreLeft?'✓ Đã tới cuối • bấm ← để quay lại':'✓ Đã xem hết các công cụ';
+     fill.style.width=(max?Math.min(100,Math.round((position+rail.clientWidth)*100/rail.scrollWidth)):100)+'%';
+   }
+   function move(direction){
+     const tileWidth=tiles[0]?tiles[0].getBoundingClientRect().width:0;
+     rail.scrollBy({left:direction*Math.max(rail.clientWidth*.7,tileWidth*2,110),behavior:'smooth'});
+   }
+   previous.addEventListener('click',()=>move(-1));
+   next.addEventListener('click',()=>move(1));
+   rail.addEventListener('scroll',refresh,{passive:true});
+   window.addEventListener('resize',refresh,{passive:true});
+   const settings=document.getElementById('settings');
+   if(settings&&typeof MutationObserver!=='undefined')
+     new MutationObserver(()=>requestAnimationFrame(refresh)).observe(settings,{attributes:true,attributeFilter:['class','style']});
+   if(typeof ResizeObserver!=='undefined')new ResizeObserver(refresh).observe(rail);
+   requestAnimationFrame(refresh);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+ else init();
 })();
 </script>
 </body>
