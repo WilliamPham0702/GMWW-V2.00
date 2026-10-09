@@ -3797,3 +3797,8 @@ body:not(.play-immersive) #bottomNav.gmww-pearl-nav-v344 .gmww-settings-nav .gmw
  #playGameSheet .play-template-role-values [data-role-remove]{width:25px}
  #playGameSheet .play-template-selected-row{gap:5px;padding:6px}
 }
+
+/* V3.49 — Lá đánh sao / Thường dùng: một hàng vuốt ngang */
+#playGameSheet .play-template-catalog{display:flex!important;flex-flow:row nowrap!important;align-items:stretch;gap:9px;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:6px 5px 12px}
+#playGameSheet .play-template-catalog>.play-template-card{flex:0 0 clamp(102px,27vw,132px);width:clamp(102px,27vw,132px);scroll-snap-align:start}
+@media(max-width:390px){#playGameSheet .play-template-catalog{display:flex!important;flex-flow:row nowrap!important}}
