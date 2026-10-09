@@ -85,14 +85,14 @@ export function selectVerifiedRuntimeV353Delta(manifest,installedVersion){
     message:'Đồng bộ thanh bước GM với timeline phía trên; giữ nguyên dữ liệu và artwork.'};
 }
 
-/** Verified minimal 3.53 -> 3.54 homepage artwork overlay; all older releases use complete manifest. */
+/** Verified minimal V3.51/V3.52/V3.53 -> V3.54 homepage artwork overlay. */
 export function selectVerifiedRuntimeV354Delta(manifest,installedVersion){
   const current=String(installedVersion||'').trim().replace(/^V/i,'');
-  if(current!=='3.53'||String(manifest?.releaseVersion||'')!=='3.54'
+  if(!['3.51','3.52','3.53'].includes(current)||String(manifest?.releaseVersion||'')!=='3.54'
     ||String(manifest?.runtimeVersion||'')!=='3.54'||String(manifest?.shellVersion||'')!=='3.17'
     ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
     ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
-  const names=['GMWW.html','app.js','style.css','home-art/home-sea-portal-v354.svg',
+  const names=['GMWW.html','app.js','style.css',...(current==='3.51'?['home-art/home-sea-portal-v352.svg']:[]),'home-art/home-sea-portal-v354.svg',
    'home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg'];
   const selected=[];
   for(const path of names){
@@ -103,6 +103,6 @@ export function selectVerifiedRuntimeV354Delta(manifest,installedVersion){
     selected.push({path,url,sha256:String(value.sha256).toLowerCase()});
   }
   return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
-    optimizedFromVersion:'3.53',upgradeMode:'verified-overlay',
-    message:'Cập nhật Trang Chủ biển V3.54 gồm 4 hình mới; giữ dữ liệu, cài đặt và các tính năng GM.'};
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'Cập nhật V3.54 gồm 4 hình biển và đồng bộ tiến trình GM; bảo toàn dữ liệu người dùng.'};
 }

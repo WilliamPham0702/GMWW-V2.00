@@ -9,9 +9,17 @@ import fs from 'node:fs';
 const url=process.argv[2],version=process.argv[3];
 if(!['3.51','3.52','3.54'].includes(version)){console.log('Incremental OTA test skipped '+version);process.exit(0)}
 if(!/^https:\/\/gmww-v2-00\.williampham0702\.workers\.dev$/.test(url||''))throw Error('Untrusted Production origin');
-const installed=version==='3.54'?'3.53':version==='3.52'?'3.51':'3.50';
-const response=await fetch(url+'/api/update/manifest?current='+installed+'&verify-lean='+Date.now(),{signal:AbortSignal.timeout(25000),headers:{'cache-control':'no-cache'}});
-assert.equal(response.status,200,'V3.50 update manifest must be readable');
+const installations=version==='3.54'?['3.51','3.52','3.53']:[version==='3.52'?'3.51':'3.50'];
+for(const installed of installations){
+let response;
+for(let attempt=0;attempt<6;attempt++){
+ try{response=await fetch(url+'/api/update/manifest?current='+installed+'&verify-lean='+Date.now()+'-'+attempt,{signal:AbortSignal.timeout(25000),headers:{'cache-control':'no-cache'}})}
+ catch(error){console.warn('OTA request failed',installed,String(error.message||error))}
+ if(response?.status===200)break;
+ console.warn('OTA manifest not ready for installed V'+installed, response?.status,'attempt',attempt+1);
+ if(attempt<5)await new Promise(resolve=>setTimeout(resolve,2000));
+}
+assert.equal(response?.status,200,'V'+installed+' update manifest must be readable');
 const manifest=await response.json();
 assert.equal(manifest.ok,true);
 assert.equal(manifest.releaseVersion,version);
@@ -20,7 +28,7 @@ assert.equal(manifest.optimizedFromVersion,installed);
 assert.equal(manifest.upgradeMode,'verified-overlay');
 const expected=['GMWW.html','app.js','style.css'];
 if(version==='3.52')expected.push('home-art/home-sea-portal-v352.svg');
-if(version==='3.54')expected.push('home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg');
+if(version==='3.54')expected.push(...(installed==='3.51'?['home-art/home-sea-portal-v352.svg']:[]),'home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg');
 assert.deepEqual(manifest.runtime.files.map(x=>x.path),expected);
 assert.deepEqual(manifest.delete,[]);
 let total=0;
@@ -39,3 +47,4 @@ for(const f of manifest.runtime.files){
   console.log('IPA V3.17 overlay integrity PASS '+f.path+' ('+data.length+' bytes)');
 }
 console.log('V'+installed+' → V'+version+' '+expected.length+'-file OTA PASS, total bytes '+total);
+}
