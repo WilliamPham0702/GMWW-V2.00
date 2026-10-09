@@ -3,34 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.50</title>
-<link rel="stylesheet" href="style.css?v=3.50-template-swipe-fix-2">
+<title>GMWW V3.51</title>
+<link rel="stylesheet" href="style.css?v=3.51-sections-1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
 <div id="app">
   <main id="stage">
     <section class="page active" id="home" aria-label="Trang Chủ GMWW">
-      <div class="gmww-home-rebuild-v350" data-home-build="v350-independent">
-        <section class="gmww-home-scene-v350" aria-label="Làng biển WilliamPham">
-          <img src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển với nhân vật GM và sói trắng" class="gmww-home-scene-image-v350" decoding="async" fetchpriority="high">
-          <button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350" type="button" aria-label="Vào Làng và mở Trang Chơi"><span aria-hidden="true">▶</span><strong>VÀO LÀNG</strong><small>Tạo phòng · Chơi ngay</small></button>
+      <div class="gmww-home-rebuild-v350 gmww-home-rebuild-v351" data-home-build="v351-sectioned">
+        <section class="gmww-home-scene-v350 gmww-home-scene-v351" aria-label="Làng biển WilliamPham">
+          <div class="gmww-home-hero-artboard-v351"><img src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển với nhân vật GM và sói trắng" class="gmww-home-scene-image-v350" decoding="async" fetchpriority="high"><div class="gmww-home-plaque-v351" aria-label="WilliamPham – Ma Sói Phiên Bản Biển"><strong>WilliamPham</strong><span>MA SÓI · PHIÊN BẢN BIỂN</span></div></div>
         </section>
-        <section class="gmww-home-tiles-v350" aria-label="Khám phá GMWW">
+        <div class="gmww-home-cta-wrap-v351"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350" type="button" aria-label="Vào Làng và mở Trang Chơi"><span aria-hidden="true">▶</span><strong>VÀO LÀNG</strong><small>Tạo phòng · Chơi ngay</small></button></div>
+        <section class="gmww-home-tiles-v350 gmww-home-tiles-v351" aria-label="Khám phá GMWW">
           <button type="button" data-home-destination="library" data-home-library-tab="cards"><img src="home-art/home-sea-cards-v348.svg" alt=""><b>Bộ Bài</b><small>Vai trò · Artifact</small></button>
           <button type="button" data-home-destination="members"><img src="home-art/home-sea-members-v348.svg" alt=""><b>Thành Viên</b><small>Quản lý · Xếp hạng</small></button>
           <button type="button" data-home-destination="library" data-home-library-tab="templates"><img src="home-art/home-sea-templates-v348.svg" alt=""><b>Ván Mẫu</b><small>Thiết lập nhanh</small></button>
         </section>
-        <section class="gmww-home-stats-v350" aria-label="Thống Kê Nhanh"><h2>▥ Thống Kê Nhanh</h2><div class="gmww-home-stats-grid-v350">
+        <section class="gmww-home-stats-v350 gmww-home-stats-v351" aria-label="Thống Kê Nhanh"><h2>▥ Thống Kê Nhanh</h2><div class="gmww-home-stats-grid-v350">
           <div><span>👥</span><strong id="gmwwHomeMemberCount">—</strong><small>Thành viên</small></div>
           <div><span>🟢</span><strong id="gmwwHomeOnlineCount">—</strong><small>Đang online</small></div>
           <div><span>⚔️</span><strong id="gmwwHomePlaysCount">—</strong><small>Tổng số ván</small></div>
           <div><span>🏆</span><strong id="gmwwHomeLeaderWins">—</strong><small id="gmwwHomeLeaderboard">Chưa có xếp hạng</small></div>
         </div></section>
-        <section class="gmww-home-activity-v350" aria-label="Hoạt Động Gần Đây"><header><h2>◷ Hoạt Động Gần Đây</h2><button type="button" id="gmwwHomeRefresh" aria-label="Làm mới hoạt động">↻</button><button type="button" id="gmwwHomeOpenRanking">Xem tất cả ❯</button></header>
+        <section class="gmww-home-activity-v350 gmww-home-activity-v351" aria-label="Hoạt Động Gần Đây"><header><h2>◷ Hoạt Động Gần Đây</h2><button type="button" id="gmwwHomeRefresh" aria-label="Làm mới hoạt động">↻</button><button type="button" id="gmwwHomeOpenRanking">Xem tất cả ❯</button></header>
           <p id="gmwwHomeRecentResult" role="status">Đang tải hoạt động…</p><div id="gmwwHomeRecentRows" class="gmww-home-recent-rows" aria-live="polite"></div>
         </section>
-        <span id="gmwwHomeVersion" class="gmww-home-version-sr">GMWW V3.50</span>
+        <span id="gmwwHomeVersion" class="gmww-home-version-sr">GMWW V3.51</span>
       </div>
     </section>
     <section class="page" id="members">
@@ -665,7 +665,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.50-home-isolated-1-template-rail-3"></script>
+<script src="app.js?v=3.51-sections-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{
