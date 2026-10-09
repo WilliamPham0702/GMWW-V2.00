@@ -36,11 +36,11 @@ test('transparent PNG validator enforces actual 1024x1536 master size and 2:3 as
  assert.equal(alphaDiagnostics({width:w,height:h,data:p}).valid,false);
  assert.throws(()=>alphaDiagnostics({width:w,height:h,data:new Uint8ClampedArray(4)}),/INVALID_IMAGE_DATA/);
 });
-test('source manifest acknowledges only 3 independent views and no real rig integration',()=>{
+test('source manifest acknowledges 4 independent views and no real rig integration',()=>{
  const manifest=JSON.parse(read('assets/characters/v4/artwork-v416-manifest.json'));
  assert.equal(manifest.version,'4.16-highres-artwork-draft');
  assert.equal(manifest.drafts.length,4);
- assert.equal(new Set(manifest.drafts.map(x=>x.id+'-'+x.direction)).size,3);
+ assert.equal(new Set(manifest.drafts.map(x=>x.id+'-'+x.direction)).size,4);
  assert.ok(manifest.drafts.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)));
  assert.equal(manifest.limitations.requiredViews,8);
  assert.equal(manifest.limitations.importedIntoRepository,false);
