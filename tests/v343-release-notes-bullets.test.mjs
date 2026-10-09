@@ -14,7 +14,7 @@ test('Có gì mới shows each note in a dedicated safe bullet',()=>{
  assert.ok(start>0&&end>start);
  const box={children:[],replaceChildren(...children){this.children=children}};
  const document={getElementById:()=>box,createElement:tag=>({tag,children:[],appendChild(el){this.children.push(el)},textContent:'',className:''})};
- vm.runInNewContext(app.slice(start,end)+"\ngmwwRenderReleaseNotes({releaseVersion:'3.51',releaseNotes:['Nội dung A','Nội dung B']});",{document,gmwwRuntimeVersion:()=> '3.51',gmwwVersionCompare:(a,b)=>a.localeCompare(b,undefined,{numeric:true})});
+ vm.runInNewContext(app.slice(start,end)+"\ngmwwRenderReleaseNotes({releaseVersion:'3.51',releaseNotes:['Nội dung A','Nội dung B']});",{document,gmwwRuntimeVersion:()=> '3.50',gmwwVersionCompare:(a,b)=>a.localeCompare(b,undefined,{numeric:true})});
  assert.equal(box.children[0].textContent,'Có gì mới');
  assert.equal(box.children[1].tag,'ul');
  assert.deepEqual(Array.from(box.children[1].children,x=>x.textContent),['Nội dung A','Nội dung B']);
