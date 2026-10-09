@@ -277,3 +277,15 @@ jobs:
           grep -Fq 'x="0" y="0"' /tmp/char01-front.svg
           grep -Fq 'id="labCharacter"' /tmp/character-v4-web.html
           echo "Verify Production: Character 01 + 02, four directions each, new real artwork PASS."
+          echo "Verify Production: checking V4 articulated two-character action module."
+          grep -Fq '<canvas id="labCharacter"' /tmp/character-v4-web.html
+          grep -Fq 'animated-sprite.mjs' /tmp/character-v4-web.html
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/animated-sprite.mjs?verify=$(date +%s)" > /tmp/character-v4-animated-sprite.mjs
+          node --check /tmp/character-v4-animated-sprite.mjs
+          grep -Fq "export function v4ActionPose" /tmp/character-v4-animated-sprite.mjs
+          grep -Fq "export function createV4SpriteRenderer" /tmp/character-v4-animated-sprite.mjs
+          node - <<'NODE'
+          const fs=require('node:fs'), html=fs.readFileSync('/tmp/character-v4-web.html','utf8');
+          if(!html.includes('sprite.render({')||html.includes('actor.src=imageUrl('))process.exit(1);
+          console.log('Verify Production: V4 canvas articulated limb animation wired to Action controls PASS.');
+          NODE
