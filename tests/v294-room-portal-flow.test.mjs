@@ -46,14 +46,15 @@ test('V3.01 only GM can assign seats',()=>{
   assert.doesNotMatch(live,/gmww:portal-click/);
 });
 
-test('V3.38 Player Web auto-ready from GM and keeps only Leave Seat and Leave Room',()=>{
+test('V3.58 Player Web auto-ready from GM and hides Leave Seat and Leave Room',()=>{
   const script=JSON.parse(live.trim().replace(/^export const gmwwMembersLiveScript = /,'').replace(/;$/,''));
   const begin=script.indexOf('function ensureVillageReadyDock(){'),end=script.indexOf('function syncPlayerSetupState(){',begin);
   const dock=script.slice(begin,end);
   assert.match(dock,/RỜI GHẾ/);
   assert.match(dock,/RỜI PHÒNG/);
   assert.match(dock,/ĐÃ SẴN SÀNG/);
-  assert.match(dock,/sb\.hidden=!seated/);
+  assert.match(dock,/d\.querySelector\('\.seat'\)\.hidden=true/);
+  assert.match(dock,/d\.querySelector\('\.leave'\)\.hidden=true/);
   assert.doesNotMatch(dock,/<button class="ready"/);
   assert.doesNotMatch(script,/toggleReady\(/);
   assert.match(server,/ready:true,reservedByGM:true/);
