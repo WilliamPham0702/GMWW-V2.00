@@ -2761,11 +2761,17 @@ function playTemplateRenderCatalog(){
     faction=document.getElementById('playTemplateRoleFaction')?.value||'all',
     starred=!!document.getElementById('playTemplateOnlyStarred')?.checked;
   const roles=playSortedRoles().filter(r=>(!term||(String(r.name||'')+' '+playFactionLabel(r)).toLocaleLowerCase('vi').includes(term))&&(faction==='all'||playFactionLabel(r)===faction)&&(!starred||!!prefs.cards?.[r.id]?.starred));
+  // Enforce horizontal scroll at runtime: legacy IPA stylesheets may override the catalog grid.
+  const swipeRules={display:'flex',flexDirection:'row',flexWrap:'nowrap',overflowX:'auto',overflowY:'hidden',maxHeight:'none',gridTemplateColumns:'none',touchAction:'pan-x pan-y',webkitOverflowScrolling:'touch'};
+  for(const [key,value] of Object.entries(swipeRules))picker.style.setProperty(key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase()),value,'important');
   picker.replaceChildren();
   for(const role of roles){
     const count=Math.max(0,Number(playSceneState.rolePlan?.[role.id])||0),chosen=count>0;
     const button=document.createElement('button');button.type='button';
     button.className='play-template-card'+(chosen?' is-picked':'');
+    button.style.setProperty('flex','0 0 112px','important');
+    button.style.setProperty('width','112px','important');
+    button.style.setProperty('max-width','112px','important');
     button.setAttribute('aria-pressed',String(chosen));
     button.setAttribute('aria-label',(chosen?'Bỏ chọn ':'Chọn ')+String(role.name||'Vai Trò'));
     button.innerHTML='<span class="play-template-artwork"><img loading="lazy" alt=""><span class="play-template-select-indicator" aria-hidden="true">'+(chosen?'✓':'+')+'</span></span><span class="play-template-card-name">'+playEsc(role.name||'Vai Trò')+'</span>';
