@@ -175,7 +175,7 @@ jobs:
             echo "Verify Production: GM rider hash PASS."
             # Artwork must be available as exact bytes after OTA, not merely in GitHub.
             echo "Verify Production: checking every Trang Chu artwork in live Runtime."
-            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp home-sea-portal-v352.svg; do
+            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp home-sea-portal-v352.svg home-sea-portal-v354.svg home-sea-cards-v354.svg home-sea-members-v354.svg home-sea-templates-v354.svg; do
               REL="home-art/$ART"
               ART_URL=$(node - "$REL" <<'NODE'
           const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));

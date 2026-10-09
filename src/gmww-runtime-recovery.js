@@ -1,10 +1,10 @@
 /* Signed recovery for legacy Runtime V3.38–V3.46 installed on IPA shell 3.17.
  * Used only when a full immutable manifest cannot be read at an edge. */
 export async function recoverLegacyRuntimeManifest({assets,requestUrl,version,shellVersion,installedVersion}={}){
-  if(!assets?.fetch||version!=='3.53'||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44','3.45','3.46','3.47','3.48','3.49'].includes(String(installedVersion).replace(/^V/i,'')))return null;
+  if(!assets?.fetch||version!=='3.54'||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44','3.45','3.46','3.47','3.48','3.49'].includes(String(installedVersion).replace(/^V/i,'')))return null;
   const files=[];
   try{
-    for(const path of ['GMWW.html','app.js','style.css','home-art/home-sea-portal-v352.svg']){
+    for(const path of ['GMWW.html','app.js','style.css','home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg']){
       const url=new URL('/updates/runtime/V'+version+'/'+path,requestUrl);
       const response=await assets.fetch(new Request(url.toString(),{method:'GET',headers:{'cache-control':'no-cache'}}));
       if(!response.ok)return null;

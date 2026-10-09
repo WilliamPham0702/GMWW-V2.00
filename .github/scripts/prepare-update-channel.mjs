@@ -135,7 +135,7 @@ const manifest={
   serverVersion:version,
   required:false,
   restartRequired:releaseType==='runtime',
-  releaseNotes:["Đồng bộ nhãn thanh điều khiển dưới với bước đang chọn trên timeline; không bị tên phòng ghi đè sau đồng bộ thời gian thực."],
+  releaseNotes:["Trang Chủ: loại bỏ bảng tên trùng nội dung và không che nhân vật sói trắng","Thiết kế lại artwork cổng Vào Làng và ba ô Bộ Bài, Thành Viên, Ván Mẫu theo chủ đề fantasy biển","Thêm khoảng cuộn để hiển thị đủ Thống Kê Nhanh và Hoạt Động phía trên menu dưới","Cập nhật V3.53 lên V3.54 bằng 7 tệp xác minh SHA-256; bảo toàn dữ liệu và tính năng GM"],
   message:isNative?`GMWW V${version} yêu cầu cài IPA mới.`:releaseType==='runtime'?`Có GMWW V${version}. Có thể cập nhật trực tiếp.`:'Server/Player Web đã cập nhật.',
   runtime:{files:releaseType==='runtime'?files:[]},
   delete:[],
