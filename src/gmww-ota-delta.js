@@ -127,3 +127,24 @@ export function selectVerifiedRuntimeV358Delta(manifest,installedVersion){
     optimizedFromVersion:'3.57',upgradeMode:'verified-overlay',
     message:'Hiển thị đầy đủ 14 công cụ bảo trì dạng lưới; giữ nguyên dữ liệu và artwork.'};
 }
+
+/** Safe 3-file overlay from installed V3.58 to V3.59 (native shell V3.17). */
+export function selectVerifiedRuntimeV359Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.58'||String(manifest?.releaseVersion||'')!=='3.59'
+    ||String(manifest?.runtimeVersion||'')!=='3.59'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0];
+    const expected=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.59/'+path;
+    if(String(file.url||'')!==expected||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url:expected,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:'3.58',upgradeMode:'verified-overlay',
+    message:'V3.59: Chọn Ván 300 giây, cấu hình hạn mức Artifact, thẻ ★ vuốt ngang, nhãn nhân vật gọn.'};
+}
