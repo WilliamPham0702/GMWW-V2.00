@@ -60,3 +60,14 @@ test('Simplified player lobby uses existing info boxes, hides unoccupied leaves 
  assert.match(live,/showSeats:!!state\.roomCode&&room\.enabled!==false&&!publicPlayers\.some\(p=>Number\(p\.seatId\|\|0\)>0\)/);
  assert.match(live,/if\(!confirm\('Thoát Player Web và rời phòng hiện tại\?'\)\)return/);
 });
+
+test('Assigned characters remain on the village when all empty seat leaves are hidden',()=>{
+  const start=scene.indexOf('function render(){'),end=scene.indexOf('function animateMovementFrame(',start);
+  assert.ok(start>=0&&end>start,'village render section must exist');
+  const render=scene.slice(start,end);
+  assert.match(render,/ps\.forEach\(\(p,i\)=>\{/,'iterate occupied and empty slots regardless of leaf visibility');
+  assert.match(render,/if\(!data\)\{\s*if\(setupState\.showSeats===false\)return;/,'skip only empty slot markers');
+  assert.match(render,/const pos=movementPosition\(data,p\),button=stablePlayerNode\(data,pos,seatId,i\);desiredPlayers\.push\(button\)/,'seated player characters must be retained');
+  assert.doesNotMatch(render,/setupState\.showSeats===false\?\[\]:ps/,'seat visibility must never gate character rendering');
+  assert.match(render,/for\(const data of unseated\)/,'unseated characters and GM still render');
+});

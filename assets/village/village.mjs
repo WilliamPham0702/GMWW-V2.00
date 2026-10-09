@@ -201,9 +201,11 @@ if(game){
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     const desiredPlayers=[];roster.replaceChildren();
-    (setupState.showSeats===false?[]:ps).forEach((p,i)=>{
+    // Empty leaves are optional; occupied seats must always render their characters.
+    ps.forEach((p,i)=>{
       const seatId=i+1,data=seatMap.get(seatId)||(!liveRoom&&!embedded?(all[i]||sample[i]):null);
       if(!data){
+        if(setupState.showSeats===false)return;
         const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving");
         let empty=mountedEmptySeatNodes.get(seatId);
         if(!empty){empty=document.createElement("button");empty.type="button";empty.className="seat-empty";empty.dataset.seatId=String(seatId);empty.innerHTML='<span class="seat-dot"></span><b></b>';empty.disabled=true;mountedEmptySeatNodes.set(seatId,empty)}
