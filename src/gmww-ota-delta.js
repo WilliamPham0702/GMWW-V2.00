@@ -579,3 +579,28 @@ export function selectVerifiedRuntimeV382Delta(manifest,installedVersion){
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
     message:'V3.82: Thêm icon AI Support nổi, chat tự do và Báo lỗi; bảo toàn toàn bộ lá bài, ảnh, ván mẫu và dữ liệu.'};
 }
+
+
+/** V3.82 -> V3.83: verified GM-only assignment-save and template prewarm overlay.
+ * The shell, Player Web assets and existing media stay intact.
+ */
+export function selectVerifiedRuntimeV383Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(from!=='3.82'||String(manifest?.releaseVersion||'')!=='3.83'
+    ||String(manifest?.runtimeVersion||'')!=='3.83'
+    ||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'
+    ||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js']){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.83/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.83: Lưu Phân Vai riêng tại GM và chuẩn bị trước Vai Trò, Artifact từ Ván Mẫu; giữ nguyên dữ liệu và artwork.'};
+}
