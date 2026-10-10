@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.62</title>
-<link rel="stylesheet" href="style.css?v=3.62-gather-drag">
+<title>GMWW V3.63</title>
+<link rel="stylesheet" href="style.css?v=3.63-roster-filter">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -582,6 +582,11 @@
   <div class="sheet-card play-roster-sheet-card">
     <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
     <div class="play-roster-toolbar"><span id="playRosterCount">0 đã chọn</span><button id="playRosterSelectAll" type="button">Chọn tất cả</button></div>
+    <div class="play-roster-filters" id="playRosterFilters" role="group" aria-label="Lọc thành viên theo trạng thái">
+      <button type="button" class="active" data-play-roster-filter="all" aria-pressed="true">Tất cả</button>
+      <button type="button" data-play-roster-filter="online" aria-pressed="false">Online</button>
+      <button type="button" data-play-roster-filter="offline" aria-pressed="false">Offline</button>
+    </div>
     <div class="play-roster-list" id="playRosterList"></div>
     <div class="button-row play-roster-actions">
       <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
@@ -673,7 +678,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.62-gather-drag"></script>
+<script src="app.js?v=3.63-roster-filter"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

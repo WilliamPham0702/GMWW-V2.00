@@ -12,16 +12,16 @@ const lock=JSON.parse(read("package-lock.json"));
 const shell="3.17";
 
 test("task approval is a newer OTA than the previously released V3.30",()=>{
-  const version="3.62";
+  const version="3.63";
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
-  assert.match(app,/const VERSION='3\.62';/);
-  assert.match(worker,/VERSION="V3\.62",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-362"/);
+  assert.match(app,/const VERSION='3\.63';/);
+  assert.match(worker,/VERSION="V3\.63",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-363"/);
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
   assert.equal(shell,"3.17");
-  assert.match(html,/<title>GMWW V3\.62<\/title>/);
-  assert.match(html,/app\.js\?v=3\.62-gather-drag/);
+  assert.match(html,/<title>GMWW V3\.63<\/title>/);
+  assert.match(html,/app\.js\?v=3\.63-roster-filter/);
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
