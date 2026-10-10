@@ -741,7 +741,7 @@ function updateEntityHideButton(){const b=$('#hideEntity');if(!b||!currentId)ret
 function toggleCurrentEntityHidden(){if(!currentId)return;togglePref(currentKind,currentId,'hide');updateEntityHideButton()}
 function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);editBackRendered=false;$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');updateEntityHideButton();setFace('front');renderEntityFront();$('#library').scrollTop=0}
 function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
-function saveEntity(){if(!editDraft)return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);ensureAudioPlaceholder(currentKind,editDraft);saveState();renderEntityGrid(currentKind);closeEntityEditor()}
+function saveEntity(){if(!editDraft)return;const kind=currentKind,id=String(currentId);const list=entityList(kind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);ensureAudioPlaceholder(kind,editDraft);saveState();renderEntityGrid(kind);closeEntityEditor();if(kind==='artifacts')void playSyncSharedArtifactLibrary({onlyIds:[id],forceIds:[id]})}
 function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];const bucket=currentKind==='cards'?'cards':'artifacts';state.audio[bucket]=(state.audio[bucket]||[]).filter(a=>a.targetId!==currentId);saveState();savePrefs();closeEntityEditor()}
 function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}Array.from(document.querySelectorAll('.face-switch button')).forEach(b=>b.classList.toggle('active',b.dataset.face===face));Array.from(document.querySelectorAll('.face')).forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
 let faceTouchStart=null;
@@ -3170,7 +3170,7 @@ async function savePlayGame(){
     // Remember the saved ID immediately: retry must resume the SAME template, never create duplicates.
     playSceneState.gameTemplateId=String(cached?.template?.id||templateId);
     playSceneState.gameName=gameName;savePlayScene();
-    playGameStatus('Đang kiểm tra và đóng gói Artwork cho các lá đã chọn…','progress');
+    playGameStatus('Đang đóng gói artwork Vai Trò; Artifact dùng kho chung của server…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
   }catch(err){
@@ -3371,7 +3371,55 @@ async function playVerifiedArtworkData(kind,id){
 async function playRoleArtworkData(role){return playVerifiedArtworkData('cards',role.id)}
 async function playArtifactArtworkData(artifact){return playVerifiedArtworkData('artifacts',artifact.id)}
 function playTemplateAssetIds(cfg){
-  return [...new Set([...(cfg?.roles||[]).map(r=>'role:'+String(r.roleId||'')),...(cfg?.artifacts||[]).map(a=>'artifact:'+String(a.artifactId||''))].filter(x=>!x.endsWith(':')))];
+  // Only selected Vai Trò belongs to the per-template, revisioned package.
+  return [...new Set((cfg?.roles||[]).map(r=>'role:'+String(r.roleId||'')).filter(x=>!x.endsWith(':')))];
+}
+function playMatchArtifactAssetIds(cfg){
+  return [...new Set((cfg?.artifacts||[]).map(a=>'artifact:'+String(a.artifactId||'')).filter(x=>!x.endsWith(':')))];
+}
+const playSharedArtifactUploads=new Map();
+async function playSharedArtifactSignature(artifact){
+  const data=new TextEncoder().encode(JSON.stringify(playArtifactCardPayload(artifact)));
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+// Global server-side collection: sync missing/changed cards independently from Ván Mẫu saves.
+async function playSyncSharedArtifactLibrary({onlyIds=null,forceIds=[]}={}){
+  const library=(state.artifacts||[]).filter(a=>a?.id&&(!onlyIds||onlyIds.map(String).includes(String(a.id))));
+  if(!library.length)return{ok:true,synced:0,failed:[]};
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const known=new Map((status?.artifacts||[]).map(x=>[String(x.assetId),x.signature]));
+  const forced=new Set(forceIds.map(String)),failed=[];
+  let synced=0;
+  for(const artifact of library){
+    const id=String(artifact.id),assetId='artifact:'+id;
+    try{
+      const signature=await playSharedArtifactSignature(artifact);
+      if(!forced.has(id)&&known.get(assetId)===signature)continue;
+      if(!playSharedArtifactUploads.has(id)){
+        const pending=(async()=>{
+          const imageDataUrl=await playArtifactArtworkData(artifact);
+          const payload={assetId,signature,imageDataUrl,package:{roleCard:playArtifactCardPayload(artifact)}};
+          const result=await gmApi('/api/gm/artifacts/shared',{method:'PUT',timeoutMs:60000,body:JSON.stringify(payload)});
+          if(result?.ok!==true)throw new Error('Server không xác nhận bộ Artifact '+id);
+        })();
+        playSharedArtifactUploads.set(id,pending);
+        void pending.finally(()=>{if(playSharedArtifactUploads.get(id)===pending)playSharedArtifactUploads.delete(id)}).catch(()=>{});
+      }
+      await playSharedArtifactUploads.get(id);
+      synced++;
+    }catch(err){failed.push({id,error:String(err?.message||err)})}
+  }
+  return{ok:failed.length===0,synced,failed};
+}
+async function playEnsureSharedArtifactPool(cfg){
+  const ids=playMatchArtifactAssetIds(cfg).map(id=>id.slice('artifact:'.length));
+  if(!ids.length)return;
+  const report=await playSyncSharedArtifactLibrary({onlyIds:ids});
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const ready=new Set((status?.artifacts||[]).map(x=>String(x.assetId)));
+  const missing=ids.filter(id=>!ready.has('artifact:'+id));
+  if(missing.length)throw new Error('Bộ Artifact dùng chung chưa sẵn sàng: '+missing.join(', ')+'. '+String(report.failed[0]?.error||'Hãy kiểm tra artwork trong Bộ Bài.'));
 }
 async function playEnsureTemplateAssets(id,cfg){
   const endpoint='/api/gm/game-templates/'+encodeURIComponent(id)+'/assets';
@@ -3380,13 +3428,11 @@ async function playEnsureTemplateAssets(id,cfg){
   const missing=new Set(status?.missing||playTemplateAssetIds(cfg));
   let finished=0;
   for(const assetId of missing){
-    const isArtifact=assetId.startsWith('artifact:'),rawId=assetId.slice(isArtifact?9:5);
-    const model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===rawId);
-    if(!model)throw new Error('Thiếu Lá Bài '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
-    playGameStatus('Đang đóng gói '+(finished+1)+'/'+missing.size+': '+String(model.name||'Lá Bài'),'progress');
-    const imageDataUrl=isArtifact?await playArtifactArtworkData(model):await playRoleArtworkData(model);
-    const pkg=isArtifact?{roleId:assetId,roleName:model.name,artworkAssetId:assetId,roleCard:playArtifactCardPayload(model)}:
-      {roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
+    const rawId=assetId.slice(5),model=(state.cards||[]).find(x=>String(x.id)===rawId);
+    if(!model)throw new Error('Thiếu Lá Vai Trò '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
+    playGameStatus('Đang đóng gói Vai Trò '+(finished+1)+'/'+missing.size+': '+String(model.name||'Lá Bài'),'progress');
+    const imageDataUrl=await playRoleArtworkData(model);
+    const pkg={roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
     const uploaded=await gmApi(endpoint,{method:'PUT',timeoutMs:60000,body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
     if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
     finished++;
@@ -3396,20 +3442,30 @@ async function playEnsureTemplateAssets(id,cfg){
   return status;
 }
 async function playPreloadSelectedArtwork(cfg){
-  const expected=playTemplateAssetIds(cfg);
+  const roles=playTemplateAssetIds(cfg),artifacts=playMatchArtifactAssetIds(cfg),expected=[...roles,...artifacts];
   const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
   const existing=new Set(manifest?.assetIds||[]);
-  for(const assetId of expected.filter(x=>!existing.has(x))){
-    const isArtifact=assetId.startsWith('artifact:'),id=assetId.slice(isArtifact?9:5),model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===id);
-    if(!model)throw new Error('Không tìm thấy Artwork '+assetId+' cho trận này.');
-    const imageDataUrl=await(isArtifact?playArtifactArtworkData(model):playRoleArtworkData(model));
-    const roleCard=isArtifact?playArtifactCardPayload(model):playRoleCardPayload(model);
-    const body={roles:[{roleId:isArtifact?assetId:id,roleName:model.name,artworkAssetId:assetId,roleCard,imageDataUrl}]};
-    const uploaded=await playRoomApi('/role-assets',{method:'POST',timeoutMs:60000,body:JSON.stringify(body)});
-    if(uploaded?.roles?.[0]?.hasImage!==true)throw new Error('Không nạp được ảnh '+model.name+' lên Phòng.');
+  for(const assetId of roles.filter(x=>!existing.has(x))){
+    const id=assetId.slice(5),model=(state.cards||[]).find(x=>String(x.id)===id);
+    if(!model)throw new Error('Không tìm thấy Vai Trò '+assetId+' cho trận này.');
+    const imageDataUrl=await playRoleArtworkData(model);
+    const uploaded=await playRoomApi('/role-assets',{method:'POST',timeoutMs:60000,
+      body:JSON.stringify({roles:[{roleId:id,roleName:model.name,artworkAssetId:assetId,roleCard:playRoleCardPayload(model),imageDataUrl}]})});
+    if(uploaded?.roles?.[0]?.hasImage!==true)throw new Error('Không nạp được ảnh Vai Trò '+model.name+' lên Phòng.');
+  }
+  // Artifact is copied from server-wide cache; never encoded or repackaged per template.
+  if(artifacts.length){
+    playGameStatus('Đang nhận Artifact từ kho dùng chung của Server…','progress');
+    await playEnsureSharedArtifactPool(cfg);
+    for(const assetId of artifacts){
+      const transferred=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:60000,
+        body:JSON.stringify({assetIds:[assetId]})});
+      if(transferred?.ready!==true)throw new Error('Server chưa nạp được Artifact '+assetId);
+    }
   }
   const verified=await playRoomApi('/artwork-manifest',{method:'GET'});
-  if(!expected.every(id=>verified?.assetIds?.includes(id)))throw new Error('Chưa nạp đầy đủ artwork vào Phòng. Phân Vai đang được giữ lại.');
+  if(!expected.every(id=>verified?.assetIds?.includes(id)))
+    throw new Error('Chưa nạp đầy đủ artwork Vai Trò/Artifact vào Phòng. Chưa thể Phân Vai.');
   return verified;
 }
 async function playDealRoles(){
@@ -3417,7 +3473,7 @@ async function playDealRoles(){
   const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];
   const uniqueIds=[...new Set(rows.map(r=>String(r.roleId)))],roles=uniqueIds.map(id=>(state.cards||[]).find(r=>String(r.id)===id)).filter(Boolean),artifactIds=[...new Set(rows.map(r=>String(r.artifactId||'')).filter(Boolean))],artifacts=artifactIds.map(id=>(state.artifacts||[]).find(a=>String(a.id)===id)).filter(Boolean);playSetBusy(true);
   try{
-    const expected=playTemplateAssetIds({roles:roles.map(r=>({roleId:r.id})),artifacts:artifacts.map(a=>({artifactId:a.id}))});
+    const expected=[...playTemplateAssetIds({roles:roles.map(r=>({roleId:r.id}))}),...artifacts.map(a=>'artifact:'+String(a.id))];
     const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
     if(!expected.every(id=>manifest?.assetIds?.includes(id)))throw new Error('Artwork chưa sẵn sàng. Vui lòng chọn lại Ván Mẫu để nạp đầy đủ trước khi Phát Vai.');
     const packages=roles.map(role=>({roleId:role.id,roleName:role.name,roleCard:playRoleCardPayload(role)}));
@@ -3969,6 +4025,8 @@ function initPlayScene(){
   document.getElementById('playUserAvatar')?.setAttribute('hidden','');
   document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const activeId=String(playSceneState.activePlayerId||''),gmSelected=activeId==='gm:online',p=selectedPlayPlayer();if(gmSelected||!activeId){await gmwwMoveGmCharacter(raw.x,raw.y);return}if(!isLivePlayRoom())return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
   window.addEventListener('resize',renderPlayScene);
+  // Begin the one-time background sync of the complete Artifact library, not during Ván Mẫu saves.
+  setTimeout(()=>{void playSyncSharedArtifactLibrary().catch(()=>{})},200);
   bindPlayRoomModeButtons();bindPlaySeatMoveButtons();renderPlayScene();document.body.classList.add('play-immersive');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='start'));if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
   if(!playSceneRuntime.pollTimer)playSceneRuntime.pollTimer=setInterval(()=>{if(document.getElementById('start')?.classList.contains('active')){if(isLivePlayRoom()){if(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN)playSyncRoom(false)}else gmApi('/api/gm/members').then(d=>{memberAdminState.members=d.members||[];renderPlayPlayers()}).catch(()=>{})}},15000);
 }
