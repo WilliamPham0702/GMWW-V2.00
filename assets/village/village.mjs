@@ -8,6 +8,14 @@ import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand}
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count)}
 export function safeText(v){return String(v??"").slice(0,80)}
+// A disconnected participant keeps presence/ready data, but does not need an OFFLINE · READY chip.
+export function visibleVillagePlayerStatus(data,{moving=false,gm=false}={}){
+  if(gm)return moving?"GM ĐANG TUẦN TRA":"GM ONLINE";
+  if(moving)return "ĐANG DI CHUYỂN";
+  const label=safeText(data?.statusLabel||"").trim();
+  if(data?.online===false&&(!label||/^(?:OFFLINE|READY|CHƯA READY)(?:\s*[·•-]\s*(?:READY|CHƯA READY))?$/i.test(label)))return "";
+  return label||(data?.online===false?"":data?.ready?"READY":"ONLINE");
+}
 export function reconcileVillageChildren(container,nodes){
   for(let i=0;i<nodes.length;i++)if(container.children[i]!==nodes[i])container.insertBefore(nodes[i],container.children[i]||null);
   while(container.children.length>nodes.length)container.lastElementChild.remove();
@@ -129,10 +137,10 @@ if(game){
     const sources=(isGM?[gmUrl]:[characterUrl,legacyUrl,safeDefault]).filter((u,i,a)=>u&&a.indexOf(u)===i);
     if(sources.length){avatar.classList.add("has-image","game-character");if(isGM)avatar.classList.add("gm-character");const scale=normalizeCharacterScale(setupState.characterScale)/100,compact=window.innerWidth<=390,baseW=compact?50:62,baseH=compact?67:82;avatar.style.width=baseW+"px";avatar.style.height=baseH+"px";button.style.setProperty("--gmww-character-scale",String(scale));button.style.minWidth=Math.max(52,baseW+10)+"px";if(isGM){const runtime=document.createElement("span"),shell=document.createElement("span"),shadow=document.createElement("span");runtime.className="gm-wolf-character";runtime.dataset.gmWolfRuntime="1";shell.className="gm-wolf-sprite";shadow.className="gm-wolf-shadow";runtime.append(shadow,shell);for(const cls of ["gm-wolf-segment gm-wolf-body","gm-wolf-segment gm-wolf-rear-legs","gm-wolf-segment gm-wolf-front-legs","gm-wolf-segment gm-wolf-head"]){const img=document.createElement("img");img.className=cls;img.src=sources[0];img.alt="";img.loading="eager";img.decoding="async";shell.append(img)}const dx=Number(data?.moveToX??position?.x??0)-Number(data?.moveFromX??position?.x??0);button.style.setProperty("--gm-run-dir",String(dx<0?-1:1));avatar.append(runtime)}else{const command=animationCommandFor({...data,gameCharacterId:characterId},position),renderer=mountCharacterRenderer(avatar,{characterId,command,sources,sitting:!!position?.sitting});const img=renderer?.querySelector?.("img[data-walk-character]");if(img){img.dataset.walkFrame=String(walkFrameFor(data));img.dataset.walkDir=direction}}}
     const name=document.createElement("span");name.className="name";name.textContent=playerName;
-    const status=document.createElement("span");status.className="player-status";status.textContent=isGM?(position?.moving?"GM ĐANG TUẦN TRA":"GM ONLINE"):(position?.moving?"ĐANG DI CHUYỂN":safeText(data.statusLabel||(data.online===false?"OFFLINE":data.ready?"READY":"ONLINE")));
+    const status=document.createElement("span");status.className="player-status";status.textContent=visibleVillagePlayerStatus(data,{moving:!!position?.moving,gm:isGM});status.hidden=!status.textContent;
     const over=document.createElement("span");over.className="player-over";over.append(name,status);
     const role=document.createElement("span");role.className="player-role";role.textContent=safeText(data.roleName||"");if(!role.textContent)role.hidden=true;
-    button.append(over,avatar,role);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+" · "+status.textContent);
+    button.append(over,avatar,role);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+(status.textContent?" · "+status.textContent:""));
     button._gmwwLive={data,actualSeat,playerName,isGM};
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
@@ -173,11 +181,11 @@ if(game){
     if(button.style.getPropertyValue("--gmww-character-scale")!==scale)button.style.setProperty("--gmww-character-scale",scale);
     const title=button.querySelector(".name"),status=button.querySelector(".player-status"),role=button.querySelector(".player-role");
     if(title&&title.textContent!==playerName)title.textContent=playerName;
-    const label=gm?(pos.moving?"GM ĐANG TUẦN TRA":"GM ONLINE"):(pos.moving?"ĐANG DI CHUYỂN":safeText(data.statusLabel||(data.online===false?"OFFLINE":data.ready?"READY":"ONLINE")));
-    if(status&&status.textContent!==label)status.textContent=label;
+    const label=visibleVillagePlayerStatus(data,{moving:!!pos.moving,gm});
+    if(status){if(status.textContent!==label)status.textContent=label;status.hidden=!label}
     const roleText=safeText(data.roleName||"");
     if(role){if(role.textContent!==roleText)role.textContent=roleText;role.hidden=!roleText}
-    const aria=(actualSeat?"Vị trí "+actualSeat+" · ":"")+playerName+" · "+label;
+    const aria=(actualSeat?"Vị trí "+actualSeat+" · ":"")+playerName+(label?" · "+label:"");
     if(button.getAttribute("aria-label")!==aria)button.setAttribute("aria-label",aria);
     if(gm){
       const action="gm-action-"+gmActionFor(data,pos);
@@ -249,7 +257,7 @@ if(game){
       const rigUpdated=!!avatar?.querySelector('[data-character-renderer="segmented-skeletal"]');
       const signature=[semantic.characterId,semantic.state,semantic.motion,semantic.rigId,semantic.facing,semantic.activity].join("|");
       if(rigUpdated&&el.dataset.gmwwMotion!==signature){updateCharacterRenderer(avatar,semantic);el.dataset.gmwwMotion=signature}const img=rigUpdated?null:el.querySelector("img[data-walk-character]");if(img){const characterId=img.dataset.walkCharacter,frame=pos.moving?walkFrameFor(data,nowMs):1,direction=pos.moving?walkDirection(data):"right",src=pos.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):walkFrameUrl(characterId,frame,direction),key=(pos.sitting?"sit":direction)+":"+frame;if(img.dataset.walkFrame!==key){img.dataset.walkFrame=key;img.dataset.walkDir=direction;img.src=src}}
-      const status=el.querySelector(".player-status");if(status){const gm=data?.isGM===true||data?.kind==="gm";status.textContent=gm?(pos.moving?"GM ĐANG TUẦN TRA":"GM ONLINE"):(pos.moving?"ĐANG DI CHUYỂN":safeText(data.statusLabel||(data.online===false?"OFFLINE":data.ready?"READY":"ONLINE")))}
+      const status=el.querySelector(".player-status");if(status){const gm=data?.isGM===true||data?.kind==="gm";status.textContent=visibleVillagePlayerStatus(data,{moving:!!pos.moving,gm});status.hidden=!status.textContent}
       el.dataset.walkDir=pos.moving?walkDirection(data):"right";el.classList.toggle("moving",!!pos.moving);el.classList.toggle("sitting",!!pos.sitting);if(data?.isGM===true||data?.kind==="gm"){el.classList.remove("gm-action-idle","gm-action-walk","gm-action-run","gm-action-shake","gm-action-howl");el.classList.add("gm-action-"+gmActionFor(data,pos,nowMs));const dx=Number(data?.moveToX??pos.x??0)-Number(data?.moveFromX??pos.x??0);el.style.setProperty("--gm-run-dir",String(dx<0?-1:1))}
       if(!pos.moving&&data?.movementStatus==="moving"&&!String(data.moveId||"").startsWith("visual:")&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}
     }
