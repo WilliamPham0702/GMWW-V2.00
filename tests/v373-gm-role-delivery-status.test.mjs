@@ -22,7 +22,9 @@ test('GM displays server-confirmed role delivery and separate player view count'
   const room={phase:'role_delivery',roleDeliveredAt:'2026-10-10T05:06:00Z'};
   const rows=['safari','chrome','edge'].map(loginId=>({loginId,roleId:'role_demo',deliveredAt:'2026-10-10T05:06:00Z',viewedAt:null}));
   let p=progress(room,rows);
-  assert.equal(p.total,3);assert.equal(p.delivered,3);assert.equal(p.viewed,0);assert.equal(p.success,true);
+  assert.equal(p.total,3);assert.equal(p.delivered,3);assert.equal(p.received,0);assert.equal(p.viewed,0);assert.equal(p.success,true);
+  rows[0].receivedAt='2026-10-10T05:06:30Z';assert.equal(progress(room,rows).received,1);
+  rows[1].receivedAt=rows[2].receivedAt='2026-10-10T05:06:40Z';assert.equal(progress(room,rows).received,3);
   rows[0].viewedAt='2026-10-10T05:07:00Z';
   p=progress(room,rows);assert.equal(p.viewed,1);assert.equal(p.success,true);
   rows[1].viewedAt=rows[2].viewedAt='2026-10-10T05:08:00Z';
@@ -46,13 +48,13 @@ test('Delivery remains at step 6 until GM chooses Vào Trận, and cannot republ
   assert.doesNotMatch(deliver,/playSceneState\.step='battle'/);
   assert.doesNotMatch(deliver,/playPublishStage\('battle'\)/);
   assert.match(app,/playSceneState\.step==='deal'&&playDeliveryProgress\(\)\.success\?'VÀO TRẬN'/);
-  assert.match(app,/d\.type==='role_progress'\|\|d\.type==='artifact_progress'/);
+  assert.match(app,/d\.type==='role_progress'\|\|d\.type==='artifact_progress'\|\|d\.type==='delivery_progress'/);
   assert.match(html,/id="playPhaseHint"/);
   assert.doesNotMatch(html,/id="playDeliveryStatus"/);
   assert.doesNotMatch(css,/\.play-delivery-status/);
   assert.match(css,/\.is-delivery-confirmed/);
-  assert.match(app,/title\.textContent='✓ ĐÃ PHÁT VAI THÀNH CÔNG '/);
-  assert.match(app,/hint\.textContent='Đã xem Vai Trò: '/);
+  assert.match(app,/title\.textContent=allReceived\?'✓ ĐÃ PHÁT VAI THÀNH CÔNG '/);
+  assert.match(app,/hint\.textContent='Đã nhận đủ: '/);
 });
 test('Artifact-free games show exactly one GM role card',()=>{
   const render=block('async function renderPlayCards(){','function bindPlayRoomModeButtons(){');
