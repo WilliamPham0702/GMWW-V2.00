@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.82';
+const VERSION='3.83';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -3170,7 +3170,12 @@ function updatePlayArtifactToggle(){
   if(box)box.checked=!!playSceneState.artifactsEnabled;
   const actionSec=document.getElementById('playArtifactActionSec');if(actionSec)actionSec.disabled=!playSceneState.artifactsEnabled;
   if(hint)hint.textContent=!pool.length?'Chưa có Artifact ★ trong Thư Viện':playSceneState.artifactsEnabled?(selected.length+' / '+pool.length+' Artifact ★ được sử dụng • vuốt ngang để xem hoặc bỏ chọn'):'Artifact đang tắt, không phân phát.';
-  renderPlayArtifactPicker();
+  const readonly=document.getElementById('playTemplateArtifactSummary');
+  if(readonly)readonly.textContent=playSceneState.artifactsEnabled
+    ?'Artifact: CÓ sử dụng • '+selected.length+' lá từ Ván Mẫu • '+(playSceneState.artifactLimitPerCycle??3)+' lá mới mỗi Ngày / Đêm'
+    :'Artifact: KHÔNG sử dụng (theo Ván Mẫu đã lưu)';
+  // Never construct the editable Artifact gallery in the read-only Choose Ván view.
+  if(document.querySelector('.play-game-sheet-card')?.dataset.mode==='library')renderPlayArtifactPicker();
 }
 function playTemplateSelectedRoles(){
   const plan=playSceneState.rolePlan||{},orders=playSceneState.roleOrders||{};
@@ -3340,7 +3345,8 @@ async function applyPlayGameTemplate(id){
     const templateArtifactIds=(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean);
     playSceneRuntime.templateArtifactPoolIds=templateArtifactIds;
     // Saved game configuration must be authoritative. ★ is only the editor's new-template default.
-    playSceneState.artifactsEnabled=templateArtifactIds.length>0;
+    playSceneState.artifactsEnabled=cfg.artifactsEnabled===true
+      ||(cfg.artifactsEnabled!==false&&templateArtifactIds.length>0);
     playSceneState.artifactIds=templateArtifactIds;
     playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
     const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
@@ -3364,6 +3370,7 @@ async function openLibraryGameTemplate(id=''){
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
   if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,wolfDiscussionSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;if(w)w.value=60;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
   sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
+  updatePlayArtifactToggle();
 }
 function closePlayGameSheet(){document.getElementById('playGameSheet')?.classList.add('hidden')}
 function suggestPlayGameRoles(){
@@ -3378,7 +3385,6 @@ async function savePlayGame(){
     if(!id){playFlashError('Hãy chọn Ván Mẫu đã lưu trong Thư Viện.');return}
     const need=playLiveMembers().length,total=playRolePlanTotal();
     if(total!==need){playFlashError('Ván Mẫu có '+total+' lá, nhưng phòng có '+need+' người. Hãy chọn Ván Mẫu phù hợp.');return}
-    if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length){playFlashError('Hãy chọn ít nhất một Artifact hoặc tắt Artifact.');return}
     const timing={
       villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value),
       wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value),
@@ -3399,13 +3405,20 @@ async function savePlayGame(){
       if(missingRoles.length)throw new Error('Thiếu '+missingRoles.length+' Lá Vai Trò trong Thư Viện. Vui lòng đồng bộ Bộ Bài rồi thử lại.');
       await playEnsureTemplateAssets(id,base);
       playGameStatus('Đang chuẩn bị cấu hình và Artwork cho trận…','progress');
-      const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
+      // Each saved Ván Mẫu is the single source of truth for Artifact enablement and pool.
+      const artifactEnabled=base.artifactsEnabled===true
+        ||(base.artifactsEnabled!==false&&(base.artifacts||[]).length>0);
+      const chosenArtifactRefs=artifactEnabled?(base.artifacts||[]):[];
+      const missingArtifacts=chosenArtifactRefs.filter(r=>!(state.artifacts||[]).some(a=>String(a.id)===String(r.artifactId)));
+      if(artifactEnabled&&(!chosenArtifactRefs.length||missingArtifacts.length))
+        throw new Error('Ván Mẫu thiếu Artifact đã cấu hình. Hãy vào Thư Viện sửa và LƯU Ván Mẫu trước.');
       const configured={
         ...base,
         roles:(base.roles||[]).map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),
         timing,
-        artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0))),
-        artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1}))
+        artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(base.artifactLimitPerCycle??3)||0))),
+        artifactsEnabled:artifactEnabled,
+        artifacts:chosenArtifactRefs.map((a,i)=>({artifactId:String(a.artifactId),order:Number(a.order)||i+1}))
       };
       // V3.71: register lightweight references to ALL canonical role images.
       // The Server owns the packaged bytes; never transfer images to each room.
@@ -3452,7 +3465,14 @@ async function savePlayGame(){
   const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
-  const cfg={id:templateId,name:gameName,playerCount:total,roles:chosen.map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),timing,artifactLimitPerCycle};
+  if(playSceneState.artifactsEnabled&&!selectedArtifacts.length){
+    playFlashError('Ván Mẫu bật Artifact nhưng chưa chọn lá nào. Hãy chọn ít nhất một Artifact hoặc tắt Artifact.');return;
+  }
+  const cfg={id:templateId,name:gameName,playerCount:total,
+    roles:chosen.map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),
+    artifactsEnabled:!!playSceneState.artifactsEnabled,
+    artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),
+    timing,artifactLimitPerCycle};
   playSceneState.gameTiming=timing;playSceneState.artifactLimitPerCycle=artifactLimitPerCycle;
   playSetBusy(true);
   const saveButton=document.getElementById('playGameSave');
@@ -3465,6 +3485,12 @@ async function savePlayGame(){
     playSceneState.gameName=gameName;savePlayScene();
     playGameStatus('Đang đóng gói artwork Vai Trò; Artifact dùng kho chung của server…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
+    // Prewarm the selected Artifact pool when the template is SAVED, not during room setup.
+    // Artifact bytes remain in the global shared catalog; never copy them into a template.
+    if(cfg.artifacts.length){
+      playGameStatus('Đang chuẩn bị trước '+cfg.artifacts.length+' Artifact dùng chung…','progress');
+      await playEnsureSharedArtifactPool(cfg);
+    }
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
   }catch(err){
     const raw=String(err?.message||'Không lưu được Ván Mẫu.');
@@ -3523,6 +3549,19 @@ function playAssignmentSetArtifact(loginId,artifactId){
   playSceneState.activePlayerId=String(loginId);playSceneState.roleId=String(row.roleId||'');
   playSceneState.artifactId=row.artifactId;savePlayScene();renderPlayScene();
 }
+function playAssignmentSignature(){
+  // Identify exactly which GM-private distribution was explicitly saved.
+  return JSON.stringify({roomCode:playSceneState.roomCode||'',matchId:playSceneState.matchId||'',
+    rows:(playSceneState.assignmentsPreview||[]).map(r=>[r.loginId,r.roleId,r.artifactId||''])});
+}
+function playSaveAssignments(){
+  const status=playAssignmentDraftStatus();
+  if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
+  // Step 5 stores only the GM's private local draft. Player Web receives no cards.
+  playSceneState.assignmentSavedSignature=playAssignmentSignature();
+  savePlayScene();renderPlayRoleAssignmentPanel();
+  return true;
+}
 function playConfirmAssignments(){
   const status=playAssignmentDraftStatus();
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
@@ -3544,7 +3583,9 @@ function renderPlayRoleAssignmentPanel(){
     list=document.getElementById('playAssignmentRows'),count=document.getElementById('playAssignmentCount'),
     notice=document.getElementById('playAssignmentNotice'),confirm=document.getElementById('playAssignmentConfirm');
   if(count)count.textContent=rows.length+' / '+members.length+' người · '+playRolePlanTotal()+' lá Vai Trò';
-  if(notice){notice.textContent=status.message;notice.classList.toggle('is-error',!status.ok)}
+  if(notice){notice.textContent=status.ok&&playSceneState.assignmentSavedSignature===playAssignmentSignature()
+    ?'Đã LƯU Phân Vai trên thiết bị GM. Chưa phát bài xuống Player Web.'
+    :status.message;notice.classList.toggle('is-error',!status.ok)}
   if(confirm)confirm.disabled=!status.ok||playSceneRuntime.busy;
   for(const id of ['playAssignmentRandom','playAssignmentInOrder','playAssignmentArtifactShuffle']){
     const button=document.getElementById(id);if(button)button.disabled=playSceneRuntime.busy||!members.length||playRolePlanTotal()!==members.length||(id==='playAssignmentArtifactShuffle'&&(!playSceneState.artifactsEnabled||!rows.length));
@@ -3750,6 +3791,19 @@ async function playEnsureSharedArtifactPool(cfg){
   const missing=ids.filter(id=>!ready.has('artifact:'+id));
   if(missing.length)throw new Error('Bộ Artifact dùng chung chưa sẵn sàng: '+missing.join(', ')+'. '+String(report.failed[0]?.error||'Hãy kiểm tra artwork trong Bộ Bài.'));
 }
+async function playEnsureSharedArtifactReferencesReady(cfg){
+  const ids=playMatchArtifactAssetIds(cfg);
+  if(!ids.length)return;
+  // Choose Ván Mẫu: verify lightweight metadata only; do not rehash/re-encode prepacked art.
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const ready=new Set((status?.artifacts||[]).map(a=>String(a.assetId)));
+  const missing=ids.filter(id=>!ready.has(id));
+  if(missing.length){
+    // A newly selected or removed Artifact is the only reason to lazily prepare here.
+    playGameStatus('Đang bổ sung '+missing.length+' Artifact chưa có trong kho chung…','progress');
+    await playEnsureSharedArtifactPool({artifacts:missing.map(id=>({artifactId:id.slice('artifact:'.length)}))});
+  }
+}
 async function playEnsureTemplateAssets(id,cfg){
   const endpoint='/api/gm/game-templates/'+encodeURIComponent(id)+'/assets';
   let status=await gmApi(endpoint+'/status');
@@ -3792,7 +3846,7 @@ async function playPreloadSelectedArtwork(cfg){
   // per selected pool, with no per-game artwork serialization.
   if(artifacts.length){
     playGameStatus('Đang liên kết '+artifacts.length+' Artifact từ kho chung Server…','progress');
-    await playEnsureSharedArtifactPool(cfg);
+    await playEnsureSharedArtifactReferencesReady(cfg);
     const linked=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:20000,
       body:JSON.stringify({assetIds:artifacts})});
     if(linked?.ready!==true||linked?.mode!=='reference'||!artifacts.every(id=>linked.assetIds?.includes(id)))
@@ -4293,7 +4347,7 @@ function initPlayScene(){
   document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameSheet()});
-  document.getElementById('playAssignmentConfirm')?.addEventListener('click',playConfirmAssignments);
+  document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherRandom')?.addEventListener('click',()=>{void playGatherRandomize()});
   document.getElementById('playGatherManual')?.addEventListener('click',playGatherManual);
@@ -4346,7 +4400,13 @@ function initPlayScene(){
     playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
     savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
-  document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{playSceneState.artifactsEnabled=!!e.currentTarget.checked;if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length)playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));savePlayScene();updatePlayArtifactToggle()});
+  document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{
+    if(document.querySelector('.play-game-sheet-card')?.dataset.mode!=='library')return;
+    playSceneState.artifactsEnabled=!!e.currentTarget.checked;
+    if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length)
+      playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));
+    savePlayScene();updatePlayArtifactToggle();
+  });
   document.getElementById('playArtifactLimitPerCycle')?.addEventListener('change',e=>{const n=Math.max(0,Math.min(30,Math.trunc(Number(e.currentTarget.value)||0)));e.currentTarget.value=String(n);playSceneState.artifactLimitPerCycle=n;savePlayScene()});
   document.getElementById('playGameSuggest')?.addEventListener('click',suggestPlayGameRoles);
   document.getElementById('playGameClear')?.addEventListener('click',()=>{playSceneState.rolePlan={};savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount()});
