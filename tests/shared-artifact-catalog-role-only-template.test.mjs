@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const worker=fs.readFileSync('src/index.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const method=(from,to)=>vm.runInNewContext('({'+worker.slice(worker.indexOf(from),worker.indexOf(to,worker.indexOf(from)))+'})',
+const method=(from,to)=>vm.runInNewContext('(class Tester {'+worker.slice(worker.indexOf(from),worker.indexOf(to,worker.indexOf(from)))+'}).prototype',
   {sanitizePlayerArtifactCard:x=>x,validImageDataUrl:x=>typeof x==='string'&&x.startsWith('data:image/'),j:x=>x});
 test('Ván Mẫu packages only Vai Trò, never selected Artifact',async()=>{
   const api=method('  async gameTemplateAssetsStatus(rawId){','  async gameTemplateAssetPut(body){');
