@@ -10,7 +10,7 @@ test('Village only displays compact face-down cards; big card is isolated to exp
   assert.ok(player.includes('role-stage{display:none!important;visibility:hidden!important;pointer-events:none!important}'));
   assert.match(player,/#gmwwPlayerPrivateDock button\{width:clamp\(62px,18vw,78px\)!important\}/);
   assert.match(player,/if\(!\$\('#gmwwCompactPrivateCardStyle'\)\)/);
-  assert.match(player,/gmwwPendingPrivateCardTap='';openPrivateCardViewer\(kind\)/);
+  assert.match(player,/gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);openPrivateCardViewer\(kind\)/);
   assert.match(player,/#gmwwPlayerPrivateDock\{width:min\(38vw,154px\)!important;height:clamp\(88px,12vh,112px\)!important\}/);
   assert.match(player,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
   assert.doesNotThrow(()=>new vm.Script(player));
