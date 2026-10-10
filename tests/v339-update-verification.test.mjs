@@ -73,7 +73,7 @@ test('V3.58 exposes explicit on-screen retry without IPA reinstall',()=>{
   assert.match(html,/id="retryUpdateCheck"/);
   assert.match(app,/retryUpdateCheck\.addEventListener\('click'/);
   assert.match(app,/else if\(kind==='unverified'\)/);
-  assert.match(html,/<title>GMWW V3\.72<\/title>/);
+  assert.match(html,/<title>GMWW V3\.73<\/title>/);
 });
 
 test('An existing V3.39 install is offered the immutable V3.58 runtime',async()=>{
