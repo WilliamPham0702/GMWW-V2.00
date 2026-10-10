@@ -48,7 +48,7 @@ test('Room receives Artifact from central server, never via Ván Mẫu package o
   assert.match(worker,/kind:"artifact",refs/);
   assert.match(worker,/gm\/artwork-refs/);
   assert.match(worker,/SHARED_ARTIFACT_VERIFY_FAILED/);
-  assert.match(app,/playSyncSharedArtifactLibrary\(\)\.catch\(\(\)=>\{\}\)/);
+  assert.match(app,/playScheduleSharedArtifactLibrarySync\(\)/);
   const preload=app.slice(app.indexOf('async function playPreloadSelectedArtwork(cfg){'),app.indexOf('async function playDealRoles(){'));
   assert.match(preload,/await playEnsureSharedArtifactPool\(cfg\)/);
   assert.match(preload,/playRoomApi\('\/shared-artifacts'/);
