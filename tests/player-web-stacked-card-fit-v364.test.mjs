@@ -19,7 +19,7 @@ test('Both Player backs are real overlapping, staggered cards, not two side-by-s
  assert.match(css,/#gmwwPlayerPrivateDock button\[data-private-card="artifact"\]\{[\s\S]*?translateX\(-18%\) translateY\(10px\) rotate\(6deg\)/);
  assert.match(css,/#gmwwPlayerPrivateDock\.is-solo button\[data-private-card="role"\]/);
  assert.match(script,/artifact\.hidden=!state\.artifact/);
- assert.match(script,/dock\.classList\.toggle\('is-solo',!state\.artifact\)/);
+ assert.match(script,/dock\.classList\.toggle\('is-solo',!state\.artifact&&!waitingArtifact\)/);
  assert.match(script,/data-private-card="role"/);
  assert.match(script,/data-private-card="artifact"/);
  assert.doesNotMatch(css,/#gmwwPlayerPrivateDock button\{[^}]*?flex:1/);
