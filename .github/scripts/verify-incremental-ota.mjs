@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Verify that IPA V3.17 installed on Runtime V3.50 can install V3.51 quickly.
+/** Verify direct SHA-256-checked lightweight OTA paths on installed IPA V3.17.
  * This check fetches the actual deployed manifest and all three runtime files,
  * verifying their SHA-256 before declaring Production SUCCESS.
  */
@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 const url=process.argv[2],version=process.argv[3];
-if(!['3.51','3.52','3.54'].includes(version)){console.log('Incremental OTA test skipped '+version);process.exit(0)}
+if(!['3.51','3.52','3.54','3.63'].includes(version)){console.log('Incremental OTA test skipped '+version);process.exit(0)}
 if(!/^https:\/\/gmww-v2-00\.williampham0702\.workers\.dev$/.test(url||''))throw Error('Untrusted Production origin');
-const installations=version==='3.54'?['3.51','3.52','3.53']:[version==='3.52'?'3.51':'3.50'];
+const installations=version==='3.63'?['3.60','3.61','3.62']:version==='3.54'?['3.51','3.52','3.53']:[version==='3.52'?'3.51':'3.50'];
 for(const installed of installations){
 let response;
 for(let attempt=0;attempt<6;attempt++){
