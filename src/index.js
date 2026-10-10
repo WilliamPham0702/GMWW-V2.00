@@ -1121,7 +1121,12 @@ export default {async fetch(request,env){
   if((url.pathname.startsWith("/updates/runtime/")||url.pathname==="/updates/latest.json")&&
      (request.method==="GET"||request.method==="HEAD")){
     if(!env.ASSETS)return new Response("Runtime assets unavailable",{status:503});
-    return env.ASSETS.fetch(request);
+    // OTA paths are immutable by version and manifest SHA-256. Cache-busting query strings
+    // (used by the IPA and Production verifier) must not change which binary ASSETS serves.
+    // Always fetch the canonical path, keeping the incoming method (GET/HEAD).
+    const canonicalUrl=new URL(request.url);canonicalUrl.search="";
+    const canonicalRequest=new Request(canonicalUrl.toString(),request);
+    return env.ASSETS.fetch(canonicalRequest);
   }
   const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
   if(admissionPolicy){
