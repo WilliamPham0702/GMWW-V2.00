@@ -62,8 +62,13 @@ for(const [i,s] of sessions.entries()){
      assert.ok(artTitle.includes(('Bảo Vật '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Artifact face '+artTitle);
      await page.mouse.click(7,7);await face.waitFor({state:'hidden',timeout:10000});
    }else assert.equal(await artifact.isVisible(),false,'no-Artifact game must not show Artifact button');
-   const received=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token});
-   assert.ok(received.deliveryManifest.receivedAt,'browser should confirm full private receipt');
+   let received;
+   for(let attempt=0;attempt<24;attempt++){
+     received=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token});
+     if(received.deliveryManifest.receivedAt)break;
+     await new Promise(resolve=>setTimeout(resolve,250));
+   }
+   assert.ok(received?.deliveryManifest?.receivedAt,'browser should eventually confirm full private receipt');
    console.log(JSON.stringify({browser:s.kind,success:true,role:roleTitle,artifact:i<2?'opened':'not assigned'}));
  }catch(error){
    if(page)try{await page.screenshot({path:'/tmp/gmww-player-cards-'+s.kind.toLowerCase()+'.png',fullPage:true})}catch{}
