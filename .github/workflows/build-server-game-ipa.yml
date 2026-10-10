@@ -21,30 +21,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve build metadata
+      - name: Resolve and stage clean native V3.70 metadata
         id: meta
         shell: bash
         run: |
           set -euo pipefail
           node - <<'NODE'
           const fs=require('fs');
+          const projectPath='server-game/GMWW-Server.xcodeproj/project.pbxproj';
           const app=fs.readFileSync('server-game/current/app.js','utf8');
-          const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+          const sourceProject=fs.readFileSync(projectPath,'utf8');
           const runtime=app.match(/const VERSION='([^']+)'/)?.[1]||'';
-          const build=project.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1]||'';
-          const shell=project.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
-          if(!runtime||!shell||!build) throw new Error('Missing runtime/native build metadata');
-          if(shell!==runtime) {
-            throw new Error(
-              'Native build blocked: runtime V'+runtime+' is running on native shell V'+shell+
-              '. This is a runtime-only state. Use the Fast Runtime Snapshot workflow, or intentionally bump Xcode MARKETING_VERSION/CURRENT_PROJECT_VERSION for a true native release.'
-            );
-          }
-          if(shell.replace(/\./g,'')!==build) throw new Error('Native build '+build+' does not match shell version '+shell);
-          const version=shell;
-          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\nRUNTIME_VERSION=${runtime}\nNATIVE_SHELL_VERSION=${shell}\nBUILD=${build}\n`);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\nruntime=${runtime}\nshell=${shell}\nbuild=${build}\n`);
-          console.log('Resolved native V'+shell+' / build '+build+' with bundled runtime V'+runtime);
+          const shell=sourceProject.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim()||'';
+          const sourceBuild=sourceProject.match(/CURRENT_PROJECT_VERSION = ([0-9]+);/)?.[1]||'';
+          if(!/^\\d+\\.\\d+$/.test(runtime)||!shell||!sourceBuild)
+            throw new Error('Missing or invalid runtime/native build metadata');
+          // Produce one full CLEAN IPA at the current tested runtime version,
+          // while keeping the stable V3.17 OTA baseline untouched in Git.
+          // Only this macOS runner's Xcode project receives the version bump.
+          const version=runtime,build=runtime.replace(/\\./g,'');
+          const marketing=(sourceProject.match(/MARKETING_VERSION = [^;]+;/g)||[]).length;
+          const builds=(sourceProject.match(/CURRENT_PROJECT_VERSION = [0-9]+;/g)||[]).length;
+          if(marketing!==2||builds!==2)
+            throw new Error('Expected exactly two Xcode version declarations for Debug and Release');
+          const staged=sourceProject
+            .replace(/MARKETING_VERSION = [^;]+;/g,'MARKETING_VERSION = '+version+';')
+            .replace(/CURRENT_PROJECT_VERSION = [0-9]+;/g,'CURRENT_PROJECT_VERSION = '+build+';');
+          fs.writeFileSync(projectPath,staged);
+          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\\nRUNTIME_VERSION=${runtime}\\nNATIVE_SOURCE_VERSION=${shell}\\nNATIVE_SHELL_VERSION=${version}\\nBUILD=${build}\\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\\nruntime=${runtime}\\nshell=${version}\\nbuild=${build}\\n`);
+          console.log('Clean IPA V'+version+' / build '+build+' from existing Xcode shell V'+shell);
           NODE
 
       - name: Prepare clean web bundle
@@ -59,6 +65,22 @@ jobs:
           cp server-game/current/character-renderer.js "$APPDIR/Web/character-renderer.js"
           cp server-game/current/character-renderer.css "$APPDIR/Web/character-renderer.css"
           cp server-game/current/gmww-village-coast.svg "$APPDIR/Web/gmww-village-coast.svg"
+          # Homepage V3.70 references these 12 current visual assets. Bundle them
+          # so a fresh IPA works offline instead of depending on an OTA patch.
+          mkdir -p "$APPDIR/Web/home-art"
+          cp -R server-game/current/home-art/. "$APPDIR/Web/home-art/"
+          test "$(find "$APPDIR/Web/home-art" -type f | wc -l | tr -d ' ')" -eq 12
+          node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const web='server-game/GMWW-Server/Web';
+          const html=fs.readFileSync(path.join(web,'GMWW.html'),'utf8');
+          const files=[...html.matchAll(/(?:src|href)="(home-art\\/[^"?#]+)"/g)].map(m=>m[1]);
+          if(!files.length)throw new Error('No homepage artwork references were found');
+          for(const file of files){
+            if(!fs.existsSync(path.join(web,file)))throw new Error('Missing bundled homepage artwork: '+file);
+          }
+          console.log('Bundled and verified',files.length,'homepage visual references');
+          NODE
           cp assets/backgrounds/gmww-village-day-v260.webp "$APPDIR/Web/"
           cp assets/backgrounds/gmww-village-night-v260.webp "$APPDIR/Web/"
           cp assets/village/village-layout.js "$APPDIR/Web/village-layout.js"
@@ -330,6 +352,11 @@ jobs:
           test -s "$APP/Web/style.css"
           test -s "$APP/Web/gmww-village-coast.svg"
           test -s "$APP/Web/gm/gm-white-wolf.webp"
+          test "$(find "$APP/Web/home-art" -type f | wc -l | tr -d ' ')" -eq 12
+          for ART in home-fantasy-hero-v337.webp home-sea-portal-v354.svg home-sea-cards-v354.svg home-sea-members-v354.svg home-sea-templates-v354.svg; do
+            test -s "$APP/Web/home-art/$ART"
+            cmp -s "server-game/current/home-art/$ART" "$APP/Web/home-art/$ART"
+          done
           test -s "$APP/Web/gmww-village-day-v260.webp"
           test -s "$APP/Web/gmww-village-night-v260.webp"
           test "$(find "$APP/Web/game-characters" -name 'chibi-*.webp' | wc -l | tr -d ' ')" -eq 42
@@ -361,6 +388,8 @@ jobs:
           unzip -t "$IPA" >/dev/null
           unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/default-artwork.webp'
           unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/gmww-village-coast.svg'
+          unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/home-art/home-fantasy-hero-v337.webp'
+          unzip -l "$IPA" | grep -q 'Payload/GMWW-Server.app/Web/home-art/home-sea-portal-v354.svg'
           ! unzip -l "$IPA" | grep -q 'phu-thuy-gia-sea-display'
           ! unzip -l "$IPA" | grep -q 'v1-audio.js'
 
