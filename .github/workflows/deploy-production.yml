@@ -358,6 +358,21 @@ jobs:
           grep -Fq 'x="0" y="0"' /tmp/char01-front.svg
           grep -Fq 'id="labCharacter"' /tmp/character-v4-web.html
           echo "Verify Production: Character 01 + 02, four directions each, new real artwork PASS."
+          echo "Verify Production: validating Player Web animated Character 01/02 frames."
+          for CHARACTER in character-01 character-02; do
+            for VIEW in front left; do
+              SUFFIX=""
+              if [ "$VIEW" = "left" ]; then SUFFIX="?dir=left"; fi
+              for FRAME in 1 2; do
+                curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/$CHARACTER/frame/$FRAME$SUFFIX" > "/tmp/$CHARACTER-$VIEW-$FRAME.webp"
+                test "$(file -b --mime-type "/tmp/$CHARACTER-$VIEW-$FRAME.webp")" = "image/webp" || { echo "::error::$CHARACTER $VIEW frame $FRAME did not return WebP"; exit 1; }
+              done
+              if cmp -s "/tmp/$CHARACTER-$VIEW-1.webp" "/tmp/$CHARACTER-$VIEW-2.webp"; then
+                echo "::error::$CHARACTER $VIEW reused identical animation frames"; exit 1
+              fi
+            done
+          done
+          echo "Verify Production: Player Web Character 01/02 distinct walking frames in front and left directions PASS."
           echo "Verify Production: checking V4 articulated two-character action module."
           grep -Fq '<canvas id="labCharacter"' /tmp/character-v4-web.html
           grep -Fq 'animated-sprite.mjs' /tmp/character-v4-web.html
