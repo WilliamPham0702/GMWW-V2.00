@@ -2855,7 +2855,7 @@ async function advancePlayPhase(){
   if(playSceneState.step==='game'){openPlayGameSheet();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
-  if(playSceneState.step==='deal'){if(playDeliveryProgress().success){setPlayStep('battle');return}await playDealRoles();return}
+  if(playSceneState.step==='deal'){if(playDeliveryProgress().success){playSceneState.step='battle';savePlayScene();await advancePlayPhase();return}await playDealRoles();return}
   if(playSceneState.step!=='battle'){advancePlaySetup(1);return}
   playSetBusy(true);
   try{
