@@ -20,8 +20,9 @@ test('Player village removes the OFFLINE READY chip without changing presence or
   assert.equal(label({online:false,statusLabel:'ĐÓNG BĂNG'}),'ĐÓNG BĂNG');
   assert.equal(label({online:false,statusLabel:''},{moving:true}),'ĐANG DI CHUYỂN');
   assert.equal(label({online:true,statusLabel:''},{gm:true}),'GM ONLINE');
-  assert.match(village,/status\.hidden=!status\.textContent/);
-  assert.match(village,/status\.hidden=!label/);
+  assert.match(village,/name\.append\(nameText,presence\)/);
+  assert.doesNotMatch(village,/className="player-status"/);
+  assert.doesNotMatch(village,/querySelector\("\.player-status"\)/);
 });
 
 test('GM removes offline-ready chip but retains name, roles, presence and online status',()=>{
@@ -39,5 +40,7 @@ test('GM removes offline-ready chip but retains name, roles, presence and online
 test('Player preserves actual online flags and hides offline status for both initial and realtime frames',()=>{
   assert.match(live,/p\?\.online===false\?'':p\?\.ready\?'READY':'ONLINE'/);
   assert.match(live,/online:p\?\.online!==false/);
-  assert.equal((village.match(/visibleVillagePlayerStatus\(data,\{moving:/g)||[]).length,3);
+  assert.equal((village.match(/visibleVillagePlayerStatus\(data,\{moving:/g)||[]).length,0);
+  assert.match(village,/presence\.dataset\.online=data\?\.online===false\?"false":"true"/);
+  assert.match(village,/presence&&presence\.dataset\.online!==online/);
 });
