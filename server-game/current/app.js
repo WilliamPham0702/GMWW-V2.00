@@ -1380,7 +1380,7 @@ function gmwwBuildBugReport(diag){
     const visible=document.querySelector('#diagnosticList [data-diagnostic="'+name+'"] b')?.textContent||'';
     checks[name]=p?{ok:p.ok===true,http:Number(p.status)||0,
       latencyMs:Math.min(Math.max(0,Number(p.latency)||0),99999),
-      code:p.ok?'OK':(/^[A-Z][A-Z0-9_]{3,55}$/.test(String(p.data?.error||''))
+      code:p.ok?'OK':(/^(?:RUNTIME_|UPDATE_|SERVER_|PLAYER_|CHARACTER_|MANIFEST_|ASSET_|INVALID_|HTTP_)[A-Z0-9_]{0,55}$/.test(String(p.data?.error||''))
         ?String(p.data.error):'HTTP_'+(Number(p.status)||0))}:
       {ok:false,code:visible==='OFFLINE'?'OFFLINE':visible==='OK'?'PREVIOUSLY_OK':'NOT_CHECKED'};
   }
