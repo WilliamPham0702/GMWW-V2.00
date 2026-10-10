@@ -23,13 +23,15 @@ test('Delivery counts update inside the bottom action when players open role car
     setAttribute(k,v){calls.push([k,v]);}};
   const title={textContent:'PHÁT VAI'},hint={textContent:'CHẠM ĐỂ TIẾP'};
   const els={playPhasePill:dock,playPhaseTitle:title,playPhaseHint:hint};
-  const state={step:'deal'},progress={total:3,delivered:3,viewed:0,success:true};
+  const state={step:'deal'},progress={total:3,delivered:3,received:3,viewed:0,success:true};
   const ctx={document:{getElementById:id=>els[id]||null},playSceneState:state,playDeliveryProgress:()=>progress};
   const fn=vm.runInNewContext(app.slice(start,end)+';renderPlayDeliveryProgress',ctx);
   fn();
   assert.match(title.textContent,/ĐÃ PHÁT VAI THÀNH CÔNG 3\/3/);
-  assert.equal(hint.textContent,'Đã xem Vai Trò: 0/3 · Vào Trận');
+  assert.equal(hint.textContent,'Đã nhận đủ: 3/3 · Đã xem Vai Trò: 0/3 · Vào Trận');
   assert.equal(klass.has('is-delivery-confirmed'),true);
+  progress.received=1;fn();assert.match(title.textContent,/CHỜ NHẬN 1\/3/);assert.equal(klass.has('is-delivery-confirmed'),false);
+  progress.received=3;fn();assert.equal(klass.has('is-delivery-confirmed'),true);
   progress.viewed=2;fn();assert.match(hint.textContent,/2\/3/);
   progress.viewed=3;fn();assert.match(hint.textContent,/3\/3/);
   state.step='battle';fn();assert.equal(klass.has('is-delivery-confirmed'),false);
@@ -47,5 +49,5 @@ test('V3.76 UI update is a signed three-file patch only from V3.75',()=>{
   assert.equal(selectVerifiedRuntimeV376Delta(m,'3.72'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,delete:['artwork']},'3.75'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.75'),null);
-  assert.match(worker,/VERSION="V3\.78",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-378"/);
+  assert.match(worker,/VERSION="V3\.79",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-379"/);
 });
