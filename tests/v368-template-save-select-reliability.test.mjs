@@ -45,12 +45,13 @@ test('Choosing a saved Ván Mẫu never auto-activates local ★ Artifact cards'
   assert.equal(ctx.playSceneState.artifactIds[0],'persisted-artifact');
 });
 
-test('Runtime selection preload uses single image requests and delayed server config',()=>{
+test('Runtime selection links a full template without resending images and delays server config',()=>{
   const start=app.indexOf('async function savePlayGame(){');
   const end=app.indexOf('function playRandomInt',start);
   const flow=app.slice(start,end);
-  assert.match(flow,/assetIds:\[templateAssets\[offset\]\]/);
-  assert.match(flow,/timeoutMs:60000/);
+  assert.match(flow,/assetIds:templateAssets/);
+  assert.match(flow,/prepared\?\.mode!=='reference'/);
+  assert.doesNotMatch(flow,/assetIds:\[templateAssets\[offset\]\]/);
   assert.ok(flow.indexOf("await playPreloadSelectedArtwork(configured)")<flow.indexOf("await playRoomApi('/config'"));
   assert.match(flow,/playSceneState\.gameTemplateId=String\(cached\?\.template\?\.id\|\|templateId\);[\s\S]*?await playEnsureTemplateAssets/);
   assert.match(app,/const \{timeoutMs=10000,\.\.\.requestOptions\}=opts/);
