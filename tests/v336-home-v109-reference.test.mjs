@@ -46,7 +46,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
 
 test("Trang Chủ dùng artwork thật trong thư mục home-art",()=>{
  const images=[...home.matchAll(/src="home-art\/([^"]+\.(?:webp|svg))"/g)].map(m=>m[1]);
- assert.deepEqual(images,["home-fantasy-hero-v337.webp","home-sea-portal-v354.svg","home-sea-cards-v354.svg","home-sea-members-v354.svg","home-sea-templates-v354.svg"]);
+ assert.deepEqual(images,["home-fantasy-hero-v337.webp","home-sea-portal-v354.svg","home-sea-cards-v354.svg","home-sea-members-v354.svg","home-sea-templates-v354.svg","home-reef-stats-v367.svg"]);
  for(const file of images)assert.ok(fs.existsSync("server-game/current/home-art/"+file));
  assert.match(home,/data-home-library-tab="templates"/);
 });
