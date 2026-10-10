@@ -21,7 +21,7 @@ Tài khoản OpenAI API cần có khả năng sử dụng Responses API và hạ
 5. Trong GMWW, nhấn icon nổi → nhập **mã truy cập riêng** → Kết nối → chat. Mã chỉ giữ trong bộ nhớ trang, không lưu vào LocalStorage/game state.
 6. Cấu hình giới hạn chi tiêu trên trang quản lý OpenAI API. Kịch bản giới hạn AI tại Worker là 8 yêu cầu/phút/IP; không thay thế hạn mức billing.
 
-Tùy chọn: `GMWW_AI_MODEL` là một **biến môi trường Worker không bí mật** có thể đặt thành model OpenAI hợp lệ (mặc định `gpt-5.6-terra`). Chỉ dùng model mà API project của bạn có quyền gọi.
+Tùy chọn: `GMWW_AI_MODEL` là một **biến môi trường Worker không bí mật** có thể đặt thành model OpenAI hợp lệ (mặc định `gpt-4.1-mini`). Chỉ dùng model mà API project của bạn có quyền gọi.
 
 ## Tính năng được triển khai
 - Cloudflare endpoint `POST /api/gm/ai-support/chat`: yêu cầu `Authorization: Bearer <GMWW_AI_SUPPORT_TOKEN>` và `OPENAI_API_KEY` ở phía server.
