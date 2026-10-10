@@ -913,6 +913,7 @@ window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
 
 /* UPDATE MANAGER V1 — prepared off-main */
 let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
+let gmwwUpdateActionKind='unverified',gmwwUpdateFault=null;
 
 /* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
 function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
@@ -948,7 +949,8 @@ function setUpdateUi(kind,status,message,detail=''){
 function setUpdateAction(kind,context={}){
   const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
   const title=document.getElementById('updateDecisionTitle'),hint=document.getElementById('updateDecisionHint');
-  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=false;x.removeAttribute('aria-disabled')});
+  gmwwUpdateActionKind=kind;
+  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=(x===runtime&&kind!=='runtime');if(x.disabled)x.setAttribute('aria-disabled','true');else x.removeAttribute('aria-disabled')});
   const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
   const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
   if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
@@ -961,7 +963,7 @@ function setUpdateAction(kind,context={}){
   else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
 }
 async function installRuntimeUpdate(){
-  if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
+  if(gmwwUpdateBusy||!gmwwUpdateManifest||gmwwUpdateActionKind!=='runtime')return false;
   const files=gmwwUpdateManifest?.runtime?.files;
   if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
   gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
@@ -993,7 +995,7 @@ async function updateDataNow(){
     gmwwSetUpdateProgress('done',100,'Dữ liệu đã cập nhật');
     setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
   }catch(e){console.warn('GMWW_UPDATE_DATA',e);gmwwSetUpdateProgress('error',null,'Không thể cập nhật dữ liệu');setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
-  finally{if(btn&&!gmwwUpdateBusy)btn.disabled=false}
+  finally{if(btn&&!gmwwUpdateBusy)btn.disabled=(gmwwUpdateActionKind!=='runtime')}
 }
 async function syncPlayerWebUpdate(){
   const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
@@ -1083,10 +1085,19 @@ async function checkAppUpdate({notify=false}={}){
       const publishing=serverValid&&manifestResult.status==='rejected'&&
         ['RUNTIME_MANIFEST_NOT_READY','UPDATE_MANIFEST_NOT_FOUND'].includes(String(manifestResult.reason?.code||''));
       if(publishing){
+        // Secondary, read-only probe gives ChatGPT a safe, precise asset error.
+        const diagnostic=await gmwwJsonProbe('/api/update/diagnostics?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp,d=>d?.ok===true,4500);
+        if(serial!==gmwwUpdateCheckSerial)return null;
+        gmwwUpdateFault={code:String(manifestResult.reason?.code||'RUNTIME_MANIFEST_NOT_READY'),
+          diagnosticCode:String(diagnostic.data?.code||'DIAGNOSTICS_UNAVAILABLE'),
+          asset:String(diagnostic.data?.asset||'').slice(0,120),
+          httpStatus:Number(manifestResult.reason?.status||0),serverVersion:server,at:new Date().toISOString()};
         setUpdateAction('pending');
         setUpdateUi('checking','ĐANG PHÁT HÀNH','Server V'+server+' đã chạy nhưng gói cập nhật chưa sẵn sàng.','Chưa cần nhấn Cập nhật. Hệ thống sẽ kiểm tra lại khi bạn mở ứng dụng hoặc bấm ↻.');
         return null;
       }
+      gmwwUpdateFault={code:!serverValid?'SERVER_HEALTH_UNVERIFIED':String(manifestResult.reason?.code||'UPDATE_MANIFEST_UNVERIFIED'),
+        httpStatus:Number(manifestResult.reason?.status||0),serverVersion:server||null,at:new Date().toISOString()};
       const cause=!serverValid?'Chưa xác minh được kết nối Server.':'Chưa đọc được gói cập nhật Runtime.';
       const retryInfo=!serverValid?healthResult.reason:manifestResult.reason;
       console.warn('GMWW_UPDATE_UNVERIFIED',cause,retryInfo||'');
@@ -1096,10 +1107,13 @@ async function checkAppUpdate({notify=false}={}){
     }
     const manifestServer=String(manifest.serverVersion||latest).replace(/^V/i,'');
     if(!gmwwVersionVerified(manifestServer)||gmwwVersionCompare(manifestServer,server)!==0){
+      gmwwUpdateFault={code:'SERVER_MANIFEST_VERSION_MISMATCH',serverVersion:server,
+        manifestVersion:manifestServer,at:new Date().toISOString()};
       setUpdateAction('unverified');
       setUpdateUi('warn','SERVER CHƯA ĐỒNG BỘ','Server V'+server+' và kênh cập nhật V'+manifestServer+' chưa khớp.','Nhấn ↻ kiểm tra lại sau khi hệ thống đồng bộ.');
       return null;
     }
+    gmwwUpdateFault=null;
     gmwwUpdateManifest=manifest;
     gmwwRenderReleaseNotes(manifest);
     const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
@@ -1145,6 +1159,7 @@ async function checkAppUpdate({notify=false}={}){
     return manifest
   }catch(e){
     if(serial!==gmwwUpdateCheckSerial)return null;
+    gmwwUpdateFault={code:'UPDATE_CHECK_EXCEPTION',at:new Date().toISOString()};
     gmwwUpdateManifest=null;setUpdateAction('unverified');
     setUpdateUi('warn','CẦN KIỂM TRA LẠI','Chưa xác nhận được bản cập nhật.','Kiểm tra kết nối rồi nhấn ↻ để thử lại. Game hiện tại vẫn có thể hoạt động.');
     console.warn('GMWW_UPDATE_CHECK',e);
@@ -1213,8 +1228,54 @@ async function checkServerHealth(){
     setServerHealthState('bad','Mất kết nối','Không xác nhận được Server/Player Web',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
   }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
 }
+/* One-tap, privacy-filtered ChatGPT handoff. No user identity, room codes,
+ * access tokens, card content or raw network bodies leave the app. It prepares
+ * a draft in ChatGPT; sending it and approving a production fix remain manual. */
+function gmwwSafeDiagnosticText(value){
+  return String(value??'').slice(0,200)
+    .replace(/https?:\\/\\/\\S+/gi,'[URL]')
+    .replace(/\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/gi,'[EMAIL]')
+    .replace(/\\b(?:Bearer\\s+\\S+|(?:api[_-]?key|token|secret|password)[=:]\\s*\\S+)/gi,'[REDACTED]')
+    .replace(/\\b[A-Za-z0-9_-]{22,}\\b/g,'[ID]');
+}
+function gmwwBuildChatGPTIssuePrompt(){
+  const report={
+    schema:'gmww-issue-v1',
+    createdAt:new Date().toISOString(),
+    project:'WilliamPham0702/GMWW-V2.00',
+    environment:'GMWW IPA / Cloudflare Production',
+    ipaVersion:'V'+gmwwShellVersion(),
+    runtimeVersion:'V'+gmwwRuntimeVersion(),
+    serverVersion:gmwwSafeDiagnosticText(document.getElementById('updateServerVersion')?.textContent||'V—'),
+    updateStatus:gmwwSafeDiagnosticText(document.getElementById('updateStatus')?.textContent||'UNKNOWN'),
+    releaseFault:gmwwUpdateFault?{
+      code:gmwwSafeDiagnosticText(gmwwUpdateFault.code),
+      diagnosticCode:gmwwSafeDiagnosticText(gmwwUpdateFault.diagnosticCode||''),
+      asset:gmwwSafeDiagnosticText(gmwwUpdateFault.asset||''),
+      httpStatus:Number(gmwwUpdateFault.httpStatus||0),
+      manifestVersion:gmwwSafeDiagnosticText(gmwwUpdateFault.manifestVersion||''),
+      detectedAt:gmwwUpdateFault.at
+    }:null,
+    recentErrors:gmwwRuntimeErrors.slice(0,4).map(e=>({
+      kind:gmwwSafeDiagnosticText(e.kind),
+      summary:gmwwSafeDiagnosticText(e.message)
+    }))
+  };
+  return 'GMWW tự động gửi báo cáo lỗi. Hãy kiểm tra source repository, đối chiếu CI và Cloudflare trước khi kết luận. '+ 
+    'Ưu tiên chẩn đoán gói Runtime chưa sẵn sàng, sửa có kiểm thử và tạo Pull Request để tôi phê duyệt; KHÔNG merge/deploy Production trước khi được phê duyệt. '+
+    'Bảo toàn dữ liệu và toàn bộ chức năng. Báo cáo kỹ thuật đã ẩn thông tin cá nhân:\\n'+JSON.stringify(report,null,2);
+}
+function gmwwOpenChatGPTIssue(){
+  const prompt=gmwwBuildChatGPTIssuePrompt();
+  const url='https://chatgpt.com/?prompt='+encodeURIComponent(prompt);
+  const next=window.open(url,'_blank','noopener,noreferrer');
+  const status=document.getElementById('chatgptIssueHint');
+  if(status)status.textContent=next?'Báo cáo đã mở trong ChatGPT. Kiểm tra và nhấn Gửi.':
+    'Nếu ChatGPT chưa mở, hãy cho phép mở liên kết rồi nhấn lại.';
+}
 const retryUpdateCheck=document.getElementById('retryUpdateCheck');
 if(retryUpdateCheck)retryUpdateCheck.addEventListener('click',()=>{void checkAppUpdate({notify:false})});
+const reportGmwwIssue=document.getElementById('reportGmwwIssue');if(reportGmwwIssue)reportGmwwIssue.addEventListener('click',gmwwOpenChatGPTIssue);
 const refreshServerData=document.getElementById('refreshServerData');
 if(refreshServerData)refreshServerData.addEventListener('click',async()=>{refreshServerData.disabled=true;try{memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth()}finally{refreshServerData.disabled=false}});
 const openPlayerWeb=document.getElementById('openPlayerWeb');
