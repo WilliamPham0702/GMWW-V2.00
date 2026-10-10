@@ -44,7 +44,9 @@ test('Server-wide Artifact pool is persisted once and reused across templates',a
 });
 test('Room receives Artifact from central server, never via Ván Mẫu package or mobile re-encode',()=>{
   assert.match(worker,/function gmPreloadSharedArtifacts\(env,raw,request\)/);
-  assert.match(worker,/member\.internal\/artifacts\/shared\/get\?assetId=/);
+  assert.match(worker,/member\.internal\/artifacts\/shared\/status/);
+  assert.match(worker,/kind:"artifact",refs/);
+  assert.match(worker,/gm\/artwork-refs/);
   assert.match(worker,/SHARED_ARTIFACT_VERIFY_FAILED/);
   assert.match(app,/playSyncSharedArtifactLibrary\(\)\.catch\(\(\)=>\{\}\)/);
   const preload=app.slice(app.indexOf('async function playPreloadSelectedArtwork(cfg){'),app.indexOf('async function playDealRoles(){'));
