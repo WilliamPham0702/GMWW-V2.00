@@ -19,7 +19,7 @@ test('Player scripts remain valid after instant viewer patch',()=>{
   assert.match(player,/type==='wolf'\?'🐾':type==='third'\?'🔥':'🍃'/);
   assert.match(player,/renderGMWWPlayerCardFace\('role'\)/);
   assert.match(player,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
-  assert.match(player,/function closePrivateCardViewer\(\)[\s\S]*?viewer\.hidden=true/);
+  assert.match(player,/function closePrivateCardViewer\(\)[\s\S]*?if\(face\)face\.hidden=true/);
 });
 
 test('Player keeps assigned Artifact pending until its private data arrives',()=>{
