@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.79';
+const VERSION='3.80';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2956,9 +2956,47 @@ async function advancePlayPhase(){
 const battleState={key:'',actionId:'',targets:[],roster:false,timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,ignoreClick:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
-const battleActions=()=>battleRules()?.actionsForTurn(battleTurn(),Math.max(1,Number(playSceneState.night)||1),state)||[];
+const battleActions=()=>{const turn=battleTurn();return battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state)||[];};
 const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
 const battleMember=id=>playLiveMembers().find(m=>String(m.loginId||'')===String(id));
+const battleUsed=turn=>!!battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn);
+function battleTickCountdown(){
+  const clock=document.getElementById('battleCountdown'),root=document.getElementById('playBattleDock');
+  if(!clock||!root||root.hidden)return;
+  const serverNow=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
+  const rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase;
+  let seconds=phase==='night'?battleRules()?.remainingSeconds(rt,serverNow):null;
+  if(phase==='day'){
+    const duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'');
+    if(Number.isFinite(duration)&&duration>0)seconds=Number.isFinite(started)?Math.max(0,Math.ceil(duration-(serverNow-started)/1000)):Math.ceil(duration);
+  }
+  const formatted=battleRules()?.formatTime(seconds)||'--:--';
+  if(clock.textContent!==formatted)clock.textContent=formatted;
+  clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
+  clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
+}
+async function battleNavigateIndex(index){
+  if(battleState.busy||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+  const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
+  if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
+  if(battleUsed(queue[index])){playFlashError('Artifact này đã dùng ở lượt trước; không thể dùng lại trong đêm.');return}
+  if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận để chuyển lượt?'))return;
+  battleState.busy=true;renderPlayBattle();
+  try{
+    const result=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex:index,expectedTurnId:rt.currentId||'',source:'gm-timeline'})});
+    playSceneRuntime.nightRuntime=result?.runtime||rt;
+    battleClear();await playSyncRoom(true);
+  }catch(err){playFlashError('Không thể chuyển lượt: '+String(err?.message||err));await playSyncRoom(true).catch(()=>{})}
+  finally{battleState.busy=false;renderPlayBattle()}
+}
+function battleNavigateRelative(delta){
+  const rt=playSceneRuntime.nightRuntime;
+  if(playSceneState.phase!=='night'||!rt?.queue?.length)return;
+  let index=rt.cursor+delta;
+  while(index>=0&&index<rt.queue.length&&battleUsed(rt.queue[index]))index+=delta;
+  if(index>=0&&index<rt.queue.length)void battleNavigateIndex(index);
+}
+
 const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectIds||[])].join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   if(/(bite|can|wolf)/.test(key))return'wolf-bite';
   if(/(freeze|dong bang|frozen)/.test(key))return'frozen';
@@ -3004,15 +3042,15 @@ function renderPlayBattle(){
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleState.key=key;battleClear();battleState.timelineSig='';battleState.actionSig=''}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
-  const steps=battleRules().timeline(phase,rt,night),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status]));
+  const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status]));
   if(timeline&&signature!==battleState.timelineSig){battleState.timelineSig=signature;
-    timeline.innerHTML=steps.map((s,i)=>'<span role="listitem" title="'+playEsc(s.label)+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':i+1)+'</span><b>'+playEsc(s.label)+'</b></span>').join('');
+    timeline.innerHTML=steps.map((s,i)=>i===steps.length-1?'<span role="listitem" title="'+playEsc(s.label)+'" class="play-battle-step is-'+playEsc(s.status)+'"><b>'+playEsc(s.label)+'</b></span>':'<button type="button" role="listitem" data-battle-index="'+i+'" '+(s.status==='used'?'disabled ':'')+'title="'+playEsc(s.label)+(s.status==='used'?' (đã sử dụng)':'')+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':i+1)+'</span><b>'+playEsc(s.label)+'</b></button>').join('');
     const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
   }
   const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');
-  const sig=(t?.id||phase)+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount]));
+  const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount]));
   if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget?'disabled ':'')+'>'+playEsc(a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget?'disabled ':'')+'>'+playEsc(a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
   set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+(t?.kind==='early-artifact'?'ARTIFACT ĐẦU VÁN':t?.kind==='role'?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
@@ -3033,7 +3071,7 @@ function renderPlayBattle(){
   const auto=document.getElementById('battleGMAuto'),audio=document.getElementById('battleGMAudio');
   if(auto){auto.textContent='↻ AUTO GM: '+(playSceneState.autoGM?'BẬT':'TẮT');auto.classList.toggle('is-off',!playSceneState.autoGM)}
   if(audio){audio.textContent=(playAudioMuted()?'🔇 AUDIO: TẮT':'🔊 AUDIO: BẬT');audio.classList.toggle('is-off',playAudioMuted())}
-  battleMarkPlayers()
+  battleMarkPlayers();battleTickCountdown()
 }
 async function battleConfirm(){
   const a=battleAction(),t=battleTurn();if(battleState.busy||!a||!t||battleState.targets.length!==a.targetCount)return;
@@ -3063,6 +3101,24 @@ function initBattleControls(){
   document.getElementById('battleConfirm')?.addEventListener('click',()=>{void battleConfirm()});
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
+  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled)void battleNavigateIndex(Number(b.dataset.battleIndex))});
+  const swipeRoot=document.getElementById('playShell');
+  let battleSwipe=null;
+  swipeRoot?.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
+    if(playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    if(e.target.closest('button,input,select,textarea,a,[role="button"],#playBattleTop,#playBattleDock,.play-player-token,.play-gm-sheet'))return;
+    battleSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,time:Date.now()};
+  },{passive:true});
+  swipeRoot?.addEventListener('pointerup',e=>{
+    const start=battleSwipe;battleSwipe=null;
+    if(!start||start.id!==e.pointerId||playSceneState.step!=='battle')return;
+    const dx=e.clientX-start.x,dy=e.clientY-start.y,elapsed=Date.now()-start.time;
+    if(elapsed>=100&&elapsed<=1800&&Math.abs(dx)>=Math.min(135,Math.max(90,window.innerWidth*0.26))&&Math.abs(dx)>Math.abs(dy)*2)
+      battleNavigateRelative(dx>0?-1:1);
+  },{passive:true});
+  swipeRoot?.addEventListener('pointercancel',()=>{battleSwipe=null},{passive:true});
+  window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleActionBar')?.addEventListener('click',e=>{if(Date.now()<battleState.ignoreClick)return;const x=e.target.closest('[data-battle-action]');if(x)battlePickAction(x.dataset.battleAction)});
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled)battlePickTarget(x.dataset.battleMember)});
   document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction())return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId)}},true);

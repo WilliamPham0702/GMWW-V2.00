@@ -9,13 +9,34 @@
     if(phase!=="night"||!runtime||runtime.completed)return null;
     return Array.isArray(runtime.queue)?runtime.queue[Math.max(0,Number(runtime.cursor)||0)]||null:null;
   }
-  function timeline(phase,runtime,night){
+  function artifactUsed(used,step){
+    if(!step||(step.kind!=="early-artifact"&&step.kind!=="artifact-main"))return false;
+    return (Array.isArray(used)?used:[]).some(x=>String(x?.artifactId||"")===String(step.artifactId||"")&&String(x?.playerId||("member:"+loginOf(x?.loginId)))===String(step.playerId||""));
+  }
+  function remainingSeconds(runtime,serverNow=Date.now()){
+    const current=currentTurn("night",runtime);
+    if(!current)return null;
+    const seconds=Number(current.durationSec);
+    if(!Number.isFinite(seconds)||seconds<=0)return null;
+    const deadline=Date.parse(runtime?.deadlineAt||"");
+    if(Number.isFinite(deadline))return Math.max(0,Math.ceil((deadline-serverNow)/1000));
+    const paused=Number(runtime?.autoPausedRemainingMs);
+    if(Number.isFinite(paused)&&paused>0)return Math.max(0,Math.ceil(paused/1000));
+    const start=Date.parse(current.startedAt||runtime?.startedAt||"");
+    return Number.isFinite(start)?Math.max(0,Math.ceil(seconds-(serverNow-start)/1000)):Math.ceil(seconds);
+  }
+  function formatTime(seconds){
+    if(seconds===null||!Number.isFinite(seconds))return "--:--";
+    const s=Math.max(0,Math.ceil(seconds));
+    return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  }
+  function timeline(phase,runtime,night,used=[]){
     const n=Math.max(1,Number(night)||1);
     if(phase==="day")return [{id:"wake",kind:"day",label:"Làng ơi dậy đi",status:"active",active:true}];
     if(phase!=="night")return [{id:"start",kind:"start",label:"Bắt đầu Đêm 1",status:"active",active:true}];
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
-    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),status:row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
+    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
     rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
@@ -44,6 +65,6 @@
     if(action.type==="revive")return effect==="dead";
     return action.allowDead||effect!=="dead"&&effect!=="expelled";
   }
-  const api=Object.freeze({currentTurn,timeline,displayLabel,resolvedType,actionsForTurn,targetAllowed});
+  const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
   root.GMWW_BATTLE_CONTROLS=api;
 })(globalThis);

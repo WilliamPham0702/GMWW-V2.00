@@ -30,7 +30,7 @@ test('Worker uses verified V3.58 delta on both manifest routes',()=>{
  assert.ok(s.includes('selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))'));
  assert.ok(s.includes('selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))'));
  const html=readFileSync('server-game/current/GMWW.html','utf8');
- assert.match(html,/<title>GMWW V3\.79<\/title>/);
- assert.match(html,/app\.js\?v=3\.79-battle-swap/);
- assert.match(html,/style\.css\?v=3\.79-battle-swap/);
+ assert.match(html,/<title>GMWW V3\.80<\/title>/);
+ assert.match(html,/app\.js\?v=3\.80-battle-timer/);
+ assert.match(html,/style\.css\?v=3\.80-battle-timer/);
 });

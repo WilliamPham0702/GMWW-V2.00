@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.79</title>
-<link rel="stylesheet" href="style.css?v=3.79-battle-swap">
+<title>GMWW V3.80</title>
+<link rel="stylesheet" href="style.css?v=3.80-battle-timer">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -192,7 +192,7 @@
 
 
         <section id="playBattleDock" class="play-battle-dock" aria-label="Hành động lượt chơi" hidden>
-          <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span></div>
+          <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><div class="battle-timer-status"><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại của lượt" aria-live="off">--:--</output></div></div>
           <div id="battleActionBar" class="play-battle-actions" aria-label="Kéo hành động vào nhân vật hoặc chạm để chọn"></div>
           <div id="battlePending" class="play-battle-pending" hidden>
             <span id="battlePendingText">Chọn mục tiêu</span>
@@ -738,8 +738,8 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="battle-controls.js?v=battle-379"></script>
-<script src="app.js?v=3.79-battle-swap"></script>
+<script src="battle-controls.js?v=battle-380"></script>
+<script src="app.js?v=3.80-battle-timer"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

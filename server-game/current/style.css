@@ -4581,3 +4581,21 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBack span{displ
  body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{grid-template-columns:42px minmax(0,1fr) 42px}
  body.play-immersive #start #playShell[data-step="battle"] #battleBack{width:42px;min-width:42px}
 }
+
+/* V3.80 - Compact turn countdown and swipe/select navigation */
+#start #playShell[data-step="battle"] .battle-timer-status{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+#start #playShell[data-step="battle"] #battleCountdown{display:inline-flex;align-items:center;justify-content:center;min-width:66px;height:34px;padding:0 6px;border-radius:10px;border:1px solid #b8e7e5;background:#0d5263;color:#fff5bf;font-weight:900;font-variant-numeric:tabular-nums;font-size:19px;letter-spacing:.02em}
+#start #playShell[data-step="battle"] #battleCountdown.is-ending{border-color:#ffc297;color:#ffd0b9;background:#763e40;animation:gmwwBattleLastSeconds 850ms ease-in-out infinite alternate}
+#start #playShell[data-step="battle"] #playBattleDock .play-battle-turn{gap:5px;min-width:0}
+#start #playShell[data-step="battle"] #playBattleDock .play-battle-turn>div{flex:1}
+#start #playShell[data-step="battle"] .play-battle-step{font-family:inherit;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+#start #playShell[data-step="battle"] .play-battle-step:focus-visible{outline:2px solid #f4dd90;outline-offset:1px}
+#start #playShell[data-step="battle"] button.play-battle-step:disabled{cursor:not-allowed;opacity:.48;text-decoration:line-through;border-style:dashed}
+#start #playShell[data-step="battle"] .play-battle-step.is-used{background:#243e49;color:#aab9bb}
+@media(max-width:390px){
+ #start #playShell[data-step="battle"] .battle-timer-status{gap:3px;flex-direction:column;align-items:flex-end}
+ #start #playShell[data-step="battle"] #battleCountdown{height:29px;min-width:62px;font-size:17px}
+ #start #playShell[data-step="battle"] #battleTurnProgress{font-size:9px}
+}
+@keyframes gmwwBattleLastSeconds{from{opacity:1}to{opacity:.62}}
+@media(prefers-reduced-motion:reduce){#start #playShell[data-step="battle"] #battleCountdown.is-ending{animation:none}}
