@@ -3192,7 +3192,7 @@ async function playEnsureTemplateAssets(id,cfg){
   const missing=new Set(status?.missing||playTemplateAssetIds(cfg));
   for(const assetId of missing){
     const isArtifact=assetId.startsWith('artifact:'),rawId=assetId.slice(isArtifact?9:5);
-    const model=(isArtifact?state.artifacts:state.cards||[]).find(x=>String(x.id)===rawId);
+    const model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===rawId);
     if(!model)throw new Error('Thiếu Lá Bài '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
     const imageDataUrl=isArtifact?await playArtifactArtworkData(model):await playRoleArtworkData(model);
     const pkg=isArtifact?{roleId:assetId,roleName:model.name,artworkAssetId:assetId,roleCard:playArtifactCardPayload(model)}:
@@ -3209,7 +3209,7 @@ async function playPreloadSelectedArtwork(cfg){
   const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
   const existing=new Set(manifest?.assetIds||[]);
   for(const assetId of expected.filter(x=>!existing.has(x))){
-    const isArtifact=assetId.startsWith('artifact:'),id=assetId.slice(isArtifact?9:5),model=(isArtifact?state.artifacts:state.cards||[]).find(x=>String(x.id)===id);
+    const isArtifact=assetId.startsWith('artifact:'),id=assetId.slice(isArtifact?9:5),model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===id);
     if(!model)throw new Error('Không tìm thấy Artwork '+assetId+' cho trận này.');
     const imageDataUrl=await(isArtifact?playArtifactArtworkData(model):playRoleArtworkData(model));
     const roleCard=isArtifact?playArtifactCardPayload(model):playRoleCardPayload(model);
