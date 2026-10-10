@@ -146,5 +146,5 @@ test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.6
   const worker=fs.readFileSync('src/index.js','utf8');
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
-  assert.match(fs.readFileSync('src/gmww-runtime-recovery.js','utf8'),/'3\.70'\]\.includes\(version\)/);
+  assert.match(fs.readFileSync('src/gmww-runtime-recovery.js','utf8'),/'3\.71'\]\.includes\(version\)/);
 });
