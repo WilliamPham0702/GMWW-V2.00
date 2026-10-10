@@ -9,14 +9,15 @@ const a=html.indexOf('<section class="page" id="settings">');
 const b=html.indexOf('</section>',a);
 const settings=html.slice(a,b);
 const groups={
+  settingsGroupErrorReport:['gmwwReportToChatGPT','gmwwReportPreview','gmwwCopyReport','gmwwOpenChatGPT'],
   settingsGroupHealth:['settingsRunHealth','quickMaintenanceCard','auditLocalData','clearRuntimeCache','reloadApp','gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','serverHealthCard','checkServerHealth','refreshServerData','openPlayerWeb','systemDiagnosticsCard','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'],
   settingsGroupTasks:['gmwwTasksSummary','gmwwTasksOpenList','gmwwTasksHistory','gmwwTasksDoneList','gmwwTasksReload'],
   settingsGroupUpdate:['updateManagerCard','installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate'],
   settingsGroupAppearance:['characterScaleCard','characterScaleChoices']
 };
 
-test('Every useful settings control lives in one of four boxes on a single scroll screen',()=>{
-  assert.equal(Object.keys(groups).length,4);
+test('Every useful settings control lives in one of five boxes on a single scroll screen',()=>{
+  assert.equal(Object.keys(groups).length,5);
   for(const [box,ids] of Object.entries(groups)){
     const start=settings.indexOf('id="'+box+'"');
     assert.ok(start>=0,'group missing '+box);
@@ -41,7 +42,7 @@ test('Settings removes redundant explanatory notes while keeping live status and
     'Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản.'
   ])assert.ok(!settings.includes(note),'Redundant note remains: '+note);
   assert.ok(settings.includes('id="settingsHubMiniHealth"'));
-  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+  const order=['settingsGroupUpdate','settingsGroupErrorReport','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
   const positions=order.map(id=>settings.indexOf('id="'+id+'"'));
   assert.ok(positions.every(p=>p>=0));
   assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
