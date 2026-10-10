@@ -168,7 +168,10 @@ function frame(now){
   $('perf').dataset.level=fps>=55?'good':fps>=30?'okay':'slow';
  }
 }
-setCount(1);setDir('front');setMainAction('idle');resize();
+const requestedStress=Math.max(1,Math.min(30,Number(new URLSearchParams(location.search).get('stress'))||1));
+setCount(requestedStress);setDir('front');setMainAction('idle');resize();
+document.documentElement.dataset.gmwwV510Actors=String(actors.length);
+document.documentElement.dataset.gmwwV510Bones=String(v510ModelStats().bones);
 notice.hidden=true;
 document.documentElement.dataset.gmwwV500='ready';
 status.textContent='Master-01 SkinnedMesh 16 xương · thử nghiệm độc lập';
