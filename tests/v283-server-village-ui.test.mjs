@@ -37,9 +37,12 @@ test('V3.25 auto-hides the top timeline and bottom five-control dock after 30 se
   assert.match(app,/document\.addEventListener\('touchstart',reveal/);
   assert.match(app,/querySelector\('\.gm-top-icon-audio-v293'\)/);
 });
-test('GM player labels keep name and status fixed while only character artwork scales',()=>{
-  assert.match(app,/<div class="play-player-over"><b>'\+playEsc\(name\)\+'<\/b>'\+\(statusLabel\?/);
-  assert.match(app,/statusLabel\?'<small>'\+playEsc\(statusLabel\)/);
+test('GM player labels show compact name/presence and only character artwork scales',()=>{
+  assert.match(app,/class="play-name-with-presence"/);
+  assert.match(app,/class="play-name-text"/);
+  assert.match(app,/class="play-presence-dot" data-online="/);
+  assert.doesNotMatch(app,/statusLabel\?'<small>'\+playEsc\(statusLabel\)/);
+  assert.match(css,/#start \.play-player-over \.play-presence-dot\[data-online="false"\]/);
   assert.match(app,/play-player-role/);
   assert.match(css,/\.play-player-over\{[^}]*transform:translateX\(-50%\)[^}]*\}/s);
   assert.doesNotMatch(css,/\.play-player-over\{[^}]*scale\(var\(--gmww-character-scale,1\)\)/s);
