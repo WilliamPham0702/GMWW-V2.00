@@ -72,7 +72,7 @@ test('Artwork is inaccessible before Phát Vai and delivered by signed reference
 test('Selection never encodes or uploads saved artwork again and Artifact shares one metadata batch',()=>{
   const flow=gm.slice(gm.indexOf('async function savePlayGame(){'),gm.indexOf('function playRandomInt',gm.indexOf('async function savePlayGame(){')));
   const preload=gm.slice(gm.indexOf('async function playPreloadSelectedArtwork(cfg){'),gm.indexOf('async function playDealRoles(){'));
-  const server=worker.slice(worker.indexOf('async function gmPreloadSharedArtifacts(env,raw,request){'),worker.indexOf('async function roomProxy(env,raw,path,request)'));
+  const server=worker.slice(worker.indexOf('async function gmPreloadSharedArtifacts(env,raw,request){'),worker.indexOf('async function gmPackageCanonicalTemplateRole(env,raw,request)'));
   assert.match(flow,/assetIds:templateAssets/);
   assert.doesNotMatch(flow,/assetIds:\[templateAssets\[offset\]\]/);
   assert.match(preload,/assetIds:artifacts/);
