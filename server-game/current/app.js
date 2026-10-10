@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.67';
+const VERSION='3.68';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2020,10 +2020,11 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
       avatar.append(image);
     }else avatar.textContent='♟';
     const name=document.createElement('b');name.textContent=String(h.member.displayName||h.member.loginId||'Thành viên');
-    const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='loss'?'Đã kết thúc ván':'Tham gia ván chơi';
+    const action=document.createElement('span');action.textContent=h.result==='win'?'Chiến thắng':h.result==='loss'?'Hoàn thành ván':'Tham gia ván chơi';
     const time=document.createElement('small');time.textContent=ago(h.playedAt);
     const arrow=document.createElement('i');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
-    button.append(avatar,name,action,time,arrow);
+    const marker=document.createElement('span');marker.className='gmww-home-recent-marker-v367';marker.textContent=h.result==='win'?'✦':h.result==='loss'?'·':'◦';marker.setAttribute('aria-hidden','true');
+    button.append(marker,avatar,name,action,time,arrow);
     button.addEventListener('click',()=>gmwwHomeNavigate('members'));
     target.append(button);
   }

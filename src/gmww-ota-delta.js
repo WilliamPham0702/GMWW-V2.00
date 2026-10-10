@@ -317,3 +317,23 @@ export function selectVerifiedRuntimeV367Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.67: Sửa nút Chọn Ván, hỗ trợ Artifact trong Ván Mẫu không ★, hiển thị tiến độ/lỗi tại màn chọn; giữ nguyên dữ liệu.'};
 }
+
+
+/** V3.67 chooser -> V3.68 illustrated homepage patch, verified four-file, data-safe. */
+export function selectVerifiedRuntimeV368Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.67'||String(manifest?.releaseVersion||'')!=='3.68'
+  ||String(manifest?.runtimeVersion||'')!=='3.68'||String(manifest?.shellVersion||'')!=='3.17'
+  ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+  ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const paths=['GMWW.html','app.js','style.css','home-art/home-reef-stats-v367.svg'],files=[];
+ for(const path of paths){
+  const found=manifest.runtime.files.filter(f=>f?.path===path);
+  if(found.length!==1)return null;
+  const f=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.68/'+path;
+  if(String(f.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))return null;
+  files.push({path,url,sha256:String(f.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files},delete:[],optimizedFromVersion:from,upgradeMode:'verified-overlay',
+   message:'V3.68: Thống Kê Nhanh Atlas ngọc trai, Hoạt Động Gần Đây nhật ký biển, bảo toàn Ván Mẫu và dữ liệu.'};
+}
