@@ -76,12 +76,12 @@
       const b=bounds(),{w}=viewport();
       applyPosition((state.position?.x||0)>w/2?b.maxX:b.minX,state.position?.y||b.maxY,true);
       // Suppress the synthetic click after a drag; clicks only open support.
-      bubble.dataset.ignoreClick='1';
+      bubble.dataset.ignoreClickUntil=String(Date.now()+350);
     }
   }
   bubble.addEventListener('pointerup',release);bubble.addEventListener('pointercancel',release);
   bubble.addEventListener('click',()=>{
-    if(bubble.dataset.ignoreClick==='1'){delete bubble.dataset.ignoreClick;return;}
+    if(Date.now()<Number(bubble.dataset.ignoreClickUntil||0))return;
     toggle(!state.open);
   });
   panel.querySelector('.gmww-ai-minimize').addEventListener('click',()=>toggle(false));
