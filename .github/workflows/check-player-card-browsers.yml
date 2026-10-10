@@ -1,0 +1,53 @@
+name: Check Player Card Browsers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/gmww-player-private-card-patch.js"
+      - "src/gmww-members-live.js"
+      - "src/gmww-delivery-manifest.js"
+      - "src/gmww-delivery-snapshot.js"
+      - "src/index.js"
+      - "tests/browser-private-cards.mjs"
+      - ".github/workflows/check-player-card-browsers.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-browser-private-cards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Install Playwright browser runner
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+      - name: Exercise private card UI with Chrome, Edge and WebKit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-browser-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true; tail -100 /tmp/gmww-browser-worker.log || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8787/api/health > /tmp/gmww-browser-health.json; then break; fi
+            sleep 1
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
+          node tests/browser-private-cards.mjs
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-card-failure-screenshots
+          path: /tmp/gmww-player-cards-*.png
+          if-no-files-found: ignore
