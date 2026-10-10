@@ -4,6 +4,7 @@
   const folded = value => String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   const labelOf = (row,fallback) => String(row?.name||row?.label||fallback||"").trim();
   const loginOf = value => String(value||"").replace(/^member:/,"");
+  const displayLabel = (row,fallback) => row?.kind==="wolf-introduction"?"Bầy sói":labelOf(row,fallback);
   function currentTurn(phase,runtime){
     if(phase!=="night"||!runtime||runtime.completed)return null;
     return Array.isArray(runtime.queue)?runtime.queue[Math.max(0,Number(runtime.cursor)||0)]||null:null;
@@ -14,7 +15,7 @@
     if(phase!=="night")return [{id:"start",kind:"start",label:"Bắt đầu Đêm 1",status:"active",active:true}];
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
-    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:labelOf(row,"Lượt "+(i+1)),status:row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
+    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),status:row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
     rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
@@ -43,6 +44,6 @@
     if(action.type==="revive")return effect==="dead";
     return action.allowDead||effect!=="dead"&&effect!=="expelled";
   }
-  const api=Object.freeze({currentTurn,timeline,resolvedType,actionsForTurn,targetAllowed});
+  const api=Object.freeze({currentTurn,timeline,displayLabel,resolvedType,actionsForTurn,targetAllowed});
   root.GMWW_BATTLE_CONTROLS=api;
 })(globalThis);

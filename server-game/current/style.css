@@ -4559,3 +4559,25 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
  #home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-avatar{width:32px;height:32px}
 }
 @media(prefers-reduced-motion:reduce){#home .gmww-home-top3-skin-v377 .gmww-home-top3-card-v377{transition:none!important}}
+
+/* V3.79: In battle, action panel sits at TOP; back/timeline/end menu at BOTTOM. Setup is unchanged. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock{
+  top:calc(env(safe-area-inset-top) + 7px);
+  bottom:auto;
+  z-index:97;
+  max-height:min(44dvh,420px);
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{
+  top:auto;
+  bottom:calc(env(safe-area-inset-bottom) + 7px);
+  z-index:96;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBack{
+  display:grid;place-items:center;width:44px;min-width:44px;padding:0;font-size:24px;line-height:1;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBack span{display:block;line-height:1}
+@media(max-width:390px){
+ body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{grid-template-columns:42px minmax(0,1fr) 42px}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBack{width:42px;min-width:42px}
+}
