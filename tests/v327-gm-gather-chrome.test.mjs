@@ -67,7 +67,7 @@ test('V3.37 tapping the active gathering step reopens its controls',async()=>{
  assert.deepEqual(hits,['visible']);
 });
 test('V3.37 runtime updates V3.17 native shell without forcing IPA install',()=>{
- assert.equal(pkg.version,'3.84.0');
- assert.match(app,/const VERSION='3\.84'/);
- assert.match(worker,/VERSION="V3\.84",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-384"/);
+ assert.equal(pkg.version,'3.85.0');
+ assert.match(app,/const VERSION='3\.85'/);
+ assert.match(worker,/VERSION="V3\.85",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-385"/);
 });
