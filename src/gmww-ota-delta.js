@@ -337,3 +337,22 @@ export function selectVerifiedRuntimeV368Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.68: Khắc phục lưu/chọn Ván Mẫu và nạp Artwork ổn định trên iPhone, không xóa dữ liệu hoặc hình đã tải.'};
 }
+
+/** V3.68 template reliability -> V3.69 home atlas overlay: verified UI and original illustration. */
+export function selectVerifiedRuntimeV369Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.68'||String(manifest?.releaseVersion||'')!=='3.69'
+    ||String(manifest?.runtimeVersion||'')!=='3.69'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const paths=['GMWW.html','app.js','style.css','home-art/home-reef-stats-v367.svg'],files=[];
+ for(const path of paths){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const f=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.69/'+path;
+    if(f.url!==url||!/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))return null;
+    files.push({path,url,sha256:String(f.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files},delete:[],optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.69: Trang Chủ Atlas ngọc trai và Nhật ký Hoạt Động Gần Đây, giữ nguyên Ván Mẫu và dữ liệu.'};
+}
