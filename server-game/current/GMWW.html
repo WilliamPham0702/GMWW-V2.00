@@ -91,6 +91,12 @@
           <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
         </section>
 
+        <section id="playBattleTop" class="play-battle-top" aria-label="Điều khiển trong trận" hidden>
+          <button id="battleBack" type="button" aria-label="Quay về Trang Chủ, giữ trận đang chơi">‹ <span>Quay về</span></button>
+          <div id="battleTimeline" class="play-battle-timeline" aria-label="Thứ tự gọi vai trò" role="list"></div>
+          <button id="battleForceEnd" type="button" aria-label="Kết thúc ván cưỡng chế" title="Kết thúc ván cưỡng chế">⏻</button>
+        </section>
+
         <section class="play-gather-toolbar hidden" id="playGatherToolbar" aria-label="Công cụ Tập hợp dân làng">
           <div class="play-gather-toolbar-head" title="Giữ và kéo để di chuyển • Chạm đúp để về vị trí đầu" tabindex="0" aria-label="Kéo để di chuyển thanh Tập hợp dân làng">
             <span class="play-gather-drag-grip" aria-hidden="true">⠿</span>
@@ -173,6 +179,21 @@
 
 
 
+
+        <section id="playBattleDock" class="play-battle-dock" aria-label="Hành động lượt chơi" hidden>
+          <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span></div>
+          <div id="battleActionBar" class="play-battle-actions" aria-label="Kéo hành động vào nhân vật hoặc chạm để chọn"></div>
+          <div id="battlePending" class="play-battle-pending" hidden>
+            <span id="battlePendingText">Chọn mục tiêu</span>
+            <button id="battleCancel" type="button">HỦY</button>
+            <button id="battleConfirm" type="button">OK</button>
+          </div>
+          <div id="battleRoster" class="play-battle-roster" hidden>
+            <header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header>
+            <div id="battleRosterList" class="play-battle-roster-list"></div>
+          </div>
+          <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button><button id="battleAdvance" type="button">TIẾP THEO ›</button></div>
+        </section>
 
         <nav class="gm-top-menu-v293 gm-bottom-menu-v325 gm-stage-dock-v330" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
@@ -659,6 +680,7 @@
   <div class="sheet-card play-gm-sheet-card">
     <div class="sheet-head"><div><h3>GM</h3><small>Quyền can thiệp trực tiếp</small></div><button id="playGMClose" type="button">×</button></div>
     <div class="play-gm-target" id="playGMTarget">Hãy chọn một Người Chơi trên sân.</div>
+    <div class="play-battle-gm-tools"><button id="battleGMAuto" type="button">↻ AUTO GM</button><button id="battleGMAudio" type="button">🔊 AUDIO</button></div>
     <div class="play-gm-actions">
       <button class="revive" id="playGMRevive" type="button">✨ HỒI SINH</button>
       <button class="danger" id="playGMKill" type="button">☠ GIẾT</button>
@@ -703,6 +725,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
+<script src="battle-controls.js?v=battle-374"></script>
 <script src="app.js?v=3.73-delivery-progress"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
