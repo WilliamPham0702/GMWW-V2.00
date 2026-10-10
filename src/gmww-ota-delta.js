@@ -209,10 +209,14 @@ export function selectVerifiedRuntimeV362Delta(manifest,installedVersion){
     message:'V3.62: Có thể kéo thả menu Tập hợp dân làng, giữ vị trí, không che timeline hoặc thanh điều khiển.'};
 }
 
-/** V3.62 → V3.63 — verified small GM roster-filter update. */
+/** V3.60 / V3.61 / V3.62 → V3.63: verified three-file direct overlay.
+ * The releases since V3.60 change only GMWW.html, app.js and style.css in the
+ * native web runtime; other local assets remain intact during the IPA's atomic
+ * copy-and-overlay install. Never force an unchanged artwork archive download.
+ */
 export function selectVerifiedRuntimeV363Delta(manifest,installedVersion){
   const current=String(installedVersion||'').trim().replace(/^V/i,'');
-  if(current!=='3.62'||String(manifest?.releaseVersion||'')!=='3.63'
+  if(!['3.60','3.61','3.62'].includes(current)||String(manifest?.releaseVersion||'')!=='3.63'
     ||String(manifest?.runtimeVersion||'')!=='3.63'||String(manifest?.shellVersion||'')!=='3.17'
     ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
     ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
@@ -225,6 +229,6 @@ export function selectVerifiedRuntimeV363Delta(manifest,installedVersion){
     files.push({path,url,sha256:String(file.sha256).toLowerCase()});
   }
   return {...manifest,runtime:{...manifest.runtime,files},delete:[],
-    optimizedFromVersion:'3.62',upgradeMode:'verified-overlay',
-    message:'V3.63: Bổ sung lọc Tất cả, Online, Offline trong Chọn Thành Viên.'};
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.63: Cập nhật trực tiếp từ V'+current+' với 3 tệp giao diện; giữ nguyên Artwork, dữ liệu và cài đặt. Bổ sung lọc Tất cả / Online / Offline.'};
 }
