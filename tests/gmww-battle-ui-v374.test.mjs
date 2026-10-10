@@ -5,7 +5,7 @@ await import('../server-game/current/battle-controls.js');
 const controls=globalThis.GMWW_BATTLE_CONTROLS;
 test('first night starts with wolf recognition and ends with village wake-up',()=>{
   const runtime={cursor:0,completed:false,queue:[{id:'wolf-introduction',kind:'wolf-introduction',label:'Bầy Sói ơi dậy đi nhìn mặt nhau'},{id:'early:x',kind:'early-artifact',label:'Tráng Gương'},{id:'role:y',kind:'role',label:'Bảo Vệ'}]};
-  assert.deepEqual(controls.timeline('night',runtime,1).map(x=>x.label),['Bầy Sói ơi dậy đi nhìn mặt nhau','Tráng Gương','Bảo Vệ','Làng ơi dậy đi']);
+  assert.deepEqual(controls.timeline('night',runtime,1).map(x=>x.label),['Bầy sói','Tráng Gương','Bảo Vệ','Làng ơi dậy đi']);
   assert.equal(controls.currentTurn('night',runtime)?.id,'wolf-introduction');
   runtime.cursor=2;
   assert.equal(controls.timeline('night',runtime,1)[2].status,'active');
