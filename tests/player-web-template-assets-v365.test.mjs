@@ -36,6 +36,8 @@ test('Saving a template persists verified artwork and versioned asset metadata o
  assert.match(app,/await playEnsureTemplateAssets\(String\(cached\?\.template\?\.id\|\|templateId\)/);
  assert.match(app,/const imageDataUrl=isArtifact\?await playArtifactArtworkData/);
  assert.match(app,/createImageBitmap\(blob\)/);
+ assert.match(app,/canvas\.getContext\('2d',\{alpha:false\}\)/);
+ assert.match(app,/reduced\.size<=maxBytes/);
  assert.match(app,/resolveArtwork\(kind,id,'display'\)/);
  assert.match(app,/if\(!status\?\.ready\)throw new Error/);
 });
