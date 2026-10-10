@@ -60,7 +60,17 @@ for(const [i,s] of sessions.entries()){
    const roleTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
    assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect role card face '+roleTitle);
    // The canonical full-face should close when the player taps outside.
-   await page.mouse.click(7,7);await face.waitFor({state:'hidden',timeout:10000});
+   // Offline Player only views Role; tapping the card closes it without any target action.
+   await face.click({position:{x:35,y:35}});
+   await face.waitFor({state:'hidden',timeout:10000});
+   const deck=page.locator('#gmwwPlayerPrivateDock');
+   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role should move beneath Artifact');
+   const shuffle=deck.locator('[data-shuffle-deck]');
+   await shuffle.waitFor({state:'visible',timeout:10000});
+   await shuffle.click();
+   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','shuffle cannot lift viewed Role above unseen Artifact');
+   const actionPanel=page.locator('#gmwwArtifactBar');
+   if(await actionPanel.count())assert.equal(await actionPanel.evaluate(el=>getComputedStyle(el).display),'none','offline Player must hide Artifact activation/targets');
    const artifact=page.locator('#gmwwPlayerPrivateDock button[data-private-card="artifact"]');
    if(i<3){
      await artifact.waitFor({state:'visible',timeout:10000});
