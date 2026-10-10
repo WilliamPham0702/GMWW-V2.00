@@ -9,7 +9,7 @@ const worker=fs.readFileSync('src/index.js','utf8');
 
 test('Repeated Ván Mẫu save keeps revision and already packaged artwork; real change invalidates it',async()=>{
   const start=worker.indexOf('  async gameTemplateUpsert(body){');
-  const end=worker.indexOf('  // Immutable-per-revision artwork package',start);
+  const end=worker.indexOf('  // Artifact artwork is a reusable server-wide catalog',start);
   assert.ok(start>0&&end>start);
   const api=vm.runInNewContext('({'+worker.slice(start,end)+'})',{sanitizeGameConfig:x=>x,j:x=>x});
   const store=new Map(),storage={get:async key=>store.get(key),put:async(key,value)=>{store.set(key,value)}};

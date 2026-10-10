@@ -357,3 +357,23 @@ export function selectVerifiedRuntimeV369Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.69: Sửa lỗi Load failed khi LƯU Ván Mẫu trên IPA; giữ nguyên dữ liệu và Artwork.'};
 }
+
+/** IPA V3.69 -> V3.70: verified GM patch for shared Artifact library and role-only Ván Mẫu. */
+export function selectVerifiedRuntimeV370Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.69'||String(manifest?.releaseVersion||'')!=='3.70'
+    ||String(manifest?.runtimeVersion||'')!=='3.70'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.70/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.70: Ván Mẫu chỉ đóng gói Vai Trò, Artifact lưu dùng chung trên Server; không đóng gói lại theo từng trận.'};
+}

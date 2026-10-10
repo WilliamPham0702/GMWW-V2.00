@@ -15,9 +15,9 @@ import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
-import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta } from "./gmww-ota-delta.js";
+import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.69",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-369",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.70",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-370",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -72,6 +72,9 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/village/move"&&request.method==="POST")return this.villageMove(request,await safeJson(request));
     if(url.pathname==="/player/seat-swap"&&request.method==="POST")return this.playerSeatSwap(await safeJson(request));
     if(url.pathname==="/members/directory"&&request.method==="GET")return this.memberDirectory();
+    if(url.pathname==="/artifacts/shared/status"&&request.method==="GET")return this.sharedArtifactStatus();
+    if(url.pathname==="/artifacts/shared"&&request.method==="PUT")return this.sharedArtifactPut(await safeJson(request));
+    if(url.pathname==="/artifacts/shared/get"&&request.method==="GET")return this.sharedArtifactGet(url.searchParams.get("assetId"));
     if(url.pathname==="/game-templates/list"&&request.method==="GET")return this.gameTemplateList();
     if(url.pathname==="/game-templates/upsert"&&request.method==="PUT")return this.gameTemplateUpsert(await safeJson(request));
     if(url.pathname==="/game-templates/assets/status"&&request.method==="GET")return this.gameTemplateAssetsStatus(url.searchParams.get("id"));
@@ -343,11 +346,39 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put(key,rec);
     return j({ok:true,template:rec});
   }
-  // Immutable-per-revision artwork package: saved independently from template configuration.
+  // Artifact artwork is a reusable server-wide catalog, never part of a template revision.
+  async sharedArtifactStatus(){
+    const rows=await this.ctx.storage.list({prefix:"sharedArtifactMeta:"});
+    return j({ok:true,artifacts:[...rows.values()].filter(x=>x?.assetId).map(x=>({assetId:x.assetId,signature:x.signature,updatedAt:x.updatedAt}))});
+  }
+  async sharedArtifactPut(body){
+    const assetId=String(body?.assetId||"").slice(0,180),signature=String(body?.signature||"");
+    if(!/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(assetId))return j({ok:false,error:"INVALID_ARTIFACT_ID"},400);
+    if(!/^[0-9a-f]{64}$/.test(signature))return j({ok:false,error:"INVALID_ARTIFACT_SIGNATURE"},400);
+    const metaKey="sharedArtifactMeta:"+assetId,existing=await this.ctx.storage.get(metaKey);
+    if(body?.force!==true&&existing?.signature===signature&&await this.ctx.storage.get("sharedArtifactData:"+assetId))
+      return j({ok:true,assetId,cached:true});
+    if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"INVALID_ARTIFACT_ARTWORK"},400);
+    const card=sanitizePlayerArtifactCard(body?.package?.roleCard||{}),saved={
+      assetId,signature,updatedAt:new Date().toISOString(),
+      package:{roleId:assetId,roleName:String(card.name||"Artifact"),artworkAssetId:assetId,
+        roleCard:card}
+    };
+    await this.ctx.storage.put("sharedArtifactData:"+assetId,String(body.imageDataUrl));
+    await this.ctx.storage.put(metaKey,saved);
+    return j({ok:true,assetId,cached:false});
+  }
+  async sharedArtifactGet(rawId){
+    const assetId=String(rawId||""),meta=await this.ctx.storage.get("sharedArtifactMeta:"+assetId),
+      imageDataUrl=await this.ctx.storage.get("sharedArtifactData:"+assetId);
+    if(!meta||!validImageDataUrl(imageDataUrl))return j({ok:false,error:"SHARED_ARTIFACT_MISSING",assetId},404);
+    return j({ok:true,assetId,package:{...meta.package,imageDataUrl}});
+  }
+  // A Ván Mẫu only packages its role cards. Artifact selections remain configuration references.
   async gameTemplateAssetsStatus(rawId){
     const id=String(rawId||"").slice(0,120),rec=await this.ctx.storage.get("gameTemplate:"+id);
     if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    const cfg=rec.compiledConfig||{},assets=[...new Set([...(cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")),...(cfg.artifacts||[]).map(a=>"artifact:"+String(a.artifactId||""))].filter(x=>!x.endsWith(":")))],missing=[];
+    const cfg=rec.compiledConfig||{},assets=[...new Set((cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")).filter(x=>!x.endsWith(":")))],missing=[];
     for(const assetId of assets){
       const row=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
       if(!row||Number(row.revision)!==Number(rec.revision)||!validImageDataUrl(row.imageDataUrl))missing.push(assetId);
@@ -357,7 +388,7 @@ export class RoomDurableObject extends DurableObject {
   async gameTemplateAssetPut(body){
     const id=String(body?.id||"").slice(0,120),assetId=String(body?.assetId||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id);
     if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    const cfg=rec.compiledConfig||{},expected=new Set([...(cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")),...(cfg.artifacts||[]).map(a=>"artifact:"+String(a.artifactId||""))]);
+    const cfg=rec.compiledConfig||{},expected=new Set((cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")));
     if(!expected.has(assetId))return j({ok:false,error:"ASSET_NOT_IN_TEMPLATE"},400);
     if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"ARTWORK_NOT_READY",message:"Artwork chưa được tải và tối ưu để lưu Ván Mẫu."},400);
     const pkg=body?.package||{},roleId=assetId.startsWith("artifact:")?assetId:assetId.slice(5);
@@ -516,7 +547,7 @@ export class RoomDurableObject extends DurableObject {
     const stored=[];
     for(const raw of rows){
       const roleId=String(raw?.roleId||raw?.id||"").slice(0,120);if(!roleId)continue;
-      const roleCard=sanitizePlayerRoleCard(raw),artworkAssetId=String(raw?.artworkAssetId||raw?.artworkId||roleCard.artworkAssetId||roleCard.artworkId||("role:"+roleId)).slice(0,180),roleImage=extractRoleImage(raw);
+      const roleCard=roleId.startsWith("artifact:")?sanitizePlayerArtifactCard(raw?.roleCard||raw):sanitizePlayerRoleCard(raw?.roleCard||raw),artworkAssetId=String(raw?.artworkAssetId||raw?.artworkId||roleCard.artworkAssetId||roleCard.artworkId||("role:"+roleId)).slice(0,180),roleImage=extractRoleImage(raw);
       if(roleImage){await this.ctx.storage.put("artworkAsset:"+artworkAssetId,roleImage);await this.ctx.storage.put("roleAsset:"+roleId,roleImage)}
       const normalizedCard={...roleCard,artworkAssetId,artworkId:artworkAssetId};
       await this.ctx.storage.put("roleCatalog:"+roleId,{roleId,roleName:normalizedCard.name||String(raw?.roleName||raw?.name||"Vai Trò"),faction:normalizedCard.faction??raw?.faction??"",description:normalizedCard.information??raw?.description??"",artworkAssetId,artworkId:artworkAssetId,roleCard:normalizedCard,updatedAt:new Date().toISOString()});
@@ -564,7 +595,8 @@ export class RoomDurableObject extends DurableObject {
       if(artifactRaw){
         const artifactId=String(artifactRaw?.artifactId||artifactRaw?.id||artifactRaw?.artifactCard?.id||"").slice(0,120);
         if(artifactId){
-          const artifactCard=sanitizePlayerArtifactCard(artifactRaw?.artifactCard||artifactRaw),artifactAssetId=String(artifactRaw?.artworkAssetId||artifactRaw?.artworkId||artifactCard.artworkAssetId||artifactCard.artworkId||("artifact:"+artifactId)).slice(0,180),artifactImageData=extractRoleImage(artifactRaw);
+          const sharedArtifactCatalog=(await this.ctx.storage.get("roleCatalog:artifact:"+artifactId))||{};
+          const artifactCard=sanitizePlayerArtifactCard(artifactRaw?.artifactCard||sharedArtifactCatalog.roleCard||artifactRaw),artifactAssetId=String(artifactRaw?.artworkAssetId||artifactRaw?.artworkId||artifactCard.artworkAssetId||artifactCard.artworkId||("artifact:"+artifactId)).slice(0,180),artifactImageData=extractRoleImage(artifactRaw);
           if(artifactImageData)await this.ctx.storage.put("artworkAsset:"+artifactAssetId,artifactImageData);
           const artifactStoredImage=await this.ctx.storage.get("artworkAsset:"+artifactAssetId),artifactImage="/api/rooms/"+encodeURIComponent(meta.code)+"/role-assets/"+encodeURIComponent(artifactAssetId)+"/image";
           artifact={loginId,matchId:String(body?.matchId||meta.matchId||""),matchRevision:Number(body?.matchRevision||meta.matchRevision||0),artifactId,artifactName:String(artifactCard.name||artifactRaw?.artifactName||artifactRaw?.name||"Artifact").slice(0,120),description:String(artifactCard.information||artifactRaw?.description||"").slice(0,6000),artifactImage,artworkAssetId:artifactAssetId,artworkId:artifactAssetId,artworkAvailable:!!artifactStoredImage,artifactCard:{...artifactCard,artworkAssetId:artifactAssetId,artworkId:artifactAssetId},singleUse:artifactCard.singleUse===true,deliveredAt:new Date().toISOString(),viewedAt:null,usedAt:null};
@@ -1180,7 +1212,7 @@ export default {async fetch(request,env){
       // can always discover and install the current runtime release.
       if(!currentNativeShell){
         const versioned=await readVersionedManifest();
-        if(validRuntime(versioned)&&await runtimeReady(versioned))return j({ok:true,...(selectVerifiedRuntimeV369Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(versioned,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(versioned,url.searchParams.get("current"))||versioned),checkedAt:new Date().toISOString()});
+        if(validRuntime(versioned)&&await runtimeReady(versioned))return j({ok:true,...(selectVerifiedRuntimeV370Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(versioned,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(versioned,url.searchParams.get("current"))||versioned),checkedAt:new Date().toISOString()});
       }
 
       const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
@@ -1213,7 +1245,7 @@ export default {async fetch(request,env){
       const latestMismatch=String(manifest?.releaseVersion||"")!==currentVersion;
       const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
       if(!currentNativeShell){
-        if(validRuntime(manifest)&&await runtimeReady(manifest))return j({ok:true,...(selectVerifiedRuntimeV369Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(manifest,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(manifest,url.searchParams.get("current"))||manifest),checkedAt:new Date().toISOString()});
+        if(validRuntime(manifest)&&await runtimeReady(manifest))return j({ok:true,...(selectVerifiedRuntimeV370Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(manifest,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(manifest,url.searchParams.get("current"))||manifest),checkedAt:new Date().toISOString()});
         const rescue=await recoverOlderInstalledRuntime();if(rescue)return j(rescue);
         return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
       }
@@ -1311,6 +1343,16 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/members/reset-ranking"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset-ranking",{method:"POST",headers:request.headers}));}
   if(url.pathname==="/api/gm/members/history"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-clear-history",{method:"DELETE",headers:request.headers}));}
   const gmMemberDelete=url.pathname.match(/^\/api\/gm\/members\/([A-Za-z0-9._]+)$/);if(gmMemberDelete&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/delete",{method:"DELETE",headers:request.headers,body:JSON.stringify({loginId:decodeURIComponent(gmMemberDelete[1])})}));}
+  if(url.pathname==="/api/gm/artifacts/shared"&&request.method==="GET"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch("https://member.internal/artifacts/shared/status");
+  }
+  if(url.pathname==="/api/gm/artifacts/shared"&&request.method==="PUT"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    const body=await safeJson(request);
+    return memberStore(env).fetch(new Request("https://member.internal/artifacts/shared",{method:"PUT",
+      headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));
+  }
   if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateAssetsStatus=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/status$/);
@@ -1354,6 +1396,8 @@ export default {async fetch(request,env){
   const gmConfig=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/config$/);if(gmConfig&&request.method==="POST")return gmRoomConfig(env,gmConfig[1],request);
   const gmTemplatePreload=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/template-assets$/);
   if(gmTemplatePreload&&request.method==="POST")return gmPreloadTemplateAssets(env,gmTemplatePreload[1],request);
+  const gmSharedArtifacts=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/shared-artifacts$/);
+  if(gmSharedArtifacts&&request.method==="POST")return gmPreloadSharedArtifacts(env,gmSharedArtifacts[1],request);
   const gmRoleAssets=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/role-assets$/);if(gmRoleAssets&&request.method==="POST")return roomProxy(env,gmRoleAssets[1],"/gm/role-assets",request);
   const gmArtworkManifest=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/artwork-manifest$/);if(gmArtworkManifest&&request.method==="GET")return roomProxy(env,gmArtworkManifest[1],"/gm/artwork-manifest",request);
   const publicRoleAsset=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role-assets\/([^/]+)\/image$/);if(publicRoleAsset&&request.method==="GET"){const c=normalizeRoomCode(publicRoleAsset[1]);if(!isValidRoomCode(c))return new Response("Invalid room code",{status:400});return roomStub(env,c).fetch("https://room.internal/role-assets/"+encodeURIComponent(decodeURIComponent(publicRoleAsset[2]))+"/image")}
@@ -1500,6 +1544,28 @@ async function gmRoomReset(env,raw,request){const c=normalizeRoomCode(raw),body=
 async function gmRoomEnd(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/end",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),room=data?.room||{};for(const r of (Array.isArray(data?.memberResults)?data.memberResults:[])){try{await memberStore(env).fetch("https://member.internal/members/record-result",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,matchId:data.matchId||room.matchId,roomCode:c,roomName:room.roomName,gameName:room.gameName,roleName:r.roleName,faction:r.faction,winnerFaction:data.winnerFaction||room.winnerFaction,result:r.result,playedAt:room.endedAt})})}catch(e){console.warn("GMWW_RESULT_RECORD",r?.loginId,e)}try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,roomCode:c,ready:true})})}catch(e){console.warn("GMWW_END_LOBBY_PRESENCE",r?.loginId,e)}}await syncRoomDirectory(env,c)}return res}
 async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(bearer(request)!==GM_SYNC_TOKEN){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
 
+async function gmPreloadSharedArtifacts(env,raw,request){
+  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const body=await safeJson(request),assetIds=[...new Set(Array.isArray(body?.assetIds)?body.assetIds.map(String):[])];
+  if(!assetIds.length||assetIds.length>30||!assetIds.every(id=>/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)))
+    return j({ok:false,error:"INVALID_SHARED_ARTIFACT_SELECTION"},400);
+  for(const assetId of assetIds){
+    const resp=await memberStore(env).fetch("https://member.internal/artifacts/shared/get?assetId="+encodeURIComponent(assetId));
+    if(!resp.ok)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY",assetId,message:"Bộ Artifact dùng chung chưa có "+assetId+". Vui lòng hoàn tất đồng bộ."},409);
+    const data=await resp.json(),pkg=data?.package;
+    if(!pkg?.imageDataUrl)return j({ok:false,error:"SHARED_ARTIFACT_EMPTY",assetId},424);
+    const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/role-assets",
+      {method:"POST",headers:request.headers,body:JSON.stringify({roles:[pkg]})}));
+    const result=await push.json().catch(()=>null);
+    if(!push.ok||result?.roles?.[0]?.hasImage!==true)return j({ok:false,error:"SHARED_ARTIFACT_TRANSFER_FAILED",assetId},424);
+  }
+  const check=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
+  const manifest=await check.json().catch(()=>null);
+  if(!check.ok||!assetIds.every(id=>manifest?.assetIds?.includes(id)))
+    return j({ok:false,error:"SHARED_ARTIFACT_VERIFY_FAILED"},424);
+  return j({ok:true,ready:true,assetIds,count:assetIds.length});
+}
 async function gmPreloadTemplateAssets(env,raw,request){
   if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
   const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
