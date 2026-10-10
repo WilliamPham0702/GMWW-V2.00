@@ -359,9 +359,16 @@ export class RoomDurableObject extends DurableObject {
     if(!/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(assetId))return j({ok:false,error:"INVALID_ARTIFACT_ID"},400);
     if(!/^[0-9a-f]{64}$/.test(signature))return j({ok:false,error:"INVALID_ARTIFACT_SIGNATURE"},400);
     const metaKey="sharedArtifactMeta:"+assetId,existing=await this.ctx.storage.get(metaKey);
-    if(body?.force!==true&&existing?.signature===signature&&await this.ctx.storage.get("sharedArtifactData:"+assetId))
+    const currentData=existing?.signature?await this.ctx.storage.get("sharedArtifactData:"+assetId):null;
+    if(body?.force!==true&&existing?.signature===signature&&validImageDataUrl(currentData))
       return j({ok:true,assetId,cached:true});
     if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"INVALID_ARTIFACT_ARTWORK"},400);
+    // Backfill the OLD signature before overwriting a V3.70 artifact. Previously
+    // saved matches refer to that version; newly edited cards must not change it.
+    if(existing?.signature&&existing.signature!==signature&&validImageDataUrl(currentData)){
+      const oldKey="sharedArtifactDataVersion:"+assetId+":"+existing.signature;
+      if(!await this.ctx.storage.get(oldKey))await this.ctx.storage.put(oldKey,currentData);
+    }
     const card=sanitizePlayerArtifactCard(body?.package?.roleCard||{}),saved={
       assetId,signature,updatedAt:new Date().toISOString(),
       package:{roleId:assetId,roleName:String(card.name||"Artifact"),artworkAssetId:assetId,
@@ -417,8 +424,16 @@ export class RoomDurableObject extends DurableObject {
     if(!expected.has(assetId))return j({ok:false,error:"ASSET_NOT_IN_TEMPLATE"},400);
     if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"ARTWORK_NOT_READY",message:"Artwork chưa được tải và tối ưu để lưu Ván Mẫu."},400);
     const pkg=body?.package||{},roleId=assetId.startsWith("artifact:")?assetId:assetId.slice(5);
+    // A V3.70 template has only the mutable current package. Preserve that
+    // previous revision on its FIRST edit, never on every room selection.
+    const currentKey="gameTemplateAsset:"+id+":"+assetId;
+    const previous=await this.ctx.storage.get(currentKey);
+    if(previous&&Number(previous.revision)!==Number(rec.revision)&&validImageDataUrl(previous.imageDataUrl)){
+      const oldKey="gameTemplateAssetRevision:"+id+":"+assetId+":"+previous.revision;
+      if(!await this.ctx.storage.get(oldKey))await this.ctx.storage.put(oldKey,previous);
+    }
     const saved={revision:rec.revision,imageDataUrl:body.imageDataUrl,package:{roleId,roleName:String(pkg.roleName||"").slice(0,120),artworkAssetId:assetId,roleCard:sanitizePlayerRoleCard(pkg.roleCard||{}),faction:String(pkg.faction||"").slice(0,120),description:String(pkg.description||"").slice(0,6000)},updatedAt:new Date().toISOString()};
-    await this.ctx.storage.put("gameTemplateAsset:"+id+":"+assetId,saved);
+    await this.ctx.storage.put(currentKey,saved);
     // Keep an immutable-per-revision copy for a match referencing an older
     // version of this template. Do not copy it into each room.
     await this.ctx.storage.put("gameTemplateAssetRevision:"+id+":"+assetId+":"+rec.revision,saved);
