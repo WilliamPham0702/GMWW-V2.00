@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync('server-game/current/sea-artifact-zip-import.js','utf8');
+const source=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 new vm.Script(source);
 const from=source.indexOf('function readStoredZip(buffer){');
@@ -30,7 +30,7 @@ function storedZip(fileEntries){
 }
 
 test('GMWW renders the offline-capable 44-artwork importer in Sea theme',()=>{
-  assert.match(html,/sea-artifact-zip-import\.js/);
+  assert.doesNotMatch(html,/sea-artifact-zip-import\.js/);
   assert.match(html,/sea-artifact-zip-import\.css/);
   assert.match(source,/playSyncSharedArtifactLibrary\(\{onlyIds:selected,forceIds:selected\}\)/);
   assert.match(source,/gmApi\('\/api\/gm\/artifacts\/shared'/);
