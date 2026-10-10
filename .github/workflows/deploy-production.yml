@@ -161,6 +161,40 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
+          # A green deployment must also be installable by a real older IPA.
+          # Previous validation only probed the manifest without ?current=,
+          # which does not exercise the V3.80 -> V3.81 OTA handoff.
+          if [ "$EXPECTED" != "$EXPECTED_SHELL" ]; then
+            FROM_VERSIONS=$(node - "$EXPECTED" <<'NODE'
+          const [major,minor]=process.argv[2].split('.').map(Number);
+          if(!Number.isInteger(major)||!Number.isInteger(minor))process.exit(2);
+          process.stdout.write([minor-1,minor-2].filter(n=>n>=0).map(n=>major+'.'+n).join(' '));
+          NODE
+            )
+            for FROM in $FROM_VERSIONS; do
+              echo "Verify Production: installed Runtime V$FROM can discover V$EXPECTED."
+              curl --connect-timeout 8 --max-time 35 --retry 5 --retry-all-errors --retry-delay 2 -fsS \
+                "$URL/api/update/manifest?current=$FROM&installed-client-check=$(date +%s)" > /tmp/gmww-installed-client-manifest.json
+              node - "$EXPECTED" "$EXPECTED_SHELL" "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-installed-client-manifest.json','utf8'));
+          const [expected,shell,from]=process.argv.slice(2);
+          if(m.ok!==true||m.releaseVersion!==expected||m.runtimeVersion!==expected||
+             m.shellVersion!==shell||m.releaseType!=='runtime')
+            throw new Error('Installed Runtime V'+from+' cannot obtain verified V'+expected+' update');
+          const files=m.runtime?.files||[];
+          for(const path of ['GMWW.html','app.js','style.css']){
+            const entries=files.filter(f=>f.path===path);
+            if(entries.length!==1||!entries[0].url.startsWith('https://')||
+               !/^[a-f0-9]{64}$/i.test(String(entries[0].sha256||'')))
+              throw new Error('Missing valid OTA file '+path+' for installed Runtime V'+from);
+          }
+          if(Array.isArray(m.delete)&&m.delete.length)
+            throw new Error('OTA from V'+from+' unexpectedly deletes user runtime files');
+          console.log('Installed Runtime V'+from+' -> V'+expected+' OTA manifest PASS.');
+          NODE
+            done
+          fi
           # V3.72 canonical-image preflight: the exact role_guard WEBP must be
           # readable from the deployed Worker, not merely rendered as a thumbnail.
           if [ "$EXPECTED" = "3.72" ]; then
