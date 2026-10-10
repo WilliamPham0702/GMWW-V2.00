@@ -256,6 +256,7 @@ function frame(now){
 }
 setCount(1);setDir('front');setMainAction('idle');resize();
 notice.hidden=true;
+document.documentElement.dataset.gmwwV500='ready';
 status.textContent='Master-01 WebGL 2.5D · thử nghiệm độc lập';
 window.GMWW_MASTER_V500={version:V500_VERSION,getMetrics:()=>({fps,frameMs,actors:actors.length,drawCalls:renderer.info.render.calls}),setCount,actions:V500_ACTIONS};
 requestAnimationFrame(frame);
