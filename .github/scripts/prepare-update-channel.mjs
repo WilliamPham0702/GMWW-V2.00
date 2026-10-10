@@ -39,6 +39,8 @@ const leanRuntimePatch=version==='3.16';
 
 copy('server-game/current/GMWW.html','GMWW.html');
 copy('server-game/current/app.js','app.js');
+copy('server-game/current/sea-artifact-zip-import.js','sea-artifact-zip-import.js');
+copy('server-game/current/sea-artifact-zip-import.css','sea-artifact-zip-import.css');
 copy('server-game/current/battle-controls.js','battle-controls.js');
 copy('server-game/current/style.css','style.css');
 copy('server-game/current/character-renderer.js','character-renderer.js');
