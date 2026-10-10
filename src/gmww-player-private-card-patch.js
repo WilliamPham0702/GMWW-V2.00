@@ -102,11 +102,9 @@ function gmwwReadPrivateReceipt(){
  result=result.replaceAll(previousArtifactExpected,expectedFromManifest);
  // A complete receipt must contain all assigned roles and the assigned Artifact,
  // not merely a truthy first role. Artwork is loaded independently.
- replaceReceipt("if(state.artifactExpected&&!state.artifact){if(!state.rolePoll)",
-   "if((state.artifactExpected&&!state.artifact)||(state.privateDeliveryManifest?.roleCount>state.roles.length)){if(!state.rolePoll)");
- 
+
  replaceReceipt("if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}",
-   "if(state.artifactExpected&&!state.artifact){if(!state.rolePoll)state.rolePoll=setInterval(()=>refreshPrivateRole(true),4000)}else if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}");
+   "if((state.artifactExpected&&!state.artifact)||(state.privateDeliveryManifest?.roleCount>state.roles.length)){if(!state.rolePoll)state.rolePoll=setInterval(()=>refreshPrivateRole(true),4000)}else if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}");
  // The public-room poll previously started a second, partially applied /me
  // response that updated role but not Artifact, and could race the full receipt.
  const pollStart=result.indexOf("async function pollRoomState(){");
