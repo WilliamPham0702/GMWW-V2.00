@@ -82,3 +82,26 @@ jobs:
                 print('UNITY_ASSET_ERROR',fname,type(e).__name__,str(e)[:160])
             print('=== END UNITY OBJECT TYPE ANALYSIS ===')
           PY
+      - name: Inspect walk idle animation clips and controllers
+        run: |
+          python3 - <<'PY'
+          import zipfile,io,UnityPy
+          with zipfile.ZipFile('/tmp/reference.ipa') as z:
+            chosen=[x.filename for x in z.infolist() if x.filename.endswith('.bundle') and any(t in x.filename.lower() for t in ('playerskins_assets_all','hotel_2_scenes_all','boot_assets_all'))]
+            for name in chosen:
+              env=UnityPy.load(io.BytesIO(z.read(name)))
+              print('=== ANIMATION SOURCES',name.split('/')[-1],'===')
+              for obj in env.objects:
+                if obj.type.name not in ('AnimationClip','AnimatorController','Avatar'):continue
+                try:
+                  d=obj.read()
+                  title=str(getattr(d,'m_Name','?'))[:120]
+                  if obj.type.name=='AnimationClip':
+                    sample=getattr(d,'m_SampleRate',None)
+                    muscle=getattr(d,'m_MuscleClip',None)
+                    start=getattr(muscle,'m_StartTime',None) if muscle else None
+                    stop=getattr(muscle,'m_StopTime',None) if muscle else None
+                    print('CLIP',title,'sampleRate',sample,'start',start,'stop',stop)
+                  else:print(obj.type.name.upper(),title)
+                except Exception as e:print('ASSET_READ_ERROR',obj.type.name,str(e)[:160])
+          PY
