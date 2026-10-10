@@ -13,7 +13,7 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { characterV4Status } from "./gmww-character-v4.js";
-import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
+import { PUBLIC_ENTRY_LIMITS, AI_SUPPORT_REQUEST_LIMIT, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
@@ -39,7 +39,7 @@ export class RoomDurableObject extends DurableObject {
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
-    const policy=Object.values(PUBLIC_ENTRY_LIMITS).find(x=>x.key===String(body?.key||""));
+    const policy=[...Object.values(PUBLIC_ENTRY_LIMITS),AI_SUPPORT_REQUEST_LIMIT].find(x=>x.key===String(body?.key||""));
     if(!policy)return j({ok:false,error:"UNKNOWN_ADMISSION_POLICY"},400);
     const previous=await this.ctx.storage.get("security-rate");
     const result=stepPublicEntryWindow(previous,policy,Date.now());
@@ -1393,7 +1393,7 @@ export default {async fetch(request,env){
       return new Response(asset.body,{status:200,headers:{...corsHeaders(),"content-type":"image/webp","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
     }catch{return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503)}
   }
-  const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
+  const admissionPolicy=url.pathname==="/api/gm/ai-support/chat"&&request.method==="POST"?AI_SUPPORT_REQUEST_LIMIT:publicEntryPolicy(request.method,url.pathname);
   if(admissionPolicy){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
     if(admissionResponse)return admissionResponse;
