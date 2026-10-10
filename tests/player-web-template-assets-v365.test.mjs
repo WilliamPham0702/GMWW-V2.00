@@ -19,6 +19,7 @@ test('Player uses GM-equivalent artwork, role name, faction and source informati
  assert.match(player,/object-fit:contain/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>VAI TRÒ<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>ARTIFACT<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);
+ assert.match(player,/#gmwwPlayerPrivateDock \.mini-label\{display:block!important;[^}]*background:none!important/);
 });
 test('One click anywhere closes a card; both keep 30-second idle timeout',()=>{
  assert.match(player,/document\.addEventListener\('click',event=>\{if\(\$\('#game'\)\?\.dataset\.privateCardView!=='open'\)return/);
@@ -49,6 +50,8 @@ test('Room is preloaded at Phân Vai and Phát Vai never attempts unverified ima
  assert.doesNotMatch(deal,/playArtifactArtworkData\(/);
  assert.match(deal,/await playRoomApi\('\/assignments'/);
  assert.match(worker,/ROOM_ARTWORK_VERIFY_FAILED/);
+ assert.match(worker,/Artwork is not released/);
+ assert.match(worker,/\['role_delivery','running','started','game','playing'\]\.includes/);
 });
 test('All time inputs display their seconds unit in the label',()=>{
  assert.match(html,/Thời gian thảo luận \(giây\):/);
