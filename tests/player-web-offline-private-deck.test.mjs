@@ -10,8 +10,11 @@ test('Offline-first player has two selectable fanned card backs and NO shuffle b
  assert.match(player,/function gmwwDeckBringToFront\(kind\)/);
  assert.match(player,/gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);openPrivateCardViewer\(kind\)/);
  assert.doesNotMatch(player,/gmwwShufflePrivateDeck|XÁO BÀI|data-shuffle-deck|gmww-deck-shuffle/);
- assert.match(player,/#gmwwPlayerPrivateDock:not\(\.is-solo\)/);assert.match(player,/translateX\(-92%\)/);
- assert.match(player,/translateX\(-8%\)/);
+ assert.match(player,/#gmwwPlayerPrivateDock:not\\(\\.is-solo\\)/);
+ assert.match(player,/width:min\\(160px,44vw\\)!important/);
+ assert.match(player,/left:12px!important;right:auto!important;top:4px!important/);
+ assert.match(player,/left:auto!important;right:12px!important;top:4px!important/);
+ assert.match(player,/translateY\\(-8px\\) rotate\\(0deg\\) scale\\(1\\.06\\)/);
  assert.match(player,/data-deck-top/);
  assert.match(player,/#game #gmwwArtifactBar,#game \.gmww-artifact-bar/);
  assert.match(player,/display:none!important/);
