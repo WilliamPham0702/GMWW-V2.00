@@ -3399,7 +3399,7 @@ async function playSyncSharedArtifactLibrary({onlyIds=null,forceIds=[]}={}){
       if(!playSharedArtifactUploads.has(id)){
         const pending=(async()=>{
           const imageDataUrl=await playArtifactArtworkData(artifact);
-          const payload={assetId,signature,imageDataUrl,package:{roleCard:playArtifactCardPayload(artifact)}};
+          const payload={assetId,signature,force:forced.has(id),imageDataUrl,package:{roleCard:playArtifactCardPayload(artifact)}};
           const result=await gmApi('/api/gm/artifacts/shared',{method:'PUT',timeoutMs:60000,body:JSON.stringify(payload)});
           if(result?.ok!==true)throw new Error('Server không xác nhận bộ Artifact '+id);
         })();
