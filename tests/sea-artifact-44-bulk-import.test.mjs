@@ -9,7 +9,7 @@ new vm.Script(source);
 const from=source.indexOf('function readStoredZip(buffer){');
 const to=source.indexOf('async function verifyZipImage(data,hash){',from);
 assert.ok(from>=0&&to>from);
-const parse=vm.runInNewContext(source.slice(from,to)+';readStoredZip',{TextDecoder,Uint8Array,DataView,Map,JSON,Error});
+const parse=vm.runInNewContext(source.slice(from,to)+';readStoredZip',{TextDecoder,Uint8Array,DataView,Map,JSON,Error,decoder:new TextDecoder('utf-8')});
 
 function storedZip(fileEntries){
   let offset=0;const locals=[],central=[];
