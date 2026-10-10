@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.66</title>
-<link rel="stylesheet" href="style.css?v=3.66-premium-home">
+<title>GMWW V3.67</title>
+<link rel="stylesheet" href="style.css?v=3.67-choose-game">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -535,6 +535,7 @@
 <div class="sheet hidden" id="playGameSheet">
   <div class="sheet-card play-game-sheet-card" data-mode="play">
     <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameClose" type="button">×</button></div>
+    <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
       <label class="play-game-name-label">Ván Mẫu đã lưu
         <select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu đã lưu"><option value="">Tạo Ván Mẫu mới</option></select>
@@ -701,7 +702,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.66-premium-home"></script>
+<script src="app.js?v=3.67-choose-game"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

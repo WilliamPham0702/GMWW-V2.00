@@ -297,3 +297,23 @@ export function selectVerifiedRuntimeV366Delta(manifest,installedVersion){
    optimizedFromVersion:from,upgradeMode:'verified-overlay',
    message:'V3.66: Khám Phá căn trái, Thống Kê Nhanh và Hoạt Động Gần Đây phong cách biển; giữ nguyên hình ảnh và dữ liệu.'};
 }
+
+/** V3.66 -> V3.67: verified three-file GM chooser patch, preserves native data. */
+export function selectVerifiedRuntimeV367Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.66'||String(manifest?.releaseVersion||'')!=='3.67'
+    ||String(manifest?.runtimeVersion||'')!=='3.67'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.67/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.67: Sửa nút Chọn Ván, hỗ trợ Artifact trong Ván Mẫu không ★, hiển thị tiến độ/lỗi tại màn chọn; giữ nguyên dữ liệu.'};
+}
