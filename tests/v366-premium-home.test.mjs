@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {selectVerifiedRuntimeV366Delta} from '../src/gmww-ota-delta.js';
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const css=fs.readFileSync('server-game/current/style.css','utf8');
+const app=fs.readFileSync('server-game/current/app.js','utf8');
+test('Premium homepage retains real stats, left-aligned Explore and recent member activities',()=>{
+ const home=html.slice(html.indexOf('<section class="page active" id="home"'),html.indexOf('<section class="page" id="members"'));
+ assert.match(home,/gmww-home-premium-v366/);
+ for(const id of ['gmwwHomeMemberCount','gmwwHomeOnlineCount','gmwwHomePlaysCount','gmwwHomeLeaderWins','gmwwHomeLeaderboard','gmwwHomeRefresh','gmwwHomeOpenRanking','gmwwHomeRecentRows','gmwwHomeRecentResult'])assert.equal((home.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
+ for(const stat of ['members','online','games','wins'])assert.ok(home.includes('data-stat="'+stat+'"'));
+ assert.match(css,/gmww-home-discover-title-v352\{display:flex!important;align-items:center;justify-content:flex-start!important/);
+ assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+ assert.match(css,/@media\(prefers-reduced-motion:no-preference\)/);
+ assert.match(app,/button\.dataset\.result=h\.result==='win'/);
+ assert.match(app,/gmwwHomeText\('gmwwHomeOnlineCount',rows\.filter/);
+ assert.equal((home.match(/data-home-destination=/g)||[]).length,3);
+});
+test('V3.66 UI overlay is limited to three verified files and fails closed',()=>{
+ const root='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.66/';
+ const paths=['GMWW.html','app.js','style.css'];
+ const make=()=>({releaseVersion:'3.66',runtimeVersion:'3.66',shellVersion:'3.17',releaseType:'runtime',delete:[],runtime:{files:paths.map(path=>({path,url:root+path,sha256:'a'.repeat(64)}))}});
+ const m=make(),patch=selectVerifiedRuntimeV366Delta(m,'3.65');
+ assert.deepEqual(patch?.runtime.files.map(f=>f.path),paths);
+ assert.equal(patch?.upgradeMode,'verified-overlay');
+ assert.deepEqual(patch?.delete,[]);
+ for(const ver of ['3.64','3.66','3.17',''])assert.equal(selectVerifiedRuntimeV366Delta(m,ver),null);
+ const broken=make();broken.runtime.files[0].sha256='bad';assert.equal(selectVerifiedRuntimeV366Delta(broken,'3.65'),null);
+ const deleted=make();deleted.delete=['data'];assert.equal(selectVerifiedRuntimeV366Delta(deleted,'3.65'),null);
+});

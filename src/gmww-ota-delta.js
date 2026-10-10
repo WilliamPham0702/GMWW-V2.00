@@ -277,3 +277,23 @@ export function selectVerifiedRuntimeV365Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.65: Lá bài Player đồng bộ GM, nạp artwork Ván Mẫu trước Phát Vai; giữ nguyên artwork và dữ liệu hiện có.'};
 }
+
+/** Lightweight, fail-closed V3.65 -> V3.66 OTA; preserves user data, artwork and settings. */
+export function selectVerifiedRuntimeV366Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.65'||String(manifest?.releaseVersion||'')!=='3.66'
+   ||String(manifest?.runtimeVersion||'')!=='3.66'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css']){
+   const matches=manifest.runtime.files.filter(f=>f?.path===path);
+   if(matches.length!==1)return null;
+   const f=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.66/'+path;
+   if(String(f.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))return null;
+   selected.push({path,url,sha256:String(f.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:from,upgradeMode:'verified-overlay',
+   message:'V3.66: Khám Phá căn trái, Thống Kê Nhanh và Hoạt Động Gần Đây phong cách biển; giữ nguyên hình ảnh và dữ liệu.'};
+}
