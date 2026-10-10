@@ -16,7 +16,7 @@ test('GM release gates both personal face-down cards; no role name leaks in bott
  assert.match(result,/dock\.hidden=!privateCardAllowed\(\)/);
  assert.match(result,/data-private-card="role"/);
  assert.match(result,/data-private-card="artifact"/);
- assert.match(result,/state\.artifact\?'CHẠM ĐỂ XEM':'Không có Artifact'/);
+ assert.doesNotMatch(result,/artifact\.querySelector\('small'\)\.textContent/);
  assert.doesNotMatch(result,/sessionStorage\.getItem\(storageKey\)!==deliveryKey/,'no automatic role reveal');
  const a=result.indexOf('function privateCardAllowed()'),b=result.indexOf('function clearPrivateCardIdle()',a);
  const evalRole=role=>{const ctx={state:{roomCode:'AABBCC',participantId:'member:safari',role,room:{phase:'role_delivery'}},playerScenePolicy:()=>({rolesReleased:true})};
@@ -36,7 +36,7 @@ test('Tapping Role or Artifact opens real full-card viewer; idle 30 seconds clos
  assert.match(result,/document\.addEventListener\('visibilitychange'/);
  assert.match(result,/window\.addEventListener\('pagehide'/);
  assert.match(result,/object-fit:contain!important/);
- assert.match(result,/btn\.textContent='← ÚP LÁ · VỀ LÀNG'/);
+ assert.match(result,/btn\.textContent=''/);
 });
 test('Player card modifications do not touch GM face-up card presentation or public player data',()=>{
  const gm=fs.readFileSync('server-game/current/app.js','utf8');

@@ -2954,7 +2954,7 @@ function renderPlayGameRoleTimings(){
   for(const role of roles){
     const roleId=String(role.id),custom=Object.prototype.hasOwnProperty.call(playSceneState.roleDurations||{},roleId);
     const row=document.createElement('label');row.className='play-template-role-timing'+(custom?' is-custom':'');
-    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+'</span><span class="play-role-time-input"><input type="number" inputmode="numeric" min="0" max="3600" value="'+playRoleDurationSec(roleId,defaultSec)+'" aria-label="Thời gian sử dụng '+playEsc(role.name||'Vai Trò')+' (giây)"><small>giây</small></span>';
+    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+' (giây):</span><span class="play-role-time-input"><input type="number" inputmode="numeric" min="0" max="3600" value="'+playRoleDurationSec(roleId,defaultSec)+'" aria-label="Thời gian sử dụng '+playEsc(role.name||'Vai Trò')+' (giây)"></span>';
     row.querySelector('input').onchange=e=>{
       const value=Math.max(0,Math.min(3600,Math.trunc(Number(e.target.value)||0)));
       const customTimes={...(playSceneState.roleDurations||{})};
@@ -3064,6 +3064,7 @@ async function savePlayGame(){
       const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));
       const base=template?.template?.compiledConfig||template?.template?.gameConfig;
       if(!base)throw new Error('Không tải được Ván Mẫu.');
+      await playEnsureTemplateAssets(id,base);
       const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
       const configured={
         ...base,
@@ -3078,6 +3079,12 @@ async function savePlayGame(){
       })});
       playSceneRuntime.gameConfig=data.gameConfig||configured;
       playSceneRuntime.room=data.room||playSceneRuntime.room;
+      const templateAssets=playTemplateAssetIds(base);
+      for(let offset=0;offset<templateAssets.length;offset+=3){
+        const prepared=await playRoomApi('/template-assets',{method:'POST',body:JSON.stringify({templateId:id,assetIds:templateAssets.slice(offset,offset+3)})});
+        if(prepared?.ready!==true)throw new Error('Artwork Ván Mẫu chưa nạp xong, chưa thể Phân Vai.');
+      }
+      await playPreloadSelectedArtwork(configured);
       playSceneState.gameTemplateId=id;
       playSceneState.gameName=configured.name||'Ván GMWW';
       playSceneState.matchId=matchId;
@@ -3103,7 +3110,7 @@ async function savePlayGame(){
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
   const cfg={id:templateId,name:gameName,playerCount:total,roles:chosen.map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),timing,artifactLimitPerCycle};
   playSceneState.gameTiming=timing;playSceneState.artifactLimitPerCycle=artifactLimitPerCycle;
-  playSetBusy(true);try{const cached=await gmApi('/api/gm/game-templates',{method:'PUT',body:JSON.stringify({id:templateId,gameConfig:cfg})});playSceneState.gameTemplateId=String(cached?.template?.id||templateId);playSceneState.gameName=gameName;savePlayScene();closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary()}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+  playSetBusy(true);try{const cached=await gmApi('/api/gm/game-templates',{method:'PUT',body:JSON.stringify({id:templateId,gameConfig:cfg})});await playEnsureTemplateAssets(String(cached?.template?.id||templateId),cached?.template?.compiledConfig||cfg);playSceneState.gameTemplateId=String(cached?.template?.id||templateId);playSceneState.gameName=gameName;savePlayScene();closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary()}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
 }
 function playRandomInt(max){if(max<=1)return 0;if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1),limit=Math.floor(0x100000000/max)*max;let n;do{crypto.getRandomValues(a);n=a[0]}while(n>=limit);return n%max}return Math.floor(Math.random()*max)}
 function playShuffle(items){const a=items.slice();for(let i=a.length-1;i>0;i--){const j=playRandomInt(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
@@ -3241,33 +3248,94 @@ function playArtifactCardPayload(artifact){
   const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null}});
   return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:artifact?.singleUse===true||artifact?.artifact?.singleUse===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
 }
-async function playArtifactArtworkData(artifact){
+
+async function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}
+async function playVerifiedArtworkData(kind,id){
+  // Player uses the same DISPLAY artwork as the GM library (not a cropped thumbnail).
+  // Decode first: an HTTP 200 response with invalid bytes is not a valid card.
+  let src=await resolveArtwork(kind,id,'display');
+  if(!src||String(src).includes('default-artwork.webp'))src=await resolveArtwork(kind,id,'full');
+  if(!src||String(src).includes('default-artwork.webp'))throw new Error('Artwork '+id+' chưa có ảnh thật. Hãy cập nhật trong Bộ Bài.');
+  const response=await fetch(src,{cache:'no-store'});
+  if(!response.ok)throw new Error('Không tải được artwork '+id+' (HTTP '+response.status+').');
+  let blob=await response.blob();
+  if(!blob.type.startsWith('image/'))throw new Error('Artwork '+id+' không phải hình ảnh.');
+  let bitmap=null;
   try{
-    const src=await resolveArtwork('artifacts',artifact.id,'full');if(!src)return null;if(String(src).startsWith('data:image/'))return src.length<1900000?src:null;
-    const res=await fetch(src);if(!res.ok)return null;const blob=await res.blob();if(!blob.type.startsWith('image/')||blob.size>1300000)return null;const data=await playBlobDataUrl(blob);return data.length<1900000?data:null;
-  }catch{return null}
+    bitmap=await createImageBitmap(blob);
+    if(!bitmap.width||!bitmap.height)throw new Error('Hình không có kích thước');
+    const maxBytes=1300000;
+    if(blob.size>maxBytes||blob.type==='image/svg+xml'){
+      const scale=Math.min(1,1800/bitmap.width,1800/bitmap.height);
+      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('Không thể tối ưu ảnh');
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      let reduced=null;
+      for(const quality of [0.88,0.80,0.72,0.63]){
+        reduced=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+        if(reduced?.type==='image/webp'&&reduced.size<=maxBytes)break;
+      }
+      if(!reduced||reduced.size>maxBytes)throw new Error('Ảnh quá lớn để đóng gói');
+      blob=reduced;
+    }
+  }catch(err){throw new Error('Artwork '+id+' không thể kiểm tra/đóng gói: '+String(err?.message||err))}
+  finally{bitmap?.close?.()}
+  const data=await playBlobDataUrl(blob);
+  if(!/^data:image\/(?:webp|png|jpeg);base64,/i.test(data)||data.length>=1900000)throw new Error('Artwork '+id+' không đạt giới hạn gói dữ liệu.');
+  return data;
 }
-function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}
-async function playRoleArtworkData(role){
-  try{
-    const src=await resolveArtwork('cards',role.id,'full');if(!src)return null;if(String(src).startsWith('data:image/'))return src.length<1900000?src:null;
-    const res=await fetch(src);if(!res.ok)return null;const blob=await res.blob();if(!blob.type.startsWith('image/')||blob.size>1300000)return null;const data=await playBlobDataUrl(blob);return data.length<1900000?data:null;
-  }catch{return null}
+async function playRoleArtworkData(role){return playVerifiedArtworkData('cards',role.id)}
+async function playArtifactArtworkData(artifact){return playVerifiedArtworkData('artifacts',artifact.id)}
+function playTemplateAssetIds(cfg){
+  return [...new Set([...(cfg?.roles||[]).map(r=>'role:'+String(r.roleId||'')),...(cfg?.artifacts||[]).map(a=>'artifact:'+String(a.artifactId||''))].filter(x=>!x.endsWith(':')))];
+}
+async function playEnsureTemplateAssets(id,cfg){
+  const endpoint='/api/gm/game-templates/'+encodeURIComponent(id)+'/assets';
+  let status=await gmApi(endpoint+'/status');
+  if(status?.ready)return status;
+  const missing=new Set(status?.missing||playTemplateAssetIds(cfg));
+  for(const assetId of missing){
+    const isArtifact=assetId.startsWith('artifact:'),rawId=assetId.slice(isArtifact?9:5);
+    const model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===rawId);
+    if(!model)throw new Error('Thiếu Lá Bài '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
+    const imageDataUrl=isArtifact?await playArtifactArtworkData(model):await playRoleArtworkData(model);
+    const pkg=isArtifact?{roleId:assetId,roleName:model.name,artworkAssetId:assetId,roleCard:playArtifactCardPayload(model)}:
+      {roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
+    const uploaded=await gmApi(endpoint,{method:'PUT',body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
+    if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
+  }
+  status=await gmApi(endpoint+'/status');
+  if(!status?.ready)throw new Error('Ván Mẫu chưa đóng gói đủ ảnh: '+(status?.missing||[]).join(', '));
+  return status;
+}
+async function playPreloadSelectedArtwork(cfg){
+  const expected=playTemplateAssetIds(cfg);
+  const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
+  const existing=new Set(manifest?.assetIds||[]);
+  for(const assetId of expected.filter(x=>!existing.has(x))){
+    const isArtifact=assetId.startsWith('artifact:'),id=assetId.slice(isArtifact?9:5),model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===id);
+    if(!model)throw new Error('Không tìm thấy Artwork '+assetId+' cho trận này.');
+    const imageDataUrl=await(isArtifact?playArtifactArtworkData(model):playRoleArtworkData(model));
+    const roleCard=isArtifact?playArtifactCardPayload(model):playRoleCardPayload(model);
+    const body={roles:[{roleId:isArtifact?assetId:id,roleName:model.name,artworkAssetId:assetId,roleCard,imageDataUrl}]};
+    const uploaded=await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify(body)});
+    if(uploaded?.roles?.[0]?.hasImage!==true)throw new Error('Không nạp được ảnh '+model.name+' lên Phòng.');
+  }
+  const verified=await playRoomApi('/artwork-manifest',{method:'GET'});
+  if(!expected.every(id=>verified?.assetIds?.includes(id)))throw new Error('Chưa nạp đầy đủ artwork vào Phòng. Phân Vai đang được giữ lại.');
+  return verified;
 }
 async function playDealRoles(){
   const review=playAssignmentDraftStatus();if(!review.ok){playFlashError(review.message);setPlayStep('roles');return}
   const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];
   const uniqueIds=[...new Set(rows.map(r=>String(r.roleId)))],roles=uniqueIds.map(id=>(state.cards||[]).find(r=>String(r.id)===id)).filter(Boolean),artifactIds=[...new Set(rows.map(r=>String(r.artifactId||'')).filter(Boolean))],artifacts=artifactIds.map(id=>(state.artifacts||[]).find(a=>String(a.id)===id)).filter(Boolean);playSetBusy(true);
   try{
-    const packages=[];
-    for(const role of roles){const roleCard=playRoleCardPayload(role),imageDataUrl=await playRoleArtworkData(role);packages.push({roleId:role.id,roleName:role.name,faction:playFactionLabel(role),description:role.information||'',artworkAssetId:'role:'+role.id,roleCard,...(imageDataUrl?{imageDataUrl}:{})})}
-    if(packages.length)await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify({roles:packages})});
-    const pkgById=new Map(packages.map(p=>[String(p.roleId),p])),artifactById=new Map(),artifactAssetPackages=[];
-    for(const artifact of artifacts){
-      const aid=String(artifact.id),imageDataUrl=await playArtifactArtworkData(artifact);artifactById.set(aid,artifact);
-      artifactAssetPackages.push({roleId:'artifact:'+aid,roleName:artifact.name||'Artifact',artworkAssetId:'artifact:'+aid,roleCard:{version:7,name:artifact.name||'Artifact',information:artifact.information||'',artworkAssetId:'artifact:'+aid,artworkId:'artifact:'+aid},...(imageDataUrl?{imageDataUrl}:{})});
-    }
-    for(let i=0;i<artifactAssetPackages.length;i+=3){const batch=artifactAssetPackages.slice(i,i+3);if(batch.length)await playRoomApi('/role-assets',{method:'POST',body:JSON.stringify({roles:batch})})}
+    const expected=playTemplateAssetIds({roles:roles.map(r=>({roleId:r.id})),artifacts:artifacts.map(a=>({artifactId:a.id}))});
+    const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
+    if(!expected.every(id=>manifest?.assetIds?.includes(id)))throw new Error('Artwork chưa sẵn sàng. Vui lòng chọn lại Ván Mẫu để nạp đầy đủ trước khi Phát Vai.');
+    const packages=roles.map(role=>({roleId:role.id,roleName:role.name,roleCard:playRoleCardPayload(role)}));
+    const pkgById=new Map(packages.map(p=>[String(p.roleId),p]));
+    const artifactById=new Map(artifacts.map(a=>[String(a.id),a]));
     const assignments=rows.map(r=>{
       const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId)),artifact=artifactById.get(String(r.artifactId||''))||null;
       const artifactPayload=artifact?{artifactId:String(artifact.id),artifactName:artifact.name,artworkAssetId:'artifact:'+artifact.id,artifactCard:playArtifactCardPayload(artifact)}:null;
