@@ -41,6 +41,8 @@ copy('server-game/current/GMWW.html','GMWW.html');
 copy('server-game/current/app.js','app.js');
 copy('server-game/current/artifact-sea-import.js','artifact-sea-import.js');
 copy('server-game/current/battle-controls.js','battle-controls.js');
+copy('server-game/current/gmww-ai-support.js','gmww-ai-support.js');
+copy('server-game/current/gmww-ai-support.css','gmww-ai-support.css');
 copy('server-game/current/style.css','style.css');
 copy('server-game/current/character-renderer.js','character-renderer.js');
 copy('server-game/current/character-renderer.css','character-renderer.css');
