@@ -53,7 +53,7 @@ test('Production GM theme ships bulk importer without changing role/card metadat
   assert.doesNotMatch(html,/artifact-sea-import\\.js\\?v=sea-44-1/);
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   assert.match(app,/safe batch importer for 44 artwork-only Sea Artifacts/);
-  assert.match(app,/window\\.GMWWSeaArtifactImporter/);
+  assert.match(app,/window\.GMWWSeaArtifactImporter/);
   assert.match(src,/sea-artifact-44-backup\|/);
   assert.match(src,/playSyncSharedArtifactLibrary\(\{onlyIds:ids,forceIds:ids\}\)/);
 });
