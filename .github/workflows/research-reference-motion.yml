@@ -53,3 +53,32 @@ jobs:
                 except Exception as e:print('INFO_ERROR',str(e)[:140])
             print('=== END INVENTORY ===')
           PY
+      - name: Inspect Unity Mesh Animator AnimationClip and Sprite asset types
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet UnityPy
+          python3 - <<'PY'
+          import zipfile,collections,io,UnityPy
+          with zipfile.ZipFile('/tmp/reference.ipa') as z:
+            names=[x.filename for x in z.infolist() if not x.is_dir()]
+            targets=[n for n in names if n.endswith(('resources.assets','sharedassets0.assets','globalgamemanagers.assets')) or (n.endswith('.bundle') and any(k in n.lower() for k in ('playerskins_assets','playerskinsui_assets','gameintro_assets','boot_assets','hotel_2_scenes')))]
+            important={'AnimationClip','AnimatorController','Animator','Avatar','Mesh','SkinnedMeshRenderer','MeshRenderer','MeshFilter','Sprite','SpriteRenderer','Texture2D','GameObject','Material'}
+            print('=== UNITY OBJECT TYPE ANALYSIS ===')
+            print('TARGET_FILES',len(targets))
+            for fname in targets[:10]:
+              try:
+                env=UnityPy.load(io.BytesIO(z.read(fname)))
+                counts=collections.Counter(o.type.name for o in env.objects)
+                picked={k:counts[k] for k in sorted(important) if counts[k]}
+                sample=[]
+                for obj in env.objects:
+                  if obj.type.name not in ('AnimationClip','AnimatorController','Avatar','Mesh','Sprite') or len(sample)>=24:continue
+                  try:
+                    data=obj.read()
+                    label=getattr(data,'m_Name',None)
+                    if label:sample.append((obj.type.name,str(label)[:100]))
+                  except Exception as e: sample.append((obj.type.name,'read-error:'+str(e)[:80]))
+                print('UNITY_ASSET',fname,'total_objects',sum(counts.values()),'types',picked,'motion_names',sample)
+              except Exception as e:
+                print('UNITY_ASSET_ERROR',fname,type(e).__name__,str(e)[:160])
+            print('=== END UNITY OBJECT TYPE ANALYSIS ===')
+          PY
