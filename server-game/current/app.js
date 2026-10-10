@@ -3416,6 +3416,7 @@ async function playEnsureSharedArtifactPool(cfg){
   const ids=playMatchArtifactAssetIds(cfg).map(id=>id.slice('artifact:'.length));
   if(!ids.length)return;
   const report=await playSyncSharedArtifactLibrary({onlyIds:ids});
+  if(report.failed.length)throw new Error('Không cập nhật được Artifact dùng chung: '+report.failed.map(x=>x.id).join(', ')+'. '+String(report.failed[0]?.error||''));
   const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
   const ready=new Set((status?.artifacts||[]).map(x=>String(x.assetId)));
   const missing=ids.filter(id=>!ready.has('artifact:'+id));
@@ -3481,7 +3482,8 @@ async function playDealRoles(){
     const artifactById=new Map(artifacts.map(a=>[String(a.id),a]));
     const assignments=rows.map(r=>{
       const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId)),artifact=artifactById.get(String(r.artifactId||''))||null;
-      const artifactPayload=artifact?{artifactId:String(artifact.id),artifactName:artifact.name,artworkAssetId:'artifact:'+artifact.id,artifactCard:playArtifactCardPayload(artifact)}:null;
+      // The server already holds the full Artifact package; send a reference only.
+      const artifactPayload=artifact?{artifactId:String(artifact.id),artworkAssetId:'artifact:'+artifact.id}:null;
       return{loginId:r.loginId,roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,artworkAssetId:'role:'+r.roleId,roleCard:p.roleCard||playRoleCardPayload(role||r),...(artifactPayload?{artifact:artifactPayload}:{})};
     });
     const data=await playRoomApi('/assignments',{method:'POST',body:JSON.stringify({assignments,multiAssign:false,matchId:playSceneState.matchId||('match-'+Date.now().toString(36)),matchRevision:Number(playSceneRuntime.room?.matchRevision||1),deliveryVersion:Number(playSceneRuntime.room?.deliveryVersion||0)+1})});
