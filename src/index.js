@@ -1128,6 +1128,18 @@ export default {async fetch(request,env){
     if(!env.ASSETS)return new Response("Runtime assets unavailable",{status:503});
     return env.ASSETS.fetch(request);
   }
+  // CORS-safe access to the exact canonical role artwork bundled with the current Runtime.
+  // Native WKWebView can display local images but reject fetch(file://) during template packaging.
+  const templateRoleArtwork=url.pathname.match(/^\/api\/gm\/template-role-artwork\/([A-Za-z0-9_-]{1,120})$/);
+  if(templateRoleArtwork&&request.method==="GET"){
+    if(!env.ASSETS)return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503);
+    const assetUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+templateRoleArtwork[1]+".webp",request.url);
+    try{
+      const asset=await env.ASSETS.fetch(new Request(assetUrl.toString(),{method:"GET"}));
+      if(!asset.ok)return j({ok:false,error:"ROLE_ARTWORK_NOT_FOUND"},asset.status===404?404:503);
+      return new Response(asset.body,{status:200,headers:{...corsHeaders(),"content-type":"image/webp","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
+    }catch{return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503)}
+  }
   const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
   if(admissionPolicy){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
