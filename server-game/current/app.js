@@ -1370,17 +1370,18 @@ async function checkPlayerWebNow(){
  * background AI execution. The GM reviews the prepared prompt and taps Send.
  * Only versions, service status codes and error counts are shared.
  */
-let gmwwPreparedBugReport='';
+let gmwwPreparedBugReport='',gmwwLastBugDiagnostics=null,gmwwLastBugScan=0;
 const gmwwBugCode=value=>String(value??'').replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,48)||'UNSPECIFIED';
 function gmwwBuildBugReport(diag){
   const status=id=>String(document.getElementById(id)?.textContent||'').trim().slice(0,65);
   const probes=diag?.probes||{},checks={};
   for(const name of ['server','player','update','characters','settings']){
     const p=probes[name];
+    const visible=document.querySelector('#diagnosticList [data-diagnostic="'+name+'"] b')?.textContent||'';
     checks[name]=p?{ok:p.ok===true,http:Number(p.status)||0,
       latencyMs:Math.min(Math.max(0,Number(p.latency)||0),99999),
       code:p.ok?'OK':gmwwBugCode(p.data?.error||('HTTP_'+p.status))}:
-      {ok:false,code:'NOT_CHECKED'};
+      {ok:false,code:visible==='OFFLINE'?'OFFLINE':visible==='OK'?'PREVIOUSLY_OK':'NOT_CHECKED'};
   }
   const data={
     schema:'GMWW_SAFE_ERROR_REPORT_V1',
@@ -1406,40 +1407,26 @@ function gmwwBuildBugReport(diag){
     'Bảo toàn toàn bộ dữ liệu game, vai trò, Artifact và phiên chơi.\n\n'+
     JSON.stringify(data,null,2);
 }
-async function gmwwReportBugToChatGPT(){
+function gmwwReportBugToChatGPT(){
   const btn=document.getElementById('gmwwReportToChatGPT');
   const status=document.getElementById('gmwwReportStatus');
   const preview=document.getElementById('gmwwReportPreview');
   const previewBox=document.getElementById('gmwwReportPreviewBox');
   const link=document.getElementById('gmwwOpenChatGPT');
-  if(!btn||btn.disabled)return;
-  btn.disabled=true;
-  if(status)status.textContent='Đang tự kiểm tra Server, Player Web, Runtime và lỗi gần đây…';
-  // iOS Safari allows popups only in a direct click. Reserve the window now,
-  // then navigate it once the asynchronous health checks finish.
-  let tab=null;
-  try{tab=window.open('about:blank','_blank')}catch{}
-  try{
-    let diag=null;
-    try{diag=await runSystemDiagnostics({silent:true})}catch{}
-    const report=gmwwBuildBugReport(diag);
-    gmwwPreparedBugReport=report;
-    const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
-    if(preview)preview.value=report;
-    if(previewBox)previewBox.hidden=false;
-    if(link)link.href=target;
-    let navigated=false;
-    try{if(tab&&!tab.closed){tab.location.replace(target);navigated=true}}catch{}
-    if(status)status.textContent=navigated
-      ?'Đã chuẩn bị báo cáo trong ChatGPT. Kiểm tra nội dung rồi chỉ cần nhấn Gửi.'
-      :'Đã chuẩn bị báo cáo. Nhấn MỞ CHATGPT; nếu chưa điền sẵn thì nhấn SAO CHÉP và dán.';
-  }catch{
-    try{tab?.close()}catch{}
-    if(status)status.textContent='Không tạo được báo cáo. Vui lòng thử lại; dữ liệu game vẫn an toàn.';
-  }finally{btn.disabled=false}
+  if(!btn)return;
+  // Generate synchronously from the background Health Check. WKWebView/Safari
+  // requires the ChatGPT link to open directly from the user's tap.
+  const report=gmwwBuildBugReport(gmwwLastBugDiagnostics);
+  gmwwPreparedBugReport=report;
+  const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
+  if(preview)preview.value=report;
+  if(previewBox)previewBox.hidden=false;
+  if(link)link.href=target;
+  if(status)status.textContent='Đã tự mô tả lỗi. ChatGPT sẽ mở với bản nháp; bạn chỉ cần nhấn Gửi. Nếu chưa mở, nhấn MỞ CHATGPT.';
+  try{window.open(target,'_blank','noopener,noreferrer')}catch{}
 }
 const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
-if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',()=>{void gmwwReportBugToChatGPT()});
+if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',gmwwReportBugToChatGPT);
 const gmwwCopyReport=document.getElementById('gmwwCopyReport');
 if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
   if(!gmwwPreparedBugReport)return;
@@ -1452,6 +1439,20 @@ if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
     'Chọn toàn bộ nội dung báo cáo để sao chép thủ công.';
 });
 
+// Preload safe Health Check when GM enters Settings so the report opens in
+// one direct tap, without iOS popup blocking an asynchronous navigation.
+document.querySelectorAll('[data-page="settings"]').forEach(control=>
+  control.addEventListener('click',()=>{
+    if(Date.now()-gmwwLastBugScan<120000)return;
+    gmwwLastBugScan=Date.now();
+    setTimeout(async()=>{
+      if(!document.getElementById('settings')?.classList.contains('active'))return;
+      try{const result=await runSystemDiagnostics({silent:true});
+        if(result)gmwwLastBugDiagnostics=result;
+      }catch{}
+    },250);
+  })
+);
 const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
 const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
 const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
