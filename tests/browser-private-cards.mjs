@@ -27,7 +27,7 @@ for(const [i,s] of sessions.entries()){
 }
 const assignments=sessions.map((s,i)=>({loginId:s.id,roleId:'role-browser-'+i,roleName:'Vai '+s.kind,
  roleCard:{name:'Vai '+s.kind,faction:'Phe Dân',information:'Vai Trò riêng cho '+s.kind},
- ...(i<2?{artifact:{artifactId:'artifact-browser-'+i,artifactCard:{name:'Bảo Vật '+s.kind,information:'Artifact riêng cho '+s.kind}}}:{})
+ ...(i<3?{artifact:{artifactId:'artifact-browser-'+i,artifactCard:{name:'Bảo Vật '+s.kind,information:'Artifact riêng cho '+s.kind}}}:{})
 }));
 await request('/api/gm/rooms/'+room.roomCode+'/assignments',{method:'POST',token:room.gmToken,
  body:{matchId:'browser-'+mark,matchRevision:1,deliveryVersion:1,assignments,multiAssign:false}});
@@ -62,7 +62,7 @@ for(const [i,s] of sessions.entries()){
    // The canonical full-face should close when the player taps outside.
    await page.mouse.click(7,7);await face.waitFor({state:'hidden',timeout:10000});
    const artifact=page.locator('#gmwwPlayerPrivateDock button[data-private-card="artifact"]');
-   if(i<2){
+   if(i<3){
      await artifact.waitFor({state:'visible',timeout:10000});
      await artifact.click({position:{x:60,y:65},timeout:10000});
      await face.waitFor({state:'visible',timeout:10000});
@@ -77,7 +77,7 @@ for(const [i,s] of sessions.entries()){
      await new Promise(resolve=>setTimeout(resolve,250));
    }
    assert.ok(received?.deliveryManifest?.receivedAt,'browser should eventually confirm full private receipt');
-   console.log(JSON.stringify({browser:s.kind,success:true,role:roleTitle,artifact:i<2?'opened':'not assigned'}));
+   console.log(JSON.stringify({browser:s.kind,success:true,role:roleTitle,artifact:'opened'}));
  }catch(error){
    if(page)try{await page.screenshot({path:'/tmp/gmww-player-cards-'+s.kind.toLowerCase()+'.png',fullPage:true})}catch{}
    throw new Error('Browser '+s.kind+' failed: '+error.message+'; page errors='+JSON.stringify(errors));
