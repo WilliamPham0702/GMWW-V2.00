@@ -1,7 +1,7 @@
 // Pure, backwards-compatible rules for the GM 2D scene integration.
 // No storage migration and no implicit phase advancement.
 export const EARLY_ARTIFACTS = Object.freeze(["Đá Đổi Vai Trò","Tráng Gương","Mắt Tiên Tri"]);
-const foldName = value => String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+const foldName = value => String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim();
 // Only used to migrate older cards that have never stored an explicit flag.
 export function defaultPriorityFirst(name){
   return new Set(["da doi vai tro","da hoan doi","doi vai tro","trang guong","mat tien tri"]).has(foldName(name));
