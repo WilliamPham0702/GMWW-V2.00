@@ -58,9 +58,12 @@ function decoration(){
 }
 decoration();
 let actors=[],desiredCount=1,last=0,fpsClock=0,frames=0,fps=0,frameMs=0,paused=false,night=false,runOnTap=false,stressMode=false;
+const frameHistory=[];let completedFrames=0;const MAX_FRAME_HISTORY=240;
 const pickDest=(m,k)=>({x:Math.sin(m.seed*7+k*2.29)*4.5,z:Math.cos(m.seed*5+k*1.85)*2.8});
 function setCount(n){
+ const previousCount=desiredCount;
  desiredCount=Math.max(1,Math.min(30,Number(n)||1));
+ if(previousCount!==desiredCount){frameHistory.length=0;fpsClock=0;frames=0;fps=0;}
  while(actors.length>desiredCount){const a=actors.pop();scene.remove(a.rig.root);}
  while(actors.length<desiredCount){
   const i=actors.length,m=createMotionState('character-01-'+i,
@@ -139,7 +142,9 @@ let crowdTime=0;
 function frame(now){
  requestAnimationFrame(frame);
  if(paused||document.hidden)return;
- const dt=last?Math.min(.05,(now-last)/1000):.016;last=now;
+ const actualDt=last?Math.max(0,(now-last)/1000):.016;
+ const dt=Math.min(.05,actualDt);last=now;
+ if(actualDt>0&&actualDt<2){frameHistory.push(actualDt*1000);if(frameHistory.length>MAX_FRAME_HISTORY)frameHistory.shift();}
  if(!actors.length)return;
  const m=actors[0].m;
  const keydx=(held.has('arrowright')||held.has('d')?1:0)-(held.has('arrowleft')||held.has('a')?1:0);
@@ -157,7 +162,7 @@ function frame(now){
   tickMotion(a.m,dt);animateSkinnedChibi(a.rig,a.m);
  }
  renderer.render(scene,camera);
- frames++;fpsClock+=dt;frameMs=frameMs*.87+dt*1000*.13;
+ frames++;completedFrames++;fpsClock+=actualDt;frameMs=frameMs*.87+actualDt*1000*.13;
  if(fpsClock>=.8){
   fps=Math.round(frames/fpsClock);frames=0;fpsClock=0;
   const info=renderer.info.render;
@@ -175,8 +180,27 @@ document.documentElement.dataset.gmwwV510Bones=String(v510ModelStats().bones);
 notice.hidden=true;
 document.documentElement.dataset.gmwwV500='ready';
 status.textContent='Master-01 SkinnedMesh 16 xương · thử nghiệm độc lập';
+const performanceSnapshot=()=>{
+ const ordered=[...frameHistory].sort((a,b)=>a-b);
+ const p95=ordered.length?ordered[Math.min(ordered.length-1,Math.ceil(ordered.length*.95)-1)]:null;
+ return {fps,frameMs,p95Ms:p95,samples:frameHistory.length,frames:completedFrames,
+   actors:actors.length,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
+   geometry:v510ModelStats(true),crowdGeometry:v510ModelStats(false)};
+};
+const actorSnapshot=()=>{
+ const a=actors[0],m=a?.m;
+ if(!m)return null;
+ return {x:m.x,z:m.z,yaw:m.yaw,targetYaw:m.targetYaw,action:m.action,
+  goal:m.goal?{...m.goal}:null,velocity:m.velocity,seated:m.seated,
+  bones:a.rig.bones.map(b=>({name:b.name,x:b.rotation.x,y:b.rotation.y,z:b.rotation.z})),
+  meshIsSkinned:!!a.rig.mesh.isSkinnedMesh,skeletonBones:a.rig.mesh.skeleton.bones.length};
+};
 window.GMWW_MASTER_V500={version:V510_RIG_VERSION,originalMotionVersion:V500_VERSION,
- getMetrics:()=>({fps,frameMs,actors:actors.length,drawCalls:renderer.info.render.calls,
- triangles:renderer.info.render.triangles,geometry:v510ModelStats(true),crowdGeometry:v510ModelStats(false)}),
- setCount,actions:V500_ACTIONS};
+ getMetrics:performanceSnapshot,getActor:actorSnapshot,
+ setCount,actions:V500_ACTIONS,facings:V500_DIRECTIONS,
+ setAction:setMainAction,setFacing:setDir,
+ walkTo:(x,z,run=false)=>{setDestination(actors[0].m,Number(x),Number(z),run);},
+ stop:()=>{const m=actors[0].m;m.goal=null;m.velocity=0;m.seated=false;setMainAction('idle');},
+ reset:()=>document.getElementById('reset').click()
+};
 requestAnimationFrame(frame);

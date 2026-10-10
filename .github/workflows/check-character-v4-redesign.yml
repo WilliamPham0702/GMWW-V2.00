@@ -6,6 +6,7 @@ on:
       - 'assets/characters/v4/**'
       - 'assets/characters/v5/**'
       - 'tests/character-v510-skinned-master.test.mjs'
+      - 'tests/character-v520-acceptance-board.test.mjs'
       - 'tests/character-v500-webgl-master.test.mjs'
       - 'tests/character-v4-action-lab.test.mjs'
       - 'tests/character-v4-media.test.mjs'
@@ -37,7 +38,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs tests/character-v520-acceptance-board.test.mjs
       - name: Browser smoke test V5.00 WebGL on headless Chromium
         run: |
           set -euo pipefail
@@ -72,6 +73,17 @@ jobs:
           grep -Fq 'data-gmww-v510-actors="30"' /tmp/gmww-v510-30actors.html
           grep -Fq 'data-gmww-v510-bones="16"' /tmp/gmww-v510-30actors.html
           echo "Master-01 V5.10 30 SkinnedMesh actors and 16 bones initialized in Chromium PASS."
+
+          timeout 55s "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --enable-unsafe-swiftshader --use-angle=swiftshader --virtual-time-budget=2000 \
+            --dump-dom "http://127.0.0.1:18765/characters/v5/test-board-v520.html" \
+            > /tmp/gmww-v520-test-board.html 2>/tmp/gmww-v520-board-chrome.log || {
+              tail -n 40 /tmp/gmww-v520-board-chrome.log; exit 1;
+            }
+          grep -Fq 'data-test-id="engine"' /tmp/gmww-v520-test-board.html
+          grep -Fq 'data-test-id="perf30"' /tmp/gmww-v520-test-board.html
+          grep -Fq 'id="decision" data-status="pending"' /tmp/gmww-v520-test-board.html
+          echo "Character V5.20 acceptance board renders ten rows and blocks unapproved live release PASS."
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
@@ -93,6 +105,10 @@ jobs:
           node --check assets/characters/v5/character-motion-v500.mjs
           node --check assets/characters/v5/character-master-v500.mjs
           node --check assets/characters/v5/character-rig-v510.mjs
+          node --check assets/characters/v5/test-gates-v520.mjs
+          node --check assets/characters/v5/test-board-v520.mjs
+          test -s assets/characters/v5/test-board-v520.html
+          grep -Fq 'CHƯA NGHIỆM THU' assets/characters/v5/test-board-v520.html
           test -s assets/characters/v5/index.html
           grep -Fq 'THỬ NGHIỆM RIÊNG' assets/characters/v5/index.html
           ! grep -Fq 'characters/v5' src/gmww-members-live.js

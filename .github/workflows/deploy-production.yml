@@ -533,7 +533,7 @@ jobs:
           echo "Verify Production: V4.17 real joint-layer pipeline and iPhone Studio exact SHA PASS."
 
           echo "Verify Production: Character V5.00 isolated 2.5D laboratory."
-          for F in index.html character-motion-v500.mjs character-master-v500.mjs character-rig-v510.mjs vendor/three.module.min.js vendor/three.core.min.js vendor/LICENSE; do
+          for F in index.html character-motion-v500.mjs character-master-v500.mjs character-rig-v510.mjs test-board-v520.html test-board-v520.mjs test-gates-v520.mjs vendor/three.module.min.js vendor/three.core.min.js vendor/LICENSE; do
             SAFE_FILE=${F//\//_}
             EXPECTED_HASH=$(shasum -a 256 "assets/characters/v5/$F" | awk '{print $1}')
             MATCHED=0
@@ -552,9 +552,13 @@ jobs:
           node --check /tmp/gmww-v500-character-master-v500.mjs
           node --check /tmp/gmww-v500-character-rig-v510.mjs
           grep -Fq 'SkinnedMesh' /tmp/gmww-v500-character-rig-v510.mjs
+          node --check /tmp/gmww-v500-test-board-v520.mjs
+          node --check /tmp/gmww-v500-test-gates-v520.mjs
+          grep -Fq 'CHƯA NGHIỆM THU' /tmp/gmww-v500-test-board-v520.html
+          grep -Fq 'releaseReadiness' /tmp/gmww-v500-test-gates-v520.mjs
           grep -Fq "THỬ NGHIỆM RIÊNG" /tmp/gmww-v500-index.html
           grep -Fq "./vendor/three.module.min.js" /tmp/gmww-v500-character-master-v500.mjs
-          echo "Verify Production: V5.00 WebGL Master-01 staged (not enabled for live rooms) PASS."
+          echo "Verify Production: V5.20 acceptance board exact assets and release gates PASS; live Player Web unchanged."
 
 
 
