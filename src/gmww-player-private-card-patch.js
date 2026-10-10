@@ -123,7 +123,36 @@ function gmwwAcknowledgePrivateDelivery(d){
   return true;
 }
 `;
- replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\nasync function refreshPrivateRole(force=false){");
+ const GMWW_MEMBERSHIP_RECHECK_CODE=String.raw`
+let gmwwMembershipRecheckBusy=false;
+async function gmwwVerifyMemberBeforeRemoval(){
+  if(!state.roomCode||!state.participantId||!state.token||gmwwMembershipRecheckBusy)return false;
+  gmwwMembershipRecheckBusy=true;
+  const expectedRoom=state.roomCode,expectedParticipant=state.participantId;
+  try{
+    // A transient/movement public room roster is not authoritative for private membership.
+    // Check the authenticated DO membership before clearing the player's assigned cards.
+    const d=await gmwwReadPrivateReceipt();
+    if(!d||state.roomCode!==expectedRoom||state.participantId!==expectedParticipant)return false;
+    if(d.player?.participantId===expectedParticipant){
+      state.room=d.room||state.room;
+      state.players=[...(Array.isArray(state.players)?state.players:[]).filter(p=>p.participantId!==expectedParticipant),d.player];
+      state.ready=!!d.player.ready;
+      if(d.role)await refreshPrivateRole(true);
+      renderPlayerPrivateDock();
+      return true;
+    }
+    await handleRoomMembershipLost();
+    return false;
+  }catch(error){
+    if(state.roomCode===expectedRoom&&state.participantId===expectedParticipant&&[403,404,423].includes(error?.status))
+      await handleRoomMembershipLost();
+    else if(error?.status!==undefined)console.warn('[GMWW private membership recheck]',error);
+    return false;
+  }finally{gmwwMembershipRecheckBusy=false}
+}
+`;
+ replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\n"+GMWW_MEMBERSHIP_RECHECK_CODE+"\nasync function refreshPrivateRole(force=false){");
  replaceReceipt("if(state.role){rememberActiveRole(state.role);",
    "if(state.role){gmwwAcknowledgePrivateDelivery(d);rememberActiveRole(state.role);");
  replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
@@ -140,6 +169,10 @@ function gmwwAcknowledgePrivateDelivery(d){
 
  replaceReceipt("if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}",
    "if((state.artifactExpected&&!state.artifact)||(state.privateDeliveryManifest?.roleCount>state.roles.length)){if(!state.rolePoll)state.rolePoll=setInterval(()=>refreshPrivateRole(true),4000)}else if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}");
+ replaceReceipt("if(!me&&state.participantId){handleRoomMembershipLost();return}",
+   "if(!me&&state.participantId){gmwwVerifyMemberBeforeRemoval();return}");
+ replaceReceipt("if(!state.players.some(p=>p.participantId===state.participantId)){await handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}",
+   "if(!state.players.some(p=>p.participantId===state.participantId)){await gmwwVerifyMemberBeforeRemoval();return}");
  // The public-room poll previously started a second, partially applied /me
  // response that updated role but not Artifact, and could race the full receipt.
  const pollStart=result.indexOf("async function pollRoomState(){");
