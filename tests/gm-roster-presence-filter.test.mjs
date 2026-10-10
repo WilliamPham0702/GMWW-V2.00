@@ -142,7 +142,7 @@ test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.6
   const corrupt={...manifest,runtime:{files:manifest.runtime.files.map(file=>({...file}))}};
   corrupt.runtime.files[0].sha256='INVALID';
   assert.equal(selectVerifiedRuntimeV363Delta(corrupt,'3.62'),null);
-  assert.equal(app.includes("const VERSION='3.70';"),true);
+  assert.equal(app.includes("const VERSION='3.71';"),true);
   const worker=fs.readFileSync('src/index.js','utf8');
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
