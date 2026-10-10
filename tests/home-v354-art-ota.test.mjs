@@ -17,7 +17,7 @@ test('V3.53 installs verified seven-file V3.54 homepage update',()=>{
 test('Four independent artwork files, one hero name, functional links, no hidden stats',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
  const home=html.slice(html.indexOf('<section class="page active" id="home"'),html.indexOf('<section class="page" id="members"'));
- assert.ok(home.includes('data-home-build="v354-artwork-banners"'));assert.ok(home.includes('gmww-home-name-v354'));
+ assert.ok(home.includes('data-home-build="v354-artwork-banners"'));assert.ok(home.includes('gmww-home-hero-artboard-v351'));assert.ok(home.includes('home-art/home-fantasy-hero-v337.webp'));
  assert.ok(!home.includes('aria-label="WilliamPham – Ma Sói Phiên Bản Biển"'));
  assert.equal((home.match(/id="gmwwHomeEnterVillage"/g)||[]).length,1);
  assert.equal((home.match(/data-home-destination=/g)||[]).length,3);
