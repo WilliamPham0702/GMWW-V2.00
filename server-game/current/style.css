@@ -4618,3 +4618,21 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
   box-shadow:0 0 0 1px rgba(3,36,48,.45),0 0 6px rgba(255,83,99,.7);
 }
 #start .play-player-over small{display:none!important}
+
+/* Settings: private on-device diagnostic -> prefilled ChatGPT, V3.85 */
+.gmww-report-card{display:flex;flex-direction:column;gap:11px;padding:14px}
+.gmww-report-description{font-size:13px;line-height:1.55;margin:0;color:inherit;opacity:.87}
+.gmww-report-card .gmww-report-main{display:flex;justify-content:center;align-items:center;gap:8px;
+  min-height:50px;width:100%;font-size:14px;font-weight:750}
+.gmww-report-card #gmwwReportStatus{line-height:1.5;font-size:12px;opacity:.86}
+.gmww-report-preview{display:flex;flex-direction:column;gap:10px}
+.gmww-report-preview[hidden]{display:none!important}
+.gmww-report-preview label{font-size:13px}
+.gmww-report-preview textarea{display:block;width:100%;min-height:110px;max-height:190px;
+  box-sizing:border-box;padding:12px;border:1px solid rgba(110,205,235,.5);border-radius:12px;
+  background:rgba(2,28,45,.72);color:#e9faff;line-height:1.4;font-size:12px;resize:vertical}
+.gmww-report-fallback{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gmww-report-fallback .settings-action{display:flex;min-height:44px;justify-content:center;
+  align-items:center;gap:6px;text-align:center;text-decoration:none}
+.gmww-report-preview small{font-size:11px;line-height:1.5;opacity:.8}
+@media(max-width:360px){.gmww-report-fallback{grid-template-columns:1fr}}
