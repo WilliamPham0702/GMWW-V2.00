@@ -4234,3 +4234,9 @@ body:not(.play-immersive) #bottomNav .nav{visibility:visible!important;opacity:1
 @media(prefers-reduced-motion:no-preference){#home .gmww-home-premium-v366 [data-stat="online"] .gmww-home-stat-icon{animation:gmwwHomePresence366 3s ease-in-out infinite}}
 @keyframes gmwwHomePresence366{0%,100%{box-shadow:0 0 0 0 #8fffe030,inset 0 1px 1px #dfffffa8}50%{box-shadow:0 0 0 5px #8fffe00c,0 0 15px #8fffe063}}
 
+
+/* V3.67: iPhone Chọn Ván inline progress and error above scrollable sheet. */
+#playGameSheet .play-game-status{flex:none;white-space:normal;margin:8px 0 2px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.45;color:#e7faff;background:#14455c;border:1px solid #4dc7e5;border-radius:10px}
+#playGameSheet .play-game-status[data-kind="error"]{color:#fff3e8;background:#66342b;border-color:#ffa978}
+#playGameSheet .play-game-status[hidden]{display:none!important}
+#playGameSheet #playGameSave:disabled{opacity:.8;cursor:wait;touch-action:none}
