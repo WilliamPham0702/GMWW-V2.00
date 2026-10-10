@@ -47,7 +47,7 @@ test('Polling uses one complete receipt path instead of separately applying only
   assert.doesNotMatch(poll,/\/me'|state\.role=d\.role/);
   assert.match(update,/const d=await gmwwReadPrivateReceipt\(\);if\(!d\)return false/);
   assert.match(update,/state\.artifactExpected=d\?\.deliveryManifest\?\.artifactExpected===true\|\|d\?\.artifactExpected===true/);
-  assert.match(update,/if\(state\.artifactExpected&&!state\.artifact\)/);
+  assert.match(update,/state\.artifactExpected&&!state\.artifact/);assert.match(update,/state\.privateDeliveryManifest\?\.roleCount>state\.roles\.length/);
   assert.match(update,/if\(!state\.rolePoll\)state\.rolePoll=setInterval\(\(\)=>refreshPrivateRole\(true\),4000\)/);
 });
 
