@@ -1488,8 +1488,10 @@ async function gmPreloadTemplateAssets(env,raw,request){
   if(!statusResponse.ok)return statusResponse;
   const status=await statusResponse.json();
   if(!status.ready)return j({ok:false,error:"TEMPLATE_ASSETS_NOT_READY",missing:status.missing||[],message:"Artwork của Ván Mẫu chưa được đóng gói đầy đủ."},409);
+  const requested=Array.isArray(body?.assetIds)?[...new Set(body.assetIds.map(String))]:status.assets;
+  if(!requested.length||!requested.every(id=>status.assets.includes(id)))return j({ok:false,error:'INVALID_TEMPLATE_ASSET_SELECTION'},400);
   let transferred=0;
-  for(const assetId of status.assets){
+  for(const assetId of requested){
     const assetResponse=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(id)+"&assetId="+encodeURIComponent(assetId));
     if(!assetResponse.ok)return j({ok:false,error:"TEMPLATE_ASSET_FETCH_FAILED",assetId},424);
     const asset=await assetResponse.json();
@@ -1501,8 +1503,8 @@ async function gmPreloadTemplateAssets(env,raw,request){
   }
   const verify=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
   const manifest=await verify.json().catch(()=>null);
-  if(!verify.ok||!status.assets.every(id=>manifest?.assetIds?.includes(id)))return j({ok:false,error:"ROOM_ARTWORK_VERIFY_FAILED",message:"Artwork chưa được xác thực đầy đủ trong Phòng."},424);
-  return j({ok:true,ready:true,templateId:id,count:transferred,assetIds:status.assets});
+  if(!verify.ok||!requested.every(id=>manifest?.assetIds?.includes(id)))return j({ok:false,error:"ROOM_ARTWORK_VERIFY_FAILED",message:"Artwork chưa được xác thực đầy đủ trong Phòng."},424);
+  return j({ok:true,ready:true,templateId:id,count:transferred,assetIds:requested});
 }
 async function roomProxy(env,raw,path,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);return roomStub(env,c).fetch(new Request("https://room.internal"+path,{method:request.method,headers:request.headers,body:request.method==="GET"?undefined:request.body}))}
 async function publicRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const res=await roomStub(env,c).fetch("https://room.internal/state");if(res.ok)await syncRoomDirectory(env,c);return res}
