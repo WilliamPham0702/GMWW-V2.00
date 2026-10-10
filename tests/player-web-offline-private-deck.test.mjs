@@ -25,7 +25,7 @@ test('Shuffling rearranges visible backs, never changes assigned Role or Artifac
  const state={roomCode:'AABBCC',participantId:'member:safari',room:{matchId:'match1'},role:{assignmentIndex:0,roleId:'witch',viewedAt:null},artifact:{artifactId:'mirror'}};
  let renderCalls=0;const dock={classList:{remove(){},add(){}},offsetWidth:60};
  const ctx={state,Set,privateCardAllowed:()=>true,$:()=>dock,renderPlayerPrivateDock:()=>{renderCalls++},setTimeout(fn){fn()}};
- vm.runInNewContext(player.slice(start,end)+\`\nthis.isSeen=gmwwDeckRoleWasViewed;this.shuffle=gmwwShufflePrivateDeck;this.markSeen=()=>gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());this.getPreferred=()=>gmwwDeckPreferredTop;\`,ctx);
+ vm.runInNewContext(player.slice(start,end)+`\nthis.isSeen=gmwwDeckRoleWasViewed;this.shuffle=gmwwShufflePrivateDeck;this.markSeen=()=>gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());this.getPreferred=()=>gmwwDeckPreferredTop;`,ctx);
  assert.equal(ctx.isSeen(),false);
  ctx.shuffle();assert.equal(ctx.getPreferred(),'artifact');assert.equal(renderCalls,1);
  assert.equal(state.role.roleId,'witch');assert.equal(state.artifact.artifactId,'mirror');
