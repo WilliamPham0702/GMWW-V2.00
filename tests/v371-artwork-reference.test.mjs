@@ -18,10 +18,10 @@ function roomMethod(from,to){
     MEMBER_STORE_NAME:'__GMWW_MEMBERS__',
   });
 }
-const store=()=>{const db=new Map(),writes=[];
-  return {db,writes,ctx:{storage:{
+const store=()=>{const db=new Map(),writes=[],putCalls=[];
+  return {db,writes,putCalls,ctx:{storage:{
     get:async k=>db.get(k),
-    put:async(k,v)=>{writes.push(k);db.set(k,v)},
+    put:async(k,v)=>{putCalls.push(k);for(const [key,val] of (k&&typeof k==='object'?Object.entries(k):[[k,v]])){writes.push(key);db.set(key,val)}},
     list:async({prefix})=>new Map([...db].filter(([k])=>k.startsWith(prefix))),
     delete:async keys=>{for(const k of Array.isArray(keys)?keys:[keys])db.delete(k)}
   }}}};
@@ -149,4 +149,58 @@ test('Editing global Artifact preserves prior signature artwork without packagin
   assert.equal(state.db.get('sharedArtifactDataVersion:'+assetId+':'+newSig),newImage);
   assert.equal(state.db.get('sharedArtifactData:'+assetId),newImage);
   assert.equal(state.writes.some(k=>k.startsWith('gameTemplateAsset:')),false);
+});
+
+test('44 shared Artifact references are accepted and stored in one metadata batch',async()=>{
+  const api=roomMethod('  async gmArtworkRefs(request,body){','  async roleAssetImage(roleId){');
+  const data=store(),self={ctx:data.ctx,gmAuthorized:async()=>({ok:true})};
+  const base=await api.gmArtworkRefs.call(self,{},{
+    kind:'template',refs:[{assetId:'role:guard',roleId:'guard',templateId:'gm-test',revision:1,roleCard:{name:'Bảo Vệ'}}]
+  });
+  assert.equal(base.ready,true);
+  const refs=Array.from({length:44},(_,i)=>{
+    const id='shared-'+String(i+1).padStart(2,'0');
+    return {assetId:'artifact:'+id,roleId:id,signature:'a'.repeat(64),roleCard:{name:'Artifact '+i}}
+  });
+  const before=data.putCalls.length;
+  const done=await api.gmArtworkRefs.call(self,{}, {kind:'artifact',refs});
+  assert.equal(done.ready,true);
+  assert.equal(done.count,44);
+  assert.equal(data.putCalls.length-before,2,'one active-list update and one batch of 88 metadata entries');
+  assert.equal(data.db.get('gmArtworkActiveIds').length,45);
+  assert.equal(data.db.get('roleCatalog:artifact:shared-44').roleCard.name,'Artifact 43');
+  assert.equal((await api.gmArtworkManifest.call(self,{})).count,45);
+  const tooMany=Array.from({length:101},(_,i)=>({assetId:'artifact:extra-'+i,roleId:'extra-'+i,signature:'b'.repeat(64)}));
+  assert.equal((await api.gmArtworkRefs.call(self,{}, {kind:'artifact',refs:tooMany})).error,'INVALID_ARTWORK_REFERENCES');
+});
+
+test('Shared Artifact forwarding accepts complete 44-card pool without downloading image bytes',async()=>{
+  const start=worker.indexOf('async function gmPreloadSharedArtifacts(env,raw,request){');
+  const end=worker.indexOf('async function gmPackageCanonicalTemplateRole(env,raw,request){',start);
+  assert.ok(start>0&&end>start);
+  const assetIds=Array.from({length:44},(_,i)=>'artifact:card-'+i);
+  const artifacts=assetIds.map(assetId=>({assetId,signature:'c'.repeat(64),package:{roleCard:{name:assetId}}}));
+  let referenced=[];
+  const fn=vm.runInNewContext(worker.slice(start,end)+';gmPreloadSharedArtifacts',{
+    bearer:()=> 'token',GM_SYNC_TOKEN:'token',normalizeRoomCode:x=>x,isValidRoomCode:()=>true,
+    safeJson:async req=>req.bodyJSON,
+    memberStore:()=>({fetch:async()=>new Response(JSON.stringify({ok:true,artifacts}),{headers:{'content-type':'application/json'}})}),
+    roomStub:()=>({fetch:async req=>{
+      if(req.url.includes('/gm/artwork-refs')){
+        const data=await req.json();referenced=data.refs.map(x=>x.assetId);
+        return new Response(JSON.stringify({ok:true}),{headers:{'content-type':'application/json'}});
+      }
+      if(req.url.includes('/gm/artwork-manifest'))return new Response(JSON.stringify({ok:true,assetIds:referenced}),{headers:{'content-type':'application/json'}});
+      throw Error('Unexpected request: '+req.url);
+    }}),
+    j:(data,status)=>({...data,...(status?{status}:{})}),Request,Response,URL,
+  });
+  const request={headers:new Headers(),bodyJSON:{assetIds}};
+  const done=await fn({},'X6LJWG',request);
+  assert.equal(done.ready,true);
+  assert.equal(done.count,44);
+  assert.equal(done.mode,'reference');
+  assert.deepEqual(Array.from(referenced),assetIds);
+  const tooMany=await fn({},'X6LJWG',{...request,bodyJSON:{assetIds:[...assetIds,...Array.from({length:57},(_,i)=>'artifact:extra-'+i)]}});
+  assert.equal(tooMany.error,'INVALID_SHARED_ARTIFACT_SELECTION');
 });

@@ -612,7 +612,7 @@ export class RoomDurableObject extends DurableObject {
   async gmArtworkRefs(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const kind=String(body?.kind||""),refs=Array.isArray(body?.refs)?body.refs:[];
-    if(!["template","artifact"].includes(kind)||!refs.length||refs.length>30)return j({ok:false,error:"INVALID_ARTWORK_REFERENCES"},400);
+    if(!["template","artifact"].includes(kind)||!refs.length||refs.length>(kind==="artifact"?100:30))return j({ok:false,error:"INVALID_ARTWORK_REFERENCES",message:"Một ván cho phép tối đa 100 Artifact hoặc 30 Vai Trò."},400);
     const clean=[],seen=new Set();
     for(const raw of refs){
       const assetId=String(raw?.assetId||""),roleId=String(raw?.roleId||"");
@@ -641,11 +641,17 @@ export class RoomDurableObject extends DurableObject {
       const prior=(await this.ctx.storage.get("gmArtworkActiveIds"))||[];
       await this.ctx.storage.put("gmArtworkActiveIds",[...new Set([...prior,...clean.map(x=>x.assetId)])]);
     }
-    for(const item of clean){
-      const {assetId,roleId,reference,raw}=item;
-      const roleCard=kind==="artifact"?sanitizePlayerArtifactCard(raw.roleCard||{}):sanitizePlayerRoleCard(raw.roleCard||{});
-      await this.ctx.storage.put("artworkRef:"+assetId,reference);
-      await this.ctx.storage.put("roleCatalog:"+(kind==="artifact"?assetId:roleId),{roleId:kind==="artifact"?assetId:roleId,roleName:String(roleCard.name||raw.roleName||""),faction:roleCard.faction||raw.faction||"",description:roleCard.information||raw.description||"",artworkAssetId:assetId,artworkId:assetId,roleCard,updatedAt:new Date().toISOString()});
+    // Group the metadata writes. 44 Artifact used to require 88 sequential
+    // Durable Object writes per game; each 50-card chunk now uses one batch.
+    for(let offset=0;offset<clean.length;offset+=50){
+      const records={};
+      for(const item of clean.slice(offset,offset+50)){
+        const {assetId,roleId,reference,raw}=item;
+        const roleCard=kind==="artifact"?sanitizePlayerArtifactCard(raw.roleCard||{}):sanitizePlayerRoleCard(raw.roleCard||{});
+        records["artworkRef:"+assetId]=reference;
+        records["roleCatalog:"+(kind==="artifact"?assetId:roleId)]={roleId:kind==="artifact"?assetId:roleId,roleName:String(roleCard.name||raw.roleName||""),faction:roleCard.faction||raw.faction||"",description:roleCard.information||raw.description||"",artworkAssetId:assetId,artworkId:assetId,roleCard,updatedAt:new Date().toISOString()};
+      }
+      await this.ctx.storage.put(records);
     }
     return j({ok:true,ready:true,mode:"reference",count:clean.length,assetIds:clean.map(x=>x.assetId)});
   }
@@ -1676,8 +1682,8 @@ async function gmPreloadSharedArtifacts(env,raw,request){
   if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
   const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
   const body=await safeJson(request),assetIds=[...new Set(Array.isArray(body?.assetIds)?body.assetIds.map(String):[])];
-  if(!assetIds.length||assetIds.length>30||!assetIds.every(id=>/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)))
-    return j({ok:false,error:"INVALID_SHARED_ARTIFACT_SELECTION"},400);
+  if(!assetIds.length||assetIds.length>100||!assetIds.every(id=>/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)))
+    return j({ok:false,error:"INVALID_SHARED_ARTIFACT_SELECTION",message:"Hãy chọn từ 1 đến 100 Artifact hợp lệ."},400);
   // One metadata-only call: no Base64 download/upload for every new room.
   const response=await memberStore(env).fetch("https://member.internal/artifacts/shared/status");
   if(!response.ok)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY"},424);
