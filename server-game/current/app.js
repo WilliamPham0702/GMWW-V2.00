@@ -3616,7 +3616,23 @@ function playMatchArtifactAssetIds(cfg){
 }
 const playSharedArtifactUploads=new Map();
 async function playSharedArtifactSignature(artifact){
-  const data=new TextEncoder().encode(JSON.stringify(playArtifactCardPayload(artifact)));
+  // Include the actual Sea-theme artwork bytes, not only card metadata. Otherwise
+  // an image-only edit retains the old server signature and never reaches Player Web.
+  // Hash local source bytes cheaply; only changed cards are decoded/encoded/uploaded.
+  const themeId=state.themes.activeId||'theme-sea',id=String(artifact?.id||'');
+  let artworkSha256='';
+  if(id&&themeId!=='theme-default'){
+    for(const kind of ['display','full']){
+      const record=await dbGet(cardBlobKey(themeId,'artifacts',id,kind)).catch(()=>null);
+      if(record?.blob&&typeof record.blob.arrayBuffer==='function'){
+        const bytes=await record.blob.arrayBuffer();
+        const fingerprint=await crypto.subtle.digest('SHA-256',bytes);
+        artworkSha256=[...new Uint8Array(fingerprint)].map(x=>x.toString(16).padStart(2,'0')).join('');
+        break;
+      }
+    }
+  }
+  const data=new TextEncoder().encode(JSON.stringify({card:playArtifactCardPayload(artifact),themeId,artworkSha256}));
   const digest=await crypto.subtle.digest('SHA-256',data);
   return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
