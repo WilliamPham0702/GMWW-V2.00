@@ -1,15 +1,25 @@
 // Pure, backwards-compatible rules for the GM 2D scene integration.
 // No storage migration and no implicit phase advancement.
-export const EARLY_ARTIFACTS = Object.freeze(["Tráng Gương","Đổi Vai Trò","Đá Hoán Đổi","Thức Cùng Tiên Tri","Mắt Tiên Tri","Bùa Hộ Mệnh"]);
+export const EARLY_ARTIFACTS = Object.freeze(["Đá Đổi Vai Trò","Tráng Gương","Mắt Tiên Tri"]);
+const foldName = value => String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+// Only used to migrate older cards that have never stored an explicit flag.
+export function defaultPriorityFirst(name){
+  return new Set(["da doi vai tro","da hoan doi","doi vai tro","trang guong","mat tien tri"]).has(foldName(name));
+}
+export function artifactPriorityFirst(artifact){
+  const value=artifact?.priorityFirst??artifact?.artifact?.priorityFirst;
+  return typeof value==="boolean"?value:defaultPriorityFirst(artifact?.artifactName||artifact?.name);
+}
 export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   const queue=[];
   if(night===1) queue.push({kind:"wolf-introduction",label:"Bầy Sói ơi dậy đi nhìn mặt nhau"});
-  for(const name of EARLY_ARTIFACTS){
-    const owners=artifactOwners.filter(x=>x?.artifactName===name&&!x.used);
-    for(const owner of owners)queue.push({kind:"early-artifact",name,playerId:owner.playerId});
+  // Every cycle, eligible configured Artifacts act before roles. No unused
+  // Artifact is consumed simply by appearing in this opening window.
+  for(const owner of artifactOwners){
+    if(!owner?.used&&artifactPriorityFirst(owner))queue.push({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId});
   }
   for(const turn of normalTurns){
-    if(turn?.artifactName && artifactOwners.some(x=>x.playerId===turn.playerId&&x.artifactName===turn.artifactName&&x.used))continue;
+    if((turn?.artifactId||turn?.artifactName)&&artifactOwners.some(x=>x.playerId===turn.playerId&&(turn.artifactId?x.artifactId===turn.artifactId:x.artifactName===turn.artifactName)&&x.used))continue;
     queue.push({...turn,kind:turn.kind||"normal"});
   }
   return queue;
