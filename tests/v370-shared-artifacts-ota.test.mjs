@@ -19,13 +19,13 @@ test('V3.70 overlay fails closed on tampering or unsupported base',()=>{
  x=>{x.runtime.files[1].url='https://invalid.example/app.js'},x=>{x.runtime.files.push({...x.runtime.files[0]})}
  ]){const x=manifest();change(x);assert.equal(selectVerifiedRuntimeV370Delta(x,'3.69'),null)}
 });
-test('Worker and IPA Runtime V3.79 declarations are aligned and retain native shell V3.17',()=>{
+test('Worker and IPA Runtime V3.80 declarations are aligned and retain native shell V3.17',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3\.79",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-379"/);
- assert.match(app,/const VERSION='3\.79'/);
- assert.match(html,/<title>GMWW V3\.79<\/title>/);
- assert.match(html,/app\.js\?v=3\.79-battle-swap/);
- assert.equal(pkg.version,'3.79.0');
+ assert.match(worker,/VERSION="V3\.80",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-380"/);
+ assert.match(app,/const VERSION='3\.80'/);
+ assert.match(html,/<title>GMWW V3\.80<\/title>/);
+ assert.match(html,/app\.js\?v=3\.80-battle-timer/);
+ assert.equal(pkg.version,'3.80.0');
 });

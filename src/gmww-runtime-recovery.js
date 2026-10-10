@@ -1,7 +1,7 @@
 /* Signed recovery for legacy Runtime V3.38–V3.46 installed on IPA shell 3.17.
  * Used only when a full immutable manifest cannot be read at an edge. */
 export async function recoverLegacyRuntimeManifest({assets,requestUrl,version,shellVersion,installedVersion}={}){
-  if(!assets?.fetch||!['3.58','3.59','3.60','3.61','3.62','3.63','3.64','3.65','3.66','3.67','3.68','3.69','3.70','3.71','3.72','3.73','3.74','3.75','3.76','3.77','3.78','3.79'].includes(version)||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44','3.45','3.46','3.47','3.48','3.49'].includes(String(installedVersion).replace(/^V/i,'')))return null;
+  if(!assets?.fetch||!['3.58','3.59','3.60','3.61','3.62','3.63','3.64','3.65','3.66','3.67','3.68','3.69','3.70','3.71','3.72','3.73','3.74','3.75','3.76','3.77','3.78','3.79','3.80'].includes(version)||shellVersion!=='3.17'||!['3.38','3.39','3.40','3.41','3.42','3.43','3.44','3.45','3.46','3.47','3.48','3.49'].includes(String(installedVersion).replace(/^V/i,'')))return null;
   const files=[];
   try{
     for(const path of ['GMWW.html','app.js','style.css','home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg']){

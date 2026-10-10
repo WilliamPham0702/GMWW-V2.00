@@ -1,6 +1,7 @@
 import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
+import { combineConfiguredTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -19,7 +20,7 @@ import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.79",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-379",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.80",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-380",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -966,10 +967,11 @@ export class RoomDurableObject extends DurableObject {
     for(const row of artifactRows.filter(a=>a._priorityFirst))queue.push({id:"early:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"early-artifact",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),durationSec:artifactActionSec,status:"pending"});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
     for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(a?.order||roleOrder.get(rid)||9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
-    for(const g of [...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi")))queue.push(g);
+    const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
-    for(const row of artifactRows)queue.push({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"});
+    const artifactTurns=artifactRows.map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
+    queue.push(...combineConfiguredTurns(roleTurns,artifactTurns));
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
     const runtime={matchId:String(meta?.matchId||""),night:n,queue,cursor:0,completed:queue.length===0,currentId:first?.id||null,autoAdvance:autoEnabled,startedAt:now,deadlineAt:autoEnabled&&firstDurationMs>0?new Date(Date.parse(now)+firstDurationMs).toISOString():null,autoPausedRemainingMs:!autoEnabled&&firstDurationMs>0?firstDurationMs:0,createdAt:now,updatedAt:now};
@@ -982,18 +984,30 @@ export class RoomDurableObject extends DurableObject {
   }
   async markGmArtifactTurnUsed(meta,step,targetLoginId){
     if(!step)return null;
-    if(await this.artifactUsedInNight(meta,step))return null;
+    if(await this.artifactUsedInNight(meta,step))return j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact đã dùng trong đêm này."},409);
     const activation=await this.playerArtifactActivate({loginId:normalizeLoginId(step.loginId),requestId:"gm:"+String(meta.matchId||"match")+":"+String(step.id),targetId:"member:"+normalizeLoginId(targetLoginId)});
     return activation.ok?null:activation;
   }
-  async advanceNightRuntime(meta,action="next",source="gm"){
+  async advanceNightRuntime(meta,action="next",source="gm",targetIndex=null){
     const night=Math.max(1,Number(meta.cycleNight||1)),runtime=await this.getNightRuntime(meta,night,true),now=new Date().toISOString();
-    if(action==="back"){if(runtime.cursor>0){runtime.cursor--;while(runtime.cursor>0&&runtime.queue[runtime.cursor]?.status==="skipped")runtime.cursor--;const step=runtime.queue[runtime.cursor];if(step&&step.status==="completed")step.status="pending";runtime.completed=false;runtime.currentId=step?.id||null}}
+    if(action==="jump"){
+      const step=jumpTarget(runtime.queue,targetIndex);
+      if(step&&targetIndex!==runtime.cursor){
+        if(targetIndex>runtime.cursor){
+          for(let i=runtime.cursor;i<targetIndex;i++){
+            const skipped=runtime.queue[i];if(skipped&&skipped.status==="pending"){skipped.status="skipped";skipped.skippedReason="GM_NAVIGATION";skipped.completedAt=now}
+          }
+        }
+        runtime.cursor=targetIndex;runtime.completed=false;runtime.currentId=step.id;
+        if(step.status!=="pending"){step.status="pending";delete step.skippedReason;delete step.completedAt}
+      }else if(step){return runtime}
+    }
+    else if(action==="back"){if(runtime.cursor>0){runtime.cursor--;while(runtime.cursor>0&&runtime.queue[runtime.cursor]?.status==="skipped")runtime.cursor--;const step=runtime.queue[runtime.cursor];if(step&&step.status==="completed")step.status="pending";runtime.completed=false;runtime.currentId=step?.id||null}}
     else{
       const current=runtime.queue[runtime.cursor];
       if(current&&current.status!=="skipped"){if(current.kind==="early-artifact"){const used=await this.artifactUsedInNight(meta,current);current.status="completed";current.result=used?"used":"skipped";current.completedAt=now}else{current.status="completed";current.completedAt=now}}
       runtime.cursor=Math.min(runtime.queue.length,runtime.cursor+1);
-      while(runtime.cursor<runtime.queue.length){const next=runtime.queue[runtime.cursor];if(next?.kind==="artifact-main"&&next.skipIfEarlyUsed&&await this.artifactUsedInNight(meta,next)){next.status="skipped";next.skippedReason="EARLY_ARTIFACT_USED";next.completedAt=now;runtime.cursor++;continue}break}
+      while(runtime.cursor<runtime.queue.length){const next=runtime.queue[runtime.cursor];if(next?.kind==="artifact-main"&&await this.artifactUsedInNight(meta,next)){next.status="skipped";next.skippedReason="EARLY_ARTIFACT_USED";next.completedAt=now;runtime.cursor++;continue}break}
       runtime.completed=runtime.cursor>=runtime.queue.length;runtime.currentId=runtime.completed?null:(runtime.queue[runtime.cursor]?.id||null)
     }
     const active=runtime.completed?null:runtime.queue[runtime.cursor];if(active){active.startedAt=now;const durationMs=Number(active.durationSec)>0?Number(active.durationSec)*1000:0;if(meta.autoGM===false){runtime.deadlineAt=null;runtime.autoPausedRemainingMs=durationMs}else{runtime.deadlineAt=durationMs>0?new Date(Date.parse(now)+durationMs).toISOString():null;runtime.autoPausedRemainingMs=0}}else{runtime.deadlineAt=null;runtime.autoPausedRemainingMs=0}
@@ -1037,7 +1051,21 @@ export class RoomDurableObject extends DurableObject {
   async gmTurn(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
     if(String(meta.phase||"").toLowerCase()!=="running"||String(meta.cyclePhase||"").toLowerCase()!=="night")return j({ok:false,error:"NOT_NIGHT_TURN",message:"Chỉ chuyển lượt khi đang ở Ban Đêm."},409);
-    const night=Math.max(1,Number(meta.cycleNight||1)),runtime=await this.advanceNightRuntime(meta,String(body?.action||"next").toLowerCase(),String(body?.source||"gm").slice(0,40));await this.scheduleRoomAlarm(meta);
+    const night=Math.max(1,Number(meta.cycleNight||1)),action=String(body?.action||"next").toLowerCase(),source=String(body?.source||"gm").slice(0,40);
+    if(!["next","back","jump"].includes(action))return j({ok:false,error:"INVALID_TURN_ACTION"},400);
+    const before=await this.getNightRuntime(meta,night,true);
+    if(body?.expectedTurnId!==undefined&&String(body.expectedTurnId)!==String(before?.currentId||""))
+      return j({ok:false,error:"STALE_TURN",message:"Lượt đã thay đổi trên server. Hãy đồng bộ lại."},409);
+    let targetIndex=null;
+    if(action==="jump"){
+      if(!Number.isInteger(body?.targetIndex))return j({ok:false,error:"INVALID_TURN_INDEX"},400);
+      targetIndex=body.targetIndex;
+      const target=jumpTarget(before?.queue,targetIndex);
+      if(!target)return j({ok:false,error:"INVALID_TURN_INDEX"},400);
+      if((target.kind==="artifact-main"||target.kind==="early-artifact")&&await this.artifactUsedInNight(meta,target))
+        return j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact này đã sử dụng trong đêm, không thể thực hiện lần nữa."},409);
+    }
+    const runtime=await this.advanceNightRuntime(meta,action,source,targetIndex);await this.scheduleRoomAlarm(meta);
     return j({ok:true,night,runtime,autoGM:meta.autoGM!==false})
   }
   async gmCycle(request,body){
