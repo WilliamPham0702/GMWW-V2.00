@@ -982,7 +982,6 @@ export class RoomDurableObject extends DurableObject {
   }
   async markGmArtifactTurnUsed(meta,step,targetLoginId){
     if(!step)return null;
-    // If Player has already activated, GM may resolve the effect without spending twice.
     if(await this.artifactUsedInNight(meta,step))return null;
     const activation=await this.playerArtifactActivate({loginId:normalizeLoginId(step.loginId),requestId:"gm:"+String(meta.matchId||"match")+":"+String(step.id),targetId:"member:"+normalizeLoginId(targetLoginId)});
     return activation.ok?null:activation;
@@ -1177,7 +1176,7 @@ export class RoomDurableObject extends DurableObject {
       artifact=currentArtifact?privateArtifact(currentArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
     const deliveryManifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments:(await this.ctx.storage.get("assignments"))||[],roles:roleRows,artifact:currentArtifact});
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
-    deliveryManifest.receivedAt=deliveryAck.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
+    deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
     return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
@@ -1194,7 +1193,7 @@ export class RoomDurableObject extends DurableObject {
     const manifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments,roles,artifact});
     if(!validPrivateDeliveryAcknowledgment(manifest,body))return j({ok:false,error:"DELIVERY_RECEIPT_MISMATCH"},409);
     const key="deliveryAck:"+loginId,previous=(await this.ctx.storage.get(key))||null;
-    if(previous.deliveryId===manifest.deliveryId)return j({ok:true,deliveryId:manifest.deliveryId,receivedAt:previous.receivedAt,reused:true});
+    if(previous?.deliveryId===manifest.deliveryId)return j({ok:true,deliveryId:manifest.deliveryId,receivedAt:previous.receivedAt,reused:true});
     const receivedAt=new Date().toISOString();await this.ctx.storage.put(key,{deliveryId:manifest.deliveryId,receivedAt,matchId:manifest.matchId});
     for(const row of assignments)if(normalizeLoginId(row?.loginId)===loginId&&(!meta.matchId||String(row?.matchId||"")===String(meta.matchId)))row.receivedAt=receivedAt;
     await this.ctx.storage.put("assignments",assignments);
