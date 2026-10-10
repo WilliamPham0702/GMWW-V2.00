@@ -4,6 +4,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import {V500_ACTIONS,V500_DIRECTIONS,V500_WALK_SPEED,V500_RUN_SPEED,
  createMotionState,setAction,setFacing,setDestination,tickMotion,V500_VERSION} from './character-motion-v500.mjs';
+import {createSkinnedChibi,animateSkinnedChibi,v510ModelStats,V510_RIG_VERSION} from './character-rig-v510.mjs';
 
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),notice=$('notice'),metrics=$('metrics'),status=$('status');
@@ -35,99 +36,12 @@ ground.rotation.x=-Math.PI/2;ground.position.y=.025;scene.add(ground);
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 
-const C={
- skin:new THREE.MeshStandardMaterial({color:'#f0b992',roughness:.85}),
- shade:new THREE.MeshStandardMaterial({color:'#cf8a67',roughness:.85}),
- shirt:new THREE.MeshStandardMaterial({color:'#137ab7',roughness:.65}),
- shirtLight:new THREE.MeshStandardMaterial({color:'#2ec4dd',roughness:.73}),
- shorts:new THREE.MeshStandardMaterial({color:'#faf0d7',roughness:.9}),
- hair:new THREE.MeshStandardMaterial({color:'#132b50',roughness:.94}),
- hairBright:new THREE.MeshStandardMaterial({color:'#244363',roughness:.9}),
- eye:new THREE.MeshStandardMaterial({color:'#172d3d',roughness:.45}),
- eyeWhite:new THREE.MeshStandardMaterial({color:'#fffdfa',roughness:.6}),
- sole:new THREE.MeshStandardMaterial({color:'#294e69',roughness:.9}),
- accent:new THREE.MeshStandardMaterial({color:'#ffdd87',roughness:.65}),
- flower:new THREE.MeshStandardMaterial({color:'#f7f7de',roughness:.7}),
- shadow:new THREE.MeshBasicMaterial({color:'#144f4d',transparent:true,opacity:.16,depthWrite:false}),
- coral:new THREE.MeshStandardMaterial({color:'#46bba5',roughness:.8}),
- shell:new THREE.MeshStandardMaterial({color:'#ffefe4',roughness:.6})
-};
-const sphere=new THREE.SphereGeometry(1,14,10);
-const tinySphere=new THREE.SphereGeometry(1,8,6);
-const cylinder=new THREE.CylinderGeometry(1,1,1,10);
-const shadowGeo=new THREE.CircleGeometry(1,20);
-function ellip(parent,mat,x,y,z,sx,sy,sz,geo=sphere){
+// Independent decorative meshes; actors themselves are 1 SkinnedMesh + 1 shadow each.
+const decoSphere=new THREE.SphereGeometry(1,8,6);
+const decoLeaf=new THREE.SphereGeometry(1,10,6);
+const C={shell:new THREE.MeshStandardMaterial({color:'#fff2df',roughness:.7})};
+function ellip(parent,mat,x,y,z,sx,sy,sz,geo=decoSphere){
  const o=new THREE.Mesh(geo,mat);o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;
-}
-function pivot(parent,x,y,z){const g=new THREE.Group();g.position.set(x,y,z);parent.add(g);return g;}
-function cylinderPart(parent,mat,x,y,z,r1,r2,length){
- const mesh=new THREE.Mesh(cylinder,mat);mesh.position.set(x,y,z);mesh.scale.set(r1,length,r2);parent.add(mesh);return mesh;
-}
-function makeChibi(highDetail=true){
- const root=new THREE.Group(),hips=pivot(root,0,1.25,0);
- // Torso, pelvis, neck and articulated head.
- ellip(hips,C.shorts,0,-.035,0,.52,.32,.32);
- const chest=pivot(hips,0,.56,0);
- ellip(chest,C.shirt,0,0,0,.61,.69,.38);
- ellip(chest,C.shirtLight,0,.19,.27,.5,.24,.115);
- ellip(chest,C.skin,0,.57,0,.155,.16,.17,tinySphere);
- const head=pivot(chest,0,.83,0);
- ellip(head,C.skin,0,.49,0,.57,.58,.51);
- ellip(head,C.shade,-.54,.47,0,.13,.19,.12,tinySphere);
- ellip(head,C.shade,.54,.47,0,.13,.19,.12,tinySphere);
- ellip(head,C.hair,0,.91,-.06,.59,.25,.5);
- if(highDetail){
-   for(const p of [[-.35,.86,.36],[-.16,.86,.48],[.08,.88,.48],[.35,.85,.29]])ellip(head,C.hairBright,p[0],p[1],p[2],.19,.15,.18,tinySphere);
-   for(const x of [-.205,.205]){
-     ellip(head,C.eyeWhite,x,.50,.489,.134,.16,.07,tinySphere);
-     ellip(head,C.eye,x,.49,.55,.075,.116,.027,tinySphere);
-     ellip(head,C.flower,x-.024,.54,.577,.028,.03,.01,tinySphere);
-   }
-   ellip(head,C.shade,0,.31,.516,.09,.055,.06,tinySphere);
-   ellip(head,C.shade,0,.17,.49,.12,.026,.021,tinySphere);
-   // Floral islands on the shirt, made from joint-bound decorative geometry.
-   for(const [x,y,z] of [[-.34,.03,.34],[.24,.25,.34],[.07,-.21,.31]]){
-     ellip(chest,C.accent,x,y,z,.07,.078,.018,tinySphere);
-     for(let a=0;a<5;a++){const t=a*Math.PI*2/5;ellip(chest,C.flower,x+Math.cos(t)*.105,y+Math.sin(t)*.105,z+.015,.048,.043,.018,tinySphere);}
-   }
- }
- const arms=[],legs=[],knees=[];
- for(const sign of [-1,1]){
-   const arm=pivot(chest,sign*.59,.38,0);
-   ellip(arm,C.shirt,sign*.035,-.20,0,.235,.28,.23);
-   cylinderPart(arm,C.skin,sign*.04,-.47,0,.15,.15,.42);
-   ellip(arm,C.skin,sign*.04,-.73,0,.155,.165,.15,tinySphere);
-   arms.push(arm);
-   const leg=pivot(hips,sign*.27,-.13,0);
-   cylinderPart(leg,C.shorts,0,-.18,0,.24,.22,.39);
-   const knee=pivot(leg,0,-.45,0);
-   cylinderPart(knee,C.skin,0,-.25,0,.16,.15,.48);
-   ellip(knee,C.skin,0,-.50,.015,.166,.13,.14,tinySphere);
-   ellip(knee,C.sole,0,-.57,.105,.20,.10,.30);
-   if(highDetail)ellip(knee,C.accent,0,-.52,.22,.16,.045,.065,tinySphere);
-   legs.push(leg);knees.push(knee);
- }
- const oval=new THREE.Mesh(shadowGeo,C.shadow);
- oval.rotation.x=-Math.PI/2;oval.position.y=.012;oval.scale.set(.64,.38,1);
- root.add(oval);
- const body={root,hips,chest,head,arms,legs,knees,oval};
- return body;
-}
-function animateRig(body,m){
- const p=m.pose;
- body.root.position.set(m.x,0,m.z);
- body.root.rotation.y=m.yaw;
- body.hips.position.y=1.25+p.hipY;
- body.hips.rotation.set(p.hipLean,0,p.hipRoll);
- body.chest.rotation.x=p.bodyTilt;
- body.head.rotation.set(p.headPitch,0,p.headRoll);
- body.arms[0].rotation.set(p.armL,0,p.armLOut);
- body.arms[1].rotation.set(p.armR,0,p.armROut);
- body.legs[0].rotation.x=p.legL;
- body.legs[1].rotation.x=p.legR;
- body.knees[0].rotation.x=p.kneeL;
- body.knees[1].rotation.x=p.kneeR;
- body.oval.scale.set(.64*(1-p.hipY*.6),.38*(1-p.hipY*.2),1);
 }
 function decoration(){
  const palmTrunk=new THREE.MeshStandardMaterial({color:'#a66a37',roughness:1});
@@ -152,7 +66,7 @@ function setCount(n){
   const i=actors.length,m=createMotionState('character-01-'+i,
    i===0?0:Math.sin(i*2.399)*(.7+Math.sqrt(i)*.72),
    i===0?1.5:Math.cos(i*2.399)*(.55+Math.sqrt(i)*.43),i*0.71);
-  const rig=makeChibi(i===0);
+  const rig=createSkinnedChibi(i===0);
   scene.add(rig.root);actors.push({m,rig,k:0});
  }
  renderer.setPixelRatio(desiredCount>15?1:pixelRatio);
@@ -160,7 +74,7 @@ function setCount(n){
  $('count').value=String(desiredCount);
  stressMode=desiredCount>1;
  actors.slice(1).forEach(a=>{a.k++;const p=pickDest(a.m,a.k);setDestination(a.m,p.x,p.z,a.k%4===0);});
- status.textContent=desiredCount===1?'Master-01 · Chibi Biển':'Đang thử tải '+desiredCount+' nhân vật 3D';
+ status.textContent=desiredCount===1?'Master-01 16 xương · Chàng Biển':'SkinnedMesh '+desiredCount+' nhân vật (LOD)';
 }
 function setMainAction(a){
  if(!V500_ACTIONS.includes(a))return;
@@ -240,14 +154,14 @@ function frame(now){
   if(i>0&&stressMode&&!a.m.goal&&crowdTime>.1){
    const t=pickDest(a.m,++a.k);setDestination(a.m,t.x,t.z,(i+a.k)%6===0);
   }
-  tickMotion(a.m,dt);animateRig(a.rig,a.m);
+  tickMotion(a.m,dt);animateSkinnedChibi(a.rig,a.m);
  }
  renderer.render(scene,camera);
  frames++;fpsClock+=dt;frameMs=frameMs*.87+dt*1000*.13;
  if(fpsClock>=.8){
   fps=Math.round(frames/fpsClock);frames=0;fpsClock=0;
   const info=renderer.info.render;
-  metrics.textContent=fps+' FPS · '+frameMs.toFixed(1)+' ms · '+info.calls+' draw calls · '+actors.length+' nhân vật';
+  metrics.textContent=fps+' FPS · '+frameMs.toFixed(1)+' ms · '+info.calls+' draw calls · '+info.triangles.toLocaleString('vi-VN')+' tam giác · '+actors.length+' nhân vật';
   const s=actors[0].m;
   $('actionState').textContent=s.action.toUpperCase()+' · '+(Math.round(((s.yaw%(Math.PI*2))+Math.PI*2)%(Math.PI*2)*180/Math.PI))+'°';
   $('perf').textContent=fps>=55?'Mượt':fps>=30?'Đạt mức thử nghiệm':'Cần tối ưu';
@@ -257,6 +171,9 @@ function frame(now){
 setCount(1);setDir('front');setMainAction('idle');resize();
 notice.hidden=true;
 document.documentElement.dataset.gmwwV500='ready';
-status.textContent='Master-01 WebGL 2.5D · thử nghiệm độc lập';
-window.GMWW_MASTER_V500={version:V500_VERSION,getMetrics:()=>({fps,frameMs,actors:actors.length,drawCalls:renderer.info.render.calls}),setCount,actions:V500_ACTIONS};
+status.textContent='Master-01 SkinnedMesh 16 xương · thử nghiệm độc lập';
+window.GMWW_MASTER_V500={version:V510_RIG_VERSION,originalMotionVersion:V500_VERSION,
+ getMetrics:()=>({fps,frameMs,actors:actors.length,drawCalls:renderer.info.render.calls,
+ triangles:renderer.info.render.triangles,geometry:v510ModelStats(true),crowdGeometry:v510ModelStats(false)}),
+ setCount,actions:V500_ACTIONS};
 requestAnimationFrame(frame);
