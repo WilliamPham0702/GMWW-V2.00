@@ -3029,7 +3029,7 @@ async function migrateV109GameTemplates(){
   localStorage.setItem('GMWW_V263_TEMPLATE_MIGRATION_DONE','1');
 }
 async function loadPlayGameTemplates(){
-  try{await migrateV109GameTemplates();const data=await gmApi('/api/gm/game-templates');playSceneRuntime.gameTemplates=Array.isArray(data?.templates)?data.templates:[]}catch{playSceneRuntime.gameTemplates=[]}
+  try{await migrateV109GameTemplates();const data=await gmApi('/api/gm/game-templates');playSceneRuntime.gameTemplates=Array.isArray(data?.templates)?data.templates:[]}catch(err){playSceneRuntime.gameTemplates=[];playGameStatus('Không tải được danh sách Ván Mẫu: '+String(err?.message||'Lỗi kết nối'),'error')}
   const sel=document.getElementById('playGameTemplateSelect'),mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play';if(sel){sel.innerHTML=(mode==='library'?'<option value="">Tạo Ván Mẫu mới</option>':'<option value="">Chọn Ván Mẫu</option>')+playSceneRuntime.gameTemplates.map(x=>'<option value="'+playEsc(x.id)+'">'+playEsc(x.name)+' • '+Number(x.playerCount||0)+' người</option>').join('');sel.value=playSceneState.gameTemplateId||''}
   renderGameTemplateLibrary();
 }
@@ -3041,7 +3041,7 @@ function renderGameTemplateLibrary(){
 async function applyPlayGameTemplate(id){
   id=String(id||'');if(!id){playSceneRuntime.templateArtifactPoolIds=[];playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};await renderPlayGameRoles();updatePlayGameRoleCount();return}
   try{
-    const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)return;
+    const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)throw new Error('Ván Mẫu chưa tải được dữ liệu. Vui lòng thử lại.');
     playSceneState.gameTemplateId=id;playSceneState.gameName=String(cfg.name||'Ván GMWW');playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};
     for(const r of (cfg.roles||[])){if(r?.roleId){playSceneState.rolePlan[String(r.roleId)]=Math.max(0,Number(r.count)||0);playSceneState.roleOrders[String(r.roleId)]=Math.max(1,Number(r.order)||1);const commonSec=Math.max(0,Math.min(3600,Number(cfg?.timing?.defaultActionSec??30)||0)),individualSec=Math.max(0,Math.min(3600,Number(r.actionDurationSec??commonSec)||0));if(individualSec!==commonSec)playSceneState.roleDurations[String(r.roleId)]=individualSec}}
     const templateArtifactIds=(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean);
@@ -3358,15 +3358,18 @@ async function playEnsureTemplateAssets(id,cfg){
   let status=await gmApi(endpoint+'/status');
   if(status?.ready)return status;
   const missing=new Set(status?.missing||playTemplateAssetIds(cfg));
+  let finished=0;
   for(const assetId of missing){
     const isArtifact=assetId.startsWith('artifact:'),rawId=assetId.slice(isArtifact?9:5);
     const model=((isArtifact?state.artifacts:state.cards)||[]).find(x=>String(x.id)===rawId);
     if(!model)throw new Error('Thiếu Lá Bài '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
+    playGameStatus('Đang đóng gói '+(finished+1)+'/'+missing.size+': '+String(model.name||'Lá Bài'),'progress');
     const imageDataUrl=isArtifact?await playArtifactArtworkData(model):await playRoleArtworkData(model);
     const pkg=isArtifact?{roleId:assetId,roleName:model.name,artworkAssetId:assetId,roleCard:playArtifactCardPayload(model)}:
       {roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
     const uploaded=await gmApi(endpoint,{method:'PUT',timeoutMs:60000,body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
     if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
+    finished++;
   }
   status=await gmApi(endpoint+'/status');
   if(!status?.ready)throw new Error('Ván Mẫu chưa đóng gói đủ ảnh: '+(status?.missing||[]).join(', '));
