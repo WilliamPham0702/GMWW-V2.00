@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.84';
+const VERSION='3.85';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1366,6 +1366,92 @@ async function checkPlayerWebNow(){
     await runSystemDiagnostics({silent:false});
   }finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
 }
+/* GMWW Settings -> ChatGPT, no OpenAI API key, chat bot, room data or
+ * background AI execution. The GM reviews the prepared prompt and taps Send.
+ * Only versions, service status codes and error counts are shared.
+ */
+let gmwwPreparedBugReport='';
+const gmwwBugCode=value=>String(value??'').replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,48)||'UNSPECIFIED';
+function gmwwBuildBugReport(diag){
+  const status=id=>String(document.getElementById(id)?.textContent||'').trim().slice(0,65);
+  const probes=diag?.probes||{},checks={};
+  for(const name of ['server','player','update','characters','settings']){
+    const p=probes[name];
+    checks[name]=p?{ok:p.ok===true,http:Number(p.status)||0,
+      latencyMs:Math.min(Math.max(0,Number(p.latency)||0),99999),
+      code:p.ok?'OK':gmwwBugCode(p.data?.error||('HTTP_'+p.status))}:
+      {ok:false,code:'NOT_CHECKED'};
+  }
+  const data={
+    schema:'GMWW_SAFE_ERROR_REPORT_V1',
+    project:'WilliamPham0702/GMWW-V2.00',
+    timestamp:new Date().toISOString(),
+    application:'V'+gmwwShellVersion(),
+    runtime:'V'+gmwwRuntimeVersion(),
+    serverVersion:status('updateServerVersion')||'UNVERIFIED',
+    updateStatus:status('updateStatus')||'UNKNOWN',
+    updateDecision:status('updateDecisionTitle'),
+    network:navigator.onLine===false?'OFFLINE':'UNKNOWN_OR_ONLINE',
+    checks,
+    runtimeErrorCount:gmwwRuntimeErrors.length,
+    runtimeErrorKinds:gmwwRuntimeErrors.slice(0,5).map(e=>gmwwBugCode(e.kind)),
+    warningsCount:Array.isArray(diag?.warnings)?diag.warnings.length:0,
+    diagnosticResult:diag?.ok===true?'PASS':diag?.offline?'OFFLINE':'CHECK_REQUIRED'
+  };
+  // No room ID, login/session IDs, player names, role/artifact content,
+  // stacktraces, raw exception text, credentials or HTTP bodies.
+  return 'Tôi cần hỗ trợ khắc phục lỗi GMWW. Dưới đây là báo cáo hệ thống đã được tự động tạo và loại bỏ dữ liệu cá nhân.\n'+
+    'Hãy phân tích nguyên nhân, kiểm tra GitHub CI và Cloudflare Production, đề xuất hoặc tạo PR sửa lỗi khi được cấp quyền. '+
+    'Không khẳng định đã sửa/deploy khi chưa xác minh; không merge/deploy nếu chưa được tôi phê duyệt. '+
+    'Bảo toàn toàn bộ dữ liệu game, vai trò, Artifact và phiên chơi.\n\n'+
+    JSON.stringify(data,null,2);
+}
+async function gmwwReportBugToChatGPT(){
+  const btn=document.getElementById('gmwwReportToChatGPT');
+  const status=document.getElementById('gmwwReportStatus');
+  const preview=document.getElementById('gmwwReportPreview');
+  const previewBox=document.getElementById('gmwwReportPreviewBox');
+  const link=document.getElementById('gmwwOpenChatGPT');
+  if(!btn||btn.disabled)return;
+  btn.disabled=true;
+  if(status)status.textContent='Đang tự kiểm tra Server, Player Web, Runtime và lỗi gần đây…';
+  // iOS Safari allows popups only in a direct click. Reserve the window now,
+  // then navigate it once the asynchronous health checks finish.
+  let tab=null;
+  try{tab=window.open('about:blank','_blank')}catch{}
+  try{
+    let diag=null;
+    try{diag=await runSystemDiagnostics({silent:true})}catch{}
+    const report=gmwwBuildBugReport(diag);
+    gmwwPreparedBugReport=report;
+    const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
+    if(preview)preview.value=report;
+    if(previewBox)previewBox.hidden=false;
+    if(link)link.href=target;
+    let navigated=false;
+    try{if(tab&&!tab.closed){tab.location.replace(target);navigated=true}}catch{}
+    if(status)status.textContent=navigated
+      ?'Đã chuẩn bị báo cáo trong ChatGPT. Kiểm tra nội dung rồi chỉ cần nhấn Gửi.'
+      :'Đã chuẩn bị báo cáo. Nhấn MỞ CHATGPT; nếu chưa điền sẵn thì nhấn SAO CHÉP và dán.';
+  }catch{
+    try{tab?.close()}catch{}
+    if(status)status.textContent='Không tạo được báo cáo. Vui lòng thử lại; dữ liệu game vẫn an toàn.';
+  }finally{btn.disabled=false}
+}
+const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
+if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',()=>{void gmwwReportBugToChatGPT()});
+const gmwwCopyReport=document.getElementById('gmwwCopyReport');
+if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
+  if(!gmwwPreparedBugReport)return;
+  let copied=false;
+  try{await navigator.clipboard.writeText(gmwwPreparedBugReport);copied=true}catch{}
+  if(!copied){const box=document.getElementById('gmwwReportPreview');
+    if(box){box.focus();box.select();try{copied=document.execCommand('copy')}catch{}}}
+  const status=document.getElementById('gmwwReportStatus');
+  if(status)status.textContent=copied?'Đã sao chép báo cáo. Mở ChatGPT, dán và nhấn Gửi.':
+    'Chọn toàn bộ nội dung báo cáo để sao chép thủ công.';
+});
+
 const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
 const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
 const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
