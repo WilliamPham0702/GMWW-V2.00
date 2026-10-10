@@ -2975,6 +2975,12 @@ function renderPlayGameRoleTimings(){
 }
 function playAvailableTemplateArtifacts(){
   const favorites=playFavoriteArtifacts(),byId=new Map(favorites.map(a=>[String(a.id),a]));
+  const library=new Map((state.artifacts||[]).map(a=>[String(a.id),a]));
+  const templateIds=playSceneRuntime.templateArtifactPoolIds||[];
+  for(const id of templateIds){
+    const card=library.get(String(id));
+    if(card&&!byId.has(String(id)))byId.set(String(id),card);
+  }
   for(const selected of playTemplateSelectedArtifacts())if(!byId.has(String(selected.id)))byId.set(String(selected.id),selected);
   return [...byId.values()];
 }
@@ -3029,12 +3035,13 @@ function renderGameTemplateLibrary(){
   for(const t of playSceneRuntime.gameTemplates){const b=document.createElement('button');b.type='button';b.className='template-library-item';b.innerHTML='<b>'+playEsc(t.name||'Ván Mẫu')+'</b><small>'+Number(t.playerCount||0)+' người • chạm để sửa</small>';b.onclick=()=>openLibraryGameTemplate(String(t.id||''));box.appendChild(b)}
 }
 async function applyPlayGameTemplate(id){
-  id=String(id||'');if(!id){playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};await renderPlayGameRoles();updatePlayGameRoleCount();return}
+  id=String(id||'');if(!id){playSceneRuntime.templateArtifactPoolIds=[];playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};await renderPlayGameRoles();updatePlayGameRoleCount();return}
   try{
     const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)return;
     playSceneState.gameTemplateId=id;playSceneState.gameName=String(cfg.name||'Ván GMWW');playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};
     for(const r of (cfg.roles||[])){if(r?.roleId){playSceneState.rolePlan[String(r.roleId)]=Math.max(0,Number(r.count)||0);playSceneState.roleOrders[String(r.roleId)]=Math.max(1,Number(r.order)||1);const commonSec=Math.max(0,Math.min(3600,Number(cfg?.timing?.defaultActionSec??30)||0)),individualSec=Math.max(0,Math.min(3600,Number(r.actionDurationSec??commonSec)||0));if(individualSec!==commonSec)playSceneState.roleDurations[String(r.roleId)]=individualSec}}
     const templateArtifactIds=(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean);
+    playSceneRuntime.templateArtifactPoolIds=templateArtifactIds;
     const favoriteArtifactIds=playFavoriteArtifacts().map(a=>String(a.id));
     playSceneState.artifactsEnabled=templateArtifactIds.length>0||favoriteArtifactIds.length>0;
     playSceneState.artifactIds=templateArtifactIds.length?templateArtifactIds:favoriteArtifactIds;
