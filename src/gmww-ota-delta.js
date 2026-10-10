@@ -256,3 +256,24 @@ export function selectVerifiedRuntimeV364Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.64: Mở trang Phân Vai ở bước 5, chia và đổi Vai Trò/Artifact trước khi phát; giữ nguyên dữ liệu và artwork.'};
 }
+
+/** IPA Runtime V3.64 -> V3.65: verify the three GM UI files, never touch downloaded artwork, IndexedDB or installed data.
+ * The Player Web worker is served online; this overlay updates only the IPA GM UI. */
+export function selectVerifiedRuntimeV365Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.64'||String(manifest?.releaseVersion||'')!=='3.65'
+    ||String(manifest?.runtimeVersion||'')!=='3.65'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const found=manifest.runtime.files.filter(x=>x?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.65/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.65: Lá bài Player đồng bộ GM, nạp artwork Ván Mẫu trước Phát Vai; giữ nguyên artwork và dữ liệu hiện có.'};
+}
