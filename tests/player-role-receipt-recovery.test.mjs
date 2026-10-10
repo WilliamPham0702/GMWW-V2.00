@@ -10,7 +10,7 @@ test('Public role-delivery phase never falsely claims a personal role was receiv
   assert.match(source,/const released=!!\(state\.roomCode&&state\.participantId&&playerScenePolicy\(state\.room\)\.rolesReleased\)/);
   assert.match(source,/dock\.hidden=!released/);
   assert.match(source,/label\.textContent=ready\?'VAI TRÒ':'ĐANG NHẬN VAI'/);
-  assert.match(source,/if\(b\.dataset\.privateCard==='role'&&!privateCardAllowed\(\)\)\{gmwwRecoverPrivateRole\(true\);return\}/);
+  assert.match(source,/gmwwPendingPrivateCardTap=kind;gmwwRecoverPrivateRole\(true\)/);
   assert.match(source,/const ready=privateCardAllowed\(\)/);
   assert.match(source,/if\(!ready\)gmwwRecoverPrivateRole\(\)/);
 });
