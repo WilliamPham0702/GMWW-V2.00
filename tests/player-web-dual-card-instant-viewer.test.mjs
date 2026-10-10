@@ -23,11 +23,11 @@ test('Player keeps assigned Artifact pending until its private data arrives',()=
   assert.ok(start>=0&&end>start);
   const state={roomCode:'ABC123',participantId:'member:edge',role:{roleId:'witch'},artifact:null,artifactExpected:true,room:{phase:'role_delivery'}};
   const api=vm.runInNewContext(player.slice(start,end)+';privateCardDeliveryPending',{state,playerScenePolicy:()=>({rolesReleased:true})});
-  assert.equal(api,true);
+  assert.equal(api(),true);
   state.artifact={artifactId:'crown'};
-  assert.equal(vm.runInNewContext(player.slice(start,end)+';privateCardDeliveryPending',{state,playerScenePolicy:()=>({rolesReleased:true})}),false);
+  assert.equal(vm.runInNewContext(player.slice(start,end)+';privateCardDeliveryPending',{state,playerScenePolicy:()=>({rolesReleased:true})})(),false);
   state.role=null;
-  assert.equal(vm.runInNewContext(player.slice(start,end)+';privateCardDeliveryPending',{state,playerScenePolicy:()=>({rolesReleased:true})}),true);
+  assert.equal(vm.runInNewContext(player.slice(start,end)+';privateCardDeliveryPending',{state,playerScenePolicy:()=>({rolesReleased:true})})(),true);
 });
 
 test('Artifact delivery uses committed role snapshot as fallback, never public data',()=>{
