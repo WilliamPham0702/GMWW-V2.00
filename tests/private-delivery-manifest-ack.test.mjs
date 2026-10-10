@@ -53,7 +53,7 @@ test('No private delivery acknowledgements leak to public room endpoint or other
  assert.match(source,/data\.member\.loginId/);
  assert.match(source,/"deliveryAck:"\+loginId/);
  assert.match(source,/row\.receivedAt=receivedAt/);
- assert.doesNotMatch(source,/publicRoom\(meta\)[\s\S]{0,100}deliveryManifest/);
+ const publicRoom=source.slice(source.indexOf('function publicRoom('),source.indexOf('function publicPlayer('));assert.doesNotMatch(publicRoom,/deliveryManifest|roleIds|artifactId|receivedAt/);
 });
 
 test('Player only acknowledges full authenticated Role and Artifact receipt, independently of artwork',()=>{
