@@ -54,6 +54,6 @@ test('All time inputs display their seconds unit in the label',()=>{
  assert.match(html,/Thời gian thảo luận \(giây\):/);
  assert.match(html,/Thời gian sử dụng Vai Trò \(giây\):/);
  assert.match(html,/Thời gian sử dụng Artifact \(giây\):/);
- assert.match(app,/playEsc\(role\.name\|\|'Vai Trò'\)\+' \(giây\):'/);
+ assert.ok(app.includes("playEsc(role.name||'Vai Trò')+' (giây):</span>"));
  assert.doesNotMatch(html,/<small>giây<\/small>/);
 });
