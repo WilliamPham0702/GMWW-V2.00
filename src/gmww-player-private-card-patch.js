@@ -268,19 +268,13 @@ async function gmwwVerifyMemberBeforeRemoval(){
 
 
  offlineReplace("      gmwwPendingPrivateCardTap='';openPrivateCardViewer(kind);",
-   "      // Match the GM fan: first tap on the exposed rear edge brings it forward.
-      // A second tap on the front card opens the existing private viewer.
-      if(state.artifact&&gmwwDeckPreferredTop!==kind){
-        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;
-      }
-      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
+   "      // Match the GM fan: first tap on rear card only shuffles it to the front.\n      // Tap the already-front card to open its full private viewer.\n      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
  offlineReplace("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
    "function closePrivateCardViewer(){\n  if($('#game')?.dataset.privateCardView==='open'&&$('#game')?.dataset.privateCardFocus==='role'&&state.role){gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());gmwwDeckPreferredTop='artifact'}\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
  offlineReplace("  setGameViewPane('village',{persist:false});\n}\nfunction openPrivateCardViewer(kind){",
    "  setGameViewPane('village',{persist:false});\n  if(typeof document!=='undefined')renderPlayerPrivateDock();\n}\nfunction openPrivateCardViewer(kind){");
  offlineReplace("  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);",
-   "  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);\n  const identity=gmwwDeckRoleIdentity();if(identity!==gmwwDeckLastIdentity){gmwwDeckLastIdentity=identity;gmwwDeckPreferredTop=gmwwDeckRoleWasViewed()?'artifact':'role'}\n  dock.dataset.deckTop=state.artifact&&gmwwDeckPreferredTop==='artifact'?'artifact':'role';
-  for(const kind of ['role','artifact']){const button=dock.querySelector('[data-private-card="'+kind+'"]');if(button)button.setAttribute('aria-pressed',String(dock.dataset.deckTop===kind))}");
+   "  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);\n  const identity=gmwwDeckRoleIdentity();if(identity!==gmwwDeckLastIdentity){gmwwDeckLastIdentity=identity;gmwwDeckPreferredTop=gmwwDeckRoleWasViewed()?'artifact':'role'}\n  dock.dataset.deckTop=state.artifact&&gmwwDeckPreferredTop==='artifact'?'artifact':'role';\n  for(const kind of ['role','artifact']){const button=dock.querySelector('[data-private-card=\"'+kind+'\"]');if(button)button.setAttribute('aria-pressed',String(dock.dataset.deckTop===kind))}");
  // When Avatar/GM presence work is slow, do not block the private role receipt.
  offlineReplace("  await Promise.allSettled([loadAvatars(),restore()]);",
    "  void loadAvatars().catch(()=>{});await restore();");
