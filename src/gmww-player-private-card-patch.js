@@ -123,7 +123,7 @@ function gmwwAcknowledgePrivateDelivery(d){
   return true;
 }
 `;
- replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\\n"+GMWW_RECEIPT_ACK_CODE+"\\nasync function refreshPrivateRole(force=false){");
+ replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\nasync function refreshPrivateRole(force=false){");
  replaceReceipt("if(state.role){rememberActiveRole(state.role);",
    "if(state.role){gmwwAcknowledgePrivateDelivery(d);rememberActiveRole(state.role);");
  replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
