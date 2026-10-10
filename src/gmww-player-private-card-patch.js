@@ -94,7 +94,7 @@ function gmwwReadPrivateReceipt(){
  replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
    "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");
  replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
-   "if(d?.deliveryManifest){const manifest=d.deliveryManifest;const sameMatch=!manifest.matchId||String(manifest.matchId)===String(d.room?.matchId||state.room?.matchId||'');if(sameMatch){state.privateDeliveryManifest=manifest;state.artifactExpected=manifest.artifactExpected===true}}if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=");
+   "if(d?.deliveryManifest){const manifest=d.deliveryManifest;const sameMatch=!manifest.matchId||String(manifest.matchId)===String(d.room?.matchId||state.room?.matchId||'');if(sameMatch){state.privateDeliveryManifest=manifest;state.artifactExpected=manifest.artifactExpected===true}}if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
  // Keep server's versioned private delivery contract authoritative.
  const previousArtifactExpected="state.artifactExpected=d?.artifactExpected===true;state.artifactCycle=";
  const expectedFromManifest="state.artifactExpected=d?.deliveryManifest?.artifactExpected===true||d?.artifactExpected===true;state.artifactCycle=";
@@ -104,8 +104,7 @@ function gmwwReadPrivateReceipt(){
  // not merely a truthy first role. Artwork is loaded independently.
  replaceReceipt("if(state.artifactExpected&&!state.artifact){if(!state.rolePoll)",
    "if((state.artifactExpected&&!state.artifact)||(state.privateDeliveryManifest?.roleCount>state.roles.length)){if(!state.rolePoll)");
-  replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
-   "if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
+ 
  replaceReceipt("if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}",
    "if(state.artifactExpected&&!state.artifact){if(!state.rolePoll)state.rolePoll=setInterval(()=>refreshPrivateRole(true),4000)}else if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}");
  // The public-room poll previously started a second, partially applied /me
