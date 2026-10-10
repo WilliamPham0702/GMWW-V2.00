@@ -466,3 +466,25 @@ export function selectVerifiedRuntimeV375Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.75: Đã phát Vai Trò và số đã xem hiển thị trong box điều khiển dưới, không che sân làng.'};
 }
+
+// V3.75 -> V3.76: Player Web receives personal Role after GM Phát Vai.
+// Three UI files are unchanged except their version references; this is a
+// signed patch preserving Character assets, Artifact collection and settings.
+export function selectVerifiedRuntimeV376Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(from!=='3.75'||String(manifest?.releaseVersion||'')!=='3.76'
+    ||String(manifest?.runtimeVersion||'')!=='3.76'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const matched=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matched.length!==1)return null;
+    const file=matched[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.76/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.76: Player Web nhận và hiển thị lá Vai Trò sau Phát Vai, tự đồng bộ khi có độ trễ.'};
+}
