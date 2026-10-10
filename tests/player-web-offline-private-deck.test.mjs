@@ -5,37 +5,48 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 
 const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
-test('Offline-first Player Web builds without side effects on GM/assignment API',()=>{
+test('Offline-first player has two selectable fanned card backs and NO shuffle button or target actions',()=>{
  assert.doesNotThrow(()=>new vm.Script(player));
- assert.match(player,/function gmwwShufflePrivateDeck\(\)/);
- assert.match(player,/XÁO BÀI/);
- assert.match(player,/data-shuffle-deck/);
+ assert.match(player,/function gmwwDeckBringToFront\(kind\)/);
+ assert.match(player,/gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);openPrivateCardViewer\(kind\)/);
+ assert.doesNotMatch(player,/gmwwShufflePrivateDeck|XÁO BÀI|data-shuffle-deck|gmww-deck-shuffle/);
+ assert.match(player,/#gmwwPlayerPrivateDock:not\(\.is-solo\) button\[data-private-card="role"\]/);
+ assert.match(player,/#gmwwPlayerPrivateDock:not\(\.is-solo\) button\[data-private-card="artifact"\]/);
+ assert.match(player,/#gmwwPlayerPrivateDock:not\(\.is-solo\)\[data-deck-top="artifact"\]/);
  assert.match(player,/#game #gmwwArtifactBar,#game \.gmww-artifact-bar/);
  assert.match(player,/display:none!important/);
- assert.match(player,/function closePrivateCardViewer\(\)\{\n  if\(state\.roleOpen/);
- assert.match(player,/gmwwViewedRoleDeck\.add\(gmwwDeckRoleIdentity\(\)\)/);
- assert.match(player,/if\(shuffle\)shuffle\.hidden=!ready\|\|!state\.artifact/);
- assert.match(player,/deckTop=state\.artifact&&\(gmwwDeckRoleWasViewed\(\)\|\|gmwwDeckPreferredTop==='artifact'\)\?'artifact':'role'/);
+ assert.match(player,/function closePrivateCardViewer\(\)\{\s*if\(\$\('#game'\)\?\.dataset\.privateCardView==='open'/);
+ assert.match(player,/gmwwViewedRoleDeck\.add\(gmwwDeckRoleIdentity\(\)\);gmwwDeckPreferredTop='artifact'/);
+ assert.match(player,/gmwwDeckPreferredTop=gmwwDeckRoleWasViewed\(\)\?'artifact':'role'/);
+ assert.match(player,/dock\.dataset\.deckTop=state\.artifact&&gmwwDeckPreferredTop==='artifact'\?'artifact':'role'/);
  assert.doesNotMatch(player,/\/api\/rooms\/'\+state\.roomCode\+'\/assignments'/);
 });
-test('Shuffling rearranges visible backs, never changes assigned Role or Artifact',()=>{
+test('Tapping rear role or artifact switches visual priority without altering assigned data',()=>{
  const start=player.indexOf('const gmwwViewedRoleDeck=new Set();');
  const end=player.indexOf('function renderPlayerPrivateDock(){',start);
  assert.ok(start>0&&end>start);
  const state={roomCode:'AABBCC',participantId:'member:safari',room:{matchId:'match1'},role:{assignmentIndex:0,roleId:'witch',viewedAt:null},artifact:{artifactId:'mirror'}};
- let renderCalls=0;const dock={classList:{remove(){},add(){}},offsetWidth:60};
- const ctx={state,Set,privateCardAllowed:()=>true,$:()=>dock,renderPlayerPrivateDock:()=>{renderCalls++},setTimeout(fn){fn()}};
- vm.runInNewContext(player.slice(start,end)+`\nthis.isSeen=gmwwDeckRoleWasViewed;this.shuffle=gmwwShufflePrivateDeck;this.markSeen=()=>gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());this.getPreferred=()=>gmwwDeckPreferredTop;`,ctx);
+ let redraws=0;
+ const ctx={state,Set,privateCardAllowed:()=>true,renderPlayerPrivateDock:()=>{redraws++}};
+ vm.runInNewContext(player.slice(start,end)+";this.isSeen=gmwwDeckRoleWasViewed;this.raise=gmwwDeckBringToFront;this.markSeen=()=>gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());this.getTop=()=>gmwwDeckPreferredTop;",ctx);
  assert.equal(ctx.isSeen(),false);
- ctx.shuffle();assert.equal(ctx.getPreferred(),'artifact');assert.equal(renderCalls,1);
- assert.equal(state.role.roleId,'witch');assert.equal(state.artifact.artifactId,'mirror');
+ assert.equal(ctx.getTop(),'role');
+ ctx.raise('artifact');assert.equal(ctx.getTop(),'artifact');
+ ctx.raise('role');assert.equal(ctx.getTop(),'role');
+ assert.equal(redraws,2);
+ assert.equal(state.role.roleId,'witch');
+ assert.equal(state.artifact.artifactId,'mirror');
  ctx.markSeen();assert.equal(ctx.isSeen(),true);
- state.role={...state.role,roleId:'new-role',viewedAt:null};assert.equal(ctx.isSeen(),false,'changing assigned role must not inherit old viewed status');
- state.role.viewedAt='2026-10-10T17:35:00Z';assert.equal(ctx.isSeen(),true,'server viewed receipt must survive tab restore');
+ state.role={...state.role,roleId:'new-role',viewedAt:null};
+ assert.equal(ctx.isSeen(),false,'new assignment should not inherit viewed status');
+ state.role.viewedAt='2026-10-10T17:35:00Z';
+ assert.equal(ctx.isSeen(),true,'viewed receipt must survive browser restore');
 });
-test('On reconnect Player fetches private cards before noncritical avatar/village setup',()=>{
+test('30 seconds of no activity closes viewer; Player restores private cards before decorative assets',()=>{
+ assert.match(player,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
+ assert.match(player,/Date\.now\(\)-privateCardActivityAt>=PLAYER_PRIVATE_CARD_IDLE_MS\)closePrivateCardViewer\(\)/);
+ assert.match(player,/if\(\$\('#game'\)\?\.dataset\.privateCardView!=='open'\)return/);
+ assert.match(player,/document\.addEventListener\('visibilitychange',\(\)=>\{if\(document\.hidden\)closePrivateCardViewer\(\)/);
  assert.match(player,/void loadAvatars\(\)\.catch\(\(\)=>\{\}\);await restore\(\)/);
  assert.match(player,/const resumed=await autoResumeActiveRoom\(\{stayInVillage:false\}\);if\(!resumed\)await enterVillage\(\)/);
- assert.match(player,/window\.addEventListener\('pagehide',closePrivateCardViewer/);
- assert.match(player,/PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
 });
