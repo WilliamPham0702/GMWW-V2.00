@@ -76,6 +76,9 @@ test('iPhone report controls are wired and cannot initiate an unavailable Runtim
   assert.match(app,/gmwwUpdateActionKind!=='runtime'/);
   assert.match(app,/\/api\/update\/diagnostics\?current=/);
   assert.match(app,/gmwwBuildChatGPTIssuePrompt/);
+  assert.match(app,/healthCheck:gmwwLastDiagnostics/);
+  assert.match(app,/runSystemDiagnostics\(\{silent:true\}\)/);
+  assert.match(app,/Date\.now\(\)-gmwwDiagLastScan>=120000/);
   assert.match(app,/https:\/\/chatgpt\.com\/\?prompt=/);
   assert.match(app,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
   assert.doesNotMatch(app,/summary:gmwwSafeDiagnosticText\(e\.message\)/);
