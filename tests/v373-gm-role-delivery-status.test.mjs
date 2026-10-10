@@ -47,8 +47,12 @@ test('Delivery remains at step 6 until GM chooses Vào Trận, and cannot republ
   assert.doesNotMatch(deliver,/playPublishStage\('battle'\)/);
   assert.match(app,/playSceneState\.step==='deal'&&playDeliveryProgress\(\)\.success\?'VÀO TRẬN'/);
   assert.match(app,/d\.type==='role_progress'\|\|d\.type==='artifact_progress'/);
-  assert.match(html,/id="playDeliveryStatus"/);
-  assert.match(css,/\.play-delivery-status/);
+  assert.match(html,/id="playPhaseHint"/);
+  assert.doesNotMatch(html,/id="playDeliveryStatus"/);
+  assert.doesNotMatch(css,/\.play-delivery-status/);
+  assert.match(css,/\.is-delivery-confirmed/);
+  assert.match(app,/title\.textContent='✓ ĐÃ PHÁT VAI THÀNH CÔNG '/);
+  assert.match(app,/hint\.textContent='Đã xem Vai Trò: '/);
 });
 test('Artifact-free games show exactly one GM role card',()=>{
   const render=block('async function renderPlayCards(){','function bindPlayRoomModeButtons(){');

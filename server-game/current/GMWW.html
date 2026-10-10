@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.74</title>
-<link rel="stylesheet" href="style.css?v=3.74-delivery-progress">
+<title>GMWW V3.75</title>
+<link rel="stylesheet" href="style.css?v=3.75-role-delivery-dock">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -160,7 +160,6 @@
             <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
           </div>
 
-          <div id="playDeliveryStatus" class="play-delivery-status hidden" role="status" aria-live="polite"></div>
           <div class="play-card-fan" id="playCardFan" aria-label="Vai Trò và Artifact">
             <button class="play-focus-card role-card is-front" id="playRoleCard" data-play-card="role" type="button">
               <span class="play-card-type">VAI TRÒ</span>
@@ -198,7 +197,7 @@
         <nav class="gm-top-menu-v293 gm-bottom-menu-v325 gm-stage-dock-v330" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span></button>
-          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle" aria-live="polite">SẢNH CHỜ</b><small>CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
+          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle" aria-live="polite">SẢNH CHỜ</b><small id="playPhaseHint" aria-live="polite">CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span></button>
         </nav>
@@ -726,7 +725,7 @@
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-374"></script>
-<script src="app.js?v=3.74-delivery-progress"></script>
+<script src="app.js?v=3.75-role-delivery-dock"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{

@@ -4241,18 +4241,19 @@ body:not(.play-immersive) #bottomNav .nav{visibility:visible!important;opacity:1
 #playGameSheet .play-game-status[hidden]{display:none!important}
 #playGameSheet #playGameSave:disabled{opacity:.8;cursor:wait;touch-action:none}
 
-/* GM role delivery acknowledgement: unobtrusive overlay above the cards. */
-body.play-immersive #start .play-delivery-status{
-  position:absolute;z-index:7;bottom:calc(env(safe-area-inset-bottom) + 222px);
-  left:50%;transform:translateX(-50%);min-width:205px;max-width:calc(100% - 28px);
-  padding:8px 13px;border:1px solid rgba(255,255,255,.44);border-radius:15px;
-  background:rgba(5,27,45,.92);box-shadow:0 7px 22px rgba(0,0,0,.24);
-  text-align:center;color:#eef9ff;pointer-events:none;
+/* V3.75: role delivery receipt is a part of the bottom-center action button. */
+body.play-immersive #start #gmTopMenu.gm-stage-dock-v330 .gm-top-info-v293.is-delivery-confirmed{
+ padding:4px 7px!important;border-color:rgba(135,237,195,.75)!important;
 }
-#start .play-delivery-status b{display:block;font-size:12px;line-height:1.35;white-space:nowrap}
-#start .play-delivery-status small{display:block;font-size:11px;margin-top:3px}
-#start .play-delivery-status strong{color:#ffe5a1}
-#start .play-delivery-status.is-success{border-color:rgba(116,243,191,.72)}
+body.play-immersive #start #gmTopMenu.gm-stage-dock-v330 .gm-top-info-v293.is-delivery-confirmed .gm-top-info-copy-v293{flex:1 1 auto!important}
+body.play-immersive #start #gmTopMenu.gm-stage-dock-v330 .gm-top-info-v293.is-delivery-confirmed .gm-top-info-copy-v293 b{
+ white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+ font-size:11px!important;line-height:13px!important;letter-spacing:0!important;color:#fff5d5!important;
+}
+body.play-immersive #start #gmTopMenu.gm-stage-dock-v330 .gm-top-info-v293.is-delivery-confirmed .gm-top-info-copy-v293 small{
+ white-space:normal!important;font-size:9px!important;line-height:11px!important;
+ letter-spacing:0!important;color:#d6ffe7!important;margin-top:3px!important;
+}
 #start .play-card-fan.is-role-only .role-card{
   left:50%;right:auto;transform:translateX(-50%) translateY(-8px) scale(1.06);
   filter:saturate(1.08);z-index:3;
