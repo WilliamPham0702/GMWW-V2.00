@@ -21,7 +21,7 @@ test("task approval is a newer OTA than the previously released V3.30",()=>{
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
   assert.equal(shell,"3.17");
   assert.match(html,/<title>GMWW V3\.67<\/title>/);
-  assert.match(html,/app\.js\?v=3\.67-premium-home/);
+  assert.match(html,/app\.js\?v=3\.67-choose-game/);
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
