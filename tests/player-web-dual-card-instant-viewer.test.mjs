@@ -10,11 +10,16 @@ const worker=fs.readFileSync('src/index.js','utf8');
 
 test('Player scripts remain valid after instant viewer patch',()=>{
   assert.doesNotThrow(()=>new vm.Script(player));
-  assert.match(player,/function showGmwwInstantPrivateViewer\(kind\)/);
-  assert.match(player,/renderGMWWPlayerCardFace\(kind\);\s*showGmwwInstantPrivateViewer\(kind\);/);
-  assert.match(player,/gmwwInstantPrivateViewer/);
+  assert.match(player,/function renderGMWWPlayerCardFace\(kind\)/);
+  assert.match(player,/renderGMWWPlayerCardFace\(kind\);\s*armPrivateCardIdle\(\);/);
+  assert.doesNotMatch(player,/gmwwInstantPrivateViewer|showGmwwInstantPrivateViewer/);
+  assert.match(player,/#gmwwPlayerUnifiedCard\.gmww-face-wolf\{--faction:#ef5555\}/);
+  assert.match(player,/#gmwwPlayerUnifiedCard\.gmww-face-artifact\{--faction:#bc92ff\}/);
+  assert.match(player,/grid-template-rows:8fr 1fr 3fr/);
+  assert.match(player,/type==='wolf'\?'🐾':type==='third'\?'🔥':'🍃'/);
+  assert.match(player,/renderGMWWPlayerCardFace\('role'\)/);
   assert.match(player,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
-  assert.match(player,/function closePrivateCardViewer\(\)[\s\S]*?viewer\.hidden=true/);
+  assert.match(player,/function closePrivateCardViewer\(\)[\s\S]*?if\(face\)face\.hidden=true/);
 });
 
 test('Player keeps assigned Artifact pending until its private data arrives',()=>{
@@ -39,10 +44,15 @@ test('Artifact delivery uses committed role snapshot as fallback, never public d
   assert.match(player,/artifact\.disabled=!state\.artifact/);
 });
 
-test('Viewer is independent of legacy role pane and card pictures reuse stable URL',()=>{
-  assert.match(player,/document\.body\.appendChild\(pane\)/);
-  assert.match(player,/pane\.hidden=false/);
-  assert.match(player,/const img=pane\.querySelector\('img'\),message=pane\.querySelector\('\.gmww-instant-art span'\),url=gmwwPrivateArtworkUrl\(kind\)/);
-  assert.match(player,/if\(img\.dataset\.url!==url\)/);
+test('Single canonical GM face presents role and artifact with stable artwork URL and proper data',()=>{
+  const face=player.slice(player.indexOf('function renderGMWWPlayerCardFace(kind){'),player.indexOf('function syncPlayerPresentation(){'));
+  assert.match(face,/const data=kind==='artifact'\?state\.artifact:state\.role/);
+  assert.match(face,/const pc=\(kind==='artifact'\?data\.artifactCard:data\.roleCard\)/);
+  assert.match(face,/const information=String\(pc\.information\?\?data\.description/);
+  assert.match(face,/const img=card\.querySelector\('img'\),src=gmwwPrivateArtworkUrl\(kind\)/);
+  assert.match(face,/if\(img\.dataset\.source!==src\)/);
+  assert.match(face,/split\('\\n'\)\.map\(x=>x\.trim\(\)\)\.filter\(Boolean\)/);
+  assert.match(face,/requestAnimationFrame\(\(\)=>\{/);
+  assert.match(face,/while\(body>12&&info\.scrollHeight>info\.clientHeight\+1\)/);
   assert.doesNotMatch(player,/GMWW_PLAYER_INSTANT_VIEWER_CODE/);
 });
