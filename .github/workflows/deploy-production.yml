@@ -161,6 +161,485 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
+          # GMWW V3.82: confirm the actual installed-IPA OTA path, not just latest.json.
+          if [ "$EXPECTED" = "3.82" ]; then
+            for FROM in 3.81 3.80; do
+              curl --fail --silent --show-error --retry 4 --retry-delay 2 --max-time 75 \
+                "$URL/api/update/manifest?current=$FROM&release-verify=$(date +%s)" > "/tmp/gmww-v382-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-'+from+'.json','utf8'));
+          const req=['GMWW.html','app.js','style.css','gmww-ai-support.js','gmww-ai-support.css'];
+          if(m.ok!==true||m.releaseVersion!=='3.82'||m.runtimeVersion!=='3.82'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from)
+            throw new Error('V3.82 cannot be downloaded from IPA Runtime '+from);
+          if(m.delete?.length)throw new Error('OTA would delete existing runtime data');
+          if(m.runtime?.files?.length!==req.length)throw new Error('Unexpected AI Support OTA file count');
+          for(const path of req){
+            const entry=m.runtime.files.find(x=>x.path===path);
+            if(!entry||entry.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.82/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(entry.sha256||'')))
+              throw new Error('Missing signed, same-origin V3.82 update asset '+path);
+          }
+          NODE
+            done
+            node - <<'NODE' > /tmp/gmww-v382-required-files.txt
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-3.81.json','utf8'));
+          for(const e of m.runtime.files)console.log([e.path,e.url,e.sha256].join('\t'));
+          NODE
+            while IFS=          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
+          # readable from the deployed Worker, not merely rendered as a thumbnail.
+          if [ "$EXPECTED" = "3.72" ]; then
+            ROLE_ART_READY=0
+            for CHECK in $(seq 1 12); do
+              if curl --max-time 20 -fsS "$URL/api/gm/template-role-artwork/role_guard?production-check=$CHECK-$(date +%s)" > /tmp/gmww-role-guard.webp && node - <<'NODE'
+          const b=require('fs').readFileSync('/tmp/gmww-role-guard.webp');
+          if(b.length<32||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')process.exit(1);
+          console.log('Verify Production: role_guard canonical WEBP source PASS.');
+          NODE
+              then ROLE_ART_READY=1; break; fi
+              sleep 2
+            done
+            if [ "$ROLE_ART_READY" != "1" ]; then echo "::error::Production role_guard artwork is unavailable"; exit 1; fi
+          fi
+          # Verify that an actually installed IPA V3.17 Runtime receives the correct small OTA,
+          # not just the full package used by deployment validation.
+          if [ "$EXPECTED" = "3.53" ]; then
+            for FROM in 3.51 3.52; do
+              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/update/manifest?current=$FROM&otacheck=$(date +%s)" > "/tmp/ota-from-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          const required=['GMWW.html','app.js','style.css',...(from==='3.51'?['home-art/home-sea-portal-v352.svg']:[])];
+          if(m.ok!==true||m.releaseVersion!=='3.53'||m.runtimeVersion!=='3.53'||m.shellVersion!=='3.17'
+             ||m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from
+             ||JSON.stringify(m.runtime?.files?.map(f=>f.path))!==JSON.stringify(required))process.exit(4);
+          if(!m.runtime.files.every(f=>f.url==='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.53/'+f.path
+             && /^[a-f0-9]{64}$/i.test(f.sha256)))process.exit(5);
+          console.log('Production OTA V'+from+' -> V3.53 verified '+required.length+' files PASS.');
+          NODE
+              for REL in GMWW.html app.js style.css; do
+                OTA_URL=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.url||'');
+          NODE
+                )
+                test -n "$OTA_URL"
+                curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$OTA_URL?sha-check=$(date +%s)" > /tmp/gmww-delta-file
+                LOCAL_SHA=$(shasum -a 256 /tmp/gmww-delta-file | awk '{print $1}')
+                EXPECTED_SHA=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.sha256||'');
+          NODE
+                )
+                test "$LOCAL_SHA" = "$EXPECTED_SHA"
+              done
+              echo "Verify Production: IPA V3.17 OTA V$FROM SHA-256 PASS."
+            done
+          fi
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+            RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
+            test -n "$RIDER_URL"
+            echo "Verify Production: downloading immutable GM rider asset."
+            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
+            EXPECTED_RIDER_SHA=$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')
+            ACTUAL_RIDER_SHA=$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')
+            if test "$EXPECTED_RIDER_SHA" != "$ACTUAL_RIDER_SHA"; then
+              echo "::error::Runtime GM rider hash does not match deployed bytes (expected $EXPECTED_RIDER_SHA, observed $ACTUAL_RIDER_SHA)"
+              exit 1
+            fi
+            echo "Verify Production: GM rider hash PASS."
+            # Artwork must be available as exact bytes after OTA, not merely in GitHub.
+            echo "Verify Production: checking every Trang Chu artwork in live Runtime."
+            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp home-sea-portal-v352.svg home-sea-portal-v354.svg home-sea-cards-v354.svg home-sea-members-v354.svg home-sea-templates-v354.svg; do
+              REL="home-art/$ART"
+              ART_URL=$(node - "$REL" <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const file=m.runtime?.files?.find(f=>f.path===process.argv[2]);
+          if(!file?.url)process.exit(2);
+          process.stdout.write(file.url);
+          NODE
+              )
+              echo "Verify Production: Home artwork $ART via $ART_URL"
+              if ! curl --retry 3 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"; then
+                echo "::error::Runtime Home artwork unavailable: $REL at $ART_URL (404/5xx). Deployment cannot be marked successful."
+                exit 1
+              fi
+              EXPECTED_ART_SHA=$(shasum -a 256 "server-game/current/$REL" | awk '{print $1}')
+              LIVE_ART_SHA=$(shasum -a 256 "/tmp/$ART" | awk '{print $1}')
+              if test "$EXPECTED_ART_SHA" != "$LIVE_ART_SHA"; then
+                echo "::error::Production Home artwork mismatch: $ART"
+                exit 1
+              fi
+              echo "Verify Production: Home artwork $ART PASS."
+            done
+          fi
+          # Character V5.60 is an isolated lab, not a runtime/IPA game change.
+          # Confirm that a clickable HTML test AND its REAL SkinnedMesh adapter are
+          # deployed, rather than claiming the CI merge alone implies a live page.
+          echo "Verify Production: checking V5.60 real 3D skin lab delivery."
+          curl --location --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/test-skin-v560.html?verify=$(date +%s)" > /tmp/gmww-skin-v560.html
+          curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/skin-v560-weighted-surface.mjs?verify=$(date +%s)" > /tmp/gmww-skin-v560.mjs
+          echo "V5.60 delivery: HTML=$(wc -c </tmp/gmww-skin-v560.html) bytes; module=$(wc -c </tmp/gmww-skin-v560.mjs) bytes."
+          if ! grep -Fq 'Skin 3D gắn vào 16 xương thật' /tmp/gmww-skin-v560.html; then
+            echo "::error::V5.60 HTML asset path returned HTTP 200 but wrong content. Actual first bytes:"
+            head -c 350 /tmp/gmww-skin-v560.html; echo
+            exit 1
+          fi
+          if ! grep -Fq 'addV560WeightedSkin' /tmp/gmww-skin-v560.mjs; then
+            echo "::error::V5.60 SkinnedMesh module path returned HTTP 200 but wrong content. Actual first bytes:"
+            head -c 350 /tmp/gmww-skin-v560.mjs; echo
+            exit 1
+          fi
+          echo "Verify Production: V5.60 3D skin lab HTML + module PASS."
+          echo "Verify Production: checking task-review UI in versioned runtime."
+          # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
+          TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
+          TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
+          test -n "$TASK_APP_URL" && test -n "$TASK_HTML_URL"
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
+          echo "Verify Production: OTA app and HTML fetched."
+          echo "Verify Production: checking V3.58 Settings grid directly in deployed Runtime."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/updates/runtime/V$EXPECTED/style.css?settings-grid-check=$(date +%s)" > /tmp/gmww-ota-settings.css
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const css=fs.readFileSync('/tmp/gmww-ota-settings.css','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const expected=manifest.runtime.files.find(f=>f.path==='style.css')?.sha256;
+          const ids=['settingsRunHealth','auditLocalData','clearRuntimeCache','reloadApp','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'];
+          const settings=html.slice(html.indexOf('id="settingsGroupHealth"'),html.indexOf('id="settingsGroupTasks"'));
+          const checks={
+            '14 distinct tools':ids.every(id=>settings.split('id="'+id+'"').length===2),
+            'single visible grid':settings.includes('id="settingsToolsRail"'),
+            'no horizontal navigation':!settings.includes('id="settingsToolsNext"')&&!settings.includes('id="settingsToolsPrev"'),
+            'three columns':css.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),
+            'no horizontal clipping':css.includes('overflow-x:visible!important'),
+            'CSS manifest checksum':Boolean(expected)&&sha(css)===expected
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('Production Settings grid: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(pass=>!pass))process.exit(1);
+          NODE
+          echo "Verify Production: all 14 Settings tools visible via responsive grid PASS."
+          node - "$EXPECTED" <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=text=>crypto.createHash('sha256').update(text).digest('hex');
+          const expectedSha=p=>manifest.runtime.files.find(f=>f.path===p)?.sha256;
+          const checks={
+            'JS version':app.includes("const VERSION='"+version+"';"),
+            'task review function':app.includes('function gmwwTaskReviewLink'),
+            'complete button':app.includes('XÁC NHẬN HOÀN THÀNH'),
+            'skip button':app.includes('BỎ QUA'),
+            'HTML work list':html.includes('id="gmwwTasksOpenList"'),
+            'HTML version':html.includes('GMWW V'+version),
+            'manifest JS SHA':sha(app)===expectedSha('app.js'),
+            'manifest HTML SHA':sha(html)===expectedSha('GMWW.html')
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('GMWW OTA asset check: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(x=>!x))process.exit(1);
+          console.log('GMWW task review controls verified in live OTA runtime V'+version);
+          NODE
+          echo "Verify Production: connected Theme editor controls on live IPA Runtime."
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const allowed=['bg.home','bg.play','bg.library','bg.settings',
+            'banner.home','ui.homePortal','ui.exploreDeck','ui.exploreMembers','ui.exploreTemplates','ui.bottomNavArt'];
+          const block=app.match(/const THEME_UI_GROUPS=([\s\S]*?);\n\nconst DEFAULT_STATE=/)?.[1];
+          if(!block)throw Error('Active theme UI control list missing');
+          const actual=[...block.matchAll(/\['([^']+)',/g)].map(m=>m[1]);
+          if(actual.length!==allowed.length||actual.some(x=>!allowed.includes(x)))
+            throw Error('Dead or unlinked theme UI slots visible: '+actual.join(', '));
+          for(const slot of allowed)if(!actual.includes(slot))throw Error('Missing linked theme slot '+slot);
+          for(const marker of ['ACTIVE_THEME_IMAGE_TARGETS','ACTIVE_THEME_BACKGROUND_TARGETS','ACTIVE_THEME_NAV_TARGETS',
+            "ui.exploreTemplates","img.setAttribute('src',src||img.dataset.themeDefaultSrc)"])
+            if(!app.includes(marker))throw Error('Theme consumer missing: '+marker);
+          if(!html.includes('data-home-library-tab="templates"')||!html.includes('id="gmwwHomeEnterVillage"'))
+            throw Error('Homepage does not provide active theme targets');
+          console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
+          NODE
+          node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
+          curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
+          grep -q '"ok":true' /tmp/web-sync.json
+          curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
+          grep -q 'GMWW PLAYER' /tmp/player.html
+          grep -Fq '.app{width:100%;max-width:none;min-height:100dvh;margin:0' /tmp/player.html
+          ! grep -Fq '.app{width:min(430px,100%)' /tmp/player.html
+          curl -fsS "$URL/village/village.mjs?verify=$(date +%s)" > /tmp/village.mjs
+          node --check /tmp/village.mjs
+          grep -Fq 'document.documentElement.classList.add("embedded")' /tmp/village.mjs
+          grep -Fq 'visualFallbackMoves' /tmp/village.mjs
+          grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
+          curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
+          curl -fsS "$URL/village/seat-leaf.webp?verify=$(date +%s)" > /tmp/seat-leaf.webp
+          test "$(shasum -a 256 assets/village/seat-leaf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/seat-leaf.webp | awk '{print $1}')"
+          grep -Fq '/village/seat-leaf.webp' /tmp/village.css
+          grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
+          curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
+          test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
+          test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
+          echo "Verify Production: checking isolated Character V4 Web studio."
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/index.html?verify=$(date +%s)" > /tmp/character-v4-web.html
+          grep -Fq '20 Character mới' /tmp/character-v4-web.html
+          grep -Fq 'Chưa phát hành Character mới vào trận' /tmp/character-v4-web.html
+          grep -Fq 'action-lab.mjs' /tmp/character-v4-web.html
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/action-lab.mjs?verify=$(date +%s)" > /tmp/character-v4-action-lab.mjs
+          node --check /tmp/character-v4-action-lab.mjs
+          grep -Fq 'export function sampleV4Action' /tmp/character-v4-action-lab.mjs
+          grep -Fq 'export function createV4StageController' /tmp/character-v4-action-lab.mjs
+          echo "Verify Production: V4 nine-action motion lab JavaScript PASS."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/v4?verify=$(date +%s)" > /tmp/character-v4.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const v4=JSON.parse(fs.readFileSync('/tmp/character-v4.json','utf8'));
+          if(!v4.ok||v4.webOnly!==true||v4.ipaDeployed!==false||v4.count!==20||v4.approvedCount!==0||v4.characters?.length!==20)process.exit(1);
+          if(v4.previewCount!==2||!v4.characters.every(c=>!c.approved))process.exit(2);
+          if(!v4.characters.slice(0,2).every(c=>c.hasArtwork&&c.status==='preview-artwork'))process.exit(3);
+          if(!v4.characters.slice(2).every(c=>!c.hasArtwork&&c.status==='awaiting-artwork'))process.exit(4);
+          console.log('Verify Production: Character V4 two actual artwork previews + 18 pending PASS.');
+          NODE
+          echo "Verify Production: checking real Character 01/02 four-direction artwork."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/approved-two-characters.avif?verify=$(date +%s)" > /tmp/v4-two-characters.avif
+          test "$(wc -c </tmp/v4-two-characters.avif)" -gt 10000
+          test "$(shasum -a 256 assets/characters/v4/approved-two-characters.avif | awk '{print $1}')" = "$(shasum -a 256 /tmp/v4-two-characters.avif | awk '{print $1}')"
+          for VIEW in front left right back; do
+            curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-01/image?dir=$VIEW" > "/tmp/char01-$VIEW.svg"
+            grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char01-$VIEW.svg"
+            grep -Fq 'data:image/avif;base64,' "/tmp/char01-$VIEW.svg"
+            curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-02/image?dir=$VIEW" > "/tmp/char02-$VIEW.svg"
+            grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char02-$VIEW.svg"
+            grep -Fq 'data:image/avif;base64,' "/tmp/char02-$VIEW.svg"
+          done
+          grep -Fq 'x="-200" y="-145"' /tmp/char02-back.svg
+          grep -Fq 'x="0" y="0"' /tmp/char01-front.svg
+          grep -Fq 'id="labCharacter"' /tmp/character-v4-web.html
+          echo "Verify Production: Character 01 + 02, four directions each, new real artwork PASS."
+          echo "Verify Production: validating Player Web animated Character 01/02 frames."
+          for CHARACTER in character-01 character-02; do
+            for VIEW in front left; do
+              SUFFIX=""
+              if [ "$VIEW" = "left" ]; then SUFFIX="?dir=left"; fi
+              for FRAME in 1 2; do
+                curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/$CHARACTER/frame/$FRAME$SUFFIX" > "/tmp/$CHARACTER-$VIEW-$FRAME.webp"
+                test "$(file -b --mime-type "/tmp/$CHARACTER-$VIEW-$FRAME.webp")" = "image/webp" || { echo "::error::$CHARACTER $VIEW frame $FRAME did not return WebP"; exit 1; }
+              done
+              if cmp -s "/tmp/$CHARACTER-$VIEW-1.webp" "/tmp/$CHARACTER-$VIEW-2.webp"; then
+                echo "::error::$CHARACTER $VIEW reused identical animation frames"; exit 1
+              fi
+            done
+          done
+          echo "Verify Production: Player Web Character 01/02 distinct walking frames in front and left directions PASS."
+          echo "Verify Production: checking V4 articulated two-character action module."
+          grep -Fq '<canvas id="labCharacter"' /tmp/character-v4-web.html
+          grep -Fq 'animated-sprite.mjs' /tmp/character-v4-web.html
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/animated-sprite.mjs?verify=$(date +%s)" > /tmp/character-v4-animated-sprite.mjs
+          node --check /tmp/character-v4-animated-sprite.mjs
+          grep -Fq "export function v4ActionPose" /tmp/character-v4-animated-sprite.mjs
+          grep -Fq "export function createV4SpriteRenderer" /tmp/character-v4-animated-sprite.mjs
+          node - <<'NODE'
+          const fs=require('node:fs'), html=fs.readFileSync('/tmp/character-v4-web.html','utf8');
+          if(!html.includes('sprite.render({')||html.includes('actor.src=imageUrl('))process.exit(1);
+          console.log('Verify Production: V4 canvas articulated limb animation wired to Action controls PASS.');
+          NODE
+          echo "Verify Production: rejected Skin 4.13 withdrawn; show skeleton only."
+          for F in skeleton.html skeleton-rig.mjs skin.html skin-art-spec.json; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 15); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinverify=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then
+                echo "Verify Production: $F exact bytes match on attempt $ATTEMPT."
+                MATCHED=1
+                break
+              fi
+              echo "::warning::$F hash mismatch on attempt $ATTEMPT expected $EXPECTED_HASH observed $LIVE_HASH, $(wc -c < "/tmp/v4-$F") bytes"
+              if [ "$ATTEMPT" -eq 1 ]; then head -c 120 "/tmp/v4-$F"; echo; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::Character V4 file $F did not synchronize to the approved commit."; exit 1; fi
+          done
+          node --check /tmp/v4-skeleton-rig.mjs
+          grep -Fq 'KHÔNG ĐẠT NGHIỆM THU' /tmp/v4-skin.html
+          grep -Fq 'Skin 4.13 đã bị loại' /tmp/v4-skin.html
+          grep -Fq 'skeleton-rig.mjs' /tmp/v4-skin.html
+          ! grep -Fq 'skeleton-skin.mjs' /tmp/v4-skin.html
+          ! grep -Fq 'renderV4Skin' /tmp/v4-skin.html
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const c=JSON.parse(fs.readFileSync('/tmp/v4-skin-art-spec.json','utf8'));
+          if(c.skinStatus!=='rejected-awaiting-redesign' || c.deliveryGate.productionSkinEnabled!==false || c.deliveryGate.ownerApproved!==false)process.exit(1);
+          console.log('Verify Production: rejected Skin disabled; premium layered redesign required before release.');
+          NODE
+          echo "Verify Production: skeleton-only fallback and rejected Skin exact-byte check PASS."
+
+          echo "Verify Production: checking joint-bound Character V4.14 isolated skin lab."
+          for F in skin-preview-v414.html skin-v414.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?skinpreview=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.14 $F did not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v4-skin-v414.mjs
+          grep -Fq "skin-v414.mjs" /tmp/v4-skin-preview-v414.html
+          grep -Fq "BẢN THỬ HÌNH VẼ" /tmp/v4-skin-preview-v414.html
+          grep -Fq "17 lớp" /tmp/v4-skin-preview-v414.html
+          grep -Fq "skin-preview-v414.html" /tmp/v4-skin.html
+          echo "Verify Production: isolated V4.14 Skin preview exact-byte SHA check PASS."
+
+          echo "Verify Production: checking V4.15 1200x1920 layered master exporter."
+          for F in skin-master-v415.html skin-master-v415.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?masterverify=$(date +%s)-$ATTEMPT" > "/tmp/v4-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v4-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.15 $F did not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v4-skin-master-v415.mjs
+          grep -Fq '1200 × 1920' /tmp/v4-skin-master-v415.html
+          grep -Fq 'export8MasterPNGs' /tmp/v4-skin-master-v415.html
+          grep -Fq 'export17Layers' /tmp/v4-skin-master-v415.html
+          grep -Fq 'skin-master-v415.html' /tmp/v4-skin-preview-v414.html
+          echo "Verify Production: V4.15 8 full-body masters + 17 transparent layers exporter exact SHA PASS."
+
+          echo "Verify Production: Character V4.16 art QA is staging-only."
+          for F in artwork-intake-v416.html artwork-intake-v416.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?assetverify=$(date +%s)-$ATTEMPT" > "/tmp/v416-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v416-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.16 $F does not match deployed bytes"; exit 1; fi
+          done
+          node --check /tmp/v416-artwork-intake-v416.mjs
+          grep -Fq 'CHƯA THAY CHARACTER TRONG GAME' /tmp/v416-artwork-intake-v416.html
+          grep -Fq 'artwork-intake-v416.mjs' /tmp/v416-artwork-intake-v416.html
+          grep -Fq 'artwork-intake-v416.html' /tmp/v4-skin-master-v415.html
+          echo "Verify Production: V4.16 staging artwork validator exact-byte SHA PASS."
+
+          echo "Verify Production: checking Character V4.16 HD source intake metadata."
+          for F in artwork-v416.html artwork-v416.mjs artwork-v416-manifest.json; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?sourceverify=$(date +%s)-$ATTEMPT" > "/tmp/v416-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v416-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.16 $F artwork source QA byte mismatch"; exit 1; fi
+          done
+          node --check /tmp/v416-artwork-v416.mjs
+          grep -Fq 'CHƯA GẮN VÀO GAME' /tmp/v416-artwork-v416.html
+          grep -Fq 'artwork-v416.html' /tmp/v416-artwork-intake-v416.html
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const j=JSON.parse(fs.readFileSync('/tmp/v416-artwork-v416-manifest.json','utf8'));
+          if(j.drafts?.length!==4||j.limitations?.requiredViews!==8||
+             j.limitations?.individualRigLayersAvailable!==false||
+             j.limitations?.productionSkinEnabled!==false||
+             j.limitations?.ownerApproved!==false)process.exit(1);
+          console.log('Verify Production: 4 source PNGs documented (off-repository), 4 views pending, 17-layer rig disabled PASS.');
+          NODE
+          echo "Verify Production: HD V4.16 local-only source gallery SHA PASS."
+
+          echo "Verify Production: 17-part Character V4.17 bone-bound motion lab."
+          for F in skin-motion-v417.html layered-skin-v417.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v4/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in $(seq 1 12); do
+              curl --location --retry 3 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/$F?motionverify=$(date +%s)-$ATTEMPT" > "/tmp/v417-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/v417-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then echo "::error::V4.17 $F does not match this deployment"; exit 1; fi
+          done
+          node --check /tmp/v417-layered-skin-v417.mjs
+          grep -Fq 'CHƯA VÀO GAME' /tmp/v417-skin-motion-v417.html
+          grep -Fq '17 lớp' /tmp/v417-skin-motion-v417.html
+          grep -Fq 'skin-motion-v417.html' /tmp/v416-artwork-v416.html
+          echo "Verify Production: V4.17 real joint-layer pipeline and iPhone Studio exact SHA PASS."
+
+          echo "Verify Production: Character V5.00 isolated 2.5D laboratory."
+          for F in index.html character-motion-v500.mjs character-master-v500.mjs character-rig-v510.mjs test-board-v520.html test-board-v520.mjs test-gates-v520.mjs vendor/three.module.min.js vendor/three.core.min.js vendor/LICENSE; do
+            SAFE_FILE=${F//\//_}
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v5/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in 1 2 3 4; do
+              curl --location --retry 5 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/$F?masterv500=$(date +%s)-$ATTEMPT" > "/tmp/gmww-v500-$SAFE_FILE"
+              LIVE_HASH=$(shasum -a 256 "/tmp/gmww-v500-$SAFE_FILE" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then
+              echo "::error::V5.00 laboratory file $F did not synchronize to deployed Worker"; exit 1
+            fi
+            echo "Verify Production: V5.00 $F exact SHA PASS."
+          done
+          node --check /tmp/gmww-v500-character-motion-v500.mjs
+          node --check /tmp/gmww-v500-character-master-v500.mjs
+          node --check /tmp/gmww-v500-character-rig-v510.mjs
+          grep -Fq 'SkinnedMesh' /tmp/gmww-v500-character-rig-v510.mjs
+          grep -Fq 'V414_SKIN_PALETTES' /tmp/gmww-v500-character-rig-v510.mjs
+          grep -Fq 'Skin GMWW V4.14' /tmp/gmww-v500-index.html
+          node --check /tmp/gmww-v500-test-board-v520.mjs
+          node --check /tmp/gmww-v500-test-gates-v520.mjs
+          grep -Fq 'CHƯA NGHIỆM THU' /tmp/gmww-v500-test-board-v520.html
+          grep -Fq 'releaseReadiness' /tmp/gmww-v500-test-gates-v520.mjs
+          grep -Fq "THỬ NGHIỆM RIÊNG" /tmp/gmww-v500-index.html
+          grep -Fq "./vendor/three.module.min.js" /tmp/gmww-v500-character-master-v500.mjs
+          echo "Verify Production: V5.20 acceptance board exact assets and release gates PASS; live Player Web unchanged."
+
+
+
+
+
+\t' read -r FILE LINK CHECKSUM; do
+              curl --fail --silent --show-error --retry 4 --retry-delay 2 --max-time 60 \
+                "$LINK" > "/tmp/gmww-v382-$FILE"
+              printf '%s  %s\n' "$CHECKSUM" "/tmp/gmww-v382-$FILE" | sha256sum --check --status || {
+                echo "::error::V3.82 published OTA hash mismatch: $FILE"; exit 1;
+              }
+              echo "Production verified AI Support OTA: $FILE"
+            done < /tmp/gmww-v382-required-files.txt
+            curl -fsS "$URL/api/gm/ai-support/config" > /tmp/gmww-ai-config.json
+            node - <<'NODE'
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/gmww-ai-config.json','utf8'));
+          if(a.ok!==true||typeof a.configured!=='boolean'||a.readOnly!==true)
+            throw new Error('AI Support status endpoint missing or unsafe');
+          console.log('AI Support configured: '+a.configured+'; chat has not been exercised');
+          NODE
+            STATUS=$(curl --silent --output /tmp/gmww-ai-noauth.json --write-out '%{http_code}' \
+              -X POST -H 'content-type: application/json' \
+              -d '{"message":"ping"}' "$URL/api/gm/ai-support/chat")
+            test "$STATUS" = "401" || {
+              echo "::error::AI Support unauthenticated request must be denied (received $STATUS)"; exit 1;
+            }
+            echo "AI Support authorization gate: PASS"
+          fi
           # V3.72 canonical-image preflight: the exact role_guard WEBP must be
           # readable from the deployed Worker, not merely rendered as a thumbnail.
           if [ "$EXPECTED" = "3.72" ]; then
