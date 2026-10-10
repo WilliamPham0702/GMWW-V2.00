@@ -60,6 +60,18 @@ jobs:
             exit 1
           fi
           echo "Master-01 2.5D 3D renderer initialized in headless Chromium PASS."
+
+          # Browser smoke test also instantiates all 30 separately animated GPU bone rigs.
+          timeout 70s "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --enable-unsafe-swiftshader --use-angle=swiftshader --virtual-time-budget=1100 \
+            --dump-dom "http://127.0.0.1:18765/characters/v5/?stress=30" \
+            > /tmp/gmww-v510-30actors.html 2>/tmp/gmww-v510-30actors.log || {
+              tail -n 35 /tmp/gmww-v510-30actors.log; exit 1;
+            }
+          grep -Fq 'data-gmww-v500="ready"' /tmp/gmww-v510-30actors.html
+          grep -Fq 'data-gmww-v510-actors="30"' /tmp/gmww-v510-30actors.html
+          grep -Fq 'data-gmww-v510-bones="16"' /tmp/gmww-v510-30actors.html
+          echo "Master-01 V5.10 30 SkinnedMesh actors and 16 bones initialized in Chromium PASS."
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
