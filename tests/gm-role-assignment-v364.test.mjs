@@ -37,7 +37,7 @@ function harness(){
   playAssignArtifactsToRows:rows=>rows,
   Map,Set,Number,String,Object,Array
  };
- vm.runInNewContext(draft+'\n'+build+'\nthis.api={status:playAssignmentDraftStatus,swap:playAssignmentSwapRole,confirm:playConfirmAssignments,build:playBuildAssignments};',ctx);
+ vm.runInNewContext(draft+'\n'+build+'\nthis.api={status:playAssignmentDraftStatus,swap:playAssignmentSwapRole,confirm:playConfirmAssignments,save:playSaveAssignments,build:playBuildAssignments};',ctx);
  return{ctx,api:ctx.api,logs,state:playSceneState,members};
 }
 test('Step 5 is a true GM-only responsive page with preview, control row, and confirmation',()=>{
@@ -49,6 +49,7 @@ test('Step 5 is a true GM-only responsive page with preview, control row, and co
  assert.match(app,/renderPlayPlayers\(\);renderPlayCards\(\);renderPlayDeliveryProgress\(\);renderPlayGatherToolbar\(\);renderPlayRoleAssignmentPanel\(\)/);
  assert.match(app,/async function savePlayGame\(\)/);
  assert.match(app,/try\{playBuildAssignments\(\{random:true\}\)\}catch\(err\)/);
+ assert.match(html,/id="playAssignmentConfirm"[^>]*>✓ LƯU<\/button>/);
  assert.match(app,/resolveArtwork\('cards',role\.id,'thumb'\)/);
  assert.match(app,/resolveArtwork\('artifacts',artifact\.id,'thumb'\)/);
 });
@@ -87,7 +88,16 @@ test('Validation prevents missing, duplicated, or mismatched roles and rejects u
  h.members.push({kind:'member',loginId:'c',displayName:'C',seatId:3});
  assert.equal(h.api.status().ok,false);
 });
-test('Only GM confirmation advances to step 6; release requires separate step-6 action',()=>{
+test('LƯU retains private assignments on step 5; lower navigation advances separately',()=>{
+ const h=harness();
+ assert.equal(h.api.save(),true);
+ assert.equal(h.state.step,'roles');
+ assert.ok(h.logs.includes('saved'));
+ assert.ok(h.state.assignmentSavedSignature);
+ assert.ok(!h.logs.some(x=>x.startsWith('published:')));
+ assert.match(app,/addEventListener\('click',playSaveAssignments\)/);
+});
+test('Only lower GM navigation advances to step 6; release requires separate step-6 action',()=>{
  const h=harness();
  assert.equal(h.api.confirm(),true);
  assert.equal(h.state.step,'deal');
@@ -110,7 +120,7 @@ test('Role counts are exact and versioned V3.64 OTA only includes the three exis
  assert.equal(selectVerifiedRuntimeV364Delta(bad,'3.63'),null);
  const unsafe=sample();unsafe.delete=['settings.json'];
  assert.equal(selectVerifiedRuntimeV364Delta(unsafe,'3.63'),null);
- assert.match(worker,/VERSION="V3\.82",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-382"/);
+ assert.match(worker,/VERSION="V3\.83",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-383"/);
  assert.match(html,/<title>GMWW V3\.82<\/title>/);
  assert.match(app,/const VERSION='3\.82'/);
 });
