@@ -39,7 +39,7 @@ test('Artifact delivery uses committed role snapshot as fallback, never public d
   assert.match(worker,/attachedArtifact=roleRows\.find\(r=>r\?\.artifact/);
   assert.match(worker,/artifactExpected:deliveryManifest\.artifactExpected/);
   assert.match(worker,/artifact=currentArtifact\?privateArtifact\(currentArtifact\):null/);
-  assert.match(player,/state\.artifactExpected=d\?\.artifactExpected===true/);
+  assert.match(player,/state\.artifactExpected=d\?\.deliveryManifest\?\.artifactExpected===true\|\|d\?\.artifactExpected===true/);
   assert.match(player,/artifact\.hidden=!state\.artifact&&!waitingArtifact/);
   assert.match(player,/artifact\.disabled=!state\.artifact/);
 });
