@@ -2378,8 +2378,8 @@ function connectPlaySocket(){
   ws.onopen=()=>{if(playSceneRuntime.socket===ws){setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
   ws.onmessage=e=>{try{
     const d=JSON.parse(e.data||'{}'),movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
-    if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
-    if(d.type==='role_progress'||d.type==='artifact_progress'){
+    if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
+    if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
       // The durable object stores acknowledgement timestamps; refresh from it,
       // rather than assuming a websocket notification means the card was viewed.
       if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
