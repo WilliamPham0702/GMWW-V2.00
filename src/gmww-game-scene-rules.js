@@ -1,6 +1,6 @@
 // Pure, backwards-compatible rules for the GM 2D scene integration.
 // No storage migration and no implicit phase advancement.
-export const EARLY_ARTIFACTS = Object.freeze(["Tráng Gương","Đá Hoán Đổi","Mắt Tiên Tri","Bùa Hộ Mệnh"]);
+export const EARLY_ARTIFACTS = Object.freeze(["Tráng Gương","Đổi Vai Trò","Đá Hoán Đổi","Thức Cùng Tiên Tri","Mắt Tiên Tri","Bùa Hộ Mệnh"]);
 export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   const queue=[];
   if(night===1) queue.push({kind:"wolf-introduction",label:"Bầy Sói ơi dậy đi nhìn mặt nhau"});

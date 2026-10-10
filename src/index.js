@@ -17,7 +17,7 @@ import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.73",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-373",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.74",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-374",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1024,7 +1024,21 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
+    const meta=auth.meta;
+    // The battle UI supplies an optional expected turn. Legacy GM manual overrides remain compatible.
+    if(body?.turnId){
+      if(String(meta.phase||"").toLowerCase()!=="running"||String(meta.cyclePhase||"").toLowerCase()!=="night")
+        return j({ok:false,error:"STALE_TURN",message:"Đã kết thúc lượt Ban Đêm."},409);
+      const live=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+      const step=live&&!live.completed?live.queue?.[live.cursor]:null;
+      if(!step||String(step.id)!==String(body.turnId))
+        return j({ok:false,error:"STALE_TURN",message:"Lượt chức năng đã thay đổi. Vui lòng chọn lại."},409);
+      const claimedActor=normalizeLoginId(body.actorId||"");
+      const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
+      if(claimedActor&&actors.length&&!actors.includes(claimedActor))
+        return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    }
+    const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
       const p=Object.values(players).find(x=>normalizeLoginId(x?.loginId)===loginId);if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);

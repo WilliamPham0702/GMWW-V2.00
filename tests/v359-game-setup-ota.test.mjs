@@ -20,15 +20,15 @@ test('V3.59 OTA fails closed for mismatched version, hash, URL or deletion',()=>
     const m=makeManifest();mutator(m);assert.equal(selectVerifiedRuntimeV359Delta(m,'3.58'),null);
   }
 });
-test('V3.73 version sources and IPA update manifest route are aligned',()=>{
+test('V3.74 version sources and IPA update manifest route are aligned',()=>{
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const worker=fs.readFileSync('src/index.js','utf8');
-  assert.equal(pkg.version,'3.73.0');assert.equal(lock.version,'3.73.0');
-  assert.match(app,/const VERSION='3.73'/);assert.match(html,/GMWW V3.73/);
-  assert.match(worker,/VERSION="V3.73"/);assert.match(worker,/UPDATE_CHANNEL_REV="runtime-373"/);
+  assert.equal(pkg.version,'3.74.0');assert.equal(lock.version,'3.74.0');
+  assert.match(app,/const VERSION='3.74'/);assert.match(html,/GMWW V3.74/);
+  assert.match(worker,/VERSION="V3.74"/);assert.match(worker,/UPDATE_CHANNEL_REV="runtime-374"/);
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(versioned,').length,2);
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(manifest,').length,2);
 });

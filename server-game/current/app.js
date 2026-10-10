@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.73';
+const VERSION='3.74';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2878,6 +2878,134 @@ async function advancePlayPhase(){
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false)}
 }
+
+/* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
+const battleState={key:'',actionId:'',targets:[],roster:false,timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,ignoreClick:0,impacts:new Map()};
+const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
+const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
+const battleActions=()=>battleRules()?.actionsForTurn(battleTurn(),Math.max(1,Number(playSceneState.night)||1),state)||[];
+const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
+const battleMember=id=>playLiveMembers().find(m=>String(m.loginId||'')===String(id));
+const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectIds||[])].join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/(bite|can|wolf)/.test(key))return'wolf-bite';
+  if(/(freeze|dong bang|frozen)/.test(key))return'frozen';
+  if(/(exile|expel|duoi)/.test(key))return'expelled';
+  if(/(revive|hoi sinh)/.test(key))return'revive';
+  if(/(kill|giet|poison)/.test(key))return'dead';
+  if(/(protect|bao ve|shield)/.test(key))return'shield';
+  if(/(swap|clone|doi vai|trang guong)/.test(key))return'swap';
+  if(/(seer|soi|tien tri|reveal)/.test(key))return'seer';
+  return'effect_notice';
+};
+function battleClear(){battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.nonce=''}
+function battlePickAction(id){const a=battleActions().find(a=>a.id===id);if(!a||a.noTarget)return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
+function battlePickTarget(id,actionId){
+  const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a)return;
+  if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
+  const m=battleMember(id);
+  if(!battleRules()?.targetAllowed(a,m,playPlayerEffect(id))){playFlashError('Mục tiêu không hợp lệ cho chức năng này.');return}
+  id=String(id);const i=battleState.targets.indexOf(id);
+  if(i>=0)battleState.targets.splice(i,1);
+  else if(battleState.targets.length<a.targetCount)battleState.targets.push(id);
+  else if(a.targetCount===1)battleState.targets=[id];
+  else{playFlashError('Tối đa '+a.targetCount+' mục tiêu.');return}
+  renderPlayBattle()
+}
+function battleMarkPlayers(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  const t=battleTurn(),actors=new Set((t?.loginIds||[t?.loginId]).filter(Boolean).map(String)),chosen=new Set(battleState.targets),now=Date.now();
+  ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
+    const id=String(el.dataset.playPlayerId||''),impact=battleState.impacts.get(id);
+    el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
+    el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
+    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.toggle('battle-impact-'+type,!!impact&&impact.type===type&&impact.until>now);
+  });
+  for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
+}
+function renderPlayBattle(){
+  const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
+  const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
+  if(!visible){battleClear();battleState.key='';return}
+  if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
+  const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
+  const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
+  if(battleState.key!==key){battleState.key=key;battleClear();battleState.timelineSig='';battleState.actionSig=''}
+  const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
+  const steps=battleRules().timeline(phase,rt,night),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status]));
+  if(timeline&&signature!==battleState.timelineSig){battleState.timelineSig=signature;
+    timeline.innerHTML=steps.map((s,i)=>'<span role="listitem" title="'+playEsc(s.label)+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':i+1)+'</span><b>'+playEsc(s.label)+'</b></span>').join('');
+    const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
+  }
+  const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');
+  const sig=(t?.id||phase)+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount]));
+  if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget?'disabled ':'')+'>'+playEsc(a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Mời Bầy Sói dậy nhìn mặt nhau.':phase==='day'?'Làng thảo luận và bỏ phiếu.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+  }
+  bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
+  set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+(t?.kind==='early-artifact'?'ARTIFACT ĐẦU VÁN':t?.kind==='role'?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
+  set('battleTurnTitle',phase==='day'?'LÀNG ƠI DẬY ĐI':t?.label||(rt?.completed?'ĐÃ KẾT THÚC ĐÊM '+night:'BẮT ĐẦU ĐÊM 1'));
+  set('battleTurnProgress',phase==='night'?(Math.min((rt?.cursor||0)+1,rt?.queue?.length||1)+'/'+(rt?.queue?.length||1)):phase==='day'?'THẢO LUẬN':'SẴN SÀNG');
+  const action=battleAction(),pending=document.getElementById('battlePending'),roster=document.getElementById('battleRoster'),toggle=document.getElementById('battleRosterToggle');
+  if(pending){pending.hidden=!action||!battleState.targets.length;
+    set('battlePendingText',action?action.name+' → '+battleState.targets.map(x=>battleMember(x)?.displayName||x).join(', ')+' ('+battleState.targets.length+'/'+action.targetCount+')':'');
+    document.getElementById('battleConfirm').disabled=battleState.busy||!action||battleState.targets.length!==action.targetCount;
+  }
+  if(roster)roster.hidden=!battleState.roster;
+  if(toggle){toggle.textContent=battleState.roster?'▴ Ẩn danh sách':'☷ Chọn thủ công';toggle.setAttribute('aria-expanded',String(battleState.roster))}
+  if(battleState.roster){
+    set('battleRosterCount',action?battleState.targets.length+'/'+action.targetCount+' mục tiêu':'Chọn hành động');
+    const list=document.getElementById('battleRosterList');if(list)list.innerHTML=playLiveMembers().filter(m=>m.loginId).map(m=>{const id=String(m.loginId),selected=battleState.targets.includes(id),allowed=!!action&&battleRules().targetAllowed(action,m,playPlayerEffect(id));return '<button data-battle-member="'+playEsc(id)+'" '+(!allowed?'disabled ':'')+'class="'+(selected?'selected':'')+'"><span>'+(selected?'✓':'○')+'</span><b>'+playEsc(m.displayName||id)+'</b><span>'+(selected?'×':'')+'</span></button>'}).join('');
+  }
+  const next=document.getElementById('battleAdvance');if(next){next.disabled=battleState.busy||playSceneRuntime.busy;next.textContent=phase==='night'&&rt?.completed?'LÀNG ƠI DẬY ĐI ›':phase==='day'?'ĐÊM TIẾP THEO ›':phase==='lobby'?'BẮT ĐẦU ĐÊM 1 ›':'TIẾP THEO ›'}
+  const auto=document.getElementById('battleGMAuto'),audio=document.getElementById('battleGMAudio');
+  if(auto){auto.textContent='↻ AUTO GM: '+(playSceneState.autoGM?'BẬT':'TẮT');auto.classList.toggle('is-off',!playSceneState.autoGM)}
+  if(audio){audio.textContent=(playAudioMuted()?'🔇 AUDIO: TẮT':'🔊 AUDIO: BẬT');audio.classList.toggle('is-off',playAudioMuted())}
+  battleMarkPlayers()
+}
+async function battleConfirm(){
+  const a=battleAction(),t=battleTurn();if(battleState.busy||!a||!t||battleState.targets.length!==a.targetCount)return;
+  const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');
+  if(expected!==battleState.key){playFlashError('Lượt đã thay đổi. Hãy chọn lại mục tiêu.');renderPlayBattle();return}
+  if(!confirm('Xác nhận '+a.name+' lên '+battleState.targets.map(id=>battleMember(id)?.displayName||id).join(', ')+'?'))return;
+  battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
+  try{
+    for(const id of battleState.targets){
+      const payload={loginId:id,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',effectId:a.effectIds[0]||'',effectName:a.name,matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',night:Number(playSceneState.night||1),clientEventId:battleState.nonce+':'+id};
+      if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
+      await playRoomApi('/interaction',{method:'POST',body:JSON.stringify(payload)});
+      battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
+    }
+    battleClear();await playSyncRoom(true);
+  }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
+  finally{battleState.busy=false;renderPlayBattle()}
+}
+function initBattleControls(){
+  const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
+  document.getElementById('battleBack')?.addEventListener('click',()=>{exitPlayImmersive()});
+  document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
+  document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
+  document.getElementById('battleRosterToggle')?.addEventListener('click',()=>{battleState.roster=!battleState.roster;renderPlayBattle()});
+  document.getElementById('battleRosterClose')?.addEventListener('click',()=>{battleState.roster=false;renderPlayBattle()});
+  document.getElementById('battleCancel')?.addEventListener('click',()=>{battleState.targets=[];battleState.nonce='';renderPlayBattle()});
+  document.getElementById('battleConfirm')?.addEventListener('click',()=>{void battleConfirm()});
+  document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
+  document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
+  document.getElementById('battleActionBar')?.addEventListener('click',e=>{if(Date.now()<battleState.ignoreClick)return;const x=e.target.closest('[data-battle-action]');if(x)battlePickAction(x.dataset.battleAction)});
+  document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled)battlePickTarget(x.dataset.battleMember)});
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction())return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId)}},true);
+  document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled)battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false}});
+  document.addEventListener('pointermove',e=>{
+    const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>13)d.moved=true;
+    if(!d.moved)return;
+    let ghost=document.getElementById('battleDragGhost');
+    if(!ghost){ghost=document.createElement('div');ghost.id='battleDragGhost';ghost.textContent=battleActions().find(a=>a.id===d.id)?.name||'Tác động';document.body.appendChild(ghost)}
+    ghost.style.left=e.clientX+'px';ghost.style.top=(e.clientY-34)+'px';
+  },{passive:true});
+  document.addEventListener('pointerup',e=>{const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;battleState.drag=null;document.getElementById('battleDragGhost')?.remove();if(!d.moved)return;battleState.ignoreClick=Date.now()+350;const x=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-play-player-id]');if(x)battlePickTarget(x.dataset.playPlayerId,d.id);else battlePickAction(d.id)},{passive:true});
+  document.addEventListener('pointercancel',()=>{battleState.drag=null;document.getElementById('battleDragGhost')?.remove()});
+}
+
 function renderPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;
   if(playSceneRuntime.setupPopupStep!==playSceneState.step){playSceneRuntime.setupPopupStep=playSceneState.step;playSceneRuntime.setupPopupClosed=false}
@@ -2894,7 +3022,7 @@ function renderPlayScene(){
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=playSceneState.step==='deal'&&playDeliveryProgress().success?'VÀO TRẬN':step.t.toUpperCase()}
   const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
-  renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
+  renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();renderPlayBattle();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 
 function playFactionLabel(role){const f=String(role?.factionId||role?.faction||'').toLowerCase();if(f==='wolf'||f.includes('sói')||f.includes('soi'))return'Phe Sói';if(f==='third'||f.includes('ba')||f.includes('third'))return'Phe Ba';return'Phe Dân'}
@@ -4012,6 +4140,7 @@ async function handlePlayTimelineStep(step){
 }
 function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
+  initBattleControls();
   initPlayGameChromeAutoHide();
   initDraggablePlaySheets();
   initDraggablePlayGatherToolbar();

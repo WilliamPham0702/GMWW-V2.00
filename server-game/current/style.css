@@ -4258,3 +4258,72 @@ body.play-immersive #start .play-delivery-status{
   filter:saturate(1.08);z-index:3;
 }
 #start .play-card-fan.is-role-only .artifact-card{display:none!important}
+
+/* V3.74 / battle-only control surface; the setup 7-step strip is not an in-match control. */
+#playBattleTop[hidden],#playBattleDock[hidden],#battleRoster[hidden],#battlePending[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #playSetupStrip,
+body.play-immersive #start #playShell[data-step="battle"] #gmTopMenu,
+body.play-immersive #start #playShell[data-step="battle"] #playCardFan,
+body.play-immersive #start #playShell[data-step="battle"] .play-hud,
+body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{display:none!important}
+#start #playBattleTop{position:absolute;top:calc(env(safe-area-inset-top) + 5px);left:7px;right:7px;z-index:95;display:grid;grid-template-columns:auto minmax(0,1fr) 42px;align-items:center;gap:5px;padding:7px 6px;border:1px solid #99ddea8c;border-radius:17px;background:#062f4aee;box-shadow:0 8px 22px #0014216b;color:#fff;pointer-events:auto}
+#start #playBattleTop>button{height:44px;min-width:42px;border:1px solid #bce9f477;border-radius:11px;background:#0b4d62;color:#fff;font-size:14px;font-weight:850;padding:0 7px}
+#start #playBattleTop #battleForceEnd{color:#ffd3c3;background:#653832}
+#start .play-battle-timeline{display:flex;align-items:center;gap:6px;overflow-x:auto;min-width:0;scrollbar-width:none;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+#start .play-battle-timeline::-webkit-scrollbar{display:none}
+#start .play-battle-step{display:flex;flex:none;align-items:center;gap:5px;max-width:190px;min-height:40px;border:1px solid #5993a588;border-radius:10px;background:#092a40;color:#b7d5de;padding:5px 8px;scroll-snap-align:center}
+#start .play-battle-step .battle-step-num{font-size:11px;color:#f8d89b;font-weight:900}
+#start .play-battle-step b{display:block;max-width:145px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:1.25}
+#start .play-battle-step.is-active{background:#135c6e;border-color:#edcf80;box-shadow:0 0 0 1px #e7d68a8a;color:#fff}
+#start .play-battle-step.is-completed{opacity:.65}
+#start .play-battle-step.is-skipped{opacity:.4;text-decoration:line-through}
+#start #playBattleDock{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 7px);left:7px;right:7px;z-index:96;border:1px solid #a2e6efa1;border-radius:16px;background:#072d43f2;box-shadow:0 8px 26px #001322b8;color:#fff;padding:9px 10px;max-height:min(48dvh,440px);display:flex;flex-direction:column;gap:7px}
+#start .play-battle-turn{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px}
+#start .play-battle-turn>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+#start .play-battle-turn small{font-size:9px;color:#8de4ec;font-weight:850;letter-spacing:.07em}
+#start .play-battle-turn b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff3ca}
+#start #battleTurnProgress{font-size:10px;color:#d4e8eb;white-space:nowrap}
+#start .play-battle-actions{display:flex;gap:7px;min-height:44px;overflow:auto;touch-action:pan-x;scrollbar-width:none}
+#start .play-battle-actions>button{flex:none;min-width:103px;max-width:185px;min-height:44px;padding:8px 12px;border:1px solid #77ddea;border-radius:11px;background:#0d5b72;color:#fff;box-shadow:inset 0 1px #f5ffff44;font-size:12px;font-weight:900;touch-action:none}
+#start .play-battle-actions>button.is-selected{border-color:#ffde8e;background:#266f69}
+#start .play-battle-actions .battle-empty{font-size:11px;color:#b4d6df;padding:10px 4px}
+#start .play-battle-pending{display:flex;align-items:center;gap:6px;min-width:0;font-size:11px;background:#14465a;padding:6px 7px;border-radius:10px}
+#start .play-battle-pending span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#start .play-battle-pending button{height:34px;padding:0 13px;color:#fff;background:#456574;border:1px solid #a7d9df88;border-radius:9px;font-weight:900}
+#start .play-battle-pending #battleConfirm{background:#25836b;border-color:#aaf5c1;color:#fff}
+#start .play-battle-roster{min-height:0;overflow:hidden;border:1px solid #8ecdd772;border-radius:11px;background:#052b42;display:flex;flex-direction:column}
+#start .play-battle-roster>header{display:flex;align-items:center;gap:10px;padding:5px 8px}
+#start .play-battle-roster>header b{font-size:10px}
+#start .play-battle-roster>header span{flex:1;font-size:10px;color:#b9d4db}
+#start .play-battle-roster>header button{font-size:22px;border:0;color:white;background:transparent}
+#start .play-battle-roster-list{overflow-y:auto;min-height:0;max-height:min(25dvh,190px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:6px}
+#start .play-battle-roster-list>button{min-width:0;display:flex;align-items:center;gap:5px;padding:8px 6px;border-radius:8px;background:#0e485d;color:#fff;border:1px solid #5596a8;font-size:11px}
+#start .play-battle-roster-list>button.selected{border-color:#ffda8b;background:#33796c}
+#start .play-battle-roster-list>button:disabled{opacity:.35}
+#start .play-battle-roster-list>button b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#start .play-battle-footer{display:flex;justify-content:space-between;gap:9px}
+#start .play-battle-footer button{height:39px;min-width:90px;padding:0 12px;border:1px solid #71c8d8;border-radius:10px;background:#0e4e64;color:#fff;font-size:12px;font-weight:850}
+#start .play-battle-footer #battleAdvance{background:#267669;border-color:#b2eed9}
+#start .play-battle-footer button:disabled{opacity:.5}
+#start .play-player-token.is-battle-actor .play-player-avatar{outline:3px solid #ffdf80;outline-offset:4px;filter:drop-shadow(0 0 6px #f4df75)}
+#start .play-player-token.is-battle-actor:before{content:"✦ ĐANG THỨC";position:absolute;top:-16px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;font-size:9px;background:#104e5e;color:#fff0b0;border:1px solid #ffdb72;border-radius:7px;padding:2px 4px;pointer-events:none}
+#start .play-player-token.is-battle-target .play-player-avatar{outline:3px dashed #d6fff8;outline-offset:4px}
+#start .play-player-token.battle-impact-frozen .play-player-avatar:after{content:"❄️";background:#69dff58a}
+#start .play-player-token.battle-impact-dead .play-player-avatar:after{content:"☠️";background:#482b38ac}
+#start .play-player-token.battle-impact-expelled .play-player-avatar:after{content:"🌪️";background:#bf9e7473}
+#start .play-player-token.battle-impact-effect_notice .play-player-avatar:after{content:"✦";background:#3ec6b071}
+#start .play-player-token[class*="battle-impact-"] .play-player-avatar:after{position:absolute;inset:-4px;z-index:3;display:grid;place-items:center;border-radius:50%;font-size:30px;animation:gmwwBattleImpact 1.2s ease-in-out infinite alternate}
+@keyframes gmwwBattleImpact{from{transform:scale(.8);opacity:.75}to{transform:scale(1.27);opacity:1}}
+.play-battle-gm-tools{display:flex;gap:8px;margin:8px 0}
+.play-battle-gm-tools button{flex:1;min-height:42px;border-radius:9px;border:1px solid #7fe0dc;color:#fff;font-size:12px;font-weight:850;background:#10667b}
+.play-battle-gm-tools button.is-off{background:#555e69}
+@media(max-width:390px){#start #playBattleTop{grid-template-columns:44px minmax(0,1fr) 38px}#start #playBattleTop #battleBack span{display:none}#start .play-battle-step{max-width:135px}#start .play-battle-step b{max-width:103px}}
+@media(prefers-reduced-motion:reduce){#start .play-player-token[class*="battle-impact-"] .play-player-avatar:after{animation:none}}
+
+/* V3.74: projected GM action token and non-destructive visual hit cues */
+#battleDragGhost{position:fixed;z-index:99999;pointer-events:none;transform:translate(-50%,-50%);border:1px solid #f8df91;border-radius:12px;padding:8px 12px;background:#073e54ee;color:#fff;font:900 12px system-ui;box-shadow:0 8px 24px #001a30;max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#start .play-player-token.battle-impact-wolf-bite .play-player-avatar:after{content:"🐺";background:#73384696}
+#start .play-player-token.battle-impact-shield .play-player-avatar:after{content:"🛡️";background:#199d9a88}
+#start .play-player-token.battle-impact-seer .play-player-avatar:after{content:"👁️";background:#4350aa8c}
+#start .play-player-token.battle-impact-swap .play-player-avatar:after{content:"⇄";font-size:37px;color:#fff3c5;background:#8b6dbb91}
+#start .play-player-token.battle-impact-revive .play-player-avatar:after{content:"✨";background:#35b77d8a}
