@@ -38,7 +38,7 @@ const pointer=new THREE.Vector2();
 
 // Independent decorative meshes; actors themselves are 1 SkinnedMesh + 1 shadow each.
 const decoSphere=new THREE.SphereGeometry(1,8,6);
-const decoLeaf=new THREE.SphereGeometry(1,10,6);
+const tinySphere=new THREE.SphereGeometry(1,10,6);
 const C={shell:new THREE.MeshStandardMaterial({color:'#fff2df',roughness:.7})};
 function ellip(parent,mat,x,y,z,sx,sy,sz,geo=decoSphere){
  const o=new THREE.Mesh(geo,mat);o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;
