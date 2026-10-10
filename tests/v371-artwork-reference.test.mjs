@@ -13,6 +13,7 @@ function roomMethod(from,to){
     j:(data,status)=>({...data,...(status?{status}: {})}),
     sanitizePlayerRoleCard:x=>x,
     sanitizePlayerArtifactCard:x=>x,
+    validImageDataUrl:x=>/^data:image\/(?:webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(String(x||'')),
     Response,URLSearchParams,Uint8Array,
     MEMBER_STORE_NAME:'__GMWW_MEMBERS__',
   });
@@ -115,4 +116,37 @@ test('Template availability uses compact indexed metadata on repeat selection',a
   assert.equal(second.ready,true);
   assert.equal(getCalls.includes('gameTemplateAsset:sample:role:wolf'),false);
   assert.equal(second.packages['role:wolf'].roleCard.name,'Wolf');
+});
+
+test('Editing a V3.70 role package keeps the previous revision available for an existing match',async()=>{
+  const methods=roomMethod('  async gameTemplateAssetPut(body){','  async gameTemplateAssetGet(rawId,rawAsset){');
+  const state=store();
+  const firstImage='data:image/webp;base64,QUJD',nextImage='data:image/webp;base64,REVG';
+  state.db.set('gameTemplate:sample',{revision:3,compiledConfig:{roles:[{roleId:'wolf'}]}});
+  state.db.set('gameTemplateAsset:sample:role:wolf',{
+    revision:2,imageDataUrl:firstImage,package:{roleCard:{name:'Old Wolf'}}
+  });
+  const result=await methods.gameTemplateAssetPut.call({ctx:state.ctx},{
+    id:'sample',assetId:'role:wolf',imageDataUrl:nextImage,
+    package:{roleName:'New Wolf',roleCard:{name:'New Wolf'}}
+  });
+  assert.equal(result.hasImage,true);
+  assert.equal(state.db.get('gameTemplateAssetRevision:sample:role:wolf:2')?.imageDataUrl,firstImage);
+  assert.equal(state.db.get('gameTemplateAssetRevision:sample:role:wolf:3')?.imageDataUrl,nextImage);
+  assert.equal(state.db.get('gameTemplateAsset:sample:role:wolf')?.revision,3);
+});
+test('Editing global Artifact preserves prior signature artwork without packaging it per room',async()=>{
+  const methods=roomMethod('  async sharedArtifactPut(body){','  async sharedArtifactGet(rawId){');
+  const state=store(),assetId='artifact:mirror',oldSig='a'.repeat(64),newSig='b'.repeat(64);
+  const oldImage='data:image/webp;base64,QUJD',newImage='data:image/webp;base64,REVG';
+  state.db.set('sharedArtifactMeta:'+assetId,{signature:oldSig,package:{roleCard:{name:'Mirror'}}});
+  state.db.set('sharedArtifactData:'+assetId,oldImage);
+  const result=await methods.sharedArtifactPut.call({ctx:state.ctx},{
+    assetId,signature:newSig,imageDataUrl:newImage,package:{roleCard:{name:'Mirror 2'}}
+  });
+  assert.equal(result.cached,false);
+  assert.equal(state.db.get('sharedArtifactDataVersion:'+assetId+':'+oldSig),oldImage);
+  assert.equal(state.db.get('sharedArtifactDataVersion:'+assetId+':'+newSig),newImage);
+  assert.equal(state.db.get('sharedArtifactData:'+assetId),newImage);
+  assert.equal(state.writes.some(k=>k.startsWith('gameTemplateAsset:')),false);
 });
