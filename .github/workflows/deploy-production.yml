@@ -256,8 +256,17 @@ jobs:
           echo "Verify Production: checking V5.60 real 3D skin lab delivery."
           curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/test-skin-v560.html?verify=$(date +%s)" > /tmp/gmww-skin-v560.html
           curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/skin-v560-weighted-surface.mjs?verify=$(date +%s)" > /tmp/gmww-skin-v560.mjs
-          grep -q 'Skin 3D gắn vào 16 xương thật' /tmp/gmww-skin-v560.html
-          grep -q 'addV560WeightedSkin' /tmp/gmww-skin-v560.mjs
+          echo "V5.60 delivery: HTML=$(wc -c </tmp/gmww-skin-v560.html) bytes; module=$(wc -c </tmp/gmww-skin-v560.mjs) bytes."
+          if ! grep -Fq 'Skin 3D gắn vào 16 xương thật' /tmp/gmww-skin-v560.html; then
+            echo "::error::V5.60 HTML asset path returned HTTP 200 but wrong content. Actual first bytes:"
+            head -c 350 /tmp/gmww-skin-v560.html; echo
+            exit 1
+          fi
+          if ! grep -Fq 'addV560WeightedSkin' /tmp/gmww-skin-v560.mjs; then
+            echo "::error::V5.60 SkinnedMesh module path returned HTTP 200 but wrong content. Actual first bytes:"
+            head -c 350 /tmp/gmww-skin-v560.mjs; echo
+            exit 1
+          fi
           echo "Verify Production: V5.60 3D skin lab HTML + module PASS."
           echo "Verify Production: checking task-review UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
