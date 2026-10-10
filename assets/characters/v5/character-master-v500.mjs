@@ -189,7 +189,7 @@ $('runToggle').addEventListener('change',e=>{runOnTap=e.target.checked;});
 $('dayToggle').addEventListener('change',e=>{
  night=e.target.checked;scene.background.set(night?'#102b54':'#87d7e7');
  scene.fog.color.set(night?'#102b54':'#87d7e7');
- sun.intensity=night?.8:2.6;
+ sun.intensity=night ? 0.8 : 2.6;
 });
 document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>setMainAction(b.dataset.action)));
 document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>setDir(b.dataset.dir)));
@@ -208,9 +208,7 @@ canvas.addEventListener('pointerdown',event=>{
  const pos=groundHit.point;
  const m=actors[0].m;
  setDestination(m,pos.x,pos.z,runOnTap);
- setMainAction(runOnTap?'run':'walk');
- // setMainAction resets a goal by design; reapply destination.
- setDestination(m,pos.x,pos.z,runOnTap);
+ document.querySelectorAll('[data-action]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.action===(runOnTap?'run':'walk'))));
  status.textContent='Đang '+(runOnTap?'chạy':'đi')+' tới ('+pos.x.toFixed(1)+', '+pos.z.toFixed(1)+')';
 });
 const held=new Set();
