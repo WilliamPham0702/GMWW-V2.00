@@ -33,7 +33,7 @@ test('Saving a template persists verified artwork and versioned asset metadata o
  assert.match(worker,/async gameTemplateAssetPut\(body\)/);
  assert.match(worker,/async gameTemplateAssetGet\(rawId,rawAsset\)/);
  assert.match(worker,/Number\(row\.revision\)!==Number\(rec\.revision\)/);
- assert.match(app,/await playEnsureTemplateAssets\(String\(cached\?\.template\?\.id\|\|templateId\)/);
+ assert.match(app,/await playEnsureTemplateAssets\(playSceneState\.gameTemplateId,cached\?\.template\?\.compiledConfig\|\|cfg\)/);
  assert.match(app,/const imageDataUrl=isArtifact\?await playArtifactArtworkData/);
  assert.match(app,/createImageBitmap\(blob\)/);
  assert.match(app,/canvas\.getContext\('2d',\{alpha:false\}\)/);

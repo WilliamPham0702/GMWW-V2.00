@@ -26,5 +26,5 @@ test('iPhone Chọn Ván reveals errors and progress in the visible modal',()=>{
   assert.match(app,/if\(!document\.getElementById\('playGameSheet'\)\?\.classList\.contains\('hidden'\)\)playGameStatus\(playSceneRuntime\.lastError,'error'\)/);
   assert.match(app,/if\(playSceneRuntime\.busy\)return;\s*playGameStatus\(''\);\s*const card=/);
   assert.match(app,/chooseButton\.disabled=true;chooseButton\.textContent='ĐANG NẠP VÁN/);
-  assert.match(app,/await playPreloadSelectedArtwork\(configured\);\s*if\(!\(await playPublishStage\('roles'\)\)\)throw/);
+  assert.match(app,/await playPreloadSelectedArtwork\(configured\);[\s\S]*?if\(!\(await playPublishStage\('roles'\)\)\)throw/);
 });
