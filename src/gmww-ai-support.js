@@ -1,6 +1,6 @@
 // GMWW AI Support Worker gateway. Secrets never leave Cloudflare.
 // This module intentionally provides READ-ONLY diagnostic and chat operations.
-const MODEL='gpt-5.6-terra';
+const MODEL='gpt-4.1-mini';
 const OPENAI_URL='https://api.openai.com/v1/responses';
 const GH_RUNS='https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/actions/runs?per_page=5';
 const PROMPT=String.raw`Bạn là GMWW AI Support, trợ lý tiếng Việt cho Quản Trò GMWW (web game Ma Sói).
