@@ -13,15 +13,14 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { characterV4Status } from "./gmww-character-v4.js";
-import { PUBLIC_ENTRY_LIMITS, AI_SUPPORT_REQUEST_LIMIT, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
+import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
-import { aiSupportEnabled,handleAiSupport } from "./gmww-ai-support.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.84",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-384",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.85",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-385",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -39,7 +38,7 @@ export class RoomDurableObject extends DurableObject {
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
-    const policy=[...Object.values(PUBLIC_ENTRY_LIMITS),AI_SUPPORT_REQUEST_LIMIT].find(x=>x.key===String(body?.key||""));
+    const policy=Object.values(PUBLIC_ENTRY_LIMITS).find(x=>x.key===String(body?.key||""));
     if(!policy)return j({ok:false,error:"UNKNOWN_ADMISSION_POLICY"},400);
     const previous=await this.ctx.storage.get("security-rate");
     const result=stepPublicEntryWindow(previous,policy,Date.now());
@@ -1412,7 +1411,7 @@ export default {async fetch(request,env){
       return new Response(asset.body,{status:200,headers:{...corsHeaders(),"content-type":"image/webp","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
     }catch{return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503)}
   }
-  const admissionPolicy=url.pathname==="/api/gm/ai-support/chat"&&request.method==="POST"?AI_SUPPORT_REQUEST_LIMIT:publicEntryPolicy(request.method,url.pathname);
+  const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
   if(admissionPolicy){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
     if(admissionResponse)return admissionResponse;
@@ -1422,11 +1421,6 @@ export default {async fetch(request,env){
     try{const work=await fetchGmwwTasks();return j({ok:true,source:"github_public_issues",generatedAt:new Date().toISOString(),...work})}
     catch(error){const backup=normalizeGmwwTasks(GMWW_TASK_SNAPSHOT);return j({ok:true,source:"github_public_snapshot",fallback:true,generatedAt:GMWW_TASK_SNAPSHOT_GENERATED_AT,...backup})}
   }
-  // Private GM-only AI Support. OpenAI credentials are Cloudflare secrets.
-  if(url.pathname==="/api/gm/ai-support/config"&&request.method==="GET")
-    return j({ok:true,configured:aiSupportEnabled(env),provider:'OpenAI',readOnly:true});
-  if(url.pathname==="/api/gm/ai-support/chat")
-    return handleAiSupport(request,env,{serverVersion:VERSION});
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
   if(url.pathname==="/api/health/deep"&&request.method==="GET"){
     try{
