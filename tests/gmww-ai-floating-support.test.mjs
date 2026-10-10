@@ -82,7 +82,8 @@ test('Global draggable icon and conversation panel are packaged for OTA',()=>{
   assert.match(css,/env\(safe-area-inset-bottom\)/);
   assert.match(css,/gmww-ai-panel\[hidden\]/);
   assert.match(worker,/handleAiSupport\(request,env,\{serverVersion:VERSION\}\)/);
-  assert.match(admission,/\/api\/gm\/ai-support\/chat/);
+  assert.match(admission,/AI_SUPPORT_REQUEST_LIMIT/);
+  assert.match(worker,/AI_SUPPORT_REQUEST_LIMIT:publicEntryPolicy/);
   assert.doesNotMatch(app,/OPENAI_API_KEY/);
   assert.doesNotMatch(app,/GMWW_AI_SUPPORT_TOKEN/);
   // All existing GMWW state keys and game rules remain unchanged.
