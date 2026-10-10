@@ -236,7 +236,11 @@ jobs:
           process.stdout.write(file.url);
           NODE
               )
-              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"
+              echo "Verify Production: Home artwork $ART via $ART_URL"
+              if ! curl --retry 3 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"; then
+                echo "::error::Runtime Home artwork unavailable: $REL at $ART_URL (404/5xx). Deployment cannot be marked successful."
+                exit 1
+              fi
               EXPECTED_ART_SHA=$(shasum -a 256 "server-game/current/$REL" | awk '{print $1}')
               LIVE_ART_SHA=$(shasum -a 256 "/tmp/$ART" | awk '{print $1}')
               if test "$EXPECTED_ART_SHA" != "$LIVE_ART_SHA"; then
