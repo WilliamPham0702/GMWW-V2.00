@@ -26,7 +26,7 @@ test('GM release gates both personal face-down cards; no role name leaks in bott
 });
 test('Tapping Role or Artifact opens real full-card viewer; idle 30 seconds closes both',()=>{
  assert.match(result,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
- assert.match(result,/gmwwPendingPrivateCardTap='';openPrivateCardViewer\(kind\)/);
+ assert.match(result,/gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);openPrivateCardViewer\(kind\)/);
  assert.match(result,/if\(kind==='role'\)toggleRole\(\);else toggleArtifact\(\)/);
  assert.match(result,/const game=\$\('#game'\);if\(game\)game\.dataset\.privateCardFocus=kind;\s*setGameViewPane\('role',\{persist:false\}\)/);
  assert.match(result,/setGameViewPane\('village',\{persist:false\}\)/);
