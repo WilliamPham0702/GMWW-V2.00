@@ -75,10 +75,12 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/artifacts/shared/status"&&request.method==="GET")return this.sharedArtifactStatus();
     if(url.pathname==="/artifacts/shared"&&request.method==="PUT")return this.sharedArtifactPut(await safeJson(request));
     if(url.pathname==="/artifacts/shared/get"&&request.method==="GET")return this.sharedArtifactGet(url.searchParams.get("assetId"));
+    if(url.pathname==="/artifacts/shared/image"&&request.method==="GET")return this.sharedArtifactImage(url.searchParams.get("assetId"),url.searchParams.get("signature"));
     if(url.pathname==="/game-templates/list"&&request.method==="GET")return this.gameTemplateList();
     if(url.pathname==="/game-templates/upsert"&&request.method==="PUT")return this.gameTemplateUpsert(await safeJson(request));
     if(url.pathname==="/game-templates/assets/status"&&request.method==="GET")return this.gameTemplateAssetsStatus(url.searchParams.get("id"));
     if(url.pathname==="/game-templates/assets"&&request.method==="GET")return this.gameTemplateAssetGet(url.searchParams.get("id"),url.searchParams.get("assetId"));
+    if(url.pathname==="/game-templates/assets/image"&&request.method==="GET")return this.gameTemplateAssetImage(url.searchParams.get("id"),url.searchParams.get("assetId"),url.searchParams.get("revision"));
     if(url.pathname==="/game-templates/assets"&&request.method==="PUT")return this.gameTemplateAssetPut(await safeJson(request));
     if(url.pathname==="/game-templates/get"&&request.method==="GET")return this.gameTemplateGet(url.searchParams.get("id")||"");
     if(url.pathname==="/game-templates/delete"&&request.method==="DELETE")return this.gameTemplateDelete(url.searchParams.get("id")||"");
@@ -113,6 +115,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/start"&&request.method==="POST")return this.gmStart(request,await safeJson(request));
     if(url.pathname==="/gm/config"&&request.method==="POST")return this.gmConfig(request,await safeJson(request));
     if(url.pathname==="/gm/role-assets"&&request.method==="POST")return this.gmRoleAssets(request,await safeJson(request));
+    if(url.pathname==="/gm/artwork-refs"&&request.method==="POST")return this.gmArtworkRefs(request,await safeJson(request));
     if(url.pathname==="/gm/artwork-manifest"&&request.method==="GET")return this.gmArtworkManifest(request);
     const roleAssetImage=url.pathname.match(/^\/role-assets\/([^/]+)\/image$/);if(roleAssetImage&&request.method==="GET")return this.roleAssetImage(decodeURIComponent(roleAssetImage[1]));
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
@@ -349,7 +352,7 @@ export class RoomDurableObject extends DurableObject {
   // Artifact artwork is a reusable server-wide catalog, never part of a template revision.
   async sharedArtifactStatus(){
     const rows=await this.ctx.storage.list({prefix:"sharedArtifactMeta:"});
-    return j({ok:true,artifacts:[...rows.values()].filter(x=>x?.assetId).map(x=>({assetId:x.assetId,signature:x.signature,updatedAt:x.updatedAt}))});
+    return j({ok:true,artifacts:[...rows.values()].filter(x=>x?.assetId).map(x=>({assetId:x.assetId,signature:x.signature,updatedAt:x.updatedAt,package:x.package}))});
   }
   async sharedArtifactPut(body){
     const assetId=String(body?.assetId||"").slice(0,180),signature=String(body?.signature||"");
@@ -365,6 +368,9 @@ export class RoomDurableObject extends DurableObject {
         roleCard:card}
     };
     await this.ctx.storage.put("sharedArtifactData:"+assetId,String(body.imageDataUrl));
+    // Immutable per-signature reference: an ongoing match keeps its artwork
+    // even when the global Artifact card is edited for a later match.
+    await this.ctx.storage.put("sharedArtifactDataVersion:"+assetId+":"+signature,String(body.imageDataUrl));
     await this.ctx.storage.put(metaKey,saved);
     return j({ok:true,assetId,cached:false});
   }
@@ -374,16 +380,25 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||!validImageDataUrl(imageDataUrl))return j({ok:false,error:"SHARED_ARTIFACT_MISSING",assetId},404);
     return j({ok:true,assetId,package:{...meta.package,imageDataUrl}});
   }
+  async sharedArtifactImage(rawId,rawSignature){
+    const id=String(rawId||""),signature=String(rawSignature||"");
+    if(!/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)||!/^[0-9a-f]{64}$/.test(signature))return new Response("Invalid artwork reference",{status:400});
+    const current=await this.ctx.storage.get("sharedArtifactMeta:"+id);
+    const snapshot=await this.ctx.storage.get("sharedArtifactDataVersion:"+id+":"+signature);
+    const data=snapshot||(current?.signature===signature?await this.ctx.storage.get("sharedArtifactData:"+id):null);
+    return gmwwStoredArtworkResponse(data);
+  }
   // A Ván Mẫu only packages its role cards. Artifact selections remain configuration references.
   async gameTemplateAssetsStatus(rawId){
     const id=String(rawId||"").slice(0,120),rec=await this.ctx.storage.get("gameTemplate:"+id);
     if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    const cfg=rec.compiledConfig||{},assets=[...new Set((cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")).filter(x=>!x.endsWith(":")))],missing=[];
+    const cfg=rec.compiledConfig||{},assets=[...new Set((cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")).filter(x=>!x.endsWith(":")))],missing=[],packages={};
     for(const assetId of assets){
       const row=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
       if(!row||Number(row.revision)!==Number(rec.revision)||!validImageDataUrl(row.imageDataUrl))missing.push(assetId);
+      else packages[assetId]=row.package||null;
     }
-    return j({ok:true,id,revision:rec.revision,ready:assets.length>0&&missing.length===0,total:assets.length,missing,assets});
+    return j({ok:true,id,revision:rec.revision,ready:assets.length>0&&missing.length===0,total:assets.length,missing,assets,packages});
   }
   async gameTemplateAssetPut(body){
     const id=String(body?.id||"").slice(0,120),assetId=String(body?.assetId||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id);
@@ -394,12 +409,24 @@ export class RoomDurableObject extends DurableObject {
     const pkg=body?.package||{},roleId=assetId.startsWith("artifact:")?assetId:assetId.slice(5);
     const saved={revision:rec.revision,imageDataUrl:body.imageDataUrl,package:{roleId,roleName:String(pkg.roleName||"").slice(0,120),artworkAssetId:assetId,roleCard:sanitizePlayerRoleCard(pkg.roleCard||{}),faction:String(pkg.faction||"").slice(0,120),description:String(pkg.description||"").slice(0,6000)},updatedAt:new Date().toISOString()};
     await this.ctx.storage.put("gameTemplateAsset:"+id+":"+assetId,saved);
+    // Keep an immutable-per-revision copy for a match referencing an older
+    // version of this template. Do not copy it into each room.
+    await this.ctx.storage.put("gameTemplateAssetRevision:"+id+":"+assetId+":"+rec.revision,saved);
     return j({ok:true,id,assetId,revision:rec.revision,hasImage:true});
   }
   async gameTemplateAssetGet(rawId,rawAsset){
     const id=String(rawId||"").slice(0,120),assetId=String(rawAsset||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id),saved=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
     if(!rec||!saved||Number(saved.revision)!==Number(rec.revision)||!validImageDataUrl(saved.imageDataUrl))return j({ok:false,error:"TEMPLATE_ARTWORK_MISSING"},404);
     return j({ok:true,id,assetId,package:{...saved.package,imageDataUrl:saved.imageDataUrl}});
+  }
+  async gameTemplateAssetImage(rawId,rawAsset,rawRevision){
+    const id=String(rawId||"").slice(0,120),assetId=String(rawAsset||"").slice(0,180),revision=Number(rawRevision);
+    if(!id||!/^role:[A-Za-z0-9._:-]{1,120}$/.test(assetId)||!Number.isSafeInteger(revision)||revision<1)return new Response("Invalid template artwork reference",{status:400});
+    const snapshot=await this.ctx.storage.get("gameTemplateAssetRevision:"+id+":"+assetId+":"+revision);
+    const rec=await this.ctx.storage.get("gameTemplate:"+id);
+    const saved=snapshot||(Number(rec?.revision)===revision?await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId):null);
+    if(!saved||Number(saved.revision)!==revision)return new Response("Template artwork revision missing",{status:404,headers:{"cache-control":"no-store"}});
+    return gmwwStoredArtworkResponse(saved.imageDataUrl);
   }
   async memberDelete(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
@@ -556,12 +583,66 @@ export class RoomDurableObject extends DurableObject {
     meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
     return j({ok:true,count:stored.length,roles:stored});
   }
-  async gmArtworkManifest(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const rows=await this.ctx.storage.list({prefix:"artworkAsset:"}),assetIds=[...rows.keys()].map(k=>String(k).slice("artworkAsset:".length));return j({ok:true,count:assetIds.length,assetIds})}
+  async gmArtworkRefs(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const kind=String(body?.kind||""),refs=Array.isArray(body?.refs)?body.refs:[];
+    if(!["template","artifact"].includes(kind)||!refs.length||refs.length>30)return j({ok:false,error:"INVALID_ARTWORK_REFERENCES"},400);
+    const clean=[],seen=new Set();
+    for(const raw of refs){
+      const assetId=String(raw?.assetId||""),roleId=String(raw?.roleId||"");
+      if(!/^(role|artifact):[A-Za-z0-9._:-]{1,120}$/.test(assetId)||!roleId||seen.has(assetId)||assetId!==((kind==="template"?"role:":"artifact:")+roleId))return j({ok:false,error:"INVALID_ARTWORK_REFERENCE",assetId},400);
+      const reference=kind==="template"?{kind,assetId,templateId:String(raw?.templateId||""),revision:Number(raw?.revision)}:{kind,assetId,signature:String(raw?.signature||"")};
+      if(kind==="template"&&(!reference.templateId||!Number.isSafeInteger(reference.revision)||reference.revision<1))return j({ok:false,error:"INVALID_TEMPLATE_REFERENCE"},400);
+      if(kind==="artifact"&&!/^[0-9a-f]{64}$/.test(reference.signature))return j({ok:false,error:"INVALID_ARTIFACT_REFERENCE"},400);
+      seen.add(assetId);clean.push({assetId,roleId,reference,raw});
+    }
+    // Starting a new match invalidates *references* only, not stored artwork,
+    // members, templates or prior match history.
+    if(kind==="template"){
+      const prior=await this.ctx.storage.list({prefix:"artworkRef:"});
+      if(prior.size)await this.ctx.storage.delete([...prior.keys()]);
+      await this.ctx.storage.put("gmArtworkActiveIds",clean.map(x=>x.assetId));
+    }else{
+      const prior=(await this.ctx.storage.get("gmArtworkActiveIds"))||[];
+      await this.ctx.storage.put("gmArtworkActiveIds",[...new Set([...prior,...clean.map(x=>x.assetId)])]);
+    }
+    for(const item of clean){
+      const {assetId,roleId,reference,raw}=item;
+      const roleCard=kind==="artifact"?sanitizePlayerArtifactCard(raw.roleCard||{}):sanitizePlayerRoleCard(raw.roleCard||{});
+      await this.ctx.storage.put("artworkRef:"+assetId,reference);
+      await this.ctx.storage.put("roleCatalog:"+(kind==="artifact"?assetId:roleId),{roleId:kind==="artifact"?assetId:roleId,roleName:String(roleCard.name||raw.roleName||""),faction:roleCard.faction||raw.faction||"",description:roleCard.information||raw.description||"",artworkAssetId:assetId,artworkId:assetId,roleCard,updatedAt:new Date().toISOString()});
+    }
+    return j({ok:true,ready:true,mode:"reference",count:clean.length,assetIds:clean.map(x=>x.assetId)});
+  }
+  async gmArtworkManifest(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const active=await this.ctx.storage.get("gmArtworkActiveIds");
+    if(Array.isArray(active))return j({ok:true,count:active.length,assetIds:active,mode:"reference"});
+    const rows=await this.ctx.storage.list({prefix:"artworkAsset:"}),assetIds=[...rows.keys()].map(k=>String(k).slice("artworkAsset:".length));
+    return j({ok:true,count:assetIds.length,assetIds,mode:"legacy"});
+  }
   async roleAssetImage(roleId){
     // Artwork is preloaded privately during setup but MUST remain unavailable to Player Web until Phát Vai.
     const meta=await this.ctx.storage.get('meta');
     if(!['role_delivery','running','started','game','playing'].includes(String(meta?.phase||'').toLowerCase()))return new Response('Artwork is not released',{status:404,headers:{'cache-control':'no-store'}});
     const rid=String(roleId||"");
+    const active=await this.ctx.storage.get("gmArtworkActiveIds");
+    if(Array.isArray(active)&&!active.includes(rid))return new Response("Artwork not assigned to this match",{status:404,headers:{"cache-control":"no-store"}});
+    const ref=await this.ctx.storage.get("artworkRef:"+rid);
+    if(ref){
+      const p=new URLSearchParams({assetId:rid});
+      let endpoint="";
+      if(ref.kind==="template"){p.set("id",ref.templateId);p.set("revision",String(ref.revision));endpoint="/game-templates/assets/image"}
+      else if(ref.kind==="artifact"){p.set("signature",ref.signature);endpoint="/artifacts/shared/image"}
+      else return new Response("Invalid artwork reference",{status:404});
+      try{
+        const store=this.env.ROOMS.get(this.env.ROOMS.idFromName(MEMBER_STORE_NAME));
+        const asset=await store.fetch("https://member.internal"+endpoint+"?"+p);
+        if(!asset.ok)return new Response("Referenced artwork unavailable",{status:asset.status===400?400:404,headers:{"cache-control":"no-store","x-gmww-artwork-state":"missing"}});
+        return new Response(asset.body,{status:200,headers:{"content-type":asset.headers.get("content-type")||"image/webp","cache-control":"private, max-age=3600","x-content-type-options":"nosniff","x-gmww-artwork-asset":rid}});
+      }catch{return new Response("Artwork reference temporarily unavailable",{status:503,headers:{"cache-control":"no-store"}})}
+    }
+    if(Array.isArray(active))return new Response("Referenced artwork missing",{status:404,headers:{"cache-control":"no-store"}});
     const direct=await this.ctx.storage.get("artworkAsset:"+rid);
     const pkg=(await this.ctx.storage.get("roleCatalog:"+rid))||{},assetId=String(pkg.artworkAssetId||pkg.artworkId||rid||("role:"+rid));
     const primary=direct||await this.ctx.storage.get("artworkAsset:"+assetId),legacy=await this.ctx.storage.get("roleAsset:"+rid),src=primary||legacy;
@@ -585,7 +666,7 @@ export class RoomDurableObject extends DurableObject {
       const snap=catalog.get(requestedRoleId)||{},pkg=(await this.ctx.storage.get("roleCatalog:"+requestedRoleId))||{};
       const incomingCard=sanitizePlayerRoleCard(row?.roleCard||row),savedCard=pkg.roleCard||{},merged=mergePlayerRoleCard(savedCard,incomingCard),artworkAssetId=String(row?.artworkAssetId||row?.artworkId||merged.artworkAssetId||merged.artworkId||pkg.artworkAssetId||pkg.artworkId||("role:"+requestedRoleId)).slice(0,180),incomingImage=extractRoleImage(row)||extractRoleImage(row?.role);
       if(incomingImage){await this.ctx.storage.put("artworkAsset:"+artworkAssetId,incomingImage);await this.ctx.storage.put("roleAsset:"+requestedRoleId,incomingImage)}
-      const storedImage=(await this.ctx.storage.get("artworkAsset:"+artworkAssetId))||((!pkg.artworkAssetId&&!pkg.artworkId)?await this.ctx.storage.get("roleAsset:"+requestedRoleId):null),roleCard={...merged,artworkAssetId,artworkId:artworkAssetId};
+      const storedImage=(await this.ctx.storage.get("artworkRef:"+artworkAssetId))||(await this.ctx.storage.get("artworkAsset:"+artworkAssetId))||((!pkg.artworkAssetId&&!pkg.artworkId)?await this.ctx.storage.get("roleAsset:"+requestedRoleId):null),roleCard={...merged,artworkAssetId,artworkId:artworkAssetId};
       const roleName=String(roleCard.name||row?.roleName||row?.name||pkg.roleName||snap.roleName||"Vai Trò").slice(0,120);
       const faction=roleCard.faction??row?.faction??row?.factionName??pkg.faction??snap.faction??"";
       const description=String(roleCard.information??row?.description??row?.roleDescription??pkg.description??snap.description??"").slice(0,6000);
@@ -598,7 +679,7 @@ export class RoomDurableObject extends DurableObject {
           const sharedArtifactCatalog=(await this.ctx.storage.get("roleCatalog:artifact:"+artifactId))||{};
           const artifactCard=sanitizePlayerArtifactCard(artifactRaw?.artifactCard||sharedArtifactCatalog.roleCard||artifactRaw),artifactAssetId=String(artifactRaw?.artworkAssetId||artifactRaw?.artworkId||artifactCard.artworkAssetId||artifactCard.artworkId||("artifact:"+artifactId)).slice(0,180),artifactImageData=extractRoleImage(artifactRaw);
           if(artifactImageData)await this.ctx.storage.put("artworkAsset:"+artifactAssetId,artifactImageData);
-          const artifactStoredImage=await this.ctx.storage.get("artworkAsset:"+artifactAssetId),artifactImage="/api/rooms/"+encodeURIComponent(meta.code)+"/role-assets/"+encodeURIComponent(artifactAssetId)+"/image";
+          const artifactStoredImage=(await this.ctx.storage.get("artworkRef:"+artifactAssetId))||await this.ctx.storage.get("artworkAsset:"+artifactAssetId),artifactImage="/api/rooms/"+encodeURIComponent(meta.code)+"/role-assets/"+encodeURIComponent(artifactAssetId)+"/image";
           artifact={loginId,matchId:String(body?.matchId||meta.matchId||""),matchRevision:Number(body?.matchRevision||meta.matchRevision||0),artifactId,artifactName:String(artifactCard.name||artifactRaw?.artifactName||artifactRaw?.name||"Artifact").slice(0,120),description:String(artifactCard.information||artifactRaw?.description||"").slice(0,6000),artifactImage,artworkAssetId:artifactAssetId,artworkId:artifactAssetId,artworkAvailable:!!artifactStoredImage,artifactCard:{...artifactCard,artworkAssetId:artifactAssetId,artworkId:artifactAssetId},singleUse:artifactCard.singleUse===true,deliveredAt:new Date().toISOString(),viewedAt:null,usedAt:null};
         }
       }
@@ -1427,6 +1508,15 @@ export default {async fetch(request,env){
   if(url.pathname==="/"&&request.method==="GET")return playerPage("");return new Response("Không tìm thấy trang",{status:404,headers:{...corsHeaders(),"content-type":"text/plain; charset=UTF-8"}});
 }};
 
+function gmwwStoredArtworkResponse(data){
+  if(!validImageDataUrl(data))return new Response("Artwork not found",{status:404,headers:{"cache-control":"no-store"}});
+  const match=String(data).match(/^data:(image\\/(?:webp|png|jpeg));base64,(.+)$/i);
+  if(!match)return new Response("Invalid artwork",{status:404});
+  try{
+    const bin=atob(match[2]);
+    return new Response(Uint8Array.from(bin,c=>c.charCodeAt(0)),{headers:{"content-type":match[1],"cache-control":"no-store","x-content-type-options":"nosniff"}});
+  }catch{return new Response("Invalid artwork",{status:404})}
+}
 async function applyPublicEntryRateLimit(env,request,policy){
   // Cloudflare sets CF-Connecting-IP at the trusted edge. Never trust X-Forwarded-For.
   // Hash before using the identity as a Durable Object name; never store raw addresses.
@@ -1550,21 +1640,20 @@ async function gmPreloadSharedArtifacts(env,raw,request){
   const body=await safeJson(request),assetIds=[...new Set(Array.isArray(body?.assetIds)?body.assetIds.map(String):[])];
   if(!assetIds.length||assetIds.length>30||!assetIds.every(id=>/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)))
     return j({ok:false,error:"INVALID_SHARED_ARTIFACT_SELECTION"},400);
-  for(const assetId of assetIds){
-    const resp=await memberStore(env).fetch("https://member.internal/artifacts/shared/get?assetId="+encodeURIComponent(assetId));
-    if(!resp.ok)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY",assetId,message:"Bộ Artifact dùng chung chưa có "+assetId+". Vui lòng hoàn tất đồng bộ."},409);
-    const data=await resp.json(),pkg=data?.package;
-    if(!pkg?.imageDataUrl)return j({ok:false,error:"SHARED_ARTIFACT_EMPTY",assetId},424);
-    const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/role-assets",
-      {method:"POST",headers:request.headers,body:JSON.stringify({roles:[pkg]})}));
-    const result=await push.json().catch(()=>null);
-    if(!push.ok||result?.roles?.[0]?.hasImage!==true)return j({ok:false,error:"SHARED_ARTIFACT_TRANSFER_FAILED",assetId},424);
-  }
+  // One metadata-only call: no Base64 download/upload for every new room.
+  const response=await memberStore(env).fetch("https://member.internal/artifacts/shared/status");
+  if(!response.ok)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY"},424);
+  const status=await response.json(),available=new Map((status?.artifacts||[]).map(x=>[String(x.assetId),x]));
+  const missing=assetIds.filter(id=>!available.get(id)?.signature||!available.get(id)?.package);
+  if(missing.length)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY",missing},409);
+  const refs=assetIds.map(assetId=>({assetId,roleId:assetId.slice(9),signature:available.get(assetId).signature,roleCard:available.get(assetId).package.roleCard}));
+  const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-refs",{method:"POST",headers:request.headers,body:JSON.stringify({kind:"artifact",refs})}));
+  if(!push.ok)return j({ok:false,error:"SHARED_ARTIFACT_REFERENCE_FAILED"},424);
   const check=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
   const manifest=await check.json().catch(()=>null);
   if(!check.ok||!assetIds.every(id=>manifest?.assetIds?.includes(id)))
     return j({ok:false,error:"SHARED_ARTIFACT_VERIFY_FAILED"},424);
-  return j({ok:true,ready:true,assetIds,count:assetIds.length});
+  return j({ok:true,ready:true,mode:"reference",assetIds,count:assetIds.length});
 }
 async function gmPreloadTemplateAssets(env,raw,request){
   if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
@@ -1575,22 +1664,16 @@ async function gmPreloadTemplateAssets(env,raw,request){
   const status=await statusResponse.json();
   if(!status.ready)return j({ok:false,error:"TEMPLATE_ASSETS_NOT_READY",missing:status.missing||[],message:"Artwork của Ván Mẫu chưa được đóng gói đầy đủ."},409);
   const requested=Array.isArray(body?.assetIds)?[...new Set(body.assetIds.map(String))]:status.assets;
-  if(!requested.length||!requested.every(id=>status.assets.includes(id)))return j({ok:false,error:'INVALID_TEMPLATE_ASSET_SELECTION'},400);
-  let transferred=0;
-  for(const assetId of requested){
-    const assetResponse=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(id)+"&assetId="+encodeURIComponent(assetId));
-    if(!assetResponse.ok)return j({ok:false,error:"TEMPLATE_ASSET_FETCH_FAILED",assetId},424);
-    const asset=await assetResponse.json();
-    if(!asset?.package?.imageDataUrl)return j({ok:false,error:"TEMPLATE_ASSET_EMPTY",assetId},424);
-    const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/role-assets",{method:"POST",headers:request.headers,body:JSON.stringify({roles:[asset.package]})}));
-    const result=await push.json().catch(()=>null);
-    if(!push.ok||result?.ok!==true||result?.roles?.[0]?.hasImage!==true)return j({ok:false,error:"ROOM_ARTWORK_PRELOAD_FAILED",assetId,message:result?.message||result?.error||"Không thể nạp artwork lên Phòng."},424);
-    transferred++;
-  }
+  if(!requested.length||!requested.every(assetId=>status.assets.includes(assetId)&&status.packages?.[assetId]))
+    return j({ok:false,error:"INVALID_TEMPLATE_ASSET_SELECTION"},400);
+  const refs=requested.map(assetId=>({assetId,roleId:assetId.slice(5),templateId:id,revision:status.revision,roleCard:status.packages[assetId].roleCard,roleName:status.packages[assetId].roleName,faction:status.packages[assetId].faction,description:status.packages[assetId].description}));
+  const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-refs",{method:"POST",headers:request.headers,body:JSON.stringify({kind:"template",refs})}));
+  if(!push.ok)return j({ok:false,error:"ROOM_ARTWORK_REFERENCE_FAILED",message:"Không đăng ký được tham chiếu artwork Vai Trò."},424);
   const verify=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
   const manifest=await verify.json().catch(()=>null);
-  if(!verify.ok||!requested.every(id=>manifest?.assetIds?.includes(id)))return j({ok:false,error:"ROOM_ARTWORK_VERIFY_FAILED",message:"Artwork chưa được xác thực đầy đủ trong Phòng."},424);
-  return j({ok:true,ready:true,templateId:id,count:transferred,assetIds:requested});
+  if(!verify.ok||!requested.every(assetId=>manifest?.assetIds?.includes(assetId)))
+    return j({ok:false,error:"ROOM_ARTWORK_VERIFY_FAILED",message:"Artwork chưa được xác thực đầy đủ trong Phòng."},424);
+  return j({ok:true,ready:true,mode:"reference",templateId:id,revision:status.revision,count:requested.length,assetIds:requested});
 }
 async function roomProxy(env,raw,path,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);return roomStub(env,c).fetch(new Request("https://room.internal"+path,{method:request.method,headers:request.headers,body:request.method==="GET"?undefined:request.body}))}
 async function publicRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const res=await roomStub(env,c).fetch("https://room.internal/state");if(res.ok)await syncRoomDirectory(env,c);return res}
