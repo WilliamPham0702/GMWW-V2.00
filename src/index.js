@@ -522,6 +522,9 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmArtworkManifest(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const rows=await this.ctx.storage.list({prefix:"artworkAsset:"}),assetIds=[...rows.keys()].map(k=>String(k).slice("artworkAsset:".length));return j({ok:true,count:assetIds.length,assetIds})}
   async roleAssetImage(roleId){
+    // Artwork is preloaded privately during setup but MUST remain unavailable to Player Web until Phát Vai.
+    const meta=await this.ctx.storage.get('meta');
+    if(!['role_delivery','running','started','game','playing'].includes(String(meta?.phase||'').toLowerCase()))return new Response('Artwork is not released',{status:404,headers:{'cache-control':'no-store'}});
     const rid=String(roleId||"");
     const direct=await this.ctx.storage.get("artworkAsset:"+rid);
     const pkg=(await this.ctx.storage.get("roleCatalog:"+rid))||{},assetId=String(pkg.artworkAssetId||pkg.artworkId||rid||("role:"+rid));
