@@ -78,3 +78,8 @@ jobs:
             -H 'content-type: application/json' \
             --data '{"loginId":"ciuser2"}' > /tmp/login-2.json
           grep -q '"ok":true' /tmp/login-2.json
+
+          # Real Durable Object integration: verify that each authenticated Player
+          # receives its private Role + Artifact together, ACKs it, can reconnect,
+          # and cannot ACK a previous delivery after the GM republishes.
+          node tests/worker-private-delivery-e2e.mjs
