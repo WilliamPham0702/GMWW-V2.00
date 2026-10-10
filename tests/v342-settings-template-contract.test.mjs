@@ -10,9 +10,9 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('Settings renders exactly four numbered groups and a vertical 14-tool grid',()=>{
+test('Settings renders five numbered groups and a vertical 14-tool grid',()=>{
  const section=html.slice(html.indexOf('<section class="page" id="settings">'),html.indexOf('</section>',html.indexOf('<section class="page" id="settings">')));
- const ids=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+ const ids=['settingsGroupUpdate','settingsGroupErrorReport','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
  assert.deepEqual([...section.matchAll(/id="(settingsGroup\w+)"/g)].map(m=>m[1]),ids);
  assert.doesNotMatch(section,/id="settingsGroupMaintenance"/);
  for(const control of ['settingsRunHealth','quickMaintenanceCard','gmwwOpsCenter','serverHealthCard','systemDiagnosticsCard','characterScaleChoices'])
