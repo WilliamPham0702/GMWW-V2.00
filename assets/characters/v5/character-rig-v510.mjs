@@ -3,6 +3,7 @@
 // Shared GPU geometry across 30 instances; per-character 16-joint skeleton and one draw call.
 // The model is procedural geometry, not a final hand-crafted, owner-approved GLB artwork.
 import * as THREE from './vendor/three.module.min.js';
+import {V414_SKIN_PALETTES,V414_LAYERS} from '../v4/skin-v414.mjs';
 
 export const V510_RIG_VERSION='5.10-skinned-master01-review';
 export const V510_BONES=Object.freeze([
@@ -10,10 +11,15 @@ export const V510_BONES=Object.freeze([
  'shoulderL','elbowL','handL','shoulderR','elbowR','handR',
  'thighL','kneeL','footL','thighR','kneeR','footR'
 ]);
-const HEAD='#152d4a', HAIR_HIGHLIGHT='#315579', SKIN='#f1bc94', SHADE='#d88d71',
- EYE='#21354d', IRIS='#2b7597', WHITE='#fff9ed', SHIRT='#1884bb', LIGHT='#50c6d6',
- DARK='#0e5a89', SHORTS='#eee0c3', SEAM='#bbaa90', SANDAL='#1b5b79',
- GOLD='#f3cb6f', FLOWER='#fff4da', LEAF='#79d5b8';
+// Exact V4.14 design colors: no invented V5.10 blue-floral replacement palette.
+const original=V414_SKIN_PALETTES['character-01'];
+const HEAD=original.hair, HAIR_HIGHLIGHT=original.hairHigh,
+ SKIN=original.skin,SHADE=original.skinDark,EYE=original.ink,
+ IRIS=original.shoeDark,WHITE=original.skinBright,
+ SHIRT=original.shirt,LIGHT=original.shirtLight,DARK=original.shirtDark,
+ SHORTS=original.bottom,SEAM=original.bottomDark,SANDAL=original.shoeDark,
+ GOLD=original.detail,FLOWER=original.detail,LEAF=original.shirtLight;
+const V530_ORIGINAL_SKIN_SOURCE='V4.14-color-tokens-procedural-adapter';
 const BONE_LAYOUT=[
  {n:'root',parent:-1,x:0,y:0,z:0},
  {n:'hips',parent:0,x:0,y:1.33,z:0},
@@ -200,7 +206,8 @@ export function createSkinnedChibi(highDetail=true){
  shadow.rotation.x=-Math.PI/2;shadow.position.y=.017;shadow.scale.set(.73,.42,1);
  root.add(shadow);
  root.userData.gmwwV510=true;
- return {root,mesh:skinned,bones,shadow,model,highDetail};
+ return {root,mesh:skinned,bones,shadow,model,highDetail,
+  skinSource:V530_ORIGINAL_SKIN_SOURCE,skinLayerCount:V414_LAYERS.length};
 }
 export function animateSkinnedChibi(rig,motion){
  const p=motion.pose,b=rig.bones;
@@ -228,7 +235,8 @@ export function animateSkinnedChibi(rig,motion){
 }
 export function v510ModelStats(detail=true){
  const model=getGeometry(detail);
- return {version:V510_RIG_VERSION,bones:V510_BONES.length,
+ return {version:V510_RIG_VERSION,skinSource:V530_ORIGINAL_SKIN_SOURCE,
+  originalSkinLayers:V414_LAYERS.length,originalSkinPNGLoaded:false,bones:V510_BONES.length,
   vertices:model.vertices,triangles:model.triangles,
   sceneObjectsPerActor:2,skinnedMeshesPerActor:1,sharedGeometry:true,parts:model.parts};
 }
