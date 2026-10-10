@@ -394,8 +394,18 @@ export class RoomDurableObject extends DurableObject {
     if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     const cfg=rec.compiledConfig||{},assets=[...new Set((cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")).filter(x=>!x.endsWith(":")))],missing=[],packages={};
     for(const assetId of assets){
-      const row=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
-      if(!row||Number(row.revision)!==Number(rec.revision)||!validImageDataUrl(row.imageDataUrl))missing.push(assetId);
+      const key="gameTemplateAssetMeta:"+id+":"+assetId;
+      let row=await this.ctx.storage.get(key);
+      if(!row||Number(row.revision)!==Number(rec.revision)){
+        // One-time migration of V3.70 packages. Subsequent selections read
+        // metadata only, never megabytes of Base64 artwork per role.
+        const saved=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
+        if(saved&&Number(saved.revision)===Number(rec.revision)&&validImageDataUrl(saved.imageDataUrl)){
+          row={revision:saved.revision,package:saved.package,verified:true};
+          if(typeof this.ctx.storage.put==="function")await this.ctx.storage.put(key,row);
+        }
+      }
+      if(!row||Number(row.revision)!==Number(rec.revision)||row.verified!==true)missing.push(assetId);
       else packages[assetId]=row.package||null;
     }
     return j({ok:true,id,revision:rec.revision,ready:assets.length>0&&missing.length===0,total:assets.length,missing,assets,packages});
@@ -412,6 +422,7 @@ export class RoomDurableObject extends DurableObject {
     // Keep an immutable-per-revision copy for a match referencing an older
     // version of this template. Do not copy it into each room.
     await this.ctx.storage.put("gameTemplateAssetRevision:"+id+":"+assetId+":"+rec.revision,saved);
+    await this.ctx.storage.put("gameTemplateAssetMeta:"+id+":"+assetId,{revision:rec.revision,verified:true,package:saved.package});
     return j({ok:true,id,assetId,revision:rec.revision,hasImage:true});
   }
   async gameTemplateAssetGet(rawId,rawAsset){
