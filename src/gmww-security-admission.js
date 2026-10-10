@@ -4,9 +4,11 @@ export const PUBLIC_ENTRY_LIMITS=Object.freeze({
   "/api/members/login":Object.freeze({key:"member-login",method:"POST",limit:120,windowMs:60000}),
   "/api/members/register":Object.freeze({key:"member-register",method:"POST",limit:60,windowMs:60000}),
   "/api/members/reset-request":Object.freeze({key:"member-reset",method:"POST",limit:30,windowMs:60000}),
-  "/api/rooms":Object.freeze({key:"room-create",method:"POST",limit:30,windowMs:60000}),
-  "/api/gm/ai-support/chat":Object.freeze({key:"ai-support",method:"POST",limit:8,windowMs:60000})
+  "/api/rooms":Object.freeze({key:"room-create",method:"POST",limit:30,windowMs:60000})
 });
+
+// This quota is NOT a public entry policy; it must never change the 30-player entry gates.
+export const AI_SUPPORT_REQUEST_LIMIT=Object.freeze({key:"ai-support",method:"POST",limit:8,windowMs:60000});
 
 export function publicEntryPolicy(method,path){
   const policy=PUBLIC_ENTRY_LIMITS[String(path||"")];
