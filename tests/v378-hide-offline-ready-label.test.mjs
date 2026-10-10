@@ -10,7 +10,7 @@ const start=village.indexOf('export function safeText('),end=village.indexOf('ex
 assert.ok(start>=0&&end>start);
 
 test('Player village removes the OFFLINE READY chip without changing presence or important statuses',()=>{
-  const api=vm.runInNewContext(village.slice(start,end).replaceAll('export function ','')+';({visibleVillagePlayerStatus})');
+  const api=vm.runInNewContext(village.slice(start,end).replaceAll('export function ','function ')+';({visibleVillagePlayerStatus})');
   const label=api.visibleVillagePlayerStatus;
   for(const statusLabel of ['', 'OFFLINE', 'OFFLINE • READY', 'OFFLINE · READY', 'OFFLINE • CHƯA READY','READY']){
     assert.equal(label({online:false,ready:true,statusLabel}), '',statusLabel);
