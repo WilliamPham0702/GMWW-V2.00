@@ -4,6 +4,7 @@ import { DurableObject } from "cloudflare:workers";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
+import { buildPrivateDeliveryManifest, validPrivateDeliveryAcknowledgment } from "./gmww-delivery-manifest.js";
 import { GMWW_MEMBER_AVATARS, GMWW_MEMBER_AVATAR_IDS } from "./gmww-avatars.js";
 import { EARLY_ARTIFACTS, artifactCycleKey, reserveArtifactActivation } from "./gmww-game-scene-rules.js";
 import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./gmww-seat-movement-rules.js";
@@ -31,7 +32,7 @@ export class RoomDurableObject extends DurableObject {
   async fetch(request){
     const path=new URL(request.url).pathname;
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -137,6 +138,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/end"&&request.method==="POST")return this.gmEnd(request,await safeJson(request));
     if(url.pathname==="/gm/delete"&&request.method==="POST")return this.gmDelete(request);
     if(url.pathname==="/player/state"&&request.method==="POST")return this.playerState(await safeJson(request));
+    if(url.pathname==="/player/delivery-received"&&request.method==="POST")return this.playerDeliveryReceived(await safeJson(request));
     if(url.pathname==="/player/role-viewed"&&request.method==="POST")return this.playerRoleViewed(await safeJson(request));
     if(url.pathname==="/player/artifact-viewed"&&request.method==="POST")return this.playerArtifactViewed(await safeJson(request));
     if(url.pathname==="/player/artifact-activate"&&request.method==="POST")return this.playerArtifactActivate(await safeJson(request));
@@ -1146,8 +1148,30 @@ export class RoomDurableObject extends DurableObject {
       attachedArtifact=roleRows.find(r=>r?.artifact&&(!meta.matchId||String(r.matchId||"")===String(meta.matchId)))?.artifact||null,
       currentArtifact=storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact,
       artifact=currentArtifact?privateArtifact(currentArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
+    const deliveryManifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments:(await this.ctx.storage.get("assignments"))||[],roles:roleRows,artifact:currentArtifact});
+    const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
+    deliveryManifest.receivedAt=deliveryAck.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:!!currentArtifact,deliveryManifest:{schemaVersion:1,deliveryId:String(meta.matchId||meta.code||'')+':'+String(loginId),matchId:String(meta.matchId||''),roleCount:roles.length,artifactExpected:!!currentArtifact,roleIds:roles.map(r=>String(r.roleId||'')),artifactId:currentArtifact?String(currentArtifact.artifactId||''):null,complete:!!role&&(!currentArtifact||!!artifact)},artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+  }
+  async playerDeliveryReceived(body){
+    const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
+    if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
+    const players=(await this.ctx.storage.get("players"))||{},player=players["member:"+loginId];
+    if(!loginId||!player||player.kind!=="member")return j({ok:false,error:"PLAYER_NOT_IN_ROOM"},403);
+    if(!["role_delivery","running"].includes(String(meta.phase||"").toLowerCase()))return j({ok:false,error:"ROLE_DELIVERY_NOT_STARTED"},409);
+    const stored=(await this.ctx.storage.get("roles:"+loginId))||[],legacy=await this.ctx.storage.get("role:"+loginId),roles=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
+    const artifact=await this.ctx.storage.get("artifact:"+loginId)||roles.find(row=>row?.artifact)?.artifact||null;
+    const assignments=(await this.ctx.storage.get("assignments"))||[];
+    const manifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments,roles,artifact});
+    if(!validPrivateDeliveryAcknowledgment(manifest,body))return j({ok:false,error:"DELIVERY_RECEIPT_MISMATCH"},409);
+    const key="deliveryAck:"+loginId,previous=(await this.ctx.storage.get(key))||null;
+    if(previous.deliveryId===manifest.deliveryId)return j({ok:true,deliveryId:manifest.deliveryId,receivedAt:previous.receivedAt,reused:true});
+    const receivedAt=new Date().toISOString();await this.ctx.storage.put(key,{deliveryId:manifest.deliveryId,receivedAt,matchId:manifest.matchId});
+    for(const row of assignments)if(normalizeLoginId(row?.loginId)===loginId&&(!meta.matchId||String(row?.matchId||"")===String(meta.matchId)))row.receivedAt=receivedAt;
+    await this.ctx.storage.put("assignments",assignments);
+    this.broadcast({type:"delivery_progress",loginId,deliveryId:manifest.deliveryId,receivedAt});
+    return j({ok:true,deliveryId:manifest.deliveryId,receivedAt});
   }
   async playerRoleViewed(body){
     const loginId=normalizeLoginId(body?.loginId),wantedIndex=Number.isInteger(Number(body?.roleIndex))?Math.max(0,Number(body.roleIndex)):null,wantedRoleId=String(body?.roleId||""),stored=await this.ctx.storage.get("roles:"+loginId),legacy=await this.ctx.storage.get("role:"+loginId),roles=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
@@ -1526,6 +1550,7 @@ export default {async fetch(request,env){
   const heartbeatApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/heartbeat$/);if(heartbeatApi&&request.method==="POST")return heartbeatRoom(env,heartbeatApi[1],request);
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
   const playerState=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/me$/);if(playerState&&request.method==="GET")return playerPrivateState(env,playerState[1],request);
+  const deliveryReceived=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/delivery\/received$/);if(deliveryReceived&&request.method==="POST")return playerDeliveryReceivedApi(env,deliveryReceived[1],request);
   const roleViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role\/viewed$/);if(roleViewed&&request.method==="POST")return playerRoleViewedApi(env,roleViewed[1],request);
   const artifactViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/viewed$/);if(artifactViewed&&request.method==="POST")return playerArtifactViewedApi(env,artifactViewed[1],request);
   const artifactActivate=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/activate$/);if(artifactActivate&&request.method==="POST")return playerArtifactActivateApi(env,artifactActivate[1],request);
@@ -1626,6 +1651,7 @@ async function playerRoomMoveCompleteApi(env,raw,request){
   const data=await me.json(),body=await safeJson(request)||{},res=await roomStub(env,code).fetch("https://room.internal/player/move-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})});
   if(res.ok)await syncRoomDirectory(env,code);return res
 }
+async function playerDeliveryReceivedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/delivery-received",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerRoleViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/role-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactActivateApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-activate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
