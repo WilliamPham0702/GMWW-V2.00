@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.82';
+const VERSION='3.83';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -3465,6 +3465,12 @@ async function savePlayGame(){
     playSceneState.gameName=gameName;savePlayScene();
     playGameStatus('Đang đóng gói artwork Vai Trò; Artifact dùng kho chung của server…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
+    // Prewarm the selected Artifact pool when the template is SAVED, not during room setup.
+    // Artifact bytes remain in the global shared catalog; never copy them into a template.
+    if(cfg.artifacts.length){
+      playGameStatus('Đang chuẩn bị trước '+cfg.artifacts.length+' Artifact dùng chung…','progress');
+      await playEnsureSharedArtifactPool(cfg);
+    }
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
   }catch(err){
     const raw=String(err?.message||'Không lưu được Ván Mẫu.');
@@ -3523,6 +3529,19 @@ function playAssignmentSetArtifact(loginId,artifactId){
   playSceneState.activePlayerId=String(loginId);playSceneState.roleId=String(row.roleId||'');
   playSceneState.artifactId=row.artifactId;savePlayScene();renderPlayScene();
 }
+function playAssignmentSignature(){
+  // Identify exactly which GM-private distribution was explicitly saved.
+  return JSON.stringify({roomCode:playSceneState.roomCode||'',matchId:playSceneState.matchId||'',
+    rows:(playSceneState.assignmentsPreview||[]).map(r=>[r.loginId,r.roleId,r.artifactId||''])});
+}
+function playSaveAssignments(){
+  const status=playAssignmentDraftStatus();
+  if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
+  // Step 5 stores only the GM's private local draft. Player Web receives no cards.
+  playSceneState.assignmentSavedSignature=playAssignmentSignature();
+  savePlayScene();renderPlayRoleAssignmentPanel();
+  return true;
+}
 function playConfirmAssignments(){
   const status=playAssignmentDraftStatus();
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
@@ -3544,7 +3563,9 @@ function renderPlayRoleAssignmentPanel(){
     list=document.getElementById('playAssignmentRows'),count=document.getElementById('playAssignmentCount'),
     notice=document.getElementById('playAssignmentNotice'),confirm=document.getElementById('playAssignmentConfirm');
   if(count)count.textContent=rows.length+' / '+members.length+' người · '+playRolePlanTotal()+' lá Vai Trò';
-  if(notice){notice.textContent=status.message;notice.classList.toggle('is-error',!status.ok)}
+  if(notice){notice.textContent=status.ok&&playSceneState.assignmentSavedSignature===playAssignmentSignature()
+    ?'Đã LƯU Phân Vai trên thiết bị GM. Chưa phát bài xuống Player Web.'
+    :status.message;notice.classList.toggle('is-error',!status.ok)}
   if(confirm)confirm.disabled=!status.ok||playSceneRuntime.busy;
   for(const id of ['playAssignmentRandom','playAssignmentInOrder','playAssignmentArtifactShuffle']){
     const button=document.getElementById(id);if(button)button.disabled=playSceneRuntime.busy||!members.length||playRolePlanTotal()!==members.length||(id==='playAssignmentArtifactShuffle'&&(!playSceneState.artifactsEnabled||!rows.length));
@@ -3750,6 +3771,19 @@ async function playEnsureSharedArtifactPool(cfg){
   const missing=ids.filter(id=>!ready.has('artifact:'+id));
   if(missing.length)throw new Error('Bộ Artifact dùng chung chưa sẵn sàng: '+missing.join(', ')+'. '+String(report.failed[0]?.error||'Hãy kiểm tra artwork trong Bộ Bài.'));
 }
+async function playEnsureSharedArtifactReferencesReady(cfg){
+  const ids=playMatchArtifactAssetIds(cfg);
+  if(!ids.length)return;
+  // Choose Ván Mẫu: verify lightweight metadata only; do not rehash/re-encode prepacked art.
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const ready=new Set((status?.artifacts||[]).map(a=>String(a.assetId)));
+  const missing=ids.filter(id=>!ready.has(id));
+  if(missing.length){
+    // A newly selected or removed Artifact is the only reason to lazily prepare here.
+    playGameStatus('Đang bổ sung '+missing.length+' Artifact chưa có trong kho chung…','progress');
+    await playEnsureSharedArtifactPool({artifacts:missing.map(id=>({artifactId:id.slice('artifact:'.length)}))});
+  }
+}
 async function playEnsureTemplateAssets(id,cfg){
   const endpoint='/api/gm/game-templates/'+encodeURIComponent(id)+'/assets';
   let status=await gmApi(endpoint+'/status');
@@ -3792,7 +3826,7 @@ async function playPreloadSelectedArtwork(cfg){
   // per selected pool, with no per-game artwork serialization.
   if(artifacts.length){
     playGameStatus('Đang liên kết '+artifacts.length+' Artifact từ kho chung Server…','progress');
-    await playEnsureSharedArtifactPool(cfg);
+    await playEnsureSharedArtifactReferencesReady(cfg);
     const linked=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:20000,
       body:JSON.stringify({assetIds:artifacts})});
     if(linked?.ready!==true||linked?.mode!=='reference'||!artifacts.every(id=>linked.assetIds?.includes(id)))
@@ -4293,7 +4327,7 @@ function initPlayScene(){
   document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameSheet()});
-  document.getElementById('playAssignmentConfirm')?.addEventListener('click',playConfirmAssignments);
+  document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherRandom')?.addEventListener('click',()=>{void playGatherRandomize()});
   document.getElementById('playGatherManual')?.addEventListener('click',playGatherManual);
