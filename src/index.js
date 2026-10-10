@@ -356,7 +356,7 @@ export class RoomDurableObject extends DurableObject {
     if(!/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(assetId))return j({ok:false,error:"INVALID_ARTIFACT_ID"},400);
     if(!/^[0-9a-f]{64}$/.test(signature))return j({ok:false,error:"INVALID_ARTIFACT_SIGNATURE"},400);
     const metaKey="sharedArtifactMeta:"+assetId,existing=await this.ctx.storage.get(metaKey);
-    if(existing?.signature===signature&&await this.ctx.storage.get("sharedArtifactData:"+assetId))
+    if(body?.force!==true&&existing?.signature===signature&&await this.ctx.storage.get("sharedArtifactData:"+assetId))
       return j({ok:true,assetId,cached:true});
     if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"INVALID_ARTIFACT_ARTWORK"},400);
     const card=sanitizePlayerArtifactCard(body?.package?.roleCard||{}),saved={
