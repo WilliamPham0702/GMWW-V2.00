@@ -1,7 +1,7 @@
 // GMWW V5.00: isolated WebGL 2.5D Character Master-01.
 // The game/room Player Web still uses approved production assets. This is only a lab.
-// THREE r180 is pinned; external dependency must be bundled before offline IPA adoption.
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+// Three.js r180 vendored locally under MIT; no CDN required for the lab.
+import * as THREE from './vendor/three.module.min.js';
 import {V500_ACTIONS,V500_DIRECTIONS,V500_WALK_SPEED,V500_RUN_SPEED,
  createMotionState,setAction,setFacing,setDestination,tickMotion,V500_VERSION} from './character-motion-v500.mjs';
 
