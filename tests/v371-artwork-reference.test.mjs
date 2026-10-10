@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {selectVerifiedRuntimeV371Delta} from '../src/gmww-ota-delta.js';
 
 const worker=fs.readFileSync('src/index.js','utf8');
 const gm=fs.readFileSync('server-game/current/app.js','utf8');
@@ -78,4 +79,40 @@ test('Selection never encodes or uploads saved artwork again and Artifact shares
   assert.match(server,/gm\/artwork-refs/);
   assert.doesNotMatch(server,/imageDataUrl|\/gm\/role-assets/);
   assert.match(worker,/Artwork is not released/);
+});
+
+test('IPA V3.70 receives only three SHA-verified V3.71 UI files without overwriting artwork',()=>{
+  const origin='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.71/';
+  const files=['GMWW.html','app.js','style.css'];
+  const valid=()=>({releaseVersion:'3.71',runtimeVersion:'3.71',shellVersion:'3.17',releaseType:'runtime',delete:[],
+    runtime:{files:files.map(path=>({path,url:origin+path,sha256:'a'.repeat(64)}))}});
+  const selected=selectVerifiedRuntimeV371Delta(valid(),'3.70');
+  assert.equal(selected?.upgradeMode,'verified-overlay');
+  assert.deepEqual(selected?.runtime?.files.map(x=>x.path),files);
+  assert.deepEqual(selected?.delete,[]);
+  for(const v of ['3.17','3.69','3.71','']){
+    assert.equal(selectVerifiedRuntimeV371Delta(valid(),v),null);
+  }
+  for(const change of [x=>{x.releaseVersion='3.70'},x=>{x.runtime.files[0].url='https://bad.example/GMWW.html'},
+    x=>{x.runtime.files[1].sha256='invalid'},x=>{x.runtime.files.push({...x.runtime.files[0]})},x=>{x.delete=['artwork']}])
+      {const x=valid();change(x);assert.equal(selectVerifiedRuntimeV371Delta(x,'3.70'),null)}
+});
+test('Template availability uses compact indexed metadata on repeat selection',async()=>{
+  const methods=roomMethod('  async gameTemplateAssetsStatus(rawId){','  async gameTemplateAssetPut(body){');
+  const state=store();
+  state.db.set('gameTemplate:sample',{revision:2,compiledConfig:{roles:[{roleId:'wolf'}],artifacts:[]}});
+  state.db.set('gameTemplateAsset:sample:role:wolf',{revision:2,imageDataUrl:'data:image/webp;base64,AAAA',package:{roleCard:{name:'Wolf'}}});
+  const getCalls=[];
+  const original=state.ctx.storage.get;
+  state.ctx.storage.get=async k=>{getCalls.push(k);return original(k)};
+  const self={ctx:state.ctx};
+  const first=await methods.gameTemplateAssetsStatus.call(self,'sample');
+  assert.equal(first.ready,true);
+  assert.ok(getCalls.includes('gameTemplateAsset:sample:role:wolf'));
+  assert.equal(state.db.get('gameTemplateAssetMeta:sample:role:wolf').verified,true);
+  getCalls.length=0;
+  const second=await methods.gameTemplateAssetsStatus.call(self,'sample');
+  assert.equal(second.ready,true);
+  assert.equal(getCalls.includes('gameTemplateAsset:sample:role:wolf'),false);
+  assert.equal(second.packages['role:wolf'].roleCard.name,'Wolf');
 });
