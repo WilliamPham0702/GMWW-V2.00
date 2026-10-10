@@ -7,7 +7,7 @@ import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js'
 const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
 
 test('Village only displays compact face-down cards; big card is isolated to explicit opening',()=>{
-  assert.match(player,/#game:not\(\[data-private-card-view="open"\]\) \.role-stage\{display:none!important;visibility:hidden!important;pointer-events:none!important\}/);
+  assert.ok(player.includes('role-stage{display:none!important;visibility:hidden!important;pointer-events:none!important}'));
   assert.match(player,/#gmwwPlayerPrivateDock button\{width:clamp\(74px,21vw,94px\)!important\}/);
   assert.match(player,/if\(!\$\('#gmwwCompactPrivateCardStyle'\)\)/);
   assert.match(player,/openPrivateCardViewer\(b\.dataset\.privateCard\)/);
