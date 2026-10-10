@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.76';
+const VERSION='3.77';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -1991,6 +1991,65 @@ function gmwwHomeText(id,text){
   if(node)node.textContent=String(text??'—');
 }
 
+function gmwwHomeTop3Ranked(rows){
+  return (Array.isArray(rows)?rows:[]).filter(member=>{
+    const stats=memberStats(member);
+    return stats.games>0&&stats.w>=0&&stats.l>=0&&Number.isFinite(stats.games);
+  }).sort((left,right)=>{
+    const a=memberStats(left),b=memberStats(right);
+    return b.w*a.games-a.w*b.games||b.games-a.games||b.w-a.w
+      ||String(left.displayName||left.loginId||'').localeCompare(String(right.displayName||right.loginId||''),'vi');
+  }).slice(0,3);
+}
+function gmwwHomeRenderTop3(rows){
+  const target=document.getElementById('gmwwHomeTop3');
+  const status=document.getElementById('gmwwHomeTop3Status');
+  if(!target)return;
+  target.replaceChildren();
+  const best=gmwwHomeTop3Ranked(rows);
+  if(status){
+    status.hidden=best.length>0;
+    status.textContent=!Array.isArray(rows)?'Không tải được xếp hạng. Nhấn làm mới để thử lại.'
+      :'Chưa có người chơi hoàn tất ván để xếp hạng.';
+  }
+  for(const index of [1,0,2]){
+    const member=best[index];
+    if(!member)continue;
+    const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
+    const button=document.createElement('button');
+    button.type='button';button.className='gmww-home-top3-card-v377';
+    button.dataset.rank=String(place);
+    button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
+    const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
+    crown.textContent=place===1?'♛':place===2?'✦':'✧';crown.setAttribute('aria-hidden','true');
+    const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
+    const avatar=document.createElement('span');avatar.className='gmww-home-top3-avatar-v377';
+    const avatarId=String(member.gameCharacterId||member.avatarId||'');
+    if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
+      const image=document.createElement('img');image.src=memberAvatarUrl(avatarId);image.alt='';image.loading='lazy';
+      image.onerror=()=>{image.remove();avatar.textContent='✦'};
+      avatar.append(image);
+    }else avatar.textContent='✦';
+    const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';
+    name.textContent=String(member.displayName||member.loginId||'Thành viên');
+    const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';
+    percent.textContent=rate+'%';
+    const percentLabel=document.createElement('span');percentLabel.className='gmww-home-top3-percent-label-v377';percentLabel.textContent='TỶ LỆ THẮNG';
+    const meter=document.createElement('span');meter.className='gmww-home-top3-meter-v377';
+    const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,rate))+'%';meter.append(fill);
+    const record=document.createElement('small');record.className='gmww-home-top3-record-v377';
+    record.textContent=stats.w+' thắng / '+stats.games+' ván';
+    button.append(crown,badge,avatar,name,percent,percentLabel,meter,record);
+    button.addEventListener('click',()=>gmwwHomeOpenMemberRanking());
+    target.append(button);
+  }
+}
+function gmwwHomeOpenMemberRanking(){
+  const section=document.getElementById('memberGroupRanking');
+  if(section)section.open=true;
+  gmwwHomeNavigate('members');
+}
+
 function gmwwHomeRenderExtras(rows,ranking,leader){
   const totalLeader=document.getElementById('gmwwHomeLeaderWins');
   if(totalLeader)totalLeader.textContent=leader?String(memberStats(leader).w):'—';
@@ -2028,7 +2087,8 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
     const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='loss'?'Đã kết thúc ván':'Tham gia ván chơi';
     const time=document.createElement('small');time.textContent=ago(h.playedAt);
     const arrow=document.createElement('i');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
-    button.append(avatar,name,action,time,arrow);
+    const marker=document.createElement('span');marker.className='gmww-home-recent-marker-v377';marker.textContent=h.result==='win'?'✦':h.result==='loss'?'·':'◦';marker.setAttribute('aria-hidden','true');
+    button.append(marker,avatar,name,action,time,arrow);
     button.addEventListener('click',()=>gmwwHomeNavigate('members'));
     target.append(button);
   }
@@ -2036,6 +2096,7 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
 
 function gmwwHomeRenderMembers(rows){
   if(!Array.isArray(rows))return;
+  gmwwHomeRenderTop3(rows);
   gmwwHomeText('gmwwHomeMemberCount',rows.length);
   gmwwHomeText('gmwwHomeOnlineCount',rows.filter(m=>m?.online).length);
   const played=rows.reduce((sum,m)=>sum+memberStats(m).games,0);
@@ -2075,6 +2136,7 @@ async function gmwwHomeRefresh(force=false){
     if(members.status==='fulfilled'&&Array.isArray(members.value?.members))
       gmwwHomeRenderMembers(members.value.members);
     else{
+      gmwwHomeRenderTop3(null);
       gmwwHomeText('gmwwHomeMemberCount','—');
       gmwwHomeText('gmwwHomeOnlineCount','—');
       gmwwHomeText('gmwwHomePlaysCount','—');
@@ -2098,6 +2160,7 @@ document.getElementById('gmwwHomeOpenRanking')?.addEventListener('click',()=>{
   gmwwHomeAllRecent=!gmwwHomeAllRecent;
   if(gmwwHomeCachedRows.length)gmwwHomeRenderMembers(gmwwHomeCachedRows);
 });
+document.getElementById('gmwwHomeTop3Ranking')?.addEventListener('click',gmwwHomeOpenMemberRanking);
 document.getElementById('gmwwHomeRefresh')?.addEventListener('click',()=>gmwwHomeRefresh(true));
 document.querySelectorAll('#bottomNav .nav[data-page="home"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>gmwwHomeRefresh(false),35)));
 setTimeout(()=>{if(document.getElementById('home')?.classList.contains('active'))gmwwHomeRefresh()},150);
