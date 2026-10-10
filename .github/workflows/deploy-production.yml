@@ -220,6 +220,41 @@ jobs:
             }
             echo "AI Support authorization PASS"
           fi
+          # V3.83: verify IPA overlay for V3.82 installations and exact file integrity.
+          if [ "$EXPECTED" = "3.83" ]; then
+            curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+              "$URL/api/update/manifest?current=3.82&verify-v383=$(date +%s)" > /tmp/gmww-v383.json
+            node - <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          const names=['GMWW.html','app.js'];
+          if(m.ok!==true||m.releaseVersion!=='3.83'||m.runtimeVersion!=='3.83'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!=='3.82'||
+             (m.delete||[]).length!==0||m.runtime?.files?.length!==2)
+            throw new Error('GMWW V3.83 OTA overlay is not ready');
+          for(const path of names){
+            const item=m.runtime.files.find(f=>f.path===path);
+            if(!item||item.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.83/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(item.sha256)))
+              throw new Error('V3.83 OTA integrity metadata missing for '+path);
+          }
+          console.log('V3.83 overlay manifest verified.');
+          NODE
+            for FILE in GMWW.html app.js; do
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.83/$FILE" > /tmp/gmww-v383-file
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v383-file | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
+          const fs=require('node:fs'),m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
+          NODE
+              )
+              test -n "$EXPECTED_SHA"
+              test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo "::error::V3.83 file SHA mismatch: $FILE"; exit 1; }
+              echo "Verified V3.83 Runtime asset: $FILE"
+            done
+          fi
           # V3.72 canonical-image preflight: the exact role_guard WEBP must be
           # readable from the deployed Worker, not merely rendered as a thumbnail.
           if [ "$EXPECTED" = "3.72" ]; then
