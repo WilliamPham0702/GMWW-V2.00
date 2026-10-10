@@ -4068,3 +4068,46 @@ body.play-immersive #start #playGatherToolbar.is-dragging .play-gather-toolbar-h
 @media(prefers-reduced-motion:reduce){
   body.play-immersive #start #playShell[data-step="seats"] #playGatherToolbar.play-gather-toolbar{transition:none!important}
 }
+
+
+/* Home artwork v2: dimensions follow the approved actual slots; preserve all subjects. */
+#home .gmww-home-rebuild-v354 .gmww-home-scene-v351 .gmww-home-hero-artboard-v351{
+  aspect-ratio:1024 / 380!important;
+  height:auto!important;
+  overflow:hidden!important;
+  background:#04769b!important;
+}
+#home .gmww-home-scene-v351 .gmww-home-scene-image-v350{
+  display:block!important;
+  width:100%!important;height:100%!important;
+  object-fit:contain!important;object-position:center!important;
+  transform:none!important;
+}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-action-v352{
+  aspect-ratio:1024 / 260!important;
+  height:auto!important;min-height:0!important;max-height:none!important;
+  padding:9px 7%!important;
+}
+#home .gmww-home-enter-banner-v352 .gmww-home-portal-art-v352{
+  width:100%!important;height:100%!important;
+  object-fit:contain!important;object-position:center!important;
+}
+#home .gmww-home-portal-action-v352:before{
+  background:linear-gradient(90deg,rgba(0,30,64,.85),rgba(0,55,83,.37) 53%,transparent 83%)!important;
+  pointer-events:none!important;
+}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 button{
+  aspect-ratio:1/1!important;min-height:0!important;max-height:none!important;
+}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 img{
+  object-fit:contain!important;object-position:center!important;
+}
+#home .gmww-home-discover-banner-v352 .gmww-home-tiles-v350 button:after{
+  inset:64% 0 0!important;
+  background:linear-gradient(180deg,transparent,rgba(0,35,69,.52) 23%,#002a50 100%)!important;
+}
+body:not(.play-immersive) #bottomNav{
+  background-color:#064b74!important;
+  background-size:100% 100%!important;background-repeat:no-repeat!important;
+}
+body:not(.play-immersive) #bottomNav .nav{position:relative!important;z-index:2!important}
