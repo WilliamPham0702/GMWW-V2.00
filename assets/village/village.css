@@ -93,14 +93,20 @@ html.embedded .player .portrait.game-character img{image-rendering:auto;transfor
   transform-origin:50% 100%;pointer-events:none;
 }
 .player .player-over .name{
-  display:block;max-width:132px;padding:3px 7px;border-radius:8px;
+  display:inline-flex;align-items:center;gap:5px;max-width:132px;padding:3px 7px;border-radius:8px;
   background:rgba(3,36,48,.88);color:#fff;font-size:12px;font-weight:900;line-height:1.05;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 9px rgba(0,0,0,.28);
+  white-space:nowrap;overflow:hidden;box-shadow:0 3px 9px rgba(0,0,0,.28);
 }
-.player .player-status{
-  display:inline-flex;min-height:16px;align-items:center;padding:2px 6px;border-radius:999px;
-  background:rgba(255,248,207,.94);color:#075f76;font-size:8px;font-weight:1000;white-space:nowrap;
+.player .name-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player .player-presence{
+  display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;
+  background:#39e680;border:1px solid rgba(255,255,255,.8);
+  box-shadow:0 0 0 1px rgba(3,36,48,.45),0 0 6px rgba(57,230,128,.66);
 }
+.player .player-presence[data-online="false"]{
+  background:#ff5363;box-shadow:0 0 0 1px rgba(3,36,48,.45),0 0 6px rgba(255,83,99,.7);
+}
+.player .player-status{display:none!important}
 .player .player-role{
   display:block;width:max-content;max-width:120px;margin:4px auto 0;padding:2px 6px;border-radius:7px;
   background:rgba(3,42,55,.84);color:#ffe9a3;font-size:8px;font-weight:950;white-space:nowrap;
@@ -111,7 +117,7 @@ html.embedded .player .player-over .name{font-size:11px}
 @media(max-width:390px){
   .player{min-width:82px!important}
   .player .player-over .name{font-size:10px}
-  .player .player-status,.player .player-role{font-size:7px}
+  .player .player-role{font-size:7px}
 }
 
 /* V2.94 Mystery Portal — join at campfire, arrival at stairs */
@@ -227,7 +233,6 @@ html.embedded .player .player-over .name{font-size:11px}
 .player.gm .gm-wolf-leg-a{clip-path:polygon(0 54%,57% 54%,57% 100%,0 100%);transform-origin:38% 68%;transform:scaleY(1.22)}
 .player.gm .gm-wolf-leg-b{clip-path:polygon(43% 54%,100% 54%,100% 100%,43% 100%);transform-origin:68% 68%;transform:scaleY(1.22)}
 .player.gm .player-over .name{background:linear-gradient(180deg,rgba(91,59,13,.96),rgba(42,29,9,.96));border:1px solid rgba(255,221,120,.78);color:#ffe9a0}
-.player.gm .player-status{background:rgba(255,231,153,.96);color:#573900}
 @keyframes gmwwGmWolfLeap{0%{transform:translate(0,1px)}18%{transform:translate(calc(var(--gm-run-dir)*1px),2px)}46%{transform:translate(calc(var(--gm-run-dir)*7px),-8px)}70%{transform:translate(calc(var(--gm-run-dir)*9px),-3px)}100%{transform:translate(0,1px)}}
 @keyframes gmwwGmWolfBodyRun{0%,100%{transform:translateY(1px)}45%{transform:translateY(-2px)}70%{transform:translateY(0)}}
 @keyframes gmwwGmWolfLegA{0%,100%{transform:translate(calc(var(--gm-run-dir)*-2px),0) rotate(calc(var(--gm-run-dir)*-7deg)) scaleY(1.48)}45%{transform:translate(calc(var(--gm-run-dir)*4px),-4px) rotate(calc(var(--gm-run-dir)*10deg)) scaleY(.88)}70%{transform:translate(calc(var(--gm-run-dir)*5px),1px) rotate(calc(var(--gm-run-dir)*5deg)) scaleY(1.34)}}
