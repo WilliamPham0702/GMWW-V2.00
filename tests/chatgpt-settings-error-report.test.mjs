@@ -58,7 +58,7 @@ test('Generated report excludes raw credentials, room details and runtime except
   assert.match(report,/GMWW_SAFE_ERROR_REPORT_V1/);
   assert.match(report,/RUNTIME_MANIFEST_NOT_READY/);
   assert.match(report,/V3\.85/);
-  assert.match(report,/ChatGPT/);
+  assert.match(report,/Mô tả lỗi:/);
   for(const secret of ['extremely-sensitive-token','ABCD23','TOP_SECRET','PRIVATE_USER','sensitive membership'])
     assert.ok(!report.includes(secret),'Sensitive field leaked: '+secret);
   const payload=JSON.parse(report.slice(report.indexOf('\n\n')+2));
