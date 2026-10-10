@@ -48,7 +48,7 @@ for(const [i,s] of sessions.entries()){
    try{await role.waitFor({state:'visible',timeout:22000})}
    catch(e){
      const debug=await page.evaluate(()=>{
-       const describe=id=>{const el=document.querySelector(id);return el?{hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility,cls:el.className}:null};
+       const describe=id=>{const el=document.querySelector(id);return el?{hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility,cls:el.className,deliveryState:el.dataset.deliveryState||'',privateCardView:el.dataset.privateCardView||'',focus:el.dataset.privateCardFocus||''}:null};
        return {path:location.pathname,game:describe('#game'),dock:describe('#gmwwPlayerPrivateDock'),role:describe('#gmwwPlayerPrivateDock button[data-private-card="role"]'),login:describe('#login'),screens:[...document.querySelectorAll('.screen.active')].map(e=>e.id),version:document.documentElement.dataset.gmwwMembersVersion||null};
      }).catch(()=>({error:'page closed'}));
      const privateData=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token}).catch(err=>({error:String(err.message)}));
