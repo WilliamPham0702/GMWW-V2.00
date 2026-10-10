@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#082b42">
+<title>GMWW · V5.60 kiểm tra Skin 3D gắn xương thật</title>
+<style>
+:root{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#effaff;background:#071d31}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:linear-gradient(155deg,#0b354c,#041728)}
+main{max-width:980px;margin:auto;display:grid;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom))}
+header{display:grid;gap:5px}h1{margin:0;font-size:clamp(22px,5vw,30px);line-height:1.18}p{margin:0;color:#b9dbe3}
+.kicker{font-weight:900;letter-spacing:.13em;color:#a3faf0;font-size:11px}
+.layout{display:grid;gap:12px;grid-template-columns:minmax(0,1fr) 300px;align-items:start}
+.stage{height:min(68vh,630px);min-height:360px;position:relative;overflow:hidden;border-radius:20px;border:1px solid #59b8bb;background:#91d9e4}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.stagehint{position:absolute;left:10px;top:10px;right:10px;background:#04344bd9;padding:8px 10px;border-radius:11px;font-size:11px}
+.card{border-radius:18px;border:1px solid #407c90;background:#0b334c;padding:13px;display:grid;gap:11px}
+.card h2{font-size:15px;margin:0} .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+button{border-radius:11px;background:#146d86;border:1px solid #63adb8;color:white;font:700 12px/1.25 inherit;min-height:44px;padding:8px 5px;cursor:pointer;touch-action:manipulation}
+button.active{background:#d7a232;color:#082d40;border-color:#f4dc8f}button:disabled{opacity:.45}
+select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-radius:10px;min-height:42px;padding:7px;font:inherit}
+.status{font-size:12px;background:#103c52;border-radius:12px;padding:11px;color:#dbfcff;overflow-wrap:anywhere}
+.warn{color:#ffe3b6;background:#553c2a;border-left:3px solid #f4c469;padding:11px;border-radius:10px;font-size:12px}
+.mini{color:#a3c9d4;font-size:11px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.stage{height:53vh;min-height:350px}.card{padding:12px}}
+</style></head><body>
+<main>
+<header>
+ <div class="kicker">GMWW CHARACTER · BẢNG THỬ RIÊNG V5.60</div>
+ <h1>Skin 3D gắn vào 16 xương thật</h1>
+ <p>Thử trực tiếp chuyển động, góc nhìn và khả năng biến dạng của bề mặt áo 3D. Không phải hình PNG cắt ghép.</p>
+</header>
+<div class="warn">Đây là bước nghiệm chứng kỹ thuật <b>SkinnedMesh + UV + bone weights</b>. Hoa văn áo hiện tại được dựng tạm để kiểm tra cơ chế; <b>chưa phải Skin GMWW gốc đã nghiệm thu</b>. Chưa thay nhân vật trong game chính.</div>
+<div class="layout">
+ <div class="stage" id="stage"><canvas id="canvas" aria-label="Mô hình Chàng Biển 3D thực"></canvas><div class="stagehint" id="notice">Đang kiểm tra WebGL và tải mô hình 3D thật…</div></div>
+ <section class="card">
+  <h2>Thử chuyển động</h2>
+  <div class="controls" id="actions">
+   <button data-action="idle" class="active">Đứng</button>
+   <button data-action="walk">Đi</button>
+   <button data-action="run">Chạy</button>
+   <button data-action="sit-down">Ngồi xuống</button>
+   <button data-action="sit">Ngồi</button>
+   <button data-action="stand-up">Đứng dậy</button>
+   <button data-action="wave">Vẫy tay</button>
+   <button data-action="vote">Giơ tay</button>
+   <button data-action="result">Ăn mừng</button>
+  </div>
+  <label>Góc nhìn</label>
+  <select id="direction"><option value="front">Trước</option><option value="front-right">Trước phải</option><option value="right">Phải</option><option value="back-right">Sau phải</option><option value="back">Sau</option><option value="back-left">Sau trái</option><option value="left">Trái</option><option value="front-left">Trước trái</option></select>
+  <label><input id="wireframe" type="checkbox"> Hiện lưới bề mặt áo 3D để thấy hình học thật</label>
+  <div class="status" id="status">Đang khởi tạo…</div>
+  <div class="mini">Nguồn học hỏi: IPA game mẫu MyHotel (Unity bundles playerskins). Mô hình GMWW dùng Three.js V5.10, không sao chép tài nguyên game mẫu.</div>
+  <div class="mini"><a href="./index.html" style="color:#b7fff6">Bảng Character V5.10 cũ</a></div>
+ </section>
+</div>
+</main>
+<script type="module">
+import * as THREE from './vendor/three.module.min.js';
+import {createSkinnedChibi,animateSkinnedChibi} from './character-rig-v510.mjs';
+import {createMotionState,setAction,setFacing,tickMotion} from './character-motion-v500.mjs';
+import {addV560WeightedSkin} from './skin-v560-weighted-surface.mjs';
+const $=id=>document.getElementById(id),cv=$('canvas'),stage=$('stage');
+const notice=$('notice'),status=$('status');
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({canvas:cv,alpha:false,antialias:true,powerPreference:'high-performance'});
+}catch(err){notice.textContent='Không thể khởi tạo WebGL: '+err.message;throw err}
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#91d9e4');
+scene.add(new THREE.HemisphereLight('#f7fcff','#637968',2.0));
+const sun=new THREE.DirectionalLight('#fff9e9',2.2);sun.position.set(-3,8,6);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.8,.22,48),new THREE.MeshLambertMaterial({color:'#f0d49d'}));
+ground.position.y=-.16;scene.add(ground);
+const camera=new THREE.PerspectiveCamera(34,1,.05,50);camera.position.set(0,3.05,9.0);camera.lookAt(0,1.8,0);
+const rig=createSkinnedChibi(true);scene.add(rig.root);
+const skin=addV560WeightedSkin(rig);
+const motion=createMotionState();setFacing(motion,'front');
+let action='idle';
+function setActive(v){for(const b of $('actions').querySelectorAll('button'))b.classList.toggle('active',b.dataset.action===v)}
+$('actions').addEventListener('click',e=>{
+ const b=e.target.closest('button[data-action]');if(!b)return;
+ action=b.dataset.action;
+ setAction(motion,action);setActive(action);
+});
+$('direction').addEventListener('change',e=>setFacing(motion,e.target.value));
+$('wireframe').addEventListener('change',e=>skin.surface.material.wireframe=e.target.checked);
+function resize(){
+ const width=stage.clientWidth,height=stage.clientHeight;
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);resize();
+let last=performance.now(),fpsTick=last,frames=0,fps=0;
+function loop(now){
+ const dt=Math.min(.05,(now-last)/1000);last=now;
+ tickMotion(motion,dt);animateSkinnedChibi(rig,motion);
+ renderer.render(scene,camera);
+ frames++;
+ if(now-fpsTick>1200){fps=Math.round(frames*1000/(now-fpsTick));fpsTick=now;frames=0;
+  status.textContent='WebGL ✓ · '+skin.bones+' xương chung · '+skin.vertexCount+' đỉnh áo · '+skin.blendedVertices+' đỉnh pha trộn 2 xương · '+fps+' FPS · '+motion.action;
+ }
+ requestAnimationFrame(loop);
+}
+notice.textContent='3D SkinnedMesh thật • 16 xương • áo UV/weight pha trộn • độc lập với game chính';
+requestAnimationFrame(loop);
+</script></body></html>
