@@ -54,7 +54,7 @@ test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",(
  const labels=["Bộ Bài","Thành Viên","Ván Mẫu"].filter(label=>home.includes("<b>"+label+"</b>"));
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
- assert.ok(html.includes("style.css?v=3.85-artifact-sea"));
+ assert.ok(html.includes("style.css?v=3.85-chatgpt-report"));
  assert.match(home,/gmww-home-rebuild-v350/);
  for(const n of [3,6,1])assert.ok(!home.includes(">"+n+"</strong>"),"No fabricated counters");
  assert.ok(app.includes("function gmwwHomeRenderExtras(rows,ranking,leader)"));
