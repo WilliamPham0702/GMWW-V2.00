@@ -1079,6 +1079,13 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  // Serve OTA files through the same ASSETS binding used by manifest readiness.
+  // This avoids advertising an asset that a different static/CDN route cannot serve.
+  if((url.pathname.startsWith("/updates/runtime/")||url.pathname==="/updates/latest.json")&&
+     (request.method==="GET"||request.method==="HEAD")){
+    if(!env.ASSETS)return new Response("Runtime assets unavailable",{status:503});
+    return env.ASSETS.fetch(request);
+  }
   const admissionPolicy=publicEntryPolicy(request.method,url.pathname);
   if(admissionPolicy){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);

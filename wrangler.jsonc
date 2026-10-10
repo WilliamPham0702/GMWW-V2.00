@@ -23,7 +23,7 @@
   "assets": {
     "directory": "./assets",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/gmww-sea-background.webp", "/favicon.svg"]
+    "run_worker_first": ["/api/*", "/gmww-sea-background.webp", "/favicon.svg", "/updates/runtime/*", "/updates/latest.json"]
   },
   "observability": { "enabled": true, "redact_query_string": true, "issues": { "enabled": true } }
 }
