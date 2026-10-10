@@ -606,10 +606,21 @@
         <div class="play-template-team-summary" id="playTemplateTeamSummary" role="status"></div>
         <div class="play-game-role-list" id="playGameRoleList"></div>
         <p class="play-template-help">Chọn một lần để thêm 1 lá, chạm lại để bỏ chọn. Số lượng và thứ tự của vai đã chọn được điều chỉnh trong danh sách.</p>
+        <div class="play-template-section-title"><b>ARTIFACT CỦA VÁN MẪU</b><span>Thiết lập một lần khi tạo Ván Mẫu</span></div>
+        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Có sử dụng Artifact trong Ván Mẫu</label>
+        <label class="play-template-artifact-time">Thời gian sử dụng Artifact (giây): <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"></span></label>
+        <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
+          <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
+          <small>Hạn mức riêng cho mỗi chu kỳ; 0 = không cho sử dụng.</small>
+        </label>
+        <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
+        <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
+        <p class="play-template-help">Artifact được lưu theo Ván Mẫu. Khi chọn Ván để chơi sẽ sử dụng đúng thiết lập này, không phải chọn lại.</p>
       </div>
       <div class="play-template-play-review">
         <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
         <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
+        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo cấu hình Ván Mẫu</p>
         <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
         <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
           <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
@@ -620,16 +631,7 @@
         <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
         <p class="play-template-help play-role-time-help">Mỗi vai mặc định theo thời gian chung ở trên; có thể điều chỉnh riêng cho từng lá.</p>
         <div class="play-template-role-timings" id="playGameRoleTimingList" role="group" aria-label="Thời gian sử dụng riêng từng vai"></div>
-        <div class="play-template-section-title"><b>ARTIFACT TRONG TRẬN</b><span>Cài đặt chung</span></div>
-        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Có sử dụng Artifact</label>
-        <label class="play-template-artifact-time">Thời gian sử dụng Artifact (giây): <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"></span></label>
-        <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
-          <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
-          <small>Hạn mức riêng cho mỗi chu kỳ; 0 = không cho sử dụng.</small>
-        </label>
-        <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
-        <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
-        <p class="play-template-help">Thay đổi ở đây chỉ áp dụng cho trận hiện tại, không sửa Ván Mẫu đã lưu và chưa phát vai xuống Player Web.</p>
+
       </div>
     </div>
     <div class="button-row play-roster-actions">
