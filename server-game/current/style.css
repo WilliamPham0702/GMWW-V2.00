@@ -4111,3 +4111,69 @@ body:not(.play-immersive) #bottomNav{
   background-size:100% 100%!important;background-repeat:no-repeat!important;
 }
 body:not(.play-immersive) #bottomNav .nav{position:relative!important;z-index:2!important}
+
+
+/* GMWW V3.64 — fully functional, private 5/7 assignment review (V1-style workflow). */
+body.play-immersive #start #playRoleAssignmentPanel.play-role-assignment-panel{
+  position:absolute!important;z-index:93!important;
+  top:calc(env(safe-area-inset-top) + 93px)!important;
+  bottom:calc(env(safe-area-inset-bottom) + 82px)!important;
+  left:max(8px,calc((100% - 720px) / 2))!important;right:max(8px,calc((100% - 720px) / 2))!important;
+  display:flex!important;flex-direction:column!important;gap:9px!important;
+  box-sizing:border-box!important;min-height:0!important;
+  padding:12px!important;border:1px solid rgba(183,233,243,.56)!important;
+  border-radius:19px!important;color:#e9fdff!important;
+  background:linear-gradient(162deg,rgba(3,37,62,.94),rgba(3,36,53,.91) 64%,rgba(2,21,43,.96))!important;
+  box-shadow:0 13px 45px #0013238a,inset 0 1px #ffffff29!important;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  overflow:hidden!important;
+}
+body.play-immersive #start #playRoleAssignmentPanel.play-role-assignment-panel.hidden,
+body.play-immersive #start #playRoleAssignmentPanel.play-role-assignment-panel[hidden]{display:none!important}
+#playRoleAssignmentPanel .play-assignment-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex:0 0 auto}
+#playRoleAssignmentPanel .play-assignment-heading-copy{min-width:0}
+#playRoleAssignmentPanel .play-assignment-heading-copy>small{font-size:10px;letter-spacing:.08em;font-weight:950;color:#ffe4a7}
+#playRoleAssignmentPanel .play-assignment-heading h2{font-size:17px;line-height:1.2;letter-spacing:.02em;margin:4px 0 5px;color:#fff5d6}
+#playRoleAssignmentPanel .play-assignment-heading p{margin:0;font-size:10.5px;line-height:1.4;color:#c3e9f0}
+#playRoleAssignmentPanel .play-assignment-private{flex:0 0 auto;font-size:8.5px;font-weight:950;letter-spacing:.04em;border-radius:100px;border:1px solid #e5cf8b7d;padding:6px;color:#ffecad;white-space:nowrap;background:#6e601929}
+#playRoleAssignmentPanel .play-assignment-progress{display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;flex:0 0 auto;padding:7px 9px;border:1px solid #94daec55;border-radius:10px;background:#0e45628f}
+#playRoleAssignmentPanel .play-assignment-progress strong{font-size:11px;color:#fff0ba}
+#playRoleAssignmentPanel #playAssignmentNotice{font-size:10px;color:#c5f1db}
+#playRoleAssignmentPanel #playAssignmentNotice.is-error{color:#ffd3ae}
+#playRoleAssignmentPanel .play-assignment-toolbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#playRoleAssignmentPanel .play-assignment-toolbar button{appearance:none;min-width:0;min-height:40px;border:1px solid #b6dbea79;border-radius:10px;background:linear-gradient(165deg,#18667ca9,#09455cbb);color:#f5f9f7;font-size:9.3px;line-height:1.2;font-weight:850;padding:5px}
+#playRoleAssignmentPanel .play-assignment-toolbar button:disabled{opacity:.45}
+#playRoleAssignmentPanel .play-assignment-help{font-size:10px;line-height:1.35;color:#cde3ee;margin:0;flex:0 0 auto}
+#playRoleAssignmentPanel .play-assignment-rows{overflow-y:auto;min-height:0;flex:1 1 auto;display:grid;align-content:start;gap:8px;padding:0 2px 2px 0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#playRoleAssignmentPanel .play-assignment-member{min-width:0;display:grid;gap:6px;padding:9px;border:1px solid #7fd3e14f;border-radius:12px;background:linear-gradient(120deg,#154d65b8,#0b3045d1)}
+#playRoleAssignmentPanel .play-assignment-identity{display:flex;gap:9px;align-items:center;min-width:0}
+#playRoleAssignmentPanel .play-assignment-seat{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:10px;background:#e0bf7950;color:#ffefc4;border:1px solid #f6d7a77c;font-size:11px;font-weight:900}
+#playRoleAssignmentPanel .play-assignment-person{display:grid;gap:2px;min-width:0;flex:1}
+#playRoleAssignmentPanel .play-assignment-person b{font-size:12px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#playRoleAssignmentPanel .play-assignment-person small{font-size:9px;color:#bde5ed;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#playRoleAssignmentPanel .play-assignment-presence{font-size:15px}
+#playRoleAssignmentPanel .play-assignment-presence.on{color:#8deaba}
+#playRoleAssignmentPanel .play-assignment-presence.off{color:#e4af8b}
+#playRoleAssignmentPanel .play-assignment-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
+#playRoleAssignmentPanel .play-assignment-control{display:flex;align-items:center;gap:5px;min-width:0}
+#playRoleAssignmentPanel .play-assignment-control>span{min-width:0;flex:1;display:grid;gap:3px}
+#playRoleAssignmentPanel .play-assignment-control small{font-size:8.5px;letter-spacing:.05em;font-weight:800;color:#b4dfed}
+#playRoleAssignmentPanel .play-assignment-thumb{flex:0 0 38px;width:38px;height:52px;border:1px solid #ead39a8f;border-radius:7px;object-fit:cover;background:#0e3751}
+#playRoleAssignmentPanel .play-assignment-control select{box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:36px;background:#082f46;color:#f4fdff;border:1px solid #65b5cb9c;border-radius:8px;padding:0 4px;font-size:10px;text-overflow:ellipsis}
+#playRoleAssignmentPanel select:focus-visible,#playRoleAssignmentPanel button:focus-visible{outline:2px solid #ffe5a3;outline-offset:2px}
+#playRoleAssignmentPanel .play-assignment-empty{color:#d3eaf1;font-size:12px;text-align:center}
+#playRoleAssignmentPanel .play-assignment-footer{flex:0 0 auto;display:grid;grid-template-columns:minmax(0,.38fr) minmax(0,1fr);gap:8px;padding-top:8px;border-top:1px solid #8ed6e346}
+#playRoleAssignmentPanel .play-assignment-footer button{min-height:46px;min-width:0;border:1px solid #80cddd95;border-radius:11px;padding:7px 6px;color:#fff8e7;font-size:10px;font-weight:900}
+#playRoleAssignmentPanel .play-assignment-back{background:#184b61c9}
+#playRoleAssignmentPanel .play-assignment-confirm{background:linear-gradient(145deg,#177f89,#095a68);box-shadow:0 2px 12px #23d5d438}
+#playRoleAssignmentPanel .play-assignment-confirm:disabled{opacity:.48;box-shadow:none}
+@media(max-width:390px){
+ body.play-immersive #start #playRoleAssignmentPanel.play-role-assignment-panel{top:calc(env(safe-area-inset-top) + 87px)!important;bottom:calc(env(safe-area-inset-bottom) + 75px)!important;padding:9px!important;gap:7px!important}
+ #playRoleAssignmentPanel .play-assignment-heading h2{font-size:14.5px}
+ #playRoleAssignmentPanel .play-assignment-private{font-size:7px;padding:5px}
+ #playRoleAssignmentPanel .play-assignment-heading p{font-size:9.5px}
+ #playRoleAssignmentPanel .play-assignment-help{font-size:9px}
+ #playRoleAssignmentPanel .play-assignment-control select{font-size:9px}
+ #playRoleAssignmentPanel .play-assignment-thumb{width:33px;flex-basis:33px;height:46px}
+ #playRoleAssignmentPanel .play-assignment-footer button{font-size:9px}
+}

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.63</title>
-<link rel="stylesheet" href="style.css?v=3.63-roster-filter-home-art-v2">
+<title>GMWW V3.64</title>
+<link rel="stylesheet" href="style.css?v=3.64-role-assignment">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 </head>
 <body>
@@ -105,6 +105,29 @@
             <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
             <button id="playGatherDisband" type="button"><span aria-hidden="true">↩</span><b>GIẢI TÁN</b></button>
           </div>
+        </section>
+
+
+        <section class="play-role-assignment-panel hidden" id="playRoleAssignmentPanel" hidden aria-label="Bước 5: Phân Vai">
+          <header class="play-assignment-heading">
+            <div class="play-assignment-heading-copy"><small>05 / 07 · PHÂN VAI</small><h2>PHÂN VAI CHO DÂN LÀNG</h2><p>Lá bài đã phân được lưu ở GM. Người Chơi chỉ nhận bài sau khi GM nhấn Phát Vai ở bước 6.</p></div>
+            <span class="play-assignment-private">GM RIÊNG TƯ</span>
+          </header>
+          <div class="play-assignment-progress">
+            <strong id="playAssignmentCount">0 / 0 người</strong>
+            <span id="playAssignmentNotice" aria-live="polite">Chờ chia Vai Trò</span>
+          </div>
+          <div class="play-assignment-toolbar" aria-label="Công cụ Phân Vai">
+            <button id="playAssignmentRandom" type="button"><span aria-hidden="true">⚄</span> CHIA NGẪU NHIÊN</button>
+            <button id="playAssignmentInOrder" type="button"><span aria-hidden="true">☷</span> THEO THỨ TỰ</button>
+            <button id="playAssignmentArtifactShuffle" type="button"><span aria-hidden="true">✦</span> ĐỔI ARTIFACT</button>
+          </div>
+          <p class="play-assignment-help">Chọn Vai Trò khác để <b>hoán đổi</b> với người đang giữ lá đó, bảo toàn đúng số lá của Ván Mẫu. Artifact có thể chọn riêng cho từng người.</p>
+          <div class="play-assignment-rows" id="playAssignmentRows" role="list" aria-label="Danh sách phân Vai Trò và Artifact"></div>
+          <footer class="play-assignment-footer">
+            <button id="playAssignmentBack" type="button" class="play-assignment-back">← VÁN MẪU</button>
+            <button id="playAssignmentConfirm" type="button" class="play-assignment-confirm" disabled>✓ CHỐT PHÂN VAI → PHÁT VAI</button>
+          </footer>
         </section>
 
         <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
@@ -678,7 +701,7 @@
 </div>
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="app.js?v=3.63-roster-filter-home-art-v2"></script>
+<script src="app.js?v=3.64-role-assignment"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{
