@@ -17,7 +17,7 @@ import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from ".
 import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
-import { isRuntimePackageReady } from "./gmww-update-readiness.js";
+import { isRuntimePackageReady, diagnoseRuntimePackage } from "./gmww-update-readiness.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta } from "./gmww-ota-delta.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V3.81",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-381",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
@@ -1411,6 +1411,40 @@ export default {async fetch(request,env){
     }catch{return j({ok:false,project:PROJECT,status:"degraded",checks:{memberStorage:"unavailable"}},503)}
   }
   if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
+  // Safe, public, read-only release diagnostics for ChatGPT support reports.
+  // Never expose file bodies, player data, auth headers or other secrets.
+  if(url.pathname==="/api/update/diagnostics"&&request.method==="GET"){
+    const releaseVersion=VERSION.replace(/^V/i,''),checkedAt=new Date().toISOString();
+    const base={ok:true,project:PROJECT,serverVersion:VERSION,releaseVersion,
+      shellVersion:NATIVE_SHELL_VERSION,checkedAt};
+    if(!env.ASSETS)return j({...base,ready:false,code:'ASSETS_BINDING_UNAVAILABLE',asset:null});
+    const getManifest=async path=>{
+      try{
+        const target=new URL(path,request.url);
+        const response=await env.ASSETS.fetch(new Request(target.toString(),
+          {method:'GET',headers:{'cache-control':'no-cache'}}));
+        if(!response.ok||!String(response.headers.get('content-type')||'').includes('json'))return null;
+        return await response.json();
+      }catch{return null}
+    };
+    const sources=[
+      ['versioned','/updates/runtime/V'+releaseVersion+'/manifest-'+UPDATE_CHANNEL_REV+'.json'],
+      ['latest','/updates/latest.json']
+    ];
+    let firstFailure=null,found=false;
+    for(const [source,path] of sources){
+      const manifest=await getManifest(path);
+      if(!manifest)continue;
+      found=true;
+      const result=await diagnoseRuntimePackage({assets:env.ASSETS,requestUrl:request.url,
+        manifest,version:releaseVersion});
+      if(result.ready)return j({...base,ready:true,code:result.code,asset:null,source});
+      if(!firstFailure)firstFailure={code:result.code,asset:result.asset,source};
+    }
+    return j({...base,ready:false,code:firstFailure?.code||
+      'RUNTIME_MANIFEST_NOT_PUBLISHED',asset:firstFailure?.asset||null,
+      source:firstFailure?.source||null,manifestFound:found});
+  }
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
