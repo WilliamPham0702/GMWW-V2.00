@@ -3173,7 +3173,14 @@ async function savePlayGame(){
     playGameStatus('Đang kiểm tra và đóng gói Artwork cho các lá đã chọn…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
-  }catch(err){playFlashError(err?.message||'Không lưu được Ván Mẫu. Vui lòng thử lại.')}
+  }catch(err){
+    const raw=String(err?.message||'Không lưu được Ván Mẫu.');
+    const stage=String(document.getElementById('playGameStatus')?.textContent||'Lưu Ván Mẫu');
+    const hint=/^(?:Load failed|Failed to fetch|Network request failed|NetworkError|The network connection was lost)/i.test(raw)
+      ?'Kết nối bị ngắt khi '+stage.toLocaleLowerCase('vi')+'.'
+      :raw;
+    playFlashError(hint+' Nhấn LƯU để thử lại; cấu hình và danh sách Vai Trò đã chọn được giữ nguyên.');
+  }
   finally{playSetBusy(false);if(saveButton){saveButton.disabled=false;saveButton.textContent='LƯU'}}
 }
 function playRandomInt(max){if(max<=1)return 0;if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1),limit=Math.floor(0x100000000/max)*max;let n;do{crypto.getRandomValues(a);n=a[0]}while(n>=limit);return n%max}return Math.floor(Math.random()*max)}
@@ -3320,10 +3327,23 @@ async function playVerifiedArtworkData(kind,id){
   let src=await resolveArtwork(kind,id,'display');
   if(!src||String(src).includes('default-artwork.webp'))src=await resolveArtwork(kind,id,'full');
   if(!src||String(src).includes('default-artwork.webp'))throw new Error('Artwork '+id+' chưa có ảnh thật. Hãy cập nhật trong Bộ Bài.');
-  const response=await fetch(src,{cache:'no-store'});
-  if(!response.ok)throw new Error('Không tải được artwork '+id+' (HTTP '+response.status+').');
-  let blob=await response.blob();
-  if(!blob.type.startsWith('image/'))throw new Error('Artwork '+id+' không phải hình ảnh.');
+  // A bundled image can render in WKWebView <img> but fail fetch(file://...) with "Load failed".
+  // Only built-in role art may use the same-image CORS proxy; never substitute an unrelated image.
+  const original=String(src),builtin=kind==='cards'&&original===String(builtinRoleArtwork(id,'display')||'');
+  const nativeScheme=/^(?:file:|capacitor:|ionic:|app:)/i.test(String(location.protocol||''));
+  const serverCopy=GMWW_SERVER_BASE+'/api/gm/template-role-artwork/'+encodeURIComponent(String(id));
+  const candidates=builtin?(nativeScheme?[serverCopy,original]:[original,serverCopy]):[original];
+  let blob=null,lastImageError=null;
+  for(const url of [...new Set(candidates)]){
+    try{
+      const response=await fetch(url,{cache:'no-store'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const candidate=await response.blob();
+      if(!candidate.type.startsWith('image/')||!candidate.size)throw new Error('Dữ liệu trả về không phải ảnh');
+      blob=candidate;break;
+    }catch(err){lastImageError=err}
+  }
+  if(!blob)throw new Error('Không đọc được Artwork '+id+' từ bộ ảnh IPA hoặc Server. '+String(lastImageError?.message||'Lỗi kết nối')+'. Kiểm tra kết nối và nhấn LƯU để tiếp tục.');
   let bitmap=null;
   try{
     bitmap=await createImageBitmap(blob);
