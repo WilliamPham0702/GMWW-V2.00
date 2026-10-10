@@ -150,6 +150,8 @@ function gmwwAcknowledgePrivateDelivery(d){
  if(privateBlock<0)throw new Error('Private receipt inside public-room poll changed');
  result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+"  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+result.slice(pollEnd);
  // Browser restore must carry the Artifact expectation, not only the role.
+ replaceReceipt("state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];",
+   "state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];gmwwAcknowledgePrivateDelivery(d);");
  replaceReceipt("state.artifact=d.artifact||null;state.artifactCycle=d.artifactCycle||",
    "state.artifact=d.artifact||null;state.artifactExpected=d.artifactExpected===true;state.artifactCycle=d.artifactCycle||");
 
