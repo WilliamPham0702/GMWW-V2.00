@@ -74,6 +74,9 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/members/directory"&&request.method==="GET")return this.memberDirectory();
     if(url.pathname==="/game-templates/list"&&request.method==="GET")return this.gameTemplateList();
     if(url.pathname==="/game-templates/upsert"&&request.method==="PUT")return this.gameTemplateUpsert(await safeJson(request));
+    if(url.pathname==="/game-templates/assets/status"&&request.method==="GET")return this.gameTemplateAssetsStatus(url.searchParams.get("id"));
+    if(url.pathname==="/game-templates/assets"&&request.method==="GET")return this.gameTemplateAssetGet(url.searchParams.get("id"),url.searchParams.get("assetId"));
+    if(url.pathname==="/game-templates/assets"&&request.method==="PUT")return this.gameTemplateAssetPut(await safeJson(request));
     if(url.pathname==="/game-templates/get"&&request.method==="GET")return this.gameTemplateGet(url.searchParams.get("id")||"");
     if(url.pathname==="/game-templates/delete"&&request.method==="DELETE")return this.gameTemplateDelete(url.searchParams.get("id")||"");
     if(url.pathname==="/members/admin-reset-ranking"&&request.method==="POST")return this.memberResetRanking(request);
@@ -322,7 +325,38 @@ export class RoomDurableObject extends DurableObject {
     if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const key="gameTemplate:"+id,existing=await this.ctx.storage.get(key);
     if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    await this.ctx.storage.delete(key);return j({ok:true,deleted:true,id});
+    await this.ctx.storage.delete(key);
+    const savedAssets=await this.ctx.storage.list({prefix:"gameTemplateAsset:"+id+":"});
+    if(savedAssets.size)await this.ctx.storage.delete([...savedAssets.keys()]);
+    return j({ok:true,deleted:true,id});
+  }
+
+  // Immutable-per-revision artwork package: saved independently from template configuration.
+  async gameTemplateAssetsStatus(rawId){
+    const id=String(rawId||"").slice(0,120),rec=await this.ctx.storage.get("gameTemplate:"+id);
+    if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    const cfg=rec.compiledConfig||{},assets=[...new Set([...(cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")),...(cfg.artifacts||[]).map(a=>"artifact:"+String(a.artifactId||""))].filter(x=>!x.endsWith(":")))],missing=[];
+    for(const assetId of assets){
+      const row=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
+      if(!row||Number(row.revision)!==Number(rec.revision)||!validImageDataUrl(row.imageDataUrl))missing.push(assetId);
+    }
+    return j({ok:true,id,revision:rec.revision,ready:assets.length>0&&missing.length===0,total:assets.length,missing,assets});
+  }
+  async gameTemplateAssetPut(body){
+    const id=String(body?.id||"").slice(0,120),assetId=String(body?.assetId||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id);
+    if(!rec)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    const cfg=rec.compiledConfig||{},expected=new Set([...(cfg.roles||[]).map(r=>"role:"+String(r.roleId||"")),...(cfg.artifacts||[]).map(a=>"artifact:"+String(a.artifactId||""))]);
+    if(!expected.has(assetId))return j({ok:false,error:"ASSET_NOT_IN_TEMPLATE"},400);
+    if(!validImageDataUrl(body?.imageDataUrl))return j({ok:false,error:"ARTWORK_NOT_READY",message:"Artwork chưa được tải và tối ưu để lưu Ván Mẫu."},400);
+    const pkg=body?.package||{},roleId=assetId.startsWith("artifact:")?assetId:assetId.slice(5);
+    const saved={revision:rec.revision,imageDataUrl:body.imageDataUrl,package:{roleId,roleName:String(pkg.roleName||"").slice(0,120),artworkAssetId:assetId,roleCard:sanitizePlayerRoleCard(pkg.roleCard||{}),faction:String(pkg.faction||"").slice(0,120),description:String(pkg.description||"").slice(0,6000)},updatedAt:new Date().toISOString()};
+    await this.ctx.storage.put("gameTemplateAsset:"+id+":"+assetId,saved);
+    return j({ok:true,id,assetId,revision:rec.revision,hasImage:true});
+  }
+  async gameTemplateAssetGet(rawId,rawAsset){
+    const id=String(rawId||"").slice(0,120),assetId=String(rawAsset||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id),saved=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
+    if(!rec||!saved||Number(saved.revision)!==Number(rec.revision)||!validImageDataUrl(saved.imageDataUrl))return j({ok:false,error:"TEMPLATE_ARTWORK_MISSING"},404);
+    return j({ok:true,id,assetId,package:{...saved.package,imageDataUrl:saved.imageDataUrl}});
   }
   async gameTemplateUpsert(body){
     const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
@@ -1259,6 +1293,10 @@ export default {async fetch(request,env){
   const gmMemberDelete=url.pathname.match(/^\/api\/gm\/members\/([A-Za-z0-9._]+)$/);if(gmMemberDelete&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/delete",{method:"DELETE",headers:request.headers,body:JSON.stringify({loginId:decodeURIComponent(gmMemberDelete[1])})}));}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
+  const gmTemplateAssetsStatus=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/status$/);
+  if(gmTemplateAssetsStatus&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(decodeURIComponent(gmTemplateAssetsStatus[1])))}
+  const gmTemplateAssetPut=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets$/);
+  if(gmTemplateAssetPut&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateAssetPut[1]),body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/assets",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...body,id})}))}
   const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
   if(gmTemplateGet&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch(new Request("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"}));}
   if(url.pathname==="/api/gm/lobby/reset"&&request.method==="POST"){
@@ -1294,6 +1332,8 @@ export default {async fetch(request,env){
   const gmAssign=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/assignments$/);if(gmAssign&&request.method==="POST")return roomProxy(env,gmAssign[1],"/gm/assign",request);
   const gmStart=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/start$/);if(gmStart&&request.method==="POST")return roomProxy(env,gmStart[1],"/gm/start",request);
   const gmConfig=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/config$/);if(gmConfig&&request.method==="POST")return gmRoomConfig(env,gmConfig[1],request);
+  const gmTemplatePreload=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/template-assets$/);
+  if(gmTemplatePreload&&request.method==="POST")return gmPreloadTemplateAssets(env,gmTemplatePreload[1],request);
   const gmRoleAssets=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/role-assets$/);if(gmRoleAssets&&request.method==="POST")return roomProxy(env,gmRoleAssets[1],"/gm/role-assets",request);
   const gmArtworkManifest=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/artwork-manifest$/);if(gmArtworkManifest&&request.method==="GET")return roomProxy(env,gmArtworkManifest[1],"/gm/artwork-manifest",request);
   const publicRoleAsset=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role-assets\/([^/]+)\/image$/);if(publicRoleAsset&&request.method==="GET"){const c=normalizeRoomCode(publicRoleAsset[1]);if(!isValidRoomCode(c))return new Response("Invalid room code",{status:400});return roomStub(env,c).fetch("https://room.internal/role-assets/"+encodeURIComponent(decodeURIComponent(publicRoleAsset[2]))+"/image")}
@@ -1439,6 +1479,31 @@ async function gmRoomRename(env,raw,request){const c=normalizeRoomCode(raw),body
 async function gmRoomReset(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.hardReset===false&&data?.preserveParticipants===true){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:c,ready:true})})}catch{}}}else{for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}}await syncRoomDirectory(env,c)}return res}
 async function gmRoomEnd(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/end",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),room=data?.room||{};for(const r of (Array.isArray(data?.memberResults)?data.memberResults:[])){try{await memberStore(env).fetch("https://member.internal/members/record-result",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,matchId:data.matchId||room.matchId,roomCode:c,roomName:room.roomName,gameName:room.gameName,roleName:r.roleName,faction:r.faction,winnerFaction:data.winnerFaction||room.winnerFaction,result:r.result,playedAt:room.endedAt})})}catch(e){console.warn("GMWW_RESULT_RECORD",r?.loginId,e)}try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,roomCode:c,ready:true})})}catch(e){console.warn("GMWW_END_LOBBY_PRESENCE",r?.loginId,e)}}await syncRoomDirectory(env,c)}return res}
 async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(bearer(request)!==GM_SYNC_TOKEN){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
+
+async function gmPreloadTemplateAssets(env,raw,request){
+  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const body=await safeJson(request),id=String(body?.templateId||"").slice(0,120);
+  const statusResponse=await memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(id));
+  if(!statusResponse.ok)return statusResponse;
+  const status=await statusResponse.json();
+  if(!status.ready)return j({ok:false,error:"TEMPLATE_ASSETS_NOT_READY",missing:status.missing||[],message:"Artwork của Ván Mẫu chưa được đóng gói đầy đủ."},409);
+  let transferred=0;
+  for(const assetId of status.assets){
+    const assetResponse=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(id)+"&assetId="+encodeURIComponent(assetId));
+    if(!assetResponse.ok)return j({ok:false,error:"TEMPLATE_ASSET_FETCH_FAILED",assetId},424);
+    const asset=await assetResponse.json();
+    if(!asset?.package?.imageDataUrl)return j({ok:false,error:"TEMPLATE_ASSET_EMPTY",assetId},424);
+    const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/role-assets",{method:"POST",headers:request.headers,body:JSON.stringify({roles:[asset.package]})}));
+    const result=await push.json().catch(()=>null);
+    if(!push.ok||result?.ok!==true||result?.roles?.[0]?.hasImage!==true)return j({ok:false,error:"ROOM_ARTWORK_PRELOAD_FAILED",assetId,message:result?.message||result?.error||"Không thể nạp artwork lên Phòng."},424);
+    transferred++;
+  }
+  const verify=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
+  const manifest=await verify.json().catch(()=>null);
+  if(!verify.ok||!status.assets.every(id=>manifest?.assetIds?.includes(id)))return j({ok:false,error:"ROOM_ARTWORK_VERIFY_FAILED",message:"Artwork chưa được xác thực đầy đủ trong Phòng."},424);
+  return j({ok:true,ready:true,templateId:id,count:transferred,assetIds:status.assets});
+}
 async function roomProxy(env,raw,path,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);return roomStub(env,c).fetch(new Request("https://room.internal"+path,{method:request.method,headers:request.headers,body:request.method==="GET"?undefined:request.body}))}
 async function publicRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const res=await roomStub(env,c).fetch("https://room.internal/state");if(res.ok)await syncRoomDirectory(env,c);return res}
 async function gmRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const res=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(res.ok)await syncRoomDirectory(env,c);return res}
