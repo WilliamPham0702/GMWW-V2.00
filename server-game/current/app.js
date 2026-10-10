@@ -3114,14 +3114,14 @@ async function savePlayGame(){
         artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0))),
         artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1}))
       };
-      // Transfer one image per request on iPhone. Do not partially apply the room config if media fails.
+      // V3.71: register lightweight references to ALL canonical role images.
+      // The Server owns the packaged bytes; never transfer images to each room.
       const templateAssets=playTemplateAssetIds(base);
-      for(let offset=0;offset<templateAssets.length;offset++){
-        playGameStatus('Đang nạp ảnh lá bài '+(offset+1)+'/'+templateAssets.length+'…','progress');
-        const prepared=await playRoomApi('/template-assets',{method:'POST',timeoutMs:60000,
-          body:JSON.stringify({templateId:id,assetIds:[templateAssets[offset]]})});
-        if(prepared?.ready!==true)throw new Error('Artwork Ván Mẫu chưa nạp xong, chưa thể Phân Vai.');
-      }
+      playGameStatus('Đang liên kết '+templateAssets.length+' lá Vai Trò đã lưu trên Server…','progress');
+      const prepared=await playRoomApi('/template-assets',{method:'POST',timeoutMs:20000,
+        body:JSON.stringify({templateId:id,assetIds:templateAssets})});
+      if(prepared?.ready!==true||prepared?.mode!=='reference'||!templateAssets.every(assetId=>prepared.assetIds?.includes(assetId)))
+        throw new Error('Artwork Ván Mẫu chưa liên kết xong. Vui lòng kiểm tra kho Vai Trò.');
       playGameStatus('Đang xác thực Artwork và lưu cấu hình phòng…','progress');
       await playPreloadSelectedArtwork(configured);
       const matchId='match-'+Date.now().toString(36);
@@ -3446,27 +3446,23 @@ async function playPreloadSelectedArtwork(cfg){
   const roles=playTemplateAssetIds(cfg),artifacts=playMatchArtifactAssetIds(cfg),expected=[...roles,...artifacts];
   const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
   const existing=new Set(manifest?.assetIds||[]);
-  for(const assetId of roles.filter(x=>!existing.has(x))){
-    const id=assetId.slice(5),model=(state.cards||[]).find(x=>String(x.id)===id);
-    if(!model)throw new Error('Không tìm thấy Vai Trò '+assetId+' cho trận này.');
-    const imageDataUrl=await playRoleArtworkData(model);
-    const uploaded=await playRoomApi('/role-assets',{method:'POST',timeoutMs:60000,
-      body:JSON.stringify({roles:[{roleId:id,roleName:model.name,artworkAssetId:assetId,roleCard:playRoleCardPayload(model),imageDataUrl}]})});
-    if(uploaded?.roles?.[0]?.hasImage!==true)throw new Error('Không nạp được ảnh Vai Trò '+model.name+' lên Phòng.');
-  }
-  // Artifact is copied from server-wide cache; never encoded or repackaged per template.
+  // Roles are always registered in a single metadata-only request at Chọn Ván.
+  // Never fetch/re-encode their artwork on the phone a second time.
+  const missingRoles=roles.filter(assetId=>!existing.has(assetId));
+  if(missingRoles.length)throw new Error('Thiếu tham chiếu ảnh Vai Trò: '+missingRoles.join(', ')+'. Hãy chọn lại Ván Mẫu.');
+  // Artifact stays in the server-wide shared catalog and is referenced once
+  // per selected pool, with no per-game artwork serialization.
   if(artifacts.length){
-    playGameStatus('Đang nhận Artifact từ kho dùng chung của Server…','progress');
+    playGameStatus('Đang liên kết '+artifacts.length+' Artifact từ kho chung Server…','progress');
     await playEnsureSharedArtifactPool(cfg);
-    for(const assetId of artifacts){
-      const transferred=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:60000,
-        body:JSON.stringify({assetIds:[assetId]})});
-      if(transferred?.ready!==true)throw new Error('Server chưa nạp được Artifact '+assetId);
-    }
+    const linked=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:20000,
+      body:JSON.stringify({assetIds:artifacts})});
+    if(linked?.ready!==true||linked?.mode!=='reference'||!artifacts.every(id=>linked.assetIds?.includes(id)))
+      throw new Error('Server chưa liên kết đủ bộ Artifact.');
   }
   const verified=await playRoomApi('/artwork-manifest',{method:'GET'});
-  if(!expected.every(id=>verified?.assetIds?.includes(id)))
-    throw new Error('Chưa nạp đầy đủ artwork Vai Trò/Artifact vào Phòng. Chưa thể Phân Vai.');
+  if(verified?.mode!=='reference'||!expected.every(id=>verified?.assetIds?.includes(id)))
+    throw new Error('Tham chiếu artwork Vai Trò/Artifact chưa đầy đủ. Chưa thể Phân Vai.');
   return verified;
 }
 async function playDealRoles(){
