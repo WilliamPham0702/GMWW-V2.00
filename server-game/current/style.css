@@ -4240,3 +4240,21 @@ body:not(.play-immersive) #bottomNav .nav{visibility:visible!important;opacity:1
 #playGameSheet .play-game-status[data-kind="error"]{color:#fff3e8;background:#66342b;border-color:#ffa978}
 #playGameSheet .play-game-status[hidden]{display:none!important}
 #playGameSheet #playGameSave:disabled{opacity:.8;cursor:wait;touch-action:none}
+
+/* GM role delivery acknowledgement: unobtrusive overlay above the cards. */
+body.play-immersive #start .play-delivery-status{
+  position:absolute;z-index:7;bottom:calc(env(safe-area-inset-bottom) + 222px);
+  left:50%;transform:translateX(-50%);min-width:205px;max-width:calc(100% - 28px);
+  padding:8px 13px;border:1px solid rgba(255,255,255,.44);border-radius:15px;
+  background:rgba(5,27,45,.92);box-shadow:0 7px 22px rgba(0,0,0,.24);
+  text-align:center;color:#eef9ff;pointer-events:none;
+}
+#start .play-delivery-status b{display:block;font-size:12px;line-height:1.35;white-space:nowrap}
+#start .play-delivery-status small{display:block;font-size:11px;margin-top:3px}
+#start .play-delivery-status strong{color:#ffe5a1}
+#start .play-delivery-status.is-success{border-color:rgba(116,243,191,.72)}
+#start .play-card-fan.is-role-only .role-card{
+  left:50%;right:auto;transform:translateX(-50%) translateY(-8px) scale(1.06);
+  filter:saturate(1.08);z-index:3;
+}
+#start .play-card-fan.is-role-only .artifact-card{display:none!important}

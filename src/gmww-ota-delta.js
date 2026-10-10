@@ -422,3 +422,26 @@ export function selectVerifiedRuntimeV372Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.72: Server đóng gói ảnh Vai Trò trực tiếp, giảm lag bằng đồng bộ Artifact lần lượt khi rảnh; giữ nguyên dữ liệu và hình ảnh.'};
 }
+
+/** Runtime V3.72 -> V3.73: show server-confirmed deal and seen counts on GM.
+ * Three-file overlay retains previously installed cards, characters and user data.
+ * Older runtimes continue to receive the complete verified package.
+ */
+export function selectVerifiedRuntimeV373Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.72'||String(manifest?.releaseVersion||'')!=='3.73'
+    ||String(manifest?.runtimeVersion||'')!=='3.73'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const matched=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matched.length!==1)return null;
+    const file=matched[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.73/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.73: Xác nhận đã Phát Vai, theo dõi số người đã xem Vai Trò và tự ẩn lá Artifact khi tắt.'};
+}

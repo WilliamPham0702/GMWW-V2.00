@@ -46,7 +46,7 @@ test('Step 5 is a true GM-only responsive page with preview, control row, and co
  assert.match(css,/#playRoleAssignmentPanel \.play-assignment-rows\{overflow-y:auto/);
  assert.match(css,/#playRoleAssignmentPanel \.play-assignment-fields\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
  assert.match(css,/@media\(max-width:390px\)/);
- assert.match(app,/renderPlayPlayers\(\);renderPlayCards\(\);renderPlayGatherToolbar\(\);renderPlayRoleAssignmentPanel\(\)/);
+ assert.match(app,/renderPlayPlayers\(\);renderPlayCards\(\);renderPlayDeliveryProgress\(\);renderPlayGatherToolbar\(\);renderPlayRoleAssignmentPanel\(\)/);
  assert.match(app,/async function savePlayGame\(\)/);
  assert.match(app,/try\{playBuildAssignments\(\{random:true\}\)\}catch\(err\)/);
  assert.match(app,/resolveArtwork\('cards',role\.id,'thumb'\)/);
@@ -95,7 +95,7 @@ test('Only GM confirmation advances to step 6; release requires separate step-6 
  assert.ok(h.logs.includes('published:deal'));
  assert.equal(h.logs.filter(x=>x.startsWith('published:')).length,1);
  assert.match(app,/if\(playSceneState\.step==='roles'\)\{playConfirmAssignments\(\);return\}/);
- assert.match(app,/if\(playSceneState\.step==='deal'\)\{await playDealRoles\(\);return\}/);
+ assert.match(app,/if\(playSceneState\.step==='deal'\)\{if\(playDeliveryProgress\(\)\.success\)/);
 });
 test('Role counts are exact and versioned V3.64 OTA only includes the three existing GM UI files',()=>{
  const paths=['GMWW.html','app.js','style.css'],origin='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.64/';
@@ -110,7 +110,7 @@ test('Role counts are exact and versioned V3.64 OTA only includes the three exis
  assert.equal(selectVerifiedRuntimeV364Delta(bad,'3.63'),null);
  const unsafe=sample();unsafe.delete=['settings.json'];
  assert.equal(selectVerifiedRuntimeV364Delta(unsafe,'3.63'),null);
- assert.match(worker,/VERSION="V3\.72",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-372"/);
- assert.match(html,/<title>GMWW V3\.72<\/title>/);
- assert.match(app,/const VERSION='3\.72'/);
+ assert.match(worker,/VERSION="V3\.73",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-373"/);
+ assert.match(html,/<title>GMWW V3\.73<\/title>/);
+ assert.match(app,/const VERSION='3\.73'/);
 });

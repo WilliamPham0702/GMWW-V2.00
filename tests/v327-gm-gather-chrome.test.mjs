@@ -42,7 +42,7 @@ test('V3.37 displays working gathering tools directly inside village stage',()=>
  assert.match(html,/id="playGatherConfirm"/);
  assert.match(html,/id="playGatherClose"/);
  assert.match(app,/function renderPlayGatherToolbar\(\)/);
- assert.match(app,/renderPlayCards\(\);renderPlayGatherToolbar\(\)/);
+ assert.match(app,/renderPlayCards\(\);renderPlayDeliveryProgress\(\);renderPlayGatherToolbar\(\)/);
  assert.match(app,/async function playGatherCallMembers\(\)/);
  assert.match(app,/await playCallOnlineMembers\(\)/);
  assert.match(app,/async function playGatherRandomize\(\)/);
@@ -67,7 +67,7 @@ test('V3.37 tapping the active gathering step reopens its controls',async()=>{
  assert.deepEqual(hits,['visible']);
 });
 test('V3.37 runtime updates V3.17 native shell without forcing IPA install',()=>{
- assert.equal(pkg.version,'3.72.0');
- assert.match(app,/const VERSION='3\.72'/);
- assert.match(worker,/VERSION="V3\.72",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-372"/);
+ assert.equal(pkg.version,'3.73.0');
+ assert.match(app,/const VERSION='3\.73'/);
+ assert.match(worker,/VERSION="V3\.73",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-373"/);
 });

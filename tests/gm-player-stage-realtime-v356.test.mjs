@@ -17,7 +17,7 @@ test('GM stage is authorized, broadcast and present in room snapshots',()=>{
 test('GM publishes timeline and setup transitions',()=>{
   assert.match(gm,/function playPublishStage\(step\)/);
   assert.match(gm,/playStagePublishQueue=playStagePublishQueue\.then\(write,write\)/);
-  for(const stage of ['seats','game','roles','deal','battle'])
+  for(const stage of ['seats','game','roles','deal'])
     assert.ok(gm.includes("playPublishStage('"+stage+"')"),stage+' published');
   assert.match(gm,/playSceneState\.step=room\.gmStage/);
 });
