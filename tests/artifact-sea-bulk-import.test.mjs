@@ -44,7 +44,7 @@ test('Sea Artifact importer disallows unknown / incomplete or encrypted ZIPs',as
   const bytes=makeZip([['manifest.json',JSON.stringify({themeId:'theme-sea',imageCount:44,items:[]})]]);
   const invalid={name:'bad.zip',size:bytes.length,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length)};
   await assert.rejects(fn.parse(invalid),/Không phải bộ 44/);
-  await assert.rejects(fn.parse({name:'bad.zip',size:25000001}),/tối đa 25 MB/);
+  await assert.rejects(fn.parse({name:'bad.zip',size:25*1024*1024+1}),/tối đa 25 MB/);
 });
 test('Production GM theme ships bulk importer without changing role/card metadata',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
