@@ -1380,7 +1380,8 @@ function gmwwBuildBugReport(diag){
     const visible=document.querySelector('#diagnosticList [data-diagnostic="'+name+'"] b')?.textContent||'';
     checks[name]=p?{ok:p.ok===true,http:Number(p.status)||0,
       latencyMs:Math.min(Math.max(0,Number(p.latency)||0),99999),
-      code:p.ok?'OK':gmwwBugCode(p.data?.error||('HTTP_'+p.status))}:
+      code:p.ok?'OK':(/^[A-Z][A-Z0-9_]{3,55}$/.test(String(p.data?.error||''))
+        ?String(p.data.error):'HTTP_'+(Number(p.status)||0))}:
       {ok:false,code:visible==='OFFLINE'?'OFFLINE':visible==='OK'?'PREVIOUSLY_OK':'NOT_CHECKED'};
   }
   const data={
@@ -1399,9 +1400,20 @@ function gmwwBuildBugReport(diag){
     warningsCount:Array.isArray(diag?.warnings)?diag.warnings.length:0,
     diagnosticResult:diag?.ok===true?'PASS':diag?.offline?'OFFLINE':'CHECK_REQUIRED'
   };
+  const names={server:'Server',player:'Player Web',update:'Kênh cập nhật Runtime',
+    characters:'Kho nhân vật',settings:'Cài đặt'};
+  const issues=Object.entries(checks)
+    .filter(([,v])=>v.code!=='NOT_CHECKED'&&v.code!=='PREVIOUSLY_OK'&&!v.ok)
+    .map(([key,v])=>names[key]+': '+v.code+(v.http?' (HTTP '+v.http+')':''));
+  if(data.updateStatus.includes('PHÁT HÀNH'))
+    issues.unshift('Runtime đang phát hành nhưng gói cập nhật có thể chưa sẵn sàng.');
+  if(data.runtimeErrorCount>0)issues.push('Ứng dụng ghi nhận '+data.runtimeErrorCount+' lỗi Runtime gần đây.');
+  const description=issues.length?issues.join(' • '):
+    'Chưa xác nhận lỗi cụ thể. Kiểm tra các trạng thái hệ thống bên dưới.';
   // No room ID, login/session IDs, player names, role/artifact content,
   // stacktraces, raw exception text, credentials or HTTP bodies.
   return 'Tôi cần hỗ trợ khắc phục lỗi GMWW. Dưới đây là báo cáo hệ thống đã được tự động tạo và loại bỏ dữ liệu cá nhân.\n'+
+    'Mô tả lỗi: '+description+'\n'+
     'Hãy phân tích nguyên nhân, kiểm tra GitHub CI và Cloudflare Production, đề xuất hoặc tạo PR sửa lỗi khi được cấp quyền. '+
     'Không khẳng định đã sửa/deploy khi chưa xác minh; không merge/deploy nếu chưa được tôi phê duyệt. '+
     'Bảo toàn toàn bộ dữ liệu game, vai trò, Artifact và phiên chơi.\n\n'+
