@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.62';
+const VERSION='3.63';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -3315,6 +3315,34 @@ async function confirmPlayEndGame(){
 }
 function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
 function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
+let playRosterFilterMode='all';
+function applyPlayRosterFilter(){
+  const list=document.getElementById('playRosterList');if(!list)return;
+  document.querySelectorAll('#playRosterFilters [data-play-roster-filter]').forEach(btn=>{
+    const active=btn.dataset.playRosterFilter===playRosterFilterMode;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-pressed',active?'true':'false');
+  });
+  const rows=[...list.querySelectorAll('.play-roster-row')];let visible=0;
+  rows.forEach(row=>{
+    const show=playRosterFilterMode==='all'||row.dataset.presence===playRosterFilterMode;
+    row.classList.toggle('hidden',!show);
+    if(show)visible++;
+  });
+  let empty=document.getElementById('playRosterFilterEmpty');
+  if(rows.length&&!empty){
+    empty=document.createElement('div');empty.id='playRosterFilterEmpty';empty.className='member-empty';
+    list.appendChild(empty);
+  }
+  if(empty){
+    empty.textContent=playRosterFilterMode==='online'?'Không có Thành Viên Online.':playRosterFilterMode==='offline'?'Không có Thành Viên Offline.':'Chưa có Thành Viên trong danh bạ.';
+    empty.classList.toggle('hidden',visible>0);
+  }
+}
+function setPlayRosterFilter(mode){
+  playRosterFilterMode=mode==='online'||mode==='offline'?mode:'all';
+  applyPlayRosterFilter();
+}
 async function playLoadFreshRosterMembers(){
   const data=await gmApi('/api/gm/members');
   if(!Array.isArray(data?.members))throw new Error('Không nhận được danh sách Thành Viên mới nhất.');
@@ -3336,7 +3364,9 @@ async function playRefreshRosterPresence(){
       dot.classList.toggle('is-online',online);dot.classList.toggle('is-offline',!online);
       dot.setAttribute('aria-label',online?'Đang trực tuyến':'Đang ngoại tuyến');
       dot.title=online?'Đang trực tuyến':'Đang ngoại tuyến';
+      row.dataset.presence=online?'online':'offline';
     });
+    applyPlayRosterFilter();
   }catch(err){console.warn('[GMWW roster presence]',err)}
 }
 async function openPlayRosterSheet(){
@@ -3349,7 +3379,7 @@ async function openPlayRosterSheet(){
   const selected=new Set((playSceneState.selectedMemberIds||[]).map(String));
   document.getElementById('playRosterRoomLabel').textContent='Phòng '+playSceneState.roomCode;list.innerHTML='';
   for(const m of rows){
-    const b=document.createElement('button');b.type='button';b.className='play-roster-row'+(selected.has(String(m.loginId))?' selected':'');b.dataset.loginId=String(m.loginId);
+    const b=document.createElement('button');b.type='button';b.className='play-roster-row'+(selected.has(String(m.loginId))?' selected':'');b.dataset.loginId=String(m.loginId);b.dataset.presence=m.online===true?'online':'offline';
     const initial=(String(m.displayName||m.loginId||'?').trim().charAt(0)||'?').toUpperCase();
     const online=m.online===true,status=online?'Đang trực tuyến':'Đang ngoại tuyến';
     b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b></div><span class="play-roster-presence '+(online?'is-online':'is-offline')+'" role="img" aria-label="'+status+'" title="'+status+'"></span><span class="play-roster-check">✓</span>';
@@ -3357,7 +3387,7 @@ async function openPlayRosterSheet(){
     b.onclick=()=>{b.classList.toggle('selected');updatePlayRosterCount()};list.appendChild(b);
   }
   if(!rows.length)list.innerHTML='<div class="member-empty">Chưa có Thành Viên trong danh bạ.</div>';
-  sheet.classList.remove('hidden');updatePlayRosterCount();
+  sheet.classList.remove('hidden');updatePlayRosterCount();setPlayRosterFilter('all');
   if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);
   playRosterPresenceTimer=setInterval(()=>{if(!document.hidden)void playRefreshRosterPresence()},10000);
 }
@@ -3612,7 +3642,8 @@ function initPlayScene(){
   document.getElementById('playGMRevive')?.addEventListener('click',async()=>{if(await applyPlayPlayerState('revive'))closePlayGMSheet()});
   document.getElementById('playRosterClose')?.addEventListener('click',closePlayRosterSheet);document.getElementById('playRosterCancel')?.addEventListener('click',closePlayRosterSheet);
   document.getElementById('playRosterSave')?.addEventListener('click',savePlayRoster);
-  document.getElementById('playRosterSelectAll')?.addEventListener('click',()=>{const rows=[...document.querySelectorAll('#playRosterList .play-roster-row')],all=rows.length&&rows.every(x=>x.classList.contains('selected'));rows.forEach(x=>x.classList.toggle('selected',!all));updatePlayRosterCount()});
+  document.querySelectorAll('#playRosterFilters [data-play-roster-filter]').forEach(btn=>btn.addEventListener('click',()=>setPlayRosterFilter(btn.dataset.playRosterFilter)));
+  document.getElementById('playRosterSelectAll')?.addEventListener('click',()=>{const rows=[...document.querySelectorAll('#playRosterList .play-roster-row')].filter(x=>!x.classList.contains('hidden')),all=rows.length&&rows.every(x=>x.classList.contains('selected'));rows.forEach(x=>x.classList.toggle('selected',!all));updatePlayRosterCount()});
   document.getElementById('playRosterSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playRosterSheet'))closePlayRosterSheet()});
   document.getElementById('playSeatClose')?.addEventListener('click',closePlaySeatSheet);document.getElementById('playSeatCancel')?.addEventListener('click',closePlaySeatSheet);document.getElementById('playSeatRelease')?.addEventListener('click',releaseSelectedPlayerSeat);
   document.querySelectorAll('[data-play-seat-member-mode]').forEach(b=>b.addEventListener('click',()=>{playSeatCandidateMode=b.dataset.playSeatMemberMode==='offline'?'offline':'online';renderPlaySeatSheet()}));
