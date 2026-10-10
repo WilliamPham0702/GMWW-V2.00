@@ -19,8 +19,8 @@ const fakeAi=()=>async (url,opts)=>{
   const payload=JSON.parse(opts.body);
   assert.equal(payload.store,false);
   assert.ok(payload.max_output_tokens<=1200);
-  assert.equal(payload.model,'gpt-5.6-terra');
-  return Response.json({model:'gpt-5.6-terra',output:[{type:'message',content:[{type:'output_text',text:'Đã kiểm tra trạng thái CI. Chưa sửa hoặc deploy.'}]}]});
+  assert.equal(payload.model,'gpt-4.1-mini');
+  return Response.json({model:'gpt-4.1-mini',output:[{type:'message',content:[{type:'output_text',text:'Đã kiểm tra trạng thái CI. Chưa sửa hoặc deploy.'}]}]});
 };
 test('Only Cloudflare env contains provider credential; unauthenticated requests never call OpenAI',async()=>{
   let called=0;
