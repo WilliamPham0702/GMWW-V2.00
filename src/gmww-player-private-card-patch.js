@@ -173,6 +173,9 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "if(!me&&state.participantId){gmwwVerifyMemberBeforeRemoval();return}");
  replaceReceipt("if(!state.players.some(p=>p.participantId===state.participantId)){await handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}",
    "if(!state.players.some(p=>p.participantId===state.participantId)){await gmwwVerifyMemberBeforeRemoval();return}");
+ // Enabled only by isolated browser acceptance tests; no private data or tokens.
+ replaceReceipt("async function handleRoomMembershipLost(message='Bạn đã rời Phòng.'){",
+   "async function handleRoomMembershipLost(message='Bạn đã rời Phòng.'){if(window.__gmwwPrivateDeliveryDiagnostics)window.__gmwwLastLoss={reason:message,stack:new Error().stack,time:Date.now()};");
  // The public-room poll previously started a second, partially applied /me
  // response that updated role but not Artifact, and could race the full receipt.
  const pollStart=result.indexOf("async function pollRoomState(){");
