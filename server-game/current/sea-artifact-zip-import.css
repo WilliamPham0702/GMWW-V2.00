@@ -1,0 +1,23 @@
+/* GMWW Sea theme: one-time audited artwork importer */
+.gmww-sea-import-toolbar{display:flex;flex-direction:column;gap:5px;margin:8px 0 12px;padding:10px;border:1px solid rgba(84,203,234,.45);border-radius:12px;background:rgba(8,66,94,.33)}
+.gmww-sea-import-toolbar button{font-size:13px;font-weight:800;letter-spacing:.1px;border:1px solid #5fcfe9;border-radius:9px;background:linear-gradient(120deg,#046f94,#138cc0);color:#fff;padding:12px;min-height:44px}
+.gmww-sea-import-toolbar small{font-size:11px;color:#d4edf6}
+.gmww-sea-import-overlay{position:fixed;z-index:99999;inset:0;background:rgba(4,12,24,.84);display:flex;align-items:center;justify-content:center;padding:max(env(safe-area-inset-top),12px) 12px max(env(safe-area-inset-bottom),12px)}
+.gmww-sea-import-dialog{display:flex;flex-direction:column;width:min(1100px,100%);max-height:95dvh;min-height:300px;background:#0c2b40;border:1px solid #59bcd9;border-radius:16px;color:#f4f9ff;box-shadow:0 10px 54px #0009;overflow:hidden}
+.gmww-sea-import-header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 14px;background:#124562}
+.gmww-sea-import-header b{font-size:15px}.gmww-sea-import-header small{display:block;color:#c7e8ef;font-size:11px;margin-top:5px}
+.gmww-sea-import-header button{min-width:38px;min-height:38px;border-radius:50%;color:white;background:#34627c}
+.gmww-sea-import-notice{margin:0;padding:10px 14px;font-size:12px;color:#eddfad;background:#3d3b1b}
+.gmww-sea-import-grid{overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:9px;padding:12px;align-content:start}
+.gmww-sea-import-card{display:flex;flex-direction:column;min-width:0;border:1px solid #276b80;background:#113b50;border-radius:10px;overflow:hidden}
+.gmww-sea-import-card img{display:block;width:100%;height:125px;object-fit:contain;background:#082434}
+.gmww-sea-import-card-detail{display:flex;flex-direction:column;gap:7px;padding:8px;min-width:0}
+.gmww-sea-import-card-detail small{font-size:10px;line-height:1.35;overflow-wrap:anywhere;min-height:24px}
+.gmww-sea-import-card-detail select{font-size:12px;width:100%;min-width:0;min-height:38px;color:#122630;background:#e7f5fb;border:1px solid #73afc0;border-radius:7px;padding:5px}
+.gmww-sea-import-footer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 12px;background:#102f41;border-top:1px solid #366681}
+.gmww-sea-import-footer span{flex:1 1 100%;font-size:12px;overflow-wrap:anywhere;color:#e0f3f8}
+.gmww-sea-import-footer button{min-height:43px;padding:8px 12px;border-radius:9px;font-size:12px}
+.gmww-sea-import-confirm{flex:1;background:linear-gradient(110deg,#1387a9,#0eabe4);font-weight:800;color:white;border:1px solid #a0eaff}
+.gmww-sea-import-footer button:disabled{opacity:.5;pointer-events:none}
+.gmww-sea-import-error{color:#ffb2b2!important}.gmww-sea-import-success{color:#85ffe0!important}
+@media(max-width:560px){.gmww-sea-import-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:6px}.gmww-sea-import-card img{height:95px}.gmww-sea-import-card-detail select{font-size:11px}.gmww-sea-import-dialog{max-height:96dvh}.gmww-sea-import-header b{font-size:13px}}
