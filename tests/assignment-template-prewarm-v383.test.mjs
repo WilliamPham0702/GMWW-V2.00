@@ -20,7 +20,7 @@ test('Assignment LƯU is GM-local; bottom navigation alone moves to Phát Vai',(
   assert.doesNotMatch(saver,/playPublishStage|playRoomApi|step='deal'/);
   assert.match(html,/id="playAssignmentConfirm"[^>]*>✓ LƯU<\/button>/);
   assert.match(app,/if\(playSceneState\.step==='roles'\)\{playConfirmAssignments\(\);return\}/);
-  assert.match(app,/id='playAssignmentConfirm'/);
+  assert.match(app,/getElementById\('playAssignmentConfirm'\)\?\.addEventListener\('click',playSaveAssignments\)/);
 });
 
 test('Ván Mẫu saving prepackages roles and prepares selected Artifact before choosing the match',()=>{
