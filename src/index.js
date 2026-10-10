@@ -1024,7 +1024,21 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
+    const meta=auth.meta;
+    // The battle UI supplies an optional expected turn. Legacy GM manual overrides remain compatible.
+    if(body?.turnId){
+      if(String(meta.phase||"").toLowerCase()!=="running"||String(meta.cyclePhase||"").toLowerCase()!=="night")
+        return j({ok:false,error:"STALE_TURN",message:"Đã kết thúc lượt Ban Đêm."},409);
+      const live=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+      const step=live&&!live.completed?live.queue?.[live.cursor]:null;
+      if(!step||String(step.id)!==String(body.turnId))
+        return j({ok:false,error:"STALE_TURN",message:"Lượt chức năng đã thay đổi. Vui lòng chọn lại."},409);
+      const claimedActor=normalizeLoginId(body.actorId||"");
+      const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
+      if(claimedActor&&actors.length&&!actors.includes(claimedActor))
+        return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    }
+    const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
       const p=Object.values(players).find(x=>normalizeLoginId(x?.loginId)===loginId);if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
