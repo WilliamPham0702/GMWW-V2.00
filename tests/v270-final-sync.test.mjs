@@ -40,14 +40,16 @@ test('Player Web consumes authoritative cycle, turn and Auto GM events with serv
   assert.ok(live.includes("state.room=d.room||state.room"));
 });
 
-test('Native IPA build is isolated to native-shell changes for V3.17',()=>{
+test('Clean native IPA rebuild keeps Git baseline V3.17 while bundling current runtime',()=>{
   const workflow=read('.github/workflows/build-server-game-ipa.yml');
   assert.ok(workflow.includes('workflow_dispatch:'));
   assert.ok(workflow.includes('test "$IPA_BYTES" -gt 50000000'));
   assert.ok(workflow.includes('RESTORED_COUNT'));
   assert.ok(workflow.includes('walk-v263'));
   assert.ok(workflow.includes('walk-v266-left'));
-  assert.ok(workflow.includes('Native build blocked:'));
-  assert.ok(workflow.includes('Fast Runtime Snapshot workflow'));
+  assert.ok(workflow.includes("Only this macOS runner's Xcode project receives the version bump"));
+  assert.ok(workflow.includes('fs.writeFileSync(projectPath,staged)'));
+  assert.ok(workflow.includes('server-game/current/home-art'));
+  assert.ok(workflow.includes('Native executable')===false);
   assert.ok(!workflow.includes('server-game/BUILD_IPA_REQUEST'));
 });
