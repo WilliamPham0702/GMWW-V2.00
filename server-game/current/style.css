@@ -4319,3 +4319,11 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 .play-battle-gm-tools button.is-off{background:#555e69}
 @media(max-width:390px){#start #playBattleTop{grid-template-columns:44px minmax(0,1fr) 38px}#start #playBattleTop #battleBack span{display:none}#start .play-battle-step{max-width:135px}#start .play-battle-step b{max-width:103px}}
 @media(prefers-reduced-motion:reduce){#start .play-player-token[class*="battle-impact-"] .play-player-avatar:after{animation:none}}
+
+/* V3.74: projected GM action token and non-destructive visual hit cues */
+#battleDragGhost{position:fixed;z-index:99999;pointer-events:none;transform:translate(-50%,-50%);border:1px solid #f8df91;border-radius:12px;padding:8px 12px;background:#073e54ee;color:#fff;font:900 12px system-ui;box-shadow:0 8px 24px #001a30;max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#start .play-player-token.battle-impact-wolf-bite .play-player-avatar:after{content:"🐺";background:#73384696}
+#start .play-player-token.battle-impact-shield .play-player-avatar:after{content:"🛡️";background:#199d9a88}
+#start .play-player-token.battle-impact-seer .play-player-avatar:after{content:"👁️";background:#4350aa8c}
+#start .play-player-token.battle-impact-swap .play-player-avatar:after{content:"⇄";font-size:37px;color:#fff3c5;background:#8b6dbb91}
+#start .play-player-token.battle-impact-revive .play-player-avatar:after{content:"✨";background:#35b77d8a}
