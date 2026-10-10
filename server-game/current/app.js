@@ -1233,10 +1233,10 @@ async function checkServerHealth(){
  * a draft in ChatGPT; sending it and approving a production fix remain manual. */
 function gmwwSafeDiagnosticText(value){
   return String(value??'').slice(0,200)
-    .replace(/https?:\\/\\/\\S+/gi,'[URL]')
-    .replace(/\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/gi,'[EMAIL]')
-    .replace(/\\b(?:Bearer\\s+\\S+|(?:api[_-]?key|token|secret|password)[=:]\\s*\\S+)/gi,'[REDACTED]')
-    .replace(/\\b[A-Za-z0-9_-]{22,}\\b/g,'[ID]');
+    .replace(/https?:\/\/\S+/gi,'[URL]')
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,'[EMAIL]')
+    .replace(/\b(?:Bearer\s+\S+|(?:api[_-]?key|token|secret|password)[=:]\s*\S+)/gi,'[REDACTED]')
+    .replace(/\b[A-Za-z0-9_-]{22,}\b/g,'[ID]');
 }
 function gmwwBuildChatGPTIssuePrompt(){
   const report={
