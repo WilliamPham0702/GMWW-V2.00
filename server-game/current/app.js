@@ -2981,7 +2981,7 @@ async function battleConfirm(){
 }
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
-  document.getElementById('battleBack')?.addEventListener('click',()=>{if(confirm('Về Trang Chủ? Ván vẫn tiếp tục trên Server.'))exitPlayImmersive()});
+  document.getElementById('battleBack')?.addEventListener('click',()=>{exitPlayImmersive()});
   document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
   document.getElementById('battleRosterToggle')?.addEventListener('click',()=>{battleState.roster=!battleState.roster;renderPlayBattle()});
