@@ -119,8 +119,8 @@ test('Production AI Support Runtime cannot be announced without both widget asse
   assert.match(source,/essential\['gmww-ai-support\.js'\]/);
   assert.match(source,/essential\['gmww-ai-support\.css'\]/);
   const worker=fs.readFileSync('src/index.js','utf8');
-  assert.match(worker,/VERSION="V3\.83"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-383"/);
+  assert.match(worker,/VERSION="V3\.84"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-384"/);
 });
 
 
