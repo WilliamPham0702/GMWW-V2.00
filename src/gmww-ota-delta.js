@@ -551,3 +551,31 @@ export function selectVerifiedRuntimeV381Delta(manifest,installedVersion){
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
     message:'V3.81: Đèn Online xanh và Offline đỏ cạnh tên nhân vật, bỏ box trạng thái dưới tên trên Server.'};
 }
+
+
+/** GMWW V3.80/V3.81 -> V3.82: compact, integrity-verified AI Support UI overlay.
+ * Includes full HTML, JS, CSS and both new AI widget files. All other files,
+ * game state, artwork and Artifact packages stay untouched.
+ */
+export function selectVerifiedRuntimeV382Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(!['3.80','3.81'].includes(from)
+    ||String(manifest?.releaseVersion||'')!=='3.82'
+    ||String(manifest?.runtimeVersion||'')!=='3.82'
+    ||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'
+    ||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css','gmww-ai-support.js','gmww-ai-support.css']){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0];
+    const url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.82/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.82: Thêm icon AI Support nổi, chat tự do và Báo lỗi; bảo toàn toàn bộ lá bài, ảnh, ván mẫu và dữ liệu.'};
+}

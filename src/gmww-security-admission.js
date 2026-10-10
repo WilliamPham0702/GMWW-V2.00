@@ -7,6 +7,9 @@ export const PUBLIC_ENTRY_LIMITS=Object.freeze({
   "/api/rooms":Object.freeze({key:"room-create",method:"POST",limit:30,windowMs:60000})
 });
 
+// This quota is NOT a public entry policy; it must never change the 30-player entry gates.
+export const AI_SUPPORT_REQUEST_LIMIT=Object.freeze({key:"ai-support",method:"POST",limit:8,windowMs:60000});
+
 export function publicEntryPolicy(method,path){
   const policy=PUBLIC_ENTRY_LIMITS[String(path||"")];
   return policy&&policy.method===String(method||"").toUpperCase()?policy:null;

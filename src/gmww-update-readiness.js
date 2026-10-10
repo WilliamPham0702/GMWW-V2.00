@@ -18,6 +18,10 @@ export async function isRuntimePackageReady({assets,requestUrl,manifest,version}
     'home-art/home-v1-members.webp':'image/webp',
     'home-art/home-v1-action.webp':'image/webp'
   };
+  if(String(version||'')==='3.82'){
+    essential['gmww-ai-support.js']='javascript';
+    essential['gmww-ai-support.css']='text/css';
+  }
   // Files must be on the published version path, never an old or unrelated host.
   for(const [path,mime] of Object.entries(essential)){
     const candidates=files.filter(file=>file?.path===path);
