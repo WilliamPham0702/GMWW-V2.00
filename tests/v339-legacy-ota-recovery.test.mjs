@@ -27,7 +27,7 @@ test('Rescue rejects older or future client runtimes',async()=>{
  for(const v of ['3.17','3.37','3.81','unknown']){
   assert.equal(await recoverLegacyRuntimeManifest({...cfg,installedVersion:v,assets:mock()}),null);
  }
- assert.equal(await recoverLegacyRuntimeManifest({...cfg,version:'3.81',assets:mock()}),null);
+ assert.equal(await recoverLegacyRuntimeManifest({...cfg,version:'3.82',assets:mock()}),null);
 });
 test('Rescue fails closed for absent or invalid files',async()=>{
  assert.equal(await recoverLegacyRuntimeManifest({...cfg,assets:mock('app.js')}),null);
