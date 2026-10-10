@@ -913,7 +913,7 @@ window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
 
 /* UPDATE MANAGER V1 — prepared off-main */
 let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
-let gmwwUpdateActionKind='unverified',gmwwUpdateFault=null;
+let gmwwUpdateActionKind='unverified',gmwwUpdateFault=null,gmwwLastDiagnostics=null;
 
 /* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
 function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
@@ -1256,6 +1256,7 @@ function gmwwBuildChatGPTIssuePrompt(){
       manifestVersion:gmwwSafeDiagnosticText(gmwwUpdateFault.manifestVersion||''),
       detectedAt:gmwwUpdateFault.at
     }:null,
+    healthCheck:gmwwLastDiagnostics,
     errorCount:gmwwRuntimeErrors.length,
     recentErrors:gmwwRuntimeErrors.slice(0,4).map(e=>({
       kind:gmwwSafeDiagnosticText(e.kind),
@@ -1374,6 +1375,7 @@ async function runSystemDiagnostics({silent=false}={}){
   try{
     if(navigator.onLine===false){
       ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'bad','OFFLINE'));
+      gmwwLastDiagnostics={at:new Date().toISOString(),offline:true};
       setDiagnosticState('bad','MẤT MẠNG','Thiết bị đang Offline.','Kết nối mạng rồi chạy lại Health Check.');
       return{ok:false,offline:true}
     }
@@ -1386,6 +1388,17 @@ async function runSystemDiagnostics({silent=false}={}){
       gmwwJsonProbe('/api/ui-settings?diag='+stamp,()=>true)
     ]);
     const probes={server,player,update,characters,settings};
+    // Keep only safe HTTP status/latency/error codes; never include API responses.
+    gmwwLastDiagnostics={
+      at:new Date().toISOString(),
+      checks:Object.fromEntries(Object.entries(probes).map(([name,result])=>[name,{
+        ok:Boolean(result.ok),
+        status:Number(result.status||0),
+        latencyMs:Number(result.latency||0),
+        code:gmwwSafeDiagnosticText(String(result.data?.error||'').slice(0,60))
+          .replace(/[^A-Za-z0-9_-]/g,'')
+      }]))
+    };
     for(const [key,result] of Object.entries(probes))renderDiagnosticItem(key,result.ok?'ok':'bad',result.ok?'OK':(result.error||'LỖI').slice(0,18));
     const failures=Object.entries(probes).filter(([,v])=>!v.ok);
     const warnings=[];
