@@ -8,11 +8,22 @@ const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
 
 test('Village only displays compact face-down cards; big card is isolated to explicit opening',()=>{
   assert.ok(player.includes('role-stage{display:none!important;visibility:hidden!important;pointer-events:none!important}'));
-  assert.match(player,/#gmwwPlayerPrivateDock button\{width:clamp\(74px,21vw,94px\)!important\}/);
+  assert.match(player,/#gmwwPlayerPrivateDock button\{width:clamp\(62px,18vw,78px\)!important\}/);
   assert.match(player,/if\(!\$\('#gmwwCompactPrivateCardStyle'\)\)/);
   assert.match(player,/openPrivateCardViewer\(b\.dataset\.privateCard\)/);
+  assert.match(player,/#gmwwPlayerPrivateDock\{width:min\(38vw,154px\)!important;height:clamp\(88px,12vh,112px\)!important\}/);
   assert.match(player,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
   assert.doesNotThrow(()=>new vm.Script(player));
+});
+
+test('First tap reuses a prepared viewer and does not prepare private UI before role delivery',()=>{
+  const dock=player.slice(player.indexOf('function renderPlayerPrivateDock(){'),player.indexOf('function renderGMWWPlayerCardFace(kind){'));
+  assert.match(dock,/if\(!ready\)gmwwRecoverPrivateRole\(\);\s*else \{/);
+  assert.match(dock,/warmPlayerPrivateArtwork\(\);/);
+  assert.match(dock,/if\(!document\.getElementById\('gmwwInstantPrivateViewer'\)\)/);
+  assert.match(dock,/showGmwwInstantPrivateViewer\('role'\)/);
+  assert.match(dock,/document\.getElementById\('gmwwInstantPrivateViewer'\)\.hidden=true/);
+  assert.match(player,/if\(!privateCardAllowed\(\)\)return;/);
 });
 
 test('Role and Artifact use the same stable match-versioned URL as preloaded artwork',()=>{
