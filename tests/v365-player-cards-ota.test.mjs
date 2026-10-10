@@ -42,9 +42,9 @@ test('Both IPA update-manifest routes run V3.65 fast overlay ahead of older algo
  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const app=fs.readFileSync('server-game/current/app.js','utf8');
- assert.equal(pkg.version,'3.82.0');
- assert.match(html,/<title>GMWW V3\.82<\/title>/);
- assert.match(html,/app\.js\?v=3\.82-ai-support/);
- assert.match(app,/const VERSION='3\.82'/);
- assert.match(worker,/VERSION="V3\.82",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-382"/);
+ assert.equal(pkg.version,'3.83.0');
+ assert.match(html,/<title>GMWW V3\.83<\/title>/);
+ assert.match(html,/app\.js\?v=3\.83-ai-support/);
+ assert.match(app,/const VERSION='3\.83'/);
+ assert.match(worker,/VERSION="V3\.83",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-383"/);
 });

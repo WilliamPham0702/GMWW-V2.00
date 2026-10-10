@@ -49,5 +49,5 @@ test('V3.76 UI update is a signed three-file patch only from V3.75',()=>{
   assert.equal(selectVerifiedRuntimeV376Delta(m,'3.72'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,delete:['artwork']},'3.75'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.75'),null);
-  assert.match(worker,/VERSION="V3\.82",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-382"/);
+  assert.match(worker,/VERSION="V3\.83",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-383"/);
 });

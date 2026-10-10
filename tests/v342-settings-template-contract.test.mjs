@@ -39,20 +39,21 @@ test('Workboard fallback is a real recorded public issue snapshot',()=>{
  assert.match(app,/data\.fallback\?'BẢN DỰ PHÒNG/);
 });
 
-test('Ván Mẫu uses thumbnail toggle selection; timing and Artifact settings only appear during Chọn Ván',()=>{
+test('Ván Mẫu uses thumbnail toggle selection; Artifact settings live in Ván Mẫu while per-match timing lives in Chọn Ván',()=>{
  const part=html.slice(html.indexOf('id="playGameSheet"'),html.indexOf('id="playEndSheet"'));
  const editor=part.slice(part.indexOf('<div class="play-template-editor-only">'),part.indexOf('<div class="play-template-play-review">'));
  const play=part.slice(part.indexOf('<div class="play-template-play-review">'));
  for(const id of ['playGameRolePicker','playGameRoleList','playGameRoleCount','playTemplateRoleSearch','playTemplateTeamSummary'])assert.ok(editor.includes('id="'+id+'"'),id);
- for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playArtifactsEnabled','playGameArtifactPicker','playGameRoleTimingList'])assert.ok(play.includes('id="'+id+'"'),id);
- assert.doesNotMatch(editor,/id="playVillageDiscussionSec"|id="playArtifactsEnabled"|id="playAutoAdvance"/);
+ for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playGameRoleTimingList'])assert.ok(play.includes('id="'+id+'"'),id);
+ for(const id of ['playArtifactsEnabled','playArtifactActionSec','playGameArtifactPicker'])assert.ok(editor.includes('id="'+id+'"'),id);
+ assert.doesNotMatch(editor,/id="playVillageDiscussionSec"|id="playAutoAdvance"/);
  assert.match(app,/resolveArtwork\('cards',role\.id,'thumb'\)/);
  assert.match(app,/button\.onclick=\(\)=>playTemplateSetCount\(role\.id,chosen\?0:1\)/);
  assert.match(app,/className='play-template-card'/);
  assert.match(app,/function renderPlayGameRoleTimings\(\)/);
  assert.match(app,/function renderPlayArtifactPicker\(\)/);
  assert.match(app,/gameConfig:configured,matchId/);
- assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,roles:/);
+ assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,\s*roles:/);
  assert.match(app,/artifacts:selectedArtifacts\.map\(/);
  assert.match(app,/artifactLimitPerCycle/);
  assert.match(html,/id="playVillageDiscussionSec"[^>]*value="300"/);

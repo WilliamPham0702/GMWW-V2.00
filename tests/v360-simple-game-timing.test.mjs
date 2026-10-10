@@ -11,8 +11,9 @@ test('Chọn Ván uses shared defaults and allows per-role overrides',()=>{
   const sheet=html.slice(html.indexOf('<div class="play-template-play-review">'),html.indexOf('<div class="sheet hidden" id="playEndSheet">'));
   assert.match(sheet,/id="playVillageDiscussionSec"[^>]*value="300"/);
   assert.match(sheet,/id="playDefaultActionSec"[^>]*value="30"/);
-  assert.match(sheet,/id="playArtifactActionSec"[^>]*value="30"/);
-  assert.match(sheet,/id="playArtifactsEnabled"/);
+  // Artifact settings belong to the reusable Ván Mẫu editor, not Chọn Ván.
+  assert.match(html,/id="playArtifactActionSec"[^>]*value="30"/);
+  assert.match(html,/id="playArtifactsEnabled"/);
   assert.match(sheet,/THỜI GIAN RIÊNG TỪNG VAI/);
   assert.match(css,/#playGameSheet \.play-game-sheet-card\[data-mode="play"\] \.play-timing-grid\{display:grid!important/);
   assert.match(app,/roles:\(base\.roles\|\|\[\]\)\.map\(r=>\(\{\.\.\.r,actionDurationSec:playRoleDurationSec\(r\.roleId,timing\.defaultActionSec\)\}\)\)/);

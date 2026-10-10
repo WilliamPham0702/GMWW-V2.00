@@ -20,7 +20,8 @@ test("GM game setup supports 300-second discussion and starred swipe-row artifac
   assert.match(html,/id="playArtifactLimitPerCycle"/);
   assert.match(frontend,/artifactLimitPerCycle/);
   assert.match(frontend,/playFavoriteArtifacts\(\)\.map\(a=>String\(a\.id\)\)/);
-  assert.match(frontend,/playSceneState\.artifactsEnabled=templateArtifactIds\.length>0/);
+  assert.match(frontend,/playSceneState\.artifactsEnabled=cfg\.artifactsEnabled===true/);
+  assert.match(frontend,/cfg\.artifactsEnabled!==false&&templateArtifactIds\.length>0/);
   assert.match(css,/play-template-artifact-gallery:not\(\[hidden\]\).*?flex-wrap:nowrap/s);
   assert.doesNotMatch(frontend,/roleLabel\|\|'CHƯA PHÂN VAI'/);
   assert.doesNotMatch(frontend,/s\.textContent='CHƯA CHỌN NHÂN VẬT'/);
