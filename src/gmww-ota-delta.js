@@ -377,3 +377,26 @@ export function selectVerifiedRuntimeV370Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.70: Ván Mẫu chỉ đóng gói Vai Trò, Artifact lưu dùng chung trên Server; không đóng gói lại theo từng trận.'};
 }
+
+/** IPA V3.70 -> Runtime V3.71: reference-based artwork, with no asset re-download.
+ * Install only the three verified GM UI files; preserve clean artwork, IndexedDB
+ * and user configuration from the signed or unsigned native IPA V3.70.
+ */
+export function selectVerifiedRuntimeV371Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(from!=='3.70'||String(manifest?.releaseVersion||'')!=='3.71'
+    ||String(manifest?.runtimeVersion||'')!=='3.71'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.71/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.71: Chọn Ván Mẫu liên kết ảnh đã lưu tức thì; Vai Trò và Artifact dùng tham chiếu Server, không sao chép từng lá vào phòng.'};
+}
