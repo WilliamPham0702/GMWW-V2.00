@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {selectVerifiedRuntimeV375Delta} from '../src/gmww-ota-delta.js';
+import {selectVerifiedRuntimeV376Delta} from '../src/gmww-ota-delta.js';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
@@ -36,7 +36,7 @@ test('Delivery counts update inside the bottom action when players open role car
   assert.equal(hint.textContent,'CHẠM ĐỂ TIẾP');
   assert.ok(calls.some(([name,value])=>name==='aria-label'&&/Chạm để Vào Trận/.test(value)));
 });
-test('V3.76 UI update is a signed three-file patch only from V3.74',()=>{
+test('V3.76 UI update is a signed three-file patch only from V3.75',()=>{
   const paths=['GMWW.html','app.js','style.css'],host='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.76/';
   const m={releaseVersion:'3.76',runtimeVersion:'3.76',shellVersion:'3.17',releaseType:'runtime',delete:[],
     runtime:{files:paths.map(path=>({path,url:host+path,sha256:'c'.repeat(64)}))}};
