@@ -2217,7 +2217,7 @@ function playPlayerEffect(loginId){
 }
 function playDeliveryLabel(member){
   const a=(playSceneRuntime.assignments||[]).find(x=>String(x?.loginId||'')===String(member?.loginId||''));if(!member?.online)return'MẤT KẾT NỐI';if(!a)return playSceneState.step==='deal'||playSceneState.step==='battle'?'CHƯA PHÁT':(member?.ready?'SẴN SÀNG':'ONLINE');
-  if(a.viewedAt&&(!a.artifactId||a.artifactViewedAt))return'ĐÃ XEM';if(a.viewedAt&&a.artifactId)return'ĐÃ XEM VAI';return'ĐÃ PHÁT'
+  if(!a.receivedAt)return'ĐANG NHẬN VAI';if(a.viewedAt&&(!a.artifactId||a.artifactViewedAt))return'ĐÃ XEM';if(a.viewedAt&&a.artifactId)return'ĐÃ XEM VAI';return'ĐÃ NHẬN'
 }
 function playDeliveryProgress(){
   // Only server-confirmed deliveries and per-player view acknowledgements count.
@@ -2226,21 +2226,23 @@ function playDeliveryProgress(){
   const members=playLiveMembers();
   const expected=new Set([...members,...preview].map(p=>String(p?.loginId||'')).filter(Boolean));
   const delivered=new Set(assignments.filter(a=>a?.loginId&&a?.roleId&&a?.deliveredAt).map(a=>String(a.loginId)));
+  const received=new Set(assignments.filter(a=>a?.loginId&&a?.roleId&&a?.deliveredAt&&a?.receivedAt).map(a=>String(a.loginId)));
   const viewed=new Set(assignments.filter(a=>a?.loginId&&a?.roleId&&a?.deliveredAt&&a?.viewedAt).map(a=>String(a.loginId)));
   const total=Math.max(expected.size,delivered.size);
   const serverConfirmed=!!playSceneRuntime.room?.roleDeliveredAt&&['role_delivery','running','started','game','playing'].includes(String(playSceneRuntime.room?.phase||'').toLowerCase());
-  return{total,delivered:delivered.size,viewed:viewed.size,success:serverConfirmed&&total>0&&delivered.size===total};
+  return{total,delivered:delivered.size,received:received.size,viewed:viewed.size,success:serverConfirmed&&total>0&&delivered.size===total};
 }
 function renderPlayDeliveryProgress(){
   // Delivery receipt belongs in the existing bottom-center action, not a floating overlay.
   const dock=document.getElementById('playPhasePill'),title=document.getElementById('playPhaseTitle'),hint=document.getElementById('playPhaseHint');
   if(!dock||!title||!hint)return;
   const p=playDeliveryProgress(),confirmed=playSceneState.step==='deal'&&p.success;
-  dock.classList.toggle('is-delivery-confirmed',confirmed);
+  const allReceived=confirmed&&p.received===p.total;
+  dock.classList.toggle('is-delivery-confirmed',allReceived);
   if(confirmed){
-    title.textContent='✓ ĐÃ PHÁT VAI THÀNH CÔNG '+p.delivered+'/'+p.total;
-    hint.textContent='Đã xem Vai Trò: '+p.viewed+'/'+p.total+' · Vào Trận';
-    dock.setAttribute('aria-label','Đã phát Vai Trò '+p.delivered+'/'+p.total+', đã xem '+p.viewed+'/'+p.total+'. Chạm để Vào Trận');
+    title.textContent=allReceived?'✓ ĐÃ PHÁT VAI THÀNH CÔNG '+p.received+'/'+p.total:'ĐÃ PHÁT '+p.delivered+'/'+p.total+' · CHỜ NHẬN '+p.received+'/'+p.total;
+    hint.textContent='Đã nhận đủ: '+p.received+'/'+p.total+' · Đã xem Vai Trò: '+p.viewed+'/'+p.total+' · Vào Trận';
+    dock.setAttribute('aria-label','Đã phát '+p.delivered+'/'+p.total+', đã nhận đủ '+p.received+'/'+p.total+', đã xem '+p.viewed+'/'+p.total+'. Chạm để Vào Trận');
   }else hint.textContent='CHẠM ĐỂ TIẾP';
 }
 async function applyPlayPlayerState(type){
