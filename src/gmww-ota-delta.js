@@ -317,3 +317,23 @@ export function selectVerifiedRuntimeV367Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.67: Sửa nút Chọn Ván, hỗ trợ Artifact trong Ván Mẫu không ★, hiển thị tiến độ/lỗi tại màn chọn; giữ nguyên dữ liệu.'};
 }
+
+/** Runtime V3.67 -> V3.68: checked GM UI patch and server-side idempotent template saves. */
+export function selectVerifiedRuntimeV368Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.67'||String(manifest?.releaseVersion||'')!=='3.68'
+    ||String(manifest?.runtimeVersion||'')!=='3.68'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.68/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.68: Khắc phục lưu/chọn Ván Mẫu và nạp Artwork ổn định trên iPhone, không xóa dữ liệu hoặc hình đã tải.'};
+}
