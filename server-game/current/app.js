@@ -1256,9 +1256,10 @@ function gmwwBuildChatGPTIssuePrompt(){
       manifestVersion:gmwwSafeDiagnosticText(gmwwUpdateFault.manifestVersion||''),
       detectedAt:gmwwUpdateFault.at
     }:null,
+    errorCount:gmwwRuntimeErrors.length,
     recentErrors:gmwwRuntimeErrors.slice(0,4).map(e=>({
       kind:gmwwSafeDiagnosticText(e.kind),
-      summary:gmwwSafeDiagnosticText(e.message)
+      signal:String(e.message||'').match(/\b[A-Z][A-Z0-9_]{4,50}\b/)?.[0]||'UNCLASSIFIED_RUNTIME_ERROR'
     }))
   };
   return 'GMWW tự động gửi báo cáo lỗi. Hãy kiểm tra source repository, đối chiếu CI và Cloudflare trước khi kết luận. '+ 
@@ -1268,10 +1269,11 @@ function gmwwBuildChatGPTIssuePrompt(){
 function gmwwOpenChatGPTIssue(){
   const prompt=gmwwBuildChatGPTIssuePrompt();
   const url='https://chatgpt.com/?prompt='+encodeURIComponent(prompt);
-  const next=window.open(url,'_blank','noopener,noreferrer');
+  const fallback=document.getElementById('chatgptIssueFallback');
+  if(fallback){fallback.href=url;fallback.hidden=false}
+  window.open(url,'_blank','noopener,noreferrer');
   const status=document.getElementById('chatgptIssueHint');
-  if(status)status.textContent=next?'Báo cáo đã mở trong ChatGPT. Kiểm tra và nhấn Gửi.':
-    'Nếu ChatGPT chưa mở, hãy cho phép mở liên kết rồi nhấn lại.';
+  if(status)status.textContent='Đã chuẩn bị báo cáo. Kiểm tra và nhấn Gửi trong ChatGPT. Nếu không tự mở, chọn liên kết bên dưới.';
 }
 const retryUpdateCheck=document.getElementById('retryUpdateCheck');
 if(retryUpdateCheck)retryUpdateCheck.addEventListener('click',()=>{void checkAppUpdate({notify:false})});
