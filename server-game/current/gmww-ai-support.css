@@ -1,6 +1,6 @@
 /* GMWW AI Support — floating, touch-friendly, no blur over the 2D village. */
 .gmww-ai-host{--gmww-ai-cyan:#55ddf1;--gmww-ai-ink:#eafaff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.gmww-ai-host [hidden]{display:none!important}
+.gmww-ai-host [hidden],.gmww-ai-panel[hidden]{display:none!important}
 .gmww-ai-bubble{position:fixed;z-index:10070;width:54px;height:54px;left:auto;top:55%;
   display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(195,247,255,.86);
   border-radius:50%;background:linear-gradient(145deg,#1176a1,#075071 65%,#07344c);
