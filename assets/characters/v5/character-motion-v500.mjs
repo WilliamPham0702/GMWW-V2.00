@@ -60,7 +60,7 @@ export function tickMotion(state,delta){
  if(state.goal&&!locked){
   dx=state.goal.x-state.x;dz=state.goal.z-state.z;
   goalDistance=Math.hypot(dx,dz);
-  if(goalDistance<=0.05){state.goal=null;state.action='idle';state.actionTime=0;}
+  if(goalDistance<=0.05){state.x=state.goal.x;state.z=state.goal.z;state.goal=null;state.action='idle';state.actionTime=0;}
   else {
    state.targetYaw=Math.atan2(dx,dz);
    intended=state.run?V500_RUN_SPEED:V500_WALK_SPEED;
