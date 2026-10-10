@@ -267,6 +267,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "      if(e.target.closest('[data-shuffle-deck]')){gmwwShufflePrivateDeck();return}\n      const b=e.target.closest('[data-private-card]');");
  offlineReplace("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
    "function closePrivateCardViewer(){\n  if(state.roleOpen&&$('#game')?.dataset.privateCardFocus==='role')gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
+ offlineReplace("  setGameViewPane('village',{persist:false});\n}\nfunction openPrivateCardViewer(kind){",
+   "  setGameViewPane('village',{persist:false});\n  renderPlayerPrivateDock();\n}\nfunction openPrivateCardViewer(kind){");
  offlineReplace("  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);",
    "  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);\n  const identity=gmwwDeckRoleIdentity();if(identity!==gmwwDeckLastIdentity){gmwwDeckLastIdentity=identity;gmwwDeckPreferredTop='role'}\n  dock.dataset.deckTop=state.artifact&&(gmwwDeckRoleWasViewed()||gmwwDeckPreferredTop==='artifact')?'artifact':'role';\n  const shuffle=dock.querySelector('[data-shuffle-deck]');if(shuffle)shuffle.hidden=!ready||!state.artifact;");
  // When Avatar/GM presence work is slow, do not block the private role receipt.
