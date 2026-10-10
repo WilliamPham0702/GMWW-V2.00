@@ -40,6 +40,12 @@ test('sitting and standing respect temporal transitions',()=>{
  setAction(m,'stand-up');advance(m,.95);
  assert.equal(m.action,'idle');assert.equal(m.seated,false);assert.ok(m.pose.hipY>-.14);
 });
+test('touch-to-walk starts from seated position through stand-up instead of snapping',()=>{
+ const m=createMotionState();setAction(m,'sit');advance(m,.5);setDestination(m,2,0);
+ assert.equal(m.action,'stand-up');assert.equal(m.seated,false);
+ advance(m,.57);assert.equal(m.action,'walk');
+ advance(m,.5);assert.ok(m.x>.1);
+});
 test('wave, vote and result animate arms independently of legs',()=>{
  const m=createMotionState();
  setAction(m,'wave');advance(m,.6);const wave=m.pose.armR;
