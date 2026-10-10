@@ -4618,3 +4618,8 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
   box-shadow:0 0 0 1px rgba(3,36,48,.45),0 0 6px rgba(255,83,99,.7);
 }
 #start .play-player-over small{display:none!important}
+
+/* GMWW one-tap ChatGPT diagnostic issue report */
+.gmww-report-action{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.gmww-report-action .settings-action{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;gap:9px}
+.gmww-report-action small{display:block;opacity:.85;font-size:12px;line-height:1.45}
