@@ -111,6 +111,7 @@ code{color:#ddffef}
 import('./character-master-v500.mjs').catch(error=>{
  const notice=document.getElementById('notice');
  notice.hidden=false;
+ document.documentElement.dataset.gmwwV500='error';
  notice.textContent='Không tải được Character V5: '+(error?.message||String(error))+' · Kiểm tra kết nối Internet và hỗ trợ WebGL trên trình duyệt.';
  document.getElementById('status').textContent='WebGL V5 tạm thời không khả dụng';
  console.error('[GMWW Master-01]',error);
