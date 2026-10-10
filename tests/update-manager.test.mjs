@@ -107,8 +107,13 @@ test('Official native IPA build is isolated to explicit dispatch or native-shell
   assert.match(script,/GMWW-V\$\{isNative\?version:shell\}\.ipa/);
   assert.match(workflow,/workflow_dispatch:/);
   assert.doesNotMatch(workflow,/server-game\/BUILD_IPA_REQUEST/);
-  assert.match(workflow,/Native build blocked:/);
-  assert.match(workflow,/Fast Runtime Snapshot workflow/);
+  // A clean official IPA may rebuild the tested Runtime into a standalone native
+  // package without mutating the stable V3.17 Xcode/OTA source baseline.
+  assert.match(workflow,/Only this macOS runner's Xcode project receives the version bump/);
+  assert.match(workflow,/const version=runtime,build=runtime.replace/);
+  assert.match(workflow,/fs.writeFileSync\(projectPath,staged\)/);
+  assert.match(workflow,/server-game\/current\/home-art/);
+  assert.match(workflow,/test "\$IPA_BYTES" -gt 50000000/);
 });
 
 test('Fast Runtime Snapshot reuses a verified native shell and never runs Xcode or publishes official IPA',()=>{
