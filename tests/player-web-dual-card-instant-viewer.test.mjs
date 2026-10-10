@@ -37,7 +37,7 @@ test('Player keeps assigned Artifact pending until its private data arrives',()=
 
 test('Artifact delivery uses committed role snapshot as fallback, never public data',()=>{
   assert.match(worker,/attachedArtifact=roleRows\.find\(r=>r\?\.artifact/);
-  assert.match(worker,/artifactExpected:!!attachedArtifact/);
+  assert.match(worker,/artifactExpected:!!currentArtifact/);
   assert.match(worker,/artifact=currentArtifact\?privateArtifact\(currentArtifact\):null/);
   assert.match(player,/state\.artifactExpected=d\?\.artifactExpected===true/);
   assert.match(player,/artifact\.hidden=!state\.artifact&&!waitingArtifact/);
