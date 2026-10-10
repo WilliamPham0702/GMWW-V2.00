@@ -277,3 +277,23 @@ export function selectVerifiedRuntimeV365Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.65: Lá bài Player đồng bộ GM, nạp artwork Ván Mẫu trước Phát Vai; giữ nguyên artwork và dữ liệu hiện có.'};
 }
+
+/** IPA V3.65 -> V3.66: verified three-file GM chooser hotfix. Fail closed on mismatches. */
+export function selectVerifiedRuntimeV366Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.65'||String(manifest?.releaseVersion||'')!=='3.66'
+    ||String(manifest?.runtimeVersion||'')!=='3.66'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of INCREMENTAL_FILES){
+    const found=manifest.runtime.files.filter(f=>f?.path===path);
+    if(found.length!==1)return null;
+    const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.66/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.66: Sửa Chọn Ván, Artifact theo Ván Mẫu và hiển thị nạp ảnh/lỗi trực tiếp; giữ nguyên dữ liệu, Artwork.'};
+}
