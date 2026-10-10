@@ -13,7 +13,7 @@ test('Patched Player Web script parses cleanly and is safe to apply once',()=>{
 });
 test('GM release gates both personal face-down cards; no role name leaks in bottom dock',()=>{
  assert.match(result,/function privateCardAllowed\(\)\{return !!\(state\.roomCode&&state\.participantId&&state\.role&&playerScenePolicy\(state\.room\)\.rolesReleased\)\}/);
- assert.match(result,/dock\.hidden=!privateCardAllowed\(\)/);
+ assert.match(result,/dock\.hidden=!released/); assert.match(result,/const ready=privateCardAllowed\(\)/);
  assert.match(result,/data-private-card="role"/);
  assert.match(result,/data-private-card="artifact"/);
  assert.doesNotMatch(result,/artifact\.querySelector\('small'\)\.textContent/);

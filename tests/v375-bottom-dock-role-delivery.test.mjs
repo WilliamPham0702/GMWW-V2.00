@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {selectVerifiedRuntimeV375Delta} from '../src/gmww-ota-delta.js';
+import {selectVerifiedRuntimeV376Delta} from '../src/gmww-ota-delta.js';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
@@ -36,16 +36,16 @@ test('Delivery counts update inside the bottom action when players open role car
   assert.equal(hint.textContent,'CHẠM ĐỂ TIẾP');
   assert.ok(calls.some(([name,value])=>name==='aria-label'&&/Chạm để Vào Trận/.test(value)));
 });
-test('V3.75 UI update is a signed three-file patch only from V3.74',()=>{
-  const paths=['GMWW.html','app.js','style.css'],host='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.75/';
-  const m={releaseVersion:'3.75',runtimeVersion:'3.75',shellVersion:'3.17',releaseType:'runtime',delete:[],
+test('V3.76 UI update is a signed three-file patch only from V3.75',()=>{
+  const paths=['GMWW.html','app.js','style.css'],host='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.76/';
+  const m={releaseVersion:'3.76',runtimeVersion:'3.76',shellVersion:'3.17',releaseType:'runtime',delete:[],
     runtime:{files:paths.map(path=>({path,url:host+path,sha256:'c'.repeat(64)}))}};
-  const selected=selectVerifiedRuntimeV375Delta(m,'3.74');
+  const selected=selectVerifiedRuntimeV376Delta(m,'3.75');
   assert.deepEqual(selected.runtime.files.map(x=>x.path),paths);
   assert.equal(selected.delete.length,0);
   assert.equal(selected.upgradeMode,'verified-overlay');
-  assert.equal(selectVerifiedRuntimeV375Delta(m,'3.72'),null);
-  assert.equal(selectVerifiedRuntimeV375Delta({...m,delete:['artwork']},'3.74'),null);
-  assert.equal(selectVerifiedRuntimeV375Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.74'),null);
-  assert.match(worker,/VERSION="V3\.75",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-375"/);
+  assert.equal(selectVerifiedRuntimeV376Delta(m,'3.72'),null);
+  assert.equal(selectVerifiedRuntimeV376Delta({...m,delete:['artwork']},'3.75'),null);
+  assert.equal(selectVerifiedRuntimeV376Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.75'),null);
+  assert.match(worker,/VERSION="V3\.76",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-376"/);
 });
