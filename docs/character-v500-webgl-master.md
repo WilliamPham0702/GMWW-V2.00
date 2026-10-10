@@ -12,7 +12,7 @@ Owner chọn **phương án A**: giữ Làng Biển 2D và toàn bộ hệ thố
 - Các module V5 **không được import** bởi `src/gmww-members-live.js`, `assets/village/village.mjs`, game/server engine hoặc IPA.
 
 ## Giới hạn / nghiệm thu
-1. V5.00 dùng Three.js r180 từ CDN cố định cho trang **lab**. Chưa hỗ trợ offline; trước khi dùng trong game thật phải vendoring/bundle vào build với giấy phép MIT và thêm kiểm thử khi không có mạng.
+1. V5.00 đã vendor Three.js r180 dạng minified trong `assets/characters/v5/vendor/` kèm giấy phép MIT. Trang lab không cần CDN ngoài để chạy. Tuy nhiên, nghiệm thu trên iPhone offline thật và tích hợp IPA vẫn chưa thực hiện.
 2. Đây là articulated **group-transform rig** (các pivot 3D), chưa phải skinned GLTF/GLB, chưa có model/chất liệu chuyên nghiệp và chưa có animation retarget từ game mẫu.
 3. FPS thực tế chưa được xác minh trên iPhone thật. Giới hạn 30 nhân vật chỉ là mục **stress thử nghiệm**, không phải tuyên bố đã chạy ổn 60 FPS.
 4. Code kiểm thử và cloud verification chỉ kiểm tra tính toàn vẹn tệp, hợp đồng hoạt ảnh và byte trên Production; **không thay** nghiệm thu hình ảnh/thao tác trực tiếp trên thiết bị.
