@@ -123,6 +123,12 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
+          # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
+          curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
+          grep -q '<main class="game day"' /tmp/gmww-production-village.html
+          curl --fail --location --silent --show-error --max-time 30 "$URL/village/village.css?v=303" > /tmp/gmww-production-village.css
+          test -s /tmp/gmww-production-village.css
+          echo "Verify Production: Player Web village iframe HTML+CSS PASS."
           EXPECTED_SHELL=$(node -e "const fs=require('fs'),s=fs.readFileSync('src/index.js','utf8'),m=s.match(/NATIVE_SHELL_VERSION=\\\"([^\\\"]+)\\\"/);if(!m)process.exit(2);process.stdout.write(m[1])")
           MANIFEST_OK=0
           for i in $(seq 1 30); do

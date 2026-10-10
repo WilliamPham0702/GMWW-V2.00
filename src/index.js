@@ -1374,6 +1374,25 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  // The Player's village runs inside an iframe at /village/?embed=1.
+  // With Cloudflare Assets html_handling=none, /village/ does not resolve to
+  // /village/index.html automatically. Forward this exact entry and its static
+  // resources through the ASSETS binding, not the generic Player 404 route.
+  if((url.pathname==="/village"||url.pathname.startsWith("/village/"))&&
+     (request.method==="GET"||request.method==="HEAD")){
+    if(!env.ASSETS)return new Response("Village assets unavailable",{status:503,headers:{"cache-control":"no-store"}});
+    if(url.pathname==="/village"||url.pathname==="/village/"){
+      const entryUrl=new URL(request.url);
+      entryUrl.pathname="/village/index.html"; // keep ?embed=1 for the village UI
+      const entry=await env.ASSETS.fetch(new Request(entryUrl.toString(),request));
+      if(!entry.ok)return new Response("Village entry not ready",{status:503,headers:{"cache-control":"no-store"}});
+      const headers=new Headers(entry.headers);
+      headers.set("content-type","text/html; charset=UTF-8");
+      headers.set("cache-control","no-store");
+      return new Response(entry.body,{status:200,headers});
+    }
+    return env.ASSETS.fetch(request);
+  }
   // Serve OTA files through the same ASSETS binding used by manifest readiness.
   // This avoids advertising an asset that a different static/CDN route cannot serve.
   if((url.pathname.startsWith("/updates/runtime/")||url.pathname==="/updates/latest.json")&&
