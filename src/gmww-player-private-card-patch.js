@@ -67,6 +67,49 @@ export function patchPrivatePlayerCards(source){
  // based on a public room phase alone.
  result=result.replace("if(phase==='role_delivery')return'PHÒNG CHỜ · ĐÃ PHÁT VAI';",
    "if(phase==='role_delivery')return state.role?'PHÒNG CHỜ · ĐÃ NHẬN VAI':'PHÒNG CHỜ · ĐANG NHẬN VAI';");
+
+ // All browsers use one authenticated, per-room /me receipt read. Overlapping
+ // websocket/poll/manual retries share the same promise rather than racing.
+ const replaceReceipt=(before,after)=>{
+   if(result.split(before).length!==2)throw new Error('Player receipt patch mismatch: '+before.slice(0,110));
+   result=result.replace(before,after);
+ };
+ const GMWW_RECEIPT_READER=String.raw`
+let gmwwPrivateReceiptInFlight=null;
+function gmwwReadPrivateReceipt(){
+  const room=state.roomCode,participant=state.participantId,token=state.token;
+  if(!room||!participant||!token)return Promise.resolve(null);
+  const key=room+'|'+participant+'|'+token;
+  if(gmwwPrivateReceiptInFlight?.key===key)return gmwwPrivateReceiptInFlight.promise;
+  const entry={key,promise:null};
+  entry.promise=api('/api/rooms/'+encodeURIComponent(room)+'/me',{headers:{Authorization:'Bearer '+token}})
+    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token)?d:null)
+    .catch(e=>{if(state.roomCode!==room||state.participantId!==participant||state.token!==token)return null;throw e})
+    .finally(()=>{if(gmwwPrivateReceiptInFlight===entry)gmwwPrivateReceiptInFlight=null});
+  gmwwPrivateReceiptInFlight=entry;
+  return entry.promise;
+}
+`;
+ replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\nasync function refreshPrivateRole(force=false){");
+ replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
+   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");
+ replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
+   "if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
+ replaceReceipt("if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}",
+   "if(state.artifactExpected&&!state.artifact){if(!state.rolePoll)state.rolePoll=setInterval(()=>refreshPrivateRole(true),4000)}else if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}");
+ // The public-room poll previously started a second, partially applied /me
+ // response that updated role but not Artifact, and could race the full receipt.
+ const pollStart=result.indexOf("async function pollRoomState(){");
+ const pollEnd=result.indexOf("function startRoomStateWatch(){",pollStart);
+ if(pollStart<0||pollEnd<pollStart)throw new Error('Player public-room poll changed');
+ const poll=result.slice(pollStart,pollEnd);
+ const privateBlock=poll.indexOf("  if(!state.token)return;\n  try{");
+ if(privateBlock<0)throw new Error('Private receipt inside public-room poll changed');
+ result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+"  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+result.slice(pollEnd);
+ // Browser restore must carry the Artifact expectation, not only the role.
+ replaceReceipt("state.artifact=d.artifact||null;state.artifactCycle=d.artifactCycle||",
+   "state.artifact=d.artifact||null;state.artifactExpected=d.artifactExpected===true;state.artifactCycle=d.artifactCycle||");
+
  const from=result.indexOf(removeStart,result.indexOf('function syncPlayerPresentation(){'));
  const end=result.indexOf(removeEnd,from);
  if(from<0||end<from||end-from>1400)throw new Error('Player role reveal policy changed');
