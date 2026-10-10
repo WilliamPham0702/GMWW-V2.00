@@ -445,3 +445,24 @@ export function selectVerifiedRuntimeV373Delta(manifest,installedVersion){
     optimizedFromVersion:current,upgradeMode:'verified-overlay',
     message:'V3.73: Xác nhận đã Phát Vai, theo dõi số người đã xem Vai Trò và tự ẩn lá Artifact khi tắt.'};
 }
+
+// V3.73 -> V3.74: only the three UI files changed. Preserve clean Artwork,
+// shared Artifact catalog and existing member data in a signed OTA overlay.
+export function selectVerifiedRuntimeV374Delta(manifest,installedVersion){
+  const current=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(current!=='3.73'||String(manifest?.releaseVersion||'')!=='3.74'
+    ||String(manifest?.runtimeVersion||'')!=='3.74'||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const files=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const matched=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matched.length!==1)return null;
+    const file=matched[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.74/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    files.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files},delete:[],
+    optimizedFromVersion:current,upgradeMode:'verified-overlay',
+    message:'V3.74: Hiển thị xác nhận phát vai và số người đã xem ngay trong box điều khiển dưới, không che sân làng.'};
+}
