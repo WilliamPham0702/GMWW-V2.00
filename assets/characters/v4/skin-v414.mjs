@@ -29,6 +29,11 @@ const P={
   shoe:'#fcf0d9',shoeDark:'#54acc0'
  }
 };
+/** Read-only original GMWW V4.14 design tokens. These are NOT a substitute for
+ * the original multi-view PNG skin layers, which are not yet in the repo. */
+export const V414_SKIN_PALETTES=Object.freeze(Object.fromEntries(
+ Object.entries(P).map(([id,colors])=>[id,Object.freeze({...colors})])
+));
 const finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 export function skinBinding(pose,characterId='character-01'){
  if(!V414_CHARACTERS.includes(characterId))throw Error('UNKNOWN_CHARACTER');
