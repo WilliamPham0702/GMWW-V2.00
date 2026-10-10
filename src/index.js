@@ -1374,14 +1374,6 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
-  // Cloudflare html_handling:none preserves immutable V3.82/GMWW.html filenames.
-  // Without the default HTML URL rewriting, preserve the existing Player Web /
-  // home route explicitly. Do not redirect, mutate room data or alter auth.
-  if(url.pathname==="/"&&(request.method==="GET"||request.method==="HEAD")){
-    if(!env.ASSETS)return new Response("Player Web assets unavailable",{status:503});
-    const home=new URL("/index.html",request.url);
-    return env.ASSETS.fetch(new Request(home.toString(),{method:request.method}));
-  }
   // Serve OTA files through the same ASSETS binding used by manifest readiness.
   // This avoids advertising an asset that a different static/CDN route cannot serve.
   if((url.pathname.startsWith("/updates/runtime/")||url.pathname==="/updates/latest.json")&&
