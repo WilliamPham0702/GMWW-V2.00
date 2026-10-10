@@ -3077,8 +3077,11 @@ async function savePlayGame(){
       })});
       playSceneRuntime.gameConfig=data.gameConfig||configured;
       playSceneRuntime.room=data.room||playSceneRuntime.room;
-      const prepared=await playRoomApi('/template-assets',{method:'POST',body:JSON.stringify({templateId:id})});
-      if(prepared?.ready!==true)throw new Error('Artwork Ván Mẫu chưa nạp xong, chưa thể Phân Vai.');
+      const templateAssets=playTemplateAssetIds(base);
+      for(let offset=0;offset<templateAssets.length;offset+=3){
+        const prepared=await playRoomApi('/template-assets',{method:'POST',body:JSON.stringify({templateId:id,assetIds:templateAssets.slice(offset,offset+3)})});
+        if(prepared?.ready!==true)throw new Error('Artwork Ván Mẫu chưa nạp xong, chưa thể Phân Vai.');
+      }
       await playPreloadSelectedArtwork(configured);
       playSceneState.gameTemplateId=id;
       playSceneState.gameName=configured.name||'Ván GMWW';
