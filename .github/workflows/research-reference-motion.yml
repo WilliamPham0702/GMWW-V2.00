@@ -1,0 +1,55 @@
+name: Inspect reference IPA motion assets (research only)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/research-reference-motion.yml'
+jobs:
+  inspect:
+    if: github.head_ref == 'research/ipa-motion-reference-20261010'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download reference IPA as data only
+        run: |
+          curl --fail --location --retry 2 --connect-timeout 25 --max-time 300 --silent --show-error 'https://d7umw8mitnngt.cloudfront.net/ipa_builds/3f9fe178-65a4-48c9-b1c4-da4fefd92496.ipa' -o /tmp/reference.ipa
+          file /tmp/reference.ipa
+          ls -lh /tmp/reference.ipa
+      - name: Inventory engines and 2D motion assets (do not execute IPA)
+        run: |
+          python3 - <<'PY'
+          import zipfile,os,collections,plistlib
+          path='/tmp/reference.ipa'
+          with zipfile.ZipFile(path) as z:
+            entries=[e for e in z.infolist() if not e.is_dir()]
+            files=[e.filename for e in entries]
+            low=[name.lower() for name in files]
+            print('=== REFERENCE IPA INVENTORY ===')
+            print('FILE_COUNT',len(files),'UNCOMPRESSED_MB',round(sum(e.file_size for e in entries)/1e6,1))
+            print('TOP_EXTENSIONS',collections.Counter(os.path.splitext(n)[1].lower() for n in files).most_common(35))
+            print('LARGEST_ASSETS',[(e.filename,round(e.file_size/1e6,2)) for e in sorted(entries,key=lambda v:-v.file_size)[:22]])
+            markers={
+              'Unity':['unityframework','globalgamemanagers','global-metadata.dat','assembly-csharp','resources.assets'],
+              'Godot':['.pck','.godot','godot.framework'],
+              'Cocos':['cocos','jsb','project.js','settings.js','dragonbones'],
+              'Flutter':['flutter.framework','flutter_assets','app.framework'],
+              'SpriteKit':['.sks','.atlas/','spritekit.framework'],
+              'Unreal':['.pak','.utoc','.ucas','ue4game'],
+              'Spine':['.skel','.atlas','spine','skeletondata'],
+              'Live2D':['moc3','model3.json','physics3.json','motion3.json'],
+              'Rive':['.riv','rive'],
+              'Lottie':['lottie','bodymovin'],
+              'WebWrapper':['cordova.js','capacitor','www/index.html','index.html'],
+              'MotionAssets':['.anim','.controller','.spriteatlas','.fnt','.plist','.json','.png','.webp','.ktx','.pvr','.astc','.bundle']
+            }
+            for label,terms in markers.items():
+              hits=[n for n,l in zip(files,low) if any(t in l for t in terms)]
+              print('ENGINE_OR_ASSET_MARKER',label,'count',len(hits),'sample',hits[:28])
+            print('ASSET_DIRECTORIES',collections.Counter('/'.join(n.split('/')[:5]) for n in files if n.lower().endswith(('.png','.webp','.plist','.atlas','.skel','.anim','.ktx','.astc','.json'))).most_common(25))
+            for name in files:
+              if name.endswith('.app/Info.plist'):
+                try:
+                  p=plistlib.loads(z.read(name))
+                  print('APP_INFO',{'executable':p.get('CFBundleExecutable'),'platforms':p.get('CFBundleSupportedPlatforms'),'minOS':p.get('MinimumOSVersion')})
+                except Exception as e:print('INFO_ERROR',str(e)[:140])
+            print('=== END INVENTORY ===')
+          PY
