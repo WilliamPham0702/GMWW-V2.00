@@ -161,11 +161,11 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
-          # GMWW V3.82: confirm the actual installed-IPA OTA path, not just latest.json.
+          # V3.82: installability must be verified from a running V3.80/V3.81 IPA.
           if [ "$EXPECTED" = "3.82" ]; then
             for FROM in 3.81 3.80; do
-              curl --fail --silent --show-error --retry 4 --retry-delay 2 --max-time 75 \
-                "$URL/api/update/manifest?current=$FROM&release-verify=$(date +%s)" > "/tmp/gmww-v382-$FROM.json"
+              curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/api/update/manifest?current=$FROM&verify-v382=$(date +%s)" > "/tmp/gmww-v382-$FROM.json"
               node - "$FROM" <<'NODE'
           const fs=require('node:fs');
           const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-'+from+'.json','utf8'));
@@ -173,23 +173,52 @@ jobs:
           if(m.ok!==true||m.releaseVersion!=='3.82'||m.runtimeVersion!=='3.82'||
              m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
              m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from)
-            throw new Error('V3.82 cannot be downloaded from IPA Runtime '+from);
-          if(m.delete?.length)throw new Error('OTA would delete existing runtime data');
-          if(m.runtime?.files?.length!==req.length)throw new Error('Unexpected AI Support OTA file count');
+            throw new Error('OTA V3.82 cannot be installed from Runtime V'+from);
+          if(m.delete?.length)throw new Error('V3.82 would unexpectedly delete client files');
+          if(m.runtime?.files?.length!==req.length)throw new Error('Unexpected OTA file count');
           for(const path of req){
-            const entry=m.runtime.files.find(x=>x.path===path);
-            if(!entry||entry.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.82/'+path||
-               !/^[a-f0-9]{64}$/i.test(String(entry.sha256||'')))
-              throw new Error('Missing signed, same-origin V3.82 update asset '+path);
+            const f=m.runtime.files.find(x=>x.path===path);
+            if(!f||f.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.82/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))
+              throw new Error('Missing verified V3.82 file '+path);
           }
+          console.log('V3.82 OTA from '+from+': manifest PASS');
           NODE
             done
-            node - <<'NODE' > /tmp/gmww-v382-required-files.txt
+            for FILE in GMWW.html app.js style.css gmww-ai-support.js gmww-ai-support.css; do
+              curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.82/$FILE" > /tmp/gmww-v382-download
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v382-download | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
           const fs=require('node:fs');
           const m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-3.81.json','utf8'));
-          for(const e of m.runtime.files)console.log([e.path,e.url,e.sha256].join('\t'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
           NODE
-            while IFS=          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
+              )
+              test -n "$EXPECTED_SHA"
+              if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+                echo "::error::V3.82 SHA mismatch for $FILE"
+                exit 1
+              fi
+              echo "Verified OTA asset: $FILE"
+            done
+            curl --fail --silent --show-error "$URL/api/gm/ai-support/config" > /tmp/gmww-v382-ai-config.json
+            node - <<'NODE'
+          const fs=require('node:fs'),d=JSON.parse(fs.readFileSync('/tmp/gmww-v382-ai-config.json','utf8'));
+          if(d.ok!==true||typeof d.configured!=='boolean'||d.readOnly!==true)
+            throw new Error('AI support status endpoint invalid');
+          console.log('AI Support configured: '+d.configured);
+          NODE
+            AI_AUTH_STATUS=$(curl --silent --output /tmp/gmww-v382-unauthorized.json \
+              --write-out '%{http_code}' -X POST -H 'content-type: application/json' \
+              -d '{"message":"test"}' "$URL/api/gm/ai-support/chat")
+            test "$AI_AUTH_STATUS" = "401" || {
+              echo "::error::AI Support unauthenticated request returned $AI_AUTH_STATUS (expected 401)"
+              exit 1
+            }
+            echo "AI Support authorization PASS"
+          fi
+          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
           # readable from the deployed Worker, not merely rendered as a thumbnail.
           if [ "$EXPECTED" = "3.72" ]; then
             ROLE_ART_READY=0
