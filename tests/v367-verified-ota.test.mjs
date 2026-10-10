@@ -26,5 +26,5 @@ test('Reject unsafe V3.67 manifests and unsupported IPA versions',()=>{
 test('Both update manifest routes prioritize verified V3.67 overlay',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  for(const k of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV367Delta('+k+',url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta'));
- assert.match(worker,/VERSION="V3\.67",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-367"/);
+ assert.match(worker,/VERSION="V3\.68",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-368"/);
 });
