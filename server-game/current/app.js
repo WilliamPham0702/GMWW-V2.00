@@ -542,6 +542,18 @@ const ACTIVE_THEME_IMAGE_TARGETS={
 };
 const ACTIVE_THEME_NAV_TARGETS={'ui.bottomNavArt':'#bottomNav'};
 let activeThemeApplyToken=0;
+// Decorative navigation artwork must be wide enough for the dock; phone screenshots
+// or exported UI posters include duplicated interactive icons and must not be applied.
+function navArtworkHasCorrectRatio(src){
+  return new Promise(resolve=>{
+    const image=new Image();let complete=false;
+    const settle=ok=>{if(complete)return;complete=true;clearTimeout(timeout);resolve(ok);};
+    const timeout=setTimeout(()=>settle(false),1500);
+    image.onload=()=>settle(image.naturalHeight>0&&image.naturalWidth/image.naturalHeight>=6&&image.naturalWidth/image.naturalHeight<=12);
+    image.onerror=()=>settle(false);
+    image.src=src;
+  });
+}
 function themeImageUrl(value){return 'url("'+String(value).replace(/["\\\n\r]/g,'')+'")'}
 function defaultThemeSlotPreview(slot){
   const selector=ACTIVE_THEME_IMAGE_TARGETS[slot];
@@ -585,14 +597,21 @@ async function applyActiveThemeUi(){
     const navSelector=ACTIVE_THEME_NAV_TARGETS[slot];
     if(navSelector){
       const el=$(navSelector);if(!el)continue;
-      if(src){
+      // Reject narrow screenshot-like artwork (which can already contain nav labels/icons).
+      // The navigation itself is rendered by real, accessible buttons.
+      const usable=src ? await navArtworkHasCorrectRatio(src) : false;
+      if(token!==activeThemeApplyToken)return;
+      if(usable){
         el.style.setProperty('background-image',themeImageUrl(src),'important');
-        el.style.setProperty('background-size','cover','important');
+        el.style.setProperty('background-size','100% 100%','important');
         el.style.setProperty('background-position','center','important');
+        el.removeAttribute('data-nav-art-rejected');
       }else{
         el.style.removeProperty('background-image');
         el.style.removeProperty('background-size');
         el.style.removeProperty('background-position');
+        if(src)el.setAttribute('data-nav-art-rejected','wrong-ratio');
+        else el.removeAttribute('data-nav-art-rejected');
       }
     }
   }
