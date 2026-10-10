@@ -2169,13 +2169,19 @@ function playDeliveryProgress(){
   return{total,delivered:delivered.size,viewed:viewed.size,success:serverConfirmed&&total>0&&delivered.size===total};
 }
 function renderPlayDeliveryProgress(){
-  const el=document.getElementById('playDeliveryStatus');if(!el)return;
-  const p=playDeliveryProgress(),visible=playSceneState.step==='deal'&&p.total>0;
-  el.classList.toggle('hidden',!visible);
-  if(!visible)return;
-  el.classList.toggle('is-success',p.success);
-  const label=p.success?'✓ ĐÃ PHÁT VAI THÀNH CÔNG':p.delivered?'ĐANG PHÁT VAI':'CHƯA PHÁT VAI';
-  el.innerHTML='<b>'+label+' · '+p.delivered+'/'+p.total+'</b><small>Đã xem Vai Trò: <strong>'+p.viewed+'/'+p.total+'</strong></small>';
+  // Keep GM delivery feedback inside the EXISTING bottom-center action, never
+  // floating over the village or overlapping the GM's role cards.
+  const dock=document.getElementById('playPhasePill'),title=document.getElementById('playPhaseTitle'),hint=document.getElementById('playPhaseHint');
+  if(!dock||!title||!hint)return;
+  const p=playDeliveryProgress(),confirmed=playSceneState.step==='deal'&&p.success;
+  dock.classList.toggle('is-delivery-confirmed',confirmed);
+  if(confirmed){
+    title.textContent='✓ ĐÃ PHÁT VAI THÀNH CÔNG '+p.delivered+'/'+p.total;
+    hint.textContent='Đã xem Vai Trò: '+p.viewed+'/'+p.total+' · Vào Trận';
+    dock.setAttribute('aria-label','Đã phát Vai Trò '+p.delivered+'/'+p.total+', đã xem '+p.viewed+'/'+p.total+'. Chạm để Vào Trận');
+  }else{
+    hint.textContent='CHẠM ĐỂ TIẾP';
+  }
 }
 async function applyPlayPlayerState(type){
   const loginId=String(playSceneState.activePlayerId||'');if(!loginId){playFlashError('Hãy chọn Người Chơi trên sân trước.');return false}
