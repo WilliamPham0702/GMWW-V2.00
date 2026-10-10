@@ -61,7 +61,9 @@ let actors=[],desiredCount=1,last=0,fpsClock=0,frames=0,fps=0,frameMs=0,paused=f
 const frameHistory=[];let completedFrames=0;const MAX_FRAME_HISTORY=240;
 const pickDest=(m,k)=>({x:Math.sin(m.seed*7+k*2.29)*4.5,z:Math.cos(m.seed*5+k*1.85)*2.8});
 function setCount(n){
+ const previousCount=desiredCount;
  desiredCount=Math.max(1,Math.min(30,Number(n)||1));
+ if(previousCount!==desiredCount){frameHistory.length=0;fpsClock=0;frames=0;fps=0;}
  while(actors.length>desiredCount){const a=actors.pop();scene.remove(a.rig.root);}
  while(actors.length<desiredCount){
   const i=actors.length,m=createMotionState('character-01-'+i,
