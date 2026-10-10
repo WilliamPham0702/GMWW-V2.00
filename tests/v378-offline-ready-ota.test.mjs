@@ -20,7 +20,7 @@ test('V3.84 metadata and both OTA endpoints are aligned',()=>{
  assert.equal(pkg.version,'3.84.0');
  assert.match(app,/const VERSION='3\.84'/);
  assert.match(html,/<title>GMWW V3\.84<\/title>/);
- assert.match(html,/app\.js\?v=3\.84-ai-support/);
+ assert.match(html,/app\.js\?v=3\.84-artifact-sea/);
  assert.match(worker,/VERSION="V3\.84",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-384"/);
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV378Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta'));
 });
