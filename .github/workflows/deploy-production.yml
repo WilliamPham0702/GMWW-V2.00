@@ -250,6 +250,15 @@ jobs:
               echo "Verify Production: Home artwork $ART PASS."
             done
           fi
+          # Character V5.60 is an isolated lab, not a runtime/IPA game change.
+          # Confirm that a clickable HTML test AND its REAL SkinnedMesh adapter are
+          # deployed, rather than claiming the CI merge alone implies a live page.
+          echo "Verify Production: checking V5.60 real 3D skin lab delivery."
+          curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/test-skin-v560.html?verify=$(date +%s)" > /tmp/gmww-skin-v560.html
+          curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/skin-v560-weighted-surface.mjs?verify=$(date +%s)" > /tmp/gmww-skin-v560.mjs
+          grep -q 'Skin 3D gắn vào 16 xương thật' /tmp/gmww-skin-v560.html
+          grep -q 'addV560WeightedSkin' /tmp/gmww-skin-v560.mjs
+          echo "Verify Production: V5.60 3D skin lab HTML + module PASS."
           echo "Verify Production: checking task-review UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
           TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
