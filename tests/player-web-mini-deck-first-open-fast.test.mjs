@@ -20,9 +20,10 @@ test('First tap reuses a prepared viewer and does not prepare private UI before 
   const dock=player.slice(player.indexOf('function renderPlayerPrivateDock(){'),player.indexOf('function renderGMWWPlayerCardFace(kind){'));
   assert.match(dock,/if\(!ready\)gmwwRecoverPrivateRole\(\);\s*else \{/);
   assert.match(dock,/warmPlayerPrivateArtwork\(\);/);
-  assert.match(dock,/if\(!document\.getElementById\('gmwwInstantPrivateViewer'\)\)/);
-  assert.match(dock,/showGmwwInstantPrivateViewer\('role'\)/);
-  assert.match(dock,/document\.getElementById\('gmwwInstantPrivateViewer'\)\.hidden=true/);
+  assert.match(dock,/if\(!\$\('#gmwwPlayerUnifiedCard'\)\)/);
+  assert.match(dock,/renderGMWWPlayerCardFace\('role'\)/);
+  assert.match(dock,/if\(face\)face\.hidden=true/);
+  assert.doesNotMatch(player,/gmwwInstantPrivateViewer/);
   assert.match(player,/if\(!privateCardAllowed\(\)\)return;/);
 });
 
