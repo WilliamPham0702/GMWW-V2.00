@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.65';
+const VERSION='3.66';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -2010,7 +2010,7 @@ function gmwwHomeRenderExtras(rows,ranking,leader){
   };
   for(const h of recent){
     const button=document.createElement('button');
-    button.type='button';button.className='gmww-home-recent-row';
+    button.type='button';button.className='gmww-home-recent-row';button.dataset.result=h.result==='win'?'win':h.result==='loss'?'loss':'played';
     button.setAttribute('aria-label','Mở Thành Viên: '+String(h.member.displayName||h.member.loginId||''));
     const avatar=document.createElement('div');avatar.className='gmww-home-recent-avatar';
     const avatarId=String(h.member.gameCharacterId||h.member.avatarId||'');
