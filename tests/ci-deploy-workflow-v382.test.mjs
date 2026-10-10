@@ -21,6 +21,7 @@ test('Production workflow Bash syntax is valid after adding V3.82 OTA verificati
   assert.match(script,/gmww-ai-support\.js/);
   assert.match(script,/gmww-ai-support\.css/);
   assert.match(script,/sha256sum|shasum -a 256/);
+  assert.match(script,/curl --fail --location --silent --show-error --retry 5/);
   assert.match(script,/AI_AUTH_STATUS/);
   assert.doesNotMatch(script,/while IFS=\s*#/);
   const result=spawnSync('bash',['-n'],{input:script,encoding:'utf8'});
