@@ -1510,7 +1510,7 @@ export default {async fetch(request,env){
 
 function gmwwStoredArtworkResponse(data){
   if(!validImageDataUrl(data))return new Response("Artwork not found",{status:404,headers:{"cache-control":"no-store"}});
-  const match=String(data).match(/^data:(image\\/(?:webp|png|jpeg));base64,(.+)$/i);
+  const match=String(data).match(/^data:(image\/(?:webp|png|jpeg));base64,(.+)$/i);
   if(!match)return new Response("Invalid artwork",{status:404});
   try{
     const bin=atob(match[2]);
