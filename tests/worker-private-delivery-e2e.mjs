@@ -20,7 +20,7 @@ const code=room.roomCode,gmToken=room.gmToken;
 const browsers=['safari','chrome','edge'],sessions=[];
 for(const [index,browser] of browsers.entries()){
  const loginId='ci'+browser+serial;
- expectOk(await req('/api/members/register',{method:'POST',body:{loginId,displayName:browser+' mock browser account',gameCharacterId:'character-0'+(index+1)}}),'register '+browser);
+ expectOk(await req('/api/members/register',{method:'POST',body:{loginId,displayName:'CI '+browser,gameCharacterId:'character-0'+(index+1)}}),'register '+browser);
  const login=expectOk(await req('/api/members/login',{method:'POST',body:{loginId,password:''}}),'login '+browser);
  assert.ok(login.token,'member session must have token');
  expectOk(await req('/api/rooms/'+code+'/join',{method:'POST',body:{token:login.token}}),'join '+browser);
