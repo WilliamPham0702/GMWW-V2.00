@@ -326,11 +326,18 @@ export class RoomDurableObject extends DurableObject {
     const key="gameTemplate:"+id,existing=await this.ctx.storage.get(key);
     if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     await this.ctx.storage.delete(key);
-    const savedAssets=await this.ctx.storage.list({prefix:"gameTemplateAsset:"+id+":"});
+    const savedAssets=typeof this.ctx.storage.list==='function'?await this.ctx.storage.list({prefix:"gameTemplateAsset:"+id+":"}):new Map();
     if(savedAssets.size)await this.ctx.storage.delete([...savedAssets.keys()]);
     return j({ok:true,deleted:true,id});
   }
 
+  async gameTemplateUpsert(body){
+    const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
+    const id=String(body?.id||cfg.id||("template-"+Date.now().toString(36))).trim().slice(0,120),now=new Date().toISOString(),key="gameTemplate:"+id,old=await this.ctx.storage.get(key),revision=Math.max(1,Number(old?.revision||0)+1);
+    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"GM_IPA"};
+    await this.ctx.storage.put(key,rec);
+    return j({ok:true,template:rec});
+  }
   // Immutable-per-revision artwork package: saved independently from template configuration.
   async gameTemplateAssetsStatus(rawId){
     const id=String(rawId||"").slice(0,120),rec=await this.ctx.storage.get("gameTemplate:"+id);
@@ -357,13 +364,6 @@ export class RoomDurableObject extends DurableObject {
     const id=String(rawId||"").slice(0,120),assetId=String(rawAsset||"").slice(0,180),rec=await this.ctx.storage.get("gameTemplate:"+id),saved=await this.ctx.storage.get("gameTemplateAsset:"+id+":"+assetId);
     if(!rec||!saved||Number(saved.revision)!==Number(rec.revision)||!validImageDataUrl(saved.imageDataUrl))return j({ok:false,error:"TEMPLATE_ARTWORK_MISSING"},404);
     return j({ok:true,id,assetId,package:{...saved.package,imageDataUrl:saved.imageDataUrl}});
-  }
-  async gameTemplateUpsert(body){
-    const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
-    const id=String(body?.id||cfg.id||("template-"+Date.now().toString(36))).trim().slice(0,120),now=new Date().toISOString(),key="gameTemplate:"+id,old=await this.ctx.storage.get(key),revision=Math.max(1,Number(old?.revision||0)+1);
-    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"GM_IPA"};
-    await this.ctx.storage.put(key,rec);
-    return j({ok:true,template:rec});
   }
   async memberDelete(request,body){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
