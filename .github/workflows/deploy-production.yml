@@ -532,6 +532,27 @@ jobs:
           grep -Fq 'skin-motion-v417.html' /tmp/v416-artwork-v416.html
           echo "Verify Production: V4.17 real joint-layer pipeline and iPhone Studio exact SHA PASS."
 
+          echo "Verify Production: Character V5.00 isolated 2.5D laboratory."
+          for F in index.html character-motion-v500.mjs character-master-v500.mjs; do
+            EXPECTED_HASH=$(shasum -a 256 "assets/characters/v5/$F" | awk '{print $1}')
+            MATCHED=0
+            for ATTEMPT in 1 2 3 4; do
+              curl --location --retry 5 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/$F?masterv500=$(date +%s)-$ATTEMPT" > "/tmp/gmww-v500-$F"
+              LIVE_HASH=$(shasum -a 256 "/tmp/gmww-v500-$F" | awk '{print $1}')
+              if [ "$EXPECTED_HASH" = "$LIVE_HASH" ]; then MATCHED=1; break; fi
+              sleep 2
+            done
+            if [ "$MATCHED" -ne 1 ]; then
+              echo "::error::V5.00 laboratory file $F did not synchronize to deployed Worker"; exit 1
+            fi
+            echo "Verify Production: V5.00 $F exact SHA PASS."
+          done
+          node --check /tmp/gmww-v500-character-motion-v500.mjs
+          node --check /tmp/gmww-v500-character-master-v500.mjs
+          grep -Fq "THỬ NGHIỆM RIÊNG" /tmp/gmww-v500-index.html
+          grep -Fq "three@0.180.0" /tmp/gmww-v500-character-master-v500.mjs
+          echo "Verify Production: V5.00 WebGL Master-01 staged (not enabled for live rooms) PASS."
+
 
 
 
