@@ -1473,6 +1473,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateAssetsStatus=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/status$/);
   if(gmTemplateAssetsStatus&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(decodeURIComponent(gmTemplateAssetsStatus[1])))}
+  const gmCanonicalTemplateRole=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/canonical$/);
+  if(gmCanonicalTemplateRole&&request.method==="POST")
+    return gmPackageCanonicalTemplateRole(env,decodeURIComponent(gmCanonicalTemplateRole[1]),request);
   const gmTemplateAssetPut=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets$/);
   if(gmTemplateAssetPut&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateAssetPut[1]),body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/assets",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...body,id})}))}
   const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
@@ -1689,6 +1692,44 @@ async function gmPreloadSharedArtifacts(env,raw,request){
   if(!check.ok||!assetIds.every(id=>manifest?.assetIds?.includes(id)))
     return j({ok:false,error:"SHARED_ARTIFACT_VERIFY_FAILED"},424);
   return j({ok:true,ready:true,mode:"reference",assetIds,count:assetIds.length});
+}
+// Package the exact clean role artwork within the Worker, without fetching a local
+// file:// URL or decoding/canvas-encoding high-resolution images in iOS WKWebView.
+async function gmPackageCanonicalTemplateRole(env,raw,request){
+  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  if(!env.ASSETS)return j({ok:false,error:"ROLE_ARTWORK_SOURCE_NOT_READY"},503);
+  const id=String(raw||"").slice(0,120),body=await safeJson(request);
+  const assetId=String(body?.assetId||"").slice(0,180);
+  if(!/^role:[A-Za-z0-9_-]{1,120}$/.test(assetId))return j({ok:false,error:"INVALID_ROLE_ASSET"},400);
+  const roleId=assetId.slice(5),statusUrl="https://member.internal/game-templates/assets/status?id="+encodeURIComponent(id);
+  const statusResponse=await memberStore(env).fetch(statusUrl);
+  if(!statusResponse.ok)return statusResponse;
+  const status=await statusResponse.json();
+  if(!status?.assets?.includes(assetId))return j({ok:false,error:"ROLE_NOT_IN_TEMPLATE"},400);
+  if(!status.missing?.includes(assetId))return j({ok:true,assetId,cached:true,hasImage:true});
+  const imageUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+roleId+".webp",request.url);
+  try{
+    const asset=await env.ASSETS.fetch(new Request(imageUrl.toString(),{method:"GET"}));
+    if(!asset.ok)return j({ok:false,error:"CANONICAL_ROLE_ARTWORK_MISSING",assetId,message:"Server không tìm thấy artwork gốc của "+roleId},asset.status===404?404:503);
+    const mime=String(asset.headers.get("content-type")||"").toLowerCase();
+    if(mime&&!mime.includes("image/")&&!mime.includes("octet-stream"))return j({ok:false,error:"INVALID_ROLE_ARTWORK_MIME"},424);
+    const bytes=new Uint8Array(await asset.arrayBuffer());
+    // The template storage contract accepts up to 1.9 MB of base64 data.
+    if(bytes.length<32||bytes.length>1380000||String.fromCharCode(...bytes.slice(0,4))!=="RIFF"
+      ||String.fromCharCode(...bytes.slice(8,12))!=="WEBP")
+      return j({ok:false,error:"INVALID_ROLE_ARTWORK_BYTES",message:"Artwork "+roleId+" không phải WEBP hợp lệ hoặc quá lớn."},424);
+    let binary="";
+    for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+    const imageDataUrl="data:image/webp;base64,"+btoa(binary);
+    if(!validImageDataUrl(imageDataUrl))return j({ok:false,error:"ROLE_ARTWORK_TOO_LARGE"},424);
+    const pkg=body?.package||{},save=await memberStore(env).fetch(new Request(
+      "https://member.internal/game-templates/assets",{method:"PUT",
+      headers:{"content-type":"application/json"},body:JSON.stringify({id,assetId,imageDataUrl,package:pkg})}));
+    const saved=await save.json().catch(()=>null);
+    if(!save.ok||saved?.ok!==true||saved?.hasImage!==true)
+      return j({ok:false,error:"CANONICAL_ROLE_PACKAGE_FAILED",message:saved?.message||saved?.error||"Không thể lưu ảnh Vai Trò."},424);
+    return j({ok:true,assetId,hasImage:true,cached:false,source:"canonical_server_artwork"});
+  }catch(err){return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",message:"Server không đọc được artwork "+roleId+". Vui lòng thử lại."},503)}
 }
 async function gmPreloadTemplateAssets(env,raw,request){
   if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
