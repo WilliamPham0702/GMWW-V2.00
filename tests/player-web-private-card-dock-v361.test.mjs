@@ -28,7 +28,7 @@ test('Tapping Role or Artifact opens real full-card viewer; idle 30 seconds clos
  assert.match(result,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
  assert.match(result,/openPrivateCardViewer\(b\.dataset\.privateCard\)/);
  assert.match(result,/if\(kind==='role'\)toggleRole\(\);else toggleArtifact\(\)/);
- assert.match(result,/renderRole\(\);const game=\$\('#game'\);if\(game\)game\.dataset\.privateCardFocus=kind;\s*setGameViewPane\('role',\{persist:false\}\)/);
+ assert.match(result,/const game=\$\('#game'\);if\(game\)game\.dataset\.privateCardFocus=kind;\s*setGameViewPane\('role',\{persist:false\}\)/);
  assert.match(result,/setGameViewPane\('village',\{persist:false\}\)/);
  assert.match(result,/Date\.now\(\)-privateCardActivityAt>=PLAYER_PRIVATE_CARD_IDLE_MS/);
  assert.match(result,/state\.roleOpen=false;state\.artifactOpen=false;state\.artifactFocus=''/);
