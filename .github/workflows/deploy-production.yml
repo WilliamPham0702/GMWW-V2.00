@@ -254,7 +254,7 @@ jobs:
           # Confirm that a clickable HTML test AND its REAL SkinnedMesh adapter are
           # deployed, rather than claiming the CI merge alone implies a live page.
           echo "Verify Production: checking V5.60 real 3D skin lab delivery."
-          curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/test-skin-v560.html?verify=$(date +%s)" > /tmp/gmww-skin-v560.html
+          curl --location --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/test-skin-v560.html?verify=$(date +%s)" > /tmp/gmww-skin-v560.html
           curl --retry 6 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v5/skin-v560-weighted-surface.mjs?verify=$(date +%s)" > /tmp/gmww-skin-v560.mjs
           echo "V5.60 delivery: HTML=$(wc -c </tmp/gmww-skin-v560.html) bytes; module=$(wc -c </tmp/gmww-skin-v560.mjs) bytes."
           if ! grep -Fq 'Skin 3D gắn vào 16 xương thật' /tmp/gmww-skin-v560.html; then
