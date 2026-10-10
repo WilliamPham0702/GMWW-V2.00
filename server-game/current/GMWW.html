@@ -6,7 +6,17 @@
 <title>GMWW V3.81</title>
 <link rel="stylesheet" href="style.css?v=3.81-presence-dots">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
-</head>
+<style>
+.sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
+.sea-artifact-import-panel input[type=file]{max-width:100%;font-size:14px}
+.sea-artifact-import-panel p{font-size:13px;margin:0;line-height:1.5}
+.sea-artifact-import-preview{max-height:340px;overflow-y:auto;display:grid;gap:6px}
+.sea-artwork-import-row{display:flex;align-items:center;gap:10px;min-height:84px;border-bottom:1px solid rgba(255,255,255,.13)}
+.sea-artwork-import-row img{width:78px;height:66px;object-fit:cover;flex:none;border-radius:8px}
+.sea-artwork-import-row>div{flex:1;min-width:0;display:grid;gap:3px}
+.sea-artwork-import-row small{font-size:11px;overflow-wrap:anywhere}
+.sea-artwork-import-row select{max-width:100%;width:100%;min-height:36px;font-size:13px}
+</style></head>
 <body>
 <div id="app">
   <main id="stage">
@@ -271,6 +281,13 @@
           </section>
           <section class="theme-section theme-section-pinned">
             <div class="theme-section-head"><h3>✦ Artwork ARTIFACTS</h3></div>
+            <div class="sea-artifact-import-panel">
+              <label for="seaArtifactImportFile"><strong>Nhập 44 Artwork chủ đề Biển, không bảng tên</strong></label>
+              <input id="seaArtifactImportFile" type="file" accept=".zip,application/zip" aria-label="Chọn ZIP 44 artwork biển">
+              <p id="seaArtifactImportStatus" role="status">Chọn ZIP 44 Artwork, kiểm tra ảnh ghép tên trước khi cập nhật kho dùng chung.</p>
+              <div id="seaArtifactImportPreview" class="sea-artifact-import-preview"></div>
+              <button id="seaArtifactImportStart" class="primary" type="button" disabled>NẠP 44 ARTWORK LÊN SERVER</button>
+            </div>
             <div id="themeArtifactRows"></div>
           </section>
         </section>
@@ -740,6 +757,7 @@
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-380"></script>
 <script src="app.js?v=3.81-presence-dots"></script>
+<script src="artifact-sea-import.js?v=sea-44-1"></script>
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
 (()=>{
