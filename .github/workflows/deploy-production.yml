@@ -186,7 +186,9 @@ jobs:
           NODE
             done
             for FILE in GMWW.html app.js style.css gmww-ai-support.js gmww-ai-support.css; do
-              curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+              # Cloudflare may redirect HTML assets to their canonical URL.
+              # Hash the final response rather than the 301/302 response body.
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
                 "$URL/updates/runtime/V3.82/$FILE" > /tmp/gmww-v382-download
               ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v382-download | awk '{print $1}')
               EXPECTED_SHA=$(node - "$FILE" <<'NODE'
