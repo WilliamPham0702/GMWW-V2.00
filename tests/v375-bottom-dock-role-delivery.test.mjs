@@ -36,7 +36,7 @@ test('Delivery counts update inside the bottom action when players open role car
   assert.equal(hint.textContent,'CHẠM ĐỂ TIẾP');
   assert.ok(calls.some(([name,value])=>name==='aria-label'&&/Chạm để Vào Trận/.test(value)));
 });
-test('V3.75 UI update is a signed three-file patch only from V3.75',()=>{
+test('V3.75 UI update is a signed three-file patch only from V3.74',()=>{
   const paths=['GMWW.html','app.js','style.css'],host='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.75/';
   const m={releaseVersion:'3.75',runtimeVersion:'3.75',shellVersion:'3.17',releaseType:'runtime',delete:[],
     runtime:{files:paths.map(path=>({path,url:host+path,sha256:'c'.repeat(64)}))}};
@@ -47,5 +47,5 @@ test('V3.75 UI update is a signed three-file patch only from V3.75',()=>{
   assert.equal(selectVerifiedRuntimeV375Delta(m,'3.72'),null);
   assert.equal(selectVerifiedRuntimeV375Delta({...m,delete:['artwork']},'3.74'),null);
   assert.equal(selectVerifiedRuntimeV375Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.74'),null);
-  assert.match(worker,/VERSION="V3\.74",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-375"/);
+  assert.match(worker,/VERSION="V3\.75",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-375"/);
 });
