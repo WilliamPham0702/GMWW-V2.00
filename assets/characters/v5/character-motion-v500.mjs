@@ -19,7 +19,7 @@ export function facingAngle(direction){
 const poseZero=()=>({hipY:0,hipRoll:0,hipLean:0,armL:0,armR:0,legL:0,legR:0,kneeL:0,kneeR:0,headRoll:0,headPitch:0,armLOut:0,armROut:0,bodyTilt:0});
 export function createMotionState(id='character-01',x=0,z=0,offset=0){
  if(!Number.isFinite(x)||!Number.isFinite(z))throw Error('INVALID_POSITION');
- return {id,x,z,yaw:0,targetYaw:0,goal:null,run:false,action:'idle',time:0,actionTime:0,phase:offset,travelled:0,
+ return {id,x,z,yaw:0,targetYaw:0,goal:null,run:false,pendingAction:null,action:'idle',time:0,actionTime:0,phase:offset,travelled:0,
   velocity:0,seated:false,pose:poseZero(),seed:offset};
 }
 export function setFacing(state,direction){
@@ -28,6 +28,10 @@ export function setFacing(state,direction){
 export function setAction(state,action){
  if(!V500_ACTIONS.includes(action))throw Error('INVALID_ACTION');
  state.goal=null;
+ if(state.seated&&!['sit','sit-down','stand-up'].includes(action)){
+  state.pendingAction=action;state.seated=false;state.action='stand-up';state.actionTime=0;return state;
+ }
+ state.pendingAction=null;
  if(state.action!==action){state.action=action;state.actionTime=0;}
  if(action==='sit')state.seated=true;
  if(action==='stand-up')state.seated=false;
@@ -37,7 +41,7 @@ export function setDestination(state,x,z,run=false){
  if(!Number.isFinite(x)||!Number.isFinite(z))throw Error('INVALID_DESTINATION');
  state.goal={x:clamp(x,-5.2,5.2),z:clamp(z,-3.6,3.6)};
  state.run=!!run;
- if(state.seated){state.seated=false;state.action='stand-up';state.actionTime=0;}
+ if(state.seated){state.pendingAction=null;state.seated=false;state.action='stand-up';state.actionTime=0;}
  return state;
 }
 export function tickMotion(state,delta){
@@ -47,7 +51,9 @@ export function tickMotion(state,delta){
   state.seated=true;state.action='sit';state.actionTime=0;
  }
  if(state.action==='stand-up'&&state.actionTime>.55){
-  state.action=state.goal?(state.run?'run':'walk'):'idle';state.actionTime=0;
+  const afterStand=state.pendingAction;
+  state.pendingAction=null;
+  state.action=afterStand||(state.goal?(state.run?'run':'walk'):'idle');state.actionTime=0;
  }
  let intended=0,dx=0,dz=0,goalDistance=0;
  const locked=['sit','sit-down','stand-up','wave','vote','result'].includes(state.action);
