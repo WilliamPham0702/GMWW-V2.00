@@ -30,10 +30,12 @@ test('GM removes offline-ready chip but retains name, roles, presence and online
   const end=gm.indexOf('function ',start+25);
   assert.ok(start>0&&end>start);
   const render=gm.slice(start,end);
-  assert.match(render,/m\.online\?\('ONLINE • '/);
-  assert.match(render,/statusLabel\?'<small>'\+playEsc\(statusLabel\)/);
-  assert.match(render,/el\.setAttribute\('aria-label',name\+\(statusLabel\?/);
-  assert.doesNotMatch(render,/\(m\.online\?'ONLINE':'OFFLINE'\)/);
+  assert.match(render,/presenceLabel=m\?\.online===false\?'Offline':'Online'/);
+  assert.match(render,/class="play-name-with-presence"/);
+  assert.match(render,/class="play-presence-dot" data-online="/);
+  assert.match(render,/m\.online===false\?'false':'true'/);
+  assert.match(render,/el\.setAttribute\('aria-label',name\+\(m\?' • '\+presenceLabel/);
+  assert.doesNotMatch(render,/statusLabel\?'<small>'/);
   assert.match(render,/const assignment=m\?gmAssignments\.find/);
 });
 
