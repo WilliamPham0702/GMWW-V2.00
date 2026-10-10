@@ -25,11 +25,11 @@ test('Room reset dialog has legible newlines too',()=>{
   assert.ok(!message.includes(String.raw`\n`));
 });
 
-test('V3.77 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
+test('V3.78 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
   const server=fs.readFileSync('src/index.js','utf8');
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-  assert.equal(pkg.version,'3.77.0');
-  assert.match(html,/<title>GMWW V3\.77<\/title>/);
-  assert.match(app,/const VERSION='3\.77'/);
-  assert.match(server,/VERSION="V3\.77",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-377"/);
+  assert.equal(pkg.version,'3.78.0');
+  assert.match(html,/<title>GMWW V3\.78<\/title>/);
+  assert.match(app,/const VERSION='3\.78'/);
+  assert.match(server,/VERSION="V3\.78",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-378"/);
 });
