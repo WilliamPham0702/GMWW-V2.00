@@ -45,7 +45,15 @@ for(const [i,s] of sessions.entries()){
    page.on('pageerror',e=>errors.push(e.message));
    await page.goto(origin+'/'+room.roomCode,{waitUntil:'domcontentloaded',timeout:35000});
    const role=page.locator('#gmwwPlayerPrivateDock button[data-private-card="role"]');
-   await role.waitFor({state:'visible',timeout:45000});
+   try{await role.waitFor({state:'visible',timeout:22000})}
+   catch(e){
+     const debug=await page.evaluate(()=>{
+       const describe=id=>{const el=document.querySelector(id);return el?{hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility,cls:el.className}:null};
+       return {path:location.pathname,game:describe('#game'),dock:describe('#gmwwPlayerPrivateDock'),role:describe('#gmwwPlayerPrivateDock button[data-private-card="role"]'),login:describe('#login'),screens:[...document.querySelectorAll('.screen.active')].map(e=>e.id),version:document.documentElement.dataset.gmwwMembersVersion||null};
+     }).catch(()=>({error:'page closed'}));
+     const privateData=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token}).catch(err=>({error:String(err.message)}));
+     throw new Error('role back not visible '+JSON.stringify({debug,receipt:{phase:privateData?.room?.phase,roleId:privateData?.role?.roleId,artifactId:privateData?.artifact?.artifactId,manifest:privateData?.deliveryManifest}})+'; '+e.message);
+   }
    await role.click({timeout:10000});
    const face=page.locator('#gmwwPlayerUnifiedCard:not([hidden])');
    await face.waitFor({state:'visible',timeout:15000});
