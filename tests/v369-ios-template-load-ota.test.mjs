@@ -23,5 +23,5 @@ test('Worker newest Runtime selector is V3.81 on both paths',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  assert.match(app,/const VERSION='3\.81'/);
  assert.match(html,/<title>GMWW V3\.81<\/title>/);
- assert.match(html,/app\.js\?v=3\.81-battle-timer/);
+ assert.match(html,/app\.js\?v=3\.81-artifact-sea/);
 });
