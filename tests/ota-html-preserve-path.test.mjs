@@ -13,7 +13,7 @@ test('Immutable Runtime HTML is served without Cloudflare canonical redirect',()
 });
 test('Player Web root stays dynamically generated with existing room code routing',()=>{
   const src=fs.readFileSync('src/index.js','utf8');
-  assert.match(src,/if\(url\.pathname==="\/"&&request\.method==="GET"\)return playerPage\("?"?\)/);
+  assert.ok(src.includes('if(url.pathname==="/"&&request.method==="GET")return playerPage("");'));
   assert.match(src,/function playerPage\(code\)\{return new Response\(gmwwMembersPage\(code\)/);
   assert.doesNotMatch(src,/url\.pathname==="\/"[\s\S]{0,160}ASSETS\.fetch/);
 });
