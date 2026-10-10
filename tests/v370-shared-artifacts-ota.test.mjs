@@ -19,13 +19,13 @@ test('V3.70 overlay fails closed on tampering or unsupported base',()=>{
  x=>{x.runtime.files[1].url='https://invalid.example/app.js'},x=>{x.runtime.files.push({...x.runtime.files[0]})}
  ]){const x=manifest();change(x);assert.equal(selectVerifiedRuntimeV370Delta(x,'3.69'),null)}
 });
-test('Worker and IPA Runtime V3.71 declarations are aligned and retain native shell V3.17',()=>{
+test('Worker and IPA Runtime V3.72 declarations are aligned and retain native shell V3.17',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
- for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV371Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta'));
- assert.match(worker,/VERSION="V3\.71",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-371"/);
- assert.match(app,/const VERSION='3\.71'/);
- assert.match(html,/<title>GMWW V3\.71<\/title>/);
- assert.match(html,/app\.js\?v=3\.71-artwork-refs/);
- assert.equal(pkg.version,'3.71.0');
+ for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV372Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta'));
+ assert.match(worker,/VERSION="V3\.72",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-372"/);
+ assert.match(app,/const VERSION='3\.72'/);
+ assert.match(html,/<title>GMWW V3\.72<\/title>/);
+ assert.match(html,/app\.js\?v=3\.72-role-guard-fix/);
+ assert.equal(pkg.version,'3.72.0');
 });

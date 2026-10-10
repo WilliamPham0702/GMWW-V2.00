@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.71';
+const VERSION='3.72';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -3412,6 +3412,25 @@ async function playSyncSharedArtifactLibrary({onlyIds=null,forceIds=[]}={}){
   }
   return{ok:failed.length===0,synced,failed};
 }
+// Gentle, one-card-at-a-time background sync. Never compete with live rooms,
+// template creation, role assignment or an inactive tab for decoding resources.
+let playSharedArtifactBackgroundTimer=null,playSharedArtifactBackgroundCursor=0;
+function playScheduleSharedArtifactLibrarySync(waitMs=30000){
+  if(playSharedArtifactBackgroundTimer!==null)return;
+  playSharedArtifactBackgroundTimer=setTimeout(async()=>{
+    playSharedArtifactBackgroundTimer=null;
+    const library=(state.artifacts||[]).filter(a=>a?.id);
+    if(playSharedArtifactBackgroundCursor>=library.length)return;
+    const sheet=document.getElementById('playGameSheet');
+    const active=typeof document.visibilityState==='undefined'||document.visibilityState==='visible';
+    if(!active||playSceneRuntime.busy||isLivePlayRoom()||(sheet&&!sheet.classList.contains('hidden'))){
+      playScheduleSharedArtifactLibrarySync(30000);return;
+    }
+    const id=String(library[playSharedArtifactBackgroundCursor++].id);
+    try{await playSyncSharedArtifactLibrary({onlyIds:[id]})}catch(_){}
+    playScheduleSharedArtifactLibrarySync(30000);
+  },Math.max(1000,Number(waitMs)||30000));
+}
 async function playEnsureSharedArtifactPool(cfg){
   const ids=playMatchArtifactAssetIds(cfg).map(id=>id.slice('artifact:'.length));
   if(!ids.length)return;
@@ -3432,10 +3451,20 @@ async function playEnsureTemplateAssets(id,cfg){
     const rawId=assetId.slice(5),model=(state.cards||[]).find(x=>String(x.id)===rawId);
     if(!model)throw new Error('Thiếu Lá Vai Trò '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
     playGameStatus('Đang đóng gói Vai Trò '+(finished+1)+'/'+missing.size+': '+String(model.name||'Lá Bài'),'progress');
-    const imageDataUrl=await playRoleArtworkData(model);
     const pkg={roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
-    const uploaded=await gmApi(endpoint,{method:'PUT',timeoutMs:60000,body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
-    if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
+    // Canonical role artwork is packaged on the Worker. Native WKWebView must not
+    // fetch the bundled file:// image and upload it again for every Ván Mẫu.
+    if(builtinRoleArtwork(rawId,'display')){
+      const uploaded=await gmApi(endpoint+'/canonical',{method:'POST',timeoutMs:60000,
+        body:JSON.stringify({assetId,package:pkg})});
+      if(uploaded?.ok!==true||uploaded?.hasImage!==true)
+        throw new Error('Server chưa đóng gói được Vai Trò '+model.name+'.');
+    }else{
+      // Only truly custom artwork must use the device-owned image.
+      const imageDataUrl=await playRoleArtworkData(model);
+      const uploaded=await gmApi(endpoint,{method:'PUT',timeoutMs:60000,body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
+      if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
+    }
     finished++;
   }
   status=await gmApi(endpoint+'/status');
@@ -4023,8 +4052,8 @@ function initPlayScene(){
   document.getElementById('playUserAvatar')?.setAttribute('hidden','');
   document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const activeId=String(playSceneState.activePlayerId||''),gmSelected=activeId==='gm:online',p=selectedPlayPlayer();if(gmSelected||!activeId){await gmwwMoveGmCharacter(raw.x,raw.y);return}if(!isLivePlayRoom())return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
   window.addEventListener('resize',renderPlayScene);
-  // Begin the one-time background sync of the complete Artifact library, not during Ván Mẫu saves.
-  setTimeout(()=>{void playSyncSharedArtifactLibrary().catch(()=>{})},200);
+  // No bulk Artifact sync at startup: one item per idle window outside active games.
+  playScheduleSharedArtifactLibrarySync();
   bindPlayRoomModeButtons();bindPlaySeatMoveButtons();renderPlayScene();document.body.classList.add('play-immersive');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='start'));if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
   if(!playSceneRuntime.pollTimer)playSceneRuntime.pollTimer=setInterval(()=>{if(document.getElementById('start')?.classList.contains('active')){if(isLivePlayRoom()){if(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN)playSyncRoom(false)}else gmApi('/api/gm/members').then(d=>{memberAdminState.members=d.members||[];renderPlayPlayers()}).catch(()=>{})}},15000);
 }

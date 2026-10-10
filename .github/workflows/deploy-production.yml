@@ -161,6 +161,21 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
+          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
+          # readable from the deployed Worker, not merely rendered as a thumbnail.
+          if [ "$EXPECTED" = "3.72" ]; then
+            ROLE_ART_READY=0
+            for CHECK in $(seq 1 12); do
+              if curl --max-time 20 -fsS "$URL/api/gm/template-role-artwork/role_guard?production-check=$CHECK-$(date +%s)" > /tmp/gmww-role-guard.webp && node - <<'NODE'
+          const b=require('fs').readFileSync('/tmp/gmww-role-guard.webp');
+          if(b.length<32||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')process.exit(1);
+          console.log('Verify Production: role_guard canonical WEBP source PASS.');
+          NODE
+              then ROLE_ART_READY=1; break; fi
+              sleep 2
+            done
+            if [ "$ROLE_ART_READY" != "1" ]; then echo "::error::Production role_guard artwork is unavailable"; exit 1; fi
+          fi
           # Verify that an actually installed IPA V3.17 Runtime receives the correct small OTA,
           # not just the full package used by deployment validation.
           if [ "$EXPECTED" = "3.53" ]; then
