@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#092f48">
+<meta name="description" content="Bảng nghiệm thu Character V5.20: 9 động tác, 8 hướng, bước đi/ngồi đứng, 1–30 người, FPS và ảnh dự phòng trước khi bật game chính.">
+<title>GMWW · Bảng test Character V5.20</title>
+<style>
+:root{font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#eafcff;background:#071d32;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 40% -15%,#168c9a,#10415d 35%,#071c32 80%)}
+main{max-width:1240px;margin:auto;display:grid;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 11px calc(env(safe-area-inset-bottom) + 24px)}
+h1,h2,p{margin:0}h1{font-size:clamp(23px,5vw,34px);line-height:1.19;letter-spacing:-.025em}
+h2{font-size:15px;letter-spacing:.025em}p{font-size:12px;color:#c3e4ed}
+b{font-weight:850}a{color:#a7faed;text-decoration:none}a:hover{text-decoration:underline}
+header{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.kicker{font-size:10px;letter-spacing:.16em;color:#82f6e1;font-weight:900;margin-bottom:5px}
+.tag{border:1px solid #5a9aa9;background:#123f55;border-radius:99px;padding:8px 11px;font-size:10px;font-weight:900;color:#bfffe5}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(295px,420px);gap:12px;align-items:start}
+.card{background:linear-gradient(145deg,#0e4a61d9,#08263def);border:1px solid #488da78c;border-radius:18px;padding:14px;box-shadow:0 12px 32px #00152877;display:grid;gap:12px;min-width:0}
+.scene{overflow:hidden;padding:0}
+iframe{width:100%;height:min(74vh,700px);border:0;background:#134154;display:block}
+.scene-foot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 12px;border-top:1px solid #79b4bf4d}
+.muted{color:#acd2de;font-size:11px}
+button{min-height:43px;border:1px solid #69bdb9;border-radius:12px;background:linear-gradient(135deg,#168b92,#137aad);color:white;padding:10px 14px;font-size:13px;font-weight:850;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+button.alt{background:#113b54;border-color:#478f9e}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dash{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.metric{padding:10px;border-radius:12px;border:1px solid #4c8a9f66;background:#051f3599}
+.metric strong{display:block;color:#ecfffc;font-size:15px}
+.metric small{font-size:10px;color:#a7dce3}
+#decision{border:1px solid #6b9fb1;border-radius:11px;padding:11px;background:#18455c;font-size:11px;line-height:1.45;font-weight:900}
+#decision[data-status=pass]{color:#acffde;background:#155443;border-color:#47b68e}
+#decision[data-status=fail]{color:#ffe0c8;background:#663d2e;border-color:#da8457}
+table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+thead th{text-align:left;color:#b5e3ef;font-size:10px;padding:9px 4px;border-bottom:1px solid #85c5cb50}
+tbody td{border-bottom:1px solid #719cab26;padding:9px 4px;vertical-align:top;overflow-wrap:anywhere}
+tbody td:nth-child(1){width:42%}tbody td:nth-child(2){width:20%}tbody td:nth-child(3){width:38%}
+td small{display:block;color:#83b3c5;font-size:10px;margin-top:3px}
+.test-result{font-size:10px;font-weight:900;color:#b9c8d3;white-space:nowrap}
+tr[data-status=pass] .test-result{color:#78f6ac}
+tr[data-status=fail] .test-result{color:#ffb197}
+.test-details{color:#d4edf4}
+.checkrow{display:flex;align-items:flex-start;gap:10px;border:1px solid #487d9066;background:#082d4470;border-radius:10px;padding:10px;font-size:12px;cursor:pointer}
+.checkrow input{margin-top:2px;width:19px;height:19px;flex:0 0 19px;accent-color:#41d4ac}
+#current{font-size:11px;color:#b2e5ed;min-height:17px}
+.note{font-size:11px;color:#bfdee3;border-top:1px solid #78b5b537;padding-top:9px}
+.notice{padding:9px 10px;border-radius:11px;background:#413a37;color:#ffe1c7;border:1px solid #b28b64;font-size:11px}
+@media(max-width:940px){.grid{grid-template-columns:1fr}iframe{height:min(60svh,580px)}.card{padding:11px}}
+@media(max-width:520px){main{padding-left:7px;padding-right:7px;gap:9px}.grid{gap:8px}.scene{padding:0}iframe{height:min(51svh,430px);min-height:300px}table{font-size:10px}td small{font-size:9px}.test-result{font-size:9px}.card{border-radius:12px}.dash{gap:5px}.metric{padding:8px}}
+</style></head>
+<body><main>
+<header>
+ <div><div class="kicker">GMWW · CHARACTER 2.5D · V5.20</div><h1>BẢNG KIỂM THỬ <span style="color:#8ffce4">TRƯỚC KHI VÀO GAME</span></h1>
+ <p>Chạy trên chính iPhone / Safari / Chrome của bạn. Chưa thay bất kỳ nhân vật nào trong phòng chơi thật.</p></div>
+ <span class="tag">CHỜ NGHIỆM THU · LIVE GAME GIỮ NGUYÊN</span>
+</header>
+<section class="grid">
+ <div class="card scene">
+  <iframe id="studio" src="/characters/v5/?review=520" loading="eager" title="Character Studio 3D V5.10 đang được kiểm thử" allow="fullscreen"></iframe>
+  <div class="scene-foot"><span class="muted">Nhân vật và chuyển động hiển thị trực tiếp, kết quả đo bên phải hoặc bên dưới.</span><button class="alt" id="studioOpen">Mở Studio toàn màn hình</button></div>
+ </div>
+ <div class="card">
+  <h2>1. KIỂM THỬ TỰ ĐỘNG TRÊN THIẾT BỊ</h2>
+  <p>Nhấn nút bên dưới, bảng sẽ tự thử 9 Action, 8 hướng, chuyển tư thế, ảnh dự phòng và FPS khi có 1/10/20/30 nhân vật. Dự kiến khoảng 35–50 giây tùy thiết bị.</p>
+  <div class="row">
+   <button id="run">▶ CHẠY TOÀN BỘ TEST</button>
+   <button id="download" class="alt" disabled>Xuất biên bản JSON</button>
+  </div>
+  <div id="current" aria-live="polite">Studio đang tải. Hãy nhấn CHẠY TOÀN BỘ TEST.</div>
+  <div class="dash">
+   <div class="metric"><strong id="counter">0/10 bài tự động đạt</strong><small>Kiểm tra thật trên thiết bị</small></div>
+   <div class="metric"><strong id="review">0/5 mục trực quan</strong><small>Cần bạn xác nhận</small></div>
+  </div>
+  <div id="failed" style="font-size:11px;color:#ffb8a6"></div>
+  <div style="overflow-x:auto"><table aria-label="Bảng 10 bài tự động">
+   <colgroup><col style="width:43%"><col style="width:19%"><col style="width:38%"></colgroup>
+   <thead><tr><th>HẠNG MỤC</th><th>KẾT QUẢ</th><th>BẰNG CHỨNG</th></tr></thead>
+   <tbody id="autoRows"></tbody>
+  </table></div>
+  <div class="notice">FPS là số đo trên thiết bị đang mở trang. PASS của Chromium/GitHub không thay cho FPS và cảm giác mượt trên iPhone.</div>
+  <h2>2. BẠN XEM VÀ XÁC NHẬN TRỰC QUAN</h2>
+  <div id="manualRows" style="display:grid;gap:6px"></div>
+  <h2>3. QUYẾT ĐỊNH TRƯỚC TÍCH HỢP</h2>
+  <div id="decision" data-status="pending" role="status">CHƯA NGHIỆM THU — GAME CHÍNH KHÔNG THAY ĐỔI</div>
+  <p class="note">Ngay cả khi 10 bài tự động và 5 hạng mục trực quan đạt, hệ thống vẫn **không tự bật Character V5** trong Làng. Hãy gửi kết quả hoặc xác nhận “OK bảng test V5.20” để triển khai có kiểm soát. Trong game thật phải giữ fallback WebP và kiểm thử riêng chức năng Phân Vai/Artifact.</p>
+ </div>
+</section>
+<p class="muted">Kiểm thử độc lập • <a href="/characters/v5/">Character Studio V5.10</a> • <a href="/">Player Web GMWW</a> • dữ liệu game không bị sửa đổi bởi bảng test.</p>
+</main>
+<script type="module" src="./test-board-v520.mjs"></script>
+</body></html>
