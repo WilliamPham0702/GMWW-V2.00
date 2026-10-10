@@ -2,8 +2,8 @@
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#072d45">
-<meta name="description" content="GMWW Character Master-01 · thử nghiệm độc lập nhân vật 2.5D có xương khớp 3D trên Player Web.">
-<title>Character Master-01 · WebGL 2.5D | GMWW</title>
+<meta name="description" content="GMWW Character Master-01 V5.10: Chàng Biển 3D dùng SkinnedMesh 16 xương thực sự, đi và chạy 8 hướng, thử hiệu năng 30 người.">
+<title>Character Master-01 · SkinnedMesh 2.5D | GMWW</title>
 <style>
 :root{font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#effcff;background:#061d33;color-scheme:dark}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%}button,input,label{touch-action:manipulation}button,input{font:inherit}
@@ -53,9 +53,9 @@ code{color:#ddffef}
 </head>
 <body><main>
 <header>
- <div><div class="eyebrow">GMWW · CHARACTER 2.5D · V5.00</div>
+ <div><div class="eyebrow">GMWW · CHARACTER 2.5D · V5.10</div>
  <h1>MASTER-01 <span style="color:#74ffe0">CHÀNG BIỂN</span></h1>
- <p class="sub">Thử nghiệm nhân vật 3D chibi có khớp chuyển động thật trên Player Web. Làng 2D và nhân vật trong trận vẫn giữ nguyên đến khi nghiệm thu.</p></div>
+ <p class="sub">Nâng cấp Master-01 thành nhân vật 3D SkinnedMesh 16 xương, áo hoa biển, tóc navy, chân đi theo nhịp, quay 8 hướng. Làng 2D và trận thật không đổi.</p></div>
  <span class="corner">THỬ NGHIỆM RIÊNG • CHƯA ÁP DỤNG GAME</span>
 </header>
 <div class="layout">
@@ -99,13 +99,13 @@ code{color:#ddffef}
    <div id="actionState" style="color:#aff3e9;font-size:11px;font-weight:800" aria-live="polite">IDLE · 0°</div>
   </div>
   <div class="help"><strong>Nguyên lý</strong>
-   <span>WebGL dựng nhân vật thật bằng các mesh 3D theo hệ khớp. Hông, đầu, hai tay, đùi, gối chuyển động đồng bộ; 60Hz rAF và nội suy tư thế.</span>
+   <span>SkinnedMesh GPU dùng 16 xương cho hông, đầu, vai, khuỷu, bàn tay, đùi, gối, bàn chân. 30 nhân vật chia sẻ 2 bộ geometry/LOD, 1 mesh mỗi nhân vật để giảm draw calls.</span>
    <span>Nhấn vào sân để thử chuyển chỗ, không thay đổi phòng hoặc dữ liệu người chơi.</span>
   </div>
  </section>
 </div>
 <div id="notice" role="alert">Đang nạp Three.js cục bộ và khởi tạo GPU…</div>
-<p class="bottom">Bản thử nghiệm kỹ thuật, nhân vật 3D dựng bằng hình học (không phải artwork HD cuối cùng). Thư viện Three.js r180 đã đóng gói cục bộ (MIT), không phụ thuộc CDN; vẫn cần nghiệm thu iPhone thật trước khi dùng trong game. <a href="/characters/v4/skin-motion-v417.html">Studio 2D cũ</a> · <a href="/">Player Web GMWW</a>.</p>
+<p class="bottom">Bản mẫu ngoại hình từ hình học 3D đã gắn xương thật (chưa phải model GLB/texture HD cuối cùng). Thư viện Three.js r180 đã đóng gói cục bộ (MIT), không phụ thuộc CDN; vẫn cần nghiệm thu iPhone thật trước khi dùng trong game. <a href="/characters/v4/skin-motion-v417.html">Studio 2D cũ</a> · <a href="/">Player Web GMWW</a>.</p>
 </main>
 <script type="module">
 import('./character-master-v500.mjs').catch(error=>{
