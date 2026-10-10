@@ -53,7 +53,7 @@ test('Ván Mẫu uses thumbnail toggle selection; Artifact settings live in Ván
  assert.match(app,/function renderPlayGameRoleTimings\(\)/);
  assert.match(app,/function renderPlayArtifactPicker\(\)/);
  assert.match(app,/gameConfig:configured,matchId/);
- assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,roles:/);
+ assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,\s*roles:/);
  assert.match(app,/artifacts:selectedArtifacts\.map\(/);
  assert.match(app,/artifactLimitPerCycle/);
  assert.match(html,/id="playVillageDiscussionSec"[^>]*value="300"/);
