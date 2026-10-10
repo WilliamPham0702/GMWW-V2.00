@@ -122,3 +122,50 @@ test('Production AI Support Runtime cannot be announced without both widget asse
   assert.match(worker,/VERSION="V3\.82"/);
   assert.match(worker,/UPDATE_CHANNEL_REV="runtime-382"/);
 });
+
+
+test('WKWebView receives CORS headers for AI success, unauthorized, errors and provider outages',async()=>{
+  const expectCors=response=>{
+    assert.equal(response.headers.get('access-control-allow-origin'),'*');
+    assert.match(response.headers.get('access-control-allow-headers'),/\bauthorization\b/);
+    assert.match(response.headers.get('access-control-allow-headers'),/\bcontent-type\b/);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+  };
+  const cases=[
+    await handleAiSupport(request({message:'hello'}),env,{fetchImpl:fakeAi()}),
+    await handleAiSupport(request({message:'hello'},'wrong'),env,{fetchImpl:async()=>{throw Error('unexpected')}}),
+    await handleAiSupport(request({message:'hello'}),{GMWW_AI_SUPPORT_TOKEN:TOKEN},{fetchImpl:fakeAi()}),
+    await handleAiSupport(request({message:''}),env,{fetchImpl:fakeAi()}),
+    await handleAiSupport(request({message:'hello'}),env,{fetchImpl:async()=>Response.json({error:'no credits'},{status:429})}),
+    await handleAiSupport(request({message:'hello'}),env,{fetchImpl:async()=>{throw Error('network unavailable')}})
+  ];
+  for(const response of cases)expectCors(response);
+  assert.equal(cases[0].status,200);
+  assert.equal(cases[1].status,401);
+  assert.equal(cases[2].status,503);
+  assert.equal(cases[3].status,400);
+  assert.equal((await cases[4].json()).error,'AI_RATE_LIMITED');
+  assert.equal((await cases[5].json()).error,'AI_NETWORK_UNAVAILABLE');
+});
+test('OpenAI failures are classified without exposing provider response bodies or secrets',async()=>{
+  for(const [status,code] of [[400,'AI_PROVIDER_BAD_REQUEST'],[401,'AI_PROVIDER_AUTH_FAILED'],[403,'AI_PROVIDER_FORBIDDEN'],[404,'AI_MODEL_UNAVAILABLE'],[429,'AI_RATE_LIMITED'],[500,'AI_PROVIDER_UNAVAILABLE']]){
+    const res=await handleAiSupport(request({message:'Hello'}),env,{
+      fetchImpl:async()=>Response.json({internalDetails:'test-private-provider-data',error:'NEVER_FORWARD'}, {status})
+    });
+    const payload=await res.json();
+    assert.equal(payload.error,code);
+    assert.ok(!JSON.stringify(payload).includes('test-private-provider-data'));
+    assert.equal(res.headers.get('access-control-allow-origin'),'*');
+  }
+});
+test('API preflight and AI response CORS are aligned for WKWebView Authorization calls',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const backend=fs.readFileSync('src/gmww-ai-support.js','utf8');
+  const frontend=fs.readFileSync('server-game/current/gmww-ai-support.js','utf8');
+  assert.match(worker,/request\.method==="OPTIONS".*headers:corsHeaders\(\)/);
+  assert.match(backend,/'access-control-allow-origin':'\*'/);
+  assert.match(backend,/'access-control-allow-headers':'content-type,authorization'/);
+  assert.match(frontend,/AI_TRANSPORT_OR_CORS_ERROR/);
+  assert.doesNotMatch(frontend,/Không thể kết nối AI Support\. Vui lòng kiểm tra mạng/);
+});
