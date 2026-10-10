@@ -552,6 +552,8 @@ jobs:
           node --check /tmp/gmww-v500-character-master-v500.mjs
           node --check /tmp/gmww-v500-character-rig-v510.mjs
           grep -Fq 'SkinnedMesh' /tmp/gmww-v500-character-rig-v510.mjs
+          grep -Fq 'V414_SKIN_PALETTES' /tmp/gmww-v500-character-rig-v510.mjs
+          grep -Fq 'Skin GMWW V4.14' /tmp/gmww-v500-index.html
           node --check /tmp/gmww-v500-test-board-v520.mjs
           node --check /tmp/gmww-v500-test-gates-v520.mjs
           grep -Fq 'CHƯA NGHIỆM THU' /tmp/gmww-v500-test-board-v520.html
