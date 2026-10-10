@@ -66,7 +66,10 @@ test('WebGL Master-01 is a review-only lab, not imported into live game or IPA',
  assert.match(source,/new THREE\.WebGLRenderer/);
  assert.match(source,/new THREE\.OrthographicCamera/);
  assert.match(source,/requestAnimationFrame\(frame\)/);
- assert.match(source,/cdn\.jsdelivr\.net\/npm\/three@0\.180\.0/);
+ assert.match(source,/\.\/vendor\/three\.module\.min\.js/);
+ assert.ok(fs.statSync(new URL('../assets/characters/v5/vendor/three.module.min.js',import.meta.url)).size>100000);
+ assert.ok(fs.statSync(new URL('../assets/characters/v5/vendor/three.core.min.js',import.meta.url)).size>100000);
+ assert.match(fs.readFileSync(new URL('../assets/characters/v5/vendor/LICENSE',import.meta.url),'utf8'),/MIT License/);
  assert.match(html,/THỬ NGHIỆM RIÊNG/);
  for(const action of V500_ACTIONS)assert.ok(html.includes('data-action="'+action+'"'));
  for(const direction of V500_DIRECTIONS)assert.ok(html.includes('data-dir="'+direction+'"'));
