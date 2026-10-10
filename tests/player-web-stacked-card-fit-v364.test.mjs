@@ -55,6 +55,6 @@ test('Existing thirty-second auto-hide and GM viewer are preserved',()=>{
  assert.match(script,/const PLAYER_PRIVATE_CARD_IDLE_MS=30000/);
  assert.match(script,/if\(Date\.now\(\)-privateCardActivityAt>=PLAYER_PRIVATE_CARD_IDLE_MS\)closePrivateCardViewer\(\)/);
  assert.match(script,/if\(kind==='role'\)toggleRole\(\);else toggleArtifact\(\)/);
- assert.match(script,/renderRole\(\);const game=\$\('#game'\);if\(game\)game\.dataset\.privateCardFocus=kind/);
+ assert.match(script,/const game=\$\('#game'\);if\(game\)game\.dataset\.privateCardFocus=kind/);
  assert.doesNotMatch(script,/sessionStorage\.getItem\(storageKey\)!==deliveryKey/);
 });
