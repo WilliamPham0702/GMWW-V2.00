@@ -7,7 +7,7 @@ import { patchPrivatePlayerCards } from '../src/gmww-player-private-card-patch.j
 const player = patchPrivatePlayerCards(gmwwMembersLiveScript);
 
 function offlineDeckCss() {
-  const from = player.indexOf('sheet.textContent=', player.indexOf('function renderPlayerPrivateDock(){'));
+  const from = player.indexOf('sheet.textContent=', player.indexOf('function ensurePlayerPrivateDock(){'));
   const to = player.indexOf(';document.head.appendChild(sheet)', from);
   assert.ok(from >= 0 && to > from, 'GM matched fan stylesheet mounted');
   return JSON.parse(player.slice(from + 'sheet.textContent='.length, to));
