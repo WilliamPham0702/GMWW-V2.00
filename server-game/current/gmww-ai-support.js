@@ -164,9 +164,12 @@
       state.history.push({role:'user',content:text},{role:'assistant',content:answer});
       state.history=state.history.slice(-8);
       notice(withDiagnostics?'Đã đính kèm chẩn đoán an toàn cho AI.':'Đã nhận phản hồi từ AI.','ok');
-    }catch{
-      waiting.textContent='Không thể kết nối AI Support. Vui lòng kiểm tra mạng và thử lại.';
-      notice('Kết nối AI thất bại. Trận đấu vẫn hoạt động bình thường.','warn');
+    }catch(error){
+      // This is a transport/browser failure, NOT proof that Wi-Fi is offline.
+      // Never display thrown error strings, which can include sensitive URLs.
+      const code=error?.name==='AbortError'?'AI_TIMEOUT':'AI_TRANSPORT_OR_CORS_ERROR';
+      waiting.textContent='Không nhận được phản hồi AI Support ('+code+'). Hãy thử lại sau khi cập nhật Server.';
+      notice('Không thể nhận phản hồi từ AI. Trận đấu vẫn hoạt động bình thường.','warn');
     }finally{state.busy=false;$('gmwwAiSend').disabled=false;$('gmwwAiDiagnose').disabled=false;}
   }
   form.addEventListener('submit',event=>{event.preventDefault();void send(input.value,false)});
