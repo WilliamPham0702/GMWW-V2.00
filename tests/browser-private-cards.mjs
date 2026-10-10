@@ -54,32 +54,45 @@ for(const [i,s] of sessions.entries()){
      const privateData=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token}).catch(err=>({error:String(err.message)}));
      throw new Error('role back not visible '+JSON.stringify({debug,receipt:{phase:privateData?.room?.phase,roleId:privateData?.role?.roleId,artifactId:privateData?.artifact?.artifactId,manifest:privateData?.deliveryManifest}})+'; '+e.message);
    }
+   const deck=page.locator('#gmwwPlayerPrivateDock');
+   assert.equal(await deck.locator('[data-shuffle-deck], .gmww-deck-shuffle').count(),0,'no dedicated shuffle button');
+   assert.equal(await deck.getAttribute('data-deck-top'),'role','new Role starts above Artifact');
    await role.click({timeout:10000});
    const face=page.locator('#gmwwPlayerUnifiedCard:not([hidden])');
    await face.waitFor({state:'visible',timeout:15000});
    const roleTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
-   assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect role card face '+roleTitle);
-   // The canonical full-face should close when the player taps outside.
-   // Offline Player only views Role; tapping the card closes it without any target action.
-   await face.click({position:{x:35,y:35}});
+   assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Role face '+roleTitle);
+   // Tapping the full card closes it; the viewed Role automatically sinks.
+   await face.click({position:{x:35,y:35},timeout:10000});
    await face.waitFor({state:'hidden',timeout:10000});
-   const deck=page.locator('#gmwwPlayerPrivateDock');
-   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role should move beneath Artifact');
-   const shuffle=deck.locator('[data-shuffle-deck]');
-   await shuffle.waitFor({state:'visible',timeout:10000});
-   await shuffle.click();
-   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','shuffle cannot lift viewed Role above unseen Artifact');
+   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role automatically goes below Artifact');
+   // Each visible rear-card edge is independently clickable and brings the selected card forward.
+   await role.click({timeout:10000});
+   await face.waitFor({state:'visible',timeout:10000});
+   assert.equal(await deck.getAttribute('data-deck-top'),'role','tapping lower Role raises it above Artifact');
+   await page.mouse.click(7,7);
+   await face.waitFor({state:'hidden',timeout:10000});
+   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','Role returns below after viewing');
    const actionPanel=page.locator('#gmwwArtifactBar');
-   if(await actionPanel.count())assert.equal(await actionPanel.evaluate(el=>getComputedStyle(el).display),'none','offline Player must hide Artifact activation/targets');
-   const artifact=page.locator('#gmwwPlayerPrivateDock button[data-private-card="artifact"]');
-   if(i<3){
-     await artifact.waitFor({state:'visible',timeout:10000});
-     await artifact.click({position:{x:60,y:65},timeout:10000});
-     await face.waitFor({state:'visible',timeout:10000});
-     const artTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
-     assert.ok(artTitle.includes(('Bảo Vật '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Artifact face '+artTitle);
-     await page.mouse.click(7,7);await face.waitFor({state:'hidden',timeout:10000});
-   }else assert.equal(await artifact.isVisible(),false,'no-Artifact game must not show Artifact button');
+   if(await actionPanel.count())assert.equal(await actionPanel.evaluate(el=>getComputedStyle(el).display),'none','offline Player must hide Artifact controls');
+   const artifact=deck.locator('button[data-private-card="artifact"]');
+   await artifact.waitFor({state:'visible',timeout:10000});
+   await artifact.click({position:{x:60,y:65},timeout:10000});
+   await face.waitFor({state:'visible',timeout:10000});
+   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','Artifact selected is now top');
+   const artTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
+   assert.ok(artTitle.includes(('Bảo Vật '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Artifact face '+artTitle);
+   if(s.kind==='Chrome'){
+     // An untouched full card folds itself after 30 seconds for privacy.
+     await face.waitFor({state:'hidden',timeout:37000});
+     assert.equal(await page.locator('#game').getAttribute('data-private-card-view'),'closed');
+   }else if(s.kind==='Edge'){
+     await face.click({position:{x:35,y:35},timeout:10000});
+     await face.waitFor({state:'hidden',timeout:10000});
+   }else{
+     await page.mouse.click(7,7);
+     await face.waitFor({state:'hidden',timeout:10000});
+   }
    let received;
    for(let attempt=0;attempt<24;attempt++){
      received=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token});
