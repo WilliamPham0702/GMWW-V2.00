@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#072d45">
+<meta name="description" content="GMWW Character Master-01 · thử nghiệm độc lập nhân vật 2.5D có xương khớp 3D trên Player Web.">
+<title>Character Master-01 · WebGL 2.5D | GMWW</title>
+<style>
+:root{font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#effcff;background:#061d33;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}button,input,label{touch-action:manipulation}button,input{font:inherit}
+body{background:radial-gradient(ellipse at 44% -20%,#1bbab8 0%,#0f5d7c 35%,#092b47 72%,#071d32 100%);overscroll-behavior-y:contain}
+main{max-width:1220px;margin:auto;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 20px);display:grid;gap:12px}
+a{color:#b9fcff;text-decoration:none}a:hover{text-decoration:underline}p,h1,h2{margin:0}
+header{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.eyebrow{font-size:10px;letter-spacing:.2em;color:#aff1ef;font-weight:800}
+h1{font-weight:900;letter-spacing:-.035em;font-size:clamp(23px,5vw,35px);line-height:1.16;margin-top:3px}
+.sub{color:#b7e1e9;margin-top:6px;max-width:68ch;font-size:12px}
+.corner{background:#093e52;border:1px solid #397b8b;border-radius:50px;padding:8px 12px;font-size:11px;font-weight:900;color:#caffed;white-space:nowrap}
+.layout{display:grid;gap:12px;grid-template-columns:minmax(0,1fr) minmax(285px,335px);align-items:start}
+.stage-wrap{position:relative;height:min(66vh,660px);min-height:410px;border-radius:23px;border:1px solid rgba(172,252,243,.4);background:linear-gradient(180deg,#8cdeef,#58bdb7 55%,#b8dfb8);overflow:hidden;box-shadow:0 16px 45px #001f32a8;isolation:isolate}
+canvas{display:block;width:100%;height:100%;outline:none;touch-action:none;cursor:crosshair}
+.hud{position:absolute;left:12px;top:12px;display:grid;gap:6px;pointer-events:none;max-width:calc(100% - 24px)}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid #c1fff96e;border-radius:100px;color:#fff;background:#00314eb8;backdrop-filter:blur(7px);font-size:11px;font-weight:800;width:max-content;max-width:100%}
+.chip::before{content:'';display:block;width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#66f1af;box-shadow:0 0 8px #59ffaf}
+#metrics{color:#f3ffff;font-variant-numeric:tabular-nums;font-size:11px}
+.footer-stage{position:absolute;bottom:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:end;gap:8px;pointer-events:none}
+.tip{border-radius:12px;padding:8px 10px;color:#e7fbff;background:#00314bbd;font-size:11px;max-width:73%}
+#perf{font-size:11px;font-weight:900;border-radius:100px;padding:7px 11px;background:#204d5c;color:#fff}
+#perf[data-level=good]{background:#0f805a}#perf[data-level=okay]{background:#73671a}#perf[data-level=slow]{background:#923f4b}
+.panel{border:1px solid #579da480;border-radius:20px;background:linear-gradient(145deg,#124c64c9,#072d46ef);padding:13px;box-shadow:0 8px 22px #041f32aa;display:grid;gap:13px}
+h2{font-size:13px;font-weight:900;color:#d9fcff;letter-spacing:.035em}
+.group{display:grid;gap:7px}
+.buttons{display:grid;gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}
+button{min-width:0;cursor:pointer;min-height:40px;padding:8px 5px;border-radius:11px;background:#14445c;color:#eafaff;border:1px solid #2e7182;font-size:11px;font-weight:800}
+button:hover,button:focus-visible{border-color:#abfff5;background:#207991;outline:none}
+button[aria-pressed=true]{border-color:#90ffe0;background:linear-gradient(135deg,#188c91,#1b79ad);color:white;box-shadow:inset 0 0 0 1px #b7ffe37a}
+.directions{grid-template-columns:repeat(4,minmax(0,1fr))}
+.directions button{min-height:35px;font-size:10px}
+.controls{display:grid;gap:9px}
+.range{display:grid;gap:4px}.range-row{display:flex;align-items:center;justify-content:space-between;font-weight:700;color:#dbf3f7;font-size:11px}
+input[type=range]{width:100%;accent-color:#68efd0;cursor:pointer;min-height:25px}
+.toggle{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#eaf8fc}
+.toggle input{accent-color:#56efc1;width:18px;height:18px}
+.help{border-top:1px solid #7cb3b44d;padding-top:11px;color:#a9d4e1;font-size:11px;display:grid;gap:5px}
+.help strong{color:#efffff}
+#notice{padding:12px;border:1px solid #ffcc8f;border-radius:12px;background:#653d28;color:#ffede1;font-size:12px;max-width:65ch}
+#status{font-size:11px;color:#c4e7ec}
+.bottom{font-size:11px;color:#b3d5e1;line-height:1.5}
+code{color:#ddffef}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.stage-wrap{height:min(58svh,610px);min-height:345px}.panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.help{grid-column:1/-1}}
+@media(max-width:560px){main{padding-left:8px;padding-right:8px;gap:9px}h1{font-size:23px}.stage-wrap{min-height:325px;height:min(54svh,470px);border-radius:15px}.panel{grid-template-columns:1fr;padding:11px}.buttons{grid-template-columns:repeat(3,1fr)}.directions{grid-template-columns:repeat(4,1fr)}.tip{max-width:78%;font-size:10px}.chip{font-size:10px}#metrics{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body><main>
+<header>
+ <div><div class="eyebrow">GMWW · CHARACTER 2.5D · V5.00</div>
+ <h1>MASTER-01 <span style="color:#74ffe0">CHÀNG BIỂN</span></h1>
+ <p class="sub">Thử nghiệm nhân vật 3D chibi có khớp chuyển động thật trên Player Web. Làng 2D và nhân vật trong trận vẫn giữ nguyên đến khi nghiệm thu.</p></div>
+ <span class="corner">THỬ NGHIỆM RIÊNG • CHƯA ÁP DỤNG GAME</span>
+</header>
+<div class="layout">
+ <section class="stage-wrap" id="stageWrap" aria-label="Thử nghiệm chuyển động nhân vật 2.5D">
+  <canvas id="stage" tabindex="0" aria-label="Bản đồ thử nhân vật. Chạm mặt đất để di chuyển, dùng WASD hoặc phím mũi tên."></canvas>
+  <div class="hud"><span class="chip" id="status">Đang tải WebGL Master-01…</span><span class="chip" id="metrics">Đang đo hiệu năng…</span></div>
+  <div class="footer-stage"><p class="tip">Chạm sân để đi · Bật “Chạy” để chạy · WASD / phím mũi tên trên laptop</p><span id="perf">— FPS</span></div>
+ </section>
+ <section class="panel" aria-label="Điều khiển Character Studio V5">
+  <div class="group"><h2>9 ACTION · ĐỘNG TÁC KHỚP</h2>
+   <div class="buttons">
+    <button data-action="idle" aria-pressed="true">Đứng thở</button>
+    <button data-action="walk" aria-pressed="false">Bước đi</button>
+    <button data-action="run" aria-pressed="false">Chạy</button>
+    <button data-action="sit" aria-pressed="false">Ngồi</button>
+    <button data-action="sit-down" aria-pressed="false">Ngồi xuống</button>
+    <button data-action="stand-up" aria-pressed="false">Đứng dậy</button>
+    <button data-action="wave" aria-pressed="false">Vẫy tay</button>
+    <button data-action="vote" aria-pressed="false">Biểu quyết</button>
+    <button data-action="result" aria-pressed="false">Chiến thắng</button>
+   </div>
+  </div>
+  <div class="group"><h2>8 HƯỚNG XOAY NHÂN VẬT</h2>
+   <div class="buttons directions">
+    <button data-dir="front" aria-pressed="true">Trước</button>
+    <button data-dir="front-right" aria-pressed="false">Trước ↗</button>
+    <button data-dir="right" aria-pressed="false">Phải</button>
+    <button data-dir="back-right" aria-pressed="false">Sau ↘</button>
+    <button data-dir="back" aria-pressed="false">Sau</button>
+    <button data-dir="back-left" aria-pressed="false">Sau ↙</button>
+    <button data-dir="left" aria-pressed="false">Trái</button>
+    <button data-dir="front-left" aria-pressed="false">Trước ↖</button>
+   </div>
+  </div>
+  <div class="controls">
+   <div class="range"><div class="range-row"><label for="count">THỬ TẢI NHIỀU NHÂN VẬT</label><span id="crowdValue">1 nhân vật</span></div><input id="count" type="range" min="1" max="30" step="1" value="1"></div>
+   <div class="range"><div class="range-row"><label for="zoom">THU PHÓNG BẢN ĐỒ</label><span>2.5D</span></div><input id="zoom" type="range" min="7" max="17" step=".5" value="11"></div>
+   <label class="toggle"><input type="checkbox" id="runToggle"> Chạy khi chạm vào sân</label>
+   <label class="toggle"><input type="checkbox" id="dayToggle"> Thử ánh sáng ban đêm</label>
+   <button id="reset" style="width:100%">↺ ĐẶT LẠI MASTER-01</button>
+   <div id="actionState" style="color:#aff3e9;font-size:11px;font-weight:800" aria-live="polite">IDLE · 0°</div>
+  </div>
+  <div class="help"><strong>Nguyên lý</strong>
+   <span>WebGL dựng nhân vật thật bằng các mesh 3D theo hệ khớp. Hông, đầu, hai tay, đùi, gối chuyển động đồng bộ; 60Hz rAF và nội suy tư thế.</span>
+   <span>Nhấn vào sân để thử chuyển chỗ, không thay đổi phòng hoặc dữ liệu người chơi.</span>
+  </div>
+ </section>
+</div>
+<div id="notice" role="alert">Đang nạp Three.js cục bộ và khởi tạo GPU…</div>
+<p class="bottom">Bản thử nghiệm kỹ thuật, nhân vật 3D dựng bằng hình học (không phải artwork HD cuối cùng). Thư viện Three.js r180 đã đóng gói cục bộ (MIT), không phụ thuộc CDN; vẫn cần nghiệm thu iPhone thật trước khi dùng trong game. <a href="/characters/v4/skin-motion-v417.html">Studio 2D cũ</a> · <a href="/">Player Web GMWW</a>.</p>
+</main>
+<script type="module">
+import('./character-master-v500.mjs').catch(error=>{
+ const notice=document.getElementById('notice');
+ notice.hidden=false;
+ document.documentElement.dataset.gmwwV500='error';
+ notice.textContent='Không tải được Character V5: '+(error?.message||String(error))+' · Kiểm tra kết nối Internet và hỗ trợ WebGL trên trình duyệt.';
+ document.getElementById('status').textContent='WebGL V5 tạm thời không khả dụng';
+ console.error('[GMWW Master-01]',error);
+});
+</script></body></html>
