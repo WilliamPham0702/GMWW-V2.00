@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {aiSupportEnabled,scrubDiagnostic,validateAiRequest,extractAiText,handleAiSupport} from '../src/gmww-ai-support.js';
+import {selectVerifiedRuntimeV382Delta} from '../src/gmww-ota-delta.js';
 
 const TOKEN='the-test-only-operator-access-token-123';
 const env={GMWW_AI_SUPPORT_TOKEN:TOKEN,OPENAI_API_KEY:'mock-server-only-api-key'};
@@ -88,4 +89,36 @@ test('Global draggable icon and conversation panel are packaged for OTA',()=>{
   assert.doesNotMatch(app,/GMWW_AI_SUPPORT_TOKEN/);
   // All existing GMWW state keys and game rules remain unchanged.
   assert.match(fs.readFileSync('server-game/current/app.js','utf8'),/GMWW_V258_STATE/);
+});
+
+
+test('V3.82 OTA from installed V3.80 or V3.81 updates only 5 verified files, no deletions',()=>{
+  const names=['GMWW.html','app.js','style.css','gmww-ai-support.js','gmww-ai-support.css'];
+  const origin='https://gmww-v2-00.williampham0702.workers.dev';
+  const manifest={releaseVersion:'3.82',runtimeVersion:'3.82',shellVersion:'3.17',
+    releaseType:'runtime',runtime:{files:names.map(path=>({
+      path,url:origin+'/updates/runtime/V3.82/'+path,sha256:'a'.repeat(64)
+    }))},delete:[]};
+  for(const from of ['3.80','3.81']){
+    const result=selectVerifiedRuntimeV382Delta(manifest,from);
+    assert.ok(result,'Must support installed V'+from);
+    assert.deepEqual(result.runtime.files.map(f=>f.path),names);
+    assert.deepEqual(result.delete,[]);
+  }
+  assert.equal(selectVerifiedRuntimeV382Delta(manifest,'3.79'),null);
+  const copy=JSON.parse(JSON.stringify(manifest));
+  copy.runtime.files[3].sha256='bad';
+  assert.equal(selectVerifiedRuntimeV382Delta(copy,'3.81'),null);
+  const mutated=JSON.parse(JSON.stringify(manifest));
+  mutated.delete=['GMWW_V258_STATE'];
+  assert.equal(selectVerifiedRuntimeV382Delta(mutated,'3.81'),null);
+  assert.match(fs.readFileSync('src/index.js','utf8'),/selectVerifiedRuntimeV382Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
+});
+test('Production AI Support Runtime cannot be announced without both widget assets',()=>{
+  const source=fs.readFileSync('src/gmww-update-readiness.js','utf8');
+  assert.match(source,/essential\['gmww-ai-support\.js'\]/);
+  assert.match(source,/essential\['gmww-ai-support\.css'\]/);
+  const worker=fs.readFileSync('src/index.js','utf8');
+  assert.match(worker,/VERSION="V3\.82"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-382"/);
 });
