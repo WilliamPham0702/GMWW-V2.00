@@ -1290,7 +1290,15 @@ const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
 setTimeout(()=>checkAppUpdate({notify:true}),1400);
 // Settings navigation stays lightweight; diagnostics and the GitHub board are loaded on demand.
-document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>gmwwSettingsHubHealth('idle','Chọn HEALTHY CHECK để kiểm tra')));
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>{
+  gmwwSettingsHubHealth('idle','Chọn HEALTHY CHECK để kiểm tra');
+  // Automatic, rate-limited status scan; never auto-clear cache or mutate game data.
+  if(Date.now()-gmwwDiagLastScan>=120000){
+    gmwwDiagLastScan=Date.now();
+    setTimeout(()=>{if(document.getElementById('settings')?.classList.contains('active'))
+      void runSystemDiagnostics({silent:true});},500);
+  }
+}));
 window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
 
@@ -1334,7 +1342,7 @@ const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clear
 const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
 
 /* V2.97 — self diagnostics for Server + Player Web */
-let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];
+let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[],gmwwDiagLastScan=0;
 function gmwwCaptureRuntimeIssue(kind,message){
   const text=String(message||'Lỗi không xác định').replace(/\s+/g,' ').trim().slice(0,220);
   if(!text)return;
