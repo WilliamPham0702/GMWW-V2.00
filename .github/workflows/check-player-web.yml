@@ -54,6 +54,13 @@ jobs:
           grep -q 'GMWW PLAYER' /tmp/player.html
           curl -fsS http://127.0.0.1:8787/gmww-members-live.js > /tmp/player-live.js
           test -s /tmp/player-live.js
+          # Regression: Cloudflare html_handling=none must not serve 404 inside Player iframe.
+          curl -fsS 'http://127.0.0.1:8787/village/?embed=1&v=303' > /tmp/gmww-village.html
+          grep -q '<main class="game day"' /tmp/gmww-village.html
+          curl -fsS 'http://127.0.0.1:8787/village/village.css?v=303' > /tmp/gmww-village.css
+          test -s /tmp/gmww-village.css
+          curl -fsS 'http://127.0.0.1:8787/village/village.mjs?v=prep303' > /tmp/gmww-village.mjs
+          test -s /tmp/gmww-village.mjs
           curl -fsS http://127.0.0.1:8787/gmww-sea-background.webp > /tmp/background.webp
           test -s /tmp/background.webp
           ROOM_JSON=$(curl -fsS -X POST http://127.0.0.1:8787/api/rooms -H 'content-type: application/json' --data '{"roomName":"CI Smoke"}')
