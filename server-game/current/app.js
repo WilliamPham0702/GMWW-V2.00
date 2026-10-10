@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.79';
+const VERSION='3.80';
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
