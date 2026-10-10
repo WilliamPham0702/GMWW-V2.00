@@ -2952,7 +2952,7 @@ function renderPlayGameRoleTimings(){
   for(const role of roles){
     const roleId=String(role.id),custom=Object.prototype.hasOwnProperty.call(playSceneState.roleDurations||{},roleId);
     const row=document.createElement('label');row.className='play-template-role-timing'+(custom?' is-custom':'');
-    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+'</span><span class="play-role-time-input"><input type="number" inputmode="numeric" min="0" max="3600" value="'+playRoleDurationSec(roleId,defaultSec)+'" aria-label="Thời gian sử dụng '+playEsc(role.name||'Vai Trò')+' (giây)"><small>giây</small></span>';
+    row.innerHTML='<span>'+playEsc(role.name||'Vai Trò')+' (giây):</span><span class="play-role-time-input"><input type="number" inputmode="numeric" min="0" max="3600" value="'+playRoleDurationSec(roleId,defaultSec)+'" aria-label="Thời gian sử dụng '+playEsc(role.name||'Vai Trò')+' (giây)"></span>';
     row.querySelector('input').onchange=e=>{
       const value=Math.max(0,Math.min(3600,Math.trunc(Number(e.target.value)||0)));
       const customTimes={...(playSceneState.roleDurations||{})};
