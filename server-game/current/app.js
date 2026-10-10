@@ -329,7 +329,7 @@ function normalizeEntity(e,kind){
   const fs=x.functions||x.abilities||[];
   x.functions=fs.map(normalizeFunction);
   if(kind==='artifacts'){
-    const raw=x.artifact||{},folded=String(x.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const raw=x.artifact||{},folded=String(x.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/đ/g,'d').replace(/[^a-z0-9]+/g,' ').trim();
     const defaultPriority=['da doi vai tro','da hoan doi','doi vai tro','trang guong','mat tien tri'].includes(folded);
     x.artifact=Object.assign({ownerSelection:false,persistentOwner:false,revealFollowTargetOnly:false,wakeWithRoleId:'',wakeWithActionId:'',priorityFirst:defaultPriority},raw);
     x.artifact.priorityFirst=raw.priorityFirst===undefined?(x.priorityFirst===undefined?defaultPriority:x.priorityFirst===true):raw.priorityFirst===true;
