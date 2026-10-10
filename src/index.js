@@ -596,12 +596,21 @@ export class RoomDurableObject extends DurableObject {
       if(kind==="artifact"&&!/^[0-9a-f]{64}$/.test(reference.signature))return j({ok:false,error:"INVALID_ARTIFACT_REFERENCE"},400);
       seen.add(assetId);clean.push({assetId,roleId,reference,raw});
     }
-    // Starting a new match invalidates *references* only, not stored artwork,
-    // members, templates or prior match history.
+    // New clients link a complete template in one atomic logical batch.
+    // Legacy V3.70 clients submit one role per request: merge only when the
+    // template ID and revision match, without retaining an earlier match.
     if(kind==="template"){
-      const prior=await this.ctx.storage.list({prefix:"artworkRef:"});
-      if(prior.size)await this.ctx.storage.delete([...prior.keys()]);
-      await this.ctx.storage.put("gmArtworkActiveIds",clean.map(x=>x.assetId));
+      const scope=clean[0].reference.templateId+"@"+clean[0].reference.revision;
+      if(clean.some(x=>x.reference.templateId+"@"+x.reference.revision!==scope))
+        return j({ok:false,error:"MIXED_TEMPLATE_REVISIONS"},400);
+      const merge=body?.merge===true&&(await this.ctx.storage.get("gmArtworkTemplateScope"))===scope;
+      if(!merge){
+        const prior=await this.ctx.storage.list({prefix:"artworkRef:"});
+        if(prior.size)await this.ctx.storage.delete([...prior.keys()]);
+      }
+      const active=merge?(await this.ctx.storage.get("gmArtworkActiveIds"))||[]:[];
+      await this.ctx.storage.put("gmArtworkTemplateScope",scope);
+      await this.ctx.storage.put("gmArtworkActiveIds",[...new Set([...active,...clean.map(x=>x.assetId)])]);
     }else{
       const prior=(await this.ctx.storage.get("gmArtworkActiveIds"))||[];
       await this.ctx.storage.put("gmArtworkActiveIds",[...new Set([...prior,...clean.map(x=>x.assetId)])]);
@@ -1667,7 +1676,7 @@ async function gmPreloadTemplateAssets(env,raw,request){
   if(!requested.length||!requested.every(assetId=>status.assets.includes(assetId)&&status.packages?.[assetId]))
     return j({ok:false,error:"INVALID_TEMPLATE_ASSET_SELECTION"},400);
   const refs=requested.map(assetId=>({assetId,roleId:assetId.slice(5),templateId:id,revision:status.revision,roleCard:status.packages[assetId].roleCard,roleName:status.packages[assetId].roleName,faction:status.packages[assetId].faction,description:status.packages[assetId].description}));
-  const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-refs",{method:"POST",headers:request.headers,body:JSON.stringify({kind:"template",refs})}));
+  const push=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-refs",{method:"POST",headers:request.headers,body:JSON.stringify({kind:"template",refs,merge:requested.length===1&&status.assets.length>1})}));
   if(!push.ok)return j({ok:false,error:"ROOM_ARTWORK_REFERENCE_FAILED",message:"Không đăng ký được tham chiếu artwork Vai Trò."},424);
   const verify=await roomStub(env,roomCode).fetch(new Request("https://room.internal/gm/artwork-manifest",{headers:request.headers}));
   const manifest=await verify.json().catch(()=>null);
