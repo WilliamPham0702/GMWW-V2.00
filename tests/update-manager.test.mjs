@@ -183,7 +183,7 @@ test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
 test('Runtime update lookup prefers the immutable versioned manifest before latest.json',()=>{
   const worker=fs.readFileSync('src/index.js','utf8');
   const route=worker.slice(worker.indexOf('if(url.pathname==="/api/update/manifest"'),worker.indexOf('if((url.pathname==="/favicon.svg"',worker.indexOf('if(url.pathname==="/api/update/manifest"')));
-  const versioned=route.indexOf('const versioned=await readVersionedManifest()');
+  const versioned=route.indexOf('const versioned=onlyNewNotes(await readVersionedManifest())');
   const latest=route.indexOf('manifestUrl.pathname="/updates/latest.json"');
   assert.ok(versioned>=0&&latest>=0&&versioned<latest);
   assert.ok(route.includes('manifest-"+UPDATE_CHANNEL_REV+".json"'));
