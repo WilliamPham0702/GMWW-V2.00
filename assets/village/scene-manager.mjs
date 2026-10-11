@@ -1,28 +1,40 @@
-// Visual-only scene management. Never mutates seats, rooms, characters or game state.
+// The server GM publishes the scene; Player Web only reads it.
 const panel=document.getElementById('villageSceneManager');
 const status=document.getElementById('sceneManagerStatus');
-const day=document.getElementById('sceneDayFile'),night=document.getElementById('sceneNightFile');
-let current={day:null,night:null},draft={day:null,night:null},history=[];
 const scene=document.querySelector('.stage');
-const setStatus=message=>{status.textContent=message};
+const game=document.getElementById('game');
+const embedded=new URLSearchParams(location.search).has('embed');
+const editor=!embedded&&new URLSearchParams(location.search).get('sceneEditor')==='preview';
+const state={published:{revision:0,day:null,night:null},draft:{day:null,night:null},files:{day:null,night:null}};
+const setStatus=t=>{if(status)status.textContent=t};
 function apply(){
-  const isNight=document.getElementById('game')?.classList.contains('night');
-  const url=(isNight?draft.night:draft.day)||(isNight?current.night:current.day);
-  if(url){scene.style.setProperty('--gmww-scene-image',`url("${url}")`);scene.classList.add('custom-scene');}
-  else{scene.classList.remove('custom-scene');scene.style.removeProperty('--gmww-scene-image');}
+ const key=game?.classList.contains('night')?'night':'day';
+ const image=(editor&&state.draft[key])||state.published[key];
+ if(image){scene.style.setProperty('--gmww-scene-image',`url("${image}")`);scene.classList.add('custom-scene')}
+ else{scene.style.removeProperty('--gmww-scene-image');scene.classList.remove('custom-scene')}
 }
-async function loadFile(input,key){
-  const file=input.files?.[0];if(!file)return;
-  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024){setStatus('Ảnh phải là PNG/JPEG/WebP tối đa 8MB');return}
-  const url=URL.createObjectURL(file);if(draft[key]?.startsWith('blob:'))URL.revokeObjectURL(draft[key]);
-  draft[key]=url;apply();setStatus('Đã xem trước. Chưa xuất bản.');
+async function sync(){
+ try{const r=await fetch('/api/village-scene',{cache:'no-store'});if(!r.ok)return;
+  const data=await r.json();if(data.ok&&data.scene&&data.scene.revision!==state.published.revision){state.published=data.scene;apply()}
+ }catch{}
 }
-day.addEventListener('change',()=>loadFile(day,'day'));
-night.addEventListener('change',()=>loadFile(night,'night'));
-document.getElementById('scenePreview').addEventListener('click',apply);
-document.getElementById('scenePublish').addEventListener('click',()=>setStatus('Chưa xuất bản: cần kết nối kho ảnh và quyền GM trên Cloudflare.'));
-document.getElementById('sceneRollback').addEventListener('click',()=>{draft={day:null,night:null};apply();setStatus('Đã hủy bản xem trước.');});
-const observer=new MutationObserver(apply);observer.observe(document.getElementById('game'),{attributes:true,attributeFilter:['class']});
-const params=new URLSearchParams(location.search);
-// Never expose upload controls in embedded Player Web or without an explicit GM preview flag.
-if(!params.has('embed')&&params.get('sceneEditor')==='preview')panel.style.display='block';
+function readFile(file){
+ return new Promise((resolve,reject)=>{
+  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)return reject(new Error('Chỉ PNG/JPEG/WebP dưới 950 KB'));
+  const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Không đọc được ảnh'));reader.readAsDataURL(file);
+ });
+}
+if(editor){
+ panel.style.display='block';
+ for(const key of ['day','night']){
+  document.getElementById(key==='day'?'sceneDayFile':'sceneNightFile').addEventListener('change',async e=>{
+   try{state.draft[key]=await readFile(e.target.files?.[0]);apply();setStatus('Đang xem trước. Chưa xuất bản.')}
+   catch(error){setStatus(error.message)}
+  });
+ }
+ document.getElementById('scenePreview').addEventListener('click',apply);
+ document.getElementById('scenePublish').addEventListener('click',()=>setStatus('Xuất bản chỉ thực hiện trong Cài Đặt → Chủ Đề của Server GM.'));
+ document.getElementById('sceneRollback').addEventListener('click',()=>{state.draft={day:null,night:null};apply();setStatus('Đã bỏ bản xem trước.')});
+}
+new MutationObserver(apply).observe(game,{attributes:true,attributeFilter:['class']});
+sync();setInterval(sync,15000);
