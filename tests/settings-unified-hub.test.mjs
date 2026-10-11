@@ -9,7 +9,7 @@ const a=html.indexOf('<section class="page" id="settings">');
 const b=html.indexOf('</section>',a);
 const settings=html.slice(a,b);
 const groups={
-  settingsGroupErrorReport:['gmwwReportToChatGPT','gmwwReportPreview','gmwwCopyReport','gmwwOpenChatGPT'],
+  settingsGroupErrorReport:['gmwwReportToChatGPT','gmwwReportComposer','gmwwCopyReport','gmwwSendReport'],
   settingsGroupHealth:['settingsRunHealth','quickMaintenanceCard','auditLocalData','clearRuntimeCache','reloadApp','gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','serverHealthCard','checkServerHealth','refreshServerData','openPlayerWeb','systemDiagnosticsCard','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'],
   settingsGroupTasks:['gmwwTasksSummary','gmwwTasksOpenList','gmwwTasksHistory','gmwwTasksDoneList','gmwwTasksReload'],
   settingsGroupUpdate:['updateManagerCard','installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate'],
