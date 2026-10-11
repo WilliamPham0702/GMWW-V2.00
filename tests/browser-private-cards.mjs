@@ -59,7 +59,29 @@ for(const [i,s] of sessions.entries()){
    assert.equal(await deck.getAttribute('data-deck-top'),'role','new Role starts above Artifact');
    await role.click({timeout:10000});
    const face=page.locator('#gmwwPlayerUnifiedCard:not([hidden])');
-   await face.waitFor({state:'visible',timeout:15000});
+   try{await face.waitFor({state:'visible',timeout:15000})}
+   catch(e){
+     const debug=await page.evaluate(()=>{
+       const describe=selector=>{
+         const el=document.querySelector(selector);
+         if(!el)return {exists:false};
+         const css=getComputedStyle(el),rect=el.getBoundingClientRect();
+         return {exists:true,hidden:el.hidden,display:css.display,visibility:css.visibility,
+           opacity:css.opacity,dimensions:[Math.round(rect.width),Math.round(rect.height)],
+           parentHidden:!!el.parentElement?.closest('[hidden]')};
+       };
+       const game=document.querySelector('#game'),dock=document.querySelector('#gmwwPlayerPrivateDock');
+       return {screen:document.querySelector('.screen.active')?.id||'',
+         pane:game?.dataset.privateCardView||'',focus:game?.dataset.privateCardFocus||'',
+         scene:game?.dataset.gmwwPlayerScene||'',deckTop:dock?.dataset.deckTop||'',
+         role:describe('#gmwwPlayerPrivateDock button[data-private-card="role"]'),
+         stage:describe('#game .role-stage'),
+         cardShell:describe('#game .role-card-shell'),
+         face:describe('#gmwwPlayerUnifiedCard'),
+         backdrop:describe('#gmwwPlayerRoleBackdrop')};
+     }).catch(error=>({evaluationError:String(error.message)}));
+     throw new Error('Role viewer not visible after initial tap: '+JSON.stringify(debug)+'; '+e.message);
+   }
    const roleTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
    assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Role face '+roleTitle);
    // Tapping the full card closes it; the viewed Role automatically sinks.
