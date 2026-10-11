@@ -238,9 +238,9 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
   const i=await h.data.get('interactions');
-  i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
+  i.push({id:'freeze-owner',loginId:'carol',type:'frozen',effectActive:true,matchId:'test-match'});
   h.data.set('interactions',i);
-  const next=await result(await h.room.gmBattleAction(null,{...p,turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
+  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'carol',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
   assert.equal(next.error,'ACTOR_CANNOT_ACT');
 });
 
