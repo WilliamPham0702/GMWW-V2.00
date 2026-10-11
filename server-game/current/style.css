@@ -4678,3 +4678,69 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
   padding:0!important;
   overflow:visible!important;
 }
+
+/* V3.91: compact battle controls; action sheet opens only on request. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{
+  top:calc(env(safe-area-inset-top) + 7px)!important;bottom:auto!important;
+  grid-template-columns:44px minmax(0,1fr) 44px!important;z-index:98!important;
+  min-height:52px;padding:4px 6px;border-radius:14px;background:#07344cdb
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleAdvance{
+  display:grid;place-items:center;min-width:44px;width:44px;height:44px;
+  padding:0;font-size:29px;line-height:1;background:#16746d;color:#fff5d0
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock{
+  display:flex;flex-direction:column;gap:5px;left:8px;right:8px;
+  top:auto!important;bottom:calc(env(safe-area-inset-bottom) + 7px)!important;
+  z-index:98!important;max-height:none!important;padding:7px 8px 8px;
+  border-radius:17px;background:#063149dc;box-shadow:0 4px 18px #001c2c65
+}
+#start #playShell[data-step="battle"] .battle-menu-row{
+  display:grid;align-items:stretch;gap:6px;min-width:0
+}
+#start #playShell[data-step="battle"] .battle-menu-row-top{grid-template-columns:1.2fr 1fr 1.1fr}
+#start #playShell[data-step="battle"] .battle-menu-row-mid{grid-template-columns:1fr 1.17fr .82fr}
+#start #playShell[data-step="battle"] .battle-menu-row-effects{grid-template-columns:1fr 1fr}
+#start #playShell[data-step="battle"] .battle-menu-row>button{
+  display:flex;align-items:center;justify-content:center;gap:5px;min-height:38px;
+  min-width:0;padding:5px;font-size:11px;line-height:1.1;font-weight:850;
+  color:#effbff;border:1px solid #7fd6e3a1;border-radius:10px;background:#126179;
+  white-space:nowrap;touch-action:manipulation
+}
+#start #playShell[data-step="battle"] #battleClockButton{font-variant-numeric:tabular-nums}
+#start #playShell[data-step="battle"] #battleCountdown{
+  display:inline-flex;height:auto;min-width:0;border:0;padding:0;background:none;
+  font-size:18px;color:#ffe39b;font-weight:900
+}
+#start #playShell[data-step="battle"] #battleForceEnd{background:#704040;border-color:#f6b0a1}
+#start #playShell[data-step="battle"] .battle-menu-row-effects button{min-height:35px;background:#185c67}
+#start #playShell[data-step="battle"] .battle-menu-row>button.is-selected,
+#start #playShell[data-step="battle"] .battle-menu-row>button.is-on{
+  border-color:#ffe3a1;background:#267b6b
+}
+#start #playShell[data-step="battle"] .battle-menu-row>button.is-off{opacity:.7;background:#355366}
+#start #playShell[data-step="battle"] .battle-menu-wolf{
+  height:41px;display:flex;align-items:center;justify-content:center;pointer-events:none
+}
+#start #playShell[data-step="battle"] .battle-menu-wolf img{
+  height:40px;width:58px;object-fit:contain;filter:drop-shadow(0 2px 5px #00263d)
+}
+#start #playShell[data-step="battle"] #battleDetails{
+  position:absolute;left:0;right:0;bottom:calc(100% + 8px);
+  max-height:min(41dvh,355px);overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:7px;padding:11px 10px;
+  background:#063049f5;border:1px solid #9ddde5a8;border-radius:15px;
+  box-shadow:0 9px 24px #001c3299
+}
+#start #playShell[data-step="battle"] #battleDetails[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleDetails .play-battle-footer{justify-content:flex-start}
+#start #playShell[data-step="battle"] #battleDetails .play-battle-footer>button{
+  min-height:38px;background:#175e72;color:white;border:1px solid #99dce5;border-radius:9px
+}
+#start #playShell[data-step="battle"] #battleDetails #battleTurnProgress{font-size:10px;color:#c3ecf0}
+@media(max-width:360px){
+  #start #playShell[data-step="battle"] .battle-menu-row>button{font-size:10px;padding:4px 2px}
+  #start #playShell[data-step="battle"] .battle-menu-wolf{height:32px}
+  #start #playShell[data-step="battle"] .battle-menu-wolf img{height:31px}
+  #start #playShell[data-step="battle"] #battleCountdown{font-size:15px}
+}
