@@ -5001,3 +5001,112 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
  #start #playShell[data-step="battle"] #battleClockButton{width:70px!important;min-width:70px!important}
  #start #playShell[data-step="battle"] #battleClockButton #battleCountdown{font-size:18px!important}
 }
+
+
+/* V3.99 — Bottom tray is for Actions only; GM/Audio/Auto remain on the walking wolf. */
+body.play-immersive #start #playShell[data-step="battle"] #battleActionTray.battle-action-tray-v399{
+ position:fixed!important;left:10px!important;right:10px!important;top:auto!important;
+ bottom:calc(env(safe-area-inset-bottom) + 10px)!important;
+ display:flex!important;flex-direction:column;gap:7px;max-height:145px;
+ z-index:102!important;box-sizing:border-box;padding:9px 10px 10px;
+ border:1px solid #9bd8ea;border-radius:17px;background:#072f48e9;
+ box-shadow:0 9px 22px #001b2baa;backdrop-filter:none!important;color:#fff
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleActionTray[hidden]{display:none!important}
+#start #playShell[data-step="battle"] .battle-action-tray-head{
+ display:flex;align-items:flex-start;flex-direction:column;gap:2px;min-width:0
+}
+#start #playShell[data-step="battle"] .battle-action-tray-head>b{
+ display:block;color:#ffefbd;font-size:11px;line-height:1.2;font-weight:900;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%
+}
+#start #playShell[data-step="battle"] .battle-action-tray-head>small{
+ color:#b6e9ec;font-size:10px;line-height:1.2
+}
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll{
+ display:flex!important;flex-wrap:nowrap!important;gap:8px;min-height:50px;
+ max-width:100%;overflow-x:auto!important;overflow-y:hidden!important;
+ scroll-snap-type:x proximity;overscroll-behavior-x:contain;
+ -webkit-overflow-scrolling:touch;scrollbar-width:thin;touch-action:pan-x
+}
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll>button{
+ flex:0 0 auto;min-width:106px;max-width:180px;min-height:48px;
+ scroll-snap-align:start;touch-action:none;white-space:normal;line-height:1.2;
+ padding:7px 12px;font-size:12px;user-select:none;-webkit-user-select:none
+}
+#start #playShell[data-step="battle"] #battleActionBar>button[data-battle-kind="artifact"]{
+ border-color:#f7d28b;background:#745d36;color:#fff1c8
+}
+#start #playShell[data-step="battle"] #battleActionBar>button[disabled]{
+ opacity:.5;cursor:not-allowed
+}
+#start #playShell[data-step="battle"] #battleActionBar .battle-empty{
+ white-space:nowrap;align-self:center
+}
+/* Undo resembles the free timer and can itself be repositioned. */
+body.play-immersive #start #playShell[data-step="battle"] #battleUndoFloat.battle-undo-float-v399{
+ display:block!important;position:fixed!important;left:auto;right:12px;
+ top:calc(env(safe-area-inset-top) + 150px);bottom:auto;
+ z-index:106!important;pointer-events:auto;touch-action:none;
+ background:transparent;border:0;box-shadow:none
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleUndoFloat[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleUndoButton{
+ display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;
+ min-width:73px;min-height:59px;padding:2px 4px;
+ border:1px solid #b5dfff;border-radius:15px;background:#07374ce8;color:#ffebc3;
+ box-shadow:0 5px 15px #00162888;touch-action:none;cursor:pointer
+}
+#start #playShell[data-step="battle"] #battleUndoButton>span{font-size:28px;line-height:1.1}
+#start #playShell[data-step="battle"] #battleUndoButton>small{font-size:9px;font-weight:900;letter-spacing:.02em}
+#start #playShell[data-step="battle"] #battleUndoButton:disabled{opacity:.52}
+/* The player selection and one-tap drop confirmation share an unobtrusive panel. */
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399{
+ display:flex!important;position:fixed!important;
+ left:10px!important;right:10px!important;top:auto!important;
+ bottom:calc(env(safe-area-inset-bottom) + 136px)!important;
+ z-index:111!important;flex-direction:column;gap:8px;
+ max-height:min(61dvh,490px);min-height:126px;
+ border:1px solid #a4e4ef;border-radius:17px;
+ padding:11px;background:#072c44f8;color:#fff;
+ box-shadow:0 16px 33px #001829b0;overflow:hidden
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleTargetSheet>header{
+ display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+#start #playShell[data-step="battle"] #battleTargetTitle{
+ color:#ffedba;font-size:14px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden
+}
+#start #playShell[data-step="battle"] #battleTargetClose{
+ border:1px solid #8bc6d4;color:#fff;background:#19546d;border-radius:9px;
+ min-width:34px;min-height:34px
+}
+#start #playShell[data-step="battle"] #battleTargetPrompt{
+ font-size:13px;margin:0;line-height:1.35;color:#e9f9fd
+}
+#start #playShell[data-step="battle"] #battleTargetCandidates{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+ min-height:0;overflow-y:auto;overscroll-behavior:contain
+}
+#start #playShell[data-step="battle"] #battleTargetCandidates[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleTargetCandidates>button{
+ min-height:46px;padding:7px;border:1px solid #5dabbc;border-radius:10px;
+ color:white;background:#10546c;white-space:normal;text-align:left;font-size:13px
+}
+#start #playShell[data-step="battle"] #battleTargetCandidates>button.is-selected{
+ border-color:#ffd68c;background:#146f70;color:#fff1c7
+}
+#start #playShell[data-step="battle"] #battleTargetSheet>footer{
+ display:flex;justify-content:flex-end;gap:9px
+}
+#start #playShell[data-step="battle"] #battleTargetSheet>footer>button{
+ min-width:87px;min-height:44px;padding:7px 15px;border-radius:11px;
+ font-weight:900;background:#13536d;color:#fff;border:1px solid #91dce2
+}
+#start #playShell[data-step="battle"] #battleTargetConfirm:not(:disabled){background:#137867;color:#fff6cc}
+#start #playShell[data-step="battle"] #battleTargetConfirm:disabled{opacity:.45}
+@media(max-width:370px){
+ #start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll>button{min-width:94px;max-width:155px;font-size:11px}
+ #start #playShell[data-step="battle"] #battleTargetCandidates{grid-template-columns:minmax(0,1fr)}
+}
