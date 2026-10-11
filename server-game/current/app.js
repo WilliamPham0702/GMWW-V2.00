@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.87';
+const VERSION='3.88';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -1405,12 +1405,32 @@ async function checkPlayerWebNow(){
  */
 let gmwwPreparedBugReport='',gmwwLastBugDiagnostics=null,gmwwLastBugScan=0;
 const gmwwBugCode=value=>String(value??'').replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,48)||'UNSPECIFIED';
-function gmwwReadExtraRequest(){
-  const field=document.getElementById('gmwwReportExtraRequest');
-  // This is explicitly user-authored text. Keep line breaks, never include
-  // game state or credentials implicitly; normalize nonprinting characters.
-  return String(field?.value||'').replace(/\r\n?/g,'\n')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'').trim().slice(0,1200);
+const GMWW_STANDARD_PROMPT=[
+  'Bạn là kỹ sư phụ trách GMWW (GitHub: WilliamPham0702/GMWW-V2.00).',
+  '',
+  'YÊU CẦU CỦA GM:',
+  '[Viết vấn đề cần khắc phục hoặc tính năng cần bổ sung tại đây.]',
+  '',
+  'CÁCH XỬ LÝ:',
+  '1. Kiểm tra mã nguồn và trạng thái CI/Cloudflare Production nếu có quyền truy cập; không đoán khi chưa có bằng chứng.',
+  '2. Phân tích nguyên nhân, phạm vi ảnh hưởng, đề xuất sửa đúng gốc và tiêu chí kiểm thử rõ ràng.',
+  '3. Nếu được cấp quyền, sửa source, bổ sung regression test, tạo PR và báo kết quả CI.',
+  '4. KHÔNG merge hoặc deploy Production nếu tôi chưa phê duyệt rõ ràng; sau khi được phê duyệt phải xác minh Production thật.',
+  '5. Giữ nguyên toàn bộ dữ liệu, Vai Trò, Artifact, ảnh, cài đặt và phiên chơi; tránh thay đổi ngoài phạm vi.',
+  '6. Báo cáo ngắn gọn: đã kiểm tra gì, đã sửa gì, còn rủi ro gì và tôi cần làm gì tiếp theo.'
+].join('\n');
+const GMWW_REPORT_START='=== BẮT ĐẦU BÁO CÁO GMWW TỰ ĐỘNG ===';
+const GMWW_REPORT_END='=== KẾT THÚC BÁO CÁO GMWW TỰ ĐỘNG ===';
+function gmwwReadComposer(){
+  return String(document.getElementById('gmwwReportComposer')?.value||'')
+    .replace(/\r\n?/g,'\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'')
+    .slice(0,16000);
+}
+function gmwwStripAutoReport(raw){
+  const start=raw.indexOf(GMWW_REPORT_START);
+  if(start<0)return raw.trim();
+  const end=raw.indexOf(GMWW_REPORT_END,start+GMWW_REPORT_START.length);
+  return (raw.slice(0,start)+(end<0?'':raw.slice(end+GMWW_REPORT_END.length))).trim();
 }
 function gmwwBuildBugReport(diag){
   const status=id=>String(document.getElementById(id)?.textContent||'').trim().slice(0,65);
@@ -1450,12 +1470,10 @@ function gmwwBuildBugReport(diag){
   if(data.runtimeErrorCount>0)issues.push('Ứng dụng ghi nhận '+data.runtimeErrorCount+' lỗi Runtime gần đây.');
   const description=issues.length?issues.join(' • '):
     'Chưa xác nhận lỗi cụ thể. Kiểm tra các trạng thái hệ thống bên dưới.';
-  const extraRequest=gmwwReadExtraRequest();
   // No room ID, login/session IDs, player names, role/artifact content,
   // stacktraces, raw exception text, credentials or HTTP bodies.
   return 'Tôi cần hỗ trợ khắc phục lỗi GMWW. Dưới đây là báo cáo hệ thống đã được tự động tạo và loại bỏ dữ liệu cá nhân.\n'+
     'Mô tả lỗi: '+description+'\n'+
-    (extraRequest?'Yêu cầu bổ sung do GM nhập:\n'+extraRequest+'\n':'')+
     'Hãy phân tích nguyên nhân, kiểm tra GitHub CI và Cloudflare Production, đề xuất hoặc tạo PR sửa lỗi khi được cấp quyền. '+
     'Không khẳng định đã sửa/deploy khi chưa xác minh; không merge/deploy nếu chưa được tôi phê duyệt. '+
     'Bảo toàn toàn bộ dữ liệu game, vai trò, Artifact và phiên chơi.\n\n'+
@@ -1463,45 +1481,68 @@ function gmwwBuildBugReport(diag){
 }
 
 function gmwwPrepareBugReport(){
+  const field=document.getElementById('gmwwReportComposer');
+  if(!field)return false;
+  const authored=gmwwStripAutoReport(gmwwReadComposer())||GMWW_STANDARD_PROMPT;
   const report=gmwwBuildBugReport(gmwwLastBugDiagnostics);
-  gmwwPreparedBugReport=report;
-  const preview=document.getElementById('gmwwReportPreview');
-  const link=document.getElementById('gmwwOpenChatGPT');
-  const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
-  if(preview)preview.value=report;
-  if(link)link.href=target;
-  return target;
+  const combined=authored+'\n\n'+GMWW_REPORT_START+'\n'+report+'\n'+GMWW_REPORT_END;
+  if(combined.length>16000){
+    const status=document.getElementById('gmwwReportStatus');
+    if(status)status.textContent='Nội dung quá dài. Hãy rút gọn yêu cầu trước khi tạo báo cáo.';
+    return false;
+  }
+  field.value=combined;
+  gmwwPreparedBugReport=combined;
+  return true;
 }
-function gmwwReportBugToChatGPT(){
+async function gmwwReportBugToChatGPT(){
   const btn=document.getElementById('gmwwReportToChatGPT');
   const status=document.getElementById('gmwwReportStatus');
-  const previewBox=document.getElementById('gmwwReportPreviewBox');
   if(!btn)return;
-  // Prepare synchronously on tap to avoid WKWebView/Safari popup blocking.
-  // The typed request stays local until the GM explicitly opens ChatGPT.
-  const target=gmwwPrepareBugReport();
-  if(previewBox)previewBox.hidden=false;
-  if(status)status.textContent='Đã ghép yêu cầu của bạn với chẩn đoán hệ thống. Kiểm tra bản nháp trong ChatGPT rồi nhấn Gửi.';
-  try{window.open(target,'_blank','noopener,noreferrer')}catch{}
+  // Only populate the editable textarea; NEVER navigate or send during diagnosis.
+  if(!gmwwPrepareBugReport())return;
+  if(status)status.textContent='Đã điền báo cáo vào ô phía trên. Đang kiểm tra trạng thái mới nhất…';
+  btn.disabled=true;
+  try{
+    const result=await runSystemDiagnostics({silent:true});
+    if(result)gmwwLastBugDiagnostics=result;
+    gmwwLastBugScan=Date.now();
+    if(gmwwPrepareBugReport()&&status)
+      status.textContent='Đã cập nhật báo cáo hệ thống. Hãy đọc, chỉnh sửa rồi nhấn GỬI CHATGPT.';
+  }catch{
+    if(status)status.textContent='Chưa thể quét mới. Báo cáo hiện có vẫn ở ô trên; bạn có thể chỉnh sửa và gửi.';
+  }finally{btn.disabled=false}
 }
+function gmwwSendReportToChatGPT(){
+  const field=document.getElementById('gmwwReportComposer');
+  const status=document.getElementById('gmwwReportStatus');
+  const message=gmwwReadComposer().trim();
+  if(!message){if(status)status.textContent='Vui lòng nhập yêu cầu trước khi gửi.';field?.focus?.();return}
+  // User-initiated gesture only. No API key or automatic submission to a chat.
+  gmwwPreparedBugReport=message;
+  const url='https://chatgpt.com/?prompt='+encodeURIComponent(message);
+  if(status)status.textContent='Đang mở ChatGPT với nội dung đã soạn. Kiểm tra và nhấn Gửi trong ChatGPT. Nếu ô chat trống, dùng SAO CHÉP NỘI DUNG.';
+  try{window.open(url,'_blank','noopener,noreferrer')}catch{
+    if(status)status.textContent='Không mở được ChatGPT tự động. Nhấn SAO CHÉP NỘI DUNG, rồi dán vào ChatGPT.';
+  }
+}
+const gmwwReportComposer=document.getElementById('gmwwReportComposer');
+if(gmwwReportComposer&&!gmwwReportComposer.value.trim())gmwwReportComposer.value=GMWW_STANDARD_PROMPT;
 const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
 if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',gmwwReportBugToChatGPT);
-const gmwwReportExtraRequest=document.getElementById('gmwwReportExtraRequest');
-if(gmwwReportExtraRequest)gmwwReportExtraRequest.addEventListener('input',()=>{
-  // If the GM edits their instructions after generating a report, keep
-  // the copy fallback and manual ChatGPT link in sync with the edit.
-  if(document.getElementById('gmwwReportPreviewBox')?.hidden===false)gmwwPrepareBugReport();
-});
+const gmwwSendReport=document.getElementById('gmwwSendReport');
+if(gmwwSendReport)gmwwSendReport.addEventListener('click',gmwwSendReportToChatGPT);
 const gmwwCopyReport=document.getElementById('gmwwCopyReport');
 if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
-  if(!gmwwPreparedBugReport)return;
-  let copied=false;
-  try{await navigator.clipboard.writeText(gmwwPreparedBugReport);copied=true}catch{}
-  if(!copied){const box=document.getElementById('gmwwReportPreview');
-    if(box){box.focus();box.select();try{copied=document.execCommand('copy')}catch{}}}
+  const message=gmwwReadComposer().trim();
   const status=document.getElementById('gmwwReportStatus');
-  if(status)status.textContent=copied?'Đã sao chép báo cáo. Mở ChatGPT, dán và nhấn Gửi.':
-    'Chọn toàn bộ nội dung báo cáo để sao chép thủ công.';
+  if(!message){if(status)status.textContent='Chưa có nội dung để sao chép.';return}
+  let copied=false;
+  try{await navigator.clipboard.writeText(message);copied=true}catch{}
+  if(!copied){const box=document.getElementById('gmwwReportComposer');
+    if(box){box.focus();box.select();try{copied=document.execCommand('copy')}catch{}}}
+  if(status)status.textContent=copied?'Đã sao chép. Mở ChatGPT, dán vào khung chat rồi nhấn Gửi.':
+    'Hãy chọn và sao chép nội dung trong ô phía trên.';
 });
 
 // Preload safe Health Check when GM enters Settings so the report opens in
