@@ -29,5 +29,5 @@ test('GM runtime exposes all five approved behavior states and articulated motio
 test('GM scene contains no retired second wolf actor or controller',()=>{
   assert.doesNotMatch(html,/id="gmWolfCharacter"/);
   assert.doesNotMatch(app,/function gmWolfSetMotion/);
-  assert.equal((html.match(/gm\/gm-white-wolf\.webp/g)||[]).length,1, 'Only the decorative menu emblem is permitted; no second wolf actor');
+  assert.equal((html.match(/gm\/gm-white-wolf\.webp/g)||[]).length,0, 'Only the live walking GM actor may show a wolf; footer must not render a duplicate');
 });

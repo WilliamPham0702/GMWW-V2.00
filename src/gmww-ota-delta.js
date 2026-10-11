@@ -784,3 +784,24 @@ export function selectVerifiedRuntimeV392Delta(manifest,installedVersion){
    optimizedFromVersion:'3.91',upgradeMode:'verified-overlay',
    message:'V3.92: Thanh dưới chỉ icon Đồng hồ và Auto GM, sói mở các công cụ GM. Giữ nguyên dữ liệu.'};
 }
+
+
+/** V3.92 -> V3.93: walking GM character owns the actions; only UI changes. */
+export function selectVerifiedRuntimeV393Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.92'||String(manifest?.releaseVersion||'')!=='3.93'
+   ||String(manifest?.runtimeVersion||'')!=='3.93'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css']){
+   const matches=manifest.runtime.files.filter(f=>f?.path===path);
+   if(matches.length!==1)return null;
+   const file=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.93/'+path;
+   if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+   selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:from,upgradeMode:'verified-overlay',
+   message:'V3.93: Nhấn trực tiếp nhân vật sói GM để mở Hồi Sinh, Giết người, Thoát game, Kết thúc Ván. Thanh dưới là đồng hồ số, Thông Tin và Auto GM xoay khi bật; bảo toàn dữ liệu.'};
+}
