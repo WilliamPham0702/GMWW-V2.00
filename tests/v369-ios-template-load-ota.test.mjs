@@ -18,10 +18,10 @@ test('V3.69 prevents partial/unsafe IPA patches',()=>{
 test('Worker newest Runtime selector is V3.86 on both paths',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3\.85",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-385"/);
+ assert.match(worker,/VERSION="V3\.86",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-386"/);
  const app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- assert.match(app,/const VERSION='3\.85'/);
- assert.match(html,/<title>GMWW V3\.85<\/title>/);
- assert.match(html,/app\.js\?v=3\.85-chatgpt-error-report/);
+ assert.match(app,/const VERSION='3\.86'/);
+ assert.match(html,/<title>GMWW V3\.86<\/title>/);
+ assert.match(html,/app\.js\?v=3\.86-chatgpt-extra-request/);
 });
