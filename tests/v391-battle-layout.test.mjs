@@ -22,7 +22,7 @@ test('compact bottom groups all approved GM controls without always-open overlay
   assert.match(css,/#battleDetails\[hidden\]\{display:none!important\}/);
 });
 test('all bottom controls are wired, quick-kill and revive require explicit confirmation',()=>{
-  for(const id of ['battleExit','battleInfoToggle','battleClockButton','battleQuickRevive','battleQuickKill','battleGMAuto','battleGMAudio'])
+  for(const id of ['battleExit','battleInfoToggle','battleQuickRevive','battleQuickKill','battleGMAuto','battleGMAudio'])
     assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
   assert.match(app,/async function battleQuickApply\(loginId\)/);
   assert.match(app,/confirm\('GM xác nhận '/);

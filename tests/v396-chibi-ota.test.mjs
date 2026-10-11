@@ -29,9 +29,9 @@ test('Worker version, channel and iOS native shell remain synchronized',()=>{
   const worker=fs.readFileSync('src/index.js','utf8');
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(worker,/VERSION="V3\.96",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-396"/);
-  assert.match(app,/const VERSION='3\.96'/);
-  assert.match(html,/<title>GMWW V3\.96<\/title>/);
+  assert.match(worker,/VERSION="V3\.97",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-397"/);
+  assert.match(app,/const VERSION='3\.97'/);
+  assert.match(html,/<title>GMWW V3\.97<\/title>/);
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
   assert.match(worker,/selectVerifiedRuntimeV396Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV395Delta\(manifest,url/);
 });

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.96</title>
-<link rel="stylesheet" href="style.css?v=3.96-chibi-fix">
+<title>GMWW V3.97</title>
+<link rel="stylesheet" href="style.css?v=3.97-battle-floating">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
@@ -212,16 +212,17 @@
 
 
 
-        <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393" aria-label="Thanh công cụ trận đấu" hidden>
-          <div class="battle-menu-row battle-menu-row-top" aria-label="Đồng hồ đếm ngược, Thông Tin, Auto GM">
-            <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" aria-controls="battleClockPopover" aria-expanded="false" title="Đồng hồ đếm ngược"><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
-            <button id="battleInfoToggle" type="button" aria-controls="battleDetails" aria-expanded="false"><span aria-hidden="true">ⓘ</span> Thông Tin</button>
-            <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span></button>
-          </div>
-          <div id="battleClockPopover" class="battle-clock-popover" hidden aria-label="Đồng hồ trận đấu"><span>Đếm ngược theo thời gian đã thiết lập cho lượt hiện tại.</span></div>
+        <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ lượt chơi có thể kéo thả" hidden>
+          <button id="battleClockButton" type="button" aria-label="Giữ và kéo để di chuyển đồng hồ" title="Kéo để di chuyển • Chạm đúp để đặt lại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+        </section>
+
+        <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
             <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
             <div class="battle-wolf-actions">
+              <button id="battleInfoToggle" type="button" aria-controls="battleDetails" aria-expanded="false">ⓘ Thông Tin</button>
+              <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
+              <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
@@ -229,11 +230,11 @@
             </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
-            <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span></div>
+            <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><button id="battleDetailsClose" type="button" aria-label="Đóng Thông Tin trận đấu">×</button></div>
             <div id="battleActionBar" class="play-battle-actions" aria-label="Chọn hành động"></div>
             <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleCancel" type="button">HỦY</button><button id="battleConfirm" type="button">OK</button></div>
             <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
-            <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button><button id="battleGMAudio" type="button" aria-pressed="true" title="Bật hoặc tắt Audio">🔊 Audio</button></div>
+            <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
           </div>
         </section>
 
@@ -665,7 +666,8 @@
         <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
           <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
           <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
-          <input id="playWolfDiscussionSec" type="hidden" value="60">
+          <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
+          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="60" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
           <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
         <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
@@ -799,7 +801,7 @@
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
-<script src="app.js?v=3.96-chibi-fix"></script>
+<script src="app.js?v=3.97-battle-floating"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
