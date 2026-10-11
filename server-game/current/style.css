@@ -4643,3 +4643,31 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
   align-items:center;gap:6px;text-align:center;text-decoration:none}
 .gmww-report-preview small{font-size:11px;line-height:1.5;opacity:.8}
 @media(max-width:360px){.gmww-report-fallback{grid-template-columns:1fr}}
+
+/* V3.87 — remove backgrounds from the final two Home panels only. */
+#home .gmww-home-top3-skin-v377 :is(.gmww-home-top3-panel-v377,.gmww-home-activity-v351){
+  background:transparent!important;background-image:none!important;border:0!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  overflow:visible!important;
+}
+#home .gmww-home-top3-skin-v377 :is(.gmww-home-top3-heading-v377,.gmww-home-top3-board-v377,.gmww-home-activity-heading){
+  background:transparent!important;background-image:none!important;border:0!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  border-radius:0!important;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-board-v377::before,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-board-v377::after{content:none!important;display:none!important}
+#home .gmww-home-top3-skin-v377 :is(.gmww-home-top3-note-v377,#gmwwHomeTop3Status,#gmwwHomeRecentResult){
+  color:#eaffff!important;text-shadow:0 1px 3px #00243a;
+}
+#home .gmww-home-top3-skin-v377 :is(#gmwwHomeTop3Status,#gmwwHomeRecentResult){
+  background:transparent!important;border:0!important;box-shadow:none!important;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row{
+  background:transparent!important;color:#eaffff!important;
+  border-bottom-color:rgba(188,238,237,.45)!important;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>b{color:#fff9dd!important}
+#home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>span:not(.gmww-home-recent-marker-v377),
+#home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>small{color:#d3f8ff!important}
+#home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>i{color:#ffecb4!important}
