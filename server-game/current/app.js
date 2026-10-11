@@ -4729,7 +4729,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       notice('Đang nạp 44 lá vào kho Artifact dùng chung. Giữ trang mở...');
       const ids=rows.map(x=>x.artifactId);
       const report=await playSyncSharedArtifactLibrary({onlyIds:ids,forceIds:ids});
-      if(!report || !Array.isArray(report.failed) || report.failed.length || report.confirmed !== 44){
+      const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+      const serverSignatures=new Map((status?.artifacts||[]).map(a=>[String(a.assetId),String(a.signature)]));
+      const verified=await Promise.all(rows.map(async x=>serverSignatures.get('artifact:'+x.artifactId)===(await playSharedArtifactSignature((state.artifacts||[]).find(a=>String(a.id)===x.artifactId)))));
+      if(!report || !Array.isArray(report.failed) || report.failed.length || report.synced!==44 || verified.some(ok=>!ok)){
         notice('Chưa xác minh đủ 44 ảnh trên server. Không xác nhận thành công; giữ lựa chọn để thử lại.');
       }else{
         notice('THÀNH CÔNG: 44/44 ảnh đã được máy chủ xác nhận, Player Web dùng kho Artifact mới.');
