@@ -193,9 +193,9 @@ test('V3.85 to V3.86 OTA updates only three SHA-pinned GM files, never game data
 });
 
 test('V3.86 version, security and legacy storage remain stable',()=>{
-  assert.match(app,/const VERSION='3\.85'/);
-  assert.match(html,/<title>GMWW V3\.85<\/title>/);
-  assert.match(worker,/VERSION="V3\.85"/);
+  assert.match(app,/const VERSION='3\.86'/);
+  assert.match(html,/<title>GMWW V3\.86<\/title>/);
+  assert.match(worker,/VERSION="V3\.86"/);
   assert.match(worker,/UPDATE_CHANNEL_REV="runtime-386"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
