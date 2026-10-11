@@ -845,3 +845,23 @@ export function selectVerifiedRuntimeV395Delta(manifest,installedVersion){
    optimizedFromVersion:'3.94',upgradeMode:'verified-overlay',
    message:'V3.95: Box Lab đầu Thư Viện, mô phỏng nhiều đêm riêng biệt; dữ liệu và cài đặt không đổi.'};
 }
+
+/** V3.95 -> V3.96: restore valid chibi images for every GM-created/offline account. No player data changes. */
+export function selectVerifiedRuntimeV396Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.95'||String(manifest?.releaseVersion||'')!=='3.96'
+   ||String(manifest?.runtimeVersion||'')!=='3.96'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css']){
+   const found=manifest.runtime.files.filter(f=>f?.path===path);
+   if(found.length!==1)return null;
+   const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.96/'+path;
+   if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+   selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:'3.95',upgradeMode:'verified-overlay',
+   message:'V3.96: Khôi phục hình nhân vật chibi đã chọn cho tài khoản offline và trong vị trí ngồi; giữ toàn bộ dữ liệu.'};
+}
