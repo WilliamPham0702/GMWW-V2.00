@@ -26,6 +26,6 @@ test('Worker and IPA Runtime V3.94 declarations are aligned and retain native sh
  assert.match(worker,/VERSION="V3\.97",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-397"/);
  assert.match(app,/const VERSION='3\.97'/);
  assert.match(html,/<title>GMWW V3\.97<\/title>/);
- assert.match(html,/app\.js\?v=3\.97-chibi-fix/);
+ assert.match(html,/app\.js\?v=3\.97-seat-mau/);
  assert.equal(pkg.version,'3.97.0');
 });
