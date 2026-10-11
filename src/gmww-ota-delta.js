@@ -947,3 +947,24 @@ export function selectVerifiedRuntimeV3100Delta(manifest,installedVersion){
    optimizedFromVersion:from,upgradeMode:'verified-overlay',
    message:'V3.100: Seat Mẫu tự động 8–30 người quanh lửa, bảo toàn toàn bộ dữ liệu trận.'};
 }
+
+
+/** V3.100 -> V3.101: one-ring adaptive seating on the existing IPA V3.17 shell. */
+export function selectVerifiedRuntimeV3101Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.100'||String(manifest?.releaseVersion||'')!=='3.101'
+   ||String(manifest?.runtimeVersion||'')!=='3.101'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css','village-layout.js']){
+   const found=manifest.runtime.files.filter(f=>f?.path===path);
+   if(found.length!==1)return null;
+   const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.101/'+path;
+   if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+   selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:from,upgradeMode:'verified-overlay',
+   message:'V3.101: 8–30 người đứng một vòng quanh lửa (tròn/elip/chữ nhật), không xếp chồng, bảo toàn dữ liệu.'};
+}

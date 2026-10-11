@@ -8,11 +8,11 @@ const context=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),context);
 const layout=context.GMWW_VILLAGE_LAYOUT;
 const sizes=[8,10,12,14,16,18,20,22,24,25,26,27,28,29,30];
-const shapes=['circle','diamond','rectangle'];
+const shapes=['circle','ellipse','rectangle'];
 
 test('GMWW fire-centered auto templates adapt by group size',()=>{
   for(let n=1;n<=30;n++){
-    const expected=n<=12?'circle':n<=20?'diamond':'rectangle';
+    const expected=n<=12?'circle':n<=20?'ellipse':'rectangle';
     assert.equal(layout.recommendedSeatShape(n),expected,'recommended shape for '+n);
   }
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
@@ -38,16 +38,31 @@ test('every Seat Mẫu 8–30 stands safely around the actual fire center, even 
   }
 });
 
-test('25–30 seats use two staggered rings with distinct, touchable player locations',()=>{
-  for(let n=25;n<=30;n++){
-    const points=layout.positions(n,layout.recommendedSeatShape(n));
+test('8–30 seats form exactly ONE continuous perimeter around the fire',()=>{
+  for(let n=8;n<=30;n++){
+    const shape=layout.recommendedSeatShape(n);
+    const points=layout.positions(n,shape);
     assert.equal(points.length,n);
-    assert.ok(points.some(p=>p.ring===0)&&points.some(p=>p.ring===1));
-    for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
-      const distance=Math.hypot(points[i].x-points[j].x,1.7*(points[i].y-points[j].y));
-      assert.ok(distance>6.8,n+' players have overlapping seats '+(i+1)+' and '+(j+1)+' at '+distance);
+    assert.ok(points.every(p=>p.ring===0),n+' players must never form an inner tier');
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+      const d=Math.hypot(points[i].x-points[j].x,1.78*(points[i].y-points[j].y));
+      assert.ok(d>5.2,n+' players are too close at '+i+'/'+j+': '+d);
+    }
+    // One perimeter: no player should lie inside the rectangular/oval boundary.
+    for(const p of points){
+      const dx=Math.abs(p.x-layout.fire.x),dy=Math.abs(p.y-layout.fire.y);
+      if(shape==='rectangle')assert.ok(Math.abs(dx-27.5)<.05||Math.abs(dy-13.2)<.05,
+        n+' rectangle seat inside outline');
+      else{
+        const rx=shape==='circle'?22.8:27.4,ry=shape==='circle'?13.1:12.9;
+        const radius=Math.hypot(dx/rx,dy/ry);
+        assert.ok(Math.abs(radius-1)<.012,n+' oval seat inside outline');
+      }
     }
   }
+  assert.equal(layout.normalizeSeatLayout('diamond'),'ellipse','V3.101 rooms retain legacy layout compatibility');
+  assert.equal(layout.positions(12).length,24,'legacy slots remain 24');
+  assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback also has no inner ring');
 });
 
 test('GM shows automatic shape, center fire icon and exact seat capacity; server sync remains authoritative',()=>{

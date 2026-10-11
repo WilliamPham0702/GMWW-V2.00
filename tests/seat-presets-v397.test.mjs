@@ -8,9 +8,9 @@ const ctx=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
 const sizes=[8,10,12,14,16,18,20,22,24,25,26,27,28,29,30];
-const shapes=['circle','diamond','rectangle'];
+const shapes=['circle','ellipse','rectangle'];
 
-test('all 15 Seat Mẫu capacities exist in every shape, without duplicate locations or invalid world points',()=>{
+test('all 15 Seat Mẫu capacities exist in circle, ellipse and rectangle, without duplicate locations or invalid world points',()=>{
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
   assert.deepEqual(Array.from(layout.seatTemplateShapes),shapes);
   for(const size of sizes)for(const shape of shapes){
@@ -27,7 +27,7 @@ test('all 15 Seat Mẫu capacities exist in every shape, without duplicate locat
   }
 });
 
-test('layouts are distinct and expand the village area compared with the legacy fire rings',()=>{
+test('layouts are distinct and form a single outline around the fire',()=>{
   for(const size of sizes){
     const rendered=shapes.map(s=>JSON.stringify(layout.positions(size,s).map(p=>[p.x,p.y])));
     assert.equal(new Set(rendered).size,3,'different shapes must not reuse the same geometry for '+size);
@@ -38,7 +38,8 @@ test('layouts are distinct and expand the village area compared with the legacy 
       assert.ok(width>30&&height>25,shape+' '+size+' must use the wider courtyard');
     }
   }
-  assert.equal(layout.positions(12).length,24,'legacy rooms retain legacy slots');
+  assert.equal(layout.positions(12).length,24,'legacy rooms retain legacy slot capacity');
+  assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback has no inner ring');
   assert.equal(layout.positions(8,'circle').length,8,'a selected 8-slot layout is not forced to 24');
 });
 

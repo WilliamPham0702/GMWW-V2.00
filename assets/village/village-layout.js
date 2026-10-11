@@ -4,36 +4,53 @@
   const fire={x:50,y:49.7},polygon=[[22,33],[78,33],[88,57],[75,84],[62,89],[62,99],[38,99],[38,89],[25,84],[12,57]];
   function inside(x,y){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit}
   function clampPoint(x,y){x=Number(x);y=Number(y);if(arguments[0]==null||arguments[1]==null||!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:76};y=Math.max(34,Math.min(98,y));const xs=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length];if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]))}}if(xs.length)x=Math.max(Math.min(...xs)+1.5,Math.min(Math.max(...xs)-1.5,x));if(Math.hypot((x-fire.x)/6,(y-fire.y)/3)<1)y=fire.y+(y<fire.y?-3.1:3.1);return{x,y}}
-  /* Seat Mẫu: stable world-coordinate layouts shared by GM, Worker and Player Web. */
-  /* Smart Seat: campfire is the center for every outline and both concentric rings. */
+  /* Single perimeter, like a real Werewolf circle of people seated around the fire.
+     Coordinates shared by GM IPA, Cloudflare Worker, and Player Web. */
   const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
-  const seatTemplateShapes=Object.freeze(['circle','diamond','rectangle']);
-  function normalizeSeatLayout(shape){return seatTemplateShapes.includes(String(shape||''))?String(shape):''}
+  const seatTemplateShapes=Object.freeze(['circle','ellipse','rectangle']);
+  function normalizeSeatLayout(shape){
+    const value=String(shape||'');
+    // Existing V3.100 rooms may carry 'diamond'; interpret them safely
+    // without losing seat IDs or breaking ongoing room metadata.
+    return value==='diamond'?'ellipse':seatTemplateShapes.includes(value)?value:'';
+  }
   function recommendedSeatShape(count){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    return n<=12?'circle':n<=20?'diamond':'rectangle';
+    return n<=12?'circle':n<=20?'ellipse':'rectangle';
   }
-  function contour(t,shape,rx,ry){
-    t=((t%1)+1)%1;
-    if(shape==='circle'){
-      const a=-Math.PI/2+2*Math.PI*t;
-      return{x:rx*Math.cos(a),y:ry*Math.sin(a)}
+  const SCREEN_Y_SCALE=1.78;
+  function circleContour(t,rx,ry){
+    const a=-Math.PI/2+2*Math.PI*t;
+    return{x:rx*Math.cos(a),y:ry*Math.sin(a)};
+  }
+  // Even distribution by on-screen distance, not by angle: no clusters
+  // at the narrow ends of the ellipse.
+  function ovalContour(t,rx,ry){
+    const steps=360,dist=[0],points=[circleContour(0,rx,ry)];
+    for(let i=1;i<=steps;i++){
+      const next=circleContour(i/steps,rx,ry),old=points[i-1];
+      dist.push(dist[i-1]+Math.hypot(next.x-old.x,SCREEN_Y_SCALE*(next.y-old.y)));
+      points.push(next);
     }
-    if(shape==='diamond'){
-      const u=t*4,side=Math.floor(u),frac=u-side;
-      const corners=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
-      const first=corners[side],last=corners[side+1];
-      return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac}
-    }
-    // Equalize travel around the rectangle in screen-like units (Y is visually taller).
-    // Begin at the top midpoint so player 1 is aligned with the campfire.
+    const target=((t%1)+1)%1*dist[steps];
+    let lo=0,hi=steps;
+    while(hi-lo>1){const mid=(lo+hi)>>1;if(dist[mid]<target)lo=mid;else hi=mid}
+    const portion=(target-dist[lo])/Math.max(1e-9,dist[hi]-dist[lo]);
+    return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
+      y:points[lo].y+(points[hi].y-points[lo].y)*portion};
+  }
+  function rectangleContour(t,rx,ry){
+    // Follow exactly ONE closed perimeter, starting at the top midpoint.
     const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
-    const lengths=[rx,3.4*ry,2*rx,3.4*ry,rx],total=lengths.reduce((sum,v)=>sum+v,0);
-    let distance=t*total;
+    const lengths=corners.slice(1).map((p,i)=>
+      Math.hypot(p[0]-corners[i][0],SCREEN_Y_SCALE*(p[1]-corners[i][1])));
+    const length=lengths.reduce((a,b)=>a+b,0);
+    let distance=((t%1)+1)%1*length;
     for(let i=0;i<lengths.length;i++){
-      if(distance<=lengths[i]){
-        const frac=distance/lengths[i],first=corners[i],last=corners[i+1];
-        return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
+      if(distance<=lengths[i]||i===lengths.length-1){
+        const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
+        return{x:corners[i][0]+(corners[i+1][0]-corners[i][0])*f,
+          y:corners[i][1]+(corners[i+1][1]-corners[i][1])*f};
       }
       distance-=lengths[i];
     }
@@ -42,33 +59,40 @@
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
     const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
-    const outer=n<=12?n:Math.ceil(n*.66),out=[];
-    const rings=[{size:outer,rx:27,ry:14},{size:n-outer,rx:14.5,ry:7.4}];
-    rings.forEach((ring,index)=>{
-      for(let i=0;i<ring.size;i++){
-        const p=contour((i+(index?.5:0))/ring.size,kind,ring.rx,ring.ry);
-        // Fire is the fixed anchor. clampPoint is a defensive no-op within the courtyard.
-        const target=clampPoint(fire.x+p.x,fire.y+p.y);
-        out.push({x:target.x,y:target.y,ring:index});
+    // Radius adapts to available courtyard, with fire permanently at
+    // world (50,49.7). For 30 players we expand ONE rectangle, not rings.
+    const rx=kind==='circle'?22.8:kind==='ellipse'?27.4:27.5;
+    const ry=kind==='circle'?13.1:kind==='ellipse'?12.9:13.2;
+    // A small deterministic phase search keeps 25–30 adjacent players
+    // from bunching diagonally around rectangle corners.
+    let phase=0;
+    if(kind==='rectangle'){
+      let bestDistance=-1;
+      for(let step=0;step<32;step++){
+        const shift=step/(32*n),points=Array.from({length:n},(_,i)=>
+          rectangleContour(i/n+shift,rx,ry));
+        const minGap=Math.min(...points.map((p,i)=>{
+          const q=points[(i+1)%n];
+          return Math.hypot(p.x-q.x,SCREEN_Y_SCALE*(p.y-q.y));
+        }));
+        if(minGap>bestDistance+1e-8){bestDistance=minGap;phase=shift}
       }
-    });
-    return out;
+    }
+    const result=[];
+    for(let i=0;i<n;i++){
+      const p=kind==='rectangle'?rectangleContour(i/n+phase,rx,ry):ovalContour(i/n,rx,ry);
+      const point=clampPoint(fire.x+p.x,fire.y+p.y);
+      result.push({x:point.x,y:point.y,ring:0});
+    }
+    return result;
   }
   function positions(count,shape=''){
-    const layout=normalizeSeatLayout(shape);
-    if(layout)return seatTemplatePositions(count,layout);
-    const n=Math.max(24,Math.min(30,Math.trunc(Number(count)||24))),rings=n<=24?[8,16]:[8,16,n-24],out=[];
-    const geometry=[{rx:17,ry:7.2},{rx:29,ry:12.2},{rx:37,ry:15.2}];
-    rings.forEach((size,r)=>{
-      if(!size)return;
-      const g=geometry[r],offset=r===0?0:r===1?Math.PI/size:Math.PI/(size*2);
-      for(let i=0;i<size;i++){
-        const a=-Math.PI/2+2*Math.PI*i/size+offset;
-        const p=clampPoint(fire.x+g.rx*Math.cos(a),fire.y+g.ry*Math.sin(a));
-        out.push({x:p.x,y:p.y,ring:r});
-      }
-    });
-    return out;
+    const kind=normalizeSeatLayout(shape);
+    if(kind)return seatTemplatePositions(count,kind);
+    // Legacy rooms without a saved seatLayout retain 24 default seat IDs,
+    // but use a single perimeter instead of the old stacked inner/outer rings.
+    const n=Math.max(24,Math.min(30,Math.trunc(Number(count)||24)));
+    return seatTemplatePositions(n,recommendedSeatShape(n));
   }
   function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(26+h%4800/100,65+(h>>>8)%1400/100)}
   function fitMode(w,h){const ratio=Number(w)/Math.max(1,Number(h));return ratio>=.85?"stretch":ratio>=.72?"contain":"cover"}
