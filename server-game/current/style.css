@@ -4620,22 +4620,6 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
 #start .play-player-over small{display:none!important}
 
 /* Settings V3.88 — one editable ChatGPT composer, separate diagnose and send actions. */
-.gmww-report-card{display:flex;flex-direction:column;gap:12px;padding:14px}
-.gmww-report-description{font-size:13px;line-height:1.55;margin:0;color:inherit;opacity:.87}
-.gmww-report-input{display:flex;flex-direction:column;gap:8px;min-width:0}
-.gmww-report-input label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;font-size:13px;line-height:1.4}
-.gmww-report-input label small{font-size:11px;font-weight:500;opacity:.78}
-.gmww-report-input textarea{display:block;width:100%;min-height:210px;max-height:410px;box-sizing:border-box;padding:13px;border:1px solid rgba(110,205,235,.65);border-radius:12px;background:rgba(2,28,45,.72);color:#e9faff;font:inherit;font-size:14px;line-height:1.52;resize:vertical;outline-offset:2px}
-.gmww-report-input textarea::placeholder{color:rgba(224,242,247,.65)}
-.gmww-report-input textarea:focus-visible{outline:2px solid #69d8eb}
-.gmww-report-input>small{font-size:11px;line-height:1.45;opacity:.86}
-.gmww-report-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.gmww-report-card .gmww-report-main,.gmww-report-card .gmww-report-send{display:flex;justify-content:center;align-items:center;gap:7px;min-height:54px;width:100%;font-size:12px;font-weight:750;padding:9px 6px}
-.gmww-report-card .gmww-report-send{background:linear-gradient(155deg,rgba(13,115,121,.93),rgba(8,77,93,.94));border-color:rgba(143,245,230,.85)}
-.gmww-report-card .gmww-report-main:disabled{opacity:.6}
-.gmww-report-card #gmwwReportStatus{line-height:1.5;font-size:12px;opacity:.9}
-.gmww-report-card .gmww-report-copy{display:flex;min-height:40px;align-items:center;justify-content:center;gap:6px;font-size:12px;text-align:center}
-@media(max-width:350px){.gmww-report-actions{grid-template-columns:1fr}}
 
 /* V3.87 — remove backgrounds from the final two Home panels only. */
 #home .gmww-home-top3-skin-v377 :is(.gmww-home-top3-panel-v377,.gmww-home-activity-v351){
