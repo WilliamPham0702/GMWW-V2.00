@@ -41,7 +41,7 @@ test('countdown follows persisted per-turn duration and authoritative server dea
 });
 test('GM server rejects stale/invalid navigation and reused artifact effects',()=>{
   const server=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(server,/combineConfiguredTurns\(roleTurns,artifactTurns\)/);
+  assert.match(server,/combineConfiguredTurns\(groupConfiguredRoleTurns\(roleTurns\),artifactTurns\)/);
   assert.match(server,/action==="jump"/);
   assert.match(server,/expectedTurnId/);
   assert.match(server,/ARTIFACT_ALREADY_USED/);

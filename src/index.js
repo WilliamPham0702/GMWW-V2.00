@@ -2,7 +2,7 @@ import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
-import { combineConfiguredTurns, jumpTarget } from "./gmww-night-turn-rules.js";
+import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -20,9 +20,9 @@ import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
-import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta } from "./gmww-ota-delta.js";
+import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.99",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-399",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.100",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-3100",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -48,7 +48,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -139,6 +139,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/artwork-manifest"&&request.method==="GET")return this.gmArtworkManifest(request);
     const roleAssetImage=url.pathname.match(/^\/role-assets\/([^/]+)\/image$/);if(roleAssetImage&&request.method==="GET")return this.roleAssetImage(decodeURIComponent(roleAssetImage[1]));
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
+    if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
+    if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
     if(url.pathname==="/gm/stage"&&request.method==="POST")return this.gmStage(request,await safeJson(request));
@@ -634,8 +636,10 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
+    const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
+    const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1045,7 +1049,7 @@ export class RoomDurableObject extends DurableObject {
     // Keep a stable, always-visible opening window even when no Artifact is assigned.
     queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:artifactRows.filter(a=>a._priorityFirst).map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(a?.order||roleOrder.get(rid)||9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(roleOrder.get(rid)??a?.order??9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
@@ -1060,7 +1064,7 @@ export class RoomDurableObject extends DurableObject {
       });
     }
     const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
-    queue.push(...combineConfiguredTurns(roleTurns,artifactTurns));
+    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(roleTurns),artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -1196,6 +1200,108 @@ export class RoomDurableObject extends DurableObject {
     const meta=auth.meta,rawPhase=String(body?.phase||body?.period||"").trim().toLowerCase(),phase=rawPhase==="day"?"morning":rawPhase,night=Math.max(0,Number(body?.night??body?.nightIndex??body?.roundIndex??0)||0),cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??((phase&&night)?(phase+"-"+night):("cycle-"+Date.now()))).slice(0,160);
     return j(await this.applyCycle(meta,phase,night,cycleKey,String(body?.source||"gm").slice(0,40)))
   }
+
+  /* V3.99: a single GM confirmation is one reversible server operation, including
+   * multi-target interactions and the Artifact quota/use ledger. Only the latest
+   * committed action in this exact turn and night may be restored. */
+  async gmBattleAction(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
+      token=String(body?.clientEventId||"").trim().slice(0,120),
+      turnId=String(body?.turnId||""),actorId=normalizeLoginId(body?.actorId||""),
+      artifactId=String(body?.artifactId||"").slice(0,120),
+      targets=Array.isArray(body?.targetIds)?body.targetIds.map(normalizeLoginId):[],
+      type=String(body?.type||"").trim().toLowerCase(),allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice","revive","clear_state"]);
+    if(!token||!turnId||!actorId||!allowed.has(type)||!targets.length||targets.length>30||
+      targets.some(id=>!id)||new Set(targets).size!==targets.length)
+      return j({ok:false,error:"INVALID_BATTLE_ACTION"},400);
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
+      String(body?.matchId||"")!==matchId||String(body?.cycleKey||"")!==cycleKey)
+      return j({ok:false,error:"STALE_BATTLE_ACTION"},409);
+    const rt=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+    const step=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;
+    if(!step||String(step.id)!==turnId)return j({ok:false,error:"STALE_TURN"},409);
+    const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
+    const owners=step.kind==="role-group"?(step.roles||[]).flatMap(row=>row.artifacts||[]):
+      step.kind==="role"?step.artifacts||[]:step.kind==="early-artifact-window"?step.actions||[]:
+      step.kind==="artifact-main"?[step]:[];
+    if(artifactId){
+      if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
+        return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
+    }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    const players=await this.ctx.storage.get("players")||{};
+    if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
+    const interactions=await this.ctx.storage.get("interactions")||[];
+    if(interactions.some(row=>normalizeLoginId(row?.loginId)===actorId&&row?.effectActive!==false&&
+      (!row.matchId||String(row.matchId)===matchId)&&["frozen","dead","expelled"].includes(String(row?.type||""))))
+      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
+    const receiptKey="battleActionReceipt:"+matchId+":"+token;
+    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||"")]);
+    const prior=await this.ctx.storage.get(receiptKey);
+    if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):
+      j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    const undoKey="battleLastAction:"+matchId,
+      artifactKey=artifactId?"artifact:"+actorId:null,
+      useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
+      cycleUseKey=artifactId?"artifactCycle:"+currentArtifactCycleKey(meta):null;
+    const keys=["interactions","assignments",...([artifactKey,useKey,cycleUseKey].filter(Boolean))];
+    const snapshot=async()=>{const entries=[];for(const key of keys){
+      const value=await this.ctx.storage.get(key);
+      entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
+    }return entries};
+    const restore=async entries=>{for(const row of entries){
+      if(row.exists)await this.ctx.storage.put(row.key,row.value);
+      else await this.ctx.storage.delete(row.key);
+    }};
+    const before=await snapshot(),results=[];
+    for(const id of targets){
+      const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
+        actionNonce:token,targetIds:targets};
+      const response=await this.executeGmInteraction(request,action);
+      const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
+      if(!response.ok||data.ok!==true){
+        await restore(before);
+        this.broadcast({type:"battle_action_reverted",matchId,turnId,serverTime:Date.now()});
+        return j({ok:false,error:"BATTLE_ACTION_ABORTED",detail:data.error||"ACTION_FAILED",
+          message:data.message||"Không thể áp dụng đầy đủ hành động; tất cả mục tiêu đã được khôi phục."},response.status>=400?response.status:409);
+      }
+      results.push(data);
+    }
+    const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
+      record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
+        label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
+        before,after,undone:false,createdAt:new Date().toISOString()};
+    await this.ctx.storage.put(undoKey,record);
+    const result={ok:true,undoToken,targets,results,turnId,label:record.label};
+    await this.ctx.storage.put(receiptKey,{fingerprint,result});
+    this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
+    return j(result);
+  }
+  async gmBattleUndo(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,matchId=String(meta.matchId||""),key="battleLastAction:"+matchId,
+      record=await this.ctx.storage.get(key);
+    if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
+    if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
+      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night||
+      String(meta.currentNightTurnId||"")!==record.turnId)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động vừa xác nhận trong lượt hiện tại."},409);
+    for(const row of record.after){
+      const current=await this.ctx.storage.get(row.key),exists=current!==undefined&&current!==null;
+      if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
+        return j({ok:false,error:"UNDO_STATE_CHANGED",message:"Dữ liệu đã có tương tác mới; không được ghi đè."},409);
+    }
+    for(const row of record.before){
+      if(row.exists)await this.ctx.storage.put(row.key,row.value);
+      else await this.ctx.storage.delete(row.key);
+    }
+    record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
+    this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
+      serverTime:Date.now()});
+    this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
+    return j({ok:true,undone:true,turnId:record.turnId,targets:record.targetIds});
+  }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const eventId=String(body?.clientEventId||"").slice(0,240);
@@ -1223,9 +1329,9 @@ export class RoomDurableObject extends DurableObject {
       const claimedActor=normalizeLoginId(body.actorId||"");
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
-      if(step.kind==="early-artifact-window"||(step.kind==="role"&&body.artifactId)){
+      if(step.kind==="early-artifact-window"||(["role","role-group"].includes(step.kind)&&body.artifactId)){
         const artifactId=String(body.artifactId||"");
-        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):artifactActions;
+        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):step.kind==="role-group"?(step.roles||[]).flatMap(role=>role.artifacts||[]):artifactActions;
         const chosen=options.find(x=>String(x.artifactId)===artifactId&&claimedActor&&normalizeLoginId(x.loginId)===claimedActor);
         if(!chosen)return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN",message:"Artifact không thuộc lượt hoặc người thực hiện."},403);
         gmArtifactStep={...chosen,id:step.id+":"+chosen.artifactId+":"+chosen.loginId};
@@ -1595,7 +1701,7 @@ export default {async fetch(request,env){
       // can always discover and install the current runtime release.
       if(!currentNativeShell){
         const versioned=onlyNewNotes(await readVersionedManifest());
-        if(validRuntime(versioned)&&await runtimeReady(versioned))return j({ok:true,...(selectVerifiedRuntimeV399Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV398Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV397Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV396Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV395Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV394Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV393Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV392Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV391Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV390Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV389Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV388Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV387Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV386Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV385Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV383Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV382Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV381Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV378Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV376Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV373Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV372Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(versioned,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(versioned,url.searchParams.get("current"))||versioned),checkedAt:new Date().toISOString()});
+        if(validRuntime(versioned)&&await runtimeReady(versioned))return j({ok:true,...(selectVerifiedRuntimeV3100Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV399Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV398Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV397Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV396Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV395Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV394Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV393Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV392Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV391Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV390Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV389Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV388Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV387Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV386Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV385Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV383Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV382Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV381Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV378Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV376Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV373Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV372Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(versioned,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(versioned,url.searchParams.get("current"))||versioned),checkedAt:new Date().toISOString()});
       }
 
       const manifestUrl=new URL(request.url);manifestUrl.pathname="/updates/latest.json";manifestUrl.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
@@ -1628,7 +1734,7 @@ export default {async fetch(request,env){
       const latestMismatch=String(manifest?.releaseVersion||"")!==currentVersion;
       const latestLostRuntime=!latestMismatch&&String(manifest?.releaseType||"")==="server_only"&&String(manifest?.shellVersion||"")&&String(manifest.shellVersion)!==currentVersion;
       if(!currentNativeShell){
-        if(validRuntime(manifest)&&await runtimeReady(manifest))return j({ok:true,...(selectVerifiedRuntimeV399Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV398Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV397Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV396Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV395Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV394Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV393Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV392Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV391Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV390Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV389Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV388Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV387Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV386Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV385Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV383Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV382Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV381Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV378Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV376Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV373Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV372Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(manifest,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(manifest,url.searchParams.get("current"))||manifest),checkedAt:new Date().toISOString()});
+        if(validRuntime(manifest)&&await runtimeReady(manifest))return j({ok:true,...(selectVerifiedRuntimeV3100Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV399Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV398Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV397Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV396Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV395Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV394Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV393Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV392Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV391Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV390Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV389Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV388Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV387Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV386Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV385Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV383Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV382Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV381Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV378Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV376Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV373Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV372Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(manifest,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(manifest,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(manifest,url.searchParams.get("current"))||manifest),checkedAt:new Date().toISOString()});
         const rescue=await recoverOlderInstalledRuntime();if(rescue)return j(rescue);
         return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
       }
@@ -1798,6 +1904,8 @@ export default {async fetch(request,env){
   const gmArtworkManifest=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/artwork-manifest$/);if(gmArtworkManifest&&request.method==="GET")return roomProxy(env,gmArtworkManifest[1],"/gm/artwork-manifest",request);
   const publicRoleAsset=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role-assets\/([^/]+)\/image$/);if(publicRoleAsset&&request.method==="GET"){const c=normalizeRoomCode(publicRoleAsset[1]);if(!isValidRoomCode(c))return new Response("Invalid room code",{status:400});return roomStub(env,c).fetch("https://room.internal/role-assets/"+encodeURIComponent(decodeURIComponent(publicRoleAsset[2]))+"/image")}
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
+  const gmBattleAction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-action$/);if(gmBattleAction&&request.method==="POST")return roomProxy(env,gmBattleAction[1],"/gm/battle-action",request);
+  const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
   const gmStageRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/stage$/);if(gmStageRoute&&request.method==="POST")return roomProxy(env,gmStageRoute[1],"/gm/stage",request);

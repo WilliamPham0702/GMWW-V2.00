@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
-import {combineConfiguredTurns,jumpTarget,timelineDisplaySteps} from '../src/gmww-night-turn-rules.js';
+import {combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,timelineDisplaySteps} from '../src/gmww-night-turn-rules.js';
 import {defaultPriorityFirst,artifactCycleKey,reserveArtifactActivation} from '../src/gmww-game-scene-rules.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
@@ -14,14 +14,14 @@ const activate=source.slice(source.indexOf('  async playerArtifactActivate('),so
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
 const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
-  Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,jumpTarget,defaultPriorityFirst,
+  Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
 function harness({artifact=true,auto=false,singleUse=false}={}){
   const data=new Map(),room=new Room(),events=[];
-  const storage={get:async key=>clone(data.get(key)),put:async(key,value)=>data.set(key,clone(value)),setAlarm:async()=>{},transaction:async fn=>{
+  const storage={get:async key=>clone(data.get(key)),put:async(key,value)=>data.set(key,clone(value)),delete:async key=>data.delete(key),setAlarm:async()=>{},transaction:async fn=>{
     const before=new Map([...data].map(([k,v])=>[k,clone(v)]));
     try{return await fn(storage)}catch(e){data.clear();for(const [k,v] of before)data.set(k,v);throw e}
   }};
@@ -181,4 +181,82 @@ test('request-ID collision across owners cannot reserve or impersonate another A
   const state={cycleKey:'test:night:1',accepted:[{requestId:'same-id',playerId:'member:alice',artifactId:'mirror'}]};
   const r=reserveArtifactActivation(state,{requestId:'same-id',playerId:'member:bob',artifactId:'stone',cycleKey:state.cycleKey,eligible:true,limit:3});
   assert.equal(r.ok,false);assert.equal(r.error,'REQUEST_ID_CONFLICT');assert.equal(state.accepted.length,1);
+});
+
+
+test('roles with identical wake order share a single server turn and keep both owners',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[{roleId:'regular-wolf',order:6},{roleId:'alpha-wolf',order:6}],
+    timing:{wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:35}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'regular-wolf',roleName:'Sói Thường'},
+    {loginId:'bob',roleId:'alpha-wolf',roleName:'Sói Trùm'}
+  ]);
+  const rt=await h.runtime(),group=rt.queue.find(x=>x.kind==='role-group');
+  assert.ok(group);assert.equal(group.order,6);
+  assert.deepEqual([...group.loginIds].sort(),['alice','bob']);
+  assert.deepEqual(group.roles.map(r=>r.label),['Sói Thường','Sói Trùm']);
+  assert.equal(rt.queue.filter(x=>x.kind==='role').length,0);
+  assert.equal(rt.queue[0].durationSec,30);
+  assert.equal(rt.queue[1].durationSec,60);
+});
+
+test('batched GM action reverses both targets and one Artifact use on server',async()=>{
+  const h=harness({artifact:true,singleUse:true});
+  await h.jump('early-artifact-window');
+  const meta=await h.meta(),rt=await h.runtime();
+  const payload={turnId:rt.currentId,actorId:'alice',artifactId:'mirror',
+    type:'frozen',actionId:'copy',effectId:'freeze',effectName:'Đóng Băng',
+    targetIds:['bob','carol'],matchId:meta.matchId,cycleKey:meta.cycleKey,
+    clientEventId:'tx-freeze-01',night:1};
+  const done=await result(await h.room.gmBattleAction(null,payload));
+  assert.equal(done.ok,true);
+  assert.equal(done.results.length,2);
+  assert.equal(h.data.get('interactions').length,2);
+  assert.equal(h.data.get('artifactCycle:test-match:night:1').accepted.length,1);
+  assert.ok(h.data.has('artifactUse:alice:mirror'));
+  const undone=await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}));
+  assert.equal(undone.ok,true);
+  assert.equal(h.data.has('artifactUse:alice:mirror'),false);
+  assert.equal(h.data.has('artifactCycle:test-match:night:1'),false);
+  assert.equal(h.data.has('interactions'),false);
+  assert.equal(h.data.get('artifact:alice').usedAt,undefined);
+  assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).idempotent,true);
+  assert.deepEqual(h.data.get('players'),Object.fromEntries(['alice','bob','carol','dave'].map(loginId=>['member:'+loginId,{loginId}])));
+});
+
+test('GM undo rejects stale turn and changed state; frozen role owner cannot act',async()=>{
+  const h=harness({artifact:false});
+  await h.jump('role');
+  const meta=await h.meta(),rt=await h.runtime();
+  const p={turnId:rt.currentId,actorId:'alice',type:'dead',actionId:'inspect',effectName:'Thử',
+    targetIds:['bob'],matchId:meta.matchId,cycleKey:meta.cycleKey,clientEventId:'tx-dead-01',night:1};
+  const done=await result(await h.room.gmBattleAction(null,p));assert.equal(done.ok,true);
+  h.data.get('interactions').push({id:'external',loginId:'carol',type:'dead',effectActive:true,matchId:'test-match'});
+  assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STATE_CHANGED');
+  h.data.get('interactions').pop();
+  await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
+  assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
+  const i=await h.data.get('interactions');
+  i.push({id:'freeze-owner',loginId:'carol',type:'frozen',effectActive:true,matchId:'test-match'});
+  h.data.set('interactions',i);
+  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'carol',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
+  assert.equal(next.error,'ACTOR_CANNOT_ACT');
+});
+
+test('partial failure of a multi-target confirmation restores entire interaction snapshot',async()=>{
+  const h=harness({artifact:false});await h.jump('role');
+  const meta=await h.meta(),rt=await h.runtime();
+  const original=h.room.executeGmInteraction.bind(h.room);let count=0;
+  h.room.executeGmInteraction=async(...args)=>{
+    if(++count===2)return Response.json({ok:false,error:'MOCK_SECOND_TARGET_REJECTED'},{status:409});
+    return original(...args);
+  };
+  const p={turnId:rt.currentId,actorId:'alice',type:'dead',actionId:'inspect',
+    targetIds:['bob','carol'],matchId:meta.matchId,cycleKey:meta.cycleKey,
+    clientEventId:'tx-fail-02',night:1};
+  const failed=await result(await h.room.gmBattleAction(null,p));
+  assert.equal(failed.error,'BATTLE_ACTION_ABORTED');
+  assert.equal(h.data.has('interactions'),false);
+  assert.equal(h.data.has('battleLastAction:test-match'),false);
 });

@@ -50,7 +50,7 @@ test("server checks Artifact ownership and manual GM final turn triggers morning
   const worker=fs.readFileSync("src/index.js","utf8");
   const gm=fs.readFileSync("server-game/current/app.js","utf8");
   assert.match(worker,/claimedActor&&normalizeLoginId\(x\.loginId\)===claimedActor/);
-  assert.match(worker,/step\.kind==="role"\&\&body\.artifactId/);
+  assert.ok(worker.includes('"role-group"].includes(step.kind)&&body.artifactId'));
   assert.match(worker,/runtime\.completed\?await this\.applyCycle\(meta,"morning"/);
   assert.match(gm,/artifactId:a\.artifactId/);
 });
