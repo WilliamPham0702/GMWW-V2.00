@@ -34,10 +34,10 @@ test('All existing operations buttons remain in one expanded accessible grid',()
  assert.equal(part.split('id="maintenanceDetail"').length-1,1);
 });
 
-test('Update buttons remain three aligned actions and versioned OTA is V3.88',()=>{
+test('Update buttons remain three aligned actions and versioned OTA is V3.89',()=>{
  for(const id of ['installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate'])assert.ok(part.includes('id="'+id+'"'),id);
  assert.match(css,/#settings #updateManagerCard \.update-actions-three\{display:grid!important;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
- assert.match(app,/const VERSION='3\.88'/);
- assert.match(html,/<title>GMWW V3\.88<\/title>/);
- assert.match(worker,/VERSION="V3\.88",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-388"/);
+ assert.match(app,/const VERSION='3\.89'/);
+ assert.match(html,/<title>GMWW V3\.89<\/title>/);
+ assert.match(worker,/VERSION="V3\.89",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-389"/);
 });

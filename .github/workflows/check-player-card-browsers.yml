@@ -10,6 +10,18 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/home-v389-iphone-webkit.mjs"
+      - ".github/workflows/check-player-card-browsers.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gmww-player-private-card-patch.js"
+      - "src/gmww-members-live.js"
+      - "src/gmww-delivery-manifest.js"
+      - "src/gmww-delivery-snapshot.js"
+      - "src/index.js"
+      - "tests/browser-private-cards.mjs"
+      - "tests/home-v389-iphone-webkit.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
@@ -44,6 +56,15 @@ jobs:
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
           node tests/browser-private-cards.mjs
+      - name: Check Khám Phá on iPhone-sized WebKit
+        run: node tests/home-v389-iphone-webkit.mjs
+      - name: Upload WebKit Home preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: home-v389-iphone-webkit-preview
+          path: /tmp/gmww-v389-iphone-webkit-home.png
+          if-no-files-found: ignore
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4

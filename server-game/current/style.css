@@ -4664,3 +4664,17 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
 #home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>span:not(.gmww-home-recent-marker-v377),
 #home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>small{color:#d3f8ff!important}
 #home .gmww-home-top3-skin-v377 .gmww-home-activity-v351 .gmww-home-recent-row>i{color:#ffecb4!important}
+
+
+/* V3.89 — transparent Khám Phá outer frame; retain all three artwork tiles. */
+#home .gmww-home-premium-v366 > .gmww-home-discover-banner-v352{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  padding:0!important;
+  overflow:visible!important;
+}
