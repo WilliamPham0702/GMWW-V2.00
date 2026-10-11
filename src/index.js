@@ -48,7 +48,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -139,6 +139,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/artwork-manifest"&&request.method==="GET")return this.gmArtworkManifest(request);
     const roleAssetImage=url.pathname.match(/^\/role-assets\/([^/]+)\/image$/);if(roleAssetImage&&request.method==="GET")return this.roleAssetImage(decodeURIComponent(roleAssetImage[1]));
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
+    if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
+    if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
     if(url.pathname==="/gm/stage"&&request.method==="POST")return this.gmStage(request,await safeJson(request));
@@ -634,8 +636,10 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
+    const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
+    const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1179,6 +1183,108 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,rawPhase=String(body?.phase||body?.period||"").trim().toLowerCase(),phase=rawPhase==="day"?"morning":rawPhase,night=Math.max(0,Number(body?.night??body?.nightIndex??body?.roundIndex??0)||0),cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??((phase&&night)?(phase+"-"+night):("cycle-"+Date.now()))).slice(0,160);
     return j(await this.applyCycle(meta,phase,night,cycleKey,String(body?.source||"gm").slice(0,40)))
+  }
+
+  /* V3.99: a single GM confirmation is one reversible server operation, including
+   * multi-target interactions and the Artifact quota/use ledger. Only the latest
+   * committed action in this exact turn and night may be restored. */
+  async gmBattleAction(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
+      token=String(body?.clientEventId||"").trim().slice(0,120),
+      turnId=String(body?.turnId||""),actorId=normalizeLoginId(body?.actorId||""),
+      artifactId=String(body?.artifactId||"").slice(0,120),
+      targets=Array.isArray(body?.targetIds)?body.targetIds.map(normalizeLoginId):[],
+      type=String(body?.type||"").trim().toLowerCase(),allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice","revive","clear_state"]);
+    if(!token||!turnId||!actorId||!allowed.has(type)||!targets.length||targets.length>30||
+      targets.some(id=>!id)||new Set(targets).size!==targets.length)
+      return j({ok:false,error:"INVALID_BATTLE_ACTION"},400);
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
+      String(body?.matchId||"")!==matchId||String(body?.cycleKey||"")!==cycleKey)
+      return j({ok:false,error:"STALE_BATTLE_ACTION"},409);
+    const rt=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+    const step=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;
+    if(!step||String(step.id)!==turnId)return j({ok:false,error:"STALE_TURN"},409);
+    const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
+    const owners=step.kind==="role-group"?(step.roles||[]).flatMap(row=>row.artifacts||[]):
+      step.kind==="role"?step.artifacts||[]:step.kind==="early-artifact-window"?step.actions||[]:
+      step.kind==="artifact-main"?[step]:[];
+    if(artifactId){
+      if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
+        return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
+    }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    const players=await this.ctx.storage.get("players")||{};
+    if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
+    const interactions=await this.ctx.storage.get("interactions")||[];
+    if(interactions.some(row=>normalizeLoginId(row?.loginId)===actorId&&row?.effectActive!==false&&
+      (!row.matchId||String(row.matchId)===matchId)&&["frozen","dead","expelled"].includes(String(row?.type||""))))
+      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
+    const receiptKey="battleActionReceipt:"+matchId+":"+token;
+    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||"")]);
+    const prior=await this.ctx.storage.get(receiptKey);
+    if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):
+      j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    const undoKey="battleLastAction:"+matchId,
+      artifactKey=artifactId?"artifact:"+actorId:null,
+      useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
+      cycleUseKey=artifactId?"artifactCycle:"+currentArtifactCycleKey(meta):null;
+    const keys=["interactions","assignments",...([artifactKey,useKey,cycleUseKey].filter(Boolean))];
+    const snapshot=async()=>{const entries=[];for(const key of keys){
+      const value=await this.ctx.storage.get(key);
+      entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
+    }return entries};
+    const restore=async entries=>{for(const row of entries){
+      if(row.exists)await this.ctx.storage.put(row.key,row.value);
+      else await this.ctx.storage.delete(row.key);
+    }};
+    const before=await snapshot(),results=[];
+    for(const id of targets){
+      const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
+        actionNonce:token,targetIds:targets};
+      const response=await this.executeGmInteraction(request,action);
+      const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
+      if(!response.ok||data.ok!==true){
+        await restore(before);
+        this.broadcast({type:"battle_action_reverted",matchId,turnId,serverTime:Date.now()});
+        return j({ok:false,error:"BATTLE_ACTION_ABORTED",detail:data.error||"ACTION_FAILED",
+          message:data.message||"Không thể áp dụng đầy đủ hành động; tất cả mục tiêu đã được khôi phục."},response.status>=400?response.status:409);
+      }
+      results.push(data);
+    }
+    const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
+      record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
+        label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
+        before,after,undone:false,createdAt:new Date().toISOString()};
+    await this.ctx.storage.put(undoKey,record);
+    const result={ok:true,undoToken,targets,results,turnId,label:record.label};
+    await this.ctx.storage.put(receiptKey,{fingerprint,result});
+    this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
+    return j(result);
+  }
+  async gmBattleUndo(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,matchId=String(meta.matchId||""),key="battleLastAction:"+matchId,
+      record=await this.ctx.storage.get(key);
+    if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
+    if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
+      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night||
+      String(meta.currentNightTurnId||"")!==record.turnId)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động vừa xác nhận trong lượt hiện tại."},409);
+    for(const row of record.after){
+      const current=await this.ctx.storage.get(row.key),exists=current!==undefined&&current!==null;
+      if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
+        return j({ok:false,error:"UNDO_STATE_CHANGED",message:"Dữ liệu đã có tương tác mới; không được ghi đè."},409);
+    }
+    for(const row of record.before){
+      if(row.exists)await this.ctx.storage.put(row.key,row.value);
+      else await this.ctx.storage.delete(row.key);
+    }
+    record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
+    this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
+      serverTime:Date.now()});
+    this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
+    return j({ok:true,undone:true,turnId:record.turnId,targets:record.targetIds});
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1782,6 +1888,8 @@ export default {async fetch(request,env){
   const gmArtworkManifest=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/artwork-manifest$/);if(gmArtworkManifest&&request.method==="GET")return roomProxy(env,gmArtworkManifest[1],"/gm/artwork-manifest",request);
   const publicRoleAsset=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role-assets\/([^/]+)\/image$/);if(publicRoleAsset&&request.method==="GET"){const c=normalizeRoomCode(publicRoleAsset[1]);if(!isValidRoomCode(c))return new Response("Invalid room code",{status:400});return roomStub(env,c).fetch("https://room.internal/role-assets/"+encodeURIComponent(decodeURIComponent(publicRoleAsset[2]))+"/image")}
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
+  const gmBattleAction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-action$/);if(gmBattleAction&&request.method==="POST")return roomProxy(env,gmBattleAction[1],"/gm/battle-action",request);
+  const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
   const gmStageRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/stage$/);if(gmStageRoute&&request.method==="POST")return roomProxy(env,gmStageRoute[1],"/gm/stage",request);
