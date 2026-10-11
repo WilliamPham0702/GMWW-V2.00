@@ -90,6 +90,22 @@ test('invalid multi-target selection leaves Artifact unused',async()=>{
   assert.equal((await result(await h.act({targetIds:['bob','missing']}))).error,'INVALID_ARTIFACT_TARGET');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
 });
+test('configured Artifact target count is enforced before consuming stock',async()=>{
+  const h=harness();h.data.get('artifact:alice').artifactCard.actions[0].targetCount=2;
+  await h.jump('early-artifact-window');
+  assert.equal((await result(await h.act())).error,'INVALID_ARTIFACT_TARGET_COUNT');
+  assert.equal(h.data.has('artifactUse:alice:mirror'),false);
+  assert.equal((await result(await h.act({targetIds:['bob','carol'],clientEventId:'correct-count:bob'}))).ok,true);
+  assert.equal(h.data.get('artifactCycle:test-match:night:1').accepted.length,1);
+});
+test('Artifact cannot target its owner unless configuration explicitly permits',async()=>{
+  const h=harness();await h.jump('early-artifact-window');
+  const self={loginId:'alice',targetIds:['alice'],clientEventId:'self-target',actionNonce:'self-target'};
+  assert.equal((await result(await h.act(self))).error,'ARTIFACT_SELF_TARGET_FORBIDDEN');
+  assert.equal(h.data.has('artifactUse:alice:mirror'),false);
+  h.data.get('artifact:alice').artifactCard.actions[0].noSelf=false;
+  assert.equal((await result(await h.act({...self,clientEventId:'self-allowed',actionNonce:'self-allowed'}))).ok,true);
+});
 test('single-use exact retry is idempotent; reuse in a later night stays rejected',async()=>{
   const h=harness({singleUse:true});
   const request={loginId:'alice',requestId:'player-1',targetId:'member:bob'};
