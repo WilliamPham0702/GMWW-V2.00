@@ -4946,3 +4946,19 @@ body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{
   body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{top:calc(env(safe-area-inset-top) + 168px);max-height:61dvh}
   body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{flex-basis:98px!important}
 }
+
+/* V3.98: Seat diagram dots orbit a gold campfire marker at their true map center. */
+#playSeatPresetPanel .play-seat-preset-fire{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block;
+  width:11px;height:11px;border:2px solid rgba(255,234,158,.94);
+  border-radius:50%;background:#f9a83b;
+  box-shadow:0 0 0 3px rgba(254,174,69,.13),0 0 12px rgba(255,184,74,.36);
+  pointer-events:none;
+}
+#playSeatPresetPanel .play-seat-preset-card small{
+  color:#c4eef5;font-size:9px;font-weight:650;line-height:1.2;white-space:nowrap;
+}
+#playSeatPresetPanel .play-seat-preset-card{
+  min-height:116px;gap:3px;
+}
+#playSeatPresetPanel .play-seat-preset-dots{height:79px}
