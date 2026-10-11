@@ -12,14 +12,14 @@ function mock(block,override={}){return{fetch:async req=>{
  const bytes=override[filename]||src.get(filename);
  return filename===block||!bytes?new Response('Missing',{status:404}):new Response(bytes);
 }};}
-test('Rescue OTA installs verified V3.97 app, HTML and CSS on IPA V3.17',async()=>{
+test('Rescue OTA installs verified V3.98 app, HTML and CSS on IPA V3.17',async()=>{
  const manifest=await recoverLegacyRuntimeManifest({...cfg,assets:mock()});
  assert.equal(manifest?.releaseType,'runtime');
  assert.equal(manifest.runtimeVersion,'3.97');
  assert.equal(manifest.shellVersion,'3.17');
  assert.equal(manifest.runtime.files.length,8);
  for(const file of manifest.runtime.files){
-  assert.ok(file.url.startsWith(root+'/updates/runtime/V3.97/'));
+  assert.ok(file.url.startsWith(root+'/updates/runtime/V3.98/'));
   assert.equal(file.sha256,createHash('sha256').update(src.get(file.path)).digest('hex'));
  }
 });
@@ -52,13 +52,13 @@ test('Rescue OTA upgrades an installed V3.40 runtime with verified files',async(
  assert.equal(manifest?.runtime?.files?.length,8);
 });
 
-test('V3.97 fallback also upgrades a V3.41 runtime',async()=>{const m=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.41',assets:mock()});assert.equal(m?.runtimeVersion,'3.97')});
+test('V3.98 fallback also upgrades a V3.41 runtime',async()=>{const m=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.41',assets:mock()});assert.equal(m?.runtimeVersion,'3.97')});
 
-test('V3.97 safely recovers an installed V3.44 Runtime without reinstalling IPA',async()=>{
+test('V3.98 safely recovers an installed V3.44 Runtime without reinstalling IPA',async()=>{
  const manifest=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.44',assets:mock()});
  assert.equal(manifest?.runtimeVersion,'3.97');
  assert.equal(manifest?.shellVersion,'3.17');
  assert.deepEqual(manifest.runtime.files.map(f=>f.path),['GMWW.html','app.js','style.css','battle-controls.js','home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg']);
 });
 
-test('V3.97 recovers V3.46 installations',async()=>{const m=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.46',assets:mock()});assert.equal(m?.releaseVersion,'3.97')});
+test('V3.98 recovers V3.46 installations',async()=>{const m=await recoverLegacyRuntimeManifest({...cfg,installedVersion:'3.46',assets:mock()});assert.equal(m?.releaseVersion,'3.97')});
