@@ -20,7 +20,7 @@ test('V3.59 OTA fails closed for mismatched version, hash, URL or deletion',()=>
     const m=makeManifest();mutator(m);assert.equal(selectVerifiedRuntimeV359Delta(m,'3.58'),null);
   }
 });
-test('V3.93 version sources and IPA update manifest route are aligned',()=>{
+test('V3.94 version sources and IPA update manifest route are aligned',()=>{
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
   const app=fs.readFileSync('server-game/current/app.js','utf8');

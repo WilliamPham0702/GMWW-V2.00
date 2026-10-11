@@ -25,7 +25,7 @@ test('Room reset dialog has legible newlines too',()=>{
   assert.ok(!message.includes(String.raw`\n`));
 });
 
-test('V3.93 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
+test('V3.94 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
   const server=fs.readFileSync('src/index.js','utf8');
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   assert.equal(pkg.version,'3.94.0');

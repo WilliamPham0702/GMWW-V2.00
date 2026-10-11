@@ -806,7 +806,7 @@ export function selectVerifiedRuntimeV393Delta(manifest,installedVersion){
    message:'V3.93: Nhấn trực tiếp nhân vật sói GM để mở Hồi Sinh, Giết người, Thoát game, Kết thúc Ván. Thanh dưới là đồng hồ số, Thông Tin và Auto GM xoay khi bật; bảo toàn dữ liệu.'};
 }
 
-/** V3.93 → V3.94: Library Lab, strictly verified three-file overlay; no data deletion. */
+/** V3.93 -> V3.94: compact countdown and previous-turn navigation; no data changes. */
 export function selectVerifiedRuntimeV394Delta(manifest,installedVersion){
  const from=String(installedVersion||'').trim().replace(/^V/i,'');
  if(from!=='3.93'||String(manifest?.releaseVersion||'')!=='3.94'
@@ -822,6 +822,6 @@ export function selectVerifiedRuntimeV394Delta(manifest,installedVersion){
    selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
  }
  return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
-   optimizedFromVersion:'3.93',upgradeMode:'verified-overlay',
-   message:'V3.94: Lab nằm đầu Thư Viện, mô phỏng nhiều đêm an toàn; giữ nguyên dữ liệu và phiên chơi.'};
+   optimizedFromVersion:from,upgradeMode:'verified-overlay',
+   message:'V3.94: Thu gọn đồng hồ đếm ngược, sửa thời gian giảm đều và nút Lượt trước. Giữ nguyên dữ liệu.'};
 }
