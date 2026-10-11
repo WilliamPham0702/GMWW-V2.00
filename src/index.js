@@ -3,6 +3,7 @@ const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
+import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -636,10 +637,11 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),activeEffects=interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))).slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
+    const battleActionUsage=(await this.ctx.storage.get("battleRoleUsage:"+String(meta.matchId||"")))||[];
     const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1240,11 +1242,43 @@ export class RoomDurableObject extends DurableObject {
     const prior=await this.ctx.storage.get(receiptKey);
     if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):
       j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    // V3.103 — enforce role-card use limits in the Durable Object, not just UI.
+    // Snapshot and undo include this ledger so undo restores function availability.
+    const usageKey="battleRoleUsage:"+matchId;
+    let currentUsage=(await this.ctx.storage.get(usageKey))||[],roleUse=null;
+    if(!artifactId){
+      const roleStep=step.kind==="role-group"?(step.roles||[]).find(r=>
+        (r.loginIds||[]).map(normalizeLoginId).includes(actorId)):step.kind==="role"?step:null;
+      if(!roleStep)return j({ok:false,error:"INVALID_ROLE_FOR_TURN"},403);
+      const roleId=String(roleStep.roleId||"");
+      const assigned=(await this.ctx.storage.get("assignments"))||[];
+      const row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
+      if(!row)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
+      const roleCard=row.roleCard||{},actionId=String(body?.actionId||"");
+      const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
+      // Recover older confirmed battle actions in an already-running match.
+      const known=new Set(currentUsage.map(x=>String(x?.eventId||"")).filter(Boolean));
+      for(const hit of interactions){
+        const event=String(hit?.clientEventId||""),eventId=event.includes(":")?event.slice(0,event.lastIndexOf(":")):"";
+        if(!eventId||known.has(eventId)||!String(hit?.actionId||"")||
+          normalizeLoginId(hit?.actorId)!==actorId||String(hit?.matchId||"")!==matchId||
+          !Number.isFinite(Number(hit?.night))||Number(hit.night)<1)continue;
+        currentUsage=appendBattleRoleActionUsage(currentUsage,{matchId,night:hit.night,
+          actorId,roleId,actionId:String(hit.actionId),eventId,usedAt:hit.createdAt});
+        known.add(eventId);
+      }
+      const decision=checkBattleRoleActionUsage(currentUsage,{matchId,
+        night:Number(meta.cycleNight||1),actorId,roleId,actionId,policy});
+      if(!decision.ok)return j({ok:false,error:decision.error,
+        message:decision.message||"Hành động không được phép theo luật vai trò."},409);
+      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,
+        eventId:token,usedAt:new Date().toISOString(),currentUsage};
+    }
     const undoKey="battleLastAction:"+matchId,
       artifactKey=artifactId?"artifact:"+actorId:null,
       useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
       cycleUseKey=artifactId?"artifactCycle:"+currentArtifactCycleKey(meta):null;
-    const keys=["interactions","assignments",...([artifactKey,useKey,cycleUseKey].filter(Boolean))];
+    const keys=["interactions","assignments",...([roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
     const snapshot=async()=>{const entries=[];for(const key of keys){
       const value=await this.ctx.storage.get(key);
       entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
@@ -1267,6 +1301,7 @@ export class RoomDurableObject extends DurableObject {
       }
       results.push(data);
     }
+    if(roleUse)await this.ctx.storage.put(usageKey,appendBattleRoleActionUsage(roleUse.currentUsage,roleUse));
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
       record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
