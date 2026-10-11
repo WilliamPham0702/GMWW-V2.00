@@ -885,6 +885,22 @@ export class RoomDurableObject extends DurableObject {
       players[id]={...old,participantId:id,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId||old.avatarId||"",gameCharacterId:m.gameCharacterId||old.gameCharacterId||null,seatId:m.seatId||old.seatId||null,ready:true,reservedByGM:true,joinedAt:old.joinedAt||now,lastSeenAt:old.lastSeenAt||null,lastHeartbeatAt:Number(old.lastHeartbeatAt||0)||null};
     }
     enforceUniqueSeatClaims(players,meta.seatCount);
+    // During gathering, adapt the real room capacity to the actual party, never
+    // discarding an assigned seat ID. Older rooms remain untouched until GM edits.
+    if(replace&&wanted.size>0&&!meta.seatsLocked&&roomUiStage(meta)==='seats'){
+      const highest=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
+      const nextCount=Math.max(8,Math.min(30,Math.max(Object.keys(players).length,highest)));
+      const nextShape=villageLayout.recommendedSeatShape(nextCount);
+      if(nextCount!==Number(meta.seatCount)||nextShape!==normalizeSeatLayout(meta.seatLayout)){
+        const points=villageLayout.positions(nextCount,nextShape);
+        for(const p of Object.values(players)){
+          const seat=normalizeSeatId(p?.seatId,nextCount);
+          if(!seat)continue;
+          clearPlayerMovement(p);p.positionX=points[seat-1].x;p.positionY=points[seat-1].y;
+        }
+        meta.seatCount=nextCount;meta.seatLayout=nextShape;
+      }
+    }
     await this.ctx.storage.put("players",players);
     const selected=new Set(wanted.keys()),assignments=(await this.ctx.storage.get("assignments"))||[],nextAssignments=assignments.filter(a=>selected.has(normalizeLoginId(a?.loginId)));
     if(nextAssignments.length!==assignments.length)await this.ctx.storage.put("assignments",nextAssignments);
