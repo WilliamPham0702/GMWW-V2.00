@@ -54,7 +54,7 @@
     if(!turn||turn.kind==="wolf-introduction"||turn.kind==="village-wakeup")return [];
     const roles=Array.isArray(catalog?.cards)?catalog.cards:[],
       artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],
-      definitions=Array.isArray(catalog?.actions)?catalog.actions:[];
+      definitions=catalog?.actions||[];
     const alreadyUsed=owned=>artifactUsed(used,{kind:"artifact-main",artifactId:owned.artifactId,playerId:owned.playerId||"member:"+loginOf(owned.loginId)});
     const build=(owner,isArt)=>{
       const pool=isArt?artifacts:roles;
@@ -63,14 +63,15 @@
       const fns=Array.isArray(chosen?.functions)?chosen.functions:Array.isArray(chosen?.actions)?chosen.actions:[];
       const actorIds=isArt?[loginOf(owner.loginId)]:(owner.loginIds||[owner.loginId]).filter(Boolean).map(loginOf);
       return fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))).map((fn,i)=>{
-        const definition=definitions.find(a=>String(a?.id||"")===String(fn?.actionId||"")),
+        const actionCatalog=Array.isArray(definitions)?definitions:(isArt?definitions.artifacts:definitions.role)||[];
+        const definition=actionCatalog.find(a=>String(a?.id||"")===String(fn?.actionId||"")),
           name=labelOf(definition,labelOf(fn,fn?.actionId||"Hành động "+(i+1)));
         return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
           actionId:String(fn.actionId||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
           allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,
           targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),
           effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds,
-          ...(isArt?{artifactId:String(owner.artifactId),artifactLoginId:loginOf(owner.loginId),artifactName:String(owner.artifactName||"Artifact")}: {})};
+          ...(isArt?{artifactId:String(owner.artifactId),artifactLoginId:loginOf(owner.loginId),artifactName:String(owner.artifactName||chosen?.name||"Artifact")}: {})};
       });
     };
     if(turn.kind==="early-artifact-window")

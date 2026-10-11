@@ -48,7 +48,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -1034,16 +1034,37 @@ export class RoomDurableObject extends DurableObject {
     const key=currentArtifactCycleKey(meta),cycle=(await this.ctx.storage.get("artifactCycle:"+key))||{accepted:[]};
     return (Array.isArray(cycle.accepted)?cycle.accepted:[]).some(x=>String(x?.artifactId||"")===String(step.artifactId)&&String(x?.playerId||("member:"+normalizeLoginId(x?.loginId)))===String(step.playerId))
   }
-  async markGmArtifactTurnUsed(meta,step,targetLoginId,actionNonce=""){
+  async markGmArtifactTurnUsed(meta,step,targetLoginId,actionNonce="",confirmation={}){
     if(!step)return null;
     const nonce=String(actionNonce||"").trim().slice(0,100);
+    const owned=await this.ctx.storage.get("artifact:"+normalizeLoginId(step.loginId));
+    if(!owned||String(owned.artifactId)!==String(step.artifactId))return j({ok:false,error:"INVALID_ARTIFACT_OWNER"},403);
+    const configuredAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
+    if(!configuredAction)return j({ok:false,error:"INVALID_ARTIFACT_ACTION"},400);
+    const targets=Array.isArray(confirmation.targetIds)?confirmation.targetIds.map(normalizeLoginId):[normalizeLoginId(targetLoginId)];
+    if(!targets.length||targets.length>30||new Set(targets).size!==targets.length||!targets.includes(normalizeLoginId(targetLoginId)))return j({ok:false,error:"INVALID_ARTIFACT_TARGETS"},400);
+    // Enforce explicit per-action limits on the server, not just the GM UI.
+    // Older Artifact cards without targetCount retain their existing behavior.
+    if(configuredAction.targetCount!==undefined&&configuredAction.targetCount!==null){
+      const count=Number(configuredAction.targetCount);
+      if(!Number.isInteger(count)||count<1||count>30||targets.length!==count)
+        return j({ok:false,error:"INVALID_ARTIFACT_TARGET_COUNT"},400);
+    }
+    if(configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
+      return j({ok:false,error:"ARTIFACT_SELF_TARGET_FORBIDDEN"},403);
+    const players=(await this.ctx.storage.get("players"))||{};
+    if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_ARTIFACT_TARGET"},400);
+    const binding={actionId:String(confirmation.actionId||""),type:String(confirmation.type||""),targetIds:targets.slice().sort()};
     const requestId="gm:"+String(meta.matchId||"match")+":"+String(step.id)+(nonce?":"+nonce:"");
     const key=currentArtifactCycleKey(meta),cycle=(await this.ctx.storage.get("artifactCycle:"+key))||{accepted:[]};
     const existing=(Array.isArray(cycle.accepted)?cycle.accepted:[]).find(x=>String(x.artifactId||"")===String(step.artifactId)&&String(x.playerId||"")===String(step.playerId));
     // A single confirmed action can select several targets. Its second target
     // must not consume the same Artifact twice; a DIFFERENT action is refused.
-    if(existing)return nonce&&String(existing.requestId||"")===requestId?null:j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact đã dùng trong đêm này."},409);
-    const activation=await this.playerArtifactActivate({loginId:normalizeLoginId(step.loginId),requestId,targetId:"member:"+normalizeLoginId(targetLoginId)});
+    if(existing){
+      const sameConfirmation=nonce&&String(existing.requestId||"")===requestId&&JSON.stringify(existing.gmConfirmation)===JSON.stringify(binding);
+      return sameConfirmation?null:j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact đã dùng trong đêm này."},409);
+    }
+    const activation=await this.playerArtifactActivate({loginId:normalizeLoginId(step.loginId),requestId,targetId:"member:"+normalizeLoginId(targetLoginId),gmConfirmation:binding});
     return activation.ok?null:activation;
   }
   async advanceNightRuntime(meta,action="next",source="gm",targetIndex=null){
@@ -1074,6 +1095,9 @@ export class RoomDurableObject extends DurableObject {
   }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
+    // Replayed completion must not restart day timers or expire effects twice.
+    if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
+      return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
     meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[],expired=[];
     for(const x of rows){const type=String(x?.type||""),sameMatch=!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId);if(!sameMatch||x?.effectActive===false||!["frozen","expelled"].includes(type))continue;const effectNight=Math.max(0,Number(x?.night||0)||0);let shouldExpire=false,reason="";if(type==="frozen"){if(p==="morning"&&(effectNight===0||n===0||n>=effectNight)){shouldExpire=true;reason="MORNING_START"}else if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_SELF_HEAL"}}else if(type==="expelled"){if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_START"}else if(p==="night"&&effectNight===0&&x?.cycleKey&&String(x.cycleKey)!==key){shouldExpire=true;reason="NEXT_CYCLE_FALLBACK"}}if(shouldExpire){x.effectActive=false;x.expiredAt=now;x.expiredReason=reason;expired.push({id:x.id,type,loginId:x.loginId,night:effectNight,reason})}}
@@ -1088,7 +1112,7 @@ export class RoomDurableObject extends DurableObject {
   async autoAdvanceDue(meta){
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
-    if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
+    if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
     if(cyclePhase==="morning"||cyclePhase==="day"){const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
     return 0
   }
@@ -1136,6 +1160,18 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const eventId=String(body?.clientEventId||"").slice(0,240);
+    if(!eventId||!body?.turnId)return this.executeGmInteraction(request,body);
+    const receiptKey="gmInteractionReceipt:"+String(auth.meta.matchId||"")+":"+eventId;
+    const fingerprint=JSON.stringify([String(body.turnId),String(body.actionId||""),normalizeLoginId(body.actorId),String(body.artifactId||""),normalizeLoginId(body.loginId),String(body.type||""),String(body.effectId||""),String(body.actionNonce||""),Number(body.night||0),String(body.cycleKey||""),Array.isArray(body.targetIds)?body.targetIds.map(normalizeLoginId).sort():null]);
+    const prior=await this.ctx.storage.get(receiptKey);
+    if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    const response=await this.executeGmInteraction(request,body);
+    if(response.ok)await this.ctx.storage.put(receiptKey,{fingerprint,result:await response.clone().json()});
+    return response;
+  }
+  async executeGmInteraction(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta;
     let gmArtifactStep=null;
     // The battle UI supplies an optional expected turn. Legacy GM manual overrides remain compatible.
@@ -1164,7 +1200,7 @@ export class RoomDurableObject extends DurableObject {
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
       const p=Object.values(players).find(x=>normalizeLoginId(x?.loginId)===loginId);if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
-      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce);if(useError)return useError}
+      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],revived=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||String(x?.type||"")!=="dead")continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_REVIVE";revived.push({id:x.id,type:x.type})}
       await this.ctx.storage.put("interactions",rows.slice(-100));const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
@@ -1174,7 +1210,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(type==="clear_state"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
-      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce);if(useError)return useError}
+      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],cleared=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||!["frozen","expelled","dead","assassin_mark"].includes(String(x?.type||"")))continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_CLEAR";cleared.push({id:x.id,type:x.type})}
       await this.ctx.storage.put("interactions",rows.slice(-100));this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
@@ -1184,7 +1220,7 @@ export class RoomDurableObject extends DurableObject {
     const defaults={frozen:"Bạn đang bị Đóng Băng.",expelled:"Bạn đã bị Đuổi Khỏi Làng.",dead:"Bạn đã Chết.",thumb_vote:"Hãy chọn dấu phù hợp.",assassin_mark:"Bạn đã bị Đánh Dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.",effect_notice:"Bạn đã nhận một Hiệu Ứng."},rawOptions=Array.isArray(body?.options)?body.options.map(x=>String(x||"").slice(0,40)).filter(Boolean).slice(0,4):[],cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??body?.nightIndex??body?.roundIndex??meta.cycleKey??"").slice(0,160),expiresAt=body?.expiresAt?String(body.expiresAt).slice(0,64):null,effectActive=["frozen","expelled","dead","assassin_mark"].includes(type),clientEventId=String(body?.clientEventId||"").slice(0,240),rows=(await this.ctx.storage.get("interactions"))||[];
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
-    if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce);if(useError)return useError}
+    if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("interactions",rows.slice(-100));
     this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
   }
@@ -1328,7 +1364,7 @@ export class RoomDurableObject extends DurableObject {
       const targetId=String(body?.targetId||body?.originalTargetId||"").slice(0,160);if(targetId){const players=(await txn.get("players"))||{};if(!players[targetId])return{ok:false,status:400,error:"INVALID_ARTIFACT_TARGET"}}
       if(meta.matchId&&artifact.matchId&&String(meta.matchId)!==String(artifact.matchId))return{ok:false,status:409,error:"STALE_ARTIFACT"};
       const artifactId=String(artifact.artifactId||""),playerId="member:"+loginId,useKey="artifactUse:"+loginId+":"+artifactId,oldUse=await txn.get(useKey),cycle=(await txn.get("artifactCycle:"+cycleKey))||{cycleKey,accepted:[]};
-      if(artifact.singleUse===true&&oldUse)return{ok:false,status:409,error:"ARTIFACT_ALREADY_USED"};
+      if(artifact.singleUse===true&&oldUse&&(String(oldUse.requestId)!==requestId||String(oldUse.cycleKey)!==cycleKey))return{ok:false,status:409,error:"ARTIFACT_ALREADY_USED"};
       const reservation=reserveArtifactActivation(cycle,{requestId,playerId,artifactId,cycleKey,eligible:true,limit:artifactLimitPerCycle});
       const accepted=Array.isArray(reservation?.state?.accepted)?reservation.state.accepted:[];
       if(!reservation.ok){
@@ -1339,7 +1375,7 @@ export class RoomDurableObject extends DurableObject {
         const prior=accepted.find(x=>String(x?.requestId||"")===requestId&&String(x?.playerId||"")===playerId);
         return{ok:true,idempotent:true,activation:prior||null,count:accepted.length,max:artifactLimitPerCycle,remaining:Math.max(0,artifactLimitPerCycle-accepted.length)};
       }
-      const activation={requestId,playerId,loginId,artifactId,artifactName:String(artifact.artifactName||""),matchId:String(meta.matchId||""),cycleKey,night:Math.max(1,Number(meta.cycleNight||1)),phase:String(meta.cyclePhase||""),originalTargetId:String(body?.targetId||body?.originalTargetId||"").slice(0,160),finalTargetId:String(body?.finalTargetId||body?.targetId||"").slice(0,160),status:"accepted",createdAt:now};
+      const activation={requestId,playerId,loginId,artifactId,artifactName:String(artifact.artifactName||""),matchId:String(meta.matchId||""),cycleKey,night:Math.max(1,Number(meta.cycleNight||1)),phase:String(meta.cyclePhase||""),originalTargetId:String(body?.targetId||body?.originalTargetId||"").slice(0,160),finalTargetId:String(body?.finalTargetId||body?.targetId||"").slice(0,160),status:"accepted",createdAt:now,...(body.gmConfirmation?{gmConfirmation:body.gmConfirmation}:{})};
       const nextAccepted=accepted.slice();nextAccepted[nextAccepted.length-1]=activation;
       const nextCycle={...reservation.state,accepted:nextAccepted,updatedAt:now};
       await txn.put("artifactCycle:"+cycleKey,nextCycle);await txn.put(useKey,{...activation,usedAt:now});
@@ -1994,7 +2030,7 @@ function extractRoleImage(obj,depth=0){
   return null
 }
 function sanitizePlayerArtifactCard(v){
-  const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null})):[];
+  const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{})})):[];
   const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
   return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
 }
