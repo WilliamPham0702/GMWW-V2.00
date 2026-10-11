@@ -16,7 +16,9 @@ test('Settings keeps ChatGPT support private with one editable composer and sepa
   assert.doesNotMatch(html,/id="gmwwReportPreview"/);
   assert.match(app,/https:\/\/chatgpt\.com\/\?prompt=/);
   assert.match(app,/encodeURIComponent\(message\)/);
-  assert.match(app,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
+  assert.match(app,/window\.open\(url,'_blank'\)/);
+  assert.match(app,/window\.location\.assign\(url\)/);
+  assert.doesNotMatch(html,/id="gmwwCopyReport"/);
   assert.match(app,/gmwwLastBugDiagnostics/);
   assert.match(app,/runSystemDiagnostics\(\{silent:true\}\)/);
   assert.doesNotMatch(html,/gmww-ai-support\.(?:js|css)/);
@@ -83,13 +85,12 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
     gmwwReportComposer:editor,
     gmwwReportToChatGPT:control('diagnose'),
     gmwwSendReport:control('send'),
-    gmwwCopyReport:control('copy'),
     gmwwReportStatus:info,
     updateServerVersion:{textContent:'V3.87'},
     updateStatus:{textContent:'ĐÃ CẬP NHẬT'},
     updateDecisionTitle:{textContent:'GMWW mới nhất'}
   };
-  const opened=[],copied=[];
+  const opened=[];
   let checked=0;
   const context={
     document:{getElementById:id=>elements[id]||null,querySelector:()=>null,querySelectorAll:()=>[]},
@@ -97,8 +98,8 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
     gmwwRuntimeVersion:()=> '3.88',
     gmwwRuntimeErrors:[],
     runSystemDiagnostics:async()=>{checked++;return {ok:true,probes:{server:{ok:true,status:200,latency:21}}}},
-    navigator:{onLine:true,clipboard:{writeText:async s=>{copied.push(s)}}},
-    window:{open:(url)=>{opened.push(url)}},Date
+    navigator:{onLine:true},
+    window:{open:(url)=>{opened.push(url);return {opener:{}}},location:{assign:(url)=>opened.push(url)}},Date
   };
   const from=app.indexOf('/* GMWW Settings -> ChatGPT');
   const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
@@ -126,8 +127,7 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
   assert.equal(opened.length,1);
   assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),sent);
   assert.match(info.textContent,/nhấn Gửi trong ChatGPT/);
-  await listeners['copy:click']();
-  assert.equal(copied[0],sent);
+  assert.ok(!listeners['copy:click'],'Copy handler must be removed');
 });
 
 test('Runtime V3.87 -> V3.88 OTA is a signed three-file overlay with no data deletion',async()=>{
@@ -193,14 +193,14 @@ test('V3.85 to V3.86 OTA updates only three SHA-pinned GM files, never game data
   assert.match(worker,/selectVerifiedRuntimeV386Delta\(versioned,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
   assert.match(worker,/selectVerifiedRuntimeV386Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-  assert.equal(pkg.version,'3.88.0');
+  assert.equal(pkg.version,'3.89.0');
 });
 
-test('V3.88 version, security and legacy storage remain stable',()=>{
-  assert.match(app,/const VERSION='3\.88'/);
-  assert.match(html,/<title>GMWW V3\.88<\/title>/);
-  assert.match(worker,/VERSION="V3\.88"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-388"/);
+test('V3.89 version, security and legacy storage remain stable',()=>{
+  assert.match(app,/const VERSION='3\.89'/);
+  assert.match(html,/<title>GMWW V3\.89<\/title>/);
+  assert.match(worker,/VERSION="V3\.89"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-389"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
   assert.match(worker,/publicEntryPolicy\(request\.method,url\.pathname\)/);
