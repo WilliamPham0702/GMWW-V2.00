@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.88</title>
-<link rel="stylesheet" href="style.css?v=3.88-chatgpt-composer">
+<title>GMWW V3.89</title>
+<link rel="stylesheet" href="style.css?v=3.89-chatgpt-handoff">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
@@ -479,10 +479,9 @@
             </div>
             <div class="gmww-report-actions" role="group" aria-label="Chuẩn bị và gửi báo cáo ChatGPT">
               <button class="settings-action settings-action-server gmww-report-main" id="gmwwReportToChatGPT" type="button"><span>⚙</span><b>BÁO LỖI TỰ ĐỘNG</b></button>
-              <button class="settings-action settings-action-server gmww-report-send" id="gmwwSendReport" type="button"><span>↗</span><b>GỬI CHATGPT</b></button>
+              <button class="settings-action settings-action-server gmww-report-send" id="gmwwSendReport" type="button"><span>↗</span><b>MỞ CHATGPT</b></button>
             </div>
-            <small id="gmwwReportStatus" role="status" aria-live="polite">Sửa prompt nếu cần, nhấn BÁO LỖI TỰ ĐỘNG để điền thông tin rồi nhấn GỬI CHATGPT. Nội dung chỉ được chuyển khi bạn nhấn Gửi.</small>
-            <button class="settings-action settings-action-server gmww-report-copy" id="gmwwCopyReport" type="button"><span>⎘</span><b>SAO CHÉP NỘI DUNG</b></button>
+            <small id="gmwwReportStatus" role="status" aria-live="polite">Sửa prompt nếu cần, nhấn BÁO LỖI TỰ ĐỘNG, sau đó MỞ CHATGPT. Tin nhắn chỉ được gửi khi bạn nhấn Gửi trong ChatGPT.</small>
           </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
@@ -783,7 +782,7 @@
 <script src="village-layout.js"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-380"></script>
-<script src="app.js?v=3.88-chatgpt-composer"></script>
+<script src="app.js?v=3.89-chatgpt-handoff"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
