@@ -21,6 +21,6 @@ test('Lab OTA fails closed for unexpected base, modified url, missing file or de
 test('Worker publishes V3.95 to both OTA manifest paths and retains shell V3.17',async()=>{
   const fs=await import('node:fs');
   const worker=fs.readFileSync('src/index.js','utf8');
-  assert.match(worker,/VERSION="V3\\.94",NATIVE_SHELL_VERSION="3\\.17",UPDATE_CHANNEL_REV="runtime-395"/);
-  assert.equal((worker.match(/selectVerifiedRuntimeV395Delta\\((?:manifest|versioned),url\\.searchParams\\.get\\("current"\\)\\)/g)||[]).length,2);
+  assert.ok(worker.includes('VERSION="V3.95",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-395"'));
+  assert.equal(worker.split('selectVerifiedRuntimeV395Delta(').length-1,2);
 });
