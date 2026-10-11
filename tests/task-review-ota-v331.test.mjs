@@ -12,7 +12,7 @@ const lock=JSON.parse(read("package-lock.json"));
 const shell="3.17";
 
 test("task approval is a newer OTA than the previously released V3.30",()=>{
-  const version="3.96";
+  const version="3.97";
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
@@ -21,7 +21,7 @@ test("task approval is a newer OTA than the previously released V3.30",()=>{
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
   assert.equal(shell,"3.17");
   assert.match(html,/<title>GMWW V3\.97<\/title>/);
-  assert.match(html,/app\.js\?v=3\.97-chibi-fix/);
+  assert.match(html,/app\.js\?v=3\.97-seat-mau/);
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
