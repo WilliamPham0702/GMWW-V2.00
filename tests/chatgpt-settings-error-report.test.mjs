@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
-import {selectVerifiedRuntimeV385Delta} from '../src/gmww-ota-delta.js';
+import {selectVerifiedRuntimeV385Delta,selectVerifiedRuntimeV386Delta} from '../src/gmww-ota-delta.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
@@ -163,11 +163,40 @@ test('Runtime V3.85 releases only SHA-verified app, HTML and CSS for installed V
   assert.match(worker,/selectVerifiedRuntimeV385Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV385Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
 });
-test('Version, security and legacy storage remain stable',()=>{
+test('V3.85 to V3.86 OTA updates only three SHA-pinned GM files, never game data',()=>{
+  const names=['GMWW.html','app.js','style.css'];
+  const files=()=>names.map(path=>({path,url:'https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.86/'+path,sha256:'a'.repeat(64)}));
+  const manifest=()=>({
+    releaseVersion:'3.86',runtimeVersion:'3.86',shellVersion:'3.17',
+    releaseType:'runtime',delete:[],runtime:{files:files()}
+  });
+  const patch=selectVerifiedRuntimeV386Delta(manifest(),'3.85');
+  assert.ok(patch);
+  assert.equal(patch.upgradeMode,'verified-overlay');
+  assert.deepEqual(patch.runtime.files.map(f=>f.path),names);
+  assert.deepEqual(patch.delete,[]);
+  assert.equal(patch.optimizedFromVersion,'3.85');
+  for(const from of ['3.70','3.84','3.86','3.17','']){
+    assert.equal(selectVerifiedRuntimeV386Delta(manifest(),from),null);
+  }
+  for(const mutate of [
+    x=>{x.releaseVersion='3.85'},x=>{x.runtimeVersion='3.85'},
+    x=>{x.shellVersion='3.86'},x=>{x.delete=['gameData']},
+    x=>{x.runtime.files.pop()},x=>{x.runtime.files[0].sha256='invalid'},
+    x=>{x.runtime.files[1].url='https://example.com/app.js'},
+    x=>{x.runtime.files.push({...x.runtime.files[0]})}
+  ]){const x=manifest();mutate(x);assert.equal(selectVerifiedRuntimeV386Delta(x,'3.85'),null)}
+  assert.match(worker,/selectVerifiedRuntimeV386Delta\(versioned,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
+  assert.match(worker,/selectVerifiedRuntimeV386Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  assert.equal(pkg.version,'3.86.0');
+});
+
+test('V3.86 version, security and legacy storage remain stable',()=>{
   assert.match(app,/const VERSION='3\.85'/);
   assert.match(html,/<title>GMWW V3\.85<\/title>/);
   assert.match(worker,/VERSION="V3\.85"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-385"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-386"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
   assert.match(worker,/publicEntryPolicy\(request\.method,url\.pathname\)/);
