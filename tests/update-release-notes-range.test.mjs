@@ -64,6 +64,10 @@ test('release note filter remains connected to /api/update/manifest route', asyn
  const end=s.indexOf('if((url.pathname==="/favicon.svg"',start);
  assert.ok(start>0 && end>start);
  const section=s.slice(start,end);
- assert.match(section,/gmwwManifestNotesForInstalled\(data,url\.searchParams\.get\("current"\)\)/);
- assert.doesNotMatch(section,/return j\(/);
+ assert.match(section,/onlyNewNotes=m=>gmwwManifestNotesForInstalled\(m,url\.searchParams\.get\("current"\)\)/);
+ assert.match(section,/const versioned=onlyNewNotes\(await readVersionedManifest\(\)\)/);
+ assert.match(section,/const manifest=onlyNewNotes\(await res\.json\(\)\)/);
+ assert.match(section,/recoverOlderInstalledRuntime=async\(\)=>onlyNewNotes\(/);
+ // Keep the existing OTA response and readiness gates untouched.
+ assert.match(section,/if\(validRuntime\(versioned\)&&await runtimeReady\(versioned\)\)return j\(\{ok:true/);
 });
