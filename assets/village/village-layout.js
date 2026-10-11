@@ -5,36 +5,53 @@
   function inside(x,y){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit}
   function clampPoint(x,y){x=Number(x);y=Number(y);if(arguments[0]==null||arguments[1]==null||!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:76};y=Math.max(34,Math.min(98,y));const xs=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length];if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]))}}if(xs.length)x=Math.max(Math.min(...xs)+1.5,Math.min(Math.max(...xs)-1.5,x));if(Math.hypot((x-fire.x)/6,(y-fire.y)/3)<1)y=fire.y+(y<fire.y?-3.1:3.1);return{x,y}}
   /* Seat Mẫu: stable world-coordinate layouts shared by GM, Worker and Player Web. */
-  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,24]);
+  /* Smart Seat: campfire is the center for every outline and both concentric rings. */
+  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
   const seatTemplateShapes=Object.freeze(['circle','diamond','rectangle']);
   function normalizeSeatLayout(shape){return seatTemplateShapes.includes(String(shape||''))?String(shape):''}
+  function recommendedSeatShape(count){
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    return n<=12?'circle':n<=20?'diamond':'rectangle';
+  }
   function contour(t,shape,rx,ry){
     t=((t%1)+1)%1;
-    if(shape==='circle'){const a=-Math.PI/2+2*Math.PI*t;return{x:rx*Math.cos(a),y:ry*Math.sin(a)}}
-    const u=t*4,side=Math.floor(u),frac=u-side;
+    if(shape==='circle'){
+      const a=-Math.PI/2+2*Math.PI*t;
+      return{x:rx*Math.cos(a),y:ry*Math.sin(a)}
+    }
     if(shape==='diamond'){
+      const u=t*4,side=Math.floor(u),frac=u-side;
       const corners=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
       const first=corners[side],last=corners[side+1];
-      return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
+      return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac}
     }
-    const corners=[[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry]];
-    const first=corners[side],last=corners[side+1];
-    return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
+    // Equalize travel around the rectangle in screen-like units (Y is visually taller).
+    // Begin at the top midpoint so player 1 is aligned with the campfire.
+    const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
+    const lengths=[rx,3.4*ry,2*rx,3.4*ry,rx],total=lengths.reduce((sum,v)=>sum+v,0);
+    let distance=t*total;
+    for(let i=0;i<lengths.length;i++){
+      if(distance<=lengths[i]){
+        const frac=distance/lengths[i],first=corners[i],last=corners[i+1];
+        return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
+      }
+      distance-=lengths[i];
+    }
+    return{x:0,y:-ry};
   }
   function seatTemplatePositions(count,shape){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12))),kind=normalizeSeatLayout(shape);
-    if(!kind)return [];
-    // Wider courtyard, no rooftops or sea. Two staggered outlines prevent crowding at 18–24.
-    const outer=n>16?Math.ceil(n*2/3):n,out=[];
-    const rings=[{size:outer,rx:30,ry:23,cx:50,cy:61},{size:n-outer,rx:17,ry:12,cx:50,cy:65}];
-    for(let ring=0;ring<rings.length;ring++){
-      const r=rings[ring];
-      for(let i=0;i<r.size;i++){
-        const offset=kind==='rectangle'?.125:0,p=contour((i+(ring?.5:0))/r.size+offset,kind,r.rx,r.ry);
-        const target=clampPoint(r.cx+p.x,r.cy+p.y);
-        out.push({x:target.x,y:target.y,ring});
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
+    const outer=n<=12?n:Math.ceil(n*.66),out=[];
+    const rings=[{size:outer,rx:27,ry:14},{size:n-outer,rx:14.5,ry:7.4}];
+    rings.forEach((ring,index)=>{
+      for(let i=0;i<ring.size;i++){
+        const p=contour((i+(index?.5:0))/ring.size,kind,ring.rx,ring.ry);
+        // Fire is the fixed anchor. clampPoint is a defensive no-op within the courtyard.
+        const target=clampPoint(fire.x+p.x,fire.y+p.y);
+        out.push({x:target.x,y:target.y,ring:index});
       }
-    }
+    });
     return out;
   }
   function positions(count,shape=''){
@@ -66,5 +83,5 @@
     const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*2)),total=lengths.reduce((s,v)=>s+v,0);let distance=t*total;
     for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const f=Math.min(1,distance/(lengths[i]||1));return{x:path[i].x+(path[i+1].x-path[i].x)*f,y:path[i].y+(path[i+1].y-path[i].y)*f}}distance-=lengths[i]}return b;
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);

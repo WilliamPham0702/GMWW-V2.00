@@ -37,7 +37,7 @@ test('no update if installed version equals or exceeds release', () => {
 });
 
 test('unversioned or future notes never appear in the upgrade summary', () => {
- const mixed=['V3.86: Tính năng mới.', 'Thông tin lịch sử không có phiên bản', 'V3.99: Bản tương lai', 'V3.85: Cũ', 'V3.86.0：Sửa giao diện'];
+ const mixed=['V3.86: Tính năng mới.', 'Thông tin lịch sử không có phiên bản', 'V3.100: Bản tương lai', 'V3.85: Cũ', 'V3.86.0：Sửa giao diện'];
  assert.deepEqual(gmwwReleaseNotesBetween(mixed, '3.85', '3.86'), [mixed[0], mixed[4]]);
 });
 

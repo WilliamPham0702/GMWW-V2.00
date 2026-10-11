@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.99';
+const VERSION='3.100';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2210,7 +2210,7 @@ const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
 const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V263_PLAY_SCENE','GMWW_V257_PLAY_SCENE','GMWW_V256_PLAY_SCENE','GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
 const PLAY_STEPS=['lobby','room','seats','game','roles','deal','battle'];
 let playGatherToolsDismissed=false;
-let playSeatPresetOpen=false,playSeatPresetShape='circle';
+let playSeatPresetOpen=false;
 const PLAY_STEP_COPY={
   lobby:{k:'SẢNH CHỜ',t:'Tạo Phòng',x:'Mọi người tập trung tại làng. Nhấn Tiếp tục để vào bước Tạo phòng.',a:'TẠO PHÒNG'},
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
@@ -2887,7 +2887,7 @@ function renderPlayGatherToolbar(){
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
   if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
-const PLAY_SEAT_PRESET_NAMES={circle:'Hình tròn',diamond:'Hình thoi',rectangle:'Chữ nhật'};
+const PLAY_SEAT_PRESET_NAMES={circle:'TRÒN',diamond:'THOI',rectangle:'CHỮ NHẬT'};
 function closePlaySeatPresetPanel(){
   playSeatPresetOpen=false;
   const panel=document.getElementById('playSeatPresetPanel'),trigger=document.getElementById('playGatherSeatPreset');
@@ -2900,45 +2900,47 @@ function renderPlaySeatPresetPanel(){
   if(!playSeatPresetOpen||playSceneState.step!=='seats'||playSceneRuntime.room?.seatsLocked){closePlaySeatPresetPanel();return}
   panel.hidden=false;
   document.getElementById('playGatherSeatPreset')?.setAttribute('aria-expanded','true');
-  panel.querySelectorAll('[data-play-seat-shape]').forEach(b=>{
-    const selected=b.dataset.playSeatShape===playSeatPresetShape;
-    b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
-  });
   const layout=globalThis.GMWW_VILLAGE_LAYOUT,selectedCount=Number(playSceneRuntime.room?.seatCount||0);
-  const selectedShape=String(playSceneRuntime.room?.seatLayout||''),occupants=playLiveMembers();
-  const minimum=Math.max(occupants.length,...occupants.map(p=>Number(p?.seatId||0)),0);
+  const selectedShape=String(playSceneRuntime.room?.seatLayout||''),members=playLiveMembers();
+  const minimum=Math.max(members.length,...members.map(p=>Number(p?.seatId||0)),0);
+  const exactCount=Math.max(8,Math.min(30,minimum));
+  const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
+  const hint=document.getElementById('playSeatPresetAutoHint');
+  if(hint)hint.textContent='Lửa trại làm tâm • Hình dạng tự chọn theo số người'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
-  for(const n of layout.seatTemplateCounts){
+  for(const n of counts){
+    const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;
     const button=document.createElement('button');button.type='button';button.className='play-seat-preset-card';
-    const selected=n===selectedCount&&selectedShape===playSeatPresetShape;
-    button.classList.toggle('selected',selected);
-    button.disabled=playSceneRuntime.busy||n<minimum;
-    button.setAttribute('aria-label',PLAY_SEAT_PRESET_NAMES[playSeatPresetShape]+' '+n+' người'+(selected?' đang chọn':''));
+    button.classList.toggle('selected',selected);button.disabled=playSceneRuntime.busy||n<minimum;
+    button.setAttribute('aria-label',n+' người • '+PLAY_SEAT_PRESET_NAMES[shape]+' quanh lửa'+(selected?' • Đang chọn':''));
     button.setAttribute('aria-pressed',String(selected));
     const preview=document.createElement('span');preview.className='play-seat-preset-dots';preview.setAttribute('aria-hidden','true');
-    for(const pos of layout.seatTemplatePositions(n,playSeatPresetShape)){
+    const fire=document.createElement('span');fire.className='play-seat-preset-fire';fire.textContent='🔥';
+    fire.style.left=((layout.fire.x-15)/70*100)+'%';
+    fire.style.top=((layout.fire.y-26)/48*100)+'%';
+    preview.append(fire);
+    for(const pos of layout.seatTemplatePositions(n,shape)){
       const dot=document.createElement('i');dot.className='play-seat-preset-dot';
-      dot.style.left=Math.max(4,Math.min(96,(pos.x-11)/78*100))+'%';
-      dot.style.top=Math.max(4,Math.min(96,(pos.y-30)/62*100))+'%';
+      dot.style.left=Math.max(4,Math.min(96,(pos.x-15)/70*100))+'%';
+      dot.style.top=Math.max(4,Math.min(96,(pos.y-26)/48*100))+'%';
       preview.append(dot);
     }
-    const label=document.createElement('b');label.textContent=n+' NGƯỜI';
-    button.append(preview,label);
-    button.onclick=()=>{void playApplySeatPreset(n,playSeatPresetShape)};
+    const label=document.createElement('b');label.textContent=n+' NGƯỜI • '+PLAY_SEAT_PRESET_NAMES[shape];
+    button.append(preview,label);button.onclick=()=>{void playApplySeatPreset(n)};
     grid.append(button);
   }
 }
 function openPlaySeatPresetPanel(){
   if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked||playSceneState.step!=='seats'||!isLivePlayRoom())return;
-  playSeatPresetShape=globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatLayout(playSceneRuntime.room?.seatLayout)||'circle';
   playSeatPresetOpen=true;renderPlaySeatPresetPanel();
 }
-async function playApplySeatPreset(count,shape){
+async function playApplySeatPreset(count){
   if(!playSeatPresetOpen||playSceneRuntime.busy||!isLivePlayRoom())return;
   const layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  if(!layout.seatTemplateCounts.includes(count)||!layout.seatTemplateShapes.includes(shape))return;
+  if(!Number.isInteger(count)||count<8||count>30)return;
   const members=playLiveMembers(),maxSeat=Math.max(0,...members.map(m=>Number(m.seatId||0)));
   if(count<members.length||count<maxSeat){playFlashError('Mẫu '+count+' chỗ không đủ cho '+members.length+' người hoặc vị trí đã xếp.');return}
+  const shape=layout.recommendedSeatShape(count);
   const ok=await playUpdateRoomSettings({seatCount:count,seatLayout:shape});
   if(ok)closePlaySeatPresetPanel();
 }
@@ -4676,7 +4678,7 @@ function initPlayScene(){
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherSeatPreset')?.addEventListener('click',openPlaySeatPresetPanel);
   document.getElementById('playSeatPresetClose')?.addEventListener('click',closePlaySeatPresetPanel);
-  document.querySelectorAll('[data-play-seat-shape]').forEach(b=>b.addEventListener('click',()=>{playSeatPresetShape=b.dataset.playSeatShape;renderPlaySeatPresetPanel()}));
+
   document.getElementById('playGatherRandom')?.addEventListener('click',()=>{void playGatherRandomize()});
   document.getElementById('playGatherManual')?.addEventListener('click',playGatherManual);
   document.getElementById('playGatherDisband')?.addEventListener('click',openPlayDisbandSheet);

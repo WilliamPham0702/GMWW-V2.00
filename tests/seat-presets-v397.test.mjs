@@ -7,10 +7,10 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const ctx=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
-const sizes=[8,10,12,14,16,18,20,24];
+const sizes=[8,10,12,14,16,18,20,22,24,25,26,27,28,29,30];
 const shapes=['circle','diamond','rectangle'];
 
-test('all eight Seat Mẫu counts exist in every shape, without duplicate locations or invalid world points',()=>{
+test('all 15 Seat Mẫu capacities exist in every shape, without duplicate locations or invalid world points',()=>{
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
   assert.deepEqual(Array.from(layout.seatTemplateShapes),shapes);
   for(const size of sizes)for(const shape of shapes){
@@ -47,13 +47,12 @@ test('GM swipes the Gọi Người action menu, while dot samples stay in a sepa
   const order=['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual','playGatherConfirm','playGatherDisband'];
   let last=-1;for(const id of order){const i=html.indexOf('id="'+id+'"');assert.ok(i>last,id+' menu ordering');last=i}
   for(const id of ['playSeatPresetPanel','playSeatPresetClose','playSeatPresetGrid'])assert.ok(html.includes('id="'+id+'"'),id);
-  assert.ok(html.includes('data-play-seat-shape="circle"'));
-  assert.ok(html.includes('data-play-seat-shape="diamond"'));
-  assert.ok(html.includes('data-play-seat-shape="rectangle"'));
+  assert.ok(html.includes('id="playSeatPresetAutoHint"'));
+  assert.ok(!html.includes('data-play-seat-shape="circle"'));
   assert.match(css,/#playGatherToolbar\.play-gather-toolbar \.play-gather-toolbar-actions\{[\s\S]*?overflow-x:auto!important/);
   assert.match(css,/#playSeatPresetPanel\[hidden\]\{display:none!important\}/);
   assert.match(app,/function renderPlaySeatPresetPanel\(\)/);
-  assert.match(app,/layout\.seatTemplatePositions\(n,playSeatPresetShape\)/);
+  assert.match(app,/layout\.seatTemplatePositions\(n,shape\)/);
   assert.match(app,/playUpdateRoomSettings\(\{seatCount:count,seatLayout:shape\}\)/);
   assert.match(app,/function closePlaySeatPresetPanel\(\)/);
 });

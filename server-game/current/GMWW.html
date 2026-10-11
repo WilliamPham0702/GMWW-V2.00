@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.99</title>
-<link rel="stylesheet" href="style.css?v=3.99-group-actions-undo">
+<title>GMWW V3.100</title>
+<link rel="stylesheet" href="style.css?v=3.100-smart-seat">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
@@ -152,11 +152,7 @@
             <div><b>SEAT MẪU</b><small>Chạm vào sơ đồ dấu chấm để chọn vị trí</small></div>
             <button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button>
           </div>
-          <div class="play-seat-preset-shapes" role="group" aria-label="Hình dạng Seat">
-            <button type="button" data-play-seat-shape="circle" aria-pressed="true">Hình tròn</button>
-            <button type="button" data-play-seat-shape="diamond" aria-pressed="false">Hình thoi</button>
-            <button type="button" data-play-seat-shape="rectangle" aria-pressed="false">Chữ nhật</button>
-          </div>
+          <p class="play-seat-preset-auto" id="playSeatPresetAutoHint">Tự động chọn hình theo số người • Đống lửa là tâm</p>
           <div id="playSeatPresetGrid" class="play-seat-preset-grid" aria-label="Sơ đồ các Seat Mẫu"></div>
         </section>
 
@@ -826,10 +822,10 @@
     </div>
   </div>
 </div>
-<script src="village-layout.js?v=3.97-seat-mau"></script>
+<script src="village-layout.js?v=3.100-smart-seat"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
-<script src="app.js?v=3.99-group-actions-undo"></script>
+<script src="app.js?v=3.100-smart-seat"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

@@ -5110,3 +5110,15 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet[hid
  #start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll>button{min-width:94px;max-width:155px;font-size:11px}
  #start #playShell[data-step="battle"] #battleTargetCandidates{grid-template-columns:minmax(0,1fr)}
 }
+
+/* V3.99 — centered, automatic Seat Mẫu. Keep the existing swipeable Gọi Người row. */
+#playSeatPresetPanel .play-seat-preset-auto{
+  margin:0;padding:7px 9px;border:1px solid rgba(147,228,243,.23);border-radius:9px;
+  background:rgba(13,75,95,.45);font-size:10px;line-height:1.35;color:#bcecf2;text-align:center;
+}
+#playSeatPresetPanel .play-seat-preset-fire{
+  position:absolute;transform:translate(-50%,-50%);font-size:15px;line-height:1;
+  z-index:1;filter:drop-shadow(0 0 3px rgba(255,191,82,.6));pointer-events:none;
+}
+#playSeatPresetPanel .play-seat-preset-dot{z-index:2}
+#playSeatPresetPanel .play-seat-preset-card b{font-size:9.2px;letter-spacing:0;white-space:nowrap}
