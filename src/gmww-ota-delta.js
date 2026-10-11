@@ -712,7 +712,6 @@ export function selectVerifiedRuntimeV389Delta(manifest,installedVersion){
     if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
     selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
   }
-  if(manifest.runtime.files.length!==selected.length)return null;
   return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
     message:'V3.89: Bỏ sao chép, mở ChatGPT đúng cách trên iPhone; không tự tuyên bố đã gửi.'};
