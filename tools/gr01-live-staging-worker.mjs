@@ -60,6 +60,21 @@ export class Gr01LabDO {
 export default {
  async fetch(request, env) {
   const url = new URL(request.url);
+  if (url.pathname === '/verify-pitr' && request.method === 'POST') {
+   const { runId } = await request.json();
+   if (typeof runId !== 'string' || !/^[0-9a-f-]{36}$/.test(runId)) return json({ ok: false }, 400);
+   const stub = env.LAB.get(env.LAB.idFromName('gr01-source-' + runId));
+   try {
+    const snapshot = await (await stub.fetch('https://isolated/snapshot', { method: 'POST' })).json();
+    const entries = Object.entries(fixture()).map(([key, value]) => ({ key, value }))
+     .sort((a, b) => a.key < b.key ? -1 : 1);
+    const expectedDigest = await digest(entries), actualDigest = await digest(snapshot.entries);
+    return json({ ok: expectedDigest === actualDigest,
+     pitrRestored: expectedDigest === actualDigest,
+     expectedDigest, actualDigest, keyCount: snapshot.entries.length,
+     environment: 'isolated-cloudflare-sqlite-do', productionTouched: false });
+   } catch (e) { return json({ ok: false, error: String(e), productionTouched: false }, 503); }
+  }
   if (url.pathname !== '/run' || request.method !== 'POST') return json({ ok: false }, 404);
   const nonce = crypto.randomUUID();
   const id = label => env.LAB.get(env.LAB.idFromName('gr01-' + label + '-' + nonce));
@@ -86,19 +101,12 @@ export default {
      const operation = await send(source, '/restore-pitr', { bookmark: bookmarkResponse.bookmark });
      pitrError = 'schedule status ' + operation.status + ': ' + (await operation.text()).slice(0, 240);
     } catch (e) { pitrError = 'scheduled fetch interrupted: ' + String(e).slice(0, 180); }
-    for (let i = 0; i < 24; ++i) {
-     try {
-      const currentResponse = await send(source, '/snapshot');
-      const current = await currentResponse.json();
-      if (checksum === await digest(current.entries)) { pitrRestored = true; break; }
-      if (i === 23) pitrError = (pitrError || '') + '; final phase=' + String(current.entries.find(x => x.key === 'meta')?.value?.phase);
-     } catch (e) { if (i === 23) pitrError = (pitrError || '') + '; probe error=' + String(e).slice(0, 150); }
-     await new Promise(resolve => setTimeout(resolve, 600));
-    }
+    // Abort terminates all current-event DO stub requests. Verify via a separate
+    // incoming HTTP request so Cloudflare starts a new Durable Object session.
    } else pitrError = 'PITR bookmark unavailable';
-   const checks = { seed: seed.ok === true, snapshot: dryRun, restore: restore.ok === true, checksum: roundTrip, overwriteBlocked: blockedOverwrite, pitrSupported, pitrRestored };
+   const checks = { seed: seed.ok === true, snapshot: dryRun, restore: restore.ok === true, checksum: roundTrip, overwriteBlocked: blockedOverwrite, pitrSupported };
    return json({
-    ok: Object.values(checks).every(Boolean), checks, keyCount: after.entries.length,
+    ok: Object.values(checks).every(Boolean), checks, pitrPending: pitrSupported, pitrRunId: nonce, keyCount: after.entries.length,
     playerFixtures: 30, roleFixtures: 63, artifactFixtures: 44,
     sourceDigest: checksum, pitrError, environment: 'isolated-cloudflare-sqlite-do',
     productionTouched: false
