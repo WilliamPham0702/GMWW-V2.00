@@ -30,7 +30,7 @@ test('GM match screen uses separate toolbar and explicit OK before submitting ef
   const js=fs.readFileSync('server-game/current/app.js','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   assert.match(html,/id="playBattleTop"/);assert.match(html,/id="playBattleDock"/);assert.match(html,/id="battleConfirm"/);
-  assert.match(html,/battle-controls\.js/);assert.match(js,/function battleConfirm\(\)/);assert.match(js,/turnId:t\.id/);
+  assert.match(html,/battle-controls\.js/);assert.match(js,/function battleConfirm\(confirmed=false\)/);assert.match(js,/turnId:t\.id/);
   assert.match(js,/clientEventId:battleState\.nonce/);
   assert.match(css,/data-step="battle"/);
   assert.match(css,/is-battle-actor/);

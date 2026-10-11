@@ -41,7 +41,14 @@ try{
  const playRoomApi=async(path,options)=>{
   const body=JSON.parse(options.body);calls.push({path,body});
   if(path==='/turn'){const rt=playSceneRuntime.nightRuntime;rt.cursor=body.targetIndex;rt.currentId=rt.queue[rt.cursor].id;return {runtime:rt}}
-  if(path==='/interaction'){playSceneRuntime.artifactCycle.accepted=[{artifactId:body.artifactId,playerId:'member:'+body.actorId}];return {ok:true}}
+  if(path==='/battle-action'){
+    playSceneRuntime.artifactCycle.accepted=[{artifactId:body.artifactId,playerId:'member:'+body.actorId}];
+    playSceneRuntime.battleUndo={token:'undo-last',label:body.effectName,turnId:body.turnId};
+    return {ok:true,undoToken:'undo-last',targets:body.targetIds};
+  }
+  if(path==='/battle-undo'){
+    playSceneRuntime.artifactCycle.accepted=[];playSceneRuntime.battleUndo=null;return {ok:true,undone:true};
+  }
   throw new Error('unexpected path');
  };
  const playSyncRoom=async()=>{renderPlayBattle();return {}};
@@ -54,20 +61,26 @@ try{
  assert.equal(await page.locator('[data-battle-index="3"]').count(),1,'wake step is selectable exactly once');
  const artifact=page.locator('[data-battle-action]').filter({hasText:'Đá Đổi Vai Trò'});
  assert.match(await artifact.textContent(),/Đổi Vai Trò.*An/);
- // V3.98: the GM wolf owns the Info control; open its menu before tapping Info.
- assert.equal(await artifact.isVisible(),false);
- await page.evaluate(()=>battleToggleWolfMenu());
- assert.equal(await page.locator('#battleInfoToggle').isVisible(),true);
- await page.locator('#battleInfoToggle').click();
+ // V3.99: actions are always visible in the scrollable tray, not in the wolf Info panel.
  assert.equal(await artifact.isVisible(),true);
- await artifact.click();
- await page.locator('[data-battle-member="bob"]').click();
- await page.locator('[data-battle-member="carol"]').click();
- await page.locator('#battleConfirm').click();
- const sent=await page.evaluate(()=>calls.filter(x=>x.path==='/interaction').map(x=>x.body));
- assert.equal(sent.length,2);assert.equal(sent[0].artifactId,'stone');assert.equal(sent[0].actorId,'alice');assert.equal(sent[0].actionId,'swap');
- assert.deepEqual(sent[0].targetIds,['bob','carol']);assert.equal(sent[0].actionNonce,sent[1].actionNonce);
- assert.equal(await page.locator('[data-battle-action]').count(),1);assert.equal(await page.locator('[data-battle-action]').textContent(),'Soi');
+ assert.equal(await page.locator('#battleTargetSheet').isVisible(),false);
+ await artifact.dblclick();
+ assert.equal(await page.locator('#battleTargetSheet').isVisible(),true);
+ await page.locator('[data-battle-candidate="bob"]').click();
+ await page.locator('[data-battle-candidate="carol"]').click();
+ assert.match(await page.locator('#battleTargetPrompt').textContent(),/Đã chọn Bình, Chi/);
+ await page.locator('#battleTargetConfirm').click();
+ const sent=await page.evaluate(()=>calls.filter(x=>x.path==='/battle-action').map(x=>x.body));
+ assert.equal(sent.length,1);assert.equal(sent[0].artifactId,'stone');
+ assert.equal(sent[0].actorId,'alice');assert.equal(sent[0].actionId,'swap');
+ assert.deepEqual(sent[0].targetIds,['bob','carol']);
+ assert.equal(await page.locator('#battleTargetSheet').isVisible(),false);
+ assert.equal(await page.locator('[data-battle-action]').count(),1);
+ assert.equal(await page.locator('[data-battle-action]').textContent(),'Soi');
+ // The floating undo restores the last action plus the Artifact-use reservation.
+ await page.locator('#battleUndoButton').click();
+ assert.equal(await page.evaluate(()=>calls.filter(x=>x.path==='/battle-undo').length),1);
+ assert.equal(await page.locator('[data-battle-action]').count(),2);
  await page.locator('[data-battle-index="1"]').click();
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early');
  const shell=page.locator('#playShell');
@@ -79,6 +92,6 @@ try{
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'wake');
  assert.deepEqual(errors,[]);
  await page.screenshot({path:'/tmp/gmww-night-timeline-iphone-webkit.png',fullPage:true});
- console.log('iPhone-sized WebKit: role + Artifact names, owner, targets, confirmation, used filtering, countdown, timeline and swipe PASS');
+ console.log('iPhone-sized WebKit: scrolling actions, double-tap targets, atomic confirmation, undo, countdown and timeline PASS');
  await context.close();
 }finally{await browser.close()}

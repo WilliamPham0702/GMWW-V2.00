@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.98</title>
-<link rel="stylesheet" href="style.css?v=3.98-battle-float">
+<title>GMWW V3.99</title>
+<link rel="stylesheet" href="style.css?v=3.99-group-actions-undo">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
@@ -229,6 +229,21 @@
           <button id="battleClockButton" type="button" aria-label="Giữ và kéo để di chuyển đồng hồ" title="Kéo để di chuyển • Chạm đúp để đặt lại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
+        <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
+        <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
+          <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><small>Giữ và kéo lên Người Chơi · Nhấn hai lần để chọn mục tiêu</small></div>
+          <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, cuộn ngang"></div>
+        </section>
+        <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
+          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
+        </section>
+        <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
+          <header><b id="battleTargetTitle">CHỌN MỤC TIÊU</b><button id="battleTargetClose" type="button" aria-label="Đóng chọn mục tiêu">×</button></header>
+          <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
+          <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
+          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm">OK</button></footer>
+        </section>
+
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
             <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
@@ -244,7 +259,7 @@
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
             <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><button id="battleDetailsClose" type="button" aria-label="Đóng Thông Tin trận đấu">×</button></div>
-            <div id="battleActionBar" class="play-battle-actions" aria-label="Chọn hành động"></div>
+            <div class="battle-action-instruction">Hành động được hiển thị trong thanh cuộn phía dưới màn hình.</div>
             <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleCancel" type="button">HỦY</button><button id="battleConfirm" type="button">OK</button></div>
             <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
             <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
@@ -814,7 +829,7 @@
 <script src="village-layout.js?v=3.97-seat-mau"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
-<script src="app.js?v=3.98-battle-float"></script>
+<script src="app.js?v=3.99-group-actions-undo"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

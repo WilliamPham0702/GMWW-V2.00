@@ -36,7 +36,7 @@
     if(phase!=="night")return [{id:"start",kind:"start",label:"Bắt đầu Đêm 1",status:"active",active:true}];
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
-    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
+    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),displayNumber:["role","role-group"].includes(row?.kind)&&Number.isFinite(Number(row?.order))&&Number(row.order)>0?Number(row.order):i+1,status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
     if(!queue.some(row=>row?.kind==="village-wakeup"))rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
@@ -78,6 +78,23 @@
       return (Array.isArray(turn.actions)?turn.actions:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true));
     if(turn.kind==="role")
       return [...build(turn,false),...(Array.isArray(turn.artifacts)?turn.artifacts:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true))];
+    if(turn.kind==="role-group"){
+      const roles=Array.isArray(turn.roles)?turn.roles:[],dedup=new Map(),art=[];
+      for(const role of roles){
+        for(const action of build(role,false)){
+          // Same visible function + targeting/effect contract = one group action.
+          // Distinct powers must remain distinct even when names look similar.
+          const key=JSON.stringify([folded(action.name),action.type,action.targetCount,
+            action.noSelf,action.allowDead,action.noTarget,(action.effectIds||[]).slice().sort()]);
+          const old=dedup.get(key);
+          if(old){old.actorIds=[...new Set([...old.actorIds,...action.actorIds])];old.roleIds=[...new Set([...(old.roleIds||[]),role.roleId])];}
+          else dedup.set(key,{...action,roleIds:[String(role.roleId||"")]});
+        }
+        for(const owner of Array.isArray(role.artifacts)?role.artifacts:[])
+          if(!alreadyUsed(owner))art.push(...build(owner,true));
+      }
+      return [...dedup.values(),...art];
+    }
     if(turn.kind==="early-artifact"||turn.kind==="artifact-main")
       return alreadyUsed(turn)?[]:build(turn,true);
     return [];

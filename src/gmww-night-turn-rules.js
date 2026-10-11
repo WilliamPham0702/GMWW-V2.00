@@ -34,3 +34,27 @@ export function timelineDisplaySteps(queue){
   const turns=withoutEarly.filter(step=>step?.kind!=="wolf-introduction");
   return [...(intro.length?intro:[{kind:"wolf-introduction",label:"Bầy Sói"}]),{kind:"early-artifact-window",label:"Artifact đầu ván",actions:early},...turns,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
 }
+
+/** One waking turn per configured order, preserving every owner and role action.
+ * This is a transient scheduling projection, never a change to saved templates.
+ */
+export function groupConfiguredRoleTurns(roles){
+  const ordered=new Map();
+  for(const role of Array.isArray(roles)?roles:[]){
+    const key=Number.isFinite(Number(role?.order))?Number(role.order):9999;
+    const rows=ordered.get(key)||[];rows.push(role);ordered.set(key,rows);
+  }
+  return [...ordered.entries()].sort((a,b)=>a[0]-b[0]).map(([order,rows])=>{
+    if(rows.length===1)return rows[0];
+    const uniq=xs=>[...new Set(xs.map(String).filter(Boolean))];
+    return {
+      id:"role-group:"+order,kind:"role-group",order,
+      label:uniq(rows.map(row=>row.label)).join(" + "),
+      roles:rows,
+      loginIds:uniq(rows.flatMap(row=>row.loginIds||[])),
+      playerIds:uniq(rows.flatMap(row=>row.playerIds||[])),
+      durationSec:Math.max(...rows.map(row=>Math.max(0,Number(row.durationSec)||0))),
+      status:"pending"
+    };
+  });
+}
