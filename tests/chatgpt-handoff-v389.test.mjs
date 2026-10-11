@@ -92,7 +92,7 @@ test('V3.88 to V3.89 overlay is signed, exact origin and fail closed, no storage
   const extended=make();extended.runtime.files.push({path:'additional-asset.png',sha256:'a'.repeat(64)});
   assert.equal(selectVerifiedRuntimeV389Delta(extended,'3.88')?.runtime.files.length,3);
   assert.match(worker,/VERSION="V3\.89"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-389"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-390"/);
   for(const payload of ['versioned','manifest'])
     assert.ok(worker.includes('selectVerifiedRuntimeV389Delta('+payload+',url.searchParams.get("current"))'));
 });
