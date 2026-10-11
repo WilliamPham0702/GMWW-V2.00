@@ -14,7 +14,7 @@ test('Vào Trận swaps both menus without altering pre-game step menus',()=>{
 test('Back button shows just one icon and keeps accessible label',()=>{
   const html=get('server-game/current/GMWW.html');
   const back=html.match(/<button id="battleBack"[^>]*>[\s\S]*?<\/button>/)?.[0]||'';
-  assert.match(back,/aria-label="Quay về Trang Chủ, giữ trận đang chơi"/);
+  assert.match(back,/aria-label="Lượt trước"/);
   assert.match(back,/<span aria-hidden="true">←<\/span>/);
   assert.doesNotMatch(back,/>Quay về</);
   assert.ok(html.includes('battle-controls.js?v=battle-391'));

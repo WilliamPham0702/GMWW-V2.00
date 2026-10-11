@@ -3163,14 +3163,23 @@ function battleTickCountdown(){
     const duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'');
     if(Number.isFinite(duration)&&duration>0)seconds=Number.isFinite(started)?Math.max(0,Math.ceil(duration-(serverNow-started)/1000)):Math.ceil(duration);
   }
-  // Keep a local monotonic countdown for this exact turn: server polling can
-  // refresh runtime timestamps without advancing the turn. Never count upward.
-  const tickKey=[playSceneRuntime.room?.matchId||'',phase,playSceneState.night||0,rt?.cursor??'',rt?.currentId||'',phase==='day'?playSceneRuntime.room?.cycleStartedAt||'':rt?.queue?.[rt?.cursor]?.startedAt||''].join(':');
+  // Anchor the local countdown to a stable turn identity. A server refresh must
+  // never restart the countdown or increase the remaining time.
+  const tickKey=[playSceneRuntime.room?.matchId||'',phase,playSceneState.night||0,
+    rt?.cursor??'',rt?.currentId||'',phase==='day'?playSceneRuntime.room?.cycleStartedAt||'':''].join(':');
   const now=performance.now();
-  if(battleState.countdownKey!==tickKey){battleState.countdownKey=tickKey;battleState.countdownBase=seconds;battleState.countdownAt=now;}
-  else if(Number.isFinite(seconds)&&Number.isFinite(battleState.countdownBase)){
-    const local=Math.max(0,Math.ceil(battleState.countdownBase-(now-battleState.countdownAt)/1000));
-    seconds=Math.min(seconds,local);
+  if(battleState.countdownKey!==tickKey){
+    battleState.countdownKey=tickKey;
+    battleState.countdownBase=Number.isFinite(seconds)?seconds:null;
+    battleState.countdownAt=now;
+  }else{
+    if(Number.isFinite(battleState.countdownBase)){
+      const local=Math.max(0,Math.ceil(battleState.countdownBase-(now-battleState.countdownAt)/1000));
+      seconds=Number.isFinite(seconds)?Math.min(seconds,local):local;
+    }else if(Number.isFinite(seconds)){
+      battleState.countdownBase=seconds;
+      battleState.countdownAt=now;
+    }
   }
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;

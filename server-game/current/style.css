@@ -4908,3 +4908,9 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
 #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton #battleCountdown{
   font-size:clamp(13px,3.6vw,16px);letter-spacing:0;font-weight:900;
 }
+
+/* Battle clock: same footprint as Auto GM, including narrow iPhones. */
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top{grid-template-columns:54px minmax(0,1fr) 54px!important;gap:8px}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton{width:54px!important;min-width:54px!important;max-width:54px!important;height:50px;box-sizing:border-box}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton #battleCountdown{font-size:15px!important;letter-spacing:0!important;font-variant-numeric:tabular-nums}
+@media(max-width:360px){#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top{grid-template-columns:48px minmax(0,1fr) 48px!important;gap:5px}#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton{width:48px!important;min-width:48px!important;max-width:48px!important}#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton #battleCountdown{font-size:13px!important}}
