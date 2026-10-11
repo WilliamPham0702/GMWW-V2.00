@@ -3146,7 +3146,7 @@ async function advancePlayPhase(){
 }
 
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
-const battleState={key:'',actionId:'',targets:[],roster:false,details:false,quickType:'',timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,ignoreClick:0,impacts:new Map()};
+const battleState={key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,ignoreClick:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleActions=()=>{const turn=battleTurn();return battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state,playSceneRuntime.artifactCycle?.accepted)||[];};
@@ -3229,11 +3229,11 @@ function battleMarkPlayers(){
 function renderPlayBattle(){
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
-  if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.quickType='';return}
+  if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
-  if(battleState.key!==key){battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.timelineSig='';battleState.actionSig=''}
+  if(battleState.key!==key){battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status]));
   if(timeline&&signature!==battleState.timelineSig){battleState.timelineSig=signature;
@@ -3272,11 +3272,17 @@ function renderPlayBattle(){
     const title=phase==='night'&&rt?.completed?'Làng ơi dậy đi':phase==='day'?'Đêm tiếp theo':phase==='lobby'?'Bắt đầu Đêm 1':'Tiếp tục';
     next.title=title;next.setAttribute('aria-label',title);next.innerHTML='<span aria-hidden="true">›</span>';
   }
+  const wolfMenu=document.getElementById('battleWolfMenu'),wolfToggle=document.getElementById('battleWolfToggle');
+  if(wolfMenu)wolfMenu.hidden=!battleState.wolfOpen;
+  if(wolfToggle){wolfToggle.setAttribute('aria-expanded',String(battleState.wolfOpen));wolfToggle.setAttribute('aria-label',battleState.wolfOpen?'Đóng menu chó sói GM':'Mở menu chó sói GM');wolfToggle.classList.toggle('is-open',battleState.wolfOpen)}
+  const clockMenu=document.getElementById('battleClockPopover'),clockToggle=document.getElementById('battleClockButton');
+  if(clockMenu)clockMenu.hidden=!battleState.clockOpen;
+  if(clockToggle){clockToggle.setAttribute('aria-expanded',String(battleState.clockOpen));clockToggle.classList.toggle('is-open',battleState.clockOpen)}
   const details=document.getElementById('battleDetails'),info=document.getElementById('battleInfoToggle');
   if(details)details.hidden=!battleState.details;
   if(info){info.setAttribute('aria-expanded',String(battleState.details));info.classList.toggle('is-on',battleState.details)}
   const auto=document.getElementById('battleGMAuto'),audio=document.getElementById('battleGMAudio');
-  if(auto){auto.textContent='↻ Auto GM '+(playSceneState.autoGM?'BẬT':'TẮT');auto.setAttribute('aria-pressed',String(playSceneState.autoGM));auto.classList.toggle('is-off',!playSceneState.autoGM)}
+  if(auto){auto.setAttribute('aria-pressed',String(playSceneState.autoGM));auto.setAttribute('aria-label',playSceneState.autoGM?'Auto GM đang bật':'Auto GM đang tắt');auto.title=playSceneState.autoGM?'Auto GM BẬT':'Auto GM TẮT';auto.classList.toggle('is-off',!playSceneState.autoGM)}
   if(audio){audio.textContent=(playAudioMuted()?'🔇 Audio TẮT':'🔊 Audio');audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.classList.toggle('is-off',playAudioMuted())}
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
     const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy}
@@ -3302,14 +3308,27 @@ async function battleConfirm(){
 }
 function battleToggleDetails(force){
   battleState.details=typeof force==='boolean'?force:!battleState.details;
+  if(battleState.details){battleState.wolfOpen=false;battleState.clockOpen=false}
   if(!battleState.details){battleState.roster=false;battleState.quickType=''}
+  renderPlayBattle();
+}
+function battleToggleWolfMenu(){
+  if(playSceneState.step!=='battle')return;
+  battleState.wolfOpen=!battleState.wolfOpen;
+  if(battleState.wolfOpen){battleState.details=false;battleState.roster=false;battleState.quickType='';battleState.clockOpen=false}
+  renderPlayBattle();
+}
+function battleToggleClockPopover(){
+  if(playSceneState.step!=='battle')return;
+  battleState.clockOpen=!battleState.clockOpen;
+  if(battleState.clockOpen){battleState.wolfOpen=false;battleState.details=false;battleState.roster=false;battleState.quickType=''}
   renderPlayBattle();
 }
 function battleQuickSelect(type){
   if(battleState.busy||playSceneRuntime.busy||playSceneState.step!=='battle'||!isLivePlayRoom())return;
   battleState.quickType=battleState.quickType===type?'':type;
   battleState.actionId='';battleState.targets=[];battleState.nonce='';
-  battleState.details=!!battleState.quickType; battleState.roster=!!battleState.quickType;
+  battleState.details=!!battleState.quickType; battleState.roster=!!battleState.quickType; battleState.wolfOpen=false; battleState.clockOpen=false;
   renderPlayBattle();
 }
 async function battleQuickApply(loginId){
@@ -3338,7 +3357,20 @@ function initBattleControls(){
   document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
-  document.getElementById('battleClockButton')?.addEventListener('click',()=>battleToggleDetails(true));
+  document.getElementById('battleClockButton')?.addEventListener('click',battleToggleClockPopover);
+  document.getElementById('battleWolfToggle')?.addEventListener('click',battleToggleWolfMenu);
+  document.getElementById('battleWolfClose')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle()});
+  document.addEventListener('pointerdown',event=>{
+    if(playSceneState.step!=='battle'||(!battleState.wolfOpen&&!battleState.clockOpen))return;
+    if(event.target.closest('#battleWolfToggle,#battleWolfMenu,#battleClockButton,#battleClockPopover'))return;
+    battleState.wolfOpen=false;battleState.clockOpen=false;renderPlayBattle();
+  },{passive:true});
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&playSceneState.step==='battle'&&(battleState.wolfOpen||battleState.clockOpen)){
+      battleState.wolfOpen=false;battleState.clockOpen=false;renderPlayBattle();
+      document.getElementById('battleWolfToggle')?.focus();
+    }
+  });
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
