@@ -90,6 +90,16 @@ test('invalid multi-target selection leaves Artifact unused',async()=>{
   assert.equal((await result(await h.act({targetIds:['bob','missing']}))).error,'INVALID_ARTIFACT_TARGET');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
 });
+test('Artifact card sanitizer retains explicit target restrictions for the server',()=>{
+  const sanitizer=source.slice(source.indexOf('function sanitizePlayerArtifactCard('),source.indexOf('function privateArtifact('));
+  const sanitize=vm.runInNewContext(sanitizer+'; sanitizePlayerArtifactCard',{defaultPriorityFirst});
+  const result=sanitize({name:'Tráng Gương',actions:[{id:'copy',targetCount:2,noSelf:true,allowDead:false},{id:'legacy'}]});
+  assert.equal(result.actions[0].targetCount,2);
+  assert.equal(result.actions[0].noSelf,true);
+  assert.equal(result.actions[0].allowDead,false);
+  assert.equal(result.actions[1].targetCount,undefined);
+  assert.equal(result.actions[1].noSelf,undefined);
+});
 test('configured Artifact target count is enforced before consuming stock',async()=>{
   const h=harness();h.data.get('artifact:alice').artifactCard.actions[0].targetCount=2;
   await h.jump('early-artifact-window');
