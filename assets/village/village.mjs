@@ -6,7 +6,7 @@ import {startVillagePerformanceReporter} from "./village-performance.mjs";
 import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character-renderer.mjs?v=ce5";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
-export function positions(count){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count)}
+export function positions(count,shape=""){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count,shape)}
 export function safeText(v){return String(v??"").slice(0,80)}
 // A disconnected participant keeps presence/ready data, but does not need an OFFLINE · READY chip.
 export function visibleVillagePlayerStatus(data,{moving=false,gm=false}={}){
@@ -73,7 +73,7 @@ if(game){
     }catch{return "";}
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
-  let night=false,selectedId=null,count=12,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
+  let night=false,selectedId=null,count=12,seatLayout="",setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
   const mountedPlayerNodes=new Map(),mountedEmptySeatNodes=new Map();
   let sitWakeTimer=0;
@@ -94,7 +94,7 @@ if(game){
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
     if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
-    const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)))[sid-1]:null;
+    const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout)[sid-1]:null;
     return seat||spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
@@ -208,7 +208,7 @@ if(game){
     cancelAnimationFrame(moveFrame);moveFrame=0;
     if(sitWakeTimer){clearTimeout(sitWakeTimer);sitWakeTimer=0}
     villageRenderMetrics.renders++;
-    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount),seatMap=new Map(),unseated=[];
+    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount,seatLayout),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     const desiredPlayers=[];roster.replaceChildren();
     // Empty leaves are optional; occupied seats must always render their characters.
@@ -293,7 +293,7 @@ if(game){
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase(),nextSetup=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},nextCount=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));
     
-    const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
+    seatLayout=layout.normalizeSeatLayout(room.seatLayout);const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",room.playerSceneMode==="battle");
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
@@ -313,7 +313,7 @@ if(game){
     window.addEventListener("message",event=>{
       if(event.origin!==window.location.origin||event.source!==window.parent)return;
       if(event.data?.type==="gmww:village-state")applyExternalState(event.data);
-      else if(event.data?.type==="gmww:seat-position-request"){const seatId=Number(event.data.seatId||0),ps=positions(Math.max(1,Math.min(30,Number(count)||12))),p=ps[seatId-1];if(p)try{window.parent.postMessage({type:"gmww:seat-position",seatId,x:p.x,y:p.y},window.location.origin)}catch{}}
+      else if(event.data?.type==="gmww:seat-position-request"){const seatId=Number(event.data.seatId||0),ps=positions(Math.max(1,Math.min(30,Number(count)||12)),seatLayout),p=ps[seatId-1];if(p)try{window.parent.postMessage({type:"gmww:seat-position",seatId,x:p.x,y:p.y},window.location.origin)}catch{}}
     });
     startVillagePerformanceReporter();
     try{window.parent.postMessage({type:"gmww:village-ready"},window.location.origin)}catch{}
@@ -328,7 +328,7 @@ if(game){
       roomCode,
       visibility:()=>!document.hidden,
       onState:state=>{
-        all=mapPublicPlayers(state);const room=state.room||{};count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
+        all=mapPublicPlayers(state);const room=state.room||{};seatLayout=layout.normalizeSeatLayout(room.seatLayout);count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
         if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
         render();if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
       },
