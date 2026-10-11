@@ -48,7 +48,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -126,7 +126,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
-      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:true,roomMode,seatMoveMode,seatCount,gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
+      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:true,roomMode,seatMoveMode,seatCount,seatLayout:"",gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);if(cfg)await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(b?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(b.cardBackImage));return j({ok:true,room:publicRoom(meta),gmToken},201);
     }
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
@@ -920,12 +920,29 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},phase=String(meta.phase||"lobby").toLowerCase();
     if(["running","started","game","playing"].includes(phase))return j({ok:false,error:"ROOM_SETTINGS_LOCKED",message:"Không đổi chế độ hoặc số ghế khi ván đang chạy."},409);
-    const roomMode=body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode),seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
+    const roomMode=body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
+    const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
+    const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):normalizeSeatLayout(meta.seatLayout);
+    if(hasSeatLayout&&String(body.seatLayout||'')!==seatLayout)return j({ok:false,error:"INVALID_SEAT_LAYOUT"},400);
     const maxOccupied=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
     if(requested<maxOccupied)return j({ok:false,error:"SEAT_COUNT_BELOW_OCCUPIED",message:"Không thể giảm số ghế thấp hơn vị trí đang có người ngồi.",maxOccupied},409);
+    if(seatLayout&&requested<Object.keys(players).length)return j({ok:false,error:"SEAT_TEMPLATE_TOO_SMALL",message:"Mẫu Seat ít hơn số người đã vào phòng."},409);
+    if(meta.seatsLocked&&(requested!==Number(meta.seatCount)||seatLayout!==normalizeSeatLayout(meta.seatLayout)))return j({ok:false,error:"SEATS_LOCKED",message:"Mở khóa vị trí trước khi đổi Seat Mẫu."},409);
+    const reflow=seatLayout!==normalizeSeatLayout(meta.seatLayout)||requested!==Number(meta.seatCount);
     if(seatMoveMode==="instant"&&normalizeSeatMoveMode(meta.seatMoveMode)==="walk")for(const p of Object.values(players))clearPlayerMovement(p);
-    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("players",players);await this.ctx.storage.put("meta",meta);
+    if(reflow){
+      const locations=villageLayout.positions(requested,seatLayout);
+      for(const p of Object.values(players)){
+        const seatId=normalizeSeatId(p?.seatId,requested);
+        if(!seatId)continue;
+        const point=locations[seatId-1];if(!point)continue;
+        clearPlayerMovement(p);p.positionX=point.x;p.positionY=point.y;
+      }
+    }
+    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;
+    meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
+    await this.ctx.storage.put("players",players);await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers});
     return j({ok:true,room,players:publicPlayers})
   }
@@ -957,7 +974,10 @@ export class RoomDurableObject extends DurableObject {
         else return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+seatId+" đã có "+String(occupied.displayName||"người khác")+". Chọn đổi chỗ hoặc giải phóng ghế trước.",seatId,occupant:publicPlayer(occupied)},409);
       }
     }
-    player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);players[participantId]=player;await this.ctx.storage.put("players",players);
+    player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);
+    if(seatId&&normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(meta.seatCount,meta.seatLayout)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
+    if(displaced&&normalizeSeatLayout(meta.seatLayout)){const record=Object.values(players).find(p=>p.participantId===displaced.participantId);if(record?.seatId){const point=villageLayout.positions(meta.seatCount,meta.seatLayout)[record.seatId-1];if(point){record.positionX=point.x;record.positionY=point.y}}}
+    players[participantId]=player;await this.ctx.storage.put("players",players);
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatUpdated:participantId});
     return j({ok:true,room,player:publicPlayer(player),displaced,players:publicPlayers})
@@ -976,7 +996,9 @@ export class RoomDurableObject extends DurableObject {
     const shuffledPlayers=secureShuffle(remaining),assigned=[];
     for(let index=0;index<shuffledPlayers.length;index++){
       const [participantId,player]=shuffledPlayers[index],seatId=free[index];
-      player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);players[participantId]=player;assigned.push({participantId,seatId});
+      player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);
+      if(normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(seatCount,meta.seatLayout)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
+      players[participantId]=player;assigned.push({participantId,seatId});
     }
     await this.ctx.storage.put("players",players);meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatsRandomized:true,assigned});
@@ -1415,7 +1437,7 @@ export class RoomDurableObject extends DurableObject {
 
     if(body?.seatId!==null)return j({ok:false,error:"GM_SEAT_ASSIGNMENT_REQUIRED",message:"Vị trí do GM xếp. Người chơi không thể tự đăng ký ghế."},403);
     const conflict=seatClaimConflict(players,id,seatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Vị trí đã có người chọn."},409);
-    p.gameCharacterId=gameCharacterId;p.seatId=seatId;p.ready=p.reservedByGM===true;clearPlayerMovement(p);if(seatId){const point=villageLayout.positions(seatCount)[seatId-1];p.positionX=point.x;p.positionY=point.y;}p.lastHeartbeatAt=Date.now();p.lastSeenAt=new Date().toISOString();players[id]=p;await this.ctx.storage.put("players",players);
+    p.gameCharacterId=gameCharacterId;p.seatId=seatId;p.ready=p.reservedByGM===true;clearPlayerMovement(p);if(seatId){const point=villageLayout.positions(seatCount,meta.seatLayout)[seatId-1];p.positionX=point.x;p.positionY=point.y;}p.lastHeartbeatAt=Date.now();p.lastSeenAt=new Date().toISOString();players[id]=p;await this.ctx.storage.put("players",players);
     meta.updatedAt=p.lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,setupUpdated:id});
     return j({ok:true,room,player:publicPlayer(p),players:publicPlayers})
@@ -1433,7 +1455,7 @@ export class RoomDurableObject extends DurableObject {
       if(Number(p.seatId||0)===targetSeatId)return j({ok:true,already:true,room:publicRoom(meta),player:publicPlayer(p),players:Object.values(players).map(publicPlayer)});
       const conflict=seatClaimConflict(players,id,targetSeatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+targetSeatId+" đã có người chọn.",seatId:targetSeatId,occupant:publicPlayer(conflict.player)},409);
     }
-    const now=Date.now(),fallback=villageLayout.spawn(id),from=villageLayout.clampPoint(currentMovementPosition(p,now,fallback.x,fallback.y).x,currentMovementPosition(p,now,fallback.x,fallback.y).y),autoMotionPhase=body?.autoMotionPhase==="gather"?"gather":body?.autoMotionPhase==="roam"?"roam":null,to=targetSeatId?villageLayout.positions(seatCount)[targetSeatId-1]:autoMotionPhase==="gather"?villageAutoPoint(id,Math.floor(now/1000),villageLayout):villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(450,Math.min(4200,Math.trunc(Number(body?.durationMs)||distance*42||650))),moveId=String(body?.moveId||crypto.randomUUID()).slice(0,120);
+    const now=Date.now(),fallback=villageLayout.spawn(id),from=villageLayout.clampPoint(currentMovementPosition(p,now,fallback.x,fallback.y).x,currentMovementPosition(p,now,fallback.x,fallback.y).y),autoMotionPhase=body?.autoMotionPhase==="gather"?"gather":body?.autoMotionPhase==="roam"?"roam":null,to=targetSeatId?villageLayout.positions(seatCount,meta.seatLayout)[targetSeatId-1]:autoMotionPhase==="gather"?villageAutoPoint(id,Math.floor(now/1000),villageLayout):villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(450,Math.min(4200,Math.trunc(Number(body?.durationMs)||distance*42||650))),moveId=String(body?.moveId||crypto.randomUUID()).slice(0,120);
     p.positionX=from.x;p.positionY=from.y;p.moveId=moveId;p.moveFromX=from.x;p.moveFromY=from.y;p.moveToX=to.x;p.moveToY=to.y;p.moveStartedAt=now;p.moveDurationMs=duration;p.moveTargetSeatId=targetSeatId;p.movementStatus="moving";p.autoMotionPhase=autoMotionPhase;p.villageActivity=autoMotionPhase==="gather"?"roaming":autoMotionPhase==="roam"?"roaming":"moving";p.sitStartedAt=null;p.sitUntil=null;p.ready=p.reservedByGM===true;p.lastHeartbeatAt=now;p.lastSeenAt=new Date(now).toISOString();players[id]=p;
     await this.ctx.storage.put("players",players);meta.updatedAt=p.lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"player_move",room,player:publicPlayer(p),players:publicPlayers,serverTime:Date.now()});
@@ -2057,6 +2079,7 @@ function normalizeVillageCoord(v,fallback=50){const n=Number(v);return Number.is
 function currentMovementPosition(p,now=Date.now(),fallbackX=50,fallbackY=78){if(p?.movementStatus==='moving'&&p?.moveStartedAt&&p?.moveDurationMs)return villageLayout.interpolate(p,now);return{x:normalizeVillageCoord(p?.positionX,fallbackX),y:normalizeVillageCoord(p?.positionY,fallbackY)}}
 function clearPlayerMovement(p,{keepPosition=false}={}){if(!p)return p;if(!keepPosition){const pos=currentMovementPosition(p);p.positionX=pos.x;p.positionY=pos.y}p.moveId=null;p.moveFromX=null;p.moveFromY=null;p.moveToX=null;p.moveToY=null;p.moveStartedAt=null;p.moveDurationMs=null;p.moveTargetSeatId=null;p.movementStatus="idle";p.autoMotionPhase=null;p.villageActivity="idle";p.sitStartedAt=null;p.sitUntil=null;return p}
 function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
+function normalizeSeatLayout(shape){return villageLayout.normalizeSeatLayout(shape)}
 function normalizeSeatId(v,seatCount){const n=Math.trunc(Number(v));return Number.isFinite(n)&&n>=1&&n<=normalizeSeatCount(seatCount)?n:null}
 function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:""}
 function activeGameCharacterId(v,seed=""){const id=normalizeGameCharacterId(v);if(id)return id;const text=String(seed||"");let h=0;for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))>>>0;return"character-"+String((h%GAME_CHARACTER_COUNT)+1).padStart(2,"0")}
@@ -2094,7 +2117,7 @@ function normalizeLoginId(v){return String(v||"").trim().toLowerCase()}function 
   const stage=String(m?.gmStage||"room");
   return ["room","seats","game","roles","deal"].includes(stage)?stage:"room";
 }
-function publicRoom(m){return{gmStage:roomUiStage(m),gmStageRevision:Number(m.gmStageRevision||0),code:m.code,roomName:m.roomName||("Phòng "+m.code),matchId:m.matchId||null,matchRevision:Number(m.matchRevision||0),deliveryVersion:Number(m.deliveryVersion||0),resetVersion:Number(m.resetVersion||0),status:m.status,phase:m.phase||"lobby",locked:!!m.locked,seatsLocked:!!m.seatsLocked,enabled:m.enabled!==false,autoGM:m.autoGM!==false,roomMode:normalizeRoomMode(m.roomMode),seatMoveMode:normalizeSeatMoveMode(m.seatMoveMode),seatCount:normalizeSeatCount(m.seatCount,Number(m.playerCount||0)||12),gameName:m.gameName||"",playerCount:Number(m.playerCount||0),cycleKey:m.cycleKey||null,cyclePhase:m.cyclePhase||null,cycleNight:Number(m.cycleNight||0),cycleStartedAt:m.cycleStartedAt||null,roleDeliveredAt:m.roleDeliveredAt||null,startedAt:m.startedAt||null,endedAt:m.endedAt||null,winnerFaction:m.winnerFaction||null,winnerLabel:m.winnerLabel||null,resultVersion:Number(m.resultVersion||0),deletedAt:m.deletedAt||null,createdAt:m.createdAt,updatedAt:m.updatedAt}}function publicPlayer(p){
+function publicRoom(m){return{gmStage:roomUiStage(m),gmStageRevision:Number(m.gmStageRevision||0),code:m.code,roomName:m.roomName||("Phòng "+m.code),matchId:m.matchId||null,matchRevision:Number(m.matchRevision||0),deliveryVersion:Number(m.deliveryVersion||0),resetVersion:Number(m.resetVersion||0),status:m.status,phase:m.phase||"lobby",locked:!!m.locked,seatsLocked:!!m.seatsLocked,enabled:m.enabled!==false,autoGM:m.autoGM!==false,roomMode:normalizeRoomMode(m.roomMode),seatMoveMode:normalizeSeatMoveMode(m.seatMoveMode),seatCount:normalizeSeatCount(m.seatCount,Number(m.playerCount||0)||12),seatLayout:normalizeSeatLayout(m.seatLayout),gameName:m.gameName||"",playerCount:Number(m.playerCount||0),cycleKey:m.cycleKey||null,cyclePhase:m.cyclePhase||null,cycleNight:Number(m.cycleNight||0),cycleStartedAt:m.cycleStartedAt||null,roleDeliveredAt:m.roleDeliveredAt||null,startedAt:m.startedAt||null,endedAt:m.endedAt||null,winnerFaction:m.winnerFaction||null,winnerLabel:m.winnerLabel||null,resultVersion:Number(m.resultVersion||0),deletedAt:m.deletedAt||null,createdAt:m.createdAt,updatedAt:m.updatedAt}}function publicPlayer(p){
   const now=Date.now(),hb=Number(p?.lastHeartbeatAt||0)||Date.parse(p?.lastSeenAt||"")||0,online=hb>0&&(now-hb)<=ROOM_PLAYER_TTL,view=roomPlayerPresence(p,now);
   return{participantId:p.participantId,kind:p.kind,loginId:p.loginId||null,displayName:p.displayName,avatarId:p.avatarId,gameCharacterId:activeGameCharacterId(p.gameCharacterId,p.loginId||p.participantId),seatId:Number(p.seatId||0)||null,setupComplete:!!activeGameCharacterId(p.gameCharacterId,p.loginId||p.participantId)&&Number(p.seatId||0)>0,positionX:view.positionX==null?null:normalizeVillageCoord(view.positionX),positionY:view.positionY==null?null:normalizeVillageCoord(view.positionY),movementStatus:view.movementStatus==="moving"?"moving":"idle",characterAnimation:characterStateFromPlayer(p),villageActivity:String(view.villageActivity||"idle"),sitStartedAt:Number(view.sitStartedAt||0)||null,sitUntil:Number(view.sitUntil||0)||null,moveId:view.moveId||null,moveFromX:view.moveFromX==null?null:normalizeVillageCoord(view.moveFromX),moveFromY:view.moveFromY==null?null:normalizeVillageCoord(view.moveFromY),moveToX:view.moveToX==null?null:normalizeVillageCoord(view.moveToX),moveToY:view.moveToY==null?null:normalizeVillageCoord(view.moveToY),moveStartedAt:Number(view.moveStartedAt||0)||null,moveDurationMs:Number(view.moveDurationMs||0)||null,moveTargetSeatId:Number(view.moveTargetSeatId||0)||null,online,ready:!!p.ready,reservedByGM:p.reservedByGM===true,joinedAt:p.joinedAt,lastSeenAt:p.lastSeenAt,lastHeartbeatAt:hb||null}
 }
