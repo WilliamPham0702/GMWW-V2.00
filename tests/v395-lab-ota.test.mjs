@@ -18,9 +18,9 @@ test('Lab OTA fails closed for unexpected base, modified url, missing file or de
   const z=sample();z.runtime.files[0].url='https://invalid.example';assert.equal(selectVerifiedRuntimeV395Delta(z,'3.94'),null);
 });
 
-test('Worker publishes V3.96 to both OTA manifest paths and retains shell V3.17',async()=>{
+test('Worker publishes V3.97 to both OTA manifest paths and retains shell V3.17',async()=>{
   const fs=await import('node:fs');
   const worker=fs.readFileSync('src/index.js','utf8');
-  assert.ok(worker.includes('VERSION="V3.96",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-396"'));
+  assert.ok(worker.includes('VERSION="V3.97",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-397"'));
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
 });
