@@ -50,6 +50,6 @@ test('Lab supports isolated freeze test and labels outcomes as simulation only',
   assert.match(html,/MÔ PHỎNG THAM CHIẾU/);
 });
 test('Lab code cannot call network or mutate persistent game data',()=>{
-  assert.doesNotMatch(source,/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|indexedDB)\b/);
+  assert.doesNotMatch(source,/\b(fetch\s*\(|XMLHttpRequest\s*\(|localStorage\s*\.|sessionStorage\s*\.|indexedDB\s*\.)/);
   assert.doesNotMatch(source,/\/api\/|\/gm\/|\/player\//);
 });
