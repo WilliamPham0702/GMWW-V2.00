@@ -489,7 +489,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async sceneSettingsPut(body){
     const isImage=v=>v===null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
-    if(!body||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
+    if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
     const previous=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0,day:null,night:null};
     const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
     const next={revision:previous.revision+1,day:body.day??previous.day,night:body.night??previous.night,updatedAt:new Date().toISOString()};
