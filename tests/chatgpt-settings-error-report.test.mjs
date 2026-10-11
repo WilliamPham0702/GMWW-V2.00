@@ -75,16 +75,16 @@ test('GM may add optional free-text instructions to the automatic ChatGPT report
   assert.match(form,/maxlength="1200"/);
   assert.match(form,/for="gmwwReportExtraRequest"/);
   assert.ok(form.indexOf('id="gmwwReportExtraRequest"')<form.indexOf('id="gmwwReportToChatGPT"'));
-  assert.doesNotMatch(form,/id="gmwwReportExtraRequest"[^>]*\\breadonly\\b/);
+  assert.doesNotMatch(form,/id="gmwwReportExtraRequest"[^>]*\breadonly\b/);
   const css=fs.readFileSync('server-game/current/style.css','utf8');
-  assert.match(css,/\\.gmww-report-input textarea:focus-visible/);
+  assert.match(css,/\.gmww-report-input textarea:focus-visible/);
 
   const listeners={};
   const makeControl=(id,extra={})=>({
     ...extra,
     addEventListener(type,fn){listeners[id+':'+type]=fn}
   });
-  const manual=makeControl('manual',{value:'  Khi Phát Vai không hiện lá Vai Trò.\\r\\nBổ sung thông báo tiến độ cho GM.  '});
+  const manual=makeControl('manual',{value:'  Khi Phát Vai không hiện lá Vai Trò.\r\nBổ sung thông báo tiến độ cho GM.  '});
   const preview={value:''},box={hidden:true},link={href:''},status={textContent:''};
   const controls={
     gmwwReportExtraRequest:manual,
@@ -115,7 +115,7 @@ test('GM may add optional free-text instructions to the automatic ChatGPT report
   assert.ok(listeners['manual:input']);
   assert.ok(listeners['button:click']);
   assert.ok(listeners['copy:click']);
-  assert.equal(api.read(),'Khi Phát Vai không hiện lá Vai Trò.\\nBổ sung thông báo tiến độ cho GM.');
+  assert.equal(api.read(),'Khi Phát Vai không hiện lá Vai Trò.\nBổ sung thông báo tiến độ cho GM.');
   listeners['button:click']();
   assert.equal(opened.length,1);
   assert.equal(box.hidden,false);
@@ -124,7 +124,7 @@ test('GM may add optional free-text instructions to the automatic ChatGPT report
   assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
   assert.ok(preview.value.includes('Không khẳng định đã sửa/deploy'));
   assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),preview.value);
-  const data=JSON.parse(preview.value.slice(preview.value.indexOf('\\n\\n')+2));
+  const data=JSON.parse(preview.value.slice(preview.value.indexOf('\n\n')+2));
   assert.equal(data.project,'WilliamPham0702/GMWW-V2.00');
   assert.equal(data.runtime,'V3.85');
 
