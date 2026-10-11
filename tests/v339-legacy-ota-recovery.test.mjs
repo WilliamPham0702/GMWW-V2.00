@@ -35,7 +35,7 @@ test('Rescue fails closed for absent or invalid files',async()=>{
 });
 test('Worker uses rescue if either normal manifest channel is unreadable',()=>{
  const code=readFileSync('src/index.js','utf8');
- assert.match(code,/recoverOlderInstalledRuntime=\(\)=>recoverLegacyRuntimeManifest/);
+ assert.match(code,/recoverOlderInstalledRuntime=async\(\)=>onlyNewNotes\(await recoverLegacyRuntimeManifest/);
  assert.match(code,/if\(!res\.ok\)\{\s*if\(!currentNativeShell\)\{const rescue=await recoverOlderInstalledRuntime\(\)/);
  assert.match(code,/if\(validRuntime\(manifest\)&&await runtimeReady\(manifest\)\)return j\(\{ok:true,/);
 });

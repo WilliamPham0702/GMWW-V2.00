@@ -19,6 +19,7 @@ import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
+import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta } from "./gmww-ota-delta.js";
 
 const PROJECT="GMWW-V2.00",VERSION="V3.86",NATIVE_SHELL_VERSION="3.17",UPDATE_CHANNEL_REV="runtime-386",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_PLAYER_TTL=70*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
@@ -1470,13 +1471,14 @@ export default {async fetch(request,env){
   }
   if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
+    const onlyNewNotes=m=>gmwwManifestNotesForInstalled(m,url.searchParams.get("current"));
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
       const currentVersion=VERSION.replace(/^V/i,"");
       const currentNativeShell=NATIVE_SHELL_VERSION===currentVersion;
       const validRuntime=m=>String(m?.releaseVersion||"")===currentVersion&&String(m?.releaseType||"")==="runtime"&&String(m?.runtimeVersion||"")===currentVersion&&String(m?.shellVersion||"")===String(NATIVE_SHELL_VERSION)&&Array.isArray(m?.runtime?.files)&&m.runtime.files.length>0;
       const runtimeReady=m=>isRuntimePackageReady({assets:env.ASSETS,requestUrl:request.url,manifest:m,version:currentVersion});
-      const recoverOlderInstalledRuntime=()=>recoverLegacyRuntimeManifest({assets:env.ASSETS,requestUrl:request.url,version:currentVersion,shellVersion:NATIVE_SHELL_VERSION,installedVersion:url.searchParams.get("current")||""});
+      const recoverOlderInstalledRuntime=async()=>onlyNewNotes(await recoverLegacyRuntimeManifest({assets:env.ASSETS,requestUrl:request.url,version:currentVersion,shellVersion:NATIVE_SHELL_VERSION,installedVersion:url.searchParams.get("current")||""}));
       const readVersionedManifest=async()=>{
         try{
           const u=new URL(request.url);u.pathname="/updates/runtime/V"+currentVersion+"/manifest-"+UPDATE_CHANNEL_REV+".json";u.search="?v="+encodeURIComponent(VERSION)+"&channel="+encodeURIComponent(UPDATE_CHANNEL_REV)+"&ts="+Date.now();
@@ -1489,7 +1491,7 @@ export default {async fetch(request,env){
       // Prefer the immutable, versioned manifest first so an installed older runtime
       // can always discover and install the current runtime release.
       if(!currentNativeShell){
-        const versioned=await readVersionedManifest();
+        const versioned=onlyNewNotes(await readVersionedManifest());
         if(validRuntime(versioned)&&await runtimeReady(versioned))return j({ok:true,...(selectVerifiedRuntimeV386Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV385Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV383Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV382Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV381Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV378Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV376Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV373Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV372Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV371Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV370Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV369Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV368Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV367Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV365Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV363Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV362Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV361Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV360Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV359Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV354Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV353Delta(versioned,url.searchParams.get("current"))||selectVerifiedRuntimeV352Delta(versioned,url.searchParams.get("current"))||selectLegacyV350RuntimeDelta(versioned,url.searchParams.get("current"))||versioned),checkedAt:new Date().toISOString()});
       }
 
@@ -1499,7 +1501,7 @@ export default {async fetch(request,env){
         if(!currentNativeShell){const rescue=await recoverOlderInstalledRuntime();if(rescue)return j(rescue);}
         return j({ok:false,error:currentNativeShell?"UPDATE_MANIFEST_NOT_FOUND":"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},currentNativeShell?404:503);
       }
-      const manifest=await res.json();
+      const manifest=onlyNewNotes(await res.json());
       const nativeManifest=()=>({
         ...manifest,
         releaseVersion:currentVersion,
@@ -1528,7 +1530,7 @@ export default {async fetch(request,env){
         return j({ok:false,error:"RUNTIME_MANIFEST_NOT_READY",releaseVersion:currentVersion,runtimeVersion:currentVersion,shellVersion:NATIVE_SHELL_VERSION},503);
       }
       if(latestMismatch||latestLostRuntime){
-        const versioned=await readVersionedManifest();
+        const versioned=onlyNewNotes(await readVersionedManifest());
         if(versioned&&String(versioned?.releaseType||"")!=="server_only")return j({ok:true,...versioned,checkedAt:new Date().toISOString()});
         return j({ok:true,...nativeManifest()});
       }
