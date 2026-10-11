@@ -4,37 +4,47 @@
   const fire={x:50,y:49.7},polygon=[[22,33],[78,33],[88,57],[75,84],[62,89],[62,99],[38,99],[38,89],[25,84],[12,57]];
   function inside(x,y){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit}
   function clampPoint(x,y){x=Number(x);y=Number(y);if(arguments[0]==null||arguments[1]==null||!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:76};y=Math.max(34,Math.min(98,y));const xs=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length];if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]))}}if(xs.length)x=Math.max(Math.min(...xs)+1.5,Math.min(Math.max(...xs)-1.5,x));if(Math.hypot((x-fire.x)/6,(y-fire.y)/3)<1)y=fire.y+(y<fire.y?-3.1:3.1);return{x,y}}
-  /* Seat Mẫu: stable world-coordinate layouts shared by GM, Worker and Player Web. */
-  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,24]);
+  /* Fire-centered seating coordinates shared across Worker, Player Web and GM IPA.
+     No seat touches water, roofs, or the campfire; large rooms use staggered rings. */
+  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
   const seatTemplateShapes=Object.freeze(['circle','diamond','rectangle']);
   function normalizeSeatLayout(shape){return seatTemplateShapes.includes(String(shape||''))?String(shape):''}
+  function autoSeatShape(count){
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    return n<=12?'circle':n<=18?'diamond':'rectangle';
+  }
   function contour(t,shape,rx,ry){
     t=((t%1)+1)%1;
     if(shape==='circle'){const a=-Math.PI/2+2*Math.PI*t;return{x:rx*Math.cos(a),y:ry*Math.sin(a)}}
     const u=t*4,side=Math.floor(u),frac=u-side;
-    if(shape==='diamond'){
-      const corners=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
-      const first=corners[side],last=corners[side+1];
-      return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
-    }
-    const corners=[[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry]];
+    const corners=shape==='diamond'?
+      [[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]]:
+      [[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry]];
     const first=corners[side],last=corners[side+1];
     return{x:first[0]+(last[0]-first[0])*frac,y:first[1]+(last[1]-first[1])*frac};
   }
   function seatTemplatePositions(count,shape){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12))),kind=normalizeSeatLayout(shape);
-    if(!kind)return [];
-    // Wider courtyard, no rooftops or sea. Two staggered outlines prevent crowding at 18–24.
-    const outer=n>16?Math.ceil(n*2/3):n,out=[];
-    const rings=[{size:outer,rx:30,ry:23,cx:50,cy:61},{size:n-outer,rx:17,ry:12,cx:50,cy:65}];
-    for(let ring=0;ring<rings.length;ring++){
-      const r=rings[ring];
-      for(let i=0;i<r.size;i++){
-        const offset=kind==='rectangle'?.125:0,p=contour((i+(ring?.5:0))/r.size+offset,kind,r.rx,r.ry);
-        const target=clampPoint(r.cx+p.x,r.cy+p.y);
-        out.push({x:target.x,y:target.y,ring});
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    const kind=normalizeSeatLayout(shape)||autoSeatShape(n);
+    // All rings use the same center as the actual map campfire (50,49.7).
+    // 25-30 seats get THREE independent rings, rather than clipping the
+    // existing 24-seat arrangement or stacking people on top of each other.
+    const rings=n<=12?
+      [{size:n,rx:25,ry:13}]:
+      n<=24?
+      [{size:n<=18?4:8,rx:14,ry:7.5},{size:n-(n<=18?4:8),rx:30,ry:14.6}]:
+      [{size:8,rx:12,ry:6.7},{size:10,rx:22,ry:10.6},{size:n-18,rx:30,ry:14.6}];
+    const scale=kind==='rectangle'?.9:kind==='diamond'?1.025:1,out=[];
+    rings.forEach((ring,index)=>{
+      for(let i=0;i<ring.size;i++){
+        const offset=kind==='rectangle'?.125:0;
+        const p=contour((i+(index%2?.5:0))/ring.size+offset,kind,ring.rx*scale,ring.ry*(kind==='diamond'?1.1:1));
+        const x=fire.x+p.x,y=fire.y+p.y;
+        // Geometry is designed to stay inside the valid courtyard; avoid
+        // clamping because it silently piles multiple seats on one edge.
+        out.push({...clampPoint(x,y),ring:index});
       }
-    }
+    });
     return out;
   }
   function positions(count,shape=''){
@@ -66,5 +76,5 @@
     const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*2)),total=lengths.reduce((s,v)=>s+v,0);let distance=t*total;
     for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const f=Math.min(1,distance/(lengths[i]||1));return{x:path[i].x+(path[i+1].x-path[i].x)*f,y:path[i].y+(path[i+1].y-path[i].y)*f}}distance-=lengths[i]}return b;
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,autoSeatShape,normalizeSeatLayout,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);
