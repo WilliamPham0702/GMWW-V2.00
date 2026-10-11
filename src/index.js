@@ -1132,9 +1132,16 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"STALE_TURN",message:"Lượt chức năng đã thay đổi. Vui lòng chọn lại."},409);
       const claimedActor=normalizeLoginId(body.actorId||"");
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
-      if(claimedActor&&actors.length&&!actors.includes(claimedActor))
-        return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
-      if(step.kind==="early-artifact"||step.kind==="artifact-main")gmArtifactStep=step;
+      const artifactActions=Array.isArray(step.actions)?step.actions:[];
+      if(step.kind==="early-artifact-window"){
+        const artifactId=String(body.artifactId||"");
+        const chosen=artifactActions.find(x=>String(x.artifactId)===artifactId&&(!claimedActor||normalizeLoginId(x.loginId)===claimedActor));
+        if(!chosen)return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN",message:"Artifact không thuộc lượt hoặc người thực hiện."},403);
+        gmArtifactStep={...chosen,id:step.id+":"+chosen.artifactId+":"+chosen.loginId};
+      }else{
+        if(claimedActor&&actors.length&&!actors.includes(claimedActor))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+        if(step.kind==="early-artifact"||step.kind==="artifact-main")gmArtifactStep=step;
+      }
     }
     const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
     if(type==="revive"){
