@@ -6,7 +6,7 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const home=html.slice(html.indexOf('<section class="page active" id="home"'),html.indexOf('<section class="page" id="members"'));
-const patch=css.slice(css.indexOf('/* V3.87 — remove backgrounds'));
+const patch=css.slice(css.indexOf('/* V3.87 — remove backgrounds'),css.indexOf('/* V3.89 — remove only the Khám Phá'));
 test('Only final two Home backgrounds and their headers are made transparent',()=>{
  assert.ok(patch.startsWith('/* V3.87 — remove backgrounds'));
  assert.match(home,/gmww-home-top3-panel-v377/);
