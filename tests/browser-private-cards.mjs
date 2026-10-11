@@ -88,10 +88,14 @@ for(const [i,s] of sessions.entries()){
    await face.click({position:{x:35,y:35},timeout:10000});
    await face.waitFor({state:'hidden',timeout:10000});
    assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role automatically goes below Artifact');
-   // Each visible rear-card edge is independently clickable and brings the selected card forward.
+   // GMWW contract: tap the rear Role once to bring it in front without
+   // revealing private content; a second tap on the front card opens it.
+   await role.click({timeout:10000});
+   assert.equal(await deck.getAttribute('data-deck-top'),'role','first rear Role tap raises it above Artifact');
+   assert.equal(await face.isVisible(),false,'raising a rear card must never reveal its private face');
    await role.click({timeout:10000});
    await face.waitFor({state:'visible',timeout:10000});
-   assert.equal(await deck.getAttribute('data-deck-top'),'role','tapping lower Role raises it above Artifact');
+   assert.equal(await deck.getAttribute('data-deck-top'),'role','front Role stays above Artifact while opened');
    await page.mouse.click(7,7);
    await face.waitFor({state:'hidden',timeout:10000});
    assert.equal(await deck.getAttribute('data-deck-top'),'artifact','Role returns below after viewing');
