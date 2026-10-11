@@ -2,7 +2,7 @@ import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
-import { combineConfiguredTurns, jumpTarget } from "./gmww-night-turn-rules.js";
+import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -1029,7 +1029,7 @@ export class RoomDurableObject extends DurableObject {
     // Keep a stable, always-visible opening window even when no Artifact is assigned.
     queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:artifactRows.filter(a=>a._priorityFirst).map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(a?.order||roleOrder.get(rid)||9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(roleOrder.get(rid)??a?.order??9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
@@ -1044,7 +1044,7 @@ export class RoomDurableObject extends DurableObject {
       });
     }
     const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
-    queue.push(...combineConfiguredTurns(roleTurns,artifactTurns));
+    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(roleTurns),artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -1207,9 +1207,9 @@ export class RoomDurableObject extends DurableObject {
       const claimedActor=normalizeLoginId(body.actorId||"");
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
-      if(step.kind==="early-artifact-window"||(step.kind==="role"&&body.artifactId)){
+      if(step.kind==="early-artifact-window"||(["role","role-group"].includes(step.kind)&&body.artifactId)){
         const artifactId=String(body.artifactId||"");
-        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):artifactActions;
+        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):step.kind==="role-group"?(step.roles||[]).flatMap(role=>role.artifacts||[]):artifactActions;
         const chosen=options.find(x=>String(x.artifactId)===artifactId&&claimedActor&&normalizeLoginId(x.loginId)===claimedActor);
         if(!chosen)return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN",message:"Artifact không thuộc lượt hoặc người thực hiện."},403);
         gmArtifactStep={...chosen,id:step.id+":"+chosen.artifactId+":"+chosen.loginId};
