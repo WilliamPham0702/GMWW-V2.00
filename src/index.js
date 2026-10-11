@@ -1011,7 +1011,17 @@ export class RoomDurableObject extends DurableObject {
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
-    const artifactTurns=artifactRows.map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
+    // Attach owned Artifacts to their role's action box. Legacy unmatched owners
+    // retain a standalone turn so their Artifact is never silently lost.
+    const attachedArtifacts=new Set();
+    for(const role of roleTurns){
+      role.artifacts=artifactRows.filter(row=>role.loginIds.includes(normalizeLoginId(row.loginId))).map(row=>{
+        const loginId=normalizeLoginId(row.loginId);
+        attachedArtifacts.add(String(row.artifactId)+":"+loginId);
+        return {artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId,playerId:"member:"+loginId,priorityFirst:row._priorityFirst===true};
+      });
+    }
+    const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
     queue.push(...combineConfiguredTurns(roleTurns,artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
@@ -1133,9 +1143,10 @@ export class RoomDurableObject extends DurableObject {
       const claimedActor=normalizeLoginId(body.actorId||"");
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
-      if(step.kind==="early-artifact-window"){
+      if(step.kind==="early-artifact-window"||(step.kind==="role"&&body.artifactId)){
         const artifactId=String(body.artifactId||"");
-        const chosen=artifactActions.find(x=>String(x.artifactId)===artifactId&&(!claimedActor||normalizeLoginId(x.loginId)===claimedActor));
+        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):artifactActions;
+        const chosen=options.find(x=>String(x.artifactId)===artifactId&&claimedActor&&normalizeLoginId(x.loginId)===claimedActor);
         if(!chosen)return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN",message:"Artifact không thuộc lượt hoặc người thực hiện."},403);
         gmArtifactStep={...chosen,id:step.id+":"+chosen.artifactId+":"+chosen.loginId};
       }else{
