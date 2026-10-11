@@ -90,6 +90,21 @@ test('invalid multi-target selection leaves Artifact unused',async()=>{
   assert.equal((await result(await h.act({targetIds:['bob','missing']}))).error,'INVALID_ARTIFACT_TARGET');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
 });
+test('GM delivery preserves configured Artifact target limits through the card payload',()=>{
+  const gmSource=fs.readFileSync('server-game/current/app.js','utf8');
+  const definition=gmSource.slice(gmSource.indexOf('function playArtifactCardPayload('),gmSource.indexOf('async function playBlobDataUrl('));
+  const payload=vm.runInNewContext('const state={actions:{artifacts:[]}};'+definition+'; playArtifactCardPayload');
+  const card=payload({id:'stone',name:'Đá Đổi Vai Trò',functions:[{actionId:'swap',targetCount:2,noSelf:false,allowDead:true}]});
+  assert.equal(card.actions[0].targetCount,2);
+  assert.equal(card.actions[0].noSelf,false);
+  assert.equal(card.actions[0].allowDead,true);
+  const sanitizeSource=source.slice(source.indexOf('function sanitizePlayerArtifactCard('),source.indexOf('function privateArtifact('));
+  const sanitize=vm.runInNewContext(sanitizeSource+'; sanitizePlayerArtifactCard',{defaultPriorityFirst});
+  const delivered=sanitize(card);
+  assert.equal(delivered.actions[0].targetCount,2);
+  assert.equal(delivered.actions[0].noSelf,false);
+  assert.equal(delivered.actions[0].allowDead,true);
+});
 test('Artifact card sanitizer retains explicit target restrictions for the server',()=>{
   const sanitizer=source.slice(source.indexOf('function sanitizePlayerArtifactCard('),source.indexOf('function privateArtifact('));
   const sanitize=vm.runInNewContext(sanitizer+'; sanitizePlayerArtifactCard',{defaultPriorityFirst});
