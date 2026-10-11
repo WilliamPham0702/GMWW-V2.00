@@ -1,4 +1,4 @@
-import "./village-layout.js?v=seat397";
+import "./village-layout.js?v=seat398";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
