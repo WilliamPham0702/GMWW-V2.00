@@ -1405,6 +1405,13 @@ async function checkPlayerWebNow(){
  */
 let gmwwPreparedBugReport='',gmwwLastBugDiagnostics=null,gmwwLastBugScan=0;
 const gmwwBugCode=value=>String(value??'').replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,48)||'UNSPECIFIED';
+function gmwwReadExtraRequest(){
+  const field=document.getElementById('gmwwReportExtraRequest');
+  // This is explicitly user-authored text. Keep line breaks, never include
+  // game state or credentials implicitly; normalize nonprinting characters.
+  return String(field?.value||'').replace(/\r\n?/g,'\n')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'').trim().slice(0,1200);
+}
 function gmwwBuildBugReport(diag){
   const status=id=>String(document.getElementById(id)?.textContent||'').trim().slice(0,65);
   const probes=diag?.probes||{},checks={};
@@ -1443,35 +1450,48 @@ function gmwwBuildBugReport(diag){
   if(data.runtimeErrorCount>0)issues.push('Ứng dụng ghi nhận '+data.runtimeErrorCount+' lỗi Runtime gần đây.');
   const description=issues.length?issues.join(' • '):
     'Chưa xác nhận lỗi cụ thể. Kiểm tra các trạng thái hệ thống bên dưới.';
+  const extraRequest=gmwwReadExtraRequest();
   // No room ID, login/session IDs, player names, role/artifact content,
   // stacktraces, raw exception text, credentials or HTTP bodies.
   return 'Tôi cần hỗ trợ khắc phục lỗi GMWW. Dưới đây là báo cáo hệ thống đã được tự động tạo và loại bỏ dữ liệu cá nhân.\n'+
     'Mô tả lỗi: '+description+'\n'+
+    (extraRequest?'Yêu cầu bổ sung do GM nhập:\n'+extraRequest+'\n':'')+
     'Hãy phân tích nguyên nhân, kiểm tra GitHub CI và Cloudflare Production, đề xuất hoặc tạo PR sửa lỗi khi được cấp quyền. '+
     'Không khẳng định đã sửa/deploy khi chưa xác minh; không merge/deploy nếu chưa được tôi phê duyệt. '+
     'Bảo toàn toàn bộ dữ liệu game, vai trò, Artifact và phiên chơi.\n\n'+
     JSON.stringify(data,null,2);
 }
+
+function gmwwPrepareBugReport(){
+  const report=gmwwBuildBugReport(gmwwLastBugDiagnostics);
+  gmwwPreparedBugReport=report;
+  const preview=document.getElementById('gmwwReportPreview');
+  const link=document.getElementById('gmwwOpenChatGPT');
+  const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
+  if(preview)preview.value=report;
+  if(link)link.href=target;
+  return target;
+}
 function gmwwReportBugToChatGPT(){
   const btn=document.getElementById('gmwwReportToChatGPT');
   const status=document.getElementById('gmwwReportStatus');
-  const preview=document.getElementById('gmwwReportPreview');
   const previewBox=document.getElementById('gmwwReportPreviewBox');
-  const link=document.getElementById('gmwwOpenChatGPT');
   if(!btn)return;
-  // Generate synchronously from the background Health Check. WKWebView/Safari
-  // requires the ChatGPT link to open directly from the user's tap.
-  const report=gmwwBuildBugReport(gmwwLastBugDiagnostics);
-  gmwwPreparedBugReport=report;
-  const target='https://chatgpt.com/?prompt='+encodeURIComponent(report);
-  if(preview)preview.value=report;
+  // Prepare synchronously on tap to avoid WKWebView/Safari popup blocking.
+  // The typed request stays local until the GM explicitly opens ChatGPT.
+  const target=gmwwPrepareBugReport();
   if(previewBox)previewBox.hidden=false;
-  if(link)link.href=target;
-  if(status)status.textContent='Đã tự mô tả lỗi. ChatGPT sẽ mở với bản nháp; bạn chỉ cần nhấn Gửi. Nếu chưa mở, nhấn MỞ CHATGPT.';
+  if(status)status.textContent='Đã ghép yêu cầu của bạn với chẩn đoán hệ thống. Kiểm tra bản nháp trong ChatGPT rồi nhấn Gửi.';
   try{window.open(target,'_blank','noopener,noreferrer')}catch{}
 }
 const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
 if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',gmwwReportBugToChatGPT);
+const gmwwReportExtraRequest=document.getElementById('gmwwReportExtraRequest');
+if(gmwwReportExtraRequest)gmwwReportExtraRequest.addEventListener('input',()=>{
+  // If the GM edits their instructions after generating a report, keep
+  // the copy fallback and manual ChatGPT link in sync with the edit.
+  if(document.getElementById('gmwwReportPreviewBox')?.hidden===false)gmwwPrepareBugReport();
+});
 const gmwwCopyReport=document.getElementById('gmwwCopyReport');
 if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
   if(!gmwwPreparedBugReport)return;

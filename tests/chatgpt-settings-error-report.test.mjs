@@ -67,6 +67,82 @@ test('Generated report excludes raw credentials, room details and runtime except
   assert.equal(payload.checks.characters.code,'NOT_CHECKED');
   assert.equal(payload.runtimeErrorCount,1);
 });
+test('GM may add optional free-text instructions to the automatic ChatGPT report',async()=>{
+  const start=html.indexOf('id="settingsGroupErrorReport"');
+  const end=html.indexOf('id="settingsGroupHealth"',start);
+  const form=html.slice(start,end);
+  assert.match(form,/id="gmwwReportExtraRequest"/);
+  assert.match(form,/maxlength="1200"/);
+  assert.match(form,/for="gmwwReportExtraRequest"/);
+  assert.ok(form.indexOf('id="gmwwReportExtraRequest"')<form.indexOf('id="gmwwReportToChatGPT"'));
+  assert.doesNotMatch(form,/id="gmwwReportExtraRequest"[^>]*\breadonly\b/);
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  assert.match(css,/\.gmww-report-input textarea:focus-visible/);
+
+  const listeners={};
+  const makeControl=(id,extra={})=>({
+    ...extra,
+    addEventListener(type,fn){listeners[id+':'+type]=fn}
+  });
+  const manual=makeControl('manual',{value:'  Khi Phát Vai không hiện lá Vai Trò.\r\nBổ sung thông báo tiến độ cho GM.  '});
+  const preview={value:''},box={hidden:true},link={href:''},status={textContent:''};
+  const controls={
+    gmwwReportExtraRequest:manual,
+    gmwwReportToChatGPT:makeControl('button'),
+    gmwwCopyReport:makeControl('copy'),
+    gmwwReportStatus:status,gmwwReportPreview:preview,
+    gmwwReportPreviewBox:box,gmwwOpenChatGPT:link,
+    updateServerVersion:{textContent:'V3.85'},
+    updateStatus:{textContent:'DỮ LIỆU ĐÃ CẬP NHẬT'},
+    updateDecisionTitle:{textContent:'GMWW mới nhất'}
+  };
+  const opened=[];let copied='';
+  const from=app.indexOf('/* GMWW Settings -> ChatGPT');
+  const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
+  const context={
+    document:{
+      getElementById:id=>controls[id]||null,
+      querySelector:()=>null,querySelectorAll:()=>[]
+    },
+    gmwwShellVersion:()=> '3.70',
+    gmwwRuntimeVersion:()=> '3.85',
+    gmwwRuntimeErrors:[],
+    navigator:{onLine:true,clipboard:{writeText:async str=>{copied=str}}},
+    window:{open:(url)=>{opened.push(url)}},
+    Date
+  };
+  const api=vm.runInNewContext(app.slice(from,until)+';({build:gmwwBuildBugReport,read:gmwwReadExtraRequest})',context);
+  assert.ok(listeners['manual:input']);
+  assert.ok(listeners['button:click']);
+  assert.ok(listeners['copy:click']);
+  assert.equal(api.read(),'Khi Phát Vai không hiện lá Vai Trò.\nBổ sung thông báo tiến độ cho GM.');
+  listeners['button:click']();
+  assert.equal(opened.length,1);
+  assert.equal(box.hidden,false);
+  assert.match(preview.value,/Yêu cầu bổ sung do GM nhập:/);
+  assert.match(preview.value,/Khi Phát Vai không hiện lá Vai Trò/);
+  assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
+  assert.ok(preview.value.includes('Không khẳng định đã sửa/deploy'));
+  assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),preview.value);
+  const data=JSON.parse(preview.value.slice(preview.value.indexOf('\n\n')+2));
+  assert.equal(data.project,'WilliamPham0702/GMWW-V2.00');
+  assert.equal(data.runtime,'V3.85');
+
+  manual.value='  Thay giao diện chờ thành giao diện biển  ';
+  listeners['manual:input']();
+  assert.match(preview.value,/Thay giao diện chờ thành giao diện biển/);
+  assert.doesNotMatch(preview.value,/Khi Phát Vai không hiện/);
+  assert.equal(decodeURIComponent(link.href.split('?prompt=')[1]),preview.value);
+  await listeners['copy:click']();
+  assert.equal(copied,preview.value);
+  manual.value='    ';
+  listeners['manual:input']();
+  assert.doesNotMatch(preview.value,/Yêu cầu bổ sung do GM nhập:/);
+  assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
+  manual.value='x'.repeat(1400);
+  assert.equal(api.read().length,1200);
+});
+
 test('Runtime V3.85 releases only SHA-verified app, HTML and CSS for installed V3.84',()=>{
   const paths=['GMWW.html','app.js','style.css'];
   const origin='https://gmww-v2-00.williampham0702.workers.dev';
