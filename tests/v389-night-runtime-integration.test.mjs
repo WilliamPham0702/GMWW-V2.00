@@ -235,7 +235,7 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   h.data.get('interactions').push({id:'external',loginId:'carol',type:'dead',effectActive:true,matchId:'test-match'});
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STATE_CHANGED');
   h.data.get('interactions').pop();
-  await h.jump('role'); // the next configured role changes the live turn
+  await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
   const i=await h.data.get('interactions');
   i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
