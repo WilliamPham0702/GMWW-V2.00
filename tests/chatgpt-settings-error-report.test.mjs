@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
-import {selectVerifiedRuntimeV385Delta} from '../src/gmww-ota-delta.js';
+import {selectVerifiedRuntimeV385Delta,selectVerifiedRuntimeV386Delta} from '../src/gmww-ota-delta.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
@@ -67,6 +67,82 @@ test('Generated report excludes raw credentials, room details and runtime except
   assert.equal(payload.checks.characters.code,'NOT_CHECKED');
   assert.equal(payload.runtimeErrorCount,1);
 });
+test('GM may add optional free-text instructions to the automatic ChatGPT report',async()=>{
+  const start=html.indexOf('id="settingsGroupErrorReport"');
+  const end=html.indexOf('id="settingsGroupHealth"',start);
+  const form=html.slice(start,end);
+  assert.match(form,/id="gmwwReportExtraRequest"/);
+  assert.match(form,/maxlength="1200"/);
+  assert.match(form,/for="gmwwReportExtraRequest"/);
+  assert.ok(form.indexOf('id="gmwwReportExtraRequest"')<form.indexOf('id="gmwwReportToChatGPT"'));
+  assert.doesNotMatch(form,/id="gmwwReportExtraRequest"[^>]*\breadonly\b/);
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  assert.match(css,/\.gmww-report-input textarea:focus-visible/);
+
+  const listeners={};
+  const makeControl=(id,extra={})=>({
+    ...extra,
+    addEventListener(type,fn){listeners[id+':'+type]=fn}
+  });
+  const manual=makeControl('manual',{value:'  Khi Phát Vai không hiện lá Vai Trò.\r\nBổ sung thông báo tiến độ cho GM.  '});
+  const preview={value:''},box={hidden:true},link={href:''},status={textContent:''};
+  const controls={
+    gmwwReportExtraRequest:manual,
+    gmwwReportToChatGPT:makeControl('button'),
+    gmwwCopyReport:makeControl('copy'),
+    gmwwReportStatus:status,gmwwReportPreview:preview,
+    gmwwReportPreviewBox:box,gmwwOpenChatGPT:link,
+    updateServerVersion:{textContent:'V3.85'},
+    updateStatus:{textContent:'DỮ LIỆU ĐÃ CẬP NHẬT'},
+    updateDecisionTitle:{textContent:'GMWW mới nhất'}
+  };
+  const opened=[];let copied='';
+  const from=app.indexOf('/* GMWW Settings -> ChatGPT');
+  const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
+  const context={
+    document:{
+      getElementById:id=>controls[id]||null,
+      querySelector:()=>null,querySelectorAll:()=>[]
+    },
+    gmwwShellVersion:()=> '3.70',
+    gmwwRuntimeVersion:()=> '3.85',
+    gmwwRuntimeErrors:[],
+    navigator:{onLine:true,clipboard:{writeText:async str=>{copied=str}}},
+    window:{open:(url)=>{opened.push(url)}},
+    Date
+  };
+  const api=vm.runInNewContext(app.slice(from,until)+';({build:gmwwBuildBugReport,read:gmwwReadExtraRequest})',context);
+  assert.ok(listeners['manual:input']);
+  assert.ok(listeners['button:click']);
+  assert.ok(listeners['copy:click']);
+  assert.equal(api.read(),'Khi Phát Vai không hiện lá Vai Trò.\nBổ sung thông báo tiến độ cho GM.');
+  listeners['button:click']();
+  assert.equal(opened.length,1);
+  assert.equal(box.hidden,false);
+  assert.match(preview.value,/Yêu cầu bổ sung do GM nhập:/);
+  assert.match(preview.value,/Khi Phát Vai không hiện lá Vai Trò/);
+  assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
+  assert.ok(preview.value.includes('Không khẳng định đã sửa/deploy'));
+  assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),preview.value);
+  const data=JSON.parse(preview.value.slice(preview.value.indexOf('\n\n')+2));
+  assert.equal(data.project,'WilliamPham0702/GMWW-V2.00');
+  assert.equal(data.runtime,'V3.85');
+
+  manual.value='  Thay giao diện chờ thành giao diện biển  ';
+  listeners['manual:input']();
+  assert.match(preview.value,/Thay giao diện chờ thành giao diện biển/);
+  assert.doesNotMatch(preview.value,/Khi Phát Vai không hiện/);
+  assert.equal(decodeURIComponent(link.href.split('?prompt=')[1]),preview.value);
+  await listeners['copy:click']();
+  assert.equal(copied,preview.value);
+  manual.value='    ';
+  listeners['manual:input']();
+  assert.doesNotMatch(preview.value,/Yêu cầu bổ sung do GM nhập:/);
+  assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
+  manual.value='x'.repeat(1400);
+  assert.equal(api.read().length,1200);
+});
+
 test('Runtime V3.85 releases only SHA-verified app, HTML and CSS for installed V3.84',()=>{
   const paths=['GMWW.html','app.js','style.css'];
   const origin='https://gmww-v2-00.williampham0702.workers.dev';
@@ -87,11 +163,40 @@ test('Runtime V3.85 releases only SHA-verified app, HTML and CSS for installed V
   assert.match(worker,/selectVerifiedRuntimeV385Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV385Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
 });
-test('Version, security and legacy storage remain stable',()=>{
-  assert.match(app,/const VERSION='3\.85'/);
-  assert.match(html,/<title>GMWW V3\.85<\/title>/);
-  assert.match(worker,/VERSION="V3\.85"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-385"/);
+test('V3.85 to V3.86 OTA updates only three SHA-pinned GM files, never game data',()=>{
+  const names=['GMWW.html','app.js','style.css'];
+  const files=()=>names.map(path=>({path,url:'https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.86/'+path,sha256:'a'.repeat(64)}));
+  const manifest=()=>({
+    releaseVersion:'3.86',runtimeVersion:'3.86',shellVersion:'3.17',
+    releaseType:'runtime',delete:[],runtime:{files:files()}
+  });
+  const patch=selectVerifiedRuntimeV386Delta(manifest(),'3.85');
+  assert.ok(patch);
+  assert.equal(patch.upgradeMode,'verified-overlay');
+  assert.deepEqual(patch.runtime.files.map(f=>f.path),names);
+  assert.deepEqual(patch.delete,[]);
+  assert.equal(patch.optimizedFromVersion,'3.85');
+  for(const from of ['3.70','3.84','3.86','3.17','']){
+    assert.equal(selectVerifiedRuntimeV386Delta(manifest(),from),null);
+  }
+  for(const mutate of [
+    x=>{x.releaseVersion='3.85'},x=>{x.runtimeVersion='3.85'},
+    x=>{x.shellVersion='3.86'},x=>{x.delete=['gameData']},
+    x=>{x.runtime.files.pop()},x=>{x.runtime.files[0].sha256='invalid'},
+    x=>{x.runtime.files[1].url='https://example.com/app.js'},
+    x=>{x.runtime.files.push({...x.runtime.files[0]})}
+  ]){const x=manifest();mutate(x);assert.equal(selectVerifiedRuntimeV386Delta(x,'3.85'),null)}
+  assert.match(worker,/selectVerifiedRuntimeV386Delta\(versioned,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
+  assert.match(worker,/selectVerifiedRuntimeV386Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  assert.equal(pkg.version,'3.86.0');
+});
+
+test('V3.86 version, security and legacy storage remain stable',()=>{
+  assert.match(app,/const VERSION='3\.86'/);
+  assert.match(html,/<title>GMWW V3\.86<\/title>/);
+  assert.match(worker,/VERSION="V3\.86"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-386"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
   assert.match(worker,/publicEntryPolicy\(request\.method,url\.pathname\)/);

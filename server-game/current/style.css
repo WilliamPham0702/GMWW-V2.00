@@ -4622,6 +4622,13 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
 /* Settings: private on-device diagnostic -> prefilled ChatGPT, V3.85 */
 .gmww-report-card{display:flex;flex-direction:column;gap:11px;padding:14px}
 .gmww-report-description{font-size:13px;line-height:1.55;margin:0;color:inherit;opacity:.87}
+.gmww-report-input{display:flex;flex-direction:column;gap:7px}
+.gmww-report-input label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;font-size:13px;line-height:1.4}
+.gmww-report-input label small{font-size:11px;font-weight:500;opacity:.78}
+.gmww-report-input textarea{display:block;width:100%;min-height:110px;max-height:240px;box-sizing:border-box;padding:12px;border:1px solid rgba(110,205,235,.55);border-radius:12px;background:rgba(2,28,45,.72);color:#e9faff;font:inherit;font-size:14px;line-height:1.5;resize:vertical;outline-offset:2px}
+.gmww-report-input textarea::placeholder{color:rgba(224,242,247,.65)}
+.gmww-report-input textarea:focus-visible{outline:2px solid #69d8eb}
+.gmww-report-input>small{font-size:11px;line-height:1.45;opacity:.82}
 .gmww-report-card .gmww-report-main{display:flex;justify-content:center;align-items:center;gap:8px;
   min-height:50px;width:100%;font-size:14px;font-weight:750}
 .gmww-report-card #gmwwReportStatus{line-height:1.5;font-size:12px;opacity:.86}
