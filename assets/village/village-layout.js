@@ -38,7 +38,7 @@
     rings.forEach((ring,index)=>{
       for(let i=0;i<ring.size;i++){
         const offset=kind==='rectangle'?.125:0;
-        const p=contour((i+(index%2?.5:0))/ring.size+offset,kind,ring.rx*scale,ring.ry);
+        const p=contour((i+(index%2?.5:0))/ring.size+offset,kind,ring.rx*scale,ring.ry*(kind==='diamond'?1.1:1));
         const x=fire.x+p.x,y=fire.y+p.y;
         // Geometry is designed to stay inside the valid courtyard; avoid
         // clamping because it silently piles multiple seats on one edge.
