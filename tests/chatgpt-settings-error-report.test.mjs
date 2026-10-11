@@ -193,14 +193,14 @@ test('V3.85 to V3.86 OTA updates only three SHA-pinned GM files, never game data
   assert.match(worker,/selectVerifiedRuntimeV386Delta\(versioned,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
   assert.match(worker,/selectVerifiedRuntimeV386Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV385Delta/);
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-  assert.equal(pkg.version,'3.94.0');
+  assert.equal(pkg.version,'3.95.0');
 });
 
-test('V3.94 version, security and legacy storage remain stable',()=>{
-  assert.match(app,/const VERSION='3\.94'/);
-  assert.match(html,/<title>GMWW V3\.94<\/title>/);
-  assert.match(worker,/VERSION="V3\.94"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-394"/);
+test('V3.95 version, security and legacy storage remain stable',()=>{
+  assert.match(app,/const VERSION='3\.95'/);
+  assert.match(html,/<title>GMWW V3\.95<\/title>/);
+  assert.match(worker,/VERSION="V3\.95"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-395"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
   assert.match(worker,/publicEntryPolicy\(request\.method,url\.pathname\)/);
