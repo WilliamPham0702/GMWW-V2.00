@@ -82,14 +82,18 @@ export default {
    let pitrRestored = false, pitrSupported = Boolean(bookmarkResponse.bookmark), pitrError = null;
    if (pitrSupported) {
     await send(source, '/mutate');
-    try { await send(source, '/restore-pitr', { bookmark: bookmarkResponse.bookmark }); }
-    catch { /* ctx.abort() deliberately terminates the outgoing request */ }
-    for (let i = 0; i < 12; ++i) {
+    try {
+     const operation = await send(source, '/restore-pitr', { bookmark: bookmarkResponse.bookmark });
+     pitrError = 'schedule status ' + operation.status + ': ' + (await operation.text()).slice(0, 240);
+    } catch (e) { pitrError = 'scheduled fetch interrupted: ' + String(e).slice(0, 180); }
+    for (let i = 0; i < 24; ++i) {
      try {
-      const current = await (await send(source, '/snapshot')).json();
+      const currentResponse = await send(source, '/snapshot');
+      const current = await currentResponse.json();
       if (checksum === await digest(current.entries)) { pitrRestored = true; break; }
-     } catch { /* DO is restarting */ }
-     await new Promise(resolve => setTimeout(resolve, 300));
+      if (i === 23) pitrError = (pitrError || '') + '; final phase=' + String(current.entries.find(x => x.key === 'meta')?.value?.phase);
+     } catch (e) { if (i === 23) pitrError = (pitrError || '') + '; probe error=' + String(e).slice(0, 150); }
+     await new Promise(resolve => setTimeout(resolve, 600));
     }
    } else pitrError = 'PITR bookmark unavailable';
    const checks = { seed: seed.ok === true, snapshot: dryRun, restore: restore.ok === true, checksum: roundTrip, overwriteBlocked: blockedOverwrite, pitrSupported, pitrRestored };
