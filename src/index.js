@@ -887,7 +887,7 @@ export class RoomDurableObject extends DurableObject {
     enforceUniqueSeatClaims(players,meta.seatCount);
     // During gathering, adapt the real room capacity to the actual party, never
     // discarding an assigned seat ID. Older rooms remain untouched until GM edits.
-    if(replace&&wanted.size>0&&!meta.seatsLocked&&roomUiStage(meta)==='seats'){
+    if(replace&&wanted.size>0&&!meta.seatsLocked&&String(meta.gmStage||'')==='seats'){
       const highest=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
       const nextCount=Math.max(8,Math.min(30,Math.max(Object.keys(players).length,highest)));
       const nextShape=villageLayout.recommendedSeatShape(nextCount);
