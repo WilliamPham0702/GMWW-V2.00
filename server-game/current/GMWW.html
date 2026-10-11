@@ -12,7 +12,7 @@
 .sea-artifact-import-panel p{font-size:13px;margin:0;line-height:1.5}
 .sea-artifact-import-preview{max-height:340px;overflow-y:auto;display:grid;gap:6px}
 .sea-artwork-import-row{display:flex;align-items:center;gap:10px;min-height:84px;border-bottom:1px solid rgba(255,255,255,.13)}
-.sea-artwork-import-row img{width:78px;height:66px;object-fit:cover;flex:none;border-radius:8px}
+.sea-artwork-import-row img{width:78px;height:66px;object-fit:contain;object-position:center;flex:none;border-radius:8px}
 .sea-artwork-import-row>div{flex:1;min-width:0;display:grid;gap:3px}
 .sea-artwork-import-row small{font-size:11px;overflow-wrap:anywhere}
 .sea-artwork-import-row select{max-width:100%;width:100%;min-height:36px;font-size:13px}
@@ -283,20 +283,20 @@
             <div class="button-row"><button type="button" id="gmVillagePreview">XEM TRƯỚC</button><button type="button" id="gmVillagePublish" class="primary">XUẤT BẢN</button><button type="button" id="gmVillageRollback">KHÔI PHỤC BẢN TRƯỚC</button></div>
             <p id="gmVillageStatus" role="status">Chưa tải cấu hình.</p>
           </section>
-          <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>🎭 Artwork Vai Trò</h3></div>
-            <div id="themeCardRows"></div>
-          </section>
-          <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>✦ Artwork ARTIFACTS</h3></div>
+          <section class="theme-section theme-section-pinned" aria-label="Quản lý Artwork">
+            <div class="theme-section-head"><h3>QUẢN LÝ ARTWORK</h3></div>
             <div class="sea-artifact-import-panel">
+              <strong>Artwork Vai Trò</strong>
+              <p>Chọn từng lá bên dưới để quản lý artwork Vai Trò. Công cụ nhập hàng loạt đang được kiểm thử, chưa bật để tránh gán nhầm ảnh.</p>
+              <div id="themeCardRows"></div>
+              <strong>Artwork Artifact · nhập hàng loạt</strong>
               <label for="seaArtifactImportFile"><strong>Nhập 44 Artwork chủ đề Biển, không bảng tên</strong></label>
               <input id="seaArtifactImportFile" type="file" accept=".zip,application/zip" aria-label="Chọn ZIP 44 artwork biển">
               <p id="seaArtifactImportStatus" role="status">Chọn ZIP 44 Artwork, kiểm tra ảnh ghép tên trước khi cập nhật kho dùng chung.</p>
               <div id="seaArtifactImportPreview" class="sea-artifact-import-preview"></div>
               <button id="seaArtifactImportStart" class="primary" type="button" disabled>NẠP 44 ARTWORK LÊN SERVER</button>
+              <div id="themeArtifactRows"></div>
             </div>
-            <div id="themeArtifactRows"></div>
           </section>
         </section>
 
