@@ -44,7 +44,7 @@ test('Both IPA update-manifest routes run V3.65 fast overlay ahead of older algo
  const app=fs.readFileSync('server-game/current/app.js','utf8');
  assert.equal(pkg.version,'3.102.0');
  assert.match(html,/<title>GMWW V3\.102<\/title>/);
- assert.match(html,/app\.js\?v=3\.102-single-seat/);
+ assert.match(html,/app\.js\?v=3\.102-compact-action-swipe/);
  assert.match(app,/const VERSION='3\.102'/);
  assert.match(worker,/VERSION="V3\.102",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3102"/);
 });
