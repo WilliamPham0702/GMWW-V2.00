@@ -5031,7 +5031,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleActionTray[hidd
 }
 #start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll>button{
  flex:0 0 auto;min-width:106px;max-width:180px;min-height:48px;
- scroll-snap-align:start;touch-action:none;white-space:normal;line-height:1.2;
+ scroll-snap-align:start;touch-action:pan-x;white-space:normal;line-height:1.2;
  padding:7px 12px;font-size:12px;user-select:none;-webkit-user-select:none
 }
 #start #playShell[data-step="battle"] #battleActionBar>button[data-battle-kind="artifact"]{
@@ -5045,7 +5045,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleActionTray[hidd
 }
 /* Undo resembles the free timer and can itself be repositioned. */
 body.play-immersive #start #playShell[data-step="battle"] #battleUndoFloat.battle-undo-float-v399{
- display:block!important;position:fixed!important;left:auto;right:12px;
+ display:block!important;position:fixed!important;left:auto;right:auto!important;
  top:calc(env(safe-area-inset-top) + 150px);bottom:auto;
  z-index:106!important;pointer-events:auto;touch-action:none;
  background:transparent;border:0;box-shadow:none
