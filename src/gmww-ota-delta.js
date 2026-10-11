@@ -629,3 +629,30 @@ export function selectVerifiedRuntimeV385Delta(manifest,installedVersion){
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
     message:'V3.85: Bỏ AI Support nổi, bổ sung báo lỗi từ Cài Đặt sang ChatGPT có sẵn bản nháp. Bảo toàn dữ liệu và Artifact.'};
 }
+
+
+/** GMWW Runtime V3.85 -> V3.86. Update only the changed GM UI files.
+ * Security: trusted exact versioned URLs, SHA256 verification, no deletions,
+ * no artwork overwrite, no role/Artifact/session data migration.
+ */
+export function selectVerifiedRuntimeV386Delta(manifest,installedVersion){
+  const from=String(installedVersion||'').trim().replace(/^V/i,'');
+  if(from!=='3.85'||String(manifest?.releaseVersion||'')!=='3.86'
+    ||String(manifest?.runtimeVersion||'')!=='3.86'
+    ||String(manifest?.shellVersion||'')!=='3.17'
+    ||manifest?.releaseType!=='runtime'
+    ||!Array.isArray(manifest?.runtime?.files)
+    ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+  const selected=[];
+  for(const path of ['GMWW.html','app.js','style.css']){
+    const matches=manifest.runtime.files.filter(f=>f?.path===path);
+    if(matches.length!==1)return null;
+    const file=matches[0];
+    const url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.86/'+path;
+    if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+    selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+  }
+  return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+    optimizedFromVersion:from,upgradeMode:'verified-overlay',
+    message:'V3.86: Viết yêu cầu thêm trong Báo lỗi tự động để gửi cùng báo cáo cho ChatGPT. Không xóa dữ liệu, hình, Vai Trò hay Artifact.'};
+}
