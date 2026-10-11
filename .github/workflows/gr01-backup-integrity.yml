@@ -1,0 +1,46 @@
+name: GR01 Backup Integrity
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gr01-pitr-auth.js"
+      - "src/index.js"
+      - "tools/gr01-*.mjs"
+      - "tests/gr01-*.test.mjs"
+      - ".github/workflows/gr01-backup-integrity.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/gr01-pitr-auth.js"
+      - "src/index.js"
+      - "tools/gr01-*.mjs"
+      - "tests/gr01-*.test.mjs"
+      - ".github/workflows/gr01-backup-integrity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Snapshot integrity, isolation, and PITR guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refuse accidental restore operation on Production Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/index.js
+          node --check tools/gr01-pitr-controller-worker.mjs
+          node --check tools/gr01-live-staging-worker.mjs
+          if grep -q "onNextSessionRestoreBookmark" src/index.js; then
+            echo "::error::Production Worker must not include a destructive PITR operation"
+            exit 1
+          fi
+      - name: Unit and transaction rollback tests
+        run: node --test tests/gr01-*.test.mjs
