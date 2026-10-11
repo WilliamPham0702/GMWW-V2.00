@@ -472,6 +472,11 @@
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Báo lỗi qua ChatGPT</h3></div></div>
           <div class="settings-tool-inner gmww-report-card">
             <p class="gmww-report-description">GMWW tự kiểm tra phiên bản, Runtime, Server và Player Web rồi chuẩn bị nội dung báo lỗi. Không cần OpenAI API key.</p>
+            <div class="gmww-report-input">
+              <label for="gmwwReportExtraRequest"><b>Mô tả lỗi hoặc yêu cầu bổ sung cho ChatGPT</b><small>Không bắt buộc</small></label>
+              <textarea id="gmwwReportExtraRequest" rows="4" maxlength="1200" placeholder="Ví dụ: Khi chọn Ván Mẫu, màn hình tải quá lâu. Hãy kiểm tra và đề xuất cách khắc phục." aria-describedby="gmwwReportExtraHelp"></textarea>
+              <small id="gmwwReportExtraHelp">Nội dung bạn viết sẽ đi kèm báo cáo tự động. Không nhập mật khẩu, mã truy cập hoặc thông tin riêng của người chơi.</small>
+            </div>
             <button class="settings-action settings-action-server gmww-report-main" id="gmwwReportToChatGPT" type="button"><span>↗</span><b>BÁO LỖI TỰ ĐỘNG</b></button>
             <small id="gmwwReportStatus" role="status" aria-live="polite">Nhấn nút để mở ChatGPT với nội dung đã điền sẵn. Bạn chỉ cần nhấn Gửi.</small>
             <div class="gmww-report-preview" id="gmwwReportPreviewBox" hidden>
