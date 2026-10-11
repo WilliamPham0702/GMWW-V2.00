@@ -22,7 +22,7 @@ test('Server accepts separate Artifact duration and uses it for early/main turns
   assert.match(worker,/artifactActionSec:clampSec\(v\?\.timing\?\.artifactActionSec\?\?30\)/);
   const night=worker.slice(worker.indexOf('async buildNightRuntime('),worker.indexOf('async artifactUsedInNight('));
   assert.ok(night.includes('artifactActionSec'));
-  assert.match(night,/kind:"early-artifact"[\s\S]*?durationSec:artifactActionSec/);
+  assert.match(night,/kind:"early-artifact-window"[\s\S]*?durationSec:artifactActionSec/);
   assert.match(night,/kind:"artifact-main"[\s\S]*?durationSec:artifactActionSec/);
   assert.match(night,/kind:"role"[\s\S]*?durationSec:roleDuration/);
 });

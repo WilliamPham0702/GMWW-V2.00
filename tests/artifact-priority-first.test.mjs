@@ -28,10 +28,12 @@ test('three familiar Artifacts default on, other Artifacts default off, explicit
 test('early priority schedules before normal roles but does not consume an unused Artifact',()=>{
   const owners=[{playerId:'member:p1',artifactId:'a',artifactName:'Tráng Gương',priorityFirst:true},{playerId:'member:p2',artifactId:'b',artifactName:'Mắt Tiên Tri',priorityFirst:false}];
   const normalTurns=[{kind:'role',playerId:'member:p3'},{kind:'artifact-main',playerId:'member:p1',artifactId:'a'},{kind:'artifact-main',playerId:'member:p2',artifactId:'b'}];
-  assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact','role','artifact-main','artifact-main']);
-  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners}).map(x=>x.kind),['early-artifact','role','artifact-main','artifact-main']);
-  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['role','artifact-main']);
+  assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','village-wakeup']);
 });
+
+test('empty early window stays visible with no actions',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['wolf-introduction','early-artifact-window','village-wakeup']);assert.deepEqual(queue[1].actions,[])});
 
 test('usage ledger refuses duplicate activation and maintains retry idempotency',()=>{
   const cycleKey='game:night:1',base={cycleKey,accepted:[]};
@@ -42,6 +44,6 @@ test('usage ledger refuses duplicate activation and maintains retry idempotency'
   assert.equal(reserveArtifactActivation(first.state,{requestId:'req1',playerId:'member:1',artifactId:'a',cycleKey,eligible:true,limit:3}).idempotent,true);
   assert.match(worker,/skipIfEarlyUsed:row\._priorityFirst===true/);
   assert.match(worker,/EARLY_ARTIFACT_USED/);
-  assert.match(worker,/requestId:"gm:"\+String\(meta\.matchId\|\|"match"\)/);
+  assert.match(worker,/const requestId="gm:"\+String\(meta\.matchId\|\|"match"\)/);
   assert.match(worker,/artifactUse:/);
 });

@@ -5,16 +5,16 @@ test("opening window uses editable Artifact flag, not a hardcoded role list",()=
  const names=["Tráng Gương","Đá Hoán Đổi","Mắt Tiên Tri","Bùa Hộ Mệnh"];
  const owners=names.map((artifactName,i)=>({artifactName,playerId:String(i)}));
  const first=buildNightQueue({night:1,artifactOwners:owners,normalTurns:[{kind:"normal",playerId:"other"}]});
- assert.deepEqual(first.map(x=>x.kind),["wolf-introduction","early-artifact","early-artifact","early-artifact","normal"]);
- assert.deepEqual(first.slice(1,4).map(x=>x.name),names.slice(0,3));
- assert.deepEqual(buildNightQueue({night:2,artifactOwners:owners}).map(x=>x.kind),["early-artifact","early-artifact","early-artifact"]);
+ assert.deepEqual(first.map(x=>x.kind),["wolf-introduction","early-artifact-window","normal","village-wakeup"]);
+ assert.deepEqual(first[1].actions.map(x=>x.name),names.slice(0,3));
+ assert.deepEqual(buildNightQueue({night:2,artifactOwners:owners}).map(x=>x.kind),["wolf-introduction","early-artifact-window","village-wakeup"]);
  const custom=buildNightQueue({night:2,artifactOwners:[{artifactName:"Bùa Hộ Mệnh",playerId:"p",priorityFirst:true},{artifactName:"Tráng Gương",playerId:"q",priorityFirst:false}]});
- assert.deepEqual(custom.map(x=>x.name),["Bùa Hộ Mệnh"]);
+ assert.deepEqual(custom[1].actions.map(x=>x.name),["Bùa Hộ Mệnh"]);
 });
 test("early use skips duplicate main turn; skipped early turn retains main turn",()=>{
  const normalTurns=[{playerId:"1",artifactName:"Tráng Gương"}];
- assert.equal(buildNightQueue({night:1,normalTurns,artifactOwners:[{playerId:"1",artifactName:"Tráng Gương",used:true}]}).length,1);
- assert.equal(buildNightQueue({night:1,normalTurns,artifactOwners:[{playerId:"1",artifactName:"Tráng Gương",used:false}]}).length,3);
+ assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:[{playerId:"1",artifactName:"Tráng Gương",used:true}]}).map(x=>x.kind),["wolf-introduction","early-artifact-window","village-wakeup"]);
+ assert.equal(buildNightQueue({night:1,normalTurns,artifactOwners:[{playerId:"1",artifactName:"Tráng Gương",used:false}]}).length,4);
 });
 test("server cycle cap is three, fourth is rejected and retries are idempotent",()=>{
  let state={cycleKey:"match:night:1",accepted:[]};

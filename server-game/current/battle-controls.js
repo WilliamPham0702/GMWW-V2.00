@@ -37,7 +37,7 @@
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
     const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:displayLabel(row,"Lượt "+(i+1)),status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
-    rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
+    if(!queue.some(row=>row?.kind==="village-wakeup"))rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
   function resolvedType(action){
@@ -48,16 +48,38 @@
     if(/(kill|chet|giet|poison)/.test(x))return "dead";
     return "effect_notice"; // bite/protection/divination needs the effect engine, never immediate death.
   }
-  function actionsForTurn(turn,night,catalog){
-    if(!turn||turn.kind==="wolf-introduction")return [];
-    const roles=Array.isArray(catalog?.cards)?catalog.cards:[],artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],actions=Array.isArray(catalog?.actions)?catalog.actions:[];
-    const isArt=turn.kind==="early-artifact"||turn.kind==="artifact-main";
-    const pool=isArt?artifacts:roles,chosen=pool.find(r=>String(r?.id||"")===String(isArt?turn.artifactId:turn.roleId))||pool.find(r=>folded(r?.name)===folded(turn.label));
-    const fns=Array.isArray(chosen?.functions)?chosen.functions:Array.isArray(chosen?.actions)?chosen.actions:[];
-    return fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))).map((fn,i)=>{
-      const definition=actions.find(a=>String(a?.id||"")===String(fn?.actionId||"")),name=labelOf(definition,labelOf(fn,fn?.actionId||"Hành động "+(i+1)));
-      return {id:String(fn.id||fn.actionId||i),actionId:String(fn.actionId||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds:(turn.loginIds||[turn.loginId]).filter(Boolean).map(loginOf)};
-    });
+  // The server owns the authoritative turn and Artifact-use ledger.
+  // A role turn may contain both role and owned Artifact actions.
+  function actionsForTurn(turn,night,catalog,used=[]){
+    if(!turn||turn.kind==="wolf-introduction"||turn.kind==="village-wakeup")return [];
+    const roles=Array.isArray(catalog?.cards)?catalog.cards:[],
+      artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],
+      definitions=Array.isArray(catalog?.actions)?catalog.actions:[];
+    const alreadyUsed=owned=>artifactUsed(used,{kind:"artifact-main",artifactId:owned.artifactId,playerId:owned.playerId||"member:"+loginOf(owned.loginId)});
+    const build=(owner,isArt)=>{
+      const pool=isArt?artifacts:roles;
+      const id=isArt?owner.artifactId:owner.roleId;
+      const chosen=pool.find(row=>String(row?.id||"")===String(id))||pool.find(row=>folded(row?.name)===folded(isArt?owner.artifactName:owner.label));
+      const fns=Array.isArray(chosen?.functions)?chosen.functions:Array.isArray(chosen?.actions)?chosen.actions:[];
+      const actorIds=isArt?[loginOf(owner.loginId)]:(owner.loginIds||[owner.loginId]).filter(Boolean).map(loginOf);
+      return fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))).map((fn,i)=>{
+        const definition=definitions.find(a=>String(a?.id||"")===String(fn?.actionId||"")),
+          name=labelOf(definition,labelOf(fn,fn?.actionId||"Hành động "+(i+1)));
+        return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
+          actionId:String(fn.actionId||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
+          allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,
+          targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),
+          effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds,
+          ...(isArt?{artifactId:String(owner.artifactId),artifactLoginId:loginOf(owner.loginId),artifactName:String(owner.artifactName||"Artifact")}: {})};
+      });
+    };
+    if(turn.kind==="early-artifact-window")
+      return (Array.isArray(turn.actions)?turn.actions:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true));
+    if(turn.kind==="role")
+      return [...build(turn,false),...(Array.isArray(turn.artifacts)?turn.artifacts:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true))];
+    if(turn.kind==="early-artifact"||turn.kind==="artifact-main")
+      return alreadyUsed(turn)?[]:build(turn,true);
+    return [];
   }
   function targetAllowed(action,member,effect){
     if(!action||!member?.loginId||action.noTarget)return false;
