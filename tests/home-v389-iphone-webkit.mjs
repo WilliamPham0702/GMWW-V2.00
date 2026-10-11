@@ -17,7 +17,7 @@ try{
   const s=getComputedStyle(el);
   return {background:s.backgroundColor,image:s.backgroundImage,border:s.borderTopWidth,shadow:s.boxShadow,blur:s.backdropFilter,round:s.borderTopLeftRadius};
  });
- assert.match(style.background,/rgba?\\(0, 0, 0, 0\\)|transparent/i);
+ assert.ok(style.background==='rgba(0, 0, 0, 0)'||style.background==='transparent','Khám Phá outer background must be fully transparent');
  assert.equal(style.image,'none','Khám Phá must not overlay a colored backdrop');
  assert.equal(style.border,'0px','Khám Phá outer frame must have no border');
  assert.equal(style.shadow,'none','Khám Phá outer frame must have no shadow');
