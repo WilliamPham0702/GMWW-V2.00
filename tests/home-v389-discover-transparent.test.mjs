@@ -33,6 +33,6 @@ test('V3.89 installs from V3.87 via three verified UI files; deletion forbidden'
    const corrupted=structuredClone(m);mutate(corrupted);
    assert.equal(selectVerifiedRuntimeV389Delta(corrupted,'3.88'),null);
  }
- assert.match(app,/const VERSION='3\.91'/);
- assert.match(html,/<title>GMWW V3\.91<\/title>/);
+ assert.match(app,/const VERSION='3\.92'/);
+ assert.match(html,/<title>GMWW V3\.92<\/title>/);
 });
