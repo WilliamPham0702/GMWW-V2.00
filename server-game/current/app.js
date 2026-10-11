@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.101';
+const VERSION='3.102';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3381,6 +3381,60 @@ function initBattleFloatingUndo(){
   box.addEventListener('click',()=>{if(Date.now()>=ignoreUntil)void battleUndoLast()});
   window.addEventListener('resize',()=>{const r=box.getBoundingClientRect();place(r.left,r.top)});
 }
+/* Capture iOS/WKWebView touch gestures directly. Pointer-only swipe events
+   can be cancelled by browser panning or pointer capture on the village scene. */
+function initBattleSwipeNavigation(){
+  const root=document.getElementById('playShell');if(!root||root.dataset.battleSwipeReady)return;
+  root.dataset.battleSwipeReady='1';
+  let gesture=null;
+  const interactive='button,input,select,textarea,a,[role="button"],[role="dialog"],[contenteditable="true"]';
+  const overlays='#playBattleTop,#playBattleDock,#battleActionTray,#battleUndoFloat,#playBattleClockFloat,#battleWolfMenu,#battleDetails,#battleTargetSheet,.play-gm-sheet,[data-play-gm-rider]';
+  const eligible=target=>{
+    if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||
+       battleState.drag||battleState.targetSheet||battleState.roster||battleState.details||
+       battleState.wolfOpen||battleState.clockOpen)return false;
+    if(!target||!root.contains(target)||target.closest?.(overlays))return false;
+    // Player tokens are safe swipe starting points during a battle; their taps
+    // still select targets, and native horizontal action scrolling is excluded.
+    return !target.closest?.(interactive)||!!target.closest?.('#playPlayerRing [data-play-player-id]');
+  };
+  const begin=(x,y,target,source,id)=>{
+    gesture=eligible(target)?{x,y,target,source,id,time:Date.now()}:null;
+  };
+  const finish=(x,y)=>{
+    const start=gesture;gesture=null;
+    if(!start||playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||battleState.targetSheet||battleState.roster||battleState.details||battleState.wolfOpen||battleState.clockOpen)return;
+    const dx=x-start.x,dy=y-start.y,elapsed=Date.now()-start.time;
+    const minDistance=Math.max(64,Math.min(104,window.innerWidth*.18));
+    if(elapsed<=1800&&Math.abs(dx)>=minDistance&&Math.abs(dx)>Math.abs(dy)*1.5)
+      battleNavigateRelative(dx<0?1:-1);
+  };
+  root.addEventListener('touchstart',event=>{
+    gesture=null;
+    if(event.touches.length!==1)return;
+    const point=event.touches[0];begin(point.clientX,point.clientY,event.target,'touch',point.identifier);
+  },{passive:true,capture:true});
+  root.addEventListener('touchmove',event=>{
+    if(event.touches.length!==1)gesture=null;
+  },{passive:true,capture:true});
+  document.addEventListener('touchend',event=>{
+    if(!gesture||gesture.source!=='touch')return;
+    if(event.touches.length!==0||event.changedTouches.length!==1||
+       event.changedTouches[0].identifier!==gesture.id){gesture=null;return}
+    const point=event.changedTouches[0];finish(point.clientX,point.clientY);
+  },{passive:true,capture:true});
+  document.addEventListener('touchcancel',()=>{gesture=null},{passive:true,capture:true});
+  root.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='pen'||event.pointerType==='touch')begin(event.clientX,event.clientY,event.target,'pointer',event.pointerId);
+  },{passive:true,capture:true});
+  document.addEventListener('pointerup',event=>{
+    if(gesture?.source==='pointer'&&gesture.id===event.pointerId)finish(event.clientX,event.clientY);
+  },{passive:true,capture:true});
+  document.addEventListener('pointercancel',event=>{
+    if(gesture?.source==='pointer'&&gesture.id===event.pointerId)gesture=null;
+  },{passive:true,capture:true});
+}
+
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
   document.getElementById('battleBack')?.addEventListener('click',()=>{battleNavigateRelative(-1)});
@@ -3417,22 +3471,7 @@ function initBattleControls(){
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled)void battleNavigateIndex(Number(b.dataset.battleIndex))});
-  const swipeRoot=document.getElementById('playShell');
-  let battleSwipe=null;
-  swipeRoot?.addEventListener('pointerdown',e=>{
-    if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
-    if(playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
-    if(e.target.closest('button,input,select,textarea,a,[role="button"],#playBattleTop,#playBattleDock,.play-player-token,.play-gm-sheet'))return;
-    battleSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,time:Date.now()};
-  },{passive:true});
-  swipeRoot?.addEventListener('pointerup',e=>{
-    const start=battleSwipe;battleSwipe=null;
-    if(!start||start.id!==e.pointerId||playSceneState.step!=='battle')return;
-    const dx=e.clientX-start.x,dy=e.clientY-start.y,elapsed=Date.now()-start.time;
-    if(elapsed>=100&&elapsed<=1800&&Math.abs(dx)>=Math.min(135,Math.max(90,window.innerWidth*0.26))&&Math.abs(dx)>Math.abs(dy)*2)
-      battleNavigateRelative(dx>0?-1:1);
-  },{passive:true});
-  swipeRoot?.addEventListener('pointercancel',()=>{battleSwipe=null},{passive:true});
+  initBattleSwipeNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleActionBar')?.addEventListener('click',e=>{
     if(Date.now()<battleState.ignoreClick)return;

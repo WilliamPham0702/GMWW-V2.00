@@ -5122,3 +5122,27 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet[hid
 }
 #playSeatPresetPanel .play-seat-preset-dot{z-index:2}
 #playSeatPresetPanel .play-seat-preset-card b{font-size:9.2px;letter-spacing:0;white-space:nowrap}
+
+/* Compact, content-sized night ACTION dock. The role/action row keeps native
+   horizontal scrolling when the available actions exceed the phone width. */
+body.play-immersive #start #playShell[data-step="battle"] #battleActionTray.battle-action-tray-v399{
+ left:calc(env(safe-area-inset-left) + 10px)!important;right:auto!important;
+ width:max-content!important;max-width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 20px)!important;
+ min-width:0!important;height:auto!important;max-height:98px!important;
+ padding:6px 8px 7px!important;gap:4px!important;align-items:stretch!important;
+}
+#start #playShell[data-step="battle"] .battle-action-tray-head{
+ gap:0!important;min-width:0!important;
+}
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll{
+ width:max-content;max-width:100%!important;min-height:40px!important;
+ overflow-x:auto!important;overflow-y:hidden!important;scroll-padding-inline:5px;
+ touch-action:pan-x;
+}
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll>button{
+ min-width:94px;min-height:40px!important;padding:6px 10px!important;
+}
+/* Swipe on the battle ground, without turning action drag or timeline scroll
+   into a turn navigation gesture. */
+#start #playShell[data-step="battle"] #battleActionBar,
+#start #playShell[data-step="battle"] #battleTimeline{touch-action:pan-x}

@@ -29,8 +29,8 @@ test('Top and bottom use the same transparent frosted style, with safe-area and 
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
 test('V3.37 OTA delivers review controls on the existing V3.17 native shell',()=>{
- assert.equal(pkg.version,'3.101.0');
- assert.match(app,/const VERSION='3\.101'/);
- assert.match(html,/<title>GMWW V3\.101<\/title>/);
- assert.match(worker,/VERSION="V3\.101",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3101"/);
+ assert.equal(pkg.version,'3.102.0');
+ assert.match(app,/const VERSION='3\.102'/);
+ assert.match(html,/<title>GMWW V3\.102<\/title>/);
+ assert.match(worker,/VERSION="V3\.102",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3102"/);
 });
