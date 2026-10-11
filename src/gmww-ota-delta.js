@@ -698,22 +698,22 @@ export function selectVerifiedRuntimeV388Delta(manifest,installedVersion){
 }
 
 
-/** V3.88 -> V3.89: only the Khám Phá frame changed; no persistent data deletion. */
-export function selectVerifiedRuntimeV389Delta(manifest,installedVersion){
+/** V3.89 -> V3.90: only the Khám Phá frame changed; no persistent data deletion. */
+export function selectVerifiedRuntimeV390Delta(manifest,installedVersion){
   const from=String(installedVersion||'').trim().replace(/^V/i,'');
-  if(from!=='3.88'||String(manifest?.releaseVersion||'')!=='3.89'
-    ||String(manifest?.runtimeVersion||'')!=='3.89'||String(manifest?.shellVersion||'')!=='3.17'
+  if(from!=='3.89'||String(manifest?.releaseVersion||'')!=='3.90'
+    ||String(manifest?.runtimeVersion||'')!=='3.90'||String(manifest?.shellVersion||'')!=='3.17'
     ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
     ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
   const selected=[];
   for(const path of ['GMWW.html','app.js','style.css']){
     const matches=manifest.runtime.files.filter(f=>f?.path===path);
     if(matches.length!==1)return null;
-    const file=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.89/'+path;
+    const file=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.90/'+path;
     if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
     selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
   }
   return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
-    message:'V3.89: Khám Phá trong suốt, bỏ viền và bóng, giữ ba thẻ và toàn bộ dữ liệu game.'};
+    message:'V3.90: Mở ChatGPT từ IPA, bỏ nút sao chép, giữ dữ liệu game.'};
 }
