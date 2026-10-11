@@ -1,133 +1,46 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
 import {selectVerifiedRuntimeV385Delta,selectVerifiedRuntimeV386Delta} from '../src/gmww-ota-delta.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
-test('Settings keeps ChatGPT support private with one editable composer and separate send',()=>{
-  assert.match(html,/id="settingsGroupErrorReport"/);
-  assert.match(html,/id="gmwwReportToChatGPT"/);
-  assert.match(html,/id="gmwwReportComposer"/);
-  assert.match(html,/id="gmwwSendReport"/);
-  assert.doesNotMatch(html,/id="gmwwReportPreview"/);
-  assert.match(app,/https:\/\/chatgpt\.com\/\?prompt=/);
-  assert.match(app,/encodeURIComponent\(message\)/);
-  assert.match(app,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
-  assert.match(app,/gmwwLastBugDiagnostics/);
-  assert.match(app,/runSystemDiagnostics\(\{silent:true\}\)/);
+
+test('ChatGPT error reporting is absent from both settings UI and runtime handlers',()=>{
+  for(const forbidden of ['settingsGroupErrorReport','gmwwReportComposer','gmwwReportToChatGPT',
+    'gmwwSendReport','gmwwCopyReport','gmwwReportStatus']){
+    assert.ok(!html.includes('id="'+forbidden+'"'),'ChatGPT element remains: '+forbidden);
+    assert.ok(!app.includes("getElementById('"+forbidden+"')"),'ChatGPT handler remains: '+forbidden);
+  }
+  assert.doesNotMatch(html,/Báo lỗi qua ChatGPT|SAO CHÉP NỘI DUNG/);
+  assert.doesNotMatch(app,/function gmwwSendReportToChatGPT|function gmwwReportBugToChatGPT|gmwwBuildBugReport|chatgpt\.com\/\?prompt=/);
   assert.doesNotMatch(html,/gmww-ai-support\.(?:js|css)/);
   assert.doesNotMatch(worker,/\/api\/gm\/ai-support\/(?:config|chat)/);
   assert.doesNotMatch(worker,/aiSupportEnabled|handleAiSupport|AI_SUPPORT_REQUEST_LIMIT/);
   assert.doesNotMatch(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),
     /copy\('server-game\/current\/gmww-ai-support\./);
 });
-test('Generated report excludes raw credentials, room details and runtime exception texts',()=>{
-  const from=app.indexOf('/* GMWW Settings -> ChatGPT');
-  const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
-  assert.ok(from>0&&until>from,'Report functions should be self-contained');
-  const tokens={
-    document:{
-      getElementById(id){
-        return {
-          updateServerVersion:{textContent:'V3.85'},
-          updateStatus:{textContent:'ĐANG PHÁT HÀNH'},
-          updateDecisionTitle:{textContent:'Server chưa có gói Runtime'}
-        }[id]||null
-      },
-      querySelector:()=>null,
-      querySelectorAll:()=>[]
-    },
-    gmwwShellVersion:()=> '3.17',
-    gmwwRuntimeVersion:()=> '3.85',
-    gmwwRuntimeErrors:[{kind:'javascript',message:'Bearer extremely-sensitive-token text: ROOM_KEY ABCD23'}],
-    navigator:{onLine:true}
-  };
-  const reporter=vm.runInNewContext(app.slice(from,until)+'\n({build:gmwwBuildBugReport})',tokens);
-  const report=reporter.build({
-    ok:false,warnings:['sensitive membership data'],
-    probes:{
-      server:{ok:true,status:200,latency:50,data:{loginId:'PRIVATE_USER'}},
-      update:{ok:false,status:503,latency:90,data:{error:'RUNTIME_MANIFEST_NOT_READY',secret:'TOP_SECRET'}},
-      player:{ok:false,status:404,latency:20,error:'Room ABCD23 private member'},
-      settings:{ok:true,status:200,latency:10}
-    }
-  });
-  assert.match(report,/GMWW_SAFE_ERROR_REPORT_V1/);
-  assert.match(report,/RUNTIME_MANIFEST_NOT_READY/);
-  assert.match(report,/V3\.85/);
-  assert.match(report,/Mô tả lỗi:/);
-  for(const secret of ['extremely-sensitive-token','ABCD23','TOP_SECRET','PRIVATE_USER','sensitive membership'])
-    assert.ok(!report.includes(secret),'Sensitive field leaked: '+secret);
-  const payload=JSON.parse(report.slice(report.indexOf('\n\n')+2));
-  assert.equal(payload.checks.update.http,503);
-  assert.equal(payload.checks.server.ok,true);
-  assert.equal(payload.checks.characters.code,'NOT_CHECKED');
-  assert.equal(payload.runtimeErrorCount,1);
-});
-test('Single editable prompt is initialized, diagnostics stay local, send uses exact edited text',async()=>{
-  const form=html.slice(html.indexOf('id="settingsGroupErrorReport"'),html.indexOf('id="settingsGroupHealth"'));
-  assert.match(form,/id="gmwwReportComposer"/);
-  assert.match(form,/maxlength="16000"/);
-  assert.match(form,/id="gmwwReportToChatGPT"/);
-  assert.match(form,/id="gmwwSendReport"/);
-  assert.doesNotMatch(form,/id="gmwwReportPreview"/);
-  const listeners={};
-  const control=(name,extra={})=>({disabled:false,...extra,addEventListener(type,fn){listeners[name+':'+type]=fn}});
-  const editor=control('editor',{value:'',focus(){},select(){}});
-  const info={textContent:''};
-  const elements={
-    gmwwReportComposer:editor,
-    gmwwReportToChatGPT:control('diagnose'),
-    gmwwSendReport:control('send'),
-    gmwwCopyReport:control('copy'),
-    gmwwReportStatus:info,
-    updateServerVersion:{textContent:'V3.87'},
-    updateStatus:{textContent:'ĐÃ CẬP NHẬT'},
-    updateDecisionTitle:{textContent:'GMWW mới nhất'}
-  };
-  const opened=[],copied=[];
-  let checked=0;
-  const context={
-    document:{getElementById:id=>elements[id]||null,querySelector:()=>null,querySelectorAll:()=>[]},
-    gmwwShellVersion:()=> '3.17',
-    gmwwRuntimeVersion:()=> '3.88',
-    gmwwRuntimeErrors:[],
-    runSystemDiagnostics:async()=>{checked++;return {ok:true,probes:{server:{ok:true,status:200,latency:21}}}},
-    navigator:{onLine:true,clipboard:{writeText:async s=>{copied.push(s)}}},
-    window:{open:(url)=>{opened.push(url)}},Date
-  };
-  const from=app.indexOf('/* GMWW Settings -> ChatGPT');
-  const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
-  vm.runInNewContext(app.slice(from,until),context);
-  assert.match(editor.value,/YÊU CẦU CỦA GM/);
-  assert.match(editor.value,/không đoán khi chưa có bằng chứng/i);
-  assert.equal(opened.length,0);
-  editor.value=editor.value.replace('[Viết vấn đề cần khắc phục hoặc tính năng cần bổ sung tại đây.]','Nút phân vai chưa hoạt động.');
-  await listeners['diagnose:click']();
-  assert.equal(checked,1);
-  assert.equal(opened.length,0,'Diagnose must never open ChatGPT');
-  assert.match(editor.value,/Nút phân vai chưa hoạt động/);
-  assert.match(editor.value,/GMWW_SAFE_ERROR_REPORT_V1/);
-  assert.match(editor.value,/"http": 200/); // server probe returned HTTP 200
-  assert.equal((editor.value.match(/BẮT ĐẦU BÁO CÁO GMWW TỰ ĐỘNG/g)||[]).length,1);
-  editor.value=editor.value.replace('Nút phân vai chưa hoạt động.','Nút phát vai chưa hoạt động.');
-  await listeners['diagnose:click']();
-  assert.equal(checked,2);
-  assert.equal((editor.value.match(/BẮT ĐẦU BÁO CÁO GMWW TỰ ĐỘNG/g)||[]).length,1);
-  assert.match(editor.value,/Nút phát vai chưa hoạt động/);
-  assert.doesNotMatch(editor.value,/Nút phân vai chưa hoạt động/);
-  editor.value+='\\nĐề nghị thêm kiểm thử Safari iPhone.';
-  const sent=editor.value;
-  listeners['send:click']();
-  assert.equal(opened.length,1);
-  assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),sent);
-  assert.match(info.textContent,/nhấn Gửi trong ChatGPT/);
-  await listeners['copy:click']();
-  assert.equal(copied[0],sent);
+
+test('Removed reporting leaves four orderly settings groups and system maintenance operational',()=>{
+  const start=html.indexOf('<section class="page" id="settings">');
+  const end=html.indexOf('</section>',start);
+  const settings=html.slice(start,end);
+  const expected=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+  assert.deepEqual([...settings.matchAll(/id="(settingsGroup\w+)"/g)].map(m=>m[1]),expected);
+  for(let i=0;i<expected.length;i++){
+    const pos=settings.indexOf('id="'+expected[i]+'"');
+    const next=i===expected.length-1?settings.length:settings.indexOf('id="'+expected[i+1]+'"');
+    assert.match(settings.slice(pos,next),new RegExp('settings-unified-index">0'+(i+1)+'<'));
+  }
+  for(const id of ['installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate','runSystemDiagnostics',
+    'quickRepairSystem','checkPlayerWebNow','settingsRunHealth','gmwwTasksReload']){
+    assert.match(settings,new RegExp('id="'+id+'"'));
+  }
+  for(const id of ['installRuntimeUpdate','syncPlayerWebUpdate','runSystemDiagnostics','quickRepairSystem'])
+    assert.ok(app.includes("getElementById('"+id+"')"),'Maintenance handler removed: '+id);
+  assert.doesNotMatch(app,/localStorage\.clear\(\)|indexedDB\.deleteDatabase\(/);
 });
 
 test('Runtime V3.87 -> V3.88 OTA is a signed three-file overlay with no data deletion',async()=>{
