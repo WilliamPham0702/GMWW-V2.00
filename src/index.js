@@ -923,8 +923,13 @@ export class RoomDurableObject extends DurableObject {
     const roomMode=body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
-    const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):normalizeSeatLayout(meta.seatLayout);
-    if(hasSeatLayout&&String(body.seatLayout||'')!==seatLayout)return j({ok:false,error:"INVALID_SEAT_LAYOUT"},400);
+    const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout");
+    const previousLayout=normalizeSeatLayout(meta.seatLayout);
+    // One server-authoritative choice by player count, with explicit V3.97 legacy
+    // shapes still supported. Room resizing updates the recommended shape too.
+    const autoLayout=body?.seatLayout==='auto'||(!hasSeatLayout&&previousLayout&&requested!==Number(meta.seatCount));
+    const seatLayout=autoLayout?villageLayout.autoSeatShape(requested):hasSeatLayout?normalizeSeatLayout(body.seatLayout):previousLayout;
+    if(hasSeatLayout&&body.seatLayout!=='auto'&&String(body.seatLayout||'')!==seatLayout)return j({ok:false,error:"INVALID_SEAT_LAYOUT"},400);
     const maxOccupied=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
     if(requested<maxOccupied)return j({ok:false,error:"SEAT_COUNT_BELOW_OCCUPIED",message:"Không thể giảm số ghế thấp hơn vị trí đang có người ngồi.",maxOccupied},409);
     if(seatLayout&&requested<Object.keys(players).length)return j({ok:false,error:"SEAT_TEMPLATE_TOO_SMALL",message:"Mẫu Seat ít hơn số người đã vào phòng."},409);
