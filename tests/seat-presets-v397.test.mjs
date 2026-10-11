@@ -42,6 +42,12 @@ test('every 8–30 player grouping is truly centered on the campfire in all thre
       closest=Math.min(closest,distance);
     }
     assert.ok(closest>5,shape+' '+n+' has piled-up players: '+closest);
+    if(shape===layout.autoSeatShape(n)){
+      const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
+      const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
+      assert.ok(width>40&&height>25,'recommended '+n+' layout must use open village ground');
+      assert.ok(closest>7,'recommended '+n+' layout must have touch-friendly separation');
+    }
   }
 });
 
