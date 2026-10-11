@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.88';
+const VERSION='3.89';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -1508,7 +1508,7 @@ async function gmwwReportBugToChatGPT(){
     if(result)gmwwLastBugDiagnostics=result;
     gmwwLastBugScan=Date.now();
     if(gmwwPrepareBugReport()&&status)
-      status.textContent='Đã cập nhật báo cáo hệ thống. Hãy đọc, chỉnh sửa rồi nhấn GỬI CHATGPT.';
+      status.textContent='Đã cập nhật báo cáo hệ thống. Hãy đọc, chỉnh sửa rồi nhấn MỞ CHATGPT.';
   }catch{
     if(status)status.textContent='Chưa thể quét mới. Báo cáo hiện có vẫn ở ô trên; bạn có thể chỉnh sửa và gửi.';
   }finally{btn.disabled=false}
@@ -1517,13 +1517,28 @@ function gmwwSendReportToChatGPT(){
   const field=document.getElementById('gmwwReportComposer');
   const status=document.getElementById('gmwwReportStatus');
   const message=gmwwReadComposer().trim();
-  if(!message){if(status)status.textContent='Vui lòng nhập yêu cầu trước khi gửi.';field?.focus?.();return}
-  // User-initiated gesture only. No API key or automatic submission to a chat.
+  if(!message){if(status)status.textContent='Vui lòng nhập yêu cầu trước khi mở ChatGPT.';field?.focus?.();return}
+  // ChatGPT's URL pre-fills a draft; it does NOT submit a chat message.
+  // Never claim that the request has been delivered until ChatGPT itself sends it.
   gmwwPreparedBugReport=message;
   const url='https://chatgpt.com/?prompt='+encodeURIComponent(message);
-  if(status)status.textContent='Đang mở ChatGPT với nội dung đã soạn. Kiểm tra và nhấn Gửi trong ChatGPT. Nếu ô chat trống, dùng SAO CHÉP NỘI DUNG.';
-  try{window.open(url,'_blank','noopener,noreferrer')}catch{
-    if(status)status.textContent='Không mở được ChatGPT tự động. Nhấn SAO CHÉP NỘI DUNG, rồi dán vào ChatGPT.';
+  const guidance='Đã yêu cầu mở ChatGPT với bản nháp. Hãy nhấn Gửi trong ChatGPT để gửi thật.';
+  if(window.webkit?.messageHandlers?.gmwwUpdater){
+    // WKWebView's main-frame navigation is intercepted by the native delegate
+    // and opened in Safari/ChatGPT; window.open(_blank) is unreliable in IPA.
+    try{window.location.assign(url);if(status)status.textContent=guidance}
+    catch{if(status)status.textContent='Không thể mở ChatGPT. Hãy thử lại khi có kết nối mạng.'}
+    return;
+  }
+  try{
+    const opened=window.open(url,'_blank');
+    if(opened){try{opened.opener=null}catch{}if(status)status.textContent=guidance}
+    else if(window.location?.assign){
+      window.location.assign(url);
+      if(status)status.textContent=guidance;
+    }else if(status)status.textContent='Trình duyệt đã chặn mở ChatGPT. Hãy cho phép mở liên kết và thử lại.';
+  }catch{
+    if(status)status.textContent='Không thể mở ChatGPT. Hãy thử lại khi có kết nối mạng.';
   }
 }
 const gmwwReportComposer=document.getElementById('gmwwReportComposer');
@@ -1532,18 +1547,6 @@ const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
 if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',gmwwReportBugToChatGPT);
 const gmwwSendReport=document.getElementById('gmwwSendReport');
 if(gmwwSendReport)gmwwSendReport.addEventListener('click',gmwwSendReportToChatGPT);
-const gmwwCopyReport=document.getElementById('gmwwCopyReport');
-if(gmwwCopyReport)gmwwCopyReport.addEventListener('click',async()=>{
-  const message=gmwwReadComposer().trim();
-  const status=document.getElementById('gmwwReportStatus');
-  if(!message){if(status)status.textContent='Chưa có nội dung để sao chép.';return}
-  let copied=false;
-  try{await navigator.clipboard.writeText(message);copied=true}catch{}
-  if(!copied){const box=document.getElementById('gmwwReportComposer');
-    if(box){box.focus();box.select();try{copied=document.execCommand('copy')}catch{}}}
-  if(status)status.textContent=copied?'Đã sao chép. Mở ChatGPT, dán vào khung chat rồi nhấn Gửi.':
-    'Hãy chọn và sao chép nội dung trong ô phía trên.';
-});
 
 // Preload safe Health Check when GM enters Settings so the report opens in
 // one direct tap, without iOS popup blocking an asynchronous navigation.
