@@ -763,3 +763,24 @@ export function selectVerifiedRuntimeV391Delta(manifest,installedVersion){
     optimizedFromVersion:'3.90',upgradeMode:'verified-overlay',
     message:'V3.91: Bỏ box lượt trên sân, menu trên Quay về / Timeline / Tiếp tục; menu dưới Đồng hồ / Thông Tin / Auto GM, Sói, Thoát / Kết thúc / Audio, Hồi Sinh / Giết người. Bảo toàn dữ liệu.'};
 }
+
+
+/** V3.91 -> V3.92: SHA-pinned compact GM wolf menu; immutable UI assets, no data deletion. */
+export function selectVerifiedRuntimeV392Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.91'||String(manifest?.releaseVersion||'')!=='3.92'
+   ||String(manifest?.runtimeVersion||'')!=='3.92'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css']){
+   const matches=manifest.runtime.files.filter(f=>f?.path===path);
+   if(matches.length!==1)return null;
+   const file=matches[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.92/'+path;
+   if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+   selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:'3.91',upgradeMode:'verified-overlay',
+   message:'V3.92: Thanh dưới chỉ icon Đồng hồ và Auto GM, sói mở các công cụ GM. Giữ nguyên dữ liệu.'};
+}
