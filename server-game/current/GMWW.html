@@ -139,6 +139,7 @@
           </div>
           <div class="play-gather-toolbar-actions">
             <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
+            <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT MẪU</b></button>
             <button id="playGatherRandom" type="button"><span aria-hidden="true">⚄</span><b>NGẪU NHIÊN</b></button>
             <button id="playGatherManual" type="button"><span aria-hidden="true">☝</span><b>THỦ CÔNG</b></button>
             <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
@@ -146,6 +147,18 @@
           </div>
         </section>
 
+        <section class="play-seat-preset-panel" id="playSeatPresetPanel" role="dialog" aria-label="Chọn Seat Mẫu" aria-modal="false" hidden>
+          <div class="play-seat-preset-heading">
+            <div><b>SEAT MẪU</b><small>Chạm vào sơ đồ dấu chấm để chọn vị trí</small></div>
+            <button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button>
+          </div>
+          <div class="play-seat-preset-shapes" role="group" aria-label="Hình dạng Seat">
+            <button type="button" data-play-seat-shape="circle" aria-pressed="true">Hình tròn</button>
+            <button type="button" data-play-seat-shape="diamond" aria-pressed="false">Hình thoi</button>
+            <button type="button" data-play-seat-shape="rectangle" aria-pressed="false">Chữ nhật</button>
+          </div>
+          <div id="playSeatPresetGrid" class="play-seat-preset-grid" aria-label="Sơ đồ các Seat Mẫu"></div>
+        </section>
 
         <section class="play-role-assignment-panel hidden" id="playRoleAssignmentPanel" hidden aria-label="Bước 5: Phân Vai">
           <header class="play-assignment-heading">
