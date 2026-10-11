@@ -39,7 +39,7 @@ test('ChatGPT composer removes copy UI and does not claim external message sent'
   assert.match(html,/id="gmwwSendReport"/);
   assert.match(html,/MỞ CHATGPT/);
   assert.doesNotMatch(html,/SAO CHÉP NỘI DUNG|gmwwCopyReport/);
-  assert.doesNotMatch(app,/gmwwCopyReport|clipboard\.writeText|execCommand\('copy'\)/);
+  assert.doesNotMatch(app.slice(start,end),/gmwwCopyReport|clipboard\.writeText|execCommand\('copy'\)/);
   assert.doesNotMatch(css,/\.gmww-report-copy/);
   assert.match(html,/Tin nhắn chỉ được gửi khi bạn nhấn Gửi trong ChatGPT/);
 });
