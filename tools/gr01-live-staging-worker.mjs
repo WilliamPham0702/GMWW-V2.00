@@ -47,7 +47,9 @@ export class Gr01LabDO {
    await storage.put('meta', { room: 'GR01 MUTATED', phase: 'ended' });
    return json({ ok: true });
   }
-  if (u.pathname === '/bookmark') return json({ ok: true, bookmark: await storage.getCurrentBookmark() });
+  if (u.pathname === '/bookmark' || u.pathname === '/__gr01/pitr/bookmark')
+   return json({ ok: true, bookmark: await storage.getCurrentBookmark(),
+    databaseSize: storage.sql.databaseSize, readOnly: true, recordedAt: new Date().toISOString() });
   if (u.pathname === '/restore-pitr') {
    const { bookmark } = await request.json();
    await storage.onNextSessionRestoreBookmark(bookmark);
