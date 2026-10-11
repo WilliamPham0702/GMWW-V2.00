@@ -1,6 +1,7 @@
 import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
+import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
@@ -33,6 +34,18 @@ function publicGmPresence(rec,online=true){
 export class RoomDurableObject extends DurableObject {
   async fetch(request){
     const path=new URL(request.url).pathname;
+    // GR01 recovery marker: internal DO stub requests only, read-only.
+    // No Production restore route exists here; unconfigured credentials fail closed.
+    if(path==="/__gr01/pitr/bookmark"){
+      if(request.method!=="POST"||!(await authorizedPitr(request,this.env?.GR01_INTERNAL_PITR_TOKEN)))
+        return new Response("Not found",{status:404,headers:{"cache-control":"no-store"}});
+      try{
+        const bookmark=await this.ctx.storage.getCurrentBookmark();
+        return j({ok:true,bookmark,databaseSize:this.ctx.storage.sql.databaseSize,readOnly:true,recordedAt:new Date().toISOString()});
+      }catch{
+        return j({ok:false,error:"PITR_UNAVAILABLE"},503);
+      }
+    }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
