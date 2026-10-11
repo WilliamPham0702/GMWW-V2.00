@@ -275,6 +275,14 @@
             <button class="icon-add" id="addTheme" aria-label="Thêm Chủ Đề">＋</button>
           </div>
           <div id="themeUiSections"></div>
+          <section class="theme-section theme-section-pinned" id="villageSceneSettings">
+            <div class="theme-section-head"><h3>🌊 Bối cảnh Làng 2D · Đồng bộ Player Web</h3></div>
+            <p>Chỉ Server GM được thay đổi. Ảnh xuất bản đồng bộ tự động tới Player Web.</p>
+            <label>Ảnh ban ngày <input id="gmVillageDay" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <label>Ảnh ban đêm <input id="gmVillageNight" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <div class="button-row"><button type="button" id="gmVillagePreview">XEM TRƯỚC</button><button type="button" id="gmVillagePublish" class="primary">XUẤT BẢN</button><button type="button" id="gmVillageRollback">KHÔI PHỤC BẢN TRƯỚC</button></div>
+            <p id="gmVillageStatus" role="status">Chưa tải cấu hình.</p>
+          </section>
           <section class="theme-section theme-section-pinned">
             <div class="theme-section-head"><h3>🎭 Artwork Vai Trò</h3></div>
             <div id="themeCardRows"></div>

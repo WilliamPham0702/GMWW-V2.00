@@ -99,6 +99,9 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
     if(url.pathname==="/global-assets/card-back"&&request.method==="GET")return this.globalAssetGet("globalAsset:cardBack","image/webp");
     if(url.pathname==="/global-assets/card-back"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:cardBack","image/webp",125000);
+    if(url.pathname==="/global-settings/village-scene"&&request.method==="GET")return this.sceneSettingsGet();
+    if(url.pathname==="/global-settings/village-scene"&&request.method==="PUT")return this.sceneSettingsPut(await safeJson(request));
+    if(url.pathname==="/global-settings/village-scene/rollback"&&request.method==="POST")return this.sceneSettingsRollback(await safeJson(request));
     if(url.pathname==="/global-settings/ui"&&request.method==="GET")return this.globalUiSettingsGet();
     if(url.pathname==="/global-settings/ui"&&request.method==="PUT")return this.globalUiSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/web-sync"&&request.method==="GET")return this.globalWebSyncGet();
@@ -480,6 +483,29 @@ export class RoomDurableObject extends DurableObject {
   }
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
+  async sceneSettingsGet(){
+    const current=await this.ctx.storage.get("globalSetting:villageScene");
+    return j({ok:true,scene:current||{revision:0,day:null,night:null},history:(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[]});
+  }
+  async sceneSettingsPut(body){
+    const isImage=v=>v===null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
+    if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
+    const previous=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0,day:null,night:null};
+    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    const next={revision:previous.revision+1,day:body.day??previous.day,night:body.night??previous.night,updatedAt:new Date().toISOString()};
+    await this.ctx.storage.put("globalSetting:villageSceneHistory",[previous,...history].slice(0,5));
+    await this.ctx.storage.put("globalSetting:villageScene",next);
+    return j({ok:true,scene:next});
+  }
+  async sceneSettingsRollback(body){
+    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    if(!history.length)return j({ok:false,error:"NO_PREVIOUS_SCENE"},409);
+    const current=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
+    const previous=history[0],next={...previous,revision:current.revision+1,updatedAt:new Date().toISOString()};
+    await this.ctx.storage.put("globalSetting:villageScene",next);
+    await this.ctx.storage.put("globalSetting:villageSceneHistory",[current,...history.slice(1)].slice(0,5));
+    return j({ok:true,scene:next});
+  }
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
     return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
@@ -1528,6 +1554,15 @@ export default {async fetch(request,env){
   }
   if(url.pathname.startsWith("/api/gm/")&&url.pathname!=="/api/gm/presence"&&bearer(request)===GM_SYNC_TOKEN){
     try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true}'}))}catch(_){}
+  }
+  if(url.pathname==="/api/village-scene"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/village-scene");
+  if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene",{method:"PUT",headers:{"content-type":"application/json"},body:request.body}));
+  }
+  if(url.pathname==="/api/gm/village-scene/rollback"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene/rollback",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}));
   }
   if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/ui",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
   if(url.pathname==="/api/gm/assets/victory-audio"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/victory",{method:"PUT",headers:{"content-type":"audio/mpeg"},body:request.body}));}

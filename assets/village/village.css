@@ -432,3 +432,7 @@ html.embedded .player .player-over .name{font-size:11px}
 
 /* Player-only preparation: keep the same 2D characters and seating, without showing gameplay HUD. */
 html.embedded body.player-prep .hud{display:none!important}
+
+/* Scene Manager: background-only overlay, preserve all collision and seat geometry. */
+.stage.custom-scene::before{content:"";position:absolute;inset:0;background-image:var(--gmww-scene-image);background-position:center;background-size:cover;pointer-events:none;z-index:0}
+.stage.custom-scene > *{position:relative}

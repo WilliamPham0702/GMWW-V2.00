@@ -1,6 +1,38 @@
 (()=>{'use strict';
 
 const VERSION='3.85';
+const villageSceneDraft={day:null,night:null};
+async function villageSceneFile(file){
+ if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
+ return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Không đọc được ảnh'));reader.readAsDataURL(file)});
+}
+function villageSceneStatus(message){const node=document.getElementById('gmVillageStatus');if(node)node.textContent=message}
+async function villageSceneRequest(path,method,body){
+ const response=await fetch(GMWW_SERVER_BASE+path,{method,headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:method==='GET'?undefined:JSON.stringify(body||{}),cache:'no-store'});
+ const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||'HTTP '+response.status);return data;
+}
+function initVillageSceneManager(){
+ const day=document.getElementById('gmVillageDay');if(!day||day.dataset.bound)return;day.dataset.bound='1';
+ for(const key of ['day','night'])document.getElementById(key==='day'?'gmVillageDay':'gmVillageNight').addEventListener('change',async e=>{
+  try{villageSceneDraft[key]=await villageSceneFile(e.target.files[0]);villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Chưa xuất bản.')}catch(error){villageSceneStatus(error.message)}
+ });
+ document.getElementById('gmVillagePreview').addEventListener('click',()=>{
+  const url=GMWW_SERVER_BASE+'/village/?sceneEditor=preview';window.open(url,'_blank','noopener');villageSceneStatus('Đã mở bản xem trước. Ảnh chưa được xuất bản.');
+ });
+ document.getElementById('gmVillagePublish').addEventListener('click',async()=>{
+  if(!villageSceneDraft.day&&!villageSceneDraft.night){villageSceneStatus('Hãy chọn ảnh Ngày hoặc Đêm trước.');return}
+  try{const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);villageSceneStatus('Đã xuất bản phiên bản '+data.scene.revision+' tới Player Web.');villageSceneDraft.day=null;villageSceneDraft.night=null}
+  catch(error){villageSceneStatus('Lỗi xuất bản: '+error.message)}
+ });
+ document.getElementById('gmVillageRollback').addEventListener('click',async()=>{
+  if(!confirm('Khôi phục hình nền làng trước đó cho cả Server và Player Web?'))return;
+  try{const data=await villageSceneRequest('/api/gm/village-scene/rollback','POST',{});villageSceneStatus('Đã khôi phục phiên bản '+data.scene.revision)}
+  catch(error){villageSceneStatus('Lỗi khôi phục: '+error.message)}
+ });
+ villageSceneRequest('/api/village-scene','GET').then(data=>villageSceneStatus('Phiên bản đang dùng: '+data.scene.revision)).catch(()=>villageSceneStatus('Chưa kết nối được cấu hình làng.'));
+}
+document.addEventListener('DOMContentLoaded',initVillageSceneManager);
+
 // V2.82 runtime: stable Player session restore + seated idle animation.
 // Retain the existing storage namespace: this release changes presentation only.
 const STATE_KEY='GMWW_V258_STATE';
@@ -876,6 +908,7 @@ setTimeout(initCharacterScaleSetting,0);
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+setTimeout(initVillageSceneManager,0);
 let gmwwGmPresenceTimer=null,gmwwGmPresenceState=null;
 const GMWW_GM_AUTO_MOVE_MS=6500,GMWW_GM_AUTO_HOLD_MS=15000,GMWW_GM_AUTO_CYCLE_MS=GMWW_GM_AUTO_MOVE_MS+GMWW_GM_AUTO_HOLD_MS,GMWW_GM_AUTO_POINTS=[[25,37],[40,35],[60,35],[75,39],[82,55],[74,77],[60,86],[40,86],[25,77],[17,58],[31,64],[51,73],[69,64],[66,45],[43,44],[34,55]];
 function gmwwGmHash(text){let h=2166136261>>>0;for(const ch of String(text||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h>>>0}
