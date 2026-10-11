@@ -19,13 +19,13 @@ test('V3.70 overlay fails closed on tampering or unsupported base',()=>{
  x=>{x.runtime.files[1].url='https://invalid.example/app.js'},x=>{x.runtime.files.push({...x.runtime.files[0]})}
  ]){const x=manifest();change(x);assert.equal(selectVerifiedRuntimeV370Delta(x,'3.69'),null)}
 });
-test('Worker and IPA Runtime V3.89 declarations are aligned and retain native shell V3.17',()=>{
+test('Worker and IPA Runtime V3.90 declarations are aligned and retain native shell V3.17',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3\.89",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-389"/);
- assert.match(app,/const VERSION='3\.89'/);
- assert.match(html,/<title>GMWW V3\.89<\/title>/);
- assert.match(html,/app\.js\?v=3\.89-home-discover-transparent/);
- assert.equal(pkg.version,'3.89.0');
+ assert.match(worker,/VERSION="V3\.90",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-390"/);
+ assert.match(app,/const VERSION='3\.90'/);
+ assert.match(html,/<title>GMWW V3\.90<\/title>/);
+ assert.match(html,/app\.js\?v=3\.90-home-discover-transparent/);
+ assert.equal(pkg.version,'3.90.0');
 });
