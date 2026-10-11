@@ -44,6 +44,6 @@ test('usage ledger refuses duplicate activation and maintains retry idempotency'
   assert.equal(reserveArtifactActivation(first.state,{requestId:'req1',playerId:'member:1',artifactId:'a',cycleKey,eligible:true,limit:3}).idempotent,true);
   assert.match(worker,/skipIfEarlyUsed:row\._priorityFirst===true/);
   assert.match(worker,/EARLY_ARTIFACT_USED/);
-  assert.match(worker,/requestId:"gm:"\+String\(meta\.matchId\|\|"match"\)/);
+  assert.match(worker,/const requestId="gm:"\+String\(meta\.matchId\|\|"match"\)/);
   assert.match(worker,/artifactUse:/);
 });
