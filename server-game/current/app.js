@@ -4386,7 +4386,7 @@ const $=id=>document.getElementById(id);
 const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
 function errorMessage(error){return String(error?.message||error||'Không xác định')}
 function safeHtml(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function readStoredZip(buffer){
+function readStoredZip(buffer,kind='artifacts'){
   const bytes=new Uint8Array(buffer),d=new DataView(buffer);
   if(bytes.length<100||bytes.length>65*1024*1024)throw Error('Bộ ZIP phải nhỏ hơn 65MB.');
   const u16=i=>d.getUint16(i,true),u32=i=>d.getUint32(i,true);
@@ -4394,7 +4394,7 @@ function readStoredZip(buffer){
   for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--){if(u32(i)===0x06054b50){eocd=i;break}}
   if(eocd<0)throw Error('File không phải ZIP hợp lệ.');
   const count=u16(eocd+10),offset=u32(eocd+16),entries=new Map();
-  if(count<45||count>60||offset>=bytes.length)throw Error('Bộ ZIP phải có đủ 44 ảnh và manifest.');
+  if(count<2||count>200||offset>=bytes.length)throw Error('Bộ ZIP phải có đủ 44 ảnh và manifest.');
   let cursor=offset;
   for(let i=0;i<count;i++){
     if(cursor+46>bytes.length||u32(cursor)!==0x02014b50)throw Error('ZIP bị lỗi mục lục.');
@@ -4413,8 +4413,10 @@ function readStoredZip(buffer){
   const manifestRaw=entries.get('manifest.json');
   if(!manifestRaw)throw Error('Thiếu manifest.json.');
   const manifest=JSON.parse(decoder.decode(manifestRaw));
-  if(manifest.themeId!=='theme-sea'||manifest.imageCount!==44||!Array.isArray(manifest.items)||manifest.items.length!==44
-    ||!String(manifest.sourceFolder||'').endsWith('Artifact-44-Moi-RedBlue-KhongBangTen'))
+  if(manifest.themeId!=='theme-sea'||!Array.isArray(manifest.items)||manifest.items.length<1||manifest.items.length>150||manifest.imageCount!==manifest.items.length
+    ||(kind==='artifacts'&&!String(manifest.sourceFolder||'').endsWith('Artifact-44-Moi-RedBlue-KhongBangTen'))
+    ||(kind==='artifacts'&&manifest.items.length!==44)
+    ||(kind==='cards'&&manifest.kind!=='cards'))
     throw Error('Không đúng bộ 44 Artifact RedBlue chủ đề Biển.');
   const used=new Set();
   for(const item of manifest.items){
@@ -4423,7 +4425,7 @@ function readStoredZip(buffer){
       throw Error('Thiếu hoặc trùng ảnh trong ZIP: '+path);
     used.add(path);
   }
-  if(used.size!==44||[...entries.keys()].filter(x=>x.startsWith('artworks/')).length!==44)
+  if(used.size!==manifest.items.length||[...entries.keys()].filter(x=>x.startsWith('artworks/')).length!==manifest.items.length)
     throw Error('ZIP phải có đúng 44 ảnh Artifact.');
   return {manifest,entries};
 }
