@@ -201,22 +201,16 @@
 
 
 
-        <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392" aria-label="Thanh công cụ trận đấu" hidden>
-          <div class="battle-menu-row battle-menu-row-top" aria-label="Đồng hồ, menu Sói GM, Auto GM">
-            <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" aria-controls="battleClockPopover" aria-expanded="false" title="Đồng hồ"><span aria-hidden="true">◷</span></button>
-            <div class="battle-menu-wolf">
-              <button id="battleWolfToggle" type="button" aria-label="Mở menu chó sói GM" aria-haspopup="true" aria-controls="battleWolfMenu" aria-expanded="false" title="Công cụ Sói GM"><img src="gm/gm-white-wolf.webp" alt="" loading="lazy"></button>
-            </div>
-            <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span aria-hidden="true">↻</span></button>
+        <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393" aria-label="Thanh công cụ trận đấu" hidden>
+          <div class="battle-menu-row battle-menu-row-top" aria-label="Đồng hồ đếm ngược, Thông Tin, Auto GM">
+            <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" aria-controls="battleClockPopover" aria-expanded="false" title="Đồng hồ đếm ngược"><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+            <button id="battleInfoToggle" type="button" aria-controls="battleDetails" aria-expanded="false"><span aria-hidden="true">ⓘ</span> Thông Tin</button>
+            <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span></button>
           </div>
-          <div id="battleClockPopover" class="battle-clock-popover" hidden aria-label="Đồng hồ đếm ngược">
-            <span>ĐỒNG HỒ</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output>
-          </div>
-          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ Sói GM">
-            <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng menu Sói GM">×</button></header>
+          <div id="battleClockPopover" class="battle-clock-popover" hidden aria-label="Đồng hồ trận đấu"><span>Đếm ngược theo thời gian đã thiết lập cho lượt hiện tại.</span></div>
+          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
+            <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
             <div class="battle-wolf-actions">
-              <button id="battleInfoToggle" type="button" aria-controls="battleDetails" aria-expanded="false"><span aria-hidden="true">ⓘ</span> Thông Tin</button>
-              <button id="battleGMAudio" type="button" aria-pressed="true">🔊 Audio</button>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
@@ -228,7 +222,7 @@
             <div id="battleActionBar" class="play-battle-actions" aria-label="Chọn hành động"></div>
             <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleCancel" type="button">HỦY</button><button id="battleConfirm" type="button">OK</button></div>
             <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
-            <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
+            <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button><button id="battleGMAudio" type="button" aria-pressed="true" title="Bật hoặc tắt Audio">🔊 Audio</button></div>
           </div>
         </section>
 

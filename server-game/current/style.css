@@ -4832,3 +4832,68 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
  #start #playShell[data-step="battle"] #battleWolfToggle{width:62px;height:54px}
  #start #playShell[data-step="battle"] #battleWolfToggle img{width:62px;height:52px}
 }
+
+
+/* V3.93 — the LIVE walking GM wolf opens tools; bottom controls are timer / Info / Auto. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393{
+  left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px)!important;
+  padding:7px 10px;max-height:none!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr) 56px;
+  gap:8px;min-height:56px;align-items:center;justify-items:stretch;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top>button{
+  width:100%;min-width:0;height:50px;min-height:50px;padding:5px 8px;
+  border-radius:13px;font-size:14px;font-weight:850;white-space:nowrap;
+}
+#start #playShell[data-step="battle"] #battleClockButton #battleCountdown{
+  display:inline-block;min-width:0;color:#ffe5a3;background:none;
+  border:0;padding:0;font-size:clamp(19px,5.4vw,25px);font-variant-numeric:tabular-nums;
+  letter-spacing:.035em;font-weight:950;
+}
+#start #playShell[data-step="battle"] #battleClockButton #battleCountdown.is-ending{color:#ffd5b9}
+#start #playShell[data-step="battle"] #battleInfoToggle{gap:6px;background:#146478}
+#start #playShell[data-step="battle"] #battleInfoToggle span{font-size:18px}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleGMAuto{
+  justify-self:end;width:54px;min-width:54px;padding:0;font-size:29px;
+}
+#start #playShell[data-step="battle"] #battleGMAuto .battle-auto-spinner{
+  display:inline-block;line-height:1;transform-origin:50% 50%;
+}
+#start #playShell[data-step="battle"] #battleGMAuto[aria-pressed="true"] .battle-auto-spinner{
+  animation:gmwwBattleAutoSpin 1.6s linear infinite;
+}
+#start #playShell[data-step="battle"] #battleGMAuto[aria-pressed="false"] .battle-auto-spinner{
+  animation:none;
+}
+@keyframes gmwwBattleAutoSpin{to{transform:rotate(360deg)}}
+#start #playShell[data-step="battle"] #playPlayerRing [data-play-gm-rider]{
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+#start #playShell[data-step="battle"] #playPlayerRing [data-play-gm-rider]:is(.is-menu-open,:focus-visible) .play-player-avatar{
+  filter:drop-shadow(0 0 8px #ffdb86);
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleWolfMenu{
+  max-height:min(39dvh,290px);overflow-y:auto;bottom:calc(100% + 10px);
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-wolf-actions{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockPopover{
+  max-width:min(85vw,320px);padding:10px 12px;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockPopover>span{
+  font-size:12px;letter-spacing:normal;
+}
+#start #playShell[data-step="battle"] #battleDetails .play-battle-footer{gap:8px;flex-wrap:wrap}
+#start #playShell[data-step="battle"] #battleDetails #battleGMAudio{
+  min-height:38px;background:#175e72;color:white;border:1px solid #99dce5;border-radius:9px;
+}
+@media(max-width:360px){
+  #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top{
+    grid-template-columns:minmax(0,1fr) minmax(0,1.06fr) 48px;gap:5px;
+  }
+  #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top>button{font-size:12px;padding:4px}
+  #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleGMAuto{width:48px;min-width:48px}
+}

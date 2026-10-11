@@ -16,7 +16,7 @@ test('battle top has only back, Timeline and next icon; force-end moved below',(
 test('compact bottom groups all approved GM controls without always-open overlay',()=>{
   for(const id of ['battleClockButton','battleCountdown','battleInfoToggle','battleGMAuto','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleDetails'])
     assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
-  assert.match(part,/class="battle-menu-wolf"/);
+  assert.doesNotMatch(part,/class="battle-menu-wolf"/);
   assert.match(part,/id="battleDetails"[^>]*hidden/);
   assert.match(css,/#playBattleDock[^{]*\{/);
   assert.match(css,/#battleDetails\[hidden\]\{display:none!important\}/);
