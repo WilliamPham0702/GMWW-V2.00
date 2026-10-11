@@ -1,0 +1,43 @@
+/* GMWW battle action usage policy. Pure rule evaluation, no I/O. */
+const normalized=v=>String(v??'').trim();
+const positive=(value,fallback=1)=>{const n=Number(value);return Number.isFinite(n)&&n>0?Math.min(100,Math.trunc(n)):fallback};
+export function resolveRoleActionPolicy(card,roleId,actionId){
+  const role=normalized(roleId),action=normalized(actionId),list=Array.isArray(card?.functions)?card.functions:[];
+  const fn=list.find(x=>normalized(x?.actionId||x?.id)===action)||null;
+  // Preserve explicit custom settings; only apply the original Phù Thuỷ Già rule to
+  // older already-distributed cards without a serialized flags/functions contract.
+  const explicit=card?.flags&&typeof card.flags.allowMultipleActions==='boolean';
+  const singleActionPerNight=explicit?!card.flags.allowMultipleActions:role==='role_old_witch';
+  const mode=String(fn?.usageMode||'').trim();
+  const fallbackOnce=role==='role_old_witch'&&action==='action_revive';
+  const usageMode=['eachNight','onceGame','unlimited'].includes(mode)?mode:(fallbackOnce?'onceGame':'unlimited');
+  return {roleId:role,actionId:action,functionId:normalized(fn?.id||action),
+    singleActionPerNight,usageMode,usageCount:positive(fn?.usageCount,1),
+    knownAction:list.length?!!fn:(Array.isArray(card?.actions)&&card.actions.length?
+      card.actions.some(x=>normalized(x?.id||x?.actionId)===action):true)};
+}
+export function checkBattleRoleActionUsage(rows,detail){
+  const previous=Array.isArray(rows)?rows:[],match=normalized(detail?.matchId),
+    role=normalized(detail?.roleId),actor=normalized(detail?.actorId),
+    action=normalized(detail?.actionId),night=Math.max(1,Number(detail?.night)||1),
+    rule=detail?.policy||resolveRoleActionPolicy(detail?.card,role,action);
+  if(!match||!role||!actor||!action)return{ok:false,error:'INVALID_ROLE_ACTION_CONTEXT'};
+  if(!rule.knownAction)return{ok:false,error:'INVALID_ROLE_ACTION_FOR_TURN'};
+  const own=previous.filter(x=>normalized(x?.matchId)===match&&normalized(x?.roleId)===role&&
+    normalized(x?.actorId)===actor);
+  if(rule.singleActionPerNight&&own.some(x=>Number(x.night)===night))
+    return{ok:false,error:'ROLE_NIGHT_ACTION_EXHAUSTED',message:'Vai trò đã sử dụng một chức năng trong đêm này.'};
+  const uses=own.filter(x=>normalized(x.actionId)===action&&
+    (rule.usageMode==='onceGame'||Number(x.night)===night)).length;
+  if(rule.usageMode!=='unlimited'&&uses>=rule.usageCount)
+    return{ok:false,error:rule.usageMode==='onceGame'?'ACTION_GAME_LIMIT_REACHED':'ACTION_NIGHT_LIMIT_REACHED',
+      message:rule.usageMode==='onceGame'?'Chức năng này đã hết lượt sử dụng trong ván.':'Chức năng này đã hết lượt sử dụng trong đêm.'};
+  return{ok:true,policy:rule};
+}
+export function appendBattleRoleActionUsage(rows,detail){
+  return [...(Array.isArray(rows)?rows:[]),{
+    matchId:normalized(detail.matchId),night:Math.max(1,Number(detail.night)||1),
+    actorId:normalized(detail.actorId),roleId:normalized(detail.roleId),
+    actionId:normalized(detail.actionId),eventId:normalized(detail.eventId),
+    usedAt:normalized(detail.usedAt||new Date().toISOString())}].slice(-1000);
+}
