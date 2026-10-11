@@ -54,8 +54,10 @@ try{
  assert.equal(await page.locator('[data-battle-index="3"]').count(),1,'wake step is selectable exactly once');
  const artifact=page.locator('[data-battle-action]').filter({hasText:'Đá Đổi Vai Trò'});
  assert.match(await artifact.textContent(),/Đổi Vai Trò.*An/);
- // V3.93: the bottom Info control intentionally keeps the action panel closed until requested.
+ // V3.98: the GM wolf owns the Info control; open its menu before tapping Info.
  assert.equal(await artifact.isVisible(),false);
+ await page.evaluate(()=>battleToggleWolfMenu());
+ assert.equal(await page.locator('#battleInfoToggle').isVisible(),true);
  await page.locator('#battleInfoToggle').click();
  assert.equal(await artifact.isVisible(),true);
  await artifact.click();

@@ -4946,3 +4946,58 @@ body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{
   body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{top:calc(env(safe-area-inset-top) + 168px);max-height:61dvh}
   body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{flex-basis:98px!important}
 }
+
+
+/* V3.96 – A standalone, freely draggable in-game clock; no bottom toolbar. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleClockFloat.battle-clock-float-v396{
+  display:block!important;position:fixed!important;top:calc(env(safe-area-inset-top) + 110px);
+  left:12px;right:auto;bottom:auto;z-index:105!important;padding:0;
+  background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;-webkit-user-select:none
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleClockFloat[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleClockButton{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  width:78px!important;min-width:78px!important;height:58px!important;min-height:58px!important;
+  border:1px solid #9ce9f5;border-radius:15px;background:#073952eb;color:#ffeab2;
+  box-shadow:0 6px 18px #00192791;padding:5px!important;cursor:grab;touch-action:none
+}
+#start #playShell[data-step="battle"] #battleClockButton:active{cursor:grabbing}
+#start #playShell[data-step="battle"] #battleClockButton .battle-clock-grip{font-size:12px;color:#9de0eb;line-height:1}
+#start #playShell[data-step="battle"] #battleClockButton #battleCountdown{
+  display:block!important;min-width:0!important;background:none!important;border:0!important;
+  padding:0!important;font-size:20px!important;font-variant-numeric:tabular-nums!important;
+  font-weight:900!important;letter-spacing:.01em!important;color:#ffe6aa!important
+}
+#start #playShell[data-step="battle"] #battleClockButton #battleCountdown.is-ending{color:#ffad98!important}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396{
+  position:fixed!important;top:0!important;left:0!important;right:auto!important;
+  bottom:auto!important;width:0!important;height:0!important;min-height:0!important;
+  display:block!important;max-height:none!important;overflow:visible!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;pointer-events:none!important;z-index:104!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu,
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleDetails{
+  position:fixed!important;left:12px!important;right:12px!important;top:auto!important;
+  bottom:calc(env(safe-area-inset-bottom) + 22px)!important;width:auto!important;
+  max-height:min(70dvh,510px)!important;overflow-y:auto!important;pointer-events:auto!important;
+  z-index:106!important
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions>button{
+  min-height:48px;padding:9px 7px;font-size:13px;white-space:normal;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleGMAuto .battle-auto-spinner{
+  display:inline-block;transform-origin:center
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleGMAuto[aria-pressed="true"] .battle-auto-spinner{
+  animation:gmwwBattleAutoSpin 1.6s linear infinite
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleGMAuto[aria-pressed="false"] .battle-auto-spinner{animation:none}
+@media(max-width:360px){
+ #start #playShell[data-step="battle"] #battleClockButton{width:70px!important;min-width:70px!important}
+ #start #playShell[data-step="battle"] #battleClockButton #battleCountdown{font-size:18px!important}
+}
