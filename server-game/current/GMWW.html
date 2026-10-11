@@ -275,20 +275,20 @@
             <button class="icon-add" id="addTheme" aria-label="Thêm Chủ Đề">＋</button>
           </div>
           <div id="themeUiSections"></div>
-          <section class="theme-section theme-section-pinned" id="villageSceneSettings">
-            <div class="theme-section-head"><h3>🌊 Bối cảnh Làng 2D · Đồng bộ Player Web</h3></div>
+          <details class="theme-section theme-section-pinned theme-collapsible" id="villageSceneSettings">
+            <summary class="theme-section-head"><h3>🌊 Bối cảnh Làng 2D · Đồng bộ Player Web</h3></summary>
             <p>Chỉ Server GM được thay đổi. Ảnh xuất bản đồng bộ tự động tới Player Web.</p>
             <label>Ảnh ban ngày <input id="gmVillageDay" type="file" accept="image/png,image/jpeg,image/webp"></label>
             <label>Ảnh ban đêm <input id="gmVillageNight" type="file" accept="image/png,image/jpeg,image/webp"></label>
             <div class="button-row"><button type="button" id="gmVillagePreview">XEM TRƯỚC</button><button type="button" id="gmVillagePublish" class="primary">XUẤT BẢN</button><button type="button" id="gmVillageRollback">KHÔI PHỤC BẢN TRƯỚC</button></div>
             <p id="gmVillageStatus" role="status">Chưa tải cấu hình.</p>
-          </section>
-          <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>🎭 Artwork Vai Trò</h3></div>
+          </details>
+          <details class="theme-section theme-section-pinned theme-collapsible">
+            <summary class="theme-section-head"><h3>🎭 Artwork Vai Trò</h3></summary>
             <div id="themeCardRows"></div>
-          </section>
-          <section class="theme-section theme-section-pinned">
-            <div class="theme-section-head"><h3>✦ Artwork ARTIFACTS</h3></div>
+          </details>
+          <details class="theme-section theme-section-pinned theme-collapsible">
+            <summary class="theme-section-head"><h3>✦ Artwork ARTIFACTS</h3></summary>
             <div class="sea-artifact-import-panel">
               <label for="seaArtifactImportFile"><strong>Nhập 44 Artwork chủ đề Biển, không bảng tên</strong></label>
               <input id="seaArtifactImportFile" type="file" accept=".zip,application/zip" aria-label="Chọn ZIP 44 artwork biển">
@@ -297,7 +297,7 @@
               <button id="seaArtifactImportStart" class="primary" type="button" disabled>NẠP 44 ARTWORK LÊN SERVER</button>
             </div>
             <div id="themeArtifactRows"></div>
-          </section>
+          </details>
         </section>
 
         <section class="libpane" id="lib-audio">
