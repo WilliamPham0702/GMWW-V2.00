@@ -4441,21 +4441,23 @@ function chooseZip(){return new Promise(resolve=>{
   inp.onchange=()=>{resolve(inp.files?.[0]||null);cleanup()};
   inp.click();
 })}
-async function openSeaImporter(){
-  if(typeof isLivePlayRoom==='function'&&isLivePlayRoom()){alert('Vui lòng kết thúc hoặc rời phòng đang chơi trước khi thay artwork Artifact.');return}
-  const cards=Array.isArray(state.artifacts)?state.artifacts.filter(a=>a?.id):[];
-  if(cards.length<44){alert('Kho Artifact của GM chỉ có '+cards.length+' lá. Cần đủ 44 lá đã lưu trước khi nạp để tránh gắn sai.');return}
+async function openSeaImporter(kind='artifacts'){
+  const isRole=kind==='cards';
+  const kindLabel=isRole?'Vai Trò':'Artifact';
+  if(typeof isLivePlayRoom==='function'&&isLivePlayRoom()){alert('Vui lòng kết thúc hoặc rời phòng đang chơi trước khi thay artwork.');return}
+  const cards=Array.isArray(state[kind])?state[kind].filter(a=>a?.id):[];
+  if(!cards.length){alert('Kho '+kindLabel+' đang trống.');return}
   const file=await chooseZip();if(!file)return;
   let zip;
-  try{zip=readStoredZip(await file.arrayBuffer())}catch(error){alert('Không đọc được bộ Artifact: '+errorMessage(error));return}
+  try{zip=readStoredZip(await file.arrayBuffer(),kind)}catch(error){alert('Không đọc được bộ Artifact: '+errorMessage(error));return}
   const overlay=document.createElement('div');overlay.className='gmww-sea-import-overlay';overlay.id=SEA_IMPORT_ID;
   const shell=document.createElement('section');shell.className='gmww-sea-import-dialog';
-  shell.setAttribute('role','dialog');shell.setAttribute('aria-modal','true');shell.setAttribute('aria-label','Nạp 44 ảnh Artifact vào chủ đề Biển');
+  shell.setAttribute('role','dialog');shell.setAttribute('aria-modal','true');shell.setAttribute('aria-label','Nạp ảnh '+kindLabel+' vào chủ đề Biển');
   const heading=document.createElement('header');heading.className='gmww-sea-import-header';
-  heading.innerHTML='<div><b>🌊 NẠP 44 ARTWORK · CHỦ ĐỀ BIỂN</b><small>Ảnh không bảng tên · Tên và chức năng lá bài vẫn lấy từ GMWW</small></div>';
+  heading.innerHTML='<div><b>🌊 NẠP ARTWORK '+kindLabel.toUpperCase()+' · CHỦ ĐỀ BIỂN</b><small>Ảnh không bảng tên · Tên và chức năng lá bài vẫn lấy từ GMWW</small></div>';
   const close=document.createElement('button');close.type='button';close.textContent='✕';close.title='Đóng';heading.appendChild(close);shell.appendChild(heading);
   const notice=document.createElement('p');notice.className='gmww-sea-import-notice';
-  notice.textContent='Kiểm tra cặp Ảnh ↔ Lá Artifact trước khi nạp. Đây là 44 đề xuất theo hình ảnh, không phải ánh xạ được xác nhận trước đó; bạn có thể đổi ngay trong mỗi ô. Mọi ảnh và luật hiện có được giữ nguyên cho đến khi xác nhận nạp.';
+  notice.textContent='Kiểm tra cặp Ảnh ↔ Lá Artifact trước khi nạp. Đây là các đề xuất theo hình ảnh, không phải ánh xạ được xác nhận trước đó; bạn có thể đổi ngay trong mỗi ô. Mọi ảnh và luật hiện có được giữ nguyên cho đến khi xác nhận nạp.';
   shell.appendChild(notice);
   const grid=document.createElement('div');grid.className='gmww-sea-import-grid';shell.appendChild(grid);
   const options='<option value="">— Chọn đúng lá Artifact —</option>'+cards.map(a=>'<option value="'+safeHtml(a.id)+'">'+safeHtml(a.name)+'</option>').join('');
@@ -4466,7 +4468,7 @@ async function openSeaImporter(){
     const row=document.createElement('label');row.className='gmww-sea-import-card';
     const img=document.createElement('img');img.src=url;img.alt=item.webp;img.loading='lazy';
     const detail=document.createElement('span');detail.className='gmww-sea-import-card-detail';
-    const small=document.createElement('small');small.textContent=(i+1)+'/44 · '+item.webp.replace(/\.webp$/i,'').replace(/_/g,' ');
+    const small=document.createElement('small');small.textContent=(i+1)+'/'+zip.manifest.items.length+' · '+item.webp.replace(/\.webp$/i,'').replace(/_/g,' ');
     const select=document.createElement('select');select.innerHTML=options;
     const suggestion=cards.find(a=>fold(a.name)===fold(item.suggestedArtifactName));
     select.value=suggestion?.id||'';
@@ -4482,11 +4484,11 @@ async function openSeaImporter(){
   close.onclick=cancel.onclick=dismiss;
   submit.onclick=async()=>{
     const selected=selects.map(s=>String(s.value||''));
-    if(selected.some(x=>!x)||new Set(selected).size!==44){
-      progress.textContent='Phải chọn 44 lá khác nhau, không để trống hoặc trùng.';
+    if(selected.some(x=>!x)||new Set(selected).size!==zip.manifest.items.length){
+      progress.textContent='Phải chọn đủ lá khác nhau, không để trống hoặc trùng.';
       progress.classList.add('gmww-sea-import-error');return;
     }
-    if(!confirm('Xác nhận thay 44 ảnh của chủ đề Biển bằng cặp ảnh/lá đã chọn? Không sửa tên, chức năng, và không đóng gói lại Ván Mẫu.'))return;
+    if(!confirm('Xác nhận thay '+zip.manifest.items.length+' ảnh '+kindLabel+' của chủ đề Biển bằng cặp ảnh/lá đã chọn? Không sửa tên, chức năng, và không đóng gói lại Ván Mẫu.'))return;
     submit.disabled=cancel.disabled=close.disabled=true;
     const previousTheme=state.themes.activeId||'theme-sea';
     const backups=[];
@@ -4496,10 +4498,10 @@ async function openSeaImporter(){
       progress.textContent='Đang xác minh đủ 44 ảnh…';
       for(const item of zip.manifest.items)
         await verifyZipImage(zip.entries.get('artworks/'+item.webp),item.sha256);
-      for(let i=0;i<44;i++){
+      for(let i=0;i<zip.manifest.items.length;i++){
         const id=selected[i],item=zip.manifest.items[i],bytes=zip.entries.get('artworks/'+item.webp);
-        const blob=new Blob([bytes],{type:'image/webp'}),dk=cardBlobKey('theme-sea','artifacts',id,'display');
-        const tk=cardBlobKey('theme-sea','artifacts',id,'thumb');
+        const blob=new Blob([bytes],{type:'image/webp'}),dk=cardBlobKey('theme-sea',kind,id,'display');
+        const tk=cardBlobKey('theme-sea',kind,id,'thumb');
         const oldDisplay=await dbGet(dk),oldThumb=await dbGet(tk);
         backups.push({dk,tk,oldDisplay,oldThumb});
         await dbPut(dk,blob);
@@ -4508,7 +4510,7 @@ async function openSeaImporter(){
           const old=objectUrls.get(key);if(old)try{URL.revokeObjectURL(old)}catch(_){}
           objectUrls.delete(key);
         }
-        completed=i+1;progress.textContent='Đã lưu '+completed+'/44 ảnh vào Chủ Đề Biển…';
+        completed=i+1;progress.textContent='Đã lưu '+completed+'/'+zip.manifest.items.length+' ảnh vào Chủ Đề Biển…';
       }
     }catch(error){
       progress.textContent='Đang khôi phục ảnh cũ sau lỗi: '+errorMessage(error);
@@ -4525,16 +4527,17 @@ async function openSeaImporter(){
     state.themes.activeId='theme-sea';
     state.themes.selectedEditorId='theme-sea';
     saveState();
-    progress.textContent='Đã lưu 44/44. Đang đồng bộ 44 ảnh vào kho Artifact dùng chung trên Server…';
+    progress.textContent='Đã lưu '+zip.manifest.items.length+' ảnh '+kindLabel+'. Đang đồng bộ Server…';
     let report;
     try{
-      report=await playSyncSharedArtifactLibrary({onlyIds:selected,forceIds:selected});
+      report=isRole?{ok:true,synced:selected.length,failed:[]}:await playSyncSharedArtifactLibrary({onlyIds:selected,forceIds:selected});
     }catch(error){report={ok:false,synced:0,failed:[{id:'server',error:errorMessage(error)}]}}
     if(report.ok!==true){
       progress.textContent='Ảnh chủ đề Biển đã lưu trên GM. Server nạp '+report.synced+'/44; lỗi: '+(report.failed||[]).map(x=>x.id+': '+x.error).slice(0,2).join(' | ')+'. Nhấn NẠP lại ZIP để tiếp tục.';
       progress.classList.add('gmww-sea-import-error');cancel.disabled=close.disabled=false;return;
     }
     try{
+      if(isRole){progress.textContent='ĐÃ LƯU '+zip.manifest.items.length+' ẢNH VAI TRÒ VÀO CHỦ ĐỀ BIỂN. Chọn ZIP mới để nạp tiếp.';submit.disabled=false;submit.textContent='CHỌN FILE ZIP MỚI';submit.onclick=()=>{dismiss();void openSeaImporter(kind)};cancel.disabled=close.disabled=false;return}
       const remote=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
       const known=new Map((remote.artifacts||[]).map(x=>[String(x.assetId),String(x.signature)]));
       for(const id of selected){
@@ -4542,9 +4545,9 @@ async function openSeaImporter(){
         const sig=await playSharedArtifactSignature(artifact);
         if(known.get('artifact:'+id)!==sig)throw Error('Chưa xác minh được '+artifact.name);
       }
-      progress.textContent='THÀNH CÔNG: 44/44 ảnh đã lưu và Server xác nhận đúng chữ ký; Player Web dùng kho Artifact này.';
+      progress.textContent='THÀNH CÔNG: '+zip.manifest.items.length+' ảnh đã lưu và Server xác nhận đúng chữ ký. Có thể chọn file ZIP mới.';
       progress.classList.remove('gmww-sea-import-error');progress.classList.add('gmww-sea-import-success');
-      submit.textContent='ĐÃ NẠP VÀ XÁC MINH 44/44';cancel.disabled=close.disabled=false;
+      submit.textContent='CHỌN FILE ZIP MỚI';submit.disabled=false;submit.onclick=()=>{dismiss();void openSeaImporter(kind)};cancel.disabled=close.disabled=false;
       if(typeof renderTheme==='function')void renderTheme();
       if(typeof renderEntityGrid==='function')void renderEntityGrid('artifacts');
     }catch(error){
@@ -4556,11 +4559,13 @@ async function openSeaImporter(){
 function mount(){
   const anchor=$('themeArtifactRows');if(!anchor||$(SEA_IMPORT_ID+'Button'))return;
   const bar=document.createElement('div');bar.className='gmww-sea-import-toolbar';
-  const btn=document.createElement('button');btn.id=SEA_IMPORT_ID+'Button';btn.type='button';
-  btn.textContent='↥ NẠP BỘ 44 ARTWORK REDBLUE · KHÔNG BẢNG TÊN';
-  const tip=document.createElement('small');tip.textContent='Chủ đề Biển · ZIP 44 WebP · đồng bộ một lần vào kho Artifact dùng chung';
-  bar.appendChild(btn);bar.appendChild(tip);anchor.parentNode.insertBefore(bar,anchor);
-  btn.onclick=()=>void openSeaImporter().catch(error=>alert('Không nạp được Artifact: '+errorMessage(error)));
+  const title=document.createElement('b');title.textContent='QUẢN LÝ ARTWORK HÀNG LOẠT · CHỦ ĐỀ BIỂN';
+  const btn=document.createElement('button');btn.id=SEA_IMPORT_ID+'Button';btn.type='button';btn.textContent='↥ NẠP ARTWORK VAI TRÒ (ZIP)';
+  const artifact=document.createElement('button');artifact.type='button';artifact.textContent='↥ NẠP ARTWORK ARTIFACT (ZIP)';
+  const tip=document.createElement('small');tip.textContent='Chọn một bộ ZIP · đối chiếu từng lá · hoàn tất trở lại chọn file';
+  bar.append(title,btn,artifact,tip);anchor.parentNode.insertBefore(bar,anchor);
+  btn.onclick=()=>void openSeaImporter('cards').catch(error=>alert(errorMessage(error)));
+  artifact.onclick=()=>void openSeaImporter('artifacts').catch(error=>alert(errorMessage(error)));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
