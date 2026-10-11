@@ -25,13 +25,13 @@ test('V3.96 rejects wrong installed versions, altered asset links, missing asset
   const external=manifest();external.runtime.files[0].url='https://wrong.example/app.js';assert.equal(selectVerifiedRuntimeV396Delta(external,'3.95'),null);
   const deleted=manifest();deleted.delete=['member-data'];assert.equal(selectVerifiedRuntimeV396Delta(deleted,'3.95'),null);
 });
-test('Worker V3.98 keeps the V3.96 migration available for older installs',()=>{
+test('Worker V3.99 keeps the V3.96 migration available for older installs',()=>{
   const worker=fs.readFileSync('src/index.js','utf8');
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(worker,/VERSION="V3\.98",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-398"/);
-  assert.match(app,/const VERSION='3\.98'/);
-  assert.match(html,/<title>GMWW V3\.98<\/title>/);
+  assert.match(worker,/VERSION="V3\.99",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-399"/);
+  assert.match(app,/const VERSION='3\.99'/);
+  assert.match(html,/<title>GMWW V3\.99<\/title>/);
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
   assert.equal(worker.split('selectVerifiedRuntimeV397Delta(').length-1,2);
   assert.match(worker,/selectVerifiedRuntimeV397Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV396Delta/);
