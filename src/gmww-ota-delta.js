@@ -825,3 +825,23 @@ export function selectVerifiedRuntimeV394Delta(manifest,installedVersion){
    optimizedFromVersion:from,upgradeMode:'verified-overlay',
    message:'V3.94: Thu gọn đồng hồ đếm ngược, sửa thời gian giảm đều và nút Lượt trước. Giữ nguyên dữ liệu.'};
 }
+
+/** V3.94 → V3.95: first Library Lab with isolated simulation; SHA-pinned UI only. */
+export function selectVerifiedRuntimeV395Delta(manifest,installedVersion){
+ const from=String(installedVersion||'').trim().replace(/^V/i,'');
+ if(from!=='3.94'||String(manifest?.releaseVersion||'')!=='3.95'
+   ||String(manifest?.runtimeVersion||'')!=='3.95'||String(manifest?.shellVersion||'')!=='3.17'
+   ||manifest?.releaseType!=='runtime'||!Array.isArray(manifest?.runtime?.files)
+   ||(Array.isArray(manifest?.delete)&&manifest.delete.length>0))return null;
+ const selected=[];
+ for(const path of ['GMWW.html','app.js','style.css']){
+   const found=manifest.runtime.files.filter(f=>f?.path===path);
+   if(found.length!==1)return null;
+   const file=found[0],url=TRUSTED_ASSET_ORIGIN+'/updates/runtime/V3.95/'+path;
+   if(String(file.url||'')!==url||!/^[a-f0-9]{64}$/i.test(String(file.sha256||'')))return null;
+   selected.push({path,url,sha256:String(file.sha256).toLowerCase()});
+ }
+ return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
+   optimizedFromVersion:'3.94',upgradeMode:'verified-overlay',
+   message:'V3.95: Box Lab đầu Thư Viện, mô phỏng nhiều đêm riêng biệt; dữ liệu và cài đặt không đổi.'};
+}
