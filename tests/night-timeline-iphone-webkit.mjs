@@ -54,6 +54,10 @@ try{
  assert.equal(await page.locator('[data-battle-index="3"]').count(),1,'wake step is selectable exactly once');
  const artifact=page.locator('[data-battle-action]').filter({hasText:'Đá Đổi Vai Trò'});
  assert.match(await artifact.textContent(),/Đổi Vai Trò.*An/);
+ // V3.93: the bottom Info control intentionally keeps the action panel closed until requested.
+ assert.equal(await artifact.isVisible(),false);
+ await page.locator('#battleInfoToggle').click();
+ assert.equal(await artifact.isVisible(),true);
  await artifact.click();
  await page.locator('[data-battle-member="bob"]').click();
  await page.locator('[data-battle-member="carol"]').click();
