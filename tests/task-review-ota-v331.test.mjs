@@ -16,12 +16,12 @@ test("task approval is a newer OTA than the previously released V3.30",()=>{
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
-  assert.match(app,/const VERSION='3\.93';/);
-  assert.match(worker,/VERSION="V3\.93",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-393"/);
+  assert.match(app,/const VERSION='3\.94';/);
+  assert.match(worker,/VERSION="V3\.94",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-394"/);
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
   assert.equal(shell,"3.17");
-  assert.match(html,/<title>GMWW V3\.93<\/title>/);
-  assert.match(html,/app\.js\?v=3\.93-gm-actor-menu/);
+  assert.match(html,/<title>GMWW V3\.94<\/title>/);
+  assert.match(html,/app\.js\?v=3\.94-gm-actor-menu/);
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
