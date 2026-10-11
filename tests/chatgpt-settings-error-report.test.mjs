@@ -16,7 +16,7 @@ test('Settings keeps ChatGPT support private with one editable composer and sepa
   assert.doesNotMatch(html,/id="gmwwReportPreview"/);
   assert.match(app,/https:\/\/chatgpt\.com\/\?prompt=/);
   assert.match(app,/encodeURIComponent\(message\)/);
-  assert.match(app,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
+  assert.match(app,/window\.open\(url,'_blank'\)/);
   assert.match(app,/gmwwLastBugDiagnostics/);
   assert.match(app,/runSystemDiagnostics\(\{silent:true\}\)/);
   assert.doesNotMatch(html,/gmww-ai-support\.(?:js|css)/);
