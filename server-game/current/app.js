@@ -3149,7 +3149,7 @@ async function advancePlayPhase(){
 const battleState={key:'',actionId:'',targets:[],roster:false,timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,ignoreClick:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
-const battleActions=()=>{const turn=battleTurn();return battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state)||[];};
+const battleActions=()=>{const turn=battleTurn();return battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state,playSceneRuntime.artifactCycle?.accepted)||[];};
 const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
 const battleMember=id=>playLiveMembers().find(m=>String(m.loginId||'')===String(id));
 const battleUsed=turn=>!!battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn);
@@ -3217,7 +3217,7 @@ function battlePickTarget(id,actionId){
 }
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
-  const t=battleTurn(),actors=new Set((t?.loginIds||[t?.loginId]).filter(Boolean).map(String)),chosen=new Set(battleState.targets),now=Date.now();
+  const t=battleTurn(),actors=new Set([...(t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId):[])].map(String)),chosen=new Set(battleState.targets),now=Date.now();
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||''),impact=battleState.impacts.get(id);
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
@@ -3246,7 +3246,7 @@ function renderPlayBattle(){
     bar.innerHTML=actions.length?actions.map(a=>'<button type="button" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget?'disabled ':'')+'>'+playEsc(a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
-  set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+(t?.kind==='early-artifact'?'ARTIFACT ĐẦU VÁN':t?.kind==='role'?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
+  set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+((t?.kind==='early-artifact'||t?.kind==='early-artifact-window')?'ARTIFACT ĐẦU VÁN':t?.kind==='role'?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
   set('battleTurnTitle',phase==='day'?'LÀNG ƠI DẬY ĐI':(t?battleRules().displayLabel(t,'Lượt chơi'):(rt?.completed?'ĐÃ KẾT THÚC ĐÊM '+night:'BẮT ĐẦU ĐÊM 1')));
   set('battleTurnProgress',phase==='night'?(Math.min((rt?.cursor||0)+1,rt?.queue?.length||1)+'/'+(rt?.queue?.length||1)):phase==='day'?'THẢO LUẬN':'SẴN SÀNG');
   const action=battleAction(),pending=document.getElementById('battlePending'),roster=document.getElementById('battleRoster'),toggle=document.getElementById('battleRosterToggle');
@@ -3274,7 +3274,7 @@ async function battleConfirm(){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   try{
     for(const id of battleState.targets){
-      const payload={loginId:id,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',effectId:a.effectIds[0]||'',effectName:a.name,matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',night:Number(playSceneState.night||1),clientEventId:battleState.nonce+':'+id};
+      const payload={loginId:id,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',...(a.artifactId?{artifactId:a.artifactId}:{}),effectId:a.effectIds[0]||'',effectName:a.name,matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',night:Number(playSceneState.night||1),clientEventId:battleState.nonce+':'+id};
       if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
       await playRoomApi('/interaction',{method:'POST',body:JSON.stringify(payload)});
       battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
