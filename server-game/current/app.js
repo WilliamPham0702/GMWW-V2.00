@@ -4733,6 +4733,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         notice('Đã lưu ảnh ở GM; server còn lỗi '+report.failed.length+' lá: '+report.failed.map(x=>x.id).join(', ')+'. Có thể thử lại.');
       }else{
         notice('THÀNH CÔNG: 44/44 ảnh đã được máy chủ xác nhận, Player Web dùng kho Artifact mới.');
+        rows=null;const pending=el('seaArtifactImportFile');if(pending)pending.value='';const previewBox=el('seaArtifactImportPreview');if(previewBox)previewBox.replaceChildren();button.disabled=true;
       }
       await renderTheme();renderEntityGrid('artifacts');
     }catch(e){notice('Có lỗi: '+String(e?.message||e)+'. Ảnh cũ đã được sao lưu.');}
