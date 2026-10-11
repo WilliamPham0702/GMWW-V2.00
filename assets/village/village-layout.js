@@ -32,7 +32,7 @@
     const rings=n<=12?
       [{size:n,rx:25,ry:13}]:
       n<=24?
-      [{size:8,rx:14,ry:7.5},{size:n-8,rx:30,ry:14.6}]:
+      [{size:n<=18?4:8,rx:14,ry:7.5},{size:n-(n<=18?4:8),rx:30,ry:14.6}]:
       [{size:8,rx:12,ry:6.7},{size:10,rx:22,ry:10.6},{size:n-18,rx:30,ry:14.6}];
     const scale=kind==='rectangle'?.9:kind==='diamond'?1.025:1,out=[];
     rings.forEach((ring,index)=>{
