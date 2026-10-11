@@ -1043,6 +1043,15 @@ export class RoomDurableObject extends DurableObject {
     if(!configuredAction)return j({ok:false,error:"INVALID_ARTIFACT_ACTION"},400);
     const targets=Array.isArray(confirmation.targetIds)?confirmation.targetIds.map(normalizeLoginId):[normalizeLoginId(targetLoginId)];
     if(!targets.length||targets.length>30||new Set(targets).size!==targets.length||!targets.includes(normalizeLoginId(targetLoginId)))return j({ok:false,error:"INVALID_ARTIFACT_TARGETS"},400);
+    // Enforce explicit per-action limits on the server, not just the GM UI.
+    // Older Artifact cards without targetCount retain their existing behavior.
+    if(configuredAction.targetCount!==undefined&&configuredAction.targetCount!==null){
+      const count=Number(configuredAction.targetCount);
+      if(!Number.isInteger(count)||count<1||count>30||targets.length!==count)
+        return j({ok:false,error:"INVALID_ARTIFACT_TARGET_COUNT"},400);
+    }
+    if(configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
+      return j({ok:false,error:"ARTIFACT_SELF_TARGET_FORBIDDEN"},403);
     const players=(await this.ctx.storage.get("players"))||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_ARTIFACT_TARGET"},400);
     const binding={actionId:String(confirmation.actionId||""),type:String(confirmation.type||""),targetIds:targets.slice().sort()};
