@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.100';
+const VERSION='3.101';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2887,7 +2887,7 @@ function renderPlayGatherToolbar(){
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
   if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
-const PLAY_SEAT_PRESET_NAMES={circle:'TRÒN',diamond:'THOI',rectangle:'CHỮ NHẬT'};
+const PLAY_SEAT_PRESET_NAMES={circle:'HÌNH TRÒN',ellipse:'ELIP',rectangle:'CHỮ NHẬT'};
 function closePlaySeatPresetPanel(){
   playSeatPresetOpen=false;
   const panel=document.getElementById('playSeatPresetPanel'),trigger=document.getElementById('playGatherSeatPreset');
@@ -2906,7 +2906,7 @@ function renderPlaySeatPresetPanel(){
   const exactCount=Math.max(8,Math.min(30,minimum));
   const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
   const hint=document.getElementById('playSeatPresetAutoHint');
-  if(hint)hint.textContent='Lửa trại làm tâm • Hình dạng tự chọn theo số người'+(minimum?' • Hiện có '+members.length+' người':'');
+  if(hint)hint.textContent='Một vòng quanh lửa • Hình tự chọn theo số người'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
   for(const n of counts){
     const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;

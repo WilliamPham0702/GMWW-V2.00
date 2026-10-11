@@ -26,12 +26,8 @@ test('V3.100 rejects unsafe OTA payloads',()=>{
   const deleted=manifest();deleted.delete=['session'];assert.equal(selectVerifiedRuntimeV3100Delta(deleted,'3.99'),null);
 });
 
-test('Worker and GM app advertise V3.100 OTA without updating the native shell',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
-  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(worker,/VERSION="V3\.100",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3100"/);
-  assert.match(app,/const VERSION='3\.100'/);
-  assert.match(html,/<title>GMWW V3\.100<\/title>/);
+test('V3.100 patch remains available for old V3.99 installs',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8');
   assert.equal(worker.split('selectVerifiedRuntimeV3100Delta(').length-1,2);
-  assert.match(html,/village-layout\.js\?v=3\.100-smart-seat/);
+  assert.match(worker,/selectVerifiedRuntimeV3101Delta/);
 });

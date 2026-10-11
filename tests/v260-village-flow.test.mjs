@@ -43,17 +43,14 @@ test('all 30 shared GM/Web positions are unique and inside the courtyard',()=>{
   for(const p of points){assert.equal(layout.inside(p.x,p.y),true);assert.ok(Math.hypot((p.x-layout.fire.x)/6,(p.y-layout.fire.y)/3)>=1)}
 });
 
-test('seat layout fills 8 inner, 16 outer, then opens a third ring above 24',()=>{
+test('legacy fallback capacities keep one outer perimeter, without stacking players',()=>{
   const p8=layout.positions(8),p24=layout.positions(24),p30=layout.positions(30);
-  assert.equal(p8.length,24,'a new village displays 24 baseline leaves even with fewer players');
-  assert.equal(p8.filter(p=>p.ring===0).length,8);
-  assert.equal(p8.filter(p=>p.ring===1).length,16);
-  assert.equal(p24.filter(p=>p.ring===0).length,8);
-  assert.equal(p24.filter(p=>p.ring===1).length,16);
-  assert.equal(p24.filter(p=>p.ring===2).length,0);
-  assert.equal(p30.filter(p=>p.ring===0).length,8);
-  assert.equal(p30.filter(p=>p.ring===1).length,16);
-  assert.equal(p30.filter(p=>p.ring===2).length,6);
+  assert.equal(p8.length,24,'legacy rooms keep 24 baseline leaves');
+  assert.equal(p24.length,24);
+  assert.equal(p30.length,30);
+  for(const points of [p8,p24,p30]){
+    assert.ok(points.every(p=>p.ring===0),'no inner, outer or third tier');
+  }
 });
 
 test('concurrent swap requests are serialized and only the recipient can accept',async()=>{
