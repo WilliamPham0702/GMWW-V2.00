@@ -3170,7 +3170,7 @@ function renderPlayBattle(){
   const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');
   const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds]));
   if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget||a.unavailable?'disabled ':'')+'>'+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget||a.unavailable?'disabled ':'')+'>'+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
   set('battleActionTrayTitle',phase==='night'&&t?((Number(t.order)>0?('LƯỢT '+Number(t.order)+' · '):'')+battleRules().displayLabel(t,'HÀNH ĐỘNG')):'HÀNH ĐỘNG TRẬN ĐẤU');
@@ -3376,7 +3376,7 @@ function initBattleFloatingUndo(){
     drag=null;
   };
   box.addEventListener('pointerup',finish);box.addEventListener('pointercancel',finish);
-  button.addEventListener('click',()=>{if(Date.now()>=ignoreUntil)void battleUndoLast()});
+  box.addEventListener('click',()=>{if(Date.now()>=ignoreUntil)void battleUndoLast()});
   window.addEventListener('resize',()=>{const r=box.getBoundingClientRect();place(r.left,r.top)});
 }
 function initBattleControls(){
