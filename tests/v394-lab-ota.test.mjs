@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { selectVerifiedRuntimeV394Delta } from '../src/gmww-ota-delta.js';
+const base='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.94/';
+const paths=['GMWW.html','app.js','style.css'];
+const sample=()=>({releaseVersion:'3.94',runtimeVersion:'3.94',shellVersion:'3.17',releaseType:'runtime',delete:[],runtime:{files:paths.map(path=>({path,url:base+path,sha256:'f'.repeat(64)}))}});
+test('V3.93 → V3.94 Lab overlay changes only the verified UI and preserves data',()=>{
+  const delta=selectVerifiedRuntimeV394Delta(sample(),'3.93');
+  assert.equal(delta?.upgradeMode,'verified-overlay');
+  assert.equal(delta?.optimizedFromVersion,'3.93');
+  assert.deepEqual(delta?.runtime.files.map(x=>x.path),paths);
+  assert.deepEqual(delta?.delete,[]);
+});
+test('Lab OTA fails closed for unexpected base, modified url, missing file or delete request',()=>{
+  assert.equal(selectVerifiedRuntimeV394Delta(sample(),'3.92'),null);
+  const x=sample();x.delete=['data'];assert.equal(selectVerifiedRuntimeV394Delta(x,'3.93'),null);
+  const y=sample();y.runtime.files.pop();assert.equal(selectVerifiedRuntimeV394Delta(y,'3.93'),null);
+  const z=sample();z.runtime.files[0].url='https://invalid.example';assert.equal(selectVerifiedRuntimeV394Delta(z,'3.93'),null);
+});
