@@ -23,5 +23,5 @@ test('Worker newest Runtime selector is V3.90 on both paths',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  assert.match(app,/const VERSION='3\.90'/);
  assert.match(html,/<title>GMWW V3\.90<\/title>/);
- assert.match(html,/app\.js\?v=3\.90-home-discover-transparent/);
+ assert.match(html,/app\.js\?v=3\.90-night-artwork-update/);
 });
