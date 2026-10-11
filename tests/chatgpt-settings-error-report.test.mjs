@@ -112,7 +112,7 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
   assert.equal(opened.length,0,'Diagnose must never open ChatGPT');
   assert.match(editor.value,/Nút phân vai chưa hoạt động/);
   assert.match(editor.value,/GMWW_SAFE_ERROR_REPORT_V1/);
-  assert.match(editor.value,/HTTP/); // scan includes HTTP status
+  assert.match(editor.value,/"http": 200/); // server probe returned HTTP 200
   assert.equal((editor.value.match(/BẮT ĐẦU BÁO CÁO GMWW TỰ ĐỘNG/g)||[]).length,1);
   editor.value=editor.value.replace('Nút phân vai chưa hoạt động.','Nút phát vai chưa hoạt động.');
   await listeners['diagnose:click']();
