@@ -12,16 +12,16 @@ export function artifactPriorityFirst(artifact){
 }
 export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   const queue=[];
-  if(night===1) queue.push({kind:"wolf-introduction",label:"Bầy Sói ơi dậy đi nhìn mặt nhau"});
+  queue.push({kind:"wolf-introduction",label:"Bầy Sói"});
   // Every cycle, eligible configured Artifacts act before roles. No unused
   // Artifact is consumed simply by appearing in this opening window.
-  for(const owner of artifactOwners){
-    if(!owner?.used&&artifactPriorityFirst(owner))queue.push({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId});
-  }
+  const earlyActions=artifactOwners.filter(owner=>!owner?.used&&artifactPriorityFirst(owner)).map(owner=>({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId}));
+  queue.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:earlyActions});
   for(const turn of normalTurns){
     if((turn?.artifactId||turn?.artifactName)&&artifactOwners.some(x=>x.playerId===turn.playerId&&(turn.artifactId?x.artifactId===turn.artifactId:x.artifactName===turn.artifactName)&&x.used))continue;
     queue.push({...turn,kind:turn.kind||"normal"});
   }
+  queue.push({kind:"village-wakeup",label:"Làng ơi dậy đi"});
   return queue;
 }
 export function artifactCycleKey(matchId,night){return String(matchId)+":night:"+Math.max(1,Number(night)||1)}
