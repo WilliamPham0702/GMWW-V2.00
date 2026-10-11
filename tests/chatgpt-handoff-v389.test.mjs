@@ -63,6 +63,7 @@ test('Safari opens a new tab, blocked popup falls back to same tab, empty reques
   assert.equal(blocked.navigated.length,1);
   assert.equal(decodeURIComponent(blocked.navigated[0].split('?prompt=')[1]),blocked.editor.value);
   const empty=boot({message:'  '});
+  empty.editor.value=' ';
   empty.listeners['send:click']();
   assert.equal(empty.opened.length,0);
   assert.equal(empty.navigated.length,0);
