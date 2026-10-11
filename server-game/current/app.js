@@ -4729,14 +4729,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       notice('Đang nạp 44 lá vào kho Artifact dùng chung. Giữ trang mở...');
       const ids=rows.map(x=>x.artifactId);
       const report=await playSyncSharedArtifactLibrary({onlyIds:ids,forceIds:ids});
-      if(report.failed?.length){
-        notice('Đã lưu ảnh ở GM; server còn lỗi '+report.failed.length+' lá: '+report.failed.map(x=>x.id).join(', ')+'. Có thể thử lại.');
+      const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+      const serverSignatures=new Map((status?.artifacts||[]).map(a=>[String(a.assetId),String(a.signature)]));
+      const verified=await Promise.all(rows.map(async x=>serverSignatures.get('artifact:'+x.artifactId)===(await playSharedArtifactSignature((state.artifacts||[]).find(a=>String(a.id)===x.artifactId)))));
+      if(!report || !Array.isArray(report.failed) || report.failed.length || report.synced!==44 || verified.some(ok=>!ok)){
+        notice('Chưa xác minh đủ 44 ảnh trên server. Không xác nhận thành công; giữ lựa chọn để thử lại.');
       }else{
         notice('THÀNH CÔNG: 44/44 ảnh đã được máy chủ xác nhận, Player Web dùng kho Artifact mới.');
+        rows=null;
+        const pending=el('seaArtifactImportFile');if(pending)pending.value='';
+        const previewBox=el('seaArtifactImportPreview');if(previewBox)previewBox.replaceChildren();
+        for(const u of urls)URL.revokeObjectURL(u);urls=[];
       }
       await renderTheme();renderEntityGrid('artifacts');
     }catch(e){notice('Có lỗi: '+String(e?.message||e)+'. Ảnh cũ đã được sao lưu.');}
-    finally{button.disabled=false}
+    finally{button.disabled=!rows}
   }
   const picker=el('seaArtifactImportFile'),start=el('seaArtifactImportStart');
   if(!picker||!start)return;
