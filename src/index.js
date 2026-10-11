@@ -1107,8 +1107,11 @@ export class RoomDurableObject extends DurableObject {
       if((target.kind==="artifact-main"||target.kind==="early-artifact")&&await this.artifactUsedInNight(meta,target))
         return j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact này đã sử dụng trong đêm, không thể thực hiện lần nữa."},409);
     }
-    const runtime=await this.advanceNightRuntime(meta,action,source,targetIndex);await this.scheduleRoomAlarm(meta);
-    return j({ok:true,night,runtime,autoGM:meta.autoGM!==false})
+    const runtime=await this.advanceNightRuntime(meta,action,source,targetIndex);
+    // Manual GM navigation must resolve morning just like the automatic timer.
+    const morning=action==="next"&&runtime.completed?await this.applyCycle(meta,"morning",night,"morning-"+night,source):null;
+    if(!morning)await this.scheduleRoomAlarm(meta);
+    return j({ok:true,night,runtime,morning,autoGM:meta.autoGM!==false})
   }
   async gmCycle(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
