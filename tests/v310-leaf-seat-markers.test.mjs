@@ -24,9 +24,9 @@ test('V3.17 Player Web uses the supplied fantasy leaf artwork and removes genera
 });
 
 test('V3.17 runtime is aligned with native shell V3.17',()=>{
-  assert.match(html,/<title>GMWW V3\.89<\/title>/);
-  assert.match(app,/const VERSION='3\.89'/);
-  assert.match(server,/VERSION="V3\.89",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-389"/);
+  assert.match(html,/<title>GMWW V3\.90<\/title>/);
+  assert.match(app,/const VERSION='3\.90'/);
+  assert.match(server,/VERSION="V3\.90",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-390"/);
   assert.ok(['3.10','3.11','3.12','3.13','3.17'].includes(manifest.releaseVersion));
   assert.ok(['native','runtime'].includes(manifest.releaseType));
   assert.ok(['3.09','3.11','3.17'].includes(manifest.shellVersion));
