@@ -2336,7 +2336,7 @@ async function refreshPlayServerRealtime(){
   }catch(err){setPlayRealtimeState('offline');btn.classList.add('is-error');playFlashError('Không cập nhật được realtime từ server. '+(err?.message||''));setTimeout(()=>btn.classList.remove('is-error'),1100)}
   finally{delete btn.dataset.syncing;btn.classList.remove('is-syncing')}
 }
-function playSeatPositions(count){return globalThis.GMWW_VILLAGE_LAYOUT.positions(count,playSceneRuntime.room?.seatLayout).map(p=>[p.x,p.y])}
+function playSeatPositions(count){const preset=typeof playSceneRuntime==="object"?playSceneRuntime.room?.seatLayout:"";return globalThis.GMWW_VILLAGE_LAYOUT.positions(count,preset).map(p=>[p.x,p.y])}
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:'character-01'}
 function playWalkDirection(member){const dx=Number(member?.moveToX)-Number(member?.moveFromX);return Number.isFinite(dx)&&dx<-.01?'left':'right'}
