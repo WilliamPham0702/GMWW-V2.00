@@ -806,6 +806,7 @@ async function renderTheme(){
   for(const group of THEME_UI_GROUPS){const sec=document.createElement('details');sec.className='theme-section theme-collapsible';sec.innerHTML='<summary class="theme-section-head"><h3>'+esc(group.title)+'</h3></summary><div class="theme-slot-list"></div>';sections.appendChild(sec);const list=$('.theme-slot-list',sec);for(const [slotId,label] of group.slots){const src=await resolveUiSlot(themeId,slotId);const row=document.createElement('div');row.className='theme-slot';row.dataset.slotId=slotId;row.innerHTML='<img class="theme-slot-preview" alt=""><div class="theme-slot-main"><b>'+esc(label)+'</b><input type="url" placeholder="Link ảnh (không bắt buộc)" value="'+esc(themeById(themeId).ui?.[slotId]?.url||'')+'"></div><div class="theme-slot-actions"><button data-upload-slot="'+esc(slotId)+'" title="Tải ảnh">↑</button><button data-clear-slot="'+esc(slotId)+'" title="Mặc định">↺</button></div>';$('.theme-slot-preview',row).src=src||defaultThemeSlotPreview(slotId)||'';$('.theme-slot-preview',row).title=src?'Ảnh đang áp dụng':'Ảnh mặc định (đã liên kết)';list.appendChild(row);$('input',row).onchange=()=>saveUiSlotUrl(themeId,slotId,$('input',row).value);$('[data-upload-slot]',row).onclick=()=>pickUiSlotFile(themeId,slotId);$('[data-clear-slot]',row).onclick=()=>clearUiSlot(themeId,slotId)}}
   await renderThemeEntityRows(themeId,'cards',$('#themeCardRows'));
   await renderThemeEntityRows(themeId,'artifacts',$('#themeArtifactRows'));
+  mountBulkArtworkImporter();
 }
 async function renderThemeEntityRows(themeId,kind,holder){
   if(!holder)return;holder.innerHTML='';
@@ -819,11 +820,49 @@ async function renderThemeEntityRows(themeId,kind,holder){
   }
 }
 
+// Shared bulk artwork box for both Roles and Artifacts; preserve each original image ratio.
+function mountBulkArtworkImporter(){
+  const role=$('themeCardRows'),artifact=$('themeArtifactRows');
+  if(!role||!artifact||$('gmwwBulkArtworkBox'))return;
+  const box=document.createElement('section');box.id='gmwwBulkArtworkBox';box.className='theme-card-row';
+  box.innerHTML='<b>🌊 Nạp Artwork hàng loạt</b><p>Chọn Lá Vai Trò hoặc Artifact · ảnh không bảng tên · không thay đổi chức năng lá bài</p><select id="gmwwBulkKind"><option value="cards">Lá Vai Trò</option><option value="artifacts">Artifact</option></select><input id="gmwwBulkFiles" type="file" accept="image/png,image/webp,image/jpeg" multiple><button type="button" id="gmwwBulkApply">Nạp ảnh đã chọn</button><small id="gmwwBulkStatus" role="status"></small>';
+  role.parentNode.insertBefore(box,role);
+  const input=$('gmwwBulkFiles'),button=$('gmwwBulkApply'),status=$('gmwwBulkStatus');
+  button.onclick=async()=>{
+    const files=[...input.files],kind=$('gmwwBulkKind').value,themeId=state.themes.selectedEditorId;
+    if(!files.length){status.textContent='Vui lòng chọn ảnh trước.';return}
+    const normalize=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const cards=entityList(kind),pairs=[],seen=new Set();
+    for(const file of files){
+      const name=file.name.replace(/\\.(png|webp|jpe?g)$/i,'');
+      const matches=cards.filter(c=>normalize(c.name)===normalize(name));
+      if(matches.length!==1){status.textContent='Chưa xác định được lá cho '+file.name+'. Hãy đổi tên file đúng tên lá bài trước khi nạp.';return}
+      if(seen.has(matches[0].id)){status.textContent='Trùng ảnh của '+matches[0].name;return}
+      seen.add(matches[0].id);pairs.push([matches[0],file]);
+    }
+    if(!confirm('Nạp '+pairs.length+' ảnh '+(kind==='cards'?'Vai Trò':'Artifact')+' vào chủ đề hiện tại?'))return;
+    button.disabled=true;
+    try{
+      for(const [card,file] of pairs){
+        const dk=cardBlobKey(themeId,kind,card.id,'display'),tk=cardBlobKey(themeId,kind,card.id,'thumb');
+        await dbPut(dk,file);await dbPut(tk,await thumbBlobFromFile(file));
+        for(const key of [dk,tk]){const old=objectUrls.get(key);if(old)URL.revokeObjectURL(old);objectUrls.delete(key)}
+      }
+      if(kind==='artifacts'&&themeId===state.themes.activeId){
+        const result=await playSyncSharedArtifactLibrary({onlyIds:pairs.map(x=>x[0].id),forceIds:pairs.map(x=>x[0].id)});
+        if(!result.ok)throw Error('Đã lưu ảnh GM nhưng đồng bộ Server chưa đủ: '+result.failed.map(x=>x.id).join(', '));
+      }
+      input.value='';status.textContent='Đã nạp '+pairs.length+' ảnh. Sẵn sàng chọn file mới.';
+      await renderTheme();renderEntityGrid(kind);
+    }catch(err){status.textContent=String(err.message||err)}
+    finally{button.disabled=false}
+  };
+}
 async function saveUiSlotUrl(themeId,slotId,url){const t=themeById(themeId);t.ui=t.ui||{};t.ui[slotId]=t.ui[slotId]||{};t.ui[slotId].url=String(url||'').trim();saveState();await renderTheme();await applyActiveThemeUi()}
 function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*';i.hidden=true;document.body.appendChild(i);i.onchange=()=>{const f=i.files?.[0];i.remove();if(f)cb(f)};i.click()}
 function pickUiSlotFile(themeId,slotId){pickFile(async f=>{await dbPut(uiBlobKey(themeId,slotId),f);objectUrls.delete(uiBlobKey(themeId,slotId));await renderTheme();await applyActiveThemeUi()})}
 async function clearUiSlot(themeId,slotId){const t=themeById(themeId);if(t.ui)delete t.ui[slotId];await dbDelete(uiBlobKey(themeId,slotId)).catch(()=>{});objectUrls.delete(uiBlobKey(themeId,slotId));saveState();await renderTheme();await applyActiveThemeUi()}
-function thumbBlobFromFile(file){return new Promise(resolve=>{const u=URL.createObjectURL(file),im=new Image();const done=v=>{try{URL.revokeObjectURL(u)}catch(_){}resolve(v||file)};im.onload=()=>{try{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');if(!g)return done(file);g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1064,sh=im.naturalHeight||1478,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);c.toBlob(b=>done(b||file),'image/webp',.9)}catch(_){done(file)}};im.onerror=()=>done(file);im.src=u})}
+function thumbBlobFromFile(file){return new Promise(resolve=>{const u=URL.createObjectURL(file),im=new Image();const done=v=>{try{URL.revokeObjectURL(u)}catch(_){}resolve(v||file)};im.onload=()=>{try{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');if(!g)return done(file);g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1064,sh=im.naturalHeight||1478,scale=Math.min(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);c.toBlob(b=>done(b||file),'image/webp',.9)}catch(_){done(file)}};im.onerror=()=>done(file);im.src=u})}
 function pickEntityThemeArtwork(themeId,kind,entityId){pickFile(async f=>{const dk=cardBlobKey(themeId,kind,entityId,'display'),tk=cardBlobKey(themeId,kind,entityId,'thumb');await dbPut(dk,f);await dbPut(tk,await thumbBlobFromFile(f));objectUrls.delete(dk);objectUrls.delete(tk);saveState();memberAdminState.loaded=false;await renderTheme();renderEntityGrid(kind)})}
 async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};delete t.mappings[entityId];for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
 
