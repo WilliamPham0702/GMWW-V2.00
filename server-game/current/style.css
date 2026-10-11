@@ -4897,3 +4897,52 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
 #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton{width:54px!important;min-width:54px!important;max-width:54px!important;height:50px;box-sizing:border-box}
 #start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton #battleCountdown{font-size:15px!important;letter-spacing:0!important;font-variant-numeric:tabular-nums}
 @media(max-width:360px){#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 .battle-menu-row-top{grid-template-columns:48px minmax(0,1fr) 48px!important;gap:5px}#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton{width:48px!important;min-width:48px!important;max-width:48px!important}#start #playShell[data-step="battle"] #playBattleDock.battle-actor-v393 #battleClockButton #battleCountdown{font-size:13px!important}}
+
+/* Seat Mẫu: the gathering toolbar swipes horizontally; only the diagram picker scrolls vertically. */
+body.play-immersive #start #playGatherToolbar.play-gather-toolbar .play-gather-toolbar-actions{
+  display:flex!important;flex-flow:row nowrap!important;grid-template-columns:none!important;
+  gap:7px!important;overflow-x:auto!important;overflow-y:hidden!important;
+  scroll-snap-type:x proximity;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;touch-action:pan-x!important;
+  scrollbar-width:none;padding:3px 1px 5px!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions::-webkit-scrollbar{display:none}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{
+  flex:0 0 clamp(94px,26vw,112px)!important;min-width:94px!important;
+  scroll-snap-align:start;min-height:48px!important;
+}
+body.play-immersive #start #playGatherToolbar #playGatherSeatPreset{
+  border-color:rgba(255,231,156,.66);color:#fff1c9;
+}
+#playSeatPresetPanel[hidden]{display:none!important}
+body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{
+  position:absolute;z-index:95;
+  top:calc(env(safe-area-inset-top) + 185px);
+  left:50%;transform:translateX(-50%);
+  width:min(calc(100vw - 22px),420px);box-sizing:border-box;
+  padding:12px;border:1px solid rgba(170,239,248,.64);border-radius:17px;
+  background:linear-gradient(160deg,rgba(6,44,65,.97),rgba(11,77,92,.95));
+  box-shadow:0 12px 34px rgba(2,26,36,.38);
+  color:#e9fcff;max-height:min(62dvh,545px);
+  display:flex;flex-direction:column;gap:9px;overflow:hidden;
+}
+#playSeatPresetPanel .play-seat-preset-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#playSeatPresetPanel .play-seat-preset-heading>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+#playSeatPresetPanel .play-seat-preset-heading b{font-size:13px;letter-spacing:.05em;color:#fff2c2}
+#playSeatPresetPanel .play-seat-preset-heading small{font-size:10px;color:#b9e8ec}
+#playSeatPresetPanel #playSeatPresetClose{flex:0 0 30px;height:30px;border-radius:10px;border:1px solid #7cc9d5;background:#13516c;color:white;font-size:22px;line-height:1}
+#playSeatPresetPanel .play-seat-preset-shapes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+#playSeatPresetPanel .play-seat-preset-shapes>button{min-height:34px;padding:5px 3px;border-radius:9px;border:1px solid rgba(154,228,243,.35);background:#0d415b;color:#deeff8;font-size:10px;font-weight:850}
+#playSeatPresetPanel .play-seat-preset-shapes>button.active{border-color:#ffe59b;background:#186b7c;color:#fff2b9}
+#playSeatPresetPanel .play-seat-preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;min-height:0;padding:2px}
+#playSeatPresetPanel .play-seat-preset-card{min-width:0;min-height:108px;border:1px solid #4d97a8;border-radius:12px;background:rgba(20,88,104,.49);color:#f3fcff;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px}
+#playSeatPresetPanel .play-seat-preset-card.selected{border:2px solid #ffe6a0;background:rgba(45,111,117,.78)}
+#playSeatPresetPanel .play-seat-preset-card:disabled{opacity:.36}
+#playSeatPresetPanel .play-seat-preset-card b{font-size:10px;letter-spacing:.045em}
+#playSeatPresetPanel .play-seat-preset-dots{position:relative;display:block;width:min(100%,136px);height:77px;pointer-events:none}
+#playSeatPresetPanel .play-seat-preset-dot{position:absolute;width:7px;height:7px;border:1px solid #d8fcf9;border-radius:50%;background:#73dbe6;box-shadow:0 0 3px #2b8ba8;transform:translate(-50%,-50%)}
+#playSeatPresetPanel button:focus-visible{outline:2px solid #ffe6a0;outline-offset:2px}
+@media(max-width:380px){
+  body.play-immersive #start #playSeatPresetPanel.play-seat-preset-panel{top:calc(env(safe-area-inset-top) + 168px);max-height:61dvh}
+  body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{flex-basis:98px!important}
+}
