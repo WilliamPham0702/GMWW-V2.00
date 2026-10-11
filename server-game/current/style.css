@@ -4634,7 +4634,6 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
 .gmww-report-card .gmww-report-send{background:linear-gradient(155deg,rgba(13,115,121,.93),rgba(8,77,93,.94));border-color:rgba(143,245,230,.85)}
 .gmww-report-card .gmww-report-main:disabled{opacity:.6}
 .gmww-report-card #gmwwReportStatus{line-height:1.5;font-size:12px;opacity:.9}
-.gmww-report-card .gmww-report-copy{display:flex;min-height:40px;align-items:center;justify-content:center;gap:6px;font-size:12px;text-align:center}
 @media(max-width:350px){.gmww-report-actions{grid-template-columns:1fr}}
 
 /* V3.87 — remove backgrounds from the final two Home panels only. */
