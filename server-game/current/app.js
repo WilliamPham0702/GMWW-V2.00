@@ -2210,7 +2210,7 @@ const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
 const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V263_PLAY_SCENE','GMWW_V257_PLAY_SCENE','GMWW_V256_PLAY_SCENE','GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
 const PLAY_STEPS=['lobby','room','seats','game','roles','deal','battle'];
 let playGatherToolsDismissed=false;
-let playSeatPresetOpen=false,playSeatPresetShape='circle';
+let playSeatPresetOpen=false;
 const PLAY_STEP_COPY={
   lobby:{k:'SẢNH CHỜ',t:'Tạo Phòng',x:'Mọi người tập trung tại làng. Nhấn Tiếp tục để vào bước Tạo phòng.',a:'TẠO PHÒNG'},
   room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
@@ -2900,37 +2900,37 @@ function renderPlaySeatPresetPanel(){
   if(!playSeatPresetOpen||playSceneState.step!=='seats'||playSceneRuntime.room?.seatsLocked){closePlaySeatPresetPanel();return}
   panel.hidden=false;
   document.getElementById('playGatherSeatPreset')?.setAttribute('aria-expanded','true');
-  panel.querySelectorAll('[data-play-seat-shape]').forEach(b=>{
-    const selected=b.dataset.playSeatShape===playSeatPresetShape;
-    b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
-  });
   const layout=globalThis.GMWW_VILLAGE_LAYOUT,selectedCount=Number(playSceneRuntime.room?.seatCount||0);
   const selectedShape=String(playSceneRuntime.room?.seatLayout||''),occupants=playLiveMembers();
   const minimum=Math.max(occupants.length,...occupants.map(p=>Number(p?.seatId||0)),0);
   grid.replaceChildren();
   for(const n of layout.seatTemplateCounts){
+    const shape=layout.seatTemplateRecommendedShape(n);
     const button=document.createElement('button');button.type='button';button.className='play-seat-preset-card';
-    const selected=n===selectedCount&&selectedShape===playSeatPresetShape;
+    button.dataset.seatCount=String(n);button.dataset.seatLayout=shape;
+    const selected=n===selectedCount&&selectedShape===shape;
     button.classList.toggle('selected',selected);
     button.disabled=playSceneRuntime.busy||n<minimum;
-    button.setAttribute('aria-label',PLAY_SEAT_PRESET_NAMES[playSeatPresetShape]+' '+n+' người'+(selected?' đang chọn':''));
+    button.setAttribute('aria-label',n+' người, đề xuất '+PLAY_SEAT_PRESET_NAMES[shape]+(selected?', đang chọn':''));
     button.setAttribute('aria-pressed',String(selected));
     const preview=document.createElement('span');preview.className='play-seat-preset-dots';preview.setAttribute('aria-hidden','true');
-    for(const pos of layout.seatTemplatePositions(n,playSeatPresetShape)){
+    for(const pos of layout.seatTemplatePositions(n,shape)){
       const dot=document.createElement('i');dot.className='play-seat-preset-dot';
-      dot.style.left=Math.max(4,Math.min(96,(pos.x-11)/78*100))+'%';
-      dot.style.top=Math.max(4,Math.min(96,(pos.y-30)/62*100))+'%';
+      dot.style.left=(50+(pos.x-layout.fire.x)*1.1)+'%';
+      dot.style.top=(50+(pos.y-layout.fire.y)*3.4)+'%';
       preview.append(dot);
     }
+    const fire=document.createElement('i');fire.className='play-seat-preset-fire';
+    fire.style.left='50%';fire.style.top='50%';preview.append(fire);
     const label=document.createElement('b');label.textContent=n+' NGƯỜI';
-    button.append(preview,label);
-    button.onclick=()=>{void playApplySeatPreset(n,playSeatPresetShape)};
+    const shapeLabel=document.createElement('small');shapeLabel.textContent='Đề xuất: '+PLAY_SEAT_PRESET_NAMES[shape];
+    button.append(preview,label,shapeLabel);
+    button.onclick=()=>{void playApplySeatPreset(n,shape)};
     grid.append(button);
   }
 }
 function openPlaySeatPresetPanel(){
   if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked||playSceneState.step!=='seats'||!isLivePlayRoom())return;
-  playSeatPresetShape=globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatLayout(playSceneRuntime.room?.seatLayout)||'circle';
   playSeatPresetOpen=true;renderPlaySeatPresetPanel();
 }
 async function playApplySeatPreset(count,shape){
@@ -4544,7 +4544,6 @@ function initPlayScene(){
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherSeatPreset')?.addEventListener('click',openPlaySeatPresetPanel);
   document.getElementById('playSeatPresetClose')?.addEventListener('click',closePlaySeatPresetPanel);
-  document.querySelectorAll('[data-play-seat-shape]').forEach(b=>b.addEventListener('click',()=>{playSeatPresetShape=b.dataset.playSeatShape;renderPlaySeatPresetPanel()}));
   document.getElementById('playGatherRandom')?.addEventListener('click',()=>{void playGatherRandomize()});
   document.getElementById('playGatherManual')?.addEventListener('click',playGatherManual);
   document.getElementById('playGatherDisband')?.addEventListener('click',openPlayDisbandSheet);
