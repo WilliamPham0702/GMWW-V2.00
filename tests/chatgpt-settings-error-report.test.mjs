@@ -122,7 +122,7 @@ test('GM may add optional free-text instructions to the automatic ChatGPT report
   assert.match(preview.value,/Yêu cầu bổ sung do GM nhập:/);
   assert.match(preview.value,/Khi Phát Vai không hiện lá Vai Trò/);
   assert.match(preview.value,/GMWW_SAFE_ERROR_REPORT_V1/);
-  assert.match(preview.value,/Không khẳng định đã sửa\\/deploy/);
+  assert.ok(preview.value.includes('Không khẳng định đã sửa/deploy'));
   assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),preview.value);
   const data=JSON.parse(preview.value.slice(preview.value.indexOf('\\n\\n')+2));
   assert.equal(data.project,'WilliamPham0702/GMWW-V2.00');
