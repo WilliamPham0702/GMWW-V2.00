@@ -11,6 +11,16 @@ on:
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gmww-player-private-card-patch.js"
+      - "src/gmww-members-live.js"
+      - "src/gmww-delivery-manifest.js"
+      - "src/gmww-delivery-snapshot.js"
+      - "src/index.js"
+      - "tests/browser-private-cards.mjs"
+      - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
 concurrency:
