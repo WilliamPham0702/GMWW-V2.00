@@ -4619,7 +4619,6 @@ body.play-immersive #start .play-player-over b.play-name-with-presence,
 }
 #start .play-player-over small{display:none!important}
 
-/* Settings V3.88 — one editable ChatGPT composer, separate diagnose and send actions. */
 
 /* V3.87 — remove backgrounds from the final two Home panels only. */
 #home .gmww-home-top3-skin-v377 :is(.gmww-home-top3-panel-v377,.gmww-home-activity-v351){
