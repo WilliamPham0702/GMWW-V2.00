@@ -3274,7 +3274,7 @@ async function battleConfirm(){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   try{
     for(const id of battleState.targets){
-      const payload={loginId:id,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',...(a.artifactId?{artifactId:a.artifactId}:{}),effectId:a.effectIds[0]||'',effectName:a.name,matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',night:Number(playSceneState.night||1),clientEventId:battleState.nonce+':'+id};
+      const payload={loginId:id,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',...(a.artifactId?{artifactId:a.artifactId,actionNonce:battleState.nonce}:{}),effectId:a.effectIds[0]||'',effectName:a.name,matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',night:Number(playSceneState.night||1),clientEventId:battleState.nonce+':'+id};
       if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
       await playRoomApi('/interaction',{method:'POST',body:JSON.stringify(payload)});
       battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
