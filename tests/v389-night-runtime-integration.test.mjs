@@ -126,3 +126,18 @@ test('timeline navigation rejects stale expected turn; backward navigation never
   await h.jump('early-artifact-window');assert.equal((await h.runtime()).currentId,'early-artifact-window');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
 });
+test('replaying a successful revive does not clear a later death; changed event payload is rejected',async()=>{
+  const h=harness();await h.jump('role');
+  h.data.set('interactions',[{id:'death-1',loginId:'bob',type:'dead',effectActive:true,night:1}]);
+  const request={artifactId:undefined,actionId:'revive',type:'revive',clientEventId:'revive-1'};
+  assert.equal((await result(await h.act(request))).ok,true);
+  h.data.get('interactions').push({id:'death-2',loginId:'bob',type:'dead',effectActive:true,night:1});
+  assert.equal((await result(await h.act(request))).idempotent,true);
+  assert.equal(h.data.get('interactions').find(x=>x.id==='death-2').effectActive,true);
+  assert.equal((await result(await h.act({...request,type:'clear_state'}))).error,'REQUEST_ID_CONFLICT');
+});
+test('request-ID collision across owners cannot reserve or impersonate another Artifact',()=>{
+  const state={cycleKey:'test:night:1',accepted:[{requestId:'same-id',playerId:'member:alice',artifactId:'mirror'}]};
+  const r=reserveArtifactActivation(state,{requestId:'same-id',playerId:'member:bob',artifactId:'stone',cycleKey:state.cycleKey,eligible:true,limit:3});
+  assert.equal(r.ok,false);assert.equal(r.error,'REQUEST_ID_CONFLICT');assert.equal(state.accepted.length,1);
+});

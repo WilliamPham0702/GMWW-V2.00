@@ -1151,6 +1151,18 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmInteraction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const eventId=String(body?.clientEventId||"").slice(0,240);
+    if(!eventId||!body?.turnId)return this.executeGmInteraction(request,body);
+    const receiptKey="gmInteractionReceipt:"+String(auth.meta.matchId||"")+":"+eventId;
+    const fingerprint=JSON.stringify([String(body.turnId),String(body.actionId||""),normalizeLoginId(body.actorId),String(body.artifactId||""),normalizeLoginId(body.loginId),String(body.type||""),String(body.effectId||""),String(body.actionNonce||""),Number(body.night||0),String(body.cycleKey||""),Array.isArray(body.targetIds)?body.targetIds.map(normalizeLoginId).sort():null]);
+    const prior=await this.ctx.storage.get(receiptKey);
+    if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    const response=await this.executeGmInteraction(request,body);
+    if(response.ok)await this.ctx.storage.put(receiptKey,{fingerprint,result:await response.clone().json()});
+    return response;
+  }
+  async executeGmInteraction(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta;
     let gmArtifactStep=null;
     // The battle UI supplies an optional expected turn. Legacy GM manual overrides remain compatible.
