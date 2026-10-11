@@ -16,9 +16,7 @@ test('Settings keeps ChatGPT support private with one editable composer and sepa
   assert.doesNotMatch(html,/id="gmwwReportPreview"/);
   assert.match(app,/https:\/\/chatgpt\.com\/\?prompt=/);
   assert.match(app,/encodeURIComponent\(message\)/);
-  assert.match(app,/window\.open\(url,'_blank'\)/);
-  assert.match(app,/window\.location\.assign\(url\)/);
-  assert.doesNotMatch(html,/id="gmwwCopyReport"/);
+  assert.match(app,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
   assert.match(app,/gmwwLastBugDiagnostics/);
   assert.match(app,/runSystemDiagnostics\(\{silent:true\}\)/);
   assert.doesNotMatch(html,/gmww-ai-support\.(?:js|css)/);
@@ -85,12 +83,13 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
     gmwwReportComposer:editor,
     gmwwReportToChatGPT:control('diagnose'),
     gmwwSendReport:control('send'),
+    gmwwCopyReport:control('copy'),
     gmwwReportStatus:info,
     updateServerVersion:{textContent:'V3.87'},
     updateStatus:{textContent:'ĐÃ CẬP NHẬT'},
     updateDecisionTitle:{textContent:'GMWW mới nhất'}
   };
-  const opened=[];
+  const opened=[],copied=[];
   let checked=0;
   const context={
     document:{getElementById:id=>elements[id]||null,querySelector:()=>null,querySelectorAll:()=>[]},
@@ -98,8 +97,8 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
     gmwwRuntimeVersion:()=> '3.88',
     gmwwRuntimeErrors:[],
     runSystemDiagnostics:async()=>{checked++;return {ok:true,probes:{server:{ok:true,status:200,latency:21}}}},
-    navigator:{onLine:true},
-    window:{open:(url)=>{opened.push(url);return {opener:{}}},location:{assign:(url)=>opened.push(url)}},Date
+    navigator:{onLine:true,clipboard:{writeText:async s=>{copied.push(s)}}},
+    window:{open:(url)=>{opened.push(url)}},Date
   };
   const from=app.indexOf('/* GMWW Settings -> ChatGPT');
   const until=app.indexOf("const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');",from);
@@ -127,7 +126,8 @@ test('Single editable prompt is initialized, diagnostics stay local, send uses e
   assert.equal(opened.length,1);
   assert.equal(decodeURIComponent(opened[0].split('?prompt=')[1]),sent);
   assert.match(info.textContent,/nhấn Gửi trong ChatGPT/);
-  assert.ok(!listeners['copy:click'],'Copy handler must be removed');
+  await listeners['copy:click']();
+  assert.equal(copied[0],sent);
 });
 
 test('Runtime V3.87 -> V3.88 OTA is a signed three-file overlay with no data deletion',async()=>{

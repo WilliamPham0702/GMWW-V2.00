@@ -697,7 +697,8 @@ export function selectVerifiedRuntimeV388Delta(manifest,installedVersion){
     message:'V3.88: Một ô soạn báo lỗi ChatGPT, chẩn đoán trước và Gửi riêng; giữ nguyên dữ liệu.'};
 }
 
-/** V3.88 -> V3.89: UI-only handoff fix; preserve roles, Artifacts, data and artwork. */
+
+/** V3.88 -> V3.89: only the Khám Phá frame changed; no persistent data deletion. */
 export function selectVerifiedRuntimeV389Delta(manifest,installedVersion){
   const from=String(installedVersion||'').trim().replace(/^V/i,'');
   if(from!=='3.88'||String(manifest?.releaseVersion||'')!=='3.89'
@@ -714,5 +715,5 @@ export function selectVerifiedRuntimeV389Delta(manifest,installedVersion){
   }
   return {...manifest,runtime:{...manifest.runtime,files:selected},delete:[],
     optimizedFromVersion:from,upgradeMode:'verified-overlay',
-    message:'V3.89: Bỏ sao chép, mở ChatGPT đúng cách trên iPhone; không tự tuyên bố đã gửi.'};
+    message:'V3.89: Khám Phá trong suốt, bỏ viền và bóng, giữ ba thẻ và toàn bộ dữ liệu game.'};
 }

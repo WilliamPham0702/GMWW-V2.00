@@ -1547,7 +1547,6 @@ const gmwwReportToChatGPT=document.getElementById('gmwwReportToChatGPT');
 if(gmwwReportToChatGPT)gmwwReportToChatGPT.addEventListener('click',gmwwReportBugToChatGPT);
 const gmwwSendReport=document.getElementById('gmwwSendReport');
 if(gmwwSendReport)gmwwSendReport.addEventListener('click',gmwwSendReportToChatGPT);
-
 // Preload safe Health Check when GM enters Settings so the report opens in
 // one direct tap, without iOS popup blocking an asynchronous navigation.
 document.querySelectorAll('[data-page="settings"]').forEach(control=>
