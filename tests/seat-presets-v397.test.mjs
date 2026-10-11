@@ -35,7 +35,7 @@ test('layouts are distinct and expand the village area compared with the legacy 
       const points=layout.positions(size,shape);
       const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
       const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
-      assert.ok(width>30&&height>25,shape+' '+size+' must use the wider courtyard');
+      assert.ok(width>30&&height>20,shape+' '+size+' must use the fire-centered courtyard without reaching rooftops');
     }
   }
   assert.equal(layout.positions(12).length,24,'legacy rooms retain legacy slots');
