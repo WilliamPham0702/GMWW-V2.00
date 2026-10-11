@@ -3163,6 +3163,15 @@ function battleTickCountdown(){
     const duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),started=Date.parse(playSceneRuntime.room?.cycleStartedAt||'');
     if(Number.isFinite(duration)&&duration>0)seconds=Number.isFinite(started)?Math.max(0,Math.ceil(duration-(serverNow-started)/1000)):Math.ceil(duration);
   }
+  // Keep a local monotonic countdown for this exact turn: server polling can
+  // refresh runtime timestamps without advancing the turn. Never count upward.
+  const tickKey=[playSceneRuntime.room?.matchId||'',phase,playSceneState.night||0,rt?.cursor??'',rt?.currentId||'',phase==='day'?playSceneRuntime.room?.cycleStartedAt||'':rt?.queue?.[rt?.cursor]?.startedAt||''].join(':');
+  const now=performance.now();
+  if(battleState.countdownKey!==tickKey){battleState.countdownKey=tickKey;battleState.countdownBase=seconds;battleState.countdownAt=now;}
+  else if(Number.isFinite(seconds)&&Number.isFinite(battleState.countdownBase)){
+    const local=Math.max(0,Math.ceil(battleState.countdownBase-(now-battleState.countdownAt)/1000));
+    seconds=Math.min(seconds,local);
+  }
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
@@ -3353,7 +3362,7 @@ async function battleQuickApply(loginId){
 }
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
-  document.getElementById('battleBack')?.addEventListener('click',()=>{exitPlayImmersive()});
+  document.getElementById('battleBack')?.addEventListener('click',()=>{battleNavigateRelative(-1)});
   document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
