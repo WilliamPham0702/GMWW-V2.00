@@ -24,3 +24,13 @@ export function jumpTarget(queue,index){
   if(!Array.isArray(queue)||!Number.isInteger(index)||index<0||index>=queue.length)return null;
   return queue[index]||null;
 }
+
+// UI-facing schedule: preserve action ownership and never consume an Artifact merely by listing it.
+export function timelineDisplaySteps(queue){
+  const steps=Array.isArray(queue)?queue:[];
+  const early=steps.filter(step=>step?.kind==="early-artifact");
+  const withoutEarly=steps.filter(step=>step?.kind!=="early-artifact"&&step?.kind!=="village-wakeup");
+  const intro=withoutEarly.filter(step=>step?.kind==="wolf-introduction");
+  const turns=withoutEarly.filter(step=>step?.kind!=="wolf-introduction");
+  return [...(intro.length?intro:[{kind:"wolf-introduction",label:"Bầy Sói"}]),{kind:"early-artifact-window",label:"Artifact đầu ván",actions:early},...turns,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
+}
