@@ -11,6 +11,9 @@ on:
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
       - "tests/home-v389-iphone-webkit.mjs"
+      - "tests/night-timeline-iphone-webkit.mjs"
+      - "server-game/current/battle-controls.js"
+      - "server-game/current/app.js"
       - ".github/workflows/check-player-card-browsers.yml"
   pull_request:
     branches: [main]
@@ -22,6 +25,9 @@ on:
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
       - "tests/home-v389-iphone-webkit.mjs"
+      - "tests/night-timeline-iphone-webkit.mjs"
+      - "server-game/current/battle-controls.js"
+      - "server-game/current/app.js"
       - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
@@ -58,6 +64,8 @@ jobs:
           node tests/browser-private-cards.mjs
       - name: Check Khám Phá on iPhone-sized WebKit
         run: node tests/home-v389-iphone-webkit.mjs
+      - name: Check night timeline on iPhone-sized WebKit
+        run: node tests/night-timeline-iphone-webkit.mjs
       - name: Upload WebKit Home preview
         if: always()
         uses: actions/upload-artifact@v4

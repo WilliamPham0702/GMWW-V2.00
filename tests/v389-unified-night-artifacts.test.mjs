@@ -54,3 +54,10 @@ test("server checks Artifact ownership and manual GM final turn triggers morning
   assert.match(worker,/runtime\.completed\?await this\.applyCycle\(meta,"morning"/);
   assert.match(gm,/artifactId:a\.artifactId/);
 });
+test('real categorized action catalog resolves Vietnamese names separately for role and Artifact',()=>{
+  const real={...catalog,actions:{role:[{id:'inspect',name:'Soi Vai Trò'}],artifacts:[{id:'stone_swap',name:'Đổi Vai Trò'}]}};
+  const actions=controls.actionsForTurn({kind:'role',roleId:'seer',loginIds:['alice','bob'],artifacts:[owner('stone','alice'),owner('stone','bob')]},1,real);
+  assert.deepEqual(Array.from(actions,x=>x.name),['Soi Vai Trò','Đổi Vai Trò','Đổi Vai Trò']);
+  assert.notEqual(actions[1].id,actions[2].id);
+  assert.equal(actions[1].artifactLoginId,'alice');assert.equal(actions[2].artifactLoginId,'bob');
+});
