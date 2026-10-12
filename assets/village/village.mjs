@@ -44,7 +44,7 @@ export function mapPublicPlayers(state){
     moveFromX:p.moveFromX==null?null:Number(p.moveFromX),moveFromY:p.moveFromY==null?null:Number(p.moveFromY),
     moveToX:p.moveToX==null?null:Number(p.moveToX),moveToY:p.moveToY==null?null:Number(p.moveToY),
     moveStartedAt:Number(p.moveStartedAt||0)||null,moveDurationMs:Number(p.moveDurationMs||0)||null,moveTargetSeatId:Number(p.moveTargetSeatId||0)||null,
-    ready:!!p.ready,setupComplete:!!p.setupComplete,online:p.online!==false,statusLabel:safeText(p.statusLabel||""),roleName:safeText(p.roleName||"")
+    ready:!!p.ready,setupComplete:!!p.setupComplete,online:p.online!==false,statusLabel:safeText(p.statusLabel||""),roleName:safeText(p.roleName||""),frozen:p?.frozen===true
   }));
 }
 const game=typeof document==="undefined"?null:document.getElementById("game");
@@ -125,7 +125,7 @@ if(game){
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
-    button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
+    button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
     const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving)button.dataset.walkDir=walkDirection(data)
     const avatar=document.createElement("span");avatar.className="portrait";
@@ -166,6 +166,7 @@ if(game){
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi");
     button._gmwwLive={data,actualSeat,playerName,isGM:gm};
     button.classList.toggle("selected",selectedId===data.id);
+    button.classList.toggle("is-frozen",data?.frozen===true&&!gm);
     button.classList.toggle("self",String(data.id)===String(setupState.viewerParticipantId||""));
     button.classList.toggle("moving",!!pos.moving);
     button.classList.toggle("sitting",!!pos.sitting);
