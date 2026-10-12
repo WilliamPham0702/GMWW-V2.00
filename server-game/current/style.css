@@ -5312,3 +5312,10 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
 /* Two top GM actions fill the entire row; dangerous actions retain their own lower row. */
 #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleGMAudio,
 #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleGMAuto{grid-column:span 3!important;min-height:48px!important}
+
+
+/* V3.105 PR #245: remove duplicate action heading and center the horizontal action strip. */
+#start #playShell[data-step="battle"] #battleBottomControls .battle-action-tray-head{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleActionTray.battle-action-tray-v399{justify-content:center!important;align-items:center!important;padding:5px 6px!important;min-width:0!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll{width:max-content!important;max-width:100%!important;min-height:40px!important;align-self:center!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button{min-height:40px!important}
