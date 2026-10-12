@@ -67,6 +67,6 @@ test('server owns layout revisions and broadcasts them to GM and Player Web with
   assert.match(server,/if\(meta\.seatsLocked/);
   assert.match(player,/seatLayout=layout\.normalizeSeatLayout\(room\.seatLayout\)/);
   assert.match(player,/ps=positions\(seatCount,seatLayout\)/);
-  assert.match(gm,/GMWW_VILLAGE_LAYOUT\.positions\(count,preset\)/);
+  assert.match(gm,/layout\.positions\(count,preset\)/);
   assert.match(gm,/playSceneRuntime\.room\?\.seatLayout\?1:24/);
 });

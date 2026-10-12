@@ -16,7 +16,7 @@ test('V3.98 battle has one draggable clock, no fixed bottom row, wolf owns GM to
   assert.ok(html.slice(clockIndex,dockIndex).includes('id="battleClockButton"'));
   assert.ok(!html.slice(dockIndex,wolfIndex).includes('battle-menu-row-top'));
   const wolf=html.slice(wolfIndex,wolfEnd);
-  for(const id of ['battleInfoToggle','battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
+  for(const id of ['battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
     assert.ok(wolf.includes('id="'+id+'"'),id+' missing from GM wolf');
   assert.equal((html.match(/id="battleGMAuto"/g)||[]).length,1);
   assert.equal((html.match(/id="battleGMAudio"/g)||[]).length,1);

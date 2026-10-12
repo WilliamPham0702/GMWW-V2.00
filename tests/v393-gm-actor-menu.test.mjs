@@ -18,7 +18,7 @@ test('moving GM actor alone opens its seven action controls',()=>{
  assert.match(rider,/data-play-gm-rider/);
  assert.match(dock,/id="battleWolfMenu"[^>]*hidden/);
  const menu=dock.split('id="battleWolfMenu"')[1]?.split('id="battleDetails"')[0]||'';
- for(const id of ['battleInfoToggle','battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
+ for(const id of ['battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
    assert.equal((menu.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.doesNotMatch(dock,/id="battleWolfToggle"/);
 });
@@ -26,6 +26,6 @@ test('Info retains actions and closes separately, without changing manual effect
  assert.match(dock,/id="battleDetails"[^>]*hidden/);
  assert.match(dock,/id="battleDetailsClose"/);
  assert.match(app,/async function battleQuickApply\(loginId\)/);
- for(const id of ['battleInfoToggle','battleDetailsClose','battleGMAuto','battleGMAudio','battleQuickRevive','battleQuickKill'])
+ for(const id of ['battleDetailsClose','battleGMAuto','battleGMAudio','battleQuickRevive','battleQuickKill'])
    assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
 });

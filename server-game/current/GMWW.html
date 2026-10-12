@@ -137,6 +137,7 @@
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
+          <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
           <div class="play-gather-toolbar-actions">
             <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
             <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
@@ -246,7 +247,6 @@
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
             <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
             <div class="battle-wolf-actions">
-              <button id="battleInfoToggle" type="button" aria-controls="battleDetails" aria-expanded="false">ⓘ Thông Tin</button>
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
