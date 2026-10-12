@@ -58,7 +58,7 @@ test('Confirmed Phù Thuỷ Già action dims the other option immediately, while
   assert.match(ctx.result[1].unavailableReason,/đêm/);
   const other={...ctx.playSceneRuntime,battleActionUsage:[]};
   ctx.playSceneRuntime=other;
-  vm.runInNewContext(app.slice(from,to)+'\nglobalThis.available=battleActions();',ctx);
+  vm.runInNewContext('globalThis.available=battleActions();',ctx);
   assert.equal(ctx.available[0].unavailable,false);
   assert.equal(ctx.available[1].unavailable,false);
 });
