@@ -2384,7 +2384,7 @@ function battleAudioForTurn(turn,auto=false){
     state,playSceneRuntime.artifactCycle?.accepted)||[];
   for(const action of configured){
     const entry=battleFindAudio('actions',action.actionId,action.name);
-    if(entry)void battleWarmAudio('actions',entry)
+    if(entry)void battleWarmAudio('actions',entry);
   }
   if(!audio)return;
   void battleWarmAudio(turn.kind==='wolf-introduction'?'cards':kind,audio);
@@ -3341,12 +3341,13 @@ function renderPlayBattle(){
     const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
   }
   const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');
-  const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds,a.unavailableReason]));
+  const battleActorEffects=actions.map(a=>[a.id,(a.actorIds||[]).map(id=>playPlayerEffect(id)).filter(x=>x==='frozen'||x==='expelled'||x==='dead')]);
+  const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds,a.unavailableReason]))+':'+JSON.stringify(battleActorEffects);
   if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+(a.noTarget||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/không thể hành động/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'Đóng băng':(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('expelled')?'Bị đuổi':'Không thể hành động')+'</span> ':'')+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
-  set('battleActionTrayTitle',phase==='night'&&t?((Number(t.order)>0?('LƯỢT '+Number(t.order)+' · '):'')+battleRules().displayLabel(t,'HÀNH ĐỘNG')):'HÀNH ĐỘNG TRẬN ĐẤU');
+  set('battleActionTrayTitle','');
   set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+((t?.kind==='early-artifact'||t?.kind==='early-artifact-window')?'ARTIFACT ĐẦU VÁN':['role','role-group'].includes(t?.kind)?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
   set('battleTurnTitle',phase==='day'?'LÀNG ƠI DẬY ĐI':(t?battleRules().displayLabel(t,'Lượt chơi'):(rt?.completed?'ĐÃ KẾT THÚC ĐÊM '+night:'BẮT ĐẦU ĐÊM 1')));
   set('battleTurnProgress',phase==='night'?(Math.min((rt?.cursor||0)+1,rt?.queue?.length||1)+'/'+(rt?.queue?.length||1)):phase==='day'?'THẢO LUẬN':'SẴN SÀNG');
