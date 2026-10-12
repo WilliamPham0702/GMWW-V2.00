@@ -2333,7 +2333,7 @@ async function battleWarmAudio(kind,item){
   const promise=(async()=>{
     const rec=await dbGet(audioBlobKey(kind,item.id)).catch(()=>null);
     const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(item);
-    const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\\/)/i.test(item.url)?item.url:'');
+    const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\/)/i.test(item.url)?item.url:'');
     if(url)battleAudioReady.set(key,url);
     return url||null
   })();
