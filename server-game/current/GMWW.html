@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>GMWW V3.105</title>
-<link rel="stylesheet" href="style.css?v=3.105-battle-ux">
+<link rel="stylesheet" href="style.css?v=3.105-battle-ux&status=1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
@@ -282,6 +282,7 @@
           <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
           <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
           <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
+          <button class="libtab" data-lib="statuses">❄<b>Trạng Thái</b></button>
           <button class="libtab" data-lib="themes">🌊<b>Chủ Đề</b></button>
           <button class="libtab" data-lib="audio">🔊<b>Âm Thanh</b></button>
           <button class="libtab" data-lib="templates">▦<b>Ván Mẫu</b></button>
@@ -327,6 +328,27 @@
         <section class="libpane" id="lib-effects">
           <div class="section-tools"><input class="search" id="effectSearch" placeholder="Tìm Hiệu Ứng"></div>
           <div class="compact-box-grid" id="effectGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-statuses" aria-label="Trạng thái hiển thị trên nhân vật">
+          <div class="character-status-library">
+            <header class="character-status-library-head">
+              <h2>Trạng Thái</h2>
+              <p>Trạng thái được lấy từ máy chủ và hiển thị trực tiếp trên nhân vật. Trang Hiệu Ứng hiện có vẫn được giữ nguyên.</p>
+            </header>
+            <article class="character-status-card" data-character-status="frozen">
+              <div class="character-status-preview-avatar" aria-label="Xem trước nhân vật bị đóng băng">
+                <span class="character-status-preview-person" aria-hidden="true">🧍</span>
+                <span class="character-status-preview-frost" aria-hidden="true">❄</span>
+              </div>
+              <div class="character-status-card-copy">
+                <span class="character-status-eyebrow">TRẠNG THÁI ĐANG TRIỂN KHAI</span>
+                <h3>Đóng Băng</h3>
+                <p>Lớp băng xanh mờ và tinh thể tuyết phủ lên nhân vật khi máy chủ xác nhận trạng thái <code>frozen</code>.</p>
+                <small>Tự gỡ khi trạng thái hết hạn hoặc được máy chủ xóa.</small>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="libpane" id="lib-themes">
@@ -827,7 +849,7 @@
 <script src="village-layout.js?v=3.105-battle-ux"></script>
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
-<script src="app.js?v=3.105-battle-ux"></script>
+<script src="app.js?v=3.105-battle-ux&status=1"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
