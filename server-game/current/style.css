@@ -5146,3 +5146,20 @@ body.play-immersive #start #playShell[data-step="battle"] #battleActionTray.batt
    into a turn navigation gesture. */
 #start #playShell[data-step="battle"] #battleActionBar,
 #start #playShell[data-step="battle"] #battleTimeline{touch-action:pan-x}
+
+/* V3.103: compact battle sound replay and exhausted action feedback. */
+#start #playShell[data-step="battle"] .battle-action-tray-head{
+  display:flex!important;align-items:center!important;flex-direction:row!important;
+  justify-content:space-between!important;gap:8px!important
+}
+#start #playShell[data-step="battle"] .battle-action-tray-head>b{
+  min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#start #playShell[data-step="battle"] #battleAudioReplay{
+  flex:none;min-width:29px;min-height:29px;padding:3px 5px;
+  border:1px solid #7bd6e6;border-radius:10px;background:#0b5469b0;
+  color:#d6faff;font-size:15px;line-height:1
+}
+#start #playShell[data-step="battle"] #battleActionBar>button[disabled]{
+  opacity:.32!important;filter:grayscale(.65);cursor:not-allowed
+}
