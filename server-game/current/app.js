@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.102';
+const VERSION='3.103';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
