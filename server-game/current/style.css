@@ -5322,7 +5322,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 #start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button{min-height:40px!important}
 
 
-/* V3.105 — standalone character status library */
+/* V3.106 — standalone character status library */
 .character-status-library{max-width:760px;margin:0 auto;padding:14px 12px 24px;color:#e9fbff}
 .character-status-library-head{margin:0 0 14px;padding:4px 2px 12px;border-bottom:1px solid rgba(112,220,239,.2)}
 .character-status-library-head h2{margin:0 0 5px;color:#eafcff;font-size:20px;font-weight:950;letter-spacing:.02em}
