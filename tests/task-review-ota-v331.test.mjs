@@ -12,7 +12,7 @@ const lock=JSON.parse(read("package-lock.json"));
 const shell="3.17";
 
 test("task approval is a newer OTA than the previously released V3.30",()=>{
-  const version="3.104";
+  const version="3.105";
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
