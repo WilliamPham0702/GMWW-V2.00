@@ -38,6 +38,9 @@ try{
  const playEsc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const playFlashError=x=>{throw new Error(x)};
  const exitPlayImmersive=()=>{},openPlayEndSheet=()=>{},advancePlayPhase=()=>{},togglePlayAutoGM=()=>{},togglePlayAudio=()=>{};
+ // This isolated test extracts only the battle handlers. Audio playback is
+ // integration-tested separately with the actual media/IndexedDB helper.
+ const battleAudioForTurn=()=>{},battlePlayConfiguredAudio=async()=>false,battleReplayAudio=()=>{};
  const playRoomApi=async(path,options)=>{
   const body=JSON.parse(options.body);calls.push({path,body});
   if(path==='/turn'){const rt=playSceneRuntime.nightRuntime;rt.cursor=body.targetIndex;rt.currentId=rt.queue[rt.cursor].id;return {runtime:rt}}
