@@ -24,13 +24,13 @@ test('V3.100 to V3.101 is a no-delete SHA-verified four-file overlay',()=>{
  assert.equal(selectVerifiedRuntimeV3101Delta(deleted,'3.100'),null);
 });
 
-test('V3.103 preserves the V3.101 Smart Seat GM/Worker/Player contract together while preserving existing gameplay and assignments',()=>{
+test('V3.104 preserves the V3.101 Smart Seat GM/Worker/Player contract together while preserving existing gameplay and assignments',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),player=fs.readFileSync('assets/village/village.mjs','utf8');
- assert.match(worker,/VERSION="V3\.103",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3103"/);
- assert.match(app,/const VERSION='3\.103'/);
- assert.match(html,/village-layout\.js\?v=3\.103-compact-action-swipe/);
- assert.match(html,/GMWW V3\.103/);
+ assert.match(worker,/VERSION="V3\.104",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3104"/);
+ assert.match(app,/const VERSION='3\.104'/);
+ assert.match(html,/village-layout\.js\?v=3\.104-battle-ux/);
+ assert.match(html,/GMWW V3\.104/);
  assert.match(player,/fire3101/);
  assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);
  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
