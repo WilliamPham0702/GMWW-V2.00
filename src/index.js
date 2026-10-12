@@ -1038,7 +1038,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async buildNightRuntime(meta,night){
     const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??60)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
-    queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy Sói",durationSec:wolfDiscussionSec,status:"pending"});
+    if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy Sói",durationSec:wolfDiscussionSec,status:"pending"});
     const artifactRows=[];
     for(const [index,a] of assignments.entries()){
       if(!a?.artifactId)continue;
