@@ -74,7 +74,7 @@ test('only the bottom ACTION tray holds role & Artifact actions, with two target
  assert.match(app,/function battleOpenTargetSheet\(actionId/);
  assert.match(app,/now-last\.at<420/);
  assert.match(app,/getElementById\('battleActionBar'\)\?\.addEventListener\('pointerdown'/);
- assert.match(app,/elementFromPoint\(e\.clientX,e\.clientY\)/);
+ assert.match(app,/battleResolveDropTarget\(e\.clientX,e\.clientY,nodes,allowed\)/);
  assert.match(app,/Đã chọn /);
  assert.match(app,/battleConfirm\(true\)/);
  assert.match(app,/async function battleUndoLast\(/);

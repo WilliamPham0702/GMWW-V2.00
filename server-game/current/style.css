@@ -5147,6 +5147,147 @@ body.play-immersive #start #playShell[data-step="battle"] #battleActionTray.batt
 #start #playShell[data-step="battle"] #battleActionBar,
 #start #playShell[data-step="battle"] #battleTimeline{touch-action:pan-x}
 
+/* V3.104 — one-handed battle control row: CLOCK | ACTIONS | UNDO.
+   Legacy floating positions are overridden only in battle. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls.battle-bottom-controls-v3104{
+  position:fixed!important;z-index:110!important;
+  left:calc(env(safe-area-inset-left) + 8px)!important;
+  right:calc(env(safe-area-inset-right) + 8px)!important;
+  bottom:calc(env(safe-area-inset-bottom) + 9px)!important;
+  display:flex!important;align-items:stretch!important;gap:6px!important;
+  padding:0!important;margin:0!important;pointer-events:none;
+  max-width:100%;min-width:0;height:auto;
+}
+#start #playShell:not([data-step="battle"]) #battleBottomControls{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat.battle-clock-float-v396,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat.battle-undo-float-v399{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  right:auto!important;bottom:auto!important;transform:none!important;
+  flex:0 0 68px!important;width:68px!important;min-width:68px!important;
+  max-width:68px!important;height:auto!important;min-height:60px!important;
+  pointer-events:auto!important;touch-action:manipulation!important;
+  z-index:auto!important;box-shadow:none!important;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleClockButton,
+#start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton{
+  width:100%!important;min-width:0!important;max-width:none!important;
+  height:100%!important;min-height:60px!important;max-height:76px!important;
+  border-radius:12px!important;touch-action:manipulation!important;
+  box-sizing:border-box;cursor:default;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleClockButton .battle-clock-grip{display:none!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleClockButton #battleCountdown{
+  font-size:15px!important;letter-spacing:0!important;white-space:nowrap;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton>span{font-size:24px!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton>small{font-size:8px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleActionTray.battle-action-tray-v399{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  right:auto!important;bottom:auto!important;transform:none!important;
+  display:flex!important;flex:1 1 auto!important;
+  width:auto!important;min-width:0!important;max-width:none!important;
+  min-height:60px!important;max-height:76px!important;
+  margin:0!important;padding:6px 7px!important;gap:4px!important;
+  border-radius:12px!important;z-index:auto!important;pointer-events:auto!important;
+}
+#start #playShell[data-step="battle"] #battleBottomControls .battle-action-tray-head>b{
+  font-size:9px!important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll{
+  min-height:38px!important;max-width:100%!important;width:100%!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  touch-action:pan-x!important;overscroll-behavior-x:contain;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button{
+  min-height:38px!important;min-width:82px!important;padding:5px 7px!important;
+  font-size:11px!important;touch-action:pan-x!important;user-select:none;-webkit-user-select:none;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399{
+  bottom:calc(env(safe-area-inset-bottom) + 91px)!important;
+}
+@media(max-width:370px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{gap:4px!important;left:5px!important;right:5px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat,
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat{flex-basis:61px!important;width:61px!important;min-width:61px!important;max-width:61px!important}
+ #start #playShell[data-step="battle"] #battleBottomControls #battleClockButton #battleCountdown{font-size:13px!important}
+}
+
+/* Gathering controls shrink to their labels instead of fixed 98–112px cells. */
+body.play-immersive #start #playGatherToolbar.play-gather-toolbar .play-gather-toolbar-actions{
+  gap:5px!important;padding:3px 2px 4px!important;scroll-snap-type:none!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{
+  flex:0 0 auto!important;width:max-content!important;min-width:0!important;max-width:none!important;
+  display:inline-flex!important;align-items:center;justify-content:center;gap:4px!important;
+  min-height:42px!important;padding:6px 9px!important;
+  border-radius:11px;scroll-snap-align:none!important;white-space:nowrap;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button>span{
+  font-size:15px!important;line-height:1!important;flex:0 0 auto;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button>b{
+  font-size:10px!important;line-height:1.05!important;white-space:nowrap!important;
+  letter-spacing:0!important;text-align:center;
+}
+
+/* GM wolf tools: three compact tiers, consistent columns and two safe exits. */
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu{
+  max-height:min(49dvh,300px)!important;overflow:auto!important;
+  padding:12px!important;border-radius:17px!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu>header{
+  padding:0 1px 9px!important;align-items:center;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions{
+  display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;gap:7px!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions>button{
+  grid-column:span 2!important;min-width:0!important;min-height:44px!important;
+  padding:7px 3px!important;border-radius:12px!important;
+  font-size:12px!important;line-height:1.2!important;
+  white-space:normal!important;display:flex;align-items:center;justify-content:center;gap:4px;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleQuickRevive,
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleQuickKill,
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleExit,
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleForceEnd{
+  grid-column:span 3!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleForceEnd{
+  background:#703e45!important;border-color:#f4b0ab!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu #battleExit{
+  background:#174e65!important;
+}
+
+/* Battle actors are spaced further from the fire; selected drop zones remain visible.
+   Server and Player Web seating coordinates are not changed. */
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token:not(.is-gm-rider){
+  width:65px!important;min-width:0!important;transition:transform .13s ease!important;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-over,
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-role{
+  max-width:65px!important;margin-inline:auto;font-size:9px!important;letter-spacing:0!important;
+}
+#start #playShell[data-step="battle"] #playPlayerRing.is-battle-packed .play-player-token:not(.is-gm-rider){width:52px!important}
+#start #playShell[data-step="battle"] #playPlayerRing.is-battle-packed .play-player-over,
+#start #playShell[data-step="battle"] #playPlayerRing.is-battle-packed .play-player-role{max-width:52px!important;font-size:8px!important}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token.is-drop-target .play-player-avatar{
+  outline:3px solid #fce9a8!important;outline-offset:3px!important;
+  filter:drop-shadow(0 0 8px #ffe09b)!important;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token.is-drop-ambiguous .play-player-avatar{
+  outline:2px dashed #ffb2a0!important;outline-offset:3px!important;
+}
+
+/* Keep the GM popover above, not behind, the new bottom control row. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu,
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleDetails{
+  bottom:calc(env(safe-area-inset-bottom) + 88px)!important;
+  max-height:min(52dvh,410px)!important;
+}
+
 /* V3.103: compact battle sound replay and exhausted action feedback. */
 #start #playShell[data-step="battle"] .battle-action-tray-head{
   display:flex!important;align-items:center!important;flex-direction:row!important;

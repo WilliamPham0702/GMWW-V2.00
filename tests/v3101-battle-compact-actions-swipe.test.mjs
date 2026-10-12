@@ -48,7 +48,7 @@ function harness(){
   const target=(zone='scene')=>({
     inside:true,
     closest(selector){
-      if(zone==='action'&&selector.includes('#battleActionTray'))return this;
+      if(zone==='action'&&(selector.includes('#battleActionTray')||selector.includes('#battleBottomControls')))return this;
       if(zone==='timeline'&&selector.includes('#playBattleTop'))return this;
       if(zone==='token'&&selector.includes('#playPlayerRing [data-play-player-id]'))return this;
       if(zone==='token'&&selector.startsWith('button,input,'))return this;
@@ -80,7 +80,7 @@ test('iPhone finger swipe left advances; finger swipe right returns to previous 
 test('vertical scroll, short movement and action/timeline gestures do not change roles',()=>{
   const h=harness();
   h.swipe(220,160,180,420);
-  h.swipe(220,160,190,162);
+  h.swipe(220,160,200,162);
   h.swipe(330,200,90,200,'action');
   h.swipe(330,200,90,200,'timeline');
   h.swipe(330,200,90,200,'button');

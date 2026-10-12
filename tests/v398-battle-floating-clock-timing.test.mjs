@@ -29,30 +29,15 @@ test('V3.98 battle has one draggable clock, no fixed bottom row, wolf owns GM to
   assert.match(app,/document\.getElementById\('battleGMAudio'\)\?\.addEventListener\('click'/);
 });
 
-test('Clock can move freely, stays inside viewport and persists its own position',()=>{
-  const src=app.slice(app.indexOf('function initBattleFloatingClock(){'),app.indexOf('function initBattleControls(){'));
-  assert.ok(src.startsWith('function initBattleFloatingClock(){'));
-  const listeners={};
-  const storage=new Map();
-  const clock={
-    dataset:{},style:{},offsetWidth:78,offsetHeight:58,
-    addEventListener:(name,fn)=>{listeners[name]=fn},
-    getBoundingClientRect(){return{left:Number.parseFloat(this.style.left)||12,top:Number.parseFloat(this.style.top)||150}},
-    setPointerCapture(){}
-  };
-  const win={innerWidth:390,innerHeight:844,addEventListener(){}};
-  const context={document:{getElementById:()=>clock},window:win,
-    localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
-    JSON,Math,Number};
-  vm.runInNewContext(src+'\ninitBattleFloatingClock();',context);
-  assert.equal(clock.dataset.ready,'1');
-  const ev=(x,y)=>({pointerId:1,button:0,clientX:x,clientY:y,preventDefault(){},stopPropagation(){}});
-  listeners.pointerdown(ev(20,160));listeners.pointermove(ev(160,260));listeners.pointerup(ev(160,260));
-  assert.ok(Number.parseFloat(clock.style.left)>100);
-  assert.ok(Number.parseFloat(clock.style.top)>150);
-  assert.ok(storage.has('GMWW_BATTLE_CLOCK_POS_V396'));
-  listeners.dblclick();
-  assert.equal(storage.has('GMWW_BATTLE_CLOCK_POS_V396'),false);
+test('V3.104 clock is anchored by the lower control row without clearing earlier saved positions',()=>{
+  const clockIndex=html.indexOf('id="playBattleClockFloat"'),rowIndex=html.indexOf('id="battleBottomControls"');
+  assert.ok(rowIndex>0&&clockIndex>rowIndex);
+  assert.ok(html.indexOf('id="battleActionTray"',clockIndex)>clockIndex);
+  assert.ok(html.indexOf('id="battleUndoFloat"',clockIndex)>clockIndex);
+  const code=app.slice(app.indexOf('function initBattleFloatingClock(){'),app.indexOf('function battleOpenTargetSheet('));
+  assert.doesNotMatch(code,/localStorage\.removeItem|setPointerCapture|pointermove/);
+  assert.match(css,/#battleBottomControls\.battle-bottom-controls-v3104/);
+  assert.match(css,/flex:0 0 68px!important/);
 });
 
 test('Chọn Ván configures separate wolf introduction 30s and opening Artifact 60s',()=>{

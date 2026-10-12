@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.103';
+const VERSION='3.104';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2784,11 +2784,37 @@ function syncPlayMovementTicker(){
   if(active&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
   else if(!active)stopPlayMovementTicker()
 }
+function battleRoomDisplayPosition(point,seatId=0,seatCount=0){
+  // VISUAL-ONLY arrangement. No seat/coordinate write to Cloudflare or Player Web.
+  if(playSceneState.step!=='battle'||!Array.isArray(point))return point;
+  const n=Math.max(1,Math.min(30,Math.trunc(Number(seatCount)||12)));
+  const seat=Math.trunc(Number(seatId)||0);
+  if(n>20&&seat>=1&&seat<=n){
+    // One larger rectangle around the fire, making use of the lower courtyard.
+    // Top/bottom stay in walkable terrain; not two concentric seat layers.
+    const xmin=26,xmax=74,top=34.8,bottom=78.4,scale=1.78;
+    const corners=[[50,top],[xmax,top],[xmax,bottom],[xmin,bottom],[xmin,top],[50,top]];
+    const sides=corners.slice(1).map((p,i)=>Math.hypot(p[0]-corners[i][0],(p[1]-corners[i][1])*scale));
+    const length=sides.reduce((a,b)=>a+b,0);
+    let d=((seat-1)/n)*length;
+    for(let i=0;i<sides.length;i++){
+      if(d<=sides[i]||i===sides.length-1){
+        const f=Math.min(1,d/Math.max(1e-8,sides[i]));
+        return [corners[i][0]+f*(corners[i+1][0]-corners[i][0]),
+          corners[i][1]+f*(corners[i+1][1]-corners[i][1])];
+      }
+      d-=sides[i];
+    }
+  }
+  const [x,y]=point,px=50+(x-50)*1.16,py=49.7+(y-49.7)*1.22;
+  const safe=globalThis.GMWW_VILLAGE_LAYOUT?.clampPoint?.(px,py);
+  return safe?[safe.x,safe.y]:[Math.max(8,Math.min(92,px)),Math.max(34,Math.min(75,py))];
+}
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const previewNew=playRoomUiState.editorMode==='new'&&!document.getElementById('playCreateRoomSheet')?.classList.contains('hidden');
   const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),bySeat=new Map((previewNew?[]:playLiveMembers()).filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
-  ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);
+  ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
     const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=m?.movementStatus==='moving',sitting=m?playCharacterSitting(m):false,isOnlinePick=false;
     el.type='button';if(seatId)el.dataset.seatId=String(seatId);if(m)el.dataset.playPlayerId=String(m.loginId||m.participantId||'');
@@ -2804,6 +2830,7 @@ function renderPlayPlayers(){
       // A neutral preview does not assign/change the account's fixed character.
       if(!characterSrc)el.classList.add('is-character-preview');
       el.onclick=async()=>{
+        if(playSceneState.step==='battle'&&Date.now()<Number(battleState.ignoreSwipeClick||0))return;
         const lid=String(m.loginId||'');
         if(isOnlinePick){
           const ids=new Set((playSceneState.selectedMemberIds||[]).map(String));if(ids.has(lid))ids.delete(lid);else ids.add(lid);playSceneState.selectedMemberIds=[...ids];savePlayScene();renderPlayScene();return
@@ -2824,7 +2851,7 @@ function renderPlayPlayers(){
   }else{
     members.sort((a,b)=>String(a.loginId).localeCompare(String(b.loginId))).forEach((m,i)=>{
       const sid=Number(m?.seatId||0),x=m?.positionX,y=m?.positionY,valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
-      const pos=sid>=1&&sid<=seatCount?positions[sid-1]:valid(x)&&valid(y)?Object.values(globalThis.GMWW_VILLAGE_LAYOUT.clampPoint(x,y)):playRoamPoint(m.loginId,i,members.length);make(m,pos,sid||null)
+      const pos=sid>=1&&sid<=seatCount?positions[sid-1]:valid(x)&&valid(y)?Object.values(globalThis.GMWW_VILLAGE_LAYOUT.clampPoint(x,y)):playRoamPoint(m.loginId,i,members.length);make(m,sid?battleRoomDisplayPosition(pos,sid,seatCount):pos,sid||null)
     })
   }
   renderPlayGmToken();syncPlayMovementTicker();
@@ -3246,7 +3273,7 @@ const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectId
   if(/(seer|soi|tien tri|reveal)/.test(key))return'seer';
   return'effect_notice';
 };
-function battleClear(){battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.nonce=''}
+function battleClear(){battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
 function battlePickAction(id){const a=battleActions().find(a=>a.id===id);if(!a||a.noTarget||a.unavailable)return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
 function battlePickTarget(id,actionId){
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
@@ -3321,7 +3348,7 @@ function renderPlayBattle(){
   if(battleState.targetSheet){
     const act=battleAction(),selected=battleState.targets.map(id=>battleMember(id)?.displayName||id);
     if(pickerTitle)pickerTitle.textContent=act?act.name.toUpperCase():'CHỌN MỤC TIÊU';
-    if(pickerText)pickerText.textContent=selected.length?'Đã chọn '+selected.join(', ')+' ('+selected.length+'/'+(act?.targetCount||0)+')':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
+    if(pickerText)pickerText.textContent=selected.length?'Đã chọn '+selected.join(', ')+' ('+selected.length+'/'+(act?.targetCount||0)+')':battleState.dragAmbiguous?'Hai người đang quá gần nhau. Hãy chạm đúng TÊN mục tiêu để tránh thả nhầm.':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
     if(candidates){
       candidates.hidden=battleState.targetMode==='drag'&&act?.targetCount===1;
       candidates.innerHTML=act?playLiveMembers().filter(m=>m.loginId&&battleRules().targetAllowed(act,m,playPlayerEffect(m.loginId))).map(m=>
@@ -3423,36 +3450,16 @@ async function battleQuickApply(loginId){
 }
 // V3.96: independent movable timer, local-only position; game state is never modified.
 function initBattleFloatingClock(){
-  const clock=document.getElementById('playBattleClockFloat');if(!clock||clock.dataset.ready)return;
-  clock.dataset.ready='1';
-  const key='GMWW_BATTLE_CLOCK_POS_V396',defaultPosition=()=>({x:12,y:Math.max(112,Math.round(window.innerHeight*0.17))});
-  const clamp=(x,y)=>({x:Math.max(6,Math.min(window.innerWidth-clock.offsetWidth-6,x)),y:Math.max(70,Math.min(window.innerHeight-clock.offsetHeight-12,y))});
-  const place=(x,y)=>{const pos=clamp(x,y);clock.style.left=pos.x+'px';clock.style.top=pos.y+'px';return pos};
-  try{const p=JSON.parse(localStorage.getItem(key)||'null');const v=p&&Number.isFinite(p.x)&&Number.isFinite(p.y)?p:defaultPosition();place(v.x,v.y)}catch{const p=defaultPosition();place(p.x,p.y)}
-  let active=null;
-  clock.addEventListener('pointerdown',e=>{
-    if(e.button!==0||active)return;
-    active={id:e.pointerId,x:e.clientX,y:e.clientY,originX:clock.getBoundingClientRect().left,originY:clock.getBoundingClientRect().top};
-    clock.setPointerCapture?.(e.pointerId);e.preventDefault();e.stopPropagation();
-  });
-  clock.addEventListener('pointermove',e=>{
-    if(!active||e.pointerId!==active.id)return;
-    place(active.originX+e.clientX-active.x,active.originY+e.clientY-active.y);e.preventDefault();
-  });
-  const finish=e=>{if(!active||e.pointerId!==active.id)return;active=null;
-    const rect=clock.getBoundingClientRect(),p=place(rect.left,rect.top);
-    try{localStorage.setItem(key,JSON.stringify(p))}catch{}
-  };
-  clock.addEventListener('pointerup',finish);clock.addEventListener('pointercancel',finish);
-  clock.addEventListener('dblclick',()=>{const p=defaultPosition();place(p.x,p.y);try{localStorage.removeItem(key)}catch{}});
-  window.addEventListener('resize',()=>{const rect=clock.getBoundingClientRect();place(rect.left,rect.top)});
+  // V3.104: the clock is anchored in the action dock; old draggable coordinates
+  // are intentionally ignored, never deleted (no changes to saved game data).
 }
 
-function battleOpenTargetSheet(actionId,mode='list'){
+function battleOpenTargetSheet(actionId,mode='list',ambiguous=false){
   const a=battleActions().find(x=>x.id===actionId);
   if(!a||a.unavailable||a.noTarget||!a.targetCount)return;
   if(battleState.actionId!==actionId){battleClear();battleState.actionId=actionId}
   battleState.targetSheet=true;
+  battleState.dragAmbiguous=ambiguous;
   battleState.targetMode=mode==='drag'&&a.targetCount===1?'drag':'list';
   battleState.roster=false;battleState.details=false;battleState.wolfOpen=false;
   renderPlayBattle();
@@ -3473,33 +3480,12 @@ async function battleUndoLast(){
   finally{battleState.undoBusy=false;renderPlayBattle()}
 }
 function initBattleFloatingUndo(){
-  const box=document.getElementById('battleUndoFloat'),button=document.getElementById('battleUndoButton');
-  if(!box||!button||box.dataset.ready)return;box.dataset.ready='1';
-  const key='GMWW_BATTLE_UNDO_POS_V399',
-    initial=()=>({x:Math.max(6,window.innerWidth-86),y:Math.max(112,Math.round(window.innerHeight*.17))}),
-    place=(x,y)=>{const px=Math.max(6,Math.min(window.innerWidth-box.offsetWidth-6,x)),
-      py=Math.max(70,Math.min(window.innerHeight-box.offsetHeight-12,y));
-      box.style.left=px+'px';box.style.top=py+'px';return{x:px,y:py}};
-  let pos=initial();try{const stored=JSON.parse(localStorage.getItem(key)||'null');
-    if(stored&&Number.isFinite(stored.x)&&Number.isFinite(stored.y))pos=stored}catch{}
-  place(pos.x,pos.y);let drag=null,ignoreUntil=0;
-  box.addEventListener('pointerdown',e=>{if(e.button!==0||drag)return;
-    const rect=box.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,originX:rect.left,originY:rect.top,moved:false};
-    box.setPointerCapture?.(e.pointerId);
-  });
-  box.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;
-    if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>9)drag.moved=true;
-    if(drag.moved){place(drag.originX+e.clientX-drag.x,drag.originY+e.clientY-drag.y);e.preventDefault()}
-  });
-  const finish=e=>{if(!drag||drag.id!==e.pointerId)return;
-    if(drag.moved){ignoreUntil=Date.now()+450;const rect=box.getBoundingClientRect(),p=place(rect.left,rect.top);
-      try{localStorage.setItem(key,JSON.stringify(p))}catch{}}
-    drag=null;
-  };
-  box.addEventListener('pointerup',finish);box.addEventListener('pointercancel',finish);
-  box.addEventListener('click',()=>{if(Date.now()>=ignoreUntil)void battleUndoLast()});
-  window.addEventListener('resize',()=>{const r=box.getBoundingClientRect();place(r.left,r.top)});
+  const button=document.getElementById('battleUndoButton');
+  if(!button||button.dataset.ready)return;
+  button.dataset.ready='1';
+  button.addEventListener('click',()=>{void battleUndoLast()});
 }
+
 /* Capture iOS/WKWebView touch gestures directly. Pointer-only swipe events
    can be cancelled by browser panning or pointer capture on the village scene. */
 function initBattleSwipeNavigation(){
@@ -3507,7 +3493,7 @@ function initBattleSwipeNavigation(){
   root.dataset.battleSwipeReady='1';
   let gesture=null;
   const interactive='button,input,select,textarea,a,[role="button"],[role="dialog"],[contenteditable="true"]';
-  const overlays='#playBattleTop,#playBattleDock,#battleActionTray,#battleUndoFloat,#playBattleClockFloat,#battleWolfMenu,#battleDetails,#battleTargetSheet,.play-gm-sheet,[data-play-gm-rider]';
+  const overlays='#playBattleTop,#playBattleDock,#battleBottomControls,#battleWolfMenu,#battleDetails,#battleTargetSheet,.play-gm-sheet,[data-play-gm-rider]';
   const eligible=target=>{
     if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||
        battleState.drag||battleState.targetSheet||battleState.roster||battleState.details||
@@ -3524,9 +3510,11 @@ function initBattleSwipeNavigation(){
     const start=gesture;gesture=null;
     if(!start||playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||battleState.targetSheet||battleState.roster||battleState.details||battleState.wolfOpen||battleState.clockOpen)return;
     const dx=x-start.x,dy=y-start.y,elapsed=Date.now()-start.time;
-    const minDistance=Math.max(64,Math.min(104,window.innerWidth*.18));
-    if(elapsed<=1800&&Math.abs(dx)>=minDistance&&Math.abs(dx)>Math.abs(dy)*1.5)
+    const minDistance=Math.max(38,Math.min(58,window.innerWidth*.105));
+    if(elapsed<=2200&&Math.abs(dx)>=minDistance&&Math.abs(dx)>Math.abs(dy)*1.12){
+      battleState.ignoreSwipeClick=Date.now()+450;
       battleNavigateRelative(dx<0?1:-1);
+    }
   };
   root.addEventListener('touchstart',event=>{
     gesture=null;
@@ -3534,8 +3522,12 @@ function initBattleSwipeNavigation(){
     const point=event.touches[0];begin(point.clientX,point.clientY,event.target,'touch',point.identifier);
   },{passive:true,capture:true});
   root.addEventListener('touchmove',event=>{
-    if(event.touches.length!==1)gesture=null;
-  },{passive:true,capture:true});
+    if(event.touches.length!==1){gesture=null;return}
+    if(gesture?.source==='touch'){
+      const p=event.touches[0],dx=p.clientX-gesture.x,dy=p.clientY-gesture.y;
+      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.12)event.preventDefault();
+    }
+  },{passive:false,capture:true});
   document.addEventListener('touchend',event=>{
     if(!gesture||gesture.source!=='touch')return;
     if(event.touches.length!==0||event.changedTouches.length!==1||
@@ -3544,7 +3536,7 @@ function initBattleSwipeNavigation(){
   },{passive:true,capture:true});
   document.addEventListener('touchcancel',()=>{gesture=null},{passive:true,capture:true});
   root.addEventListener('pointerdown',event=>{
-    if(event.pointerType==='pen'||event.pointerType==='touch')begin(event.clientX,event.clientY,event.target,'pointer',event.pointerId);
+    if(!gesture&&(event.pointerType==='pen'||event.pointerType==='touch'))begin(event.clientX,event.clientY,event.target,'pointer',event.pointerId);
   },{passive:true,capture:true});
   document.addEventListener('pointerup',event=>{
     if(gesture?.source==='pointer'&&gesture.id===event.pointerId)finish(event.clientX,event.clientY);
@@ -3554,6 +3546,27 @@ function initBattleSwipeNavigation(){
   },{passive:true,capture:true});
 }
 
+function battleResolveDropTarget(x,y,nodes,allow=()=>true){
+  // A nearby player is never silently preferred over another: ambiguous drops
+  // open the named target picker instead of risking A -> B.
+  const candidates=Array.from(nodes||[]).filter(el=>el?.dataset?.playPlayerId&&allow(el.dataset.playPlayerId)).map(el=>{
+    const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height*.54;
+    return {id:el.dataset.playPlayerId,element:el,distance:Math.hypot(cx-x,cy-y)};
+  }).filter(v=>v.distance<=72).sort((a,b)=>a.distance-b.distance);
+  if(!candidates.length)return {id:'',ambiguous:false};
+  if(candidates.length>1&&candidates[1].distance-candidates[0].distance<24)
+    return {id:'',ambiguous:true};
+  return {id:candidates[0].id,ambiguous:false};
+}
+function battleDropCandidates(actionId){
+  const a=battleActions().find(x=>x.id===actionId),ring=document.getElementById('playPlayerRing');
+  if(!a||!ring)return {nodes:[],allowed:()=>false};
+  return {nodes:ring.querySelectorAll('[data-play-player-id]'),
+    allowed:id=>battleRules().targetAllowed(a,battleMember(id),playPlayerEffect(id))};
+}
+function battleClearDropHighlights(){
+  document.querySelectorAll('#playPlayerRing .is-drop-target,#playPlayerRing .is-drop-ambiguous').forEach(el=>el.classList.remove('is-drop-target','is-drop-ambiguous'));
+}
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
   document.getElementById('battleBack')?.addEventListener('click',()=>{battleNavigateRelative(-1)});
@@ -3608,18 +3621,33 @@ function initBattleControls(){
     const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled&&!battleState.targetSheet)battleOpenTargetSheet(x.dataset.battleAction,'list');
   });
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled){if(battleState.quickType)void battleQuickApply(x.dataset.battleMember);else battlePickTarget(x.dataset.battleMember)}});
-  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction())return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);battleOpenTargetSheet(battleState.actionId,'drag')}},true);
-  document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled)battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false}});
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);battleOpenTargetSheet(battleState.actionId,'drag')}},true);
+  document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
+    const x=e.target.closest('[data-battle-action]');
+    if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
+  });
   document.addEventListener('pointermove',e=>{
     const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;
-    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>13)d.moved=true;
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>9)d.moved=true;
     if(!d.moved)return;
     let ghost=document.getElementById('battleDragGhost');
     if(!ghost){ghost=document.createElement('div');ghost.id='battleDragGhost';ghost.textContent=battleActions().find(a=>a.id===d.id)?.name||'Tác động';document.body.appendChild(ghost)}
     ghost.style.left=e.clientX+'px';ghost.style.top=(e.clientY-34)+'px';
+    const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
+    battleClearDropHighlights();
+    if(hit.id)Array.from(nodes).find(n=>n.dataset.playPlayerId===hit.id)?.classList.add('is-drop-target');
+    else if(hit.ambiguous)Array.from(nodes).filter(n=>n.getBoundingClientRect().top<e.clientY+75).forEach(n=>n.classList.add('is-drop-ambiguous'));
   },{passive:true});
-  document.addEventListener('pointerup',e=>{const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;battleState.drag=null;document.getElementById('battleDragGhost')?.remove();if(!d.moved)return;battleState.ignoreClick=Date.now()+350;const x=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-play-player-id]');if(x){battlePickTarget(x.dataset.playPlayerId,d.id);battleOpenTargetSheet(d.id,'drag')}else battleOpenTargetSheet(d.id,'list')},{passive:true});
-  document.addEventListener('pointercancel',()=>{battleState.drag=null;document.getElementById('battleDragGhost')?.remove()});
+  document.addEventListener('pointerup',e=>{
+    const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;
+    battleState.drag=null;document.getElementById('battleDragGhost')?.remove();battleClearDropHighlights();
+    if(!d.moved)return;
+    battleState.ignoreClick=Date.now()+450;
+    const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
+    battleOpenTargetSheet(d.id,hit.id?'drag':'list',hit.ambiguous);
+    if(hit.id)battlePickTarget(hit.id,d.id);
+  },{passive:true});
+  document.addEventListener('pointercancel',()=>{battleState.drag=null;document.getElementById('battleDragGhost')?.remove();battleClearDropHighlights()});
 }
 
 function renderPlayScene(){
