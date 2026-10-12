@@ -15,13 +15,13 @@ test('floating timer replaces bottom bar; GM wolf owns controls',()=>{
  for(const id of ['battleClockButton','battleCountdown'])assert.match(float,new RegExp('id="'+id+'"'));
  assert.doesNotMatch(dock,/battle-menu-row-top/);
  const menu=dock.split('id="battleWolfMenu"')[1]?.split('id="battleDetails"')[0]||'';
- for(const id of ['battleInfoToggle','battleGMAudio','battleGMAuto','battleExit','battleForceEnd','battleQuickRevive','battleQuickKill'])
+ for(const id of ['battleGMAudio','battleGMAuto','battleExit','battleForceEnd','battleQuickRevive','battleQuickKill'])
    assert.equal((menu.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(css,/#playBattleClockFloat\.battle-clock-float-v396/);
  assert.match(css,/#playBattleDock\.battle-float-v396/);
 });
 test('wolf actions keep confirmation and do not mutate game state on menu open',()=>{
- for(const id of ['battleWolfClose','battleInfoToggle','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleGMAuto'])
+ for(const id of ['battleWolfClose','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleGMAuto'])
   assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
  assert.match(app,/function initBattleFloatingClock\(/);
  assert.match(app,/function battleToggleWolfMenu\(/);

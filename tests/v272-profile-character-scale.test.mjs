@@ -8,7 +8,7 @@ test('V2.87 keeps six discrete character sizes and removes the slider',()=>{
   const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
   assert.ok(html.includes('id="characterScaleChoices"'));
   for(const n of [75,100,125,150,175,200]) assert.ok(html.includes('data-character-scale="'+n+'"'));
-  assert.doesNotMatch(html,/characterScaleRange|type="range"/);
+  assert.doesNotMatch(html,/characterScaleRange/);
   assert.ok(app.includes('const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200]'));
   assert.ok(app.includes("--gmww-character-scale"));
   assert.ok(css.includes('--gmww-character-scale:1'));

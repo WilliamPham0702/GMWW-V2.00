@@ -65,7 +65,7 @@ test('gathering toolbar sizes each box to its label and GM menu has balanced tie
   assert.match(css,/#playGatherToolbar \.play-gather-toolbar-actions>button\{[\s\S]*?flex:0 0 auto!important;width:max-content!important/);
   assert.match(css,/#playGatherToolbar \.play-gather-toolbar-actions>button>b\{[\s\S]*?white-space:nowrap!important/);
   assert.match(css, /#battleWolfMenu \.battle-wolf-actions\{[\s\S]*?grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
-  for(const id of ['battleInfoToggle','battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
+  for(const id of ['battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
     assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(css,/#battleQuickRevive,[\s\S]*?#battleForceEnd\{[\s\S]*?grid-column:span 3!important/);
 });

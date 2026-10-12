@@ -14,7 +14,7 @@ test('battle top has only back, Timeline and next icon; force-end moved below',(
   assert.doesNotMatch(top,/id="battleForceEnd"/);
 });
 test('compact bottom groups all approved GM controls without always-open overlay',()=>{
-  for(const id of ['battleClockButton','battleCountdown','battleInfoToggle','battleGMAuto','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleDetails'])
+  for(const id of ['battleClockButton','battleCountdown','battleGMAuto','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleDetails'])
     assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
   assert.doesNotMatch(part,/class="battle-menu-wolf"/);
   assert.match(part,/id="battleDetails"[^>]*hidden/);
@@ -22,7 +22,7 @@ test('compact bottom groups all approved GM controls without always-open overlay
   assert.match(css,/#battleDetails\[hidden\]\{display:none!important\}/);
 });
 test('all bottom controls are wired, quick-kill and revive require explicit confirmation',()=>{
-  for(const id of ['battleExit','battleInfoToggle','battleQuickRevive','battleQuickKill','battleGMAuto','battleGMAudio'])
+  for(const id of ['battleExit','battleQuickRevive','battleQuickKill','battleGMAuto','battleGMAudio'])
     assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
   assert.match(app,/async function battleQuickApply\(loginId\)/);
   assert.match(app,/confirm\('GM xác nhận '/);

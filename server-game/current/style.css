@@ -5304,3 +5304,11 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleDock.battle
 #start #playShell[data-step="battle"] #battleActionBar>button[disabled]{
   opacity:.32!important;filter:grayscale(.65);cursor:not-allowed
 }
+
+/* Gathering distance control: live preview, local-only, no server seat mutation. */
+#start #playGatherToolbar .play-gather-spacing{display:flex;align-items:center;gap:9px;padding:4px 9px;color:#e8f8ff;font-size:11px;font-weight:800;white-space:nowrap}
+#start #playGatherToolbar .play-gather-spacing input{flex:1;min-width:90px;accent-color:#5de0e7;touch-action:pan-x}
+#start #playGatherToolbar .play-gather-spacing output{min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+/* Two top GM actions fill the entire row; dangerous actions retain their own lower row. */
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleGMAudio,
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleGMAuto{grid-column:span 3!important;min-height:48px!important}
