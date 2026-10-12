@@ -2378,7 +2378,6 @@ function battleAudioForTurn(turn,auto=false){
   if(turn.kind==='village-wakeup')return;
   const audio=turn.kind==='wolf-introduction'?
     (state.audio?.cards||[]).find(x=>x.targetGroup==='wolves'||x.id==='audio_group_wolves'):battleFindAudio(kind,targetId,name);
-  if(!audio)return;
   // Prepare the clip while GM is navigating, so a first tap plays before
   // losing the user-activation event on iOS Safari / WKWebView.
   const configured=battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),
@@ -2387,6 +2386,7 @@ function battleAudioForTurn(turn,auto=false){
     const entry=battleFindAudio('actions',action.actionId,action.name);
     if(entry)void battleWarmAudio('actions',entry)
   }
+  if(!audio)return;
   void battleWarmAudio(turn.kind==='wolf-introduction'?'cards':kind,audio);
   if(auto)void battlePlayConfiguredAudio(turn.kind==='wolf-introduction'?'cards':kind,
     turn.kind==='wolf-introduction'?audio.targetId:targetId,audio.name,false)
