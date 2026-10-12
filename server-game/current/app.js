@@ -839,8 +839,8 @@ async function renderAudio(){const list=state.audio[audioKind]||[];const resolve
   $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
 }
 async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
-function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);a.fileName=f.name;a.verifiedBinary=true;delete a.status;saveState();renderAudio()};i.click()}
-async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});saveState();renderAudio()}
+function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);battleInvalidateAudioCache(audioKind,a.id);a.fileName=f.name;a.verifiedBinary=true;delete a.status;saveState();renderAudio()};i.click()}
+async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});battleInvalidateAudioCache(audioKind,a.id);saveState();renderAudio()}
 
 function bindCore(){
   $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
@@ -2320,6 +2320,11 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
 let battleActiveAudio=null,battleAudioLast={key:'',at:0};
+function battleInvalidateAudioCache(kind,id){
+  const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
+  if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
+  battleAudioReady.delete(key);battleAudioLoading.delete(key);
+}
 function battleFindAudio(kind,targetId,name){
   const list=Array.isArray(state?.audio?.[kind])?state.audio[kind]:[];
   const target=String(targetId||''),label=String(name||'').trim().toLowerCase();
@@ -2374,8 +2379,14 @@ function battleAudioForTurn(turn,auto=false){
   const audio=turn.kind==='wolf-introduction'?
     (state.audio?.cards||[]).find(x=>x.targetGroup==='wolves'||x.id==='audio_group_wolves'):battleFindAudio(kind,targetId,name);
   if(!audio)return;
-  // Prepare the clip while the GM is navigating so pressing Replay works
-  // synchronously on Safari; background auto-play remains best-effort.
+  // Prepare the clip while GM is navigating, so a first tap plays before
+  // losing the user-activation event on iOS Safari / WKWebView.
+  const configured=battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),
+    state,playSceneRuntime.artifactCycle?.accepted)||[];
+  for(const action of configured){
+    const entry=battleFindAudio('actions',action.actionId,action.name);
+    if(entry)void battleWarmAudio('actions',entry)
+  }
   void battleWarmAudio(turn.kind==='wolf-introduction'?'cards':kind,audio);
   if(auto)void battlePlayConfiguredAudio(turn.kind==='wolf-introduction'?'cards':kind,
     turn.kind==='wolf-introduction'?audio.targetId:targetId,audio.name,false)
@@ -2399,6 +2410,8 @@ function applyPlayAudioState(){
 function togglePlayAudio(){
   const muted=!playAudioMuted();try{localStorage.setItem(PLAY_AUDIO_MUTED_KEY,muted?'1':'0')}catch{}
   applyPlayAudioState();
+  // Battle clips are created from local blobs and are not document <audio> tags.
+  if(battleActiveAudio)battleActiveAudio.muted=muted;
 }
 async function refreshPlayServerRealtime(){
   const btn=document.getElementById('playRefreshServer');if(!btn||btn.dataset.syncing==='1')return;
