@@ -77,6 +77,14 @@ test('V2.81 update actions stay visible and IPA download never falls back to an 
 });
 
 
+test('Production deploy can safely recover the version baseline when the prior OTA manifest API is unavailable',()=>{
+  const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(workflow,/falling back to live Worker health version/);
+  assert.match(workflow,/verified-live-health-fallback/);
+  assert.match(workflow,/Cannot verify Production OTA manifest or live Worker health/);
+  assert.match(workflow,/verify-ota-version-advance\\.mjs assets\\/updates\\/latest\\.json/);
+});
+
 test('Production deploy verifies exact runtime, manifest and web-sync endpoint',()=>{
   const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(workflow,/EXPECTED=.*package\.json/);
