@@ -50,7 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           SHA="${{ steps.tested.outputs.sha }}"
-          git diff-tree --no-commit-id --name-only -r "$SHA" > /tmp/gmww-changed-files.txt
+          git diff-tree --no-commit-id --name-only -r -m "$SHA" | sort -u > /tmp/gmww-changed-files.txt
           cat /tmp/gmww-changed-files.txt
           export GMWW_CHANGED_FILES="$(cat /tmp/gmww-changed-files.txt)"
           TYPE=$(node .github/scripts/classify-update.mjs | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).releaseType))")
