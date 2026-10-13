@@ -82,7 +82,7 @@ test('Production deploy can safely recover the version baseline when the prior O
   assert.match(workflow,/falling back to live Worker health version/);
   assert.match(workflow,/verified-live-health-fallback/);
   assert.match(workflow,/Cannot verify Production OTA manifest or live Worker health/);
-  assert.match(workflow,/verify-ota-version-advance\\.mjs assets\\/updates\\/latest\\.json/);
+  assert.ok(workflow.includes('verify-ota-version-advance.mjs assets/updates/latest.json'));
 });
 
 test('Production deploy verifies exact runtime, manifest and web-sync endpoint',()=>{

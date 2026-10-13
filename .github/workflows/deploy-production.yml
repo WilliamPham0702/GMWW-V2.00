@@ -109,7 +109,7 @@ jobs:
           if(health.project!=='GMWW-V2.00'||health.status!=='online')
             throw new Error('Production Worker health identity/status is not verified');
           const version=String(health.runtimeVersion||health.version||'').trim().replace(/^V/i,'');
-          if(!/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(version))
+          if(!/^\d+\.\d+(?:\.\d+)?$/.test(version))
             throw new Error('Production Worker health has no valid Runtime version');
           fs.writeFileSync(process.argv[3],JSON.stringify({
             releaseVersion:version,runtimeVersion:version,
