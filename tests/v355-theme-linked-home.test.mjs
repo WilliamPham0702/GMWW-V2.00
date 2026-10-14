@@ -62,9 +62,9 @@ test('Existing saved theme images are only hidden, never deleted by slot list cl
  assert.doesNotMatch(app,/delete t\.ui\['banner\.deck'\]/);
 });
 test('Runtime version bumps and preserves native shell',()=>{
- assert.match(app,/const VERSION='3\.108';/);
- assert.match(html,/<title>GMWW V3\.108<\/title>/);
- assert.match(html,/app\.js\?v=3\.108-battle-ux/);
+ assert.match(app,/const VERSION='3\.109';/);
+ assert.match(html,/<title>GMWW V3\.109<\/title>/);
+ assert.match(html,/app\.js\?v=3\.109-battle-ux/);
  const worker=fs.readFileSync('src/index.js','utf8');
- assert.match(worker,/VERSION="V3\.108",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
+ assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3109"/);
 });

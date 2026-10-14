@@ -71,7 +71,10 @@ try{
  assert.equal(await page.locator('#battleTargetSheet').isVisible(),true);
  await page.locator('[data-battle-candidate="bob"]').click();
  await page.locator('[data-battle-candidate="carol"]').click();
- assert.match(await page.locator('#battleTargetPrompt').textContent(),/Đã chọn Bình, Chi/);
+  assert.equal((await page.locator('#battleTargetPrompt').textContent()).trim(),'','selected targets hide prompt text in the compact confirmation state');
+  assert.equal(await page.locator('#battleTargetCandidates').isVisible(),false,'candidate list is hidden once target selection is complete');
+  assert.equal(await page.locator('#battleTargetCancel').textContent(),'HỦY');
+  assert.equal(await page.locator('#battleTargetConfirm').textContent(),'OK');
  await page.locator('#battleTargetConfirm').click();
  const sent=await page.evaluate(()=>calls.filter(x=>x.path==='/battle-action').map(x=>x.body));
  assert.equal(sent.length,1);assert.equal(sent[0].artifactId,'stone');

@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.108';
+const VERSION='3.109';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3314,7 +3314,7 @@ function battlePickTarget(id,actionId){
 }
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
-  const t=battleTurn(),actors=new Set([...(t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId):[])].map(String)),chosen=new Set(battleState.targets),now=Date.now();
+  const t=battleTurn(),actorIds=[...(t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets),now=Date.now();
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||''),impact=battleState.impacts.get(id);
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
@@ -3369,19 +3369,19 @@ function renderPlayBattle(){
     }).join('');
   }
   const picker=document.getElementById('battleTargetSheet'),pickerTitle=document.getElementById('battleTargetTitle'),pickerText=document.getElementById('battleTargetPrompt'),
-    pickerClose=document.getElementById('battleTargetClose'),candidates=document.getElementById('battleTargetCandidates'),pickerOK=document.getElementById('battleTargetConfirm');
-  if(picker)picker.hidden=!battleState.targetSheet;
+    pickerClose=document.getElementById('battleTargetClose'),candidates=document.getElementById('battleTargetCandidates'),pickerOK=document.getElementById('battleTargetConfirm'),
+    act=battleAction(),targetReady=!!act&&battleState.targets.length===act.targetCount;
+  if(picker){picker.hidden=!battleState.targetSheet;picker.classList.toggle('is-confirm-only',!!battleState.targetSheet&&targetReady)}
   if(battleState.targetSheet){
-    const act=battleAction(),selected=battleState.targets.map(id=>battleMember(id)?.displayName||id),targetReady=!!act&&battleState.targets.length===act.targetCount;
     if(pickerTitle)pickerTitle.textContent=act?act.name.toUpperCase():'CHỌN MỤC TIÊU';
-    if(pickerClose)pickerClose.hidden=battleState.targetMode==='drag'&&targetReady;
-    if(pickerText)pickerText.textContent=targetReady&&battleState.targetMode==='drag'?'Mục tiêu: '+selected.join(', '):selected.length?'Đã chọn '+selected.join(', ')+' ('+selected.length+'/'+(act?.targetCount||0)+')':battleState.dragAmbiguous?'Hai người đang quá gần nhau. Hãy chạm đúng TÊN mục tiêu để tránh thả nhầm.':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
+    if(pickerClose)pickerClose.hidden=targetReady;
+    if(pickerText)pickerText.textContent=targetReady?'':battleState.dragAmbiguous?'Hai người đang quá gần nhau. Hãy chạm đúng TÊN mục tiêu để tránh thả nhầm.':battleState.targets.length?'':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
     if(candidates){
-      candidates.hidden=battleState.targetMode==='drag'&&act?.targetCount===1;
+      candidates.hidden=targetReady||(battleState.targetMode==='drag'&&act?.targetCount===1);
       candidates.innerHTML=act?playLiveMembers().filter(m=>m.loginId&&battleRules().targetAllowed(act,m,playPlayerEffect(m.loginId))).map(m=>
         '<button type="button" data-battle-candidate="'+playEsc(m.loginId)+'" class="'+(battleState.targets.includes(String(m.loginId))?'is-selected':'')+'">'+(battleState.targets.includes(String(m.loginId))?'✓ ':'○ ')+playEsc(m.displayName||m.loginId)+'</button>').join(''):'';
     }
-    if(pickerOK)pickerOK.disabled=battleState.busy||!act||battleState.targets.length!==act.targetCount;
+    if(pickerOK)pickerOK.disabled=battleState.busy||!targetReady;
   }
   const undo=document.getElementById('battleUndoButton');
   if(undo){undo.disabled=battleState.busy||battleState.undoBusy||!playSceneRuntime.battleUndo?.token;
@@ -3648,7 +3648,7 @@ function initBattleControls(){
     const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled&&!battleState.targetSheet)battleOpenTargetSheet(x.dataset.battleAction,'list');
   });
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled){if(battleState.quickType)void battleQuickApply(x.dataset.battleMember);else battlePickTarget(x.dataset.battleMember)}});
-  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);battleOpenTargetSheet(battleState.actionId,'drag')}},true);
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag');else if(action&&action.targetCount>1)battleOpenTargetSheet(battleState.actionId,'list')}},true);
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
     const x=e.target.closest('[data-battle-action]');
     if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
