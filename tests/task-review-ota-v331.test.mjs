@@ -17,7 +17,7 @@ test("task approval is a newer OTA than the previously released V3.30",()=>{
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
   assert.match(app,/const VERSION='3\.109';/);
-  assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
+  assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3109"/);
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
   assert.equal(shell,"3.17");
   assert.match(html,/<title>GMWW V3\.109<\/title>/);
