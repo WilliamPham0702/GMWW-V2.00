@@ -16,6 +16,7 @@ test('V3.109 marks the active role and every member of a grouped turn',()=>{
 
 test('V3.109 retains valid tap and drag target selection before confirmation',()=>{
   assert.match(app,/battlePickTarget\(x\.dataset\.playPlayerId\)/);
+  assert.match(app,/if\(action&&battleState\.targets\.length===action\.targetCount\)battleOpenTargetSheet\(battleState\.actionId,'drag'\)/);
   assert.match(app,/battleResolveDropTarget\(e\.clientX,e\.clientY,nodes,allowed\)/);
   assert.match(app,/targetAllowed/);
   assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
