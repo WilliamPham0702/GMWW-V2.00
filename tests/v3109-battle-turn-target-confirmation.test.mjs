@@ -7,7 +7,7 @@ const html=fs.readFileSync(new URL('../server-game/current/GMWW.html',import.met
 const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');
 
 test('V3.109 marks the active role and every member of a grouped turn',()=>{
-  assert.match(app,/t\?\.roles\)\?t\.roles\.flatMap/);
+  assert.match(app,/Array\.isArray\(t\?\.roles\)\?t\.roles\.flatMap/);
   assert.match(app,/is-battle-actor/);
   assert.match(app,/is-active/);
   assert.match(css,/✦ ĐẾN LƯỢT/);
