@@ -66,5 +66,5 @@ test('Runtime version bumps and preserves native shell',()=>{
  assert.match(html,/<title>GMWW V3\.109<\/title>/);
  assert.match(html,/app\.js\?v=3\.109-battle-ux/);
  const worker=fs.readFileSync('src/index.js','utf8');
- assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
+ assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3109"/);
 });
