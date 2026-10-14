@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const app=fs.readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
+const html=fs.readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');
+
+test('V3.109 marks the active role and every member of a grouped turn',()=>{
+  assert.match(app,/t\?\.roles\)\?t\.roles\.flatMap/);
+  assert.match(app,/is-battle-actor/);
+  assert.match(app,/is-active/);
+  assert.match(css,/✦ ĐẾN LƯỢT/);
+  assert.match(css,/play-battle-step\.is-active/);
+});
+
+test('V3.109 retains valid tap and drag target selection before confirmation',()=>{
+  assert.match(app,/battlePickTarget\(x\.dataset\.playPlayerId\)/);
+  assert.match(app,/battleResolveDropTarget\(e\.clientX,e\.clientY,nodes,allowed\)/);
+  assert.match(app,/targetAllowed/);
+  assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
+});
+
+test('V3.109 target sheet shows only HUY and OK after all targets are selected',()=>{
+  assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
+  assert.match(app,/candidates\.hidden=targetReady/);
+  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|!targetReady/);
+  assert.match(css,/battleTargetSheet\.is-confirm-only>header/);
+  assert.match(css,/battleTargetSheet\.is-confirm-only>#battleTargetPrompt/);
+  assert.match(html,/<button type="button" id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm">OK<\/button>/);
+});
