@@ -4308,7 +4308,7 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 #start .play-battle-footer #battleAdvance{background:#267669;border-color:#b2eed9}
 #start .play-battle-footer button:disabled{opacity:.5}
 #start .play-player-token.is-battle-actor .play-player-avatar{outline:3px solid #ffdf80;outline-offset:4px;filter:drop-shadow(0 0 6px #f4df75)}
-#start .play-player-token.is-battle-actor:before{content:"✦ ĐANG THỨC";position:absolute;top:-16px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;font-size:9px;background:#104e5e;color:#fff0b0;border:1px solid #ffdb72;border-radius:7px;padding:2px 4px;pointer-events:none}
+#start .play-player-token.is-battle-actor:before{content:"✦ ĐẾN LƯỢT";position:absolute;top:-16px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;font-size:9px;background:#104e5e;color:#fff0b0;border:1px solid #ffdb72;border-radius:7px;padding:2px 4px;pointer-events:none}
 #start .play-player-token.is-battle-target .play-player-avatar{outline:3px dashed #d6fff8;outline-offset:4px}
 #start .play-player-token.battle-impact-frozen .play-player-avatar:after{content:"❄️";background:#69dff58a}
 #start .play-player-token.battle-impact-dead .play-player-avatar:after{content:"☠️";background:#482b38ac}
@@ -5338,3 +5338,42 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 @keyframes gmwwFreezeSnow{from{transform:translateY(-2px);opacity:.72}to{transform:translateY(3px);opacity:1}}
 #battleActionBar [data-battle-action].is-actor-frozen{position:relative;overflow:hidden;border-color:rgba(166,239,255,.9);background-image:radial-gradient(circle at 12% 15%,rgba(220,250,255,.42) 0 2px,transparent 3px),radial-gradient(circle at 86% 24%,rgba(220,250,255,.55) 0 2px,transparent 3px),radial-gradient(circle at 72% 82%,rgba(220,250,255,.42) 0 2px,transparent 3px),linear-gradient(135deg,rgba(94,208,244,.34),rgba(19,81,111,.7))}
 #battleActionBar [data-battle-action].is-actor-frozen:after{content:"❄  ✧  ❄";position:absolute;right:5px;top:2px;color:#e9fcff;font-size:11px;text-shadow:0 0 5px #43d9ff;pointer-events:none}
+
+
+/* V3.109: the active waking group is obvious, while confirmed targets show only HỦY / OK. */
+#start .play-battle-step.is-active{
+  border-color:#ffe39a!important;
+  box-shadow:0 0 0 2px #ffe39a99,0 0 13px #f4d7788c!important;
+  background:linear-gradient(135deg,#17677a,#11475f)!important;
+}
+#start .play-player-token.is-battle-actor .play-player-avatar{
+  outline:3px solid #ffe39a!important;
+  outline-offset:4px!important;
+  filter:drop-shadow(0 0 8px #ffe39a)!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399.is-confirm-only{
+  min-height:0!important;
+  max-height:none!important;
+  height:auto!important;
+  padding:10px 12px!important;
+  gap:0!important;
+  bottom:calc(env(safe-area-inset-bottom) + 136px)!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>header,
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>#battleTargetPrompt,
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>#battleTargetCandidates{
+  display:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer{
+  display:flex!important;
+  justify-content:center!important;
+  gap:12px!important;
+  margin:0!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer button{
+  flex:1 1 0!important;
+  min-height:48px!important;
+  max-width:180px!important;
+  font-size:16px!important;
+  font-weight:900!important;
+}
