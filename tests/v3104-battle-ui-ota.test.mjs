@@ -19,10 +19,10 @@ test('V3.103->V3.104 only upgrades UI files, verified by SHA, never deletes a sa
  const missing=manifest();missing.runtime.files.pop();assert.equal(selectVerifiedRuntimeV3104Delta(missing,'3.103'),null);
 });
 
-test('V3.107 retains the V3.104 battle audio and server-enforced action usage implementation',()=>{
+test('V3.108 retains the V3.104 battle audio and server-enforced action usage implementation',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- assert.match(worker,/VERSION="V3\.107",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3107"/);
+ assert.match(worker,/VERSION="V3\.108",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
  assert.equal(worker.split('selectVerifiedRuntimeV3104Delta(').length-1,2);
  assert.equal(worker.split('selectVerifiedRuntimeV3103Delta(').length-1,2);
  assert.match(worker,/gmBattleAction/);
