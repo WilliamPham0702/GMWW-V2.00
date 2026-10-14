@@ -13,12 +13,12 @@ test('battle timeline updates when the active turn changes and marks exactly the
   assert.match(app,/active\.scrollIntoView\(\{block:'nearest',inline:'center'\}\)/);
 });
 
-test('drag target confirmation keeps only Cancel and OK and names the selected target',()=>{
+test('target confirmation shows only HUY and OK after the target is selected',()=>{
   assert.match(app,/targetReady=!!act&&battleState\.targets\.length===act\.targetCount/);
-  assert.match(app,/pickerClose\.hidden=battleState\.targetMode==='drag'&&targetReady/);
-  assert.match(app,/targetReady&&battleState\.targetMode==='drag'\?'Mục tiêu: '\+selected\.join\(', '\)/);
+  assert.match(app,/pickerClose\.hidden=targetReady/);
+  assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);\n  assert.match(app,/candidates\.hidden=targetReady/);\n  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|!targetReady/);
   assert.match(html,/<button type="button" id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm">OK<\/button>/);
-  assert.match(css,/#start #playShell\[data-step="battle"\] #battleTargetSheet>footer>button/);
+  assert.match(css,/#battleTargetSheet\.is-confirm-only>footer button/);
 });
 
 test('target eligibility is still checked before a target can be selected or action confirmed',()=>{
