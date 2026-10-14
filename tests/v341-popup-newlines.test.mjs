@@ -30,6 +30,6 @@ test('V3.94 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   assert.equal(pkg.version,'3.108.0');
   assert.match(html,/<title>GMWW V3\.108<\/title>/);
-  assert.match(app,/const VERSION='3\.107'/);
+  assert.match(app,/const VERSION='3\.108'/);
   assert.match(server,/VERSION="V3\.108",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
 });
