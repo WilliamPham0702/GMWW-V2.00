@@ -113,7 +113,7 @@ test('V3.94 version, security and legacy storage remain stable',()=>{
   assert.match(app,/const VERSION='3\.109'/);
   assert.match(html,/<title>GMWW V3\.109<\/title>/);
   assert.match(worker,/VERSION="V3\.109"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3108"/);
+  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3109"/);
   assert.match(app,/GMWW_V258_STATE/);
   assert.match(app,/GMWW_V258_PREFS/);
   assert.match(worker,/publicEntryPolicy\(request\.method,url\.pathname\)/);
