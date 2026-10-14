@@ -75,7 +75,8 @@ test('only the bottom ACTION tray holds role & Artifact actions, with two target
  assert.match(app,/now-last\.at<420/);
  assert.match(app,/getElementById\('battleActionBar'\)\?\.addEventListener\('pointerdown'/);
  assert.match(app,/battleResolveDropTarget\(e\.clientX,e\.clientY,nodes,allowed\)/);
- assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);\n assert.match(app,/candidates\.hidden=targetReady/);
+ assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
+ assert.match(app,/candidates\.hidden=targetReady/);
  assert.match(app,/battleConfirm\(true\)/);
  assert.match(app,/async function battleUndoLast\(/);
  assert.match(server,/async gmBattleAction\(request,body\)/);
