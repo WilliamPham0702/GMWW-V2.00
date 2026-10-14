@@ -18,7 +18,7 @@ test('V3.69 prevents partial/unsafe IPA patches',()=>{
 test('Worker newest Runtime selector is V3.94 on both paths',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3108"/);
+ assert.match(worker,/VERSION="V3\.109",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3109"/);
  const app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  assert.match(app,/const VERSION='3\.109'/);
