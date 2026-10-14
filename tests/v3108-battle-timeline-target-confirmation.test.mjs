@@ -16,7 +16,9 @@ test('battle timeline updates when the active turn changes and marks exactly the
 test('target confirmation shows only HUY and OK after the target is selected',()=>{
   assert.match(app,/targetReady=!!act&&battleState\.targets\.length===act\.targetCount/);
   assert.match(app,/pickerClose\.hidden=targetReady/);
-  assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);\n  assert.match(app,/candidates\.hidden=targetReady/);\n  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|!targetReady/);
+  assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
+  assert.match(app,/candidates\.hidden=targetReady/);
+  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|!targetReady/);
   assert.match(html,/<button type="button" id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm">OK<\/button>/);
   assert.match(css,/#battleTargetSheet\.is-confirm-only>footer button/);
 });
