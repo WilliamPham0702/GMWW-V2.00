@@ -32,5 +32,5 @@ test('V3.37 OTA delivers review controls on the existing V3.17 native shell',()=
  assert.equal(pkg.version,'3.110.0');
  assert.match(app,/const VERSION='3.110'/);
  assert.match(html,/<title>GMWW V3.110<\/title>/);
- assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3110"/);
+ assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3110"/);
 });

@@ -9,8 +9,8 @@ test('V3.17 runtime and native shell are aligned',()=>{
   assert.ok(server.includes('VERSION="V3.110"'));
   assert.ok(app.includes("const VERSION='3.110';"));
   assert.ok(html.includes('GMWW V3.110'));
-  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 317;'));
-  assert.ok(project.includes('MARKETING_VERSION = 3.17;'));
+  assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
+  assert.ok(project.includes('MARKETING_VERSION = 3.110;'));
   assert.equal(pkg.version,'3.110.0');
 });
 

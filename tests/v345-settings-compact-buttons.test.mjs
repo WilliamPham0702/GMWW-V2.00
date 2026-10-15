@@ -39,5 +39,5 @@ test('Update buttons remain three aligned actions and versioned OTA is V3.94',()
  assert.match(css,/#settings #updateManagerCard \.update-actions-three\{display:grid!important;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(app,/const VERSION='3.110'/);
  assert.match(html,/<title>GMWW V3.110<\/title>/);
- assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3110"/);
+ assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3110"/);
 });

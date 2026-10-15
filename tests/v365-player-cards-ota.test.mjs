@@ -46,5 +46,5 @@ test('Both IPA update-manifest routes run V3.65 fast overlay ahead of older algo
  assert.match(html,/<title>GMWW V3.110<\/title>/);
  assert.match(html,/app\.js\?v=3\.110-battle-marker/);
  assert.match(app,/const VERSION='3.110'/);
- assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.17",UPDATE_CHANNEL_REV="runtime-3110"/);
+ assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3110"/);
 });
