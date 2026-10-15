@@ -65,5 +65,5 @@ test('turn marker is the seat leaf under the actor, and target ring hugs the ava
 });
 
 test('confirm buttons after target selection are compact',()=>{
-  assert.match(css,/is-confirm-only>footer>button\{min-width:64px!important;min-height:32px!important/);
+  assert.match(css,/is-confirm-only>footer>button\{width:auto!important;min-width:0!important;min-height:0!important;height:24px!important/);
 });

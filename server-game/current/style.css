@@ -5380,7 +5380,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 }
 
 /* V3.111 · Nút HỦY/OK sau khi chọn mục tiêu: gọn, tinh tế hơn */
-body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer>button{min-width:64px!important;min-height:32px!important;padding:5px 12px!important;border-radius:9px!important;font-size:11px!important;font-weight:800!important;letter-spacing:.06em;opacity:.92}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer>button{width:auto!important;min-width:0!important;min-height:0!important;height:24px!important;padding:0 9px!important;border-radius:7px!important;font-size:10px!important;line-height:24px!important;font-weight:800!important;letter-spacing:.04em;opacity:.92}
 
 /* V3.111 · Trạng thái: huy hiệu trên token, thư viện Trạng Thái, công tắc hiện trên Player Web */
 #start .play-status-badges{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);display:flex;gap:2px;z-index:6;pointer-events:none;white-space:nowrap}
