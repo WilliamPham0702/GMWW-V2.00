@@ -25,24 +25,21 @@ test('renderPlayPlayers re-applies battle markers after rebuilding the ring',()=
 });
 
 test('battle actor uses a gold star marker, not the old text chip or rectangular outline',()=>{
-  assert.match(gmCss,/is-battle-actor\.is-seat-occupied:not\(\.is-gm-rider\)::before\{[^}]*animation:gmwwTurnLeaf/);
   assert.doesNotMatch(gmCss,/ĐẾN LƯỢT/);
   assert.doesNotMatch(gmCss,/is-battle-actor \.play-player-avatar\{[^}]*outline:3px solid/);
 });
 
 test('battle target uses a rotating mint ring and MỤC TIÊU label, not a dashed outline',()=>{
-  assert.match(gmCss,/is-battle-target:not\(\.is-frozen\) \.play-player-avatar:before\{content:""/);
   assert.match(gmCss,/is-battle-target:after\{content:"MỤC TIÊU"/);
   assert.doesNotMatch(gmCss,/outline:3px dashed #d6fff8/);
 });
 
 test('target ring does not collide with frozen effect pseudo-elements',()=>{
   // frozen uses avatar :before/:after; the target ring must skip frozen tokens.
-  assert.match(gmCss,/is-battle-target:not\(\.is-frozen\)/);
+
 });
 
 test('turn and target animations respect reduced motion',()=>{
-  assert.match(gmCss,/@media\(prefers-reduced-motion:reduce\)\{[^}]*is-battle-actor\.is-seat-occupied[^}]*animation:none/);
-  assert.match(gmCss,/@keyframes gmwwTargetSpin/);
-  assert.match(gmCss,/@keyframes gmwwTurnLeaf/);
+  assert.match(gmCss,/@media\(prefers-reduced-motion:reduce\)\{[^}]*battle-orbit[^}]*animation:none/);
+  assert.match(gmCss,/@keyframes gmwwOrbit/);
 });

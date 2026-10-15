@@ -1,0 +1,20 @@
+{
+  "version": "2.53",
+  "format": "webp",
+  "width": 512,
+  "height": 512,
+  "transparent": true,
+  "count": 42,
+  "groups": {
+    "restored": {
+      "from": "chibi-01",
+      "to": "chibi-30",
+      "count": 30
+    },
+    "muscle": {
+      "from": "chibi-31",
+      "to": "chibi-42",
+      "count": 12
+    }
+  }
+}
