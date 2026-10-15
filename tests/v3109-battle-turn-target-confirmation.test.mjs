@@ -10,7 +10,7 @@ test('V3.109 marks the active role and every member of a grouped turn',()=>{
   assert.match(app,/Array\.isArray\(t\?\.roles\)\?t\.roles\.flatMap/);
   assert.match(app,/is-battle-actor/);
   assert.match(app,/is-active/);
-  assert.match(css,/✦ ĐẾN LƯỢT/);
+  assert.match(css,/is-battle-actor:before\{content:"★"/);
   assert.match(css,/play-battle-step\.is-active/);
 });
 
