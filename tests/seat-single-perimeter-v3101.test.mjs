@@ -29,7 +29,7 @@ test('V3.104 preserves the V3.101 Smart Seat GM/Worker/Player contract together 
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),player=fs.readFileSync('assets/village/village.mjs','utf8');
  assert.match(worker,/VERSION="V3.114",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3114"/);
  assert.match(app,/const VERSION='3.114'/);
- assert.match(html,/village-layout\.js\?v=3\.114-orbit/);
+ assert.match(html,/village-layout\.js\?v=3\.113-orbit/);
  assert.match(html,/GMWW V3\.114/);
  assert.match(player,/fire3101/);
  assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);

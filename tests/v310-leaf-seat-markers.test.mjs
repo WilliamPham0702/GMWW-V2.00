@@ -27,10 +27,10 @@ test('V3.17 runtime is aligned with native shell V3.17',()=>{
   assert.match(html,/<title>GMWW V3\.114<\/title>/);
   assert.match(app,/const VERSION='3\.114'/);
   assert.match(server,/VERSION="V3\.114",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3114"/);
-  assert.ok(['3.10','3.11','3.12','3.13','3.17','3.109','3.110','3.114'].includes(manifest.releaseVersion));
+  assert.ok(['3.10','3.11','3.12','3.13','3.17','3.109','3.110','3.113','3.114'].includes(manifest.releaseVersion));
   assert.ok(['native','runtime'].includes(manifest.releaseType));
   assert.ok(['3.09','3.11','3.17','3.110'].includes(manifest.shellVersion));
-  assert.ok(['3.10','3.11','3.12','3.17','3.109','3.110','3.114'].includes(manifest.runtimeVersion));
+  assert.ok(['3.10','3.11','3.12','3.17','3.109','3.110','3.113','3.114'].includes(manifest.runtimeVersion));
   if(manifest.releaseType==='native')assert.ok(manifest.ipa?.url);
   if(manifest.releaseType==='runtime')assert.ok(manifest.runtime.files.some(x=>x.path==='style.css'));
   if(manifest.releaseType==='runtime')assert.ok(manifest.runtime.files.some(x=>x.path==='character-renderer.js'));
