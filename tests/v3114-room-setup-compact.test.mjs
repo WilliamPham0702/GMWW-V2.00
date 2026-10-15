@@ -31,8 +31,8 @@ test('Runtime 3.114 and OTA cache-busters stay synchronized',()=>{
   assert.equal(lock.packages[''].version,pkg.version);
   assert.match(app,/const VERSION='3\.114'/);
   assert.match(html,/<title>GMWW V3\.114<\/title>/);
-  assert.match(html,/style\.css\?v=3\.114-room-setup/);
-  assert.match(html,/app\.js\?v=3\.114-room-setup/);
+  assert.match(html,/style\.css\?v=3\.114-orbit/);
+  assert.match(html,/app\.js\?v=3\.114-orbit/);
   assert.match(worker,/VERSION="V3\.114"/);
   assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3114"/);
 });
