@@ -1,2 +1,5 @@
 node_modules/
 .wrangler/
+
+# Pinned legacy artwork extracted locally for runtime packaging (do not commit)
+server-game/legacy-assets/
