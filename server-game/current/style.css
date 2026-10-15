@@ -4312,7 +4312,7 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 
 #start .play-player-token.is-battle-target .play-player-avatar{filter:drop-shadow(0 0 5px #75efc9)!important;outline:0!important}
 
-#start .play-player-token.is-battle-target:after{content:"MỤC TIÊU";position:absolute;top:-20px;left:50%;transform:translateX(-50%);z-index:5;white-space:nowrap;font-size:8.5px;font-weight:800;letter-spacing:.04em;line-height:1;color:#073f42;background:#75efc9;padding:2px 6px;border-radius:6px;pointer-events:none;box-shadow:0 2px 6px #0007}
+#start .play-player-token.is-battle-target:after{content:"MỤC TIÊU";position:absolute;top:-20px;left:50%;transform:translateX(-50%);z-index:5;white-space:nowrap;font-size:8.5px;font-weight:800;letter-spacing:.04em;line-height:1;color:#3d0b05;background:#ff6b5b;padding:2px 6px;border-radius:6px;pointer-events:none;box-shadow:0 2px 6px #0007}
 
 
 @media(prefers-reduced-motion:reduce){#start .play-player-token .battle-orbit,#start .play-player-token .battle-turn-mark{animation:none}}
