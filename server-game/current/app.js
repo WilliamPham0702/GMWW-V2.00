@@ -2866,6 +2866,8 @@ function renderPlayPlayers(){
     })
   }
   renderPlayGmToken();syncPlayMovementTicker();
+  // Vẽ lại vòng (realtime/poll) xóa class battle; gắn lại để GM luôn thấy ai đến lượt và mục tiêu đã chọn.
+  if(playSceneState.step==='battle')battleMarkPlayers();
 }
 async function renderPlayCards(){
   const selected=(playSceneRuntime.assignments.length?playSceneRuntime.assignments:(Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[])).find(a=>String(a?.loginId||'')===String(playSceneState.activePlayerId||'')),selectedRoleId=String(selected?.roleId||playSceneState.roleId||'');

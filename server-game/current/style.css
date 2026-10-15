@@ -4307,9 +4307,15 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 #start .play-battle-footer button{height:39px;min-width:90px;padding:0 12px;border:1px solid #71c8d8;border-radius:10px;background:#0e4e64;color:#fff;font-size:12px;font-weight:850}
 #start .play-battle-footer #battleAdvance{background:#267669;border-color:#b2eed9}
 #start .play-battle-footer button:disabled{opacity:.5}
-#start .play-player-token.is-battle-actor .play-player-avatar{outline:3px solid #ffdf80;outline-offset:4px;filter:drop-shadow(0 0 6px #f4df75)}
-#start .play-player-token.is-battle-actor:before{content:"✦ ĐẾN LƯỢT";position:absolute;top:-16px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;font-size:9px;background:#104e5e;color:#fff0b0;border:1px solid #ffdb72;border-radius:7px;padding:2px 4px;pointer-events:none}
-#start .play-player-token.is-battle-target .play-player-avatar{outline:3px dashed #d6fff8;outline-offset:4px}
+/* V3.110 · Phương án B: người đến lượt = sao vàng lơ lửng + ánh vàng; mục tiêu = vòng ngắm mint quay chậm + nhãn MỤC TIÊU. */
+#start .play-player-token.is-battle-actor .play-player-avatar{filter:drop-shadow(0 0 3px #fff1b8) drop-shadow(0 0 9px #ffe39a)!important;outline:0!important}
+#start .play-player-token.is-battle-actor:before{content:"★";position:absolute;top:-24px;left:50%;transform:translateX(-50%);z-index:5;font-size:18px;line-height:1;color:#ffe39a;text-shadow:0 0 6px #ffe39a,0 1px 2px #3a2a00;pointer-events:none;animation:gmwwTurnStar 1.6s ease-in-out infinite}
+#start .play-player-token.is-battle-target .play-player-avatar{filter:drop-shadow(0 0 5px #75efc9)!important;outline:0!important}
+#start .play-player-token.is-battle-target:not(.is-frozen) .play-player-avatar:before{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid #75efc9;border-right-color:transparent;border-left-color:transparent;z-index:3;pointer-events:none;animation:gmwwTargetSpin 3s linear infinite}
+#start .play-player-token.is-battle-target:after{content:"MỤC TIÊU";position:absolute;top:-20px;left:50%;transform:translateX(-50%);z-index:5;white-space:nowrap;font-size:8.5px;font-weight:800;letter-spacing:.04em;line-height:1;color:#073f42;background:#75efc9;padding:2px 6px;border-radius:6px;pointer-events:none;box-shadow:0 2px 6px #0007}
+@keyframes gmwwTurnStar{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-4px)}}
+@keyframes gmwwTargetSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#start .play-player-token.is-battle-actor:before,#start .play-player-token.is-battle-target:not(.is-frozen) .play-player-avatar:before{animation:none}}
 #start .play-player-token.battle-impact-frozen .play-player-avatar:after{content:"❄️";background:#69dff58a}
 #start .play-player-token.battle-impact-dead .play-player-avatar:after{content:"☠️";background:#482b38ac}
 #start .play-player-token.battle-impact-expelled .play-player-avatar:after{content:"🌪️";background:#bf9e7473}
@@ -5345,11 +5351,6 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
   border-color:#ffe39a!important;
   box-shadow:0 0 0 2px #ffe39a99,0 0 13px #f4d7788c!important;
   background:linear-gradient(135deg,#17677a,#11475f)!important;
-}
-#start .play-player-token.is-battle-actor .play-player-avatar{
-  outline:3px solid #ffe39a!important;
-  outline-offset:4px!important;
-  filter:drop-shadow(0 0 8px #ffe39a)!important;
 }
 body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399.is-confirm-only{
   min-height:0!important;
