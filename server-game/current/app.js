@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.112';
+const VERSION='3.113';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2252,7 +2252,7 @@ function playVillageMembers(){
 }
 function playRoamPoint(id){const p=globalThis.GMWW_VILLAGE_LAYOUT.spawn('member:'+id);return[p.x,p.y]}
 function playMapDisplay(x,y){const world=document.getElementById('playWorld'),p=globalThis.GMWW_VILLAGE_LAYOUT.toScreen({x,y},world?.clientWidth||864,world?.clientHeight||1536);return[p.x,p.y]}
-// V3.112 · Danh mục trạng thái. Ba mục đầu dùng luồng cũ (frozen/expelled/dead); các mục còn lại gửi type "status" + statusId.
+// V3.113 · Danh mục trạng thái. Ba mục đầu dùng luồng cũ (frozen/expelled/dead); các mục còn lại gửi type "status" + statusId.
 const STATUS_UI={
   expelled:{label:'Bị đuổi khỏi làng',icon:'↗',blocks:true,chip:'Đuổi',legacy:true,duration:'Đến đêm sau'},
   frozen:{label:'Bị đóng băng',icon:'❄',blocks:true,chip:'Đóng băng',legacy:true,duration:'Đến sáng sau'},
@@ -3371,7 +3371,7 @@ function battleMarkPlayers(){
     if(actorOn){if(!mark){mark=document.createElement('span');mark.className='battle-turn-mark';mark.setAttribute('aria-hidden','true');mark.textContent='★ ĐẾN LƯỢT';el.appendChild(mark)}}
     else mark?.remove();
     let orb=avatar?.querySelector(':scope>.battle-orbit');
-    if(avatar&&(actorOn||targetOn)){if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}orb.dataset.kind=actorOn?'actor':'target'}
+    if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
     for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.toggle('battle-impact-'+type,!!impact&&impact.type===type&&impact.until>now);
   });

@@ -22,7 +22,7 @@ test('Có gì mới shows each note in a dedicated safe bullet',()=>{
  assert.ok(css.includes('max-height:166px;overflow-y:auto'));
 });
 test('V3.94 is a separate OTA release on IPA 3.17',()=>{
- assert.ok(html.includes('<title>GMWW V3.112</title>'));
- assert.ok(app.includes("const VERSION='3.112'"));
- assert.ok(worker.includes('VERSION="V3.112",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3112"'));
+ assert.ok(html.includes('<title>GMWW V3.113</title>'));
+ assert.ok(app.includes("const VERSION='3.113'"));
+ assert.ok(worker.includes('VERSION="V3.113",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3113"'));
 });
