@@ -5407,3 +5407,33 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 @keyframes gmwwOrbitSpin{to{--orb-spin:360deg}}
 @keyframes gmwwOrbit{to{transform:rotate(360deg)}}
 @keyframes gmwwTurnPop{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-3px)}}
+
+/* V3.114 — compact, centered room setup controls */
+#playCreateRoomSheet .play-room-control-row{
+  width:min(100%,270px)!important;
+  margin:0 auto!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px!important;
+  gap:7px!important
+}
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  min-width:0!important;min-height:40px!important;height:40px!important;
+  padding:0 7px!important;border-radius:10px!important;font-size:9.5px!important;gap:6px!important
+}
+#playCreateRoomSheet .play-room-control-row .play-room-step-next{
+  width:38px!important;min-width:38px!important;height:40px!important;min-height:40px!important;
+  border-radius:10px!important;font-size:24px!important
+}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-control-row{
+    width:min(100%,250px)!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important;gap:6px!important
+  }
+  #playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
+  #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+    min-height:38px!important;height:38px!important;padding:0 5px!important;font-size:9px!important
+  }
+  #playCreateRoomSheet .play-room-control-row .play-room-step-next{
+    width:36px!important;min-width:36px!important;height:38px!important;min-height:38px!important
+  }
+}
