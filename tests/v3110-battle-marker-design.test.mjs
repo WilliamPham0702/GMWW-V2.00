@@ -25,7 +25,7 @@ test('renderPlayPlayers re-applies battle markers after rebuilding the ring',()=
 });
 
 test('battle actor uses a gold star marker, not the old text chip or rectangular outline',()=>{
-  assert.match(gmCss,/is-battle-actor:before\{content:"★"/);
+  assert.match(gmCss,/is-battle-actor\.is-seat-occupied:not\(\.is-gm-rider\)::before\{[^}]*animation:gmwwTurnLeaf/);
   assert.doesNotMatch(gmCss,/ĐẾN LƯỢT/);
   assert.doesNotMatch(gmCss,/is-battle-actor \.play-player-avatar\{[^}]*outline:3px solid/);
 });
@@ -42,7 +42,7 @@ test('target ring does not collide with frozen effect pseudo-elements',()=>{
 });
 
 test('turn and target animations respect reduced motion',()=>{
-  assert.match(gmCss,/@media\(prefers-reduced-motion:reduce\)\{[^}]*is-battle-actor:before[^}]*animation:none/);
+  assert.match(gmCss,/@media\(prefers-reduced-motion:reduce\)\{[^}]*is-battle-actor\.is-seat-occupied[^}]*animation:none/);
   assert.match(gmCss,/@keyframes gmwwTargetSpin/);
-  assert.match(gmCss,/@keyframes gmwwTurnStar/);
+  assert.match(gmCss,/@keyframes gmwwTurnLeaf/);
 });

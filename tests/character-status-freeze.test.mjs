@@ -12,7 +12,7 @@ test('Trạng Thái is a separate library tab and Hiệu Ứng remains intact', 
   assert.match(html, /id="lib-effects"[\s\S]*?id="effectGrid"/);
   assert.match(html, /data-lib="statuses"[^>]*>[\s\S]*?Trạng Thái/);
   assert.match(html, /id="lib-statuses"[\s\S]*?Đóng Băng/);
-  assert.match(html, /data-character-status="frozen"/);
+  assert.match(html, /id="statusLibraryGrid"/);
 });
 
 test('freeze is shown as an ice overlay on the existing character token', () => {
