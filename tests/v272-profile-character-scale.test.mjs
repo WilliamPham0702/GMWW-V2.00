@@ -84,12 +84,12 @@ test('Manual login enters the village directly with no intermediate room restore
 
 test('V3.17 runtime metadata is aligned with the V3.17 native shell',()=>{
   const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
-  assert.ok(server.includes('VERSION="V3.111"'));
-  assert.ok(app.includes("const VERSION='3.111';"));
-  assert.ok(html.includes('GMWW V3.111'));
+  assert.ok(server.includes('VERSION="V3.112"'));
+  assert.ok(app.includes("const VERSION='3.112';"));
+  assert.ok(html.includes('GMWW V3.112'));
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));
-  assert.equal(pkg.version,'3.111.0');
+  assert.equal(pkg.version,'3.112.0');
 });
 
 

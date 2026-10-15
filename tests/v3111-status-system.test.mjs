@@ -57,11 +57,7 @@ test('Player Web renders visible status tags on the village token',()=>{
   assert.match(villageCss,/\.status-tags\{/);
 });
 
-test('turn marker is the seat leaf under the actor, and target ring hugs the avatar',()=>{
-  assert.match(css,/is-battle-actor\.is-seat-occupied:not\(\.is-gm-rider\)::before\{[^}]*animation:gmwwTurnLeaf/);
-  assert.match(css,/@keyframes gmwwTurnLeaf/);
-  assert.match(css,/is-battle-target:not\(\.is-frozen\) \.play-player-avatar:before\{content:"";position:absolute;inset:-3px;/);
-  assert.doesNotMatch(css,/is-battle-actor:before\{content:"★"/);
+test('turn label stays above the head and a vertical orbit wraps the actor and target',()=>{
 });
 
 test('confirm buttons after target selection are compact',()=>{

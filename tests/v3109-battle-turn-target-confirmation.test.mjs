@@ -9,8 +9,8 @@ const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta
 test('V3.109 marks the active role and every member of a grouped turn',()=>{
   assert.match(app,/Array\.isArray\(t\?\.roles\)\?t\.roles\.flatMap/);
   assert.match(app,/is-battle-actor/);
+  assert.match(css,/battle-orbit/);
   assert.match(app,/is-active/);
-  assert.match(css,/is-battle-actor\.is-seat-occupied:not\(\.is-gm-rider\)::before/);
   assert.match(css,/play-battle-step\.is-active/);
 });
 
