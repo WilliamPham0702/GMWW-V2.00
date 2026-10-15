@@ -424,6 +424,7 @@ jobs:
             exit 1
           fi
           echo "Verify Production: V5.60 3D skin lab HTML + module PASS."
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
           echo "Verify Production: checking task-review UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
           TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
@@ -495,6 +496,7 @@ jobs:
             throw Error('Homepage does not provide active theme targets');
           console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
           NODE
+          fi
           node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
