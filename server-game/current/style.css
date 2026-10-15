@@ -2201,14 +2201,14 @@ body.play-immersive #start .play-player-token.is-empty:focus-visible .play-playe
 /* V3.17 — room mode and room power use the same toggle pattern */
 #playCreateRoomSheet .play-room-control-row{
   display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px!important;
-  gap:7px!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important;
+  gap:6px!important;
   align-items:stretch!important
 }
 #playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
 #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
-  min-width:0!important;min-height:44px!important;height:44px!important;
-  padding:0 9px!important;border-radius:11px!important;font-size:10.5px!important;font-weight:900!important;
+  min-width:0!important;min-height:36px!important;height:36px!important;
+  padding:0 6px!important;border-radius:10px!important;font-size:9px!important;font-weight:900!important;
   display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important
 }
 /* Online and Offline are room modes: both use the same warm amber, never warning red or cyan. */
@@ -2233,13 +2233,13 @@ body.play-immersive #start .play-player-token.is-empty:focus-visible .play-playe
   border-color:rgba(107,241,190,.46)!important;background:rgba(13,116,86,.76)!important;color:#d9fff0!important
 }
 #playCreateRoomSheet .play-room-control-row .play-room-step-next{
-  width:44px!important;height:44px!important;border-radius:11px!important;font-size:27px!important
+  width:36px!important;height:36px!important;border-radius:10px!important;font-size:22px!important
 }
 @media(max-width:390px){
-  #playCreateRoomSheet .play-room-control-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 42px!important;gap:5px!important}
+  #playCreateRoomSheet .play-room-control-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px!important;gap:5px!important}
   #playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
-  #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{height:42px!important;min-height:42px!important;padding:0 6px!important;font-size:9.5px!important}
-  #playCreateRoomSheet .play-room-control-row .play-room-step-next{width:42px!important;height:42px!important}
+  #playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{height:34px!important;min-height:34px!important;padding:0 5px!important;font-size:8.5px!important}
+  #playCreateRoomSheet .play-room-control-row .play-room-step-next{width:34px!important;height:34px!important;font-size:20px!important}
 }
 
 

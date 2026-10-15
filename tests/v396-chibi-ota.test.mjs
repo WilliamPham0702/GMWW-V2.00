@@ -29,9 +29,9 @@ test('Worker V3.104 keeps the V3.96 migration available for older installs',()=>
   const worker=fs.readFileSync('src/index.js','utf8');
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(worker,/VERSION="V3.113",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3113"/);
-  assert.match(app,/const VERSION='3.113'/);
-  assert.match(html,/<title>GMWW V3.113<\/title>/);
+  assert.match(worker,/VERSION="V3.114",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3114"/);
+  assert.match(app,/const VERSION='3.114'/);
+  assert.match(html,/<title>GMWW V3.114<\/title>/);
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
   assert.equal(worker.split('selectVerifiedRuntimeV397Delta(').length-1,2);
   assert.match(worker,/selectVerifiedRuntimeV397Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV396Delta/);

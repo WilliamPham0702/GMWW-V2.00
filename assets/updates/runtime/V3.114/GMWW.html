@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GMWW V3.114</title>
+<link rel="stylesheet" href="style.css?v=3.114-orbit&status=1">
+<link rel="stylesheet" href="character-renderer.css?v=ce2">
+<style>
+.sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
+.sea-artifact-import-panel input[type=file]{max-width:100%;font-size:14px}
+.sea-artifact-import-panel p{font-size:13px;margin:0;line-height:1.5}
+.sea-artifact-import-preview{max-height:340px;overflow-y:auto;display:grid;gap:6px}
+.sea-artwork-import-row{display:flex;align-items:center;gap:10px;min-height:84px;border-bottom:1px solid rgba(255,255,255,.13)}
+.sea-artwork-import-row img{width:78px;height:66px;object-fit:contain;flex:none;border-radius:8px}
+.sea-artwork-import-row>div{flex:1;min-width:0;display:grid;gap:3px}
+.sea-artwork-import-row small{font-size:11px;overflow-wrap:anywhere}
+.sea-artwork-import-row select{max-width:100%;width:100%;min-height:36px;font-size:13px}
+</style><style id="gmww-lab-styles">
+#lib-lab .gmww-lab{padding:12px 2px 28px;color:#f2fcff;font-family:inherit}
+.gmww-lab-head{display:flex;align-items:center;gap:14px;padding:15px 14px;border:1px solid #3c7895;border-radius:18px;background:linear-gradient(135deg,#0d4767,#072032 70%);margin-bottom:12px}
+.gmww-lab-head h2{font-size:24px;margin:0;color:#fff}.gmww-lab-head p{margin:3px 0 0;color:#bbebf7;font-size:12px}.gmww-lab-symbol{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:#146a8b;font-size:30px}
+.gmww-lab-warning{display:grid;gap:6px;padding:12px;border:1px solid #b58948;border-radius:12px;background:rgba(100,62,16,.22);font-size:12px;line-height:1.5}.gmww-lab-warning b{color:#ffdf97}.gmww-lab-warning span{color:#e4edf2}
+.gmww-lab-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.gmww-lab-controls label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#d7f6ff}.gmww-lab-controls select{min-width:0;width:100%;border:1px solid #4682a2;border-radius:10px;background:#0d273a;color:#fff;padding:12px 8px;min-height:46px;font:inherit}
+.gmww-lab-run{width:100%;min-height:48px;border:0;border-radius:12px;background:linear-gradient(110deg,#55e0f2,#77dfaa);font-weight:900;font-size:15px;color:#063042;cursor:pointer}
+.gmww-lab-summary{margin:14px 0;padding:12px;border-radius:11px;background:#102f43;font-size:13px;line-height:1.55}
+.gmww-lab-log{display:grid;gap:10px}.gmww-lab-night{border:1px solid #325c79;border-radius:12px;background:rgba(6,29,45,.94);padding:12px}.gmww-lab-night h3{font-size:14px;margin:0 0 8px;color:#8ce6fb}.gmww-lab-event{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid rgba(138,207,230,.12);font-size:12px;line-height:1.5}.gmww-lab-pass{color:#9bffc5;font-weight:800;white-space:nowrap}.gmww-lab-fail{color:#ffb4a9;font-weight:800;white-space:nowrap}
+@media(max-width:360px){.gmww-lab-controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <section class="page active" id="home" aria-label="Trang Chủ GMWW">
+      <div class="gmww-home-rebuild-v350 gmww-home-rebuild-v351 gmww-home-rebuild-v352 gmww-home-rebuild-v354 gmww-home-premium-v366 gmww-home-top3-skin-v377" data-home-build="v354-artwork-banners">
+        <section class="gmww-home-scene-v350 gmww-home-scene-v351" aria-label="Làng biển WilliamPham">
+          <div class="gmww-home-hero-artboard-v351"><img src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển với nhân vật GM và sói trắng" class="gmww-home-scene-image-v350" decoding="async" fetchpriority="high"></div>
+        </section>
+        <section class="gmww-home-enter-banner-v352" aria-label="Vào Làng"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350 gmww-home-portal-action-v352" type="button" aria-label="Vào Làng và mở Trang Chơi"><img src="home-art/home-sea-portal-v354.svg" alt="" class="gmww-home-portal-art-v352"><strong>VÀO LÀNG</strong><small>Tạo phòng · Chơi ngay</small></button></section>
+        <section class="gmww-home-discover-banner-v352" aria-label="Khám phá GMWW"><header class="gmww-home-discover-title-v352"><span class="gmww-home-heading-gem" aria-hidden="true">✦</span><h2>Khám Phá</h2><span class="gmww-home-heading-line" aria-hidden="true"></span></header><div class="gmww-home-tiles-v350 gmww-home-tiles-v351">
+          <button type="button" data-home-destination="library" data-home-library-tab="cards"><img src="home-art/home-sea-cards-v354.svg" alt=""><b>Bộ Bài</b><small>Vai trò · Artifact</small></button>
+          <button type="button" data-home-destination="members"><img src="home-art/home-sea-members-v354.svg" alt=""><b>Thành Viên</b><small>Quản lý · Xếp hạng</small></button>
+          <button type="button" data-home-destination="library" data-home-library-tab="templates"><img src="home-art/home-sea-templates-v354.svg" alt=""><b>Ván Mẫu</b><small>Thiết lập nhanh</small></button>
+        </div></section>
+        <section class="gmww-home-stats-v350 gmww-home-stats-v351 gmww-home-panel-v352 gmww-home-top3-panel-v377" aria-label="Ba người chơi có tỷ lệ thắng cao nhất">
+          <header class="gmww-home-top3-heading-v377">
+            <span class="gmww-home-top3-trophy-v377" aria-hidden="true">♛</span>
+            <div><small>VINH DANH LÀNG BIỂN</small><h2>Top 3 Tỷ Lệ Thắng</h2><p>Những chiến binh xuất sắc nhất</p></div>
+            <button id="gmwwHomeTop3Ranking" type="button" aria-label="Mở bảng xếp hạng thành viên">Xếp hạng ❯</button>
+          </header>
+          <div class="gmww-home-top3-board-v377">
+            <div id="gmwwHomeTop3" class="gmww-home-top3-v377" role="list" aria-label="Top 3 tỷ lệ thắng" aria-live="polite"></div>
+            <p id="gmwwHomeTop3Status" role="status">Đang tải bảng vinh danh…</p>
+            <small class="gmww-home-top3-note-v377">Tỷ lệ thắng = trận thắng / tổng số ván đã chơi</small>
+          </div>
+          <div class="gmww-home-legacy-hidden-v377" hidden aria-hidden="true">
+            <div data-stat="members"><strong id="gmwwHomeMemberCount">—</strong></div>
+            <div data-stat="online"><strong id="gmwwHomeOnlineCount">—</strong></div>
+            <div data-stat="games"><strong id="gmwwHomePlaysCount">—</strong></div>
+            <div data-stat="wins"><strong id="gmwwHomeLeaderWins">—</strong><small id="gmwwHomeLeaderboard">—</small></div>
+          </div>
+        </section>
+        <section class="gmww-home-activity-v350 gmww-home-activity-v351 gmww-home-panel-v352" aria-label="Hoạt Động Gần Đây"><header class="gmww-home-activity-heading"><div class="gmww-home-activity-title"><span class="gmww-home-heading-gem" aria-hidden="true">◷</span><div><span class="gmww-home-kicker">DẤU ẤN NHỮNG VÁN CHƠI</span><h2>Hoạt Động Gần Đây</h2></div></div><div class="gmww-home-activity-tools"><button type="button" id="gmwwHomeRefresh" aria-label="Làm mới hoạt động" title="Làm mới hoạt động">↻</button><button type="button" id="gmwwHomeOpenRanking">Xem tất cả ❯</button></div></header>
+          <p id="gmwwHomeRecentResult" role="status">Đang tải hoạt động…</p><div id="gmwwHomeRecentRows" class="gmww-home-recent-rows" aria-live="polite"></div>
+        </section>
+        <span id="gmwwHomeVersion" class="gmww-home-version-sr">GMWW V3.77</span>
+      </div>
+    </section>
+    <section class="page" id="members">
+      <div class="member-page">
+        <div class="member-page-head">
+          <div><h2>👥 Thành Viên</h2><small>Quản lý thành viên • Theo dõi kết quả</small></div>
+        </div>
+
+        <div class="member-unified-box" id="memberGroupOverview">
+          <div class="member-unified-heading"><span class="member-unified-index">01</span><div><h3>Tổng quan thành viên</h3></div></div>
+          <div class="member-summary" aria-label="Số liệu thành viên">
+            <div><small>Tổng thành viên</small><b id="memberTotal">0</b></div>
+            <div><small>Đang trực tuyến</small><b id="memberOnline">0</b></div>
+            <div><small>Tổng số ván</small><b id="memberGames">0</b></div>
+            <div><small>Yêu cầu đặt lại mật khẩu</small><b id="memberResetRequests">0</b></div>
+          </div>
+        </div>
+
+        <div class="member-unified-box" id="memberGroupDirectory">
+          <div class="member-unified-heading"><span class="member-unified-index">02</span><div><h3>Quản lý thành viên</h3></div></div>
+          <div class="member-head-actions">
+            <button class="member-icon-btn" id="refreshMembers" type="button" aria-label="Làm mới danh sách" title="Làm mới"><span aria-hidden="true">↻</span></button>
+            <button class="member-add-btn" id="addMember" type="button" aria-label="Thêm thành viên"><span aria-hidden="true">＋</span><b>THÊM</b></button>
+          </div>
+          <section class="member-pane active" id="memberPane-directory" aria-label="Danh sách thành viên">
+            <div class="member-toolbar">
+              <input id="memberSearch" class="member-search" type="search" placeholder="Tìm tên hoặc mã thành viên" aria-label="Tìm thành viên">
+              <div class="member-filter-row" id="memberFilterRow" aria-label="Lọc thành viên">
+                <button class="active" data-member-filter="all" type="button">Tất cả</button>
+                <button data-member-filter="online" type="button">Trực tuyến</button>
+                <button data-member-filter="offline" type="button">Ngoại tuyến</button>
+                <button data-member-filter="reset" type="button">Đặt lại MK</button>
+              </div>
+            </div>
+            <div class="member-list" id="memberDirectoryList"><div class="member-empty">Đang tải thành viên…</div></div>
+          </section>
+        </div>
+
+        <details class="member-unified-box member-ranking-collapse" id="memberGroupRanking">
+          <summary class="member-unified-heading" aria-label="Mở hoặc thu gọn bảng xếp hạng"><span class="member-unified-index">03</span><div><h3>Xếp hạng thành viên</h3></div><span class="member-ranking-chevron" aria-hidden="true">⌄</span></summary>
+          <section class="member-pane active" id="memberPane-ranking" aria-label="Bảng xếp hạng">
+            <div class="member-section-head"><button class="member-tool-btn" id="resetRanking" type="button" aria-label="Đặt lại toàn bộ xếp hạng" title="Đặt lại xếp hạng">↻ ĐẶT LẠI</button></div>
+            <div class="ranking-list" id="memberRankingList"><div class="member-empty">Chưa có dữ liệu xếp hạng.</div></div>
+          </section>
+        </details>
+      </div>
+    </section>
+    <section class="page play-page" id="start">
+      <div class="play-shell" id="playShell" data-phase="lobby">
+
+        <section class="play-setup-strip gm-stage-timeline-v330" id="playSetupStrip" aria-label="Luồng vào trận">
+          <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
+          <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
+          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
+          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
+          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
+          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
+        </section>
+
+        <section id="playBattleTop" class="play-battle-top" aria-label="Điều khiển trong trận" hidden>
+          <button id="battleBack" type="button" aria-label="Lượt trước" title="Lượt trước"><span aria-hidden="true">←</span></button>
+          <div id="battleTimeline" class="play-battle-timeline" aria-label="Thứ tự gọi vai trò" role="list"></div>
+          <button id="battleAdvance" type="button" aria-label="Tiếp tục" title="Tiếp tục"><span aria-hidden="true">›</span></button>
+        </section>
+
+        <section class="play-gather-toolbar hidden" id="playGatherToolbar" aria-label="Công cụ Tập hợp dân làng">
+          <div class="play-gather-toolbar-head" title="Giữ và kéo để di chuyển • Chạm đúp để về vị trí đầu" tabindex="0" aria-label="Kéo để di chuyển thanh Tập hợp dân làng">
+            <span class="play-gather-drag-grip" aria-hidden="true">⠿</span>
+            <b>TẬP HỢP DÂN LÀNG</b>
+            <span id="playGatherCount" aria-live="polite">0 người</span>
+            <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
+          </div>
+          <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
+          <div class="play-gather-toolbar-actions">
+            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
+            <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
+            <button id="playGatherRandom" type="button"><span aria-hidden="true">⚄</span><b>NGẪU NHIÊN</b></button>
+            <button id="playGatherManual" type="button"><span aria-hidden="true">☝</span><b>THỦ CÔNG</b></button>
+            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
+            <button id="playGatherDisband" type="button"><span aria-hidden="true">↩</span><b>GIẢI TÁN</b></button>
+          </div>
+        </section>
+
+        <section class="play-seat-preset-panel" id="playSeatPresetPanel" role="dialog" aria-label="Chọn Seat Mẫu" aria-modal="false" hidden>
+          <div class="play-seat-preset-heading">
+            <div><b>SEAT MẪU</b><small>Chạm vào sơ đồ dấu chấm để chọn vị trí</small></div>
+            <button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button>
+          </div>
+          <p class="play-seat-preset-auto" id="playSeatPresetAutoHint">Một vòng duy nhất quanh lửa • Tự chọn hình theo số người</p>
+          <div id="playSeatPresetGrid" class="play-seat-preset-grid" aria-label="Sơ đồ các Seat Mẫu"></div>
+        </section>
+
+        <section class="play-role-assignment-panel hidden" id="playRoleAssignmentPanel" hidden aria-label="Bước 5: Phân Vai">
+          <header class="play-assignment-heading">
+            <div class="play-assignment-heading-copy"><small>05 / 07 · PHÂN VAI</small><h2>PHÂN VAI CHO DÂN LÀNG</h2><p>Lá bài đã phân được lưu ở GM. Người Chơi chỉ nhận bài sau khi GM nhấn Phát Vai ở bước 6.</p></div>
+            <span class="play-assignment-private">GM RIÊNG TƯ</span>
+          </header>
+          <div class="play-assignment-progress">
+            <strong id="playAssignmentCount">0 / 0 người</strong>
+            <span id="playAssignmentNotice" aria-live="polite">Chờ chia Vai Trò</span>
+          </div>
+          <div class="play-assignment-toolbar" aria-label="Công cụ Phân Vai">
+            <button id="playAssignmentRandom" type="button"><span aria-hidden="true">⚄</span> CHIA NGẪU NHIÊN</button>
+            <button id="playAssignmentInOrder" type="button"><span aria-hidden="true">☷</span> THEO THỨ TỰ</button>
+            <button id="playAssignmentArtifactShuffle" type="button"><span aria-hidden="true">✦</span> ĐỔI ARTIFACT</button>
+          </div>
+          <p class="play-assignment-help">Chọn Vai Trò khác để <b>hoán đổi</b> với người đang giữ lá đó, bảo toàn đúng số lá của Ván Mẫu. Artifact có thể chọn riêng cho từng người.</p>
+          <div class="play-assignment-rows" id="playAssignmentRows" role="list" aria-label="Danh sách phân Vai Trò và Artifact"></div>
+          <footer class="play-assignment-footer">
+            <button id="playAssignmentBack" type="button" class="play-assignment-back">← VÁN MẪU</button>
+            <button id="playAssignmentConfirm" type="button" class="play-assignment-confirm" disabled>✓ LƯU</button>
+          </footer>
+        </section>
+
+        <section class="play-world" id="playWorld" aria-label="Sân chơi 2D">
+          <div class="play-sky-glow"></div>
+          <div class="play-cloud play-cloud-a"></div>
+          <div class="play-cloud play-cloud-b"></div>
+          <div class="play-island-back"></div>
+          <div class="play-island-front"></div>
+          <div class="play-water-ripple play-water-ripple-a"></div>
+          <div class="play-water-ripple play-water-ripple-b"></div>
+
+          <div class="play-world-status">
+            <span class="play-cycle-badge" id="playCycleBadge">CHƯA BẮT ĐẦU</span>
+            <span class="play-artifact-cap"><i>✦</i><b id="playArtifactCount">0/3</b></span>
+          </div>
+
+          <div class="play-player-ring" id="playPlayerRing"></div>
+
+          <div class="play-village-core">
+            <div class="play-core-halo"></div>
+            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Tạo Phòng"></button>
+            <small id="playCoreKicker">GMWW • SÂN CHƠI</small>
+            <b id="playCoreTitle">PHÒNG CHỜ</b>
+            <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
+          </div>
+
+          <div class="play-card-fan" id="playCardFan" aria-label="Vai Trò và Artifact">
+            <button class="play-focus-card role-card is-front" id="playRoleCard" data-play-card="role" type="button">
+              <span class="play-card-type">VAI TRÒ</span>
+              <img id="playRoleArtwork" alt="">
+              <b id="playRoleName">Chưa phân Vai Trò</b>
+            </button>
+            <button class="play-focus-card artifact-card" id="playArtifactCard" data-play-card="artifact" type="button">
+              <span class="play-card-type">ARTIFACT</span>
+              <img id="playArtifactArtwork" alt="">
+              <b id="playArtifactName">Chưa có Artifact</b>
+            </button>
+          </div>
+        </section>
+
+        
+
+
+
+
+        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Hành động · Khôi phục">
+        <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
+          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+        </section>
+
+        <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
+        <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
+          <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
+          <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, cuộn ngang"></div>
+        </section>
+        <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
+          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
+        </section>
+        </section>
+        <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
+          <header><b id="battleTargetTitle">CHỌN MỤC TIÊU</b><button id="battleTargetClose" type="button" aria-label="Đóng chọn mục tiêu">×</button></header>
+          <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
+          <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
+          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm">OK</button></footer>
+        </section>
+
+        <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
+          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
+            <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
+            <div class="battle-wolf-actions">
+              <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
+              <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
+              <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
+              <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
+              <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
+              <button id="battleForceEnd" type="button" title="Kết thúc Ván">⏻ Kết thúc Ván</button>
+            </div>
+          </div>
+          <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
+            <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><button id="battleDetailsClose" type="button" aria-label="Đóng Thông Tin trận đấu">×</button></div>
+            <div class="battle-action-instruction">Hành động được hiển thị trong thanh cuộn phía dưới màn hình.</div>
+            <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleCancel" type="button">HỦY</button><button id="battleConfirm" type="button">OK</button></div>
+            <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
+            <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
+          </div>
+        </section>
+
+        <nav class="gm-top-menu-v293 gm-bottom-menu-v325 gm-stage-dock-v330" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
+          <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span></button>
+          <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle" aria-live="polite">SẢNH CHỜ</b><small id="playPhaseHint" aria-live="polite">CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span></button>
+        </nav>
+      </div>
+    </section>
+
+    <section class="page" id="library">
+      <div id="libraryHome">
+        <nav class="library-tabs">
+          <button class="libtab active" data-lib="lab">🧪<b>Lab</b></button>
+          <button class="libtab" data-lib="cards">🎭<b>VAI TRÒ</b></button>
+          <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
+          <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
+          <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
+          <button class="libtab" data-lib="statuses">❄<b>Trạng Thái</b></button>
+          <button class="libtab" data-lib="themes">🌊<b>Chủ Đề</b></button>
+          <button class="libtab" data-lib="audio">🔊<b>Âm Thanh</b></button>
+          <button class="libtab" data-lib="templates">▦<b>Ván Mẫu</b></button>
+        </nav>
+
+        <section class="libpane active" id="lib-lab" aria-label="Lab kiểm thử Engine">
+          <div class="gmww-lab">
+            <header class="gmww-lab-head"><span class="gmww-lab-symbol" aria-hidden="true">⚗</span><div><h2>Lab</h2><p>Kiểm thử mô phỏng chuỗi hiệu ứng nhiều đêm</p></div></header>
+            <div class="gmww-lab-warning" role="note"><b>MÔ PHỎNG THAM CHIẾU — CHƯA XÁC MINH ENGINE THỰC</b><span>Lab chạy trong bộ nhớ riêng, không tạo phòng, gửi hành động, sửa dữ liệu hoặc kết nối phiên chơi trên Production. Kết quả PASS chỉ xác nhận bộ mô phỏng, không khẳng định luật trong game đã hoạt động đúng.</span></div>
+            <div class="gmww-lab-controls"><label>Số đêm mô phỏng<select id="gmwwLabNights"><option value="3">3 đêm</option><option value="5" selected>5 đêm</option><option value="10">10 đêm</option></select></label><label>Tình huống<select id="gmwwLabScenario"><option value="all">Tất cả tương tác</option><option value="freeze">Đóng băng → Chặn hành động</option><option value="protect">Bảo vệ → Sói tấn công</option><option value="redirect">Dịch chuyển mục tiêu</option><option value="revive">Giết → Hồi sinh</option><option value="artifact">Artifact ưu tiên → Giới hạn</option></select></label></div>
+            <button id="gmwwLabRun" type="button" class="gmww-lab-run">▶ Chạy mô phỏng</button>
+            <div id="gmwwLabSummary" class="gmww-lab-summary" aria-live="polite">Chọn tình huống và nhấn Chạy mô phỏng để xem nhật ký.</div>
+            <div id="gmwwLabLog" class="gmww-lab-log" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="libpane" id="lib-cards">
+          <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small class="catalog-count-badge" id="cardFaceCount">0 / 0</small></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
+          <div class="filter-row" data-filter-kind="cards">
+            <button class="filter active" data-filter="all">Tất cả</button>
+            <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
+          </div>
+          <div class="card-grid" id="cardGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-artifacts">
+          <section class="favorite-shelf" id="artifactFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small class="catalog-count-badge" id="artifactFaceCount">0 / 0</small></div><div class="card-grid favorite-grid" id="artifactFavoriteGrid"></div></section>
+          <div class="filter-row" data-filter-kind="artifacts">
+            <button class="filter active" data-filter="all">Tất cả</button>
+            <button class="filter" data-filter="hidden">◌ Tạm ẩn</button>
+          </div>
+          <div class="card-grid" id="artifactGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-actions">
+          <div class="section-tools">
+            <div class="seg" id="actionKindSeg"><button class="active" data-action-kind="role">VAI TRÒ</button><button data-action-kind="artifacts">ARTIFACTS</button></div>
+            <input class="search" id="actionSearch" placeholder="Tìm Hành Động">
+          </div>
+          <div class="compact-box-grid" id="actionGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-effects">
+          <div class="section-tools"><input class="search" id="effectSearch" placeholder="Tìm Hiệu Ứng"></div>
+          <div class="compact-box-grid" id="effectGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-statuses" aria-label="Trạng thái hiển thị trên nhân vật">
+          <div class="character-status-library">
+            <header class="character-status-library-head">
+              <h2>Trạng Thái</h2>
+              <p>Gán trạng thái cho Người Chơi bằng nút trên sân (Hành Động của lượt). Bật “Hiện trên Player Web” để người chơi thấy trạng thái đó.</p>
+            </header>
+            <div class="status-library-grid" id="statusLibraryGrid"></div>
+          </div>
+        </section>
+
+        <section class="libpane" id="lib-themes">
+          <div class="theme-toolbar">
+            <div class="seg" id="themeSeg"></div>
+            <button class="icon-add" id="addTheme" aria-label="Thêm Chủ Đề">＋</button>
+          </div>
+          <div id="themeUiSections"></div>
+          <section class="theme-section theme-section-pinned" id="villageSceneSettings">
+            <div class="theme-section-head"><h3>🌊 Bối cảnh Làng 2D · Đồng bộ Player Web</h3></div>
+            <p>Chỉ Server GM được thay đổi. Ảnh xuất bản đồng bộ tự động tới Player Web.</p>
+            <label>Ảnh ban ngày <input id="gmVillageDay" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <label>Ảnh ban đêm <input id="gmVillageNight" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <div class="button-row"><button type="button" id="gmVillagePreview">XEM TRƯỚC</button><button type="button" id="gmVillagePublish" class="primary">XUẤT BẢN</button><button type="button" id="gmVillageRollback">KHÔI PHỤC BẢN TRƯỚC</button></div>
+            <p id="gmVillageStatus" role="status">Chưa tải cấu hình.</p>
+          </section>
+          <section class="theme-section theme-section-pinned" aria-label="Quản lý Artwork">
+            <div class="theme-section-head"><h3>QUẢN LÝ ARTWORK</h3></div>
+            <div class="sea-artifact-import-panel">
+              <strong>Artwork Vai Trò</strong>
+              <p>Chọn từng lá bên dưới để quản lý artwork Vai Trò. Công cụ nhập hàng loạt đang được hoàn thiện, chưa bật để tránh gán nhầm ảnh.</p>
+              <div id="themeCardRows"></div>
+              <strong>Artwork Artifact · nhập hàng loạt</strong>
+              <label for="seaArtifactImportFile"><strong>Nhập 44 Artwork chủ đề Biển, không bảng tên</strong></label>
+              <input id="seaArtifactImportFile" type="file" accept=".zip,application/zip" aria-label="Chọn ZIP 44 artwork biển">
+              <p id="seaArtifactImportStatus" role="status">Chọn ZIP 44 Artwork, kiểm tra ảnh ghép tên trước khi cập nhật kho dùng chung.</p>
+              <div id="seaArtifactImportPreview" class="sea-artifact-import-preview"></div>
+              <button id="seaArtifactImportStart" class="primary" type="button" disabled>NẠP 44 ARTWORK LÊN SERVER</button>
+              <div id="themeArtifactRows"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="libpane" id="lib-audio">
+          <div class="seg audio-seg" id="audioKindSeg">
+            <button class="active" data-audio-kind="cards">Vai Trò</button>
+            <button data-audio-kind="artifacts">ARTIFACTS</button>
+            <button data-audio-kind="actions">Hành Động</button>
+            <button data-audio-kind="system">Hệ Thống</button>
+          </div>
+          <div class="audio-list" id="audioGrid"></div>
+        </section>
+
+        <section class="libpane" id="lib-templates">
+          <div class="template-library-wrap">
+            <div class="template-library-head"><div><b>VÁN MẪU</b><small>Tạo trước tại Thư Viện • khi chơi chỉ chọn Ván Mẫu</small></div><button id="addGameTemplate" type="button">＋ TẠO VÁN MẪU</button></div>
+            <div class="template-library-list" id="gameTemplateLibraryList"><div class="member-empty">Đang tải Ván Mẫu…</div></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="entityEditor" class="card-editor hidden">
+        <div class="editor-bar">
+          <button class="editor-back" id="topBackEntity" aria-label="Đóng">×</button>
+          <div class="face-switch"><button class="active" data-face="front">Mặt Player Web</button><button data-face="back">Cài đặt</button></div>
+        </div>
+
+        <div class="face active" id="entityFront">
+          <article class="player-card village" id="playerCard">
+            <div class="card-zone card-zone-art"><img id="playerDisplay" width="3072" height="2560" alt=""></div>
+            <div class="card-zone card-zone-head">
+              <div class="player-title" id="playerName"></div>
+              <div class="player-faction-badge" id="playerFactionBadge"></div>
+            </div>
+            <div class="card-zone card-zone-info" id="playerInformation"></div>
+          </article>
+        </div>
+
+        <div class="face" id="entityBack">
+          <div class="settings-card">
+            <h3 id="entitySettingsTitle">Cài đặt Vai Trò</h3>
+            <div class="form-grid">
+              <label class="full">Tên<input id="entityName"></label>
+              <div class="full field-block" id="factionBlock"><span>Phe mặc định</span><div class="faction-seg" id="factionSeg">
+                <button data-faction="village">🍃 Phe Dân Làng</button>
+                <button data-faction="wolf"><span class="red-paw">🐾</span> Phe Sói</button>
+                <button data-faction="third">🔥 Phe Ba</button>
+              </div></div>
+              <label class="full">Thông tin<textarea id="entityInformation"></textarea></label>
+              <label id="livesField">Số mạng<input id="entityLives" type="number" min="1" max="99" value="1"></label>
+            </div>
+
+            <div class="subhead">Tuỳ chọn của Lá</div>
+            <div class="check-grid" id="roleFlagGrid">
+              <label class="check"><input type="checkbox" id="flagUseDay"><span>Hoạt động Ban Ngày</span></label>
+              <label class="check"><input type="checkbox" id="flagUseNight"><span>Hoạt động Ban Đêm</span></label>
+              <label class="check"><input type="checkbox" id="flagNightImmune"><span>Bất tử Ban Đêm</span></label>
+              <label class="check"><input type="checkbox" id="flagAllowMultipleActions"><span>Cho phép nhiều Hành Động trong cùng lượt</span></label>
+              <label class="check"><input type="checkbox" id="flagPassive"><span>Lá có Nội tại / Passive</span></label>
+              <label class="check"><input type="checkbox" id="flagSoloWolfOnly"><span>Chỉ khi là Sói đơn độc</span></label>
+            </div>
+
+            <div class="form-grid compact-fields">
+              <label class="full">Điều kiện thắng riêng<textarea id="winCondition" placeholder="Để trống nếu thắng theo Phe"></textarea></label>
+            </div>
+
+            <div class="subhead">Rule nâng cao của Lá</div>
+            <div class="advanced-rule">
+              <label class="check"><input type="checkbox" id="passiveRuleEnabled"><span>Dùng Passive Rule</span></label>
+              <div class="form-grid compact-fields">
+                <label>Kích hoạt Passive<select id="passiveRuleType">
+                  <option value="stake_survive">Bị Treo Cổ lần đầu</option><option value="stake_revenge">Chết do Treo Cổ</option><option value="source_death">Nguồn chết</option>
+                </select></label>
+                <label>Lần đầu<select id="passiveFirstTime"><option value="">Không quy định</option><option value="survive">Sống sót</option><option value="block">Chặn tác động</option><option value="trigger">Kích hoạt rule</option></select></label>
+                <label>Lần sau<select id="passiveNextTime"><option value="">Không quy định</option><option value="die">Chết</option><option value="trigger">Kích hoạt rule</option><option value="repeat">Lặp lại</option></select></label>
+                <label class="check"><input type="checkbox" id="passiveOnDeath"><span>Kích hoạt khi chết</span></label>
+                <label class="check"><input type="checkbox" id="passiveSkipDead"><span>Bỏ qua nếu mục tiêu đã chết</span></label>
+              </div>
+            </div>
+            <div class="advanced-rule">
+              <label class="check"><input type="checkbox" id="groupGateEnabled"><span>Dùng Group Action Gate</span></label>
+              <div class="form-grid compact-fields">
+                <label>Gate Hành Động<select id="groupGateAction"></select></label>
+                <label>Phạm vi Gate<select id="groupGateScope"><option value="self">Riêng Lá này</option><option value="shared">Dùng chung nhóm</option><option value="faction">Cùng Phe</option></select></label>
+                <label class="full">Gate chặn khi<div class="inline-checks">
+                  <label class="check small"><input type="checkbox" id="gateExpelled"><span>Bị Đuổi</span></label>
+                  <label class="check small"><input type="checkbox" id="gateBlocked"><span>Bị Chặn/Đóng Băng</span></label>
+                </div></label>
+              </div>
+            </div>
+
+            <div class="advanced-rule">
+              <div class="subhead">Điều kiện & Thuộc tính đặc biệt</div>
+              <div class="check-grid">
+                <label class="check"><input type="checkbox" id="ruleSystemRequired"><span>Yêu cầu Hệ Thống</span></label>
+                <label class="check"><input type="checkbox" id="ruleUsesPackBite"><span>Dùng Sói Cắn chung</span></label>
+                <label class="check"><input type="checkbox" id="ruleRequiresSoloWolf"><span>Chỉ khi không còn Sói khác sống</span></label>
+                <label class="check"><input type="checkbox" id="ruleActorMayBeDead"><span>Người thực hiện có thể đã chết</span></label>
+                <label class="check"><input type="checkbox" id="ruleAllowFriendlyFaction"><span>Cho phép chọn cùng Phe</span></label>
+                <label class="check"><input type="checkbox" id="ruleReplacesWolfBite"><span>Thay thế Sói Cắn</span></label>
+              </div>
+              <div class="form-grid compact-fields">
+                <label class="full">Giới hạn đặc biệt<textarea id="specialLimits" placeholder="Các giới hạn riêng của Lá"></textarea></label>
+                <label class="full">Điều kiện đặc biệt<textarea id="specialConditions" placeholder="Các điều kiện riêng của Lá"></textarea></label>
+                <label class="full">Thuộc tính đặc biệt<textarea id="specialAttributes" placeholder="Các thuộc tính riêng của Lá"></textarea></label>
+              </div>
+            </div>
+
+            <div class="artifact-only hidden" id="artifactSpecific">
+              <div class="subhead">Tuỳ chọn riêng ARTIFACTS</div>
+              <div class="check-grid">
+                <label class="check"><input type="checkbox" id="artifactOwnerSelection"><span>GM chọn chủ sở hữu</span></label>
+                <label class="check"><input type="checkbox" id="artifactPersistentOwner"><span>Giữ chủ sở hữu xuyên ván</span></label>
+                <label class="check"><input type="checkbox" id="artifactRevealFollow"><span>Chỉ hiển thị mục tiêu theo dõi</span></label>
+                <label class="check"><input type="checkbox" id="artifactPriorityFirst"><span>Ưu tiên sử dụng đầu tiên</span></label>
+              </div>
+              <p class="field-hint">Artifact được gọi trước lượt Vai Trò; nếu đã sử dụng, lượt thông thường sẽ tự bỏ qua.</p>
+              <div class="form-grid compact-fields">
+                <label>Thức cùng Vai Trò<select id="artifactWakeRole"></select></label>
+                <label>Thức cùng Hành Động<select id="artifactWakeAction"></select></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-title"><h3>Cài đặt Hành Động trên Lá</h3><button class="icon-add" id="addFunction" aria-label="Thêm Hành Động">＋</button></div>
+            <div id="functionList"></div>
+          </div>
+
+          <div class="editor-actions editor-actions-icons">
+            <button class="secondary editor-action-icon" id="backEntity" type="button" aria-label="Quay về" title="Quay về">‹</button>
+            <button class="primary editor-action-icon" id="saveEntity" type="button" aria-label="Lưu" title="Lưu">✓</button>
+            <button class="secondary editor-action-icon" id="hideEntity" type="button" aria-label="Ẩn" title="Ẩn">◌</button>
+            <button class="danger editor-action-icon" id="deleteEntity" type="button" aria-label="Xoá" title="Xoá">⌫</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="settings">
+      <div class="settings-page">
+        <div class="settings-page-head"><div><h2>⚙ Cài Đặt</h2></div>
+          <div class="settings-hub-mini-health" id="settingsHubMiniHealth" aria-live="polite"><span class="settings-hub-mini-dot"></span><span id="settingsHubMiniText">Sẵn sàng kiểm tra</span></div>
+        </div>
+        <div class="settings-unified-box" id="settingsGroupUpdate">
+          <div class="settings-unified-heading"><span class="settings-unified-index">01</span><div><h3>Cập nhật & đồng bộ</h3></div></div>
+          <div class="settings-tool-inner update-manager-card" id="updateManagerCard">
+          <div class="settings-operation-console settings-update-console" aria-label="Trạng thái cập nhật">
+          <div class="health-v236-head"><div><span class="update-dot checking" id="updateDot"></span><b>Cập Nhật Hệ Thống</b></div><div class="update-pill-group"><span class="update-pill checking" id="updateStatus">ĐANG KIỂM TRA</span><button type="button" id="retryUpdateCheck" class="update-retry" aria-label="Kiểm tra lại kết nối Server và phiên bản" title="Kiểm tra lại">↻</button></div></div>
+          <div class="update-version-grid">
+            <div><small>Ứng dụng</small><b id="updateShellVersion">V—</b></div>
+            <div><small>Game Runtime</small><b id="updateRuntimeVersion">V—</b></div>
+            <div><small>Server</small><b id="updateServerVersion">V—</b></div>
+          </div>
+          <p class="update-message" id="updateMessage">Đang kiểm tra phiên bản mới…</p>
+          <div class="update-decision" id="updateDecision"><b id="updateDecisionTitle">Đang xác định thao tác cần thiết…</b><small id="updateDecisionHint">Hệ thống sẽ tự chọn đúng thao tác cho phiên bản hiện tại.</small></div>
+          <small class="update-detail" id="updateDetail" hidden></small>
+          <div class="update-release-notes" id="updateReleaseNotes" aria-live="polite" aria-label="Có gì mới"><b class="update-release-title">Có gì mới</b><ul class="update-release-list"><li>Đang tải thông tin cập nhật…</li></ul></div>
+          <div class="update-progress" id="updateProgress" role="progressbar" aria-label="Tiến trình cập nhật và đồng bộ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-state="idle">
+            <div class="update-progress-head"><span id="updateProgressTitle">Chưa bắt đầu</span><b id="updateProgressPercent">0%</b></div>
+            <div class="update-progress-track"><span id="updateProgressFill"></span></div>
+            <div class="update-progress-range"><small>0%</small><small>100%</small></div>
+          </div>
+          </div>
+          <div class="health-v236-actions update-actions update-actions-three">
+            <button class="settings-action settings-action-server" id="installRuntimeUpdate" type="button"><span>⬇</span><b>CẬP NHẬT RUNTIME</b></button>
+            <button class="settings-action settings-action-server" id="downloadNewIPA" type="button"><span>📦</span><b>TẢI IPA</b></button>
+            <button class="settings-action settings-action-server" id="syncPlayerWebUpdate" type="button"><span>⟳</span><b>ĐỒNG BỘ WEB</b></button>
+          </div>
+        </div>
+        </div>
+        <div class="settings-unified-box" id="settingsGroupHealth">
+          <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
+          <div class="settings-health-action"><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
+<p class="settings-tools-grid-summary" id="settingsToolsGridSummary">Đầy đủ 14 công cụ · Cuộn xuống để xem tất cả</p>
+          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="14 công cụ kiểm tra và bảo trì hiển thị theo lưới">
+<div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
+          <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
+            <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
+            <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
+            <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
+          </div>
+          
+        </div>
+            <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
+              <b class="settings-operation-tool-heading">Vận hành</b>
+              <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
+                <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
+                <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
+                <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
+              </div>
+            </div>
+            <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
+              <b class="settings-operation-tool-heading">Server</b>
+              <div class="health-v236-actions">
+                <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
+                <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+                <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
+              </div>
+            </div>
+            <div class="settings-tool-inner diagnostics-card" id="systemDiagnosticsCard">
+              <b class="settings-operation-tool-heading">Chẩn đoán</b>
+              <div class="health-v236-actions diagnostic-actions">
+                <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
+                <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
+                <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
+          <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
+          <small class="maintenance-detail" id="maintenanceDetail">—</small>
+          </div>
+          <div class="settings-operation-console settings-operations-console" id="settingsOperationResults" aria-label="Kết quả vận hành" role="region" aria-live="polite">
+            <div class="settings-operation-console-heading"><span class="ops-dot" id="opsDot"></span><b id="gmwwOpsTitle">KẾT QUẢ VẬN HÀNH</b><span class="ops-pill" id="opsOverall">CHƯA KIỂM TRA</span></div>
+            <div class="ops-status-grid">
+              <div><small>SERVER</small><b id="opsServerState">—</b></div>
+              <div><small>LƯU TRỮ</small><b id="opsStorageState">—</b></div>
+              <div><small>REALTIME</small><b id="opsRealtimeState">—</b></div>
+              <div><small>PHIÊN BẢN</small><b id="opsReleaseState">—</b></div>
+            </div>
+            <div class="ops-report" id="opsReport">
+              <div data-ops-check="server"><span>Cloudflare Worker</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="storage"><span>Durable Objects</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="player"><span>Player Web</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="update"><span>Runtime / IPA</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="room"><span>Phòng đang chọn</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="realtime"><span>WebSocket</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="characters"><span>Kho nhân vật</span><b>—</b><small>Chưa kiểm tra</small></div>
+              <div data-ops-check="runtime"><span>Lỗi ứng dụng</span><b>—</b><small>Chưa kiểm tra</small></div>
+            </div>
+            <div class="ops-advice" id="opsAdvice" role="status">Chưa kiểm tra hệ thống.</div>
+            <small class="ops-footnote" id="opsLastChecked">—</small>
+            <div class="settings-operation-console-heading settings-operation-subheading"><span class="health-dot checking" id="serverHealthDot"></span><b>SỨC KHỎE SERVER</b><span class="health-pill checking" id="serverHealthPill">CHƯA KIỂM TRA</span></div>
+            <div class="health-v236-status"><b id="serverHealthText">Server</b><strong id="healthLatency">—</strong><small id="serverHealthDetail">—</small></div>
+            <small class="health-checked" id="healthCheckedAt">—</small>
+            <span class="hidden" id="healthPlayerWeb"></span><span class="hidden" id="healthApi"></span><span class="hidden" id="healthVersion"></span>
+            <div class="settings-operation-console-heading settings-operation-subheading"><span class="diagnostic-dot" id="diagnosticDot"></span><b>CHẨN ĐOÁN</b><span class="diagnostic-pill" id="diagnosticStatus">SẴN SÀNG</span></div>
+            <div class="diagnostic-summary"><b id="diagnosticSummary">Chưa quét hệ thống</b><small id="diagnosticHint">—</small></div>
+            <div class="diagnostic-list" id="diagnosticList">
+              <div data-diagnostic="server"><span>Server API</span><b>—</b></div>
+              <div data-diagnostic="player"><span>Player Web</span><b>—</b></div>
+              <div data-diagnostic="update"><span>Kênh cập nhật</span><b>—</b></div>
+              <div data-diagnostic="characters"><span>Kho nhân vật</span><b>—</b></div>
+              <div data-diagnostic="settings"><span>Dữ liệu cài đặt</span><b>—</b></div>
+            </div>
+            <small class="diagnostic-detail" id="diagnosticDetail">—</small>
+          </div>
+        </div>
+        <div class="settings-unified-box" id="settingsGroupTasks">
+          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3></div></div>
+          <div class="settings-operation-console settings-task-console" aria-label="Trạng thái công việc">
+          <div class="gmww-task-summary" id="gmwwTasksSummary" role="status" aria-live="polite">Đang tải công việc từ GitHub…</div>
+          <p class="gmww-task-review-health" id="gmwwTaskReviewHealth" role="status" aria-live="polite" data-ready="false">Bộ xác nhận V3.32 đang kiểm tra giao diện và dữ liệu công việc…</p>
+          <p class="gmww-task-review-help">Để xác nhận một công việc: chọn <b>XÁC NHẬN HOÀN THÀNH</b> hoặc <b>BỎ QUA</b> dưới công việc. Đăng nhập GitHub và chọn lý do đóng Issue tương ứng. Khi quay lại, nhấn Làm mới tiến độ để cập nhật.</p>
+          <div class="gmww-task-section"><h4>Việc cần tiếp tục <span id="gmwwTasksOpenCount">—</span></h4>
+            <div class="gmww-task-list" id="gmwwTasksOpenList"><p class="gmww-task-empty">Đang tải danh sách công việc…</p></div>
+          </div>
+          <details class="gmww-task-history" id="gmwwTasksHistory"><summary>Lịch sử hoàn tất <span id="gmwwTasksDoneCount">0</span></summary><div class="gmww-task-list" id="gmwwTasksDoneList"><p class="gmww-task-empty">Chưa có mục hoàn tất được ghi nhận.</p></div></details>
+          </div>
+          <div class="gmww-task-actions"><button class="settings-action settings-action-server" id="gmwwTasksReload" type="button"><span>↻</span><b>LÀM MỚI TIẾN ĐỘ</b></button></div>
+          <small class="gmww-task-source" id="gmwwTasksSource">Quyền xác nhận thuộc tài khoản GitHub quản trị dự án. Ứng dụng không lưu mật khẩu hoặc mã truy cập GitHub. Việc hoàn thành và bỏ qua được lưu trong Lịch sử đúng lý do đóng Issue.</small>
+        </div>
+        <div class="settings-unified-box" id="settingsGroupAppearance">
+          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Giao diện & nhân vật</h3></div></div>
+          <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
+          <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
+          <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
+            <button type="button" data-character-scale="75">75%</button>
+            <button type="button" data-character-scale="100">100%</button>
+            <button type="button" data-character-scale="125">125%</button>
+            <button type="button" data-character-scale="150">150%</button>
+            <button type="button" data-character-scale="175">175%</button>
+            <button type="button" data-character-scale="200">200%</button>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="bottomNav" class="gmww-pearl-nav-v342 gmww-pearl-nav-v344" aria-label="Điều hướng chính">
+    <button class="nav active" data-page="home" aria-label="Trang Chủ"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24 24 8l18 16M12 22v20h24V22M20 42V29h8v13" fill="#ffe5a3" stroke="#d99636" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg></span><b>Trang Chủ</b></button>
+    <button class="nav" data-page="members" aria-label="Thành Viên"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="16" r="8" fill="#d3f5ff"/><circle cx="9" cy="20" r="6" fill="#b3e8ff"/><circle cx="39" cy="20" r="6" fill="#b3e8ff"/><path d="M10 40c1-10 7-15 14-15s13 5 14 15v3H10zM1 41c0-8 4-13 10-14m36 14c0-8-4-13-10-14" fill="#bbeaff" stroke="#6db9df" stroke-width="2"/></svg></span><b>Thành Viên</b></button>
+    <button class="nav start" data-page="start" aria-label="Chơi"><i><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 10q-2-2-2 4v21q0 5 4 3l21-12q4-2 0-4z" fill="#e8faff" stroke="#a1eeff" stroke-width="2" stroke-linejoin="round"/></svg></i><b>Chơi</b></button>
+    <button class="nav" data-page="library" aria-label="Thư Viện"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 11c-7-5-15-5-21-3v31c9-2 16-1 21 4 6-5 13-6 21-4V8c-7-2-15-2-21 3zm0 0v32" fill="#d2f2ff" stroke="#62b9ed" stroke-width="2.5" stroke-linejoin="round"/><path d="M9 15q7-1 11 2M9 23q7-1 11 2m8-8q5-4 11-2m-11 10q5-4 11-2" fill="none" stroke="#378dc3" stroke-width="2" stroke-linecap="round"/></svg></span><b>Thư Viện</b></button>
+    <button class="nav gmww-settings-nav" data-page="settings" aria-label="Cài Đặt"><span class="gmww-dock-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M21 5h6l2 6 5 2 6-2 4 6-5 5v5l5 4-4 7-7-1-4 3-2 5h-7l-2-6-5-2-6 2-4-6 5-5v-5l-5-4 4-7 7 1 4-3z" fill="#a4ebf8" stroke="#2c6d99" stroke-width="2"/><circle cx="24" cy="24" r="8" fill="#075b92" stroke="#fce7af" stroke-width="3"/></svg></span><b>Cài Đặt</b></button>
+  </nav>
+</div>
+
+<div class="sheet hidden" id="editSheet">
+  <div class="sheet-card"><div class="sheet-head"><h3 id="sheetTitle"></h3><button id="sheetClose">×</button></div><div id="sheetBody"></div><div class="button-row"><button class="secondary" id="sheetCancel">Hủy</button><button class="primary" id="sheetSave">Lưu</button></div></div>
+</div>
+
+<div class="sheet hidden" id="playGameSheet">
+  <div class="sheet-card play-game-sheet-card" data-mode="play">
+    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameClose" type="button">×</button></div>
+    <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
+    <div class="play-template-scroll">
+      <label class="play-game-name-label">Ván Mẫu đã lưu
+        <select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu đã lưu"><option value="">Tạo Ván Mẫu mới</option></select>
+      </label>
+      <div class="play-template-editor-only">
+        <label class="play-game-name-label">Tên Ván Mẫu<input id="playGameName" maxlength="48" value="Ván GMWW" placeholder="Tên Ván Mẫu"></label>
+        <div class="play-template-section-title"><b>CHỌN VAI TRÒ</b><span>Chạm vào ảnh để chọn / bỏ chọn</span></div>
+        <div class="play-template-filters">
+          <input id="playTemplateRoleSearch" type="search" placeholder="Tìm Lá Bài theo tên hoặc Phe…" aria-label="Tìm Lá Bài">
+          <select id="playTemplateRoleFaction" aria-label="Lọc phe"><option value="all">Tất cả phe</option><option value="Phe Dân">Phe Dân</option><option value="Phe Sói">Phe Sói</option><option value="Phe Ba">Phe Ba / Khác</option></select>
+          <label class="play-template-star-filter"><input type="checkbox" id="playTemplateOnlyStarred" checked> ★ Thường dùng</label>
+        </div>
+        <div class="play-template-catalog" id="playGameRolePicker" role="region" tabindex="0" aria-label="Danh sách lá bài thường dùng, vuốt ngang để xem tiếp" style="display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch"></div>
+        <div class="play-template-section-title"><b>VAI TRÒ ĐÃ CHỌN</b><span id="playGameRoleCount">0 lá • 0 vai</span></div>
+        <div class="play-template-team-summary" id="playTemplateTeamSummary" role="status"></div>
+        <div class="play-game-role-list" id="playGameRoleList"></div>
+        <p class="play-template-help">Chọn một lần để thêm 1 lá, chạm lại để bỏ chọn. Số lượng và thứ tự của vai đã chọn được điều chỉnh trong danh sách.</p>
+        <div class="play-template-section-title"><b>ARTIFACT CỦA VÁN MẪU</b><span>Thiết lập một lần khi tạo Ván Mẫu</span></div>
+        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Có sử dụng Artifact trong Ván Mẫu</label>
+        <label class="play-template-artifact-time">Thời gian sử dụng Artifact (giây): <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"></span></label>
+        <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
+          <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
+          <small>Hạn mức riêng cho mỗi chu kỳ; 0 = không cho sử dụng.</small>
+        </label>
+        <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
+        <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
+        <p class="play-template-help">Artifact được lưu theo Ván Mẫu. Khi chọn Ván để chơi sẽ sử dụng đúng thiết lập này, không phải chọn lại.</p>
+      </div>
+      <div class="play-template-play-review">
+        <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
+        <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
+        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo cấu hình Ván Mẫu</p>
+        <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
+        <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
+          <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
+          <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
+          <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
+          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="60" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
+          <input id="playAutoAdvance" type="checkbox" checked hidden>
+        </div>
+        <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
+        <p class="play-template-help play-role-time-help">Mỗi vai mặc định theo thời gian chung ở trên; có thể điều chỉnh riêng cho từng lá.</p>
+        <div class="play-template-role-timings" id="playGameRoleTimingList" role="group" aria-label="Thời gian sử dụng riêng từng vai"></div>
+
+      </div>
+    </div>
+    <div class="button-row play-roster-actions">
+      <button class="secondary" id="playGameCancel" type="button">HỦY</button>
+      <button class="secondary" id="playGameDelete" type="button" hidden>XÓA</button>
+      <button class="primary" id="playGameSave" type="button">LƯU</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playEndSheet">
+  <div class="sheet-card play-end-sheet-card" role="dialog" aria-modal="true" aria-labelledby="playEndTitle">
+    <div class="sheet-head"><div><h3 id="playEndTitle">XÁC NHẬN KẾT THÚC VÁN</h3><small id="playEndRoomLabel">Phòng —</small></div><button id="playEndClose" type="button" aria-label="Đóng">×</button></div>
+    <div class="play-end-warning" role="alert"><b>CẢNH BÁO: KẾT THÚC CƯỠNG ÉP</b>
+      <p>Ván chơi sẽ dừng ngay lập tức ở bất kỳ giai đoạn nào. Tất cả người chơi được đưa về sảnh chờ chung.</p>
+      <p>Toàn bộ vai trò, Artifact, kết quả chưa lưu, lượt ngày/đêm, bình chọn, hiệu ứng và vị trí trong ván sẽ bị xóa. Không thể hoàn tác.</p>
+      <p>Phòng được giữ lại để GM thiết lập ván mới; không cần chọn phe thắng.</p>
+    </div>
+    <div class="button-row play-roster-actions">
+      <button class="secondary" id="playEndCancel" type="button">HỦY</button>
+      <button class="danger" id="playEndConfirm" type="button">XÁC NHẬN KẾT THÚC</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playRosterSheet">
+  <div class="sheet-card play-roster-sheet-card">
+    <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
+    <div class="play-roster-toolbar"><span id="playRosterCount">0 đã chọn</span><button id="playRosterSelectAll" type="button">Chọn tất cả</button></div>
+    <div class="play-roster-filters" id="playRosterFilters" role="group" aria-label="Lọc thành viên theo trạng thái">
+      <button type="button" class="active" data-play-roster-filter="all" aria-pressed="true">Tất cả</button>
+      <button type="button" data-play-roster-filter="online" aria-pressed="false">Online</button>
+      <button type="button" data-play-roster-filter="offline" aria-pressed="false">Offline</button>
+    </div>
+    <div class="play-roster-list" id="playRosterList"></div>
+    <div class="button-row play-roster-actions">
+      <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
+      <button class="primary" id="playRosterSave" type="button">XÁC NHẬN THÀNH VIÊN</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playSeatSheet">
+  <div class="sheet-card play-seat-sheet-card">
+    <div class="sheet-head"><div><h3>Quản lý vị trí</h3><small id="playSeatPlayerLabel">Chọn Người Chơi trên Làng</small></div><button id="playSeatClose" type="button">×</button></div>
+    <div class="play-seat-summary" id="playSeatSummary">0/0 vị trí có người</div>
+    <div class="play-seat-member-tabs hidden" id="playSeatMemberTabs">
+      <button class="active" data-play-seat-member-mode="online" type="button">ĐANG ONLINE</button>
+      <button data-play-seat-member-mode="offline" type="button">TÀI KHOẢN OFFLINE</button>
+    </div>
+    <div class="play-seat-manual-columns"><div class="play-seat-manual-members" id="playSeatManualMembers" aria-label="Danh sách người chơi"></div><div class="play-seat-grid" id="playSeatGrid" aria-label="Danh sách vị trí"></div></div>
+    <div class="button-row play-roster-actions">
+      <button class="danger" id="playSeatRelease" type="button">GIẢI PHÓNG GHẾ</button>
+      <button class="secondary" id="playSeatCancel" type="button">ĐÓNG</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playDisbandSheet">
+  <div class="sheet-card play-disband-sheet-card">
+    <div class="sheet-head"><div><h3>Giải tán người chơi</h3><small>Đưa từng người hoặc tất cả về Sảnh chờ</small></div><button id="playDisbandClose" type="button" aria-label="Đóng">×</button></div>
+    <div class="play-disband-list" id="playDisbandList"></div>
+    <button type="button" id="playDisbandAll" class="danger play-disband-all">GIẢI TÁN TẤT CẢ</button>
+  </div>
+</div>
+
+<div class="sheet hidden" id="memberSheet">
+  <div class="sheet-card member-sheet-card">
+    <div class="sheet-head"><h3 id="memberSheetTitle">Thành Viên</h3><button id="memberSheetClose" type="button">×</button></div>
+    <div id="memberSheetBody"></div>
+    <div class="button-row member-sheet-actions">
+      <button class="secondary" id="memberSheetCancel" type="button">Hủy</button>
+      <button class="primary" id="memberSheetSave" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="playGMSheet">
+  <div class="sheet-card play-gm-sheet-card">
+    <div class="sheet-head"><div><h3>GM</h3><small>Quyền can thiệp trực tiếp</small></div><button id="playGMClose" type="button">×</button></div>
+    <div class="play-gm-target" id="playGMTarget">Hãy chọn một Người Chơi trên sân.</div>
+
+    <div class="play-gm-actions">
+      <button class="revive" id="playGMRevive" type="button">✨ HỒI SINH</button>
+      <button class="danger" id="playGMKill" type="button">☠ GIẾT</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet hidden play-center-sheet" id="playCreateRoomSheet">
+  <div class="sheet-card play-room-page-card">
+    <div class="sheet-head play-room-page-head play-room-title-centered">
+      <h3>TẠO PHÒNG</h3>
+      <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
+    </div>
+    <div class="play-room-page-body">
+      <section class="play-room-section-card play-room-picker-card">
+        <div class="play-room-section-title"><b>PHÒNG</b></div>
+        <div class="play-room-strip">
+          <button class="play-room-add-tile" id="playCreateRoomAdd" type="button" aria-label="Thêm phòng mới"><span>＋</span><small>MỚI</small></button>
+          <div class="play-room-created-list" id="playCreatedRoomList"></div>
+        </div>
+      </section>
+
+      <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep">
+        <div class="play-room-section-title"><b>THIẾT LẬP</b><small>CHẾ ĐỘ • TRẠNG THÁI • TIẾP</small></div>
+        <div class="play-room-control-row">
+          <button id="playRoomModeToggle" type="button" aria-pressed="false" aria-label="Chuyển chế độ Online hoặc Offline"><span></span><b>OFFLINE</b></button>
+          <button id="playCreateRoomEnabled" type="button" aria-pressed="false" aria-label="Bật hoặc tắt phòng"><span></span><b>ON</b></button>
+          <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
+        </div>
+      </section>
+
+      <section class="play-room-editor hidden" id="playRoomEditor">
+        <label class="play-room-name-field"><span>TÊN PHÒNG</span><input id="playCreateRoomName" type="text" maxlength="32" placeholder="Ví dụ: Làng Sói đẹp" autocomplete="off"></label>
+        <div class="play-room-edit-actions">
+          <button class="primary" id="playCreateRoomSave" type="button">LƯU</button>
+          <button id="playCreateRoomReset" type="button">↻ RESET</button>
+          <button class="danger" id="playCreateRoomDelete" type="button">⌫ XOÁ</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="village-layout.js?v=3.114-orbit"></script>
+<script src="character-renderer.js?v=ce2"></script>
+<script src="battle-controls.js?v=battle-391&night225"></script>
+<script src="role-artwork-v251.js"></script>
+<script src="app.js?v=3.114-orbit&status=1"></script>
+
+<script>
+/* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
+(()=>{
+  'use strict';
+  const ROOM_RE=/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
+  function hasLiveRoom(){
+    try{
+      if(typeof isLivePlayRoom==='function')return !!isLivePlayRoom();
+      if(typeof playSceneState!=='undefined')return ROOM_RE.test(String(playSceneState?.roomCode||''));
+      const saved=JSON.parse(localStorage.getItem('GMWW_V264_PLAY_SCENE')||'{}');
+      return ROOM_RE.test(String(saved?.roomCode||''));
+    }catch{return false}
+  }
+  function currentRoomName(){
+    try{
+      const runtimeName=String(typeof playSceneRuntime!=='undefined'?(playSceneRuntime?.room?.roomName||''):'').trim();
+      if(runtimeName)return runtimeName;
+      const code=String(typeof playSceneState!=='undefined'?(playSceneState?.roomCode||''):'').trim();
+      if(code&&typeof playRoomRegistry==='function'){
+        const hit=(playRoomRegistry()||[]).find(x=>String(x?.roomCode||'')===code);
+        const registryName=String(hit?.roomName||'').trim();
+        if(registryName)return registryName;
+      }
+    }catch{}
+    return 'Làng Asahi';
+  }
+  function syncLobbyState(){
+    const live=hasLiveRoom();
+    if(!live){
+      try{
+        if(typeof playSceneState!=='undefined'){
+          let changed=false;
+          const set=(k,v)=>{if(playSceneState[k]!==v){playSceneState[k]=v;changed=true}};
+          set('roomCode','—');set('gmToken','');set('roomEnabled',false);if(!['lobby','room'].includes(String(playSceneState.step||'')))set('step','lobby');set('phase','lobby');set('activePlayerId','');
+          if(Array.isArray(playSceneState.selectedMemberIds)&&playSceneState.selectedMemberIds.length){playSceneState.selectedMemberIds=[];changed=true}
+          if(Array.isArray(playSceneState.assignmentsPreview)&&playSceneState.assignmentsPreview.length){playSceneState.assignmentsPreview=[];changed=true}
+          if(changed&&typeof savePlayScene==='function')savePlayScene();
+        }
+      }catch{}
+    }
+    const title=document.getElementById('playPhaseTitle');
+    if(!title)return;
+    if(!live){
+      if(title.textContent!=='SẢNH CHỜ')title.textContent='SẢNH CHỜ';
+      return;
+    }
+    try{
+      if(typeof playSceneState!=='undefined'&&String(playSceneState.phase||'lobby').toLowerCase()==='lobby'){
+        const name=currentRoomName();
+        if(title.textContent!==name)title.textContent=name;
+      }
+    }catch{}
+  }
+  const start=()=>{
+    syncLobbyState();
+    const title=document.getElementById('playPhaseTitle');
+    if(title)new MutationObserver(syncLobbyState).observe(title,{childList:true,subtree:true,characterData:true});
+    window.addEventListener('focus',syncLobbyState);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncLobbyState()});
+    setInterval(syncLobbyState,1000);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+<script id="gmww-lab-script">
+/* Isolated reference simulator, not the production Rule/Effect executor. No fetch, no storage. */
+(()=>{
+  'use strict';
+  const checks={
+    freeze:{label:'Đóng băng → chặn Tiên Tri',run(ctx){
+      const seer={alive:true,frozen:false};
+      seer.frozen=true;ctx.trace('Sói Tuyết đóng băng Tiên Tri');
+      const canAct=seer.alive&&!seer.frozen;
+      ctx.trace(canAct?'Tiên Tri thực hiện Soi (sai luật)':'Tiên Tri bị chặn thực hiện Soi');
+      return !canAct;
+    }},
+    protect:{label:'Bảo vệ → Sói cắn',run(ctx){
+      const target={alive:true,protected:false};
+      target.protected=true;ctx.trace('Bảo Vệ bảo vệ mục tiêu');
+      if(!target.protected)target.alive=false;
+      ctx.trace(target.alive?'Sói cắn: mục tiêu được cứu':'Sói cắn: mục tiêu chết');
+      return target.alive;
+    }},
+    redirect:{label:'Dịch chuyển mục tiêu',run(ctx){
+      const p={A:{alive:true},B:{alive:true}};
+      let target='A';ctx.trace('Sói chọn cắn A');
+      target='B';ctx.trace('Yêu Tinh chuyển tác động A → B');
+      p[target].alive=false;ctx.trace('Kết quả: B chết, A sống');
+      return p.A.alive&&!p.B.alive;
+    }},
+    revive:{label:'Giết → hồi sinh',run(ctx){
+      const target={alive:true};
+      target.alive=false;ctx.trace('Mục tiêu chết vì tấn công');
+      target.alive=true;ctx.trace('Phù Thủy hồi sinh mục tiêu');
+      return target.alive;
+    }},
+    artifact:{label:'Artifact ưu tiên → giới hạn theo ván',run(ctx){
+      const before=ctx.used.has('swap');
+      if(!before){ctx.used.add('swap');ctx.trace('Đá Đổi Vai Trò kích hoạt ở lượt ưu tiên');}
+      else ctx.trace('Đá Đổi Vai Trò đã dùng: từ chối kích hoạt lại');
+      return ctx.used.has('swap')&&(before||ctx.night===1);
+    }}
+  };
+  const runButton=document.getElementById('gmwwLabRun');
+  if(!runButton)return;
+  runButton.addEventListener('click',()=>{
+    const nights=Math.min(10,Math.max(1,Number(document.getElementById('gmwwLabNights').value)||3));
+    const scenario=document.getElementById('gmwwLabScenario').value;
+    const selected=scenario==='all'?Object.keys(checks):[scenario];
+    const summary=document.getElementById('gmwwLabSummary'),log=document.getElementById('gmwwLabLog');
+    log.replaceChildren();let pass=0,fail=0;const used=new Set();
+    for(let night=1;night<=nights;night++){
+      const box=document.createElement('section');box.className='gmww-lab-night';
+      const header=document.createElement('h3');header.textContent='ĐÊM '+night;box.append(header);
+      for(const key of selected){
+        const rule=checks[key];if(!rule)continue;
+        const traces=[];const ctx={night,used,trace:message=>traces.push(message)};
+        let ok=false;
+        try{ok=rule.run(ctx)===true;}catch(err){traces.push('Lỗi mô phỏng: '+String(err.message||err));}
+        if(ok)pass++;else fail++;
+        const line=document.createElement('div');line.className='gmww-lab-event';
+        const tag=document.createElement('span');tag.className=ok?'gmww-lab-pass':'gmww-lab-fail';tag.textContent=ok?'PASS':'FAIL';
+        const msg=document.createElement('span');msg.textContent=rule.label+' — '+traces.join(' · ');
+        line.append(tag,msg);box.append(line);
+      }
+      log.append(box);
+    }
+    summary.textContent=nights+' đêm · '+pass+' PASS / '+fail+' FAIL (bộ mô phỏng tham chiếu). CHƯA kiểm thử Engine thực hoặc phiên chơi Production.';
+  });
+})();
+</script>
+</body>
+</html>
