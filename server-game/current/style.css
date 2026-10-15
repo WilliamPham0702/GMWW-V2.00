@@ -5407,3 +5407,48 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 @keyframes gmwwOrbitSpin{to{--orb-spin:360deg}}
 @keyframes gmwwOrbit{to{transform:rotate(360deg)}}
 @keyframes gmwwTurnPop{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-3px)}}
+
+
+/* V3.114 — compact and balance the room setup card on phone screens. */
+#playCreateRoomSheet .play-room-section-card.play-room-step{
+  padding:7px 9px!important;
+}
+#playCreateRoomSheet .play-room-step .play-room-section-title{
+  margin-bottom:4px!important;
+  line-height:1.1!important;
+}
+#playCreateRoomSheet .play-room-step .play-room-control-row{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px!important;
+  gap:6px!important;
+  align-items:center!important;
+}
+#playCreateRoomSheet .play-room-step .play-room-control-row #playRoomModeToggle,
+#playCreateRoomSheet .play-room-step .play-room-control-row #playCreateRoomEnabled{
+  height:38px!important;
+  min-height:38px!important;
+  padding:0 8px!important;
+  border-radius:10px!important;
+  font-size:10px!important;
+  line-height:1!important;
+}
+#playCreateRoomSheet .play-room-step .play-room-control-row .play-room-step-next{
+  width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  border-radius:10px!important;
+  font-size:24px!important;
+}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-section-card.play-room-step{padding:6px 8px!important}
+  #playCreateRoomSheet .play-room-step .play-room-control-row{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important;
+    gap:5px!important;
+  }
+  #playCreateRoomSheet .play-room-step .play-room-control-row #playRoomModeToggle,
+  #playCreateRoomSheet .play-room-step .play-room-control-row #playCreateRoomEnabled{
+    height:36px!important;min-height:36px!important;padding:0 6px!important;font-size:9.5px!important;
+  }
+  #playCreateRoomSheet .play-room-step .play-room-control-row .play-room-step-next{
+    width:36px!important;height:36px!important;min-height:36px!important;font-size:22px!important;
+  }
+}
