@@ -34,7 +34,7 @@ try{
  const playSceneRuntime={room:{matchId:'isolated-test',cycleKey:'night-1'},artifactCycle:{accepted:[]},nightRuntime:{queue,cursor:2,currentId:'seer',completed:false,autoAdvance:false,autoPausedRemainingMs:45000}};
  const members=[{loginId:'alice',displayName:'An'},{loginId:'bob',displayName:'Bình'},{loginId:'carol',displayName:'Chi'}];
  const calls=[];
- const playLiveMembers=()=>members,playPlayerEffect=()=>'',playAudioMuted=()=>false;
+ const playLiveMembers=()=>members,playPlayerEffect=()=>'',playPlayerBlocked=()=>false,playAudioMuted=()=>false;
  const playEsc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const playFlashError=x=>{throw new Error(x)};
  const exitPlayImmersive=()=>{},openPlayEndSheet=()=>{},advancePlayPhase=()=>{},togglePlayAutoGM=()=>{},togglePlayAudio=()=>{};

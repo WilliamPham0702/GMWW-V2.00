@@ -27,5 +27,5 @@ test('role and action audio remain tied to configured clips and GM mute',()=>{
 });
 test('role action ledger guards exhausted and incapacitated actors',()=>{
  assert.match(app,/const onlyOne=card\.flags\?\.allowMultipleActions===false\|\|roleId==='role_old_witch'/);
- assert.match(app,/\['dead','frozen','expelled'\]\.includes\(playPlayerEffect\(actorId\)\)/);
+ assert.match(app,/if\(playPlayerBlocked\(actorId\)\)\{unavailableReason/);
 });

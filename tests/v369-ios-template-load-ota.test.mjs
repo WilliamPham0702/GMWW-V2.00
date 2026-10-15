@@ -18,10 +18,10 @@ test('V3.69 prevents partial/unsafe IPA patches',()=>{
 test('Worker newest Runtime selector is V3.94 on both paths',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3.110",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3110"/);
+ assert.match(worker,/VERSION="V3.111",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3111"/);
  const app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- assert.match(app,/const VERSION='3.110'/);
- assert.match(html,/<title>GMWW V3.110<\/title>/);
- assert.match(html,/app\.js\?v=3\.110-battle-marker/);
+ assert.match(app,/const VERSION='3.111'/);
+ assert.match(html,/<title>GMWW V3.111<\/title>/);
+ assert.match(html,/app\.js\?v=3\.111-status/);
 });
