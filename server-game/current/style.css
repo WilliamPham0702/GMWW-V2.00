@@ -4307,12 +4307,12 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 #start .play-battle-footer button{height:39px;min-width:90px;padding:0 12px;border:1px solid #71c8d8;border-radius:10px;background:#0e4e64;color:#fff;font-size:12px;font-weight:850}
 #start .play-battle-footer #battleAdvance{background:#267669;border-color:#b2eed9}
 #start .play-battle-footer button:disabled{opacity:.5}
-/* V3.112 · Phương án B: người đến lượt = sao vàng lơ lửng + ánh vàng; mục tiêu = vòng ngắm mint quay chậm + nhãn MỤC TIÊU. */
+/* V3.113 · Phương án B: người đến lượt = sao vàng lơ lửng + ánh vàng; mục tiêu = vòng ngắm mint quay chậm + nhãn MỤC TIÊU. */
 #start .play-player-token.is-battle-actor .play-player-avatar{filter:drop-shadow(0 0 3px #fff1b8) drop-shadow(0 0 9px #ffe39a)!important;outline:0!important}
 
 #start .play-player-token.is-battle-target .play-player-avatar{filter:drop-shadow(0 0 5px #75efc9)!important;outline:0!important}
 
-#start .play-player-token.is-battle-target:after{content:"MỤC TIÊU";position:absolute;top:-20px;left:50%;transform:translateX(-50%);z-index:5;white-space:nowrap;font-size:8.5px;font-weight:800;letter-spacing:.04em;line-height:1;color:#073f42;background:#75efc9;padding:2px 6px;border-radius:6px;pointer-events:none;box-shadow:0 2px 6px #0007}
+#start .play-player-token.is-battle-target:after{content:"MỤC TIÊU";position:absolute;top:-20px;left:50%;transform:translateX(-50%);z-index:5;white-space:nowrap;font-size:8.5px;font-weight:800;letter-spacing:.04em;line-height:1;color:#3d0b05;background:#ff6b5b;padding:2px 6px;border-radius:6px;pointer-events:none;box-shadow:0 2px 6px #0007}
 
 
 @media(prefers-reduced-motion:reduce){#start .play-player-token .battle-orbit,#start .play-player-token .battle-turn-mark{animation:none}}
@@ -5379,10 +5379,10 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
   font-weight:900!important;
 }
 
-/* V3.112 · Nút HỦY/OK sau khi chọn mục tiêu: gọn, tinh tế hơn */
+/* V3.113 · Nút HỦY/OK sau khi chọn mục tiêu: gọn, tinh tế hơn */
 body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer>button{min-width:64px!important;min-height:32px!important;padding:5px 12px!important;border-radius:9px!important;font-size:11px!important;font-weight:800!important;letter-spacing:.06em;opacity:.92}
 
-/* V3.112 · Trạng thái: huy hiệu trên token, thư viện Trạng Thái, công tắc hiện trên Player Web */
+/* V3.113 · Trạng thái: huy hiệu trên token, thư viện Trạng Thái, công tắc hiện trên Player Web */
 #start .play-status-badges{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);display:flex;gap:2px;z-index:6;pointer-events:none;white-space:nowrap}
 #start .play-status-badges i{font-style:normal;font-size:11px;line-height:1;background:rgba(7,22,34,.84);border:1px solid #91dce2;border-radius:999px;padding:2px 4px}
 .status-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:8px}
@@ -5394,11 +5394,16 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 .status-card-toggle{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
 .status-card-note{font-size:11px;opacity:.7}
 
-/* V3.112 · Đến lượt + Mục tiêu: nhãn phía trên đầu giữ nguyên; vòng quay dọc bao quanh thân nhân vật */
-#start .play-player-token .battle-turn-mark{position:absolute;top:-22px;left:50%;transform:translateX(-50%);z-index:6;white-space:nowrap;font-size:9px;font-weight:900;letter-spacing:.05em;line-height:1;color:#3a2a00;background:#ffe39a;padding:3px 7px;border-radius:6px;box-shadow:0 2px 6px #0007;pointer-events:none;animation:gmwwTurnPop 1.6s ease-in-out infinite}
+/* V3.113 · Đến lượt + Mục tiêu: nhãn phía trên đầu giữ nguyên; vòng quay dọc bao quanh thân nhân vật */
+#start .play-player-token .battle-turn-mark{position:absolute;top:-22px;left:50%;transform:translateX(-50%);z-index:6;white-space:nowrap;font-size:9px;font-weight:900;letter-spacing:.05em;line-height:1;color:#0c3317;background:#7ee08a;padding:3px 7px;border-radius:6px;box-shadow:0 2px 6px #0007;pointer-events:none;animation:gmwwTurnPop 1.6s ease-in-out infinite}
 #start .play-player-token.is-battle-target .battle-turn-mark{top:-40px}
-#start .play-player-token .battle-orbit{position:absolute;left:50%;top:50%;width:66px;height:106px;margin:-53px 0 0 -33px;box-sizing:border-box;border-radius:50%;border:3px solid var(--orb,#ffe39a);border-left-color:transparent;border-right-color:transparent;z-index:3;pointer-events:none;animation:gmwwOrbit 2.6s linear infinite;filter:drop-shadow(0 0 4px var(--orb,#ffe39a))}
-#start .play-player-token .battle-orbit[data-kind="target"]{--orb:#75efc9}
-#start .play-player-token .battle-orbit[data-kind="actor"]{--orb:#ffe39a}
+/* V3.113 · Đến lượt: sao lấp lánh xanh lá; Mục tiêu: 🔥. Vật quay theo trục đứng quanh nhân vật; phía trước to và sáng, phía sau nhỏ và mờ. */
+@property --orb-spin{syntax:"<angle>";inherits:true;initial-value:0deg}
+#start .play-player-token .battle-orbit{position:absolute;left:50%;top:50%;width:0;height:0;z-index:3;pointer-events:none;--orb-spin:0deg;animation:gmwwOrbitSpin 3.2s linear infinite}
+#start .play-player-token .battle-orbit i{position:absolute;left:0;top:0;font-style:normal;line-height:1;font-size:12px;--a:calc(var(--b) + var(--orb-spin));transform:translate(-50%,-50%) translate(calc(cos(var(--a)) * 40px),calc(sin(var(--a)) * 7px)) scale(calc(.72 + .38 * sin(var(--a))));opacity:calc(.45 + .55 * sin(var(--a)))}
+#start .play-player-token .battle-orbit[data-kind="actor"] i{font-size:15px}
+#start .play-player-token .battle-orbit[data-kind="actor"] i::before{content:"✦";color:#b6f5c2;text-shadow:0 0 6px #7ee08a,0 0 12px #7ee08a}
+#start .play-player-token .battle-orbit[data-kind="target"] i::before{content:"🔥";text-shadow:0 0 6px #ff7a3d}
+@keyframes gmwwOrbitSpin{to{--orb-spin:360deg}}
 @keyframes gmwwOrbit{to{transform:rotate(360deg)}}
 @keyframes gmwwTurnPop{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-3px)}}
