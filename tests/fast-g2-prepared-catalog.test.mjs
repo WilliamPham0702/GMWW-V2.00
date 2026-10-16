@@ -33,5 +33,14 @@ test('real package producer emits a verified catalog for a future Runtime withou
       const bytes=fs.readFileSync(path.join(root,'assets/updates/runtime/V3.999',file.path));
       assert.equal(createHash('sha256').update(bytes).digest('hex'),file.sha256);
     }
+    put('server-game/current/app.js',"const VERSION='3.1000';");
+    put('server-game/current/GMWW.html','<title>GMWW V3.1000</title><script src="app.js"></script>');
+    const next=spawnSync(process.execPath,[path.resolve('.github/scripts/prepare-update-channel.mjs'),'runtime'],{cwd:root,encoding:'utf8'});
+    assert.equal(next.status,0,next.stderr);
+    const baseModule=fs.readFileSync(path.join(root,'src/gmww-release-bases.js'),'utf8');
+    const {releaseBases}=await import('data:text/javascript;base64,'+Buffer.from(baseModule).toString('base64'));
+    assert.equal(releaseBases.length,1);
+    assert.equal(releaseBases[0].manifest.releaseVersion,'3.999');
+    assert.ok(await selectBuildVerifiedManifest(releaseBases[0],'3.999','3.110'));
   }finally{fs.rmSync(root,{recursive:true,force:true})}
 });

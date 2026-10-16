@@ -165,4 +165,20 @@ const catalog=releaseType==='runtime'
   ? await buildReleaseCatalog(manifest,rel=>fs.readFileSync(path.join(outRoot,rel)))
   : null;
 fs.writeFileSync('src/gmww-release-catalog.js','// Generated from SHA-256 verified package bytes. Do not edit.\nexport const releaseCatalog='+JSON.stringify(catalog)+';\n');
+// Only complete historical packages whose bytes are still available locally can
+// become delta bases. Missing or damaged packages simply cannot enable a delta.
+const releaseBases=[];
+const packageRoot=path.dirname(outRoot);
+const historical=fs.readdirSync(packageRoot).filter(name=>/^V\d+(?:\.\d+)+$/.test(name)&&name!=='V'+version)
+  .sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
+for(const name of historical){
+  if(releaseBases.length===3)break;
+  const root=path.join(packageRoot,name);
+  try{
+    const base=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8'));
+    if(base.shellVersion!==shell)continue;
+    releaseBases.push(await buildReleaseCatalog(base,rel=>fs.readFileSync(path.join(root,rel))));
+  }catch{/* Full package remains available for an unverified historical base. */}
+}
+fs.writeFileSync('src/gmww-release-bases.js','// Generated from verified historical package bytes. Do not edit.\nexport const releaseBases='+JSON.stringify(releaseBases)+';\n');
 console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));
