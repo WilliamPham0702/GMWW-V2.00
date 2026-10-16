@@ -14,7 +14,8 @@ const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
 const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
-const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
+const pruneHelper=source.slice(source.indexOf('const INTERACTION_KEEP'),source.indexOf('\n}\n',source.indexOf('function pruneInteractions'))+3);
+const Room=vm.runInNewContext(cycleHelper+pruneHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
