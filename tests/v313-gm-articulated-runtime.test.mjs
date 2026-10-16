@@ -16,12 +16,12 @@ const asset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
 test('V3.17 runtime is bundled in the V3.17 native shell',()=>{
   assert.match(app,/const VERSION='3\.119'/);
   assert.match(html,/<title>GMWW V3\.119<\/title>/);
-  assert.match(server,/VERSION="V3\.119",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3119"/);
+  assert.match(server,/VERSION="V3\.119",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3120"/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 3110;/);
   assert.match(project,/MARKETING_VERSION = 3\.110;/);
-  assert.equal(pkg.version,'3.119.0');
-  assert.equal(lock.version,'3.119.0');
-  assert.equal(lock.packages?.['']?.version,'3.119.0');
+  assert.equal(pkg.version,'3.120.0');
+  assert.equal(lock.version,'3.120.0');
+  assert.equal(lock.packages?.['']?.version,'3.120.0');
 });
 
 test('GM has one runtime actor with articulated white-wolf segments in both views',()=>{
