@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.118';
+const VERSION='3.119';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3346,8 +3346,27 @@ const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectId
   if(/(seer|soi|tien tri|reveal)/.test(key))return'seer';
   return'effect_notice';
 };
-function battleClear(){battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
-function battlePickAction(id){const a=battleActions().find(a=>a.id===id);if(!a||a.noTarget||a.unavailable)return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
+function battleIsTransfer(a){return !!a&&!a.artifactId&&String(a.actionId||'')==='action_transfer_bite'}
+// GM picks the bite direction; OK confirms. No choice means the Fairy does nothing.
+function battleRenderTransferPanel(){
+  const bar=document.getElementById('battleActionBar');if(!bar)return;
+  let panel=document.getElementById('battleTransferPanel');
+  if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';bar.insertAdjacentElement('afterend',panel)}
+  const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable;
+  const dir=battleState.transferDir,sig=show+':'+dir+':'+battleState.busy;
+  if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;
+  panel.style.cssText=show?'display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px':'display:none';
+  if(!show){panel.innerHTML='';return}
+  const btn='padding:12px 14px;border-radius:10px;border:2px solid #d9b45a;font-weight:700;font-size:15px;background:#1d2a3a;color:#fff';
+  panel.innerHTML='<span style="font-size:13px;color:#fff">Dịch chuyển vết cắn:</span>'+
+    '<button type="button" data-transfer="left" style="'+btn+(dir==='left'?';background:#d9b45a;color:#111':'')+'">⬅ Trái</button>'+
+    '<button type="button" data-transfer="right" style="'+btn+(dir==='right'?';background:#d9b45a;color:#111':'')+'">Phải ➡</button>'+
+    '<button type="button" data-transfer-ok style="'+btn+'" '+(dir&&!battleState.busy?'':'disabled')+'>OK</button>';
+  panel.querySelectorAll('[data-transfer]').forEach(b=>b.onclick=()=>{battleState.transferDir=b.dataset.transfer;panel.dataset.sig='';battleRenderTransferPanel()});
+  const ok=panel.querySelector('[data-transfer-ok]');if(ok)ok.onclick=()=>battleConfirm(true);
+}
+function battleClear(){battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
+function battlePickAction(id){const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
 function battlePickTarget(id,actionId){
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
   if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
@@ -3399,9 +3418,10 @@ function renderPlayBattle(){
   const battleActorEffects=actions.map(a=>[a.id,(a.actorIds||[]).map(id=>playPlayerEffect(id)).filter(x=>x==='frozen'||x==='expelled'||x==='dead')]);
   const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds,a.unavailableReason]))+':'+JSON.stringify(battleActorEffects);
   if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+(a.noTarget||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+((a.noTarget&&!battleIsTransfer(a))||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
+  battleRenderTransferPanel();
   set('battleActionTrayTitle','');
   set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+((t?.kind==='early-artifact'||t?.kind==='early-artifact-window')?'ARTIFACT ĐẦU VÁN':['role','role-group'].includes(t?.kind)?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
   set('battleTurnTitle',phase==='day'?'LÀNG ƠI DẬY ĐI':(t?battleRules().displayLabel(t,'Lượt chơi'):(rt?.completed?'ĐÃ KẾT THÚC ĐÊM '+night:'BẮT ĐẦU ĐÊM 1')));
@@ -3465,7 +3485,7 @@ function renderPlayBattle(){
   battleMarkPlayers();battleTickCountdown()
 }
 async function battleConfirm(confirmed=false){
-  const a=battleAction(),t=battleTurn();if(battleState.busy||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount)return;
+  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');
   if(expected!==battleState.key){playFlashError('Lượt đã thay đổi. Hãy chọn lại mục tiêu.');renderPlayBattle();return}
   if(!confirmed&&!confirm('Xác nhận '+a.name+' lên '+battleState.targets.map(id=>battleMember(id)?.displayName||id).join(', ')+'?'))return;
@@ -3473,11 +3493,12 @@ async function battleConfirm(confirmed=false){
   const targets=[...battleState.targets];
   try{
     const seerReveal=a.actionId==='action_seer'&&!a.artifactId;
-    const payload={targetIds:seerReveal?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
+    const payload={targetIds:(seerReveal||transferAct)?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
       ...(a.artifactId?{artifactId:a.artifactId}:{}),effectId:a.effectIds[0]||'',effectName:a.name,
       matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',
       night:Number(playSceneState.night||1),clientEventId:battleState.nonce};
-    if(seerReveal){const row=(playSceneRuntime.assignments||[]).find(x=>String(x?.loginId||'')===String(targets[0]||'')),rc=row?.roleCard?.factionId?row.roleCard:((state?.cards||[]).find(c=>String(c.id)===String(row?.roleId||''))||{}),wolf=rc.factionId==='wolf'&&String(row?.roleId||'')!=='role_alpha_wolf';payload.type='effect_notice';payload.message='Kết quả Soi Xét: '+(battleMember(targets[0])?.displayName||targets[0]||'')+(wolf?' là SÓI.':' KHÔNG PHẢI SÓI.')}
+    if(transferAct){payload.type='effect_notice';payload.direction=battleState.transferDir;payload.message='Yêu Tinh chọn dịch chuyển vết cắn sang '+(battleState.transferDir==='left'?'Trái':'Phải')+'.'}
+    else if(seerReveal){const row=(playSceneRuntime.assignments||[]).find(x=>String(x?.loginId||'')===String(targets[0]||'')),rc=row?.roleCard?.factionId?row.roleCard:((state?.cards||[]).find(c=>String(c.id)===String(row?.roleId||''))||{}),wolf=rc.factionId==='wolf'&&String(row?.roleId||'')!=='role_alpha_wolf';payload.type='effect_notice';payload.message='Kết quả Soi Xét: '+(battleMember(targets[0])?.displayName||targets[0]||'')+(wolf?' là SÓI.':' KHÔNG PHẢI SÓI.')}
     else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');

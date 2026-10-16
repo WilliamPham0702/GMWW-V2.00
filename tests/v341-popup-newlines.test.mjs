@@ -28,8 +28,8 @@ test('Room reset dialog has legible newlines too',()=>{
 test('V3.94 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
   const server=fs.readFileSync('src/index.js','utf8');
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-  assert.equal(pkg.version,'3.118.0');
-  assert.match(html,/<title>GMWW V3.118<\/title>/);
-  assert.match(app,/const VERSION='3.118'/);
-  assert.match(server,/VERSION="V3.118",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3118"/);
+  assert.equal(pkg.version,'3.119.0');
+  assert.match(html,/<title>GMWW V3.119<\/title>/);
+  assert.match(app,/const VERSION='3.119'/);
+  assert.match(server,/VERSION="V3.119",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3119"/);
 });
