@@ -46,3 +46,12 @@ test('Malformed runtime assets fail closed before deployment',()=>{
   duplicate.runtime.files.push({...duplicate.runtime.files[0]});
   assert.throws(()=>verifyOtaVersionAdvance(duplicate,manifest('3.106'),['server-game/current/app.js']),/Duplicate Runtime manifest path/);
 });
+
+test('release tooling can preserve a fully verified identical OTA package without version churn',()=>{
+  const file={path:'app.js',sha256:'a'.repeat(64),url:'https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.121/app.js'};
+  const m={releaseVersion:'3.121',runtimeVersion:'3.121',releaseType:'runtime',shellVersion:'3.110',delete:[],runtime:{files:[file,...['GMWW.html','style.css','character-renderer.js','character-renderer.css'].map(path=>({...file,path,url:file.url.replace('app.js',path)}))]}};
+  assert.doesNotThrow(()=>verifyOtaVersionAdvance(m,structuredClone(m),['.github/scripts/prepare-update-channel.mjs']));
+  const changed=structuredClone(m);changed.runtime.files[0].sha256='b'.repeat(64);
+  assert.throws(()=>verifyOtaVersionAdvance(changed,m,['.github/scripts/prepare-update-channel.mjs']),/does not advance/);
+  assert.throws(()=>verifyOtaVersionAdvance(m,m,['server-game/current/app.js']),/does not advance/);
+});
