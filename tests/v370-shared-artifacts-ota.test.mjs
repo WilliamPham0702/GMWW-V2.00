@@ -23,9 +23,9 @@ test('Worker and IPA Runtime V3.94 declarations are aligned and retain native sh
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
- assert.match(worker,/VERSION="V3.116",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3116"/);
- assert.match(app,/const VERSION='3.116'/);
- assert.match(html,/<title>GMWW V3.116<\/title>/);
- assert.match(html,/app\.js\?v=3\.116-orbit/);
- assert.equal(pkg.version,'3.116.0');
+ assert.match(worker,/VERSION="V3.117",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3117"/);
+ assert.match(app,/const VERSION='3.117'/);
+ assert.match(html,/<title>GMWW V3.117<\/title>/);
+ assert.match(html,/app\.js\?v=3\.117-orbit/);
+ assert.equal(pkg.version,'3.117.0');
 });

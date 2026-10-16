@@ -7,18 +7,18 @@ const html = fs.readFileSync('server-game/current/GMWW.html', 'utf8');
 const app = fs.readFileSync('server-game/current/app.js', 'utf8');
 const exportJs = fs.readFileSync('server-game/current/gmww-local-export.js', 'utf8');
 
-test('V3.116 export button sits in the update section and not in the template library', () => {
+test('V3.117 export button sits in the update section and not in the template library', () => {
   assert.match(html, /<button class="settings-action settings-action-server" id="exportLocalData"/);
   assert.ok(html.indexOf('id="exportLocalData"') > html.indexOf('id="settingsGroupUpdate"'));
   assert.doesNotMatch(html, /exportGameCards/);
 });
 
-test('V3.116 export module loads before app.js', () => {
+test('V3.117 export module loads before app.js', () => {
   assert.ok(html.indexOf('gmww-local-export.js') > -1);
   assert.ok(html.indexOf('gmww-local-export.js') < html.indexOf('app.js?v='));
 });
 
-test('V3.116 export handler reads local data and uses the GM API only for server reads', () => {
+test('V3.117 export handler reads local data and uses the GM API only for server reads', () => {
   const block = app.slice(app.indexOf('async function exportLocalGameData'), app.indexOf('function renderGameTemplateLibrary'));
   assert.match(block, /localStorage\.key\(i\)/);
   assert.match(block, /gmApi\('\/api\/gm\/game-templates'\)/);
@@ -27,7 +27,7 @@ test('V3.116 export handler reads local data and uses the GM API only for server
   assert.doesNotMatch(block, /GM_SYNC_TOKEN|Bearer/);
 });
 
-test('V3.116 export is packaged in the OTA channel', () => {
+test('V3.117 export is packaged in the OTA channel', () => {
   const prep = fs.readFileSync('.github/scripts/prepare-update-channel.mjs', 'utf8');
   assert.match(prep, /copy\('server-game\/current\/gmww-local-export\.js','gmww-local-export\.js'\)/);
 });

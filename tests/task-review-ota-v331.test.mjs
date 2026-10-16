@@ -9,19 +9,19 @@ const worker=read("src/index.js");
 const deploy=read(".github/workflows/deploy-production.yml");
 const pkg=JSON.parse(read("package.json"));
 const lock=JSON.parse(read("package-lock.json"));
-const shell="3.116";
+const shell="3.117";
 
 test("task approval is a newer OTA than the previously released V3.30",()=>{
-  const version="3.116";
+  const version="3.117";
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
-  assert.match(app,/const VERSION='3.116';/);
-  assert.match(worker,/VERSION="V3.116",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3116"/);
+  assert.match(app,/const VERSION='3.117';/);
+  assert.match(worker,/VERSION="V3.117",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3117"/);
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
-  assert.equal(shell,"3.116");
-  assert.match(html,/<title>GMWW V3.116<\/title>/);
-  assert.match(html,/app\.js\?v=3\.116-orbit/);
+  assert.equal(shell,"3.117");
+  assert.match(html,/<title>GMWW V3.117<\/title>/);
+  assert.match(html,/app\.js\?v=3\.117-orbit/);
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
