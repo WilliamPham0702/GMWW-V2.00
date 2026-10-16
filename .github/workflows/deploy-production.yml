@@ -40,8 +40,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - run: npm install
+      - run: npm ci
       - run: npm run check
 
       - name: Classify and prepare GMWW update channel
@@ -160,6 +161,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
+
+      - name: Classify isolated Character Lab verification
+        id: character_lab_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt "${{ github.event_name }}" >> "$GITHUB_OUTPUT"
 
       - name: Verify Production
         shell: bash
@@ -432,6 +440,9 @@ jobs:
               echo "Verify Production: Home artwork $ART PASS."
             done
           fi
+          # Keep active runtime/SHA checks mandatory. Unrelated, isolated 3D labs
+          # are verified only when relevant content/routing changes (or manual deploy).
+          if [ "${{ steps.character_lab_scope.outputs.verify_character_labs }}" != "false" ]; then
           # Character V5.60 is an isolated lab, not a runtime/IPA game change.
           # Confirm that a clickable HTML test AND its REAL SkinnedMesh adapter are
           # deployed, rather than claiming the CI merge alone implies a live page.
@@ -450,6 +461,9 @@ jobs:
             exit 1
           fi
           echo "Verify Production: V5.60 3D skin lab HTML + module PASS."
+          else
+            echo "Character V5.60 isolated lab unchanged; focused Production verification."
+          fi
           if test "$EXPECTED" != "$EXPECTED_SHELL"; then
           echo "Verify Production: checking task-review UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
@@ -543,6 +557,7 @@ jobs:
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
+          if [ "${{ steps.character_lab_scope.outputs.verify_character_labs }}" != "false" ]; then
           echo "Verify Production: checking isolated Character V4 Web studio."
           curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/index.html?verify=$(date +%s)" > /tmp/character-v4-web.html
           grep -Fq '20 Character mới' /tmp/character-v4-web.html
@@ -767,3 +782,6 @@ jobs:
           grep -Fq "THỬ NGHIỆM RIÊNG" /tmp/gmww-v500-index.html
           grep -Fq "./vendor/three.module.min.js" /tmp/gmww-v500-character-master-v500.mjs
           echo "Verify Production: V5.20 acceptance board exact assets and release gates PASS; live Player Web unchanged."
+          else
+            echo "Isolated Character V4/V5 labs unchanged; active Player Web, Runtime, OTA and core assets verified."
+          fi

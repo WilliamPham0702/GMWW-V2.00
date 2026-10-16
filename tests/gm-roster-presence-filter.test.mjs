@@ -142,9 +142,36 @@ test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.6
   const corrupt={...manifest,runtime:{files:manifest.runtime.files.map(file=>({...file}))}};
   corrupt.runtime.files[0].sha256='INVALID';
   assert.equal(selectVerifiedRuntimeV363Delta(corrupt,'3.62'),null);
-  assert.equal(app.includes("const VERSION='3.121';"),true);
+  const runningVersion=app.match(/const VERSION='(\d+(?:\.\d+)+)'/)?.[1];
+  assert.ok(runningVersion,'GM app must expose a runtime version');
   const worker=fs.readFileSync('src/index.js','utf8');
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
-  assert.match(fs.readFileSync('src/gmww-runtime-recovery.js','utf8'),/'3\.109','3\.110','3\.111','3\.113','3\.114','3\.115','3\.116','3\.117','3\.118','3\.119','3\.120','3\.121']\.includes\(version\)/);
+  // Validate a usable signed recovery manifest, not an exact sequence of historical
+  // release strings. Future runtime versions should not require editing this test.
+  const {recoverLegacyRuntimeManifest}=await import('../src/gmww-runtime-recovery.js');
+  const served=[];
+  const assets={fetch:async request=>{
+    const url=new URL(request.url);
+    served.push(url.pathname);
+    const marker=url.pathname.endsWith('/GMWW.html')
+      ? '<title>GMWW V'+runningVersion+'</title>'
+      : url.pathname.endsWith('/app.js')
+        ? "const VERSION='"+runningVersion+"';"
+        : 'gmww-verified-runtime-asset';
+    return new Response(marker+' '.repeat(70),{status:200});
+  }};
+  const options={assets,requestUrl:'https://gmww-v2-00.williampham0702.workers.dev/api/update/manifest',
+    version:runningVersion,shellVersion:'3.17',installedVersion:'3.46'};
+  const recovered=await recoverLegacyRuntimeManifest(options);
+  assert.equal(recovered?.releaseVersion,runningVersion,'Legacy IPA must recover the current runtime');
+  assert.equal(recovered?.releaseType,'runtime');
+  assert.ok(recovered.runtime.files.some(file=>file.path==='battle-controls.js'),
+    'Modern battle controls remain available to legacy IPA');
+  assert.ok(recovered.runtime.files.every(file=>
+    /^[a-f0-9]{64}$/.test(file.sha256)&&file.url.includes('/updates/runtime/V'+runningVersion+'/')),
+    'Every recovered asset must have trusted path and SHA-256');
+  assert.ok(served.includes('/updates/runtime/V'+runningVersion+'/GMWW.html'));
+  assert.equal(await recoverLegacyRuntimeManifest({...options,shellVersion:'3.110'}),null,
+    'A mismatched native IPA shell must never enter legacy recovery');
 });
