@@ -65,3 +65,32 @@ test('Runtime downloads are served by the same Cloudflare ASSETS binding as read
   assert.match(worker,/url\.pathname\.startsWith\("\/updates\/runtime\/"\)/);
   assert.match(worker,/return env\.ASSETS\.fetch\(request\)/);
 });
+
+test('Published Runtime readiness checks immutable assets concurrently within a safe bound',async()=>{
+  let active=0,maxActive=0;
+  const asset={fetch:async request=>{
+    active++;maxActive=Math.max(maxActive,active);
+    await new Promise(resolve=>setTimeout(resolve,8));
+    active--;
+    const path=new URL(request.url).pathname.replace('/updates/runtime/V3.62/','');
+    return new Response('published',{status:200,headers:{'content-type':contentType(path)}});
+  }};
+  assert.equal(await ready(asset),true);
+  assert.ok(maxActive>=2,'readiness should not block on ten sequential asset requests');
+  assert.ok(maxActive<=4,'readiness subrequests must remain bounded');
+});
+test('A transient Cloudflare asset 503 can recover without relaxing SHA-256 verification',async()=>{
+  let tries=0;
+  const asset={fetch:async request=>{
+    const path=new URL(request.url).pathname.replace('/updates/runtime/V3.62/','');
+    if(path==='app.js'&&++tries===1)return new Response('Unavailable',{status:503});
+    return new Response('published',{status:200,headers:{'content-type':contentType(path)}});
+  }};
+  assert.equal(await ready(asset),true);
+  assert.equal(tries,2);
+  const corrupt={fetch:async request=>{
+    const path=new URL(request.url).pathname.replace('/updates/runtime/V3.62/','');
+    return new Response(path==='app.js'?'tampered':'published',{status:200,headers:{'content-type':contentType(path)}});
+  }};
+  assert.equal(await ready(corrupt),false,'wrong asset bytes must never be advertised');
+});

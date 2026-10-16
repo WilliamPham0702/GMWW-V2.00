@@ -223,6 +223,32 @@ jobs:
           done
           cat /tmp/manifest.json
           test "$MANIFEST_OK" = "1"
+          # Verify the exact installed iPhone update path, not only the
+          # no-current manifest used by server-side smoke tests.
+          if [ "$EXPECTED" = "3.120" ]; then
+            for FROM in 3.119 3.118; do
+              OTA_STATUS=0
+              for CHECK in $(seq 1 10); do
+                if curl --connect-timeout 8 --max-time 25 -fsS                   "$URL/api/update/manifest?current=$FROM&iphone-verify=$CHECK-$(date +%s)"                   > "/tmp/gmww-iphone-$FROM.json"; then
+                  OTA_STATUS=1
+                  break
+                fi
+                sleep 2
+              done
+              test "$OTA_STATUS" = "1" || { echo "::error::OTA not reachable by iPhone Runtime V$FROM"; exit 1; }
+              node - "$FROM" "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('node:fs');
+          const [from,expected,shell]=process.argv.slice(2);
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-iphone-'+from+'.json','utf8'));
+          if(m.ok!==true||m.releaseType!=='runtime'||m.releaseVersion!==expected||
+             m.runtimeVersion!==expected||m.shellVersion!==shell||
+             !Array.isArray(m.runtime?.files)||!m.runtime.files.length||
+             !m.runtime.files.some(f=>f.path==='app.js'&&/^[a-f0-9]{64}$/i.test(f.sha256)))
+            throw Error('Installed Runtime V'+from+' cannot receive verified OTA V'+expected);
+          console.log('Verify Production: iPhone Runtime V'+from+' -> V'+expected+' manifest PASS');
+          NODE
+            done
+          fi
           # V3.82: installability must be verified from a running V3.80/V3.81 IPA.
           if [ "$EXPECTED" = "3.82" ]; then
             for FROM in 3.81 3.80; do

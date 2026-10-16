@@ -22,7 +22,8 @@ export async function isRuntimePackageReady({assets,requestUrl,manifest,version}
     essential['gmww-ai-support.js']='javascript';
     essential['gmww-ai-support.css']='text/css';
   }
-  // Files must be on the published version path, never an old or unrelated host.
+  // Validate all immutable metadata before touching the asset binding.
+  const required=[];
   for(const [path,mime] of Object.entries(essential)){
     const candidates=files.filter(file=>file?.path===path);
     if(candidates.length!==1)return false;
@@ -33,17 +34,38 @@ export async function isRuntimePackageReady({assets,requestUrl,manifest,version}
       const published=new URL(file.url);
       if(published.protocol!=='https:'||published.origin!==target.origin||
          published.pathname!==target.pathname)return false;
-      const response=await assets.fetch(new Request(target.toString(),{
-        method:'GET',headers:{'cache-control':'no-cache'}
-      }));
-      if(!response.ok)return false;
-      const type=String(response.headers.get('content-type')||'').toLowerCase();
-      // A missing static JS or CSS route can return HTML with HTTP 200.
-      if(!type.includes(mime))return false;
-      const hash=await crypto.subtle.digest('SHA-256',await response.arrayBuffer());
-      const observed=[...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('');
-      if(observed!==String(file.sha256).toLowerCase())return false;
     }catch{return false}
+    required.push({path,mime,sha256:String(file.sha256).toLowerCase(),target});
   }
-  return true;
+  // Cloudflare edges and phones can reach different caches. Verifying ten
+  // immutable files sequentially on EVERY OTA check may exceed the installed
+  // IPA's 6.5-second HTTP timeout, making a published Runtime appear pending.
+  // Bound concurrency to four and retry a transient failed asset fetch once;
+  // never accept a wrong MIME type or SHA-256 digest.
+  const verifyOne=async({path,mime,sha256,target})=>{
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        const response=await assets.fetch(new Request(target.toString(),{
+          method:'GET',headers:{'cache-control':'no-cache'}
+        }));
+        if(!response.ok){if(attempt===0)continue;return false}
+        const type=String(response.headers.get('content-type')||'').toLowerCase();
+        if(!type.includes(mime))return false;
+        const hash=await crypto.subtle.digest('SHA-256',await response.arrayBuffer());
+        const observed=[...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('');
+        return observed===sha256;
+      }catch{
+        if(attempt===1)return false;
+      }
+    }
+    return false;
+  };
+  let next=0,ready=true;
+  await Promise.all(Array.from({length:Math.min(4,required.length)},async()=>{
+    while(ready&&next<required.length){
+      const file=required[next++];
+      if(!await verifyOne(file)){ready=false;break}
+    }
+  }));
+  return ready;
 }
