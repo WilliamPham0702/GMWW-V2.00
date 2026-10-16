@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import vm from 'node:vm';
+import {buildReleaseCatalog} from '../../src/gmww-release-catalog-policy.js';
 
 const classifiedReleaseType=(process.argv[2]||process.env.GMWW_RELEASE_TYPE||'server_only').trim();
 const typeRank={server_only:0,runtime:1,native:2};
@@ -160,4 +161,8 @@ if(version!==shell){
   for(const p of required)if(!files.some(f=>f.path===p))throw new Error('Runtime package missing '+p);
   if(!fs.existsSync(revisionedManifest))throw new Error('Revisioned runtime manifest was not generated');
 }
+const catalog=releaseType==='runtime'
+  ? await buildReleaseCatalog(manifest,rel=>fs.readFileSync(path.join(outRoot,rel)))
+  : null;
+fs.writeFileSync('src/gmww-release-catalog.js','// Generated from SHA-256 verified package bytes. Do not edit.\nexport const releaseCatalog='+JSON.stringify(catalog)+';\n');
 console.log(JSON.stringify({version,classifiedReleaseType,releaseType,files:files.length,manifest},null,2));

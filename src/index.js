@@ -1,3 +1,5 @@
+import {releaseCatalog} from "./gmww-release-catalog.js";
+import {selectBuildVerifiedManifest} from "./gmww-release-catalog-policy.js";
 import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
@@ -1743,6 +1745,10 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     const onlyNewNotes=m=>gmwwManifestNotesForInstalled(m,url.searchParams.get("current"));
+    // Packaging verifies all bytes before embedding the catalog in this bundle.
+    // No mutable storage/cache/subrequest is needed for update discovery.
+    const packaged=await selectBuildVerifiedManifest(releaseCatalog,VERSION.replace(/^V/i,""),NATIVE_SHELL_VERSION);
+    if(packaged)return j({ok:true,...onlyNewNotes(packaged),checkedAt:new Date().toISOString(),manifestSource:"build-verified"});
     if(!env.ASSETS)return j({ok:false,error:"UPDATE_MANIFEST_UNAVAILABLE"},503);
     try{
       const currentVersion=VERSION.replace(/^V/i,"");
