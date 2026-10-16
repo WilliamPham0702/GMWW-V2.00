@@ -64,7 +64,7 @@ test('Existing saved theme images are only hidden, never deleted by slot list cl
 test('Runtime version bumps and preserves native shell',()=>{
  assert.match(app,/const VERSION='3.120';/);
  assert.match(html,/<title>GMWW V3.120<\/title>/);
- assert.match(html,/app\.js\?v=3\.119-orbit/);
+ assert.match(html,/app\.js\?v=3\.120-orbit/);
  const worker=fs.readFileSync('src/index.js','utf8');
  assert.match(worker,/VERSION="V3.120",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3120"/);
 });
