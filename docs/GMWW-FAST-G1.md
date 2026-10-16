@@ -20,3 +20,5 @@
 - [ ] Thử thay đổi UI nhỏ: không chạy screenshot Character Engine chuyên sâu khi renderer không đổi.
 - [ ] Kiểm thử source OTA recovery không còn phụ thuộc danh sách phiên bản viết cứng.
 - [ ] Không có bất kỳ deploy Production hoặc thay đổi dữ liệu game nào trước phê duyệt merge.
+
+Các bước Character Lab chuyên sâu được di chuyển nguyên vẹn sang `.github/scripts/verify-isolated-character-labs.sh`; file này chỉ chạy khi có thay đổi liên quan, khi dữ liệu không rõ hoặc deploy thủ công.

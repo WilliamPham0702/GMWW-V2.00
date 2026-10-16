@@ -6,6 +6,7 @@ import fs from 'node:fs';
 const relevant=[
   /^assets\/characters\/v[45]\//,
   /^src\/index\.js$/,
+  /^src\/gmww-character-v4\.js$/,
   /^wrangler\.jsonc$/,
   /^\.github\/workflows\/deploy-production\.yml$/,
   /^\.github\/scripts\/fast-verify-scope\.mjs$/
