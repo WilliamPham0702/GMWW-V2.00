@@ -5407,3 +5407,50 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 @keyframes gmwwOrbitSpin{to{--orb-spin:360deg}}
 @keyframes gmwwOrbit{to{transform:rotate(360deg)}}
 @keyframes gmwwTurnPop{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-3px)}}
+
+
+/* V3.119 — compact Create Room picker and centered setup controls */
+#playCreateRoomSheet .play-room-picker-card{
+  width:max-content!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-inline:auto!important;
+}
+#playCreateRoomSheet .play-room-strip{
+  width:max-content!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#playCreateRoomSheet .play-room-created-list{
+  min-width:0!important;
+}
+#playCreateRoomSheet .play-room-control-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px!important;
+  width:max-content!important;
+  max-width:100%!important;
+  margin-inline:auto!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+}
+#playCreateRoomSheet .play-room-control-row>button{
+  min-width:0!important;
+  min-height:34px!important;
+  padding:6px 9px!important;
+  border-radius:9px!important;
+  font-size:10px!important;
+  line-height:1.1!important;
+}
+#playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+  width:34px!important;
+  min-width:34px!important;
+  height:34px!important;
+  padding:0!important;
+}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-picker-card{padding:7px!important}
+  #playCreateRoomSheet .play-room-strip{gap:5px!important}
+  #playCreateRoomSheet .play-room-control-row{gap:5px!important}
+  #playCreateRoomSheet .play-room-control-row>button{padding:5px 7px!important;font-size:9.5px!important}
+}
