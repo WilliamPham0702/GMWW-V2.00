@@ -36,3 +36,14 @@ test('Runtime 3.114 and OTA cache-busters stay synchronized',()=>{
   assert.match(worker,/VERSION="V3\.114"/);
   assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3114"/);
 });
+
+test('Room picker removes excess blank width and OK confirmation keeps a cancel X',()=>{
+  assert.match(css,/V3\.114 follow-up — remove unused room-picker space/);
+  assert.match(css,/#playCreateRoomSheet \.play-room-picker-card\{\s*width:max-content!important;\s*max-width:100%!important;/);
+  assert.match(css,/\.is-confirm-only>header\{\s*display:flex!important;justify-content:flex-end!important/);
+  assert.match(css,/#battleTargetClose\{\s*display:grid!important;place-items:center!important;visibility:visible!important/);
+  assert.match(css,/#battleTargetCancel\{\s*display:none!important/);
+  assert.match(css,/#battleTargetConfirm\{[\s\S]*min-width:0!important/);
+  assert.match(app,/if\(pickerClose\)pickerClose\.hidden=false;/);
+  assert.match(app,/function battleCloseTargetSheet\(\)\{\s*battleState\.targetSheet=false;battleState\.targets=\[\];battleState\.actionId='';/);
+});
