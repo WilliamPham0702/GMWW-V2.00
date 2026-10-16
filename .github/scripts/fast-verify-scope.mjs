@@ -19,7 +19,7 @@ export function requiresIsolatedCharacterLabVerification(paths,{manual=false}={}
 }
 
 if(process.argv[1]?.endsWith('/fast-verify-scope.mjs')){
-  const [file,event]=process.argv.slice(2);
+  const [file,event=process.env.GITHUB_EVENT_NAME]=process.argv.slice(2);
   if(!file)throw Error('Missing changed-files path');
   const changed=fs.readFileSync(file,'utf8').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const verify=requiresIsolatedCharacterLabVerification(changed,{manual:event==='workflow_dispatch'});

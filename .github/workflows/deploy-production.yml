@@ -526,5 +526,10 @@ jobs:
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
-          # Run extracted Character laboratories with full checks while introducing the scoped lane.
-          URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
+          # Skip only unchanged, isolated Character V4/V5 labs. All core guards ran above.
+          VERIFY_CHARACTER_LABS=$(node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt | cut -d= -f2)
+          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
+            URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
+          else
+            echo "Unchanged Character V4/V5 lab checks skipped; active Runtime/OTA/SHA guards still PASS."
+          fi
