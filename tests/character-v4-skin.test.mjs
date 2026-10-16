@@ -64,13 +64,15 @@ test('preserve approved skeleton movements after reverting bad skin',()=>{
 });
 
 test('Cloudflare verifies withdrawn Skin status and exact served files',()=>{
- const yaml=fs.readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ const workflow=fs.readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ const script=fs.readFileSync(new URL('../.github/scripts/verify-isolated-character-labs.sh',import.meta.url),'utf8');
+ assert.match(workflow,/bash \.github\/scripts\/verify-isolated-character-labs\.sh/);
  for(const name of ['skeleton.html','skeleton-rig.mjs','skin.html','skin-art-spec.json'])
-  assert.ok(yaml.includes(name),'deployment verifies '+name);
- assert.match(yaml,/EXPECTED_HASH=/);
- assert.match(yaml,/LIVE_HASH=/);
- assert.match(yaml,/skinverify=/);
- assert.match(yaml,/KHÔNG ĐẠT NGHIỆM THU/);
- assert.match(yaml,/skin-art-spec\.json/);
- assert.doesNotMatch(yaml,/node --check \/tmp\/v4-skeleton-skin\.mjs/);
+  assert.ok(script.includes(name),'isolated deployment verifies '+name);
+ assert.match(script,/EXPECTED_HASH=/);
+ assert.match(script,/LIVE_HASH=/);
+ assert.match(script,/skinverify=/);
+ assert.match(script,/KHÔNG ĐẠT NGHIỆM THU/);
+ assert.match(script,/skin-art-spec\.json/);
+ assert.doesNotMatch(script,/node --check \/tmp\/v4-skeleton-skin\.mjs/);
 });
