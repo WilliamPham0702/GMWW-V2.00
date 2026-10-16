@@ -72,3 +72,13 @@ test('builder replaces binary data with size only and records server errors', ()
   assert.equal(out.summary.errors, 1);
   assert.equal(out.errors[0], 'Không đọc được danh sách');
 });
+
+test('export shows the JSON in-app with share and copy, without a blob download', () => {
+  const block = app.slice(app.indexOf('async function exportLocalGameData'), app.indexOf('function renderGameTemplateLibrary'));
+  assert.doesNotMatch(block, /createObjectURL|link\.click|\.download=/);
+  assert.match(block, /showLocalExportViewer\(/);
+  const viewer = app.slice(app.indexOf('function showLocalExportViewer'), app.indexOf('async function exportLocalGameData'));
+  assert.match(viewer, /navigator\.share/);
+  assert.match(viewer, /navigator\.clipboard\.writeText/);
+  assert.match(viewer, /readOnly=true/);
+});

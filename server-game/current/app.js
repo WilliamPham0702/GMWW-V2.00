@@ -3955,6 +3955,36 @@ async function readIndexedDbForExport(){
   }
   return out;
 }
+// Shows the export inside the app instead of downloading a file: blob downloads
+// blank the iPhone WebView, so the user shares or copies the text directly.
+function showLocalExportViewer(text,filename,summaryText){
+  document.getElementById('gmwwExportOverlay')?.remove();
+  const wrap=document.createElement('div');wrap.id='gmwwExportOverlay';
+  wrap.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:flex;flex-direction:column;padding:14px;gap:10px;box-sizing:border-box';
+  const head=document.createElement('div');head.style.cssText='color:#fff;font-size:14px;line-height:1.4';
+  head.textContent=summaryText+' Nhấn CHIA SẺ hoặc SAO CHÉP để gửi dữ liệu.';
+  const area=document.createElement('textarea');area.readOnly=true;area.value=text;
+  area.style.cssText='flex:1;width:100%;min-height:0;font:11px/1.35 monospace;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:8px;box-sizing:border-box';
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:8px';
+  const mk=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='flex:1;padding:14px;border-radius:10px;border:0;font-weight:700;font-size:15px';b.onclick=fn;return b};
+  const makeFile=()=>new File([text],filename,{type:'application/json'});
+  row.append(
+    mk('CHIA SẺ',async()=>{
+      try{
+        const file=makeFile();
+        if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:filename});return}
+        if(navigator.share){await navigator.share({title:filename,text});return}
+        alert('Thiết bị này không hỗ trợ chia sẻ. Hãy dùng SAO CHÉP.');
+      }catch(err){if(err?.name!=='AbortError')alert('Không chia sẻ được: '+String(err?.message||err))}
+    }),
+    mk('SAO CHÉP',async()=>{
+      try{await navigator.clipboard.writeText(text);alert('Đã sao chép. Dán vào tin nhắn để gửi.')}
+      catch{area.focus();area.select();let ok=false;try{ok=document.execCommand('copy')}catch{}alert(ok?'Đã sao chép.':'Chạm giữ trong ô để chọn tất cả rồi sao chép.')}
+    }),
+    mk('ĐÓNG',()=>wrap.remove())
+  );
+  wrap.append(head,area,row);document.body.appendChild(wrap);
+}
 async function exportLocalGameData(){
   const btn=document.getElementById('exportLocalData'),label=btn?.querySelector('b');
   try{
@@ -3975,11 +4005,9 @@ async function exportLocalGameData(){
     let serverArtifacts=null;
     try{serverArtifacts=await gmApi('/api/gm/artifacts/shared')}catch(err){serverArtifacts={error:String(err?.message||err)}}
     const payload=globalThis.gmwwBuildLocalExport({localStorage:entries,indexedDB,serverTemplates,legacyTemplates,serverArtifacts,serverError,app:'GMWW '+VERSION});
-    const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
-    const link=document.createElement('a');link.href=url;link.download='gmww-local-export-'+new Date().toISOString().slice(0,10)+'.json';
-    document.body.appendChild(link);link.click();link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),4000);
-    const s=payload.summary;alert('Đã xuất: '+s.localStorageKeys+' khóa local, '+s.indexedDbDatabases+' kho IndexedDB, '+s.legacyTemplatesUnsynced+' Ván Mẫu chưa đồng bộ, '+s.errors+' lỗi.');
+    const s=payload.summary;
+    const summaryText='Đã xuất: '+s.localStorageKeys+' khóa local, '+s.indexedDbDatabases+' kho IndexedDB, '+s.legacyTemplatesUnsynced+' Ván Mẫu chưa đồng bộ, '+s.errors+' lỗi.';
+    showLocalExportViewer(JSON.stringify(payload,null,2),'gmww-local-export-'+new Date().toISOString().slice(0,10)+'.json',summaryText);
   }catch(err){alert('Xuất dữ liệu thất bại: '+String(err?.message||err))}
   finally{if(btn){btn.disabled=false;if(label)label.textContent='XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ'}}
 }
