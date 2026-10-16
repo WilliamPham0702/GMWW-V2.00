@@ -3428,7 +3428,7 @@ function renderPlayBattle(){
   if(picker){picker.hidden=!battleState.targetSheet;picker.classList.toggle('is-confirm-only',!!battleState.targetSheet&&targetReady)}
   if(battleState.targetSheet){
     if(pickerTitle)pickerTitle.textContent=act?act.name.toUpperCase():'CHỌN MỤC TIÊU';
-    if(pickerClose)pickerClose.hidden=targetReady;
+    if(pickerClose)pickerClose.hidden=false;
     if(pickerText)pickerText.textContent=targetReady?'':battleState.dragAmbiguous?'Hai người đang quá gần nhau. Hãy chạm đúng TÊN mục tiêu để tránh thả nhầm.':battleState.targets.length?'':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
     if(candidates){
       candidates.hidden=targetReady||(battleState.targetMode==='drag'&&act?.targetCount===1);
