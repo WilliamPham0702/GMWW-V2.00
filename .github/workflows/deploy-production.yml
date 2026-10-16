@@ -162,18 +162,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
 
-      - name: Classify isolated Character Lab verification
-        id: character_lab_scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt "${{ github.event_name }}" >> "$GITHUB_OUTPUT"
-
       - name: Verify Production
         shell: bash
         run: |
           set -euo pipefail
           URL="https://gmww-v2-00.williampham0702.workers.dev"
+          VERIFY_CHARACTER_LABS=$(node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt "${{ github.event_name }}" | cut -d= -f2)
+          test "$VERIFY_CHARACTER_LABS" = true -o "$VERIFY_CHARACTER_LABS" = false
           EXPECTED=$(node -e "const p=require('./package.json');process.stdout.write(String(p.version).replace(/\.0$/,''))")
           OK=0
           for i in $(seq 1 30); do
@@ -442,7 +437,7 @@ jobs:
           fi
           # Keep active runtime/SHA checks mandatory. Unrelated, isolated 3D labs
           # are verified only when relevant content/routing changes (or manual deploy).
-          if [ "${{ steps.character_lab_scope.outputs.verify_character_labs }}" != "false" ]; then
+          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
           # Character V5.60 is an isolated lab, not a runtime/IPA game change.
           # Confirm that a clickable HTML test AND its REAL SkinnedMesh adapter are
           # deployed, rather than claiming the CI merge alone implies a live page.
@@ -557,7 +552,7 @@ jobs:
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
-          if [ "${{ steps.character_lab_scope.outputs.verify_character_labs }}" != "false" ]; then
+          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
           echo "Verify Production: checking isolated Character V4 Web studio."
           curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/index.html?verify=$(date +%s)" > /tmp/character-v4-web.html
           grep -Fq '20 Character mới' /tmp/character-v4-web.html
