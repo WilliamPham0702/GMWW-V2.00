@@ -3345,7 +3345,7 @@ body.play-immersive #start .play-shell[data-step="seats"] #playGatherToolbar.pla
 #playGatherToolbar #playGatherDisband{border-color:rgba(255,169,157,.56);background:rgba(104,44,47,.7);color:#fff0dc}
 #playGatherToolbar .play-gather-toolbar-actions>button>b{font-size:7.1px!important;white-space:normal!important;text-align:center}
 body.play-immersive #start .play-player-token.is-seat-occupied:not(.is-gm-rider){transform:translate(-50%,-84%)!important}
-body.play-immersive #start .play-player-token.is-seat-occupied:not(.is-gm-rider)::before{content:"";position:absolute;left:50%;top:calc(100% - 16px);transform:translate(-50%,-50%);width:51px;height:37px;background:url("village/seat-leaf.webp?v=320") center/contain no-repeat;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));opacity:.82;pointer-events:none;z-index:-1}
+
 #playSeatSheet.is-manual .play-seat-sheet-card{width:min(96vw,680px);max-height:84dvh}
 #playSeatSheet .play-seat-manual-members{display:none}
 #playSeatSheet.is-manual .play-seat-manual-columns{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:8px;min-height:0;flex:1}
@@ -5453,4 +5453,40 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
   #playCreateRoomSheet .play-room-strip{gap:5px!important}
   #playCreateRoomSheet .play-room-control-row{gap:5px!important}
   #playCreateRoomSheet .play-room-control-row>button{padding:5px 7px!important;font-size:9.5px!important}
+}
+
+
+/* V3.121 — keep names near character heads and leave occupied seat floors clear. */
+body.play-immersive #start #playPlayerRing .play-player-token.is-seat-occupied:not(.is-gm-rider)::before{
+  content:none!important;display:none!important;background:none!important
+}
+body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not(.is-gm-rider) .play-player-over{
+  bottom:calc(100% - 18px)!important;z-index:5
+}
+
+/* V3.121 — Wolf GM tools: one compact, horizontally swipeable row on iPhone. */
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu{
+  max-height:min(60dvh,175px)!important;overflow-x:hidden!important
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  gap:7px!important;overflow-x:auto!important;overflow-y:hidden!important;
+  overscroll-behavior-x:contain;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#6abccc transparent;
+  padding:2px 1px 7px!important;touch-action:pan-x
+}
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions>button,
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions #battleGMAudio,
+#start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions #battleGMAuto{
+  grid-column:auto!important;flex:0 0 108px!important;width:108px!important;
+  min-width:108px!important;max-width:108px!important;min-height:46px!important;
+  padding:7px 6px!important;font-size:11px!important;line-height:1.15!important;
+  white-space:normal!important;scroll-snap-align:start
+}
+@media(max-width:390px){
+  #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions>button,
+  #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions #battleGMAudio,
+  #start #playShell[data-step="battle"] #playBattleDock.battle-float-v396 #battleWolfMenu .battle-wolf-actions #battleGMAuto{
+    flex-basis:98px!important;width:98px!important;min-width:98px!important;max-width:98px!important
+  }
 }

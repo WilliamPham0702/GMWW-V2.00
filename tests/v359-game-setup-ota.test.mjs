@@ -26,9 +26,9 @@ test('V3.94 version sources and IPA update manifest route are aligned',()=>{
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const worker=fs.readFileSync('src/index.js','utf8');
-  assert.equal(pkg.version,'3.120.0');assert.equal(lock.version,'3.120.0');
-  assert.match(app,/const VERSION='3.120'/);assert.match(html,/GMWW V3.120/);
-  assert.match(worker,/VERSION="V3.120"/);assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3120"/);
+  assert.equal(pkg.version,'3.121.0');assert.equal(lock.version,'3.121.0');
+  assert.match(app,/const VERSION='3.121'/);assert.match(html,/GMWW V3.121/);
+  assert.match(worker,/VERSION="V3.121"/);assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3121"/);
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(versioned,').length,2);
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(manifest,').length,2);
 });
