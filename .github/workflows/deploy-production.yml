@@ -526,10 +526,5 @@ jobs:
           curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
           test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
           test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
-          # Character V4/V5 laboratory validation is isolated from routine GM UI OTA.
-          VERIFY_CHARACTER_LABS=$(node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt "${{ github.event_name }}" | cut -d= -f2)
-          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
-            URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
-          else
-            echo "Isolated Character V4/V5 laboratory unchanged; core Production and OTA verified."
-          fi
+          # Run extracted Character laboratories with full checks while introducing the scoped lane.
+          URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
