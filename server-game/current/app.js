@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.117';
+const VERSION='3.118';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2275,6 +2275,7 @@ function playPlayerStatuses(loginId){
   return out;
 }
 function playPlayerBlocked(loginId){return ['dead','frozen','expelled'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
+function playBlockReason(loginId){const e=playPlayerEffect(loginId);if(e==='dead')return'Người thực hiện đã chết.';if(e==='frozen')return'Người thực hiện đang bị Đóng băng.';if(e==='expelled')return'Người thực hiện đã bị Đuổi khỏi làng.';const st=playPlayerStatuses(loginId).find(x=>x.blocks);return st?'Người thực hiện đang: '+st.label+'.':'Người thực hiện không thể hành động.'}
 function playPlayerEffect(loginId){
   const now=playNow(),rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now)),types=new Set(rows.map(x=>String(x?.type||'')));
   if(types.has('dead'))return'dead';if(types.has('frozen'))return'frozen';if(types.has('expelled'))return'expelled';return'alive'
@@ -3248,7 +3249,7 @@ const battleActions=()=>{
   return actions.map(action=>{
     let unavailableReason='';
     const actorIds=(action.actorIds||[]).filter(actorId=>{
-      if(playPlayerBlocked(actorId)){unavailableReason='Người thực hiện không thể hành động.';return false}
+      if(playPlayerBlocked(actorId)){unavailableReason=playBlockReason(actorId);return false}
       if(action.artifactId)return true; // Artifact use is governed by its existing cycle ledger.
       const owner=turn?.kind==='role-group'?(turn.roles||[]).find(r=>
         (r.loginIds||[]).map(String).includes(String(actorId))&&
@@ -3398,7 +3399,7 @@ function renderPlayBattle(){
   const battleActorEffects=actions.map(a=>[a.id,(a.actorIds||[]).map(id=>playPlayerEffect(id)).filter(x=>x==='frozen'||x==='expelled'||x==='dead')]);
   const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds,a.unavailableReason]))+':'+JSON.stringify(battleActorEffects);
   if(bar&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+(a.noTarget||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/không thể hành động/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'Đóng băng':(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('expelled')?'Bị đuổi':'Không thể hành động')+'</span> ':'')+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+(a.noTarget||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.artifactId?a.name+' · '+a.artifactName+' · '+(battleMember(a.artifactLoginId)?.displayName||a.artifactLoginId):a.name)+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?'Bầy sói':phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
   set('battleActionTrayTitle','');
@@ -3471,11 +3472,13 @@ async function battleConfirm(confirmed=false){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   const targets=[...battleState.targets];
   try{
-    const payload={targetIds:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
+    const seerReveal=a.actionId==='action_seer'&&!a.artifactId;
+    const payload={targetIds:seerReveal?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
       ...(a.artifactId?{artifactId:a.artifactId}:{}),effectId:a.effectIds[0]||'',effectName:a.name,
       matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',
       night:Number(playSceneState.night||1),clientEventId:battleState.nonce};
-    if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
+    if(seerReveal){const row=(playSceneRuntime.assignments||[]).find(x=>String(x?.loginId||'')===String(targets[0]||'')),rc=row?.roleCard?.factionId?row.roleCard:((state?.cards||[]).find(c=>String(c.id)===String(row?.roleId||''))||{}),wolf=rc.factionId==='wolf'&&String(row?.roleId||'')!=='role_alpha_wolf';payload.type='effect_notice';payload.message='Kết quả Soi Xét: '+(battleMember(targets[0])?.displayName||targets[0]||'')+(wolf?' là SÓI.':' KHÔNG PHẢI SÓI.')}
+    else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});

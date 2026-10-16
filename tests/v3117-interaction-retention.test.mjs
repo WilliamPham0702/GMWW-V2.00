@@ -11,18 +11,18 @@ const { pruneInteractions } = new Function(
 )();
 const big = 'x'.repeat(2000);
 
-test('V3.117 interactions are not trimmed to a fixed row count', () => {
+test('V3.118 interactions are not trimmed to a fixed row count', () => {
   assert.doesNotMatch(src, /rows\.slice\(-100\)/);
   assert.match(src, /storage\.put\("interactions",pruneInteractions\(rows\)\)/);
 });
 
-test('V3.117 keeps full history when it fits the byte budget', () => {
+test('V3.118 keeps full history when it fits the byte budget', () => {
   const rows = [];
   for (let i = 0; i < 700; i++) rows.push({ id: 'h' + i, type: 'thumb_vote', effectActive: true });
   assert.equal(pruneInteractions(rows).length, 700);
 });
 
-test('V3.117 over budget keeps live effects and the newest history, drops oldest history', () => {
+test('V3.118 over budget keeps live effects and the newest history, drops oldest history', () => {
   const rows = [{ id: 'old-frozen', type: 'frozen', effectActive: true, message: big }];
   for (let i = 0; i < 1200; i++) rows.push({ id: 'h' + i, type: 'thumb_vote', message: big });
   const kept = pruneInteractions(rows);
@@ -33,7 +33,7 @@ test('V3.117 over budget keeps live effects and the newest history, drops oldest
   assert.ok(bytes <= 1500000 + 3000, 'bounded by budget');
 });
 
-test('V3.117 ended effects are not kept as live', () => {
+test('V3.118 ended effects are not kept as live', () => {
   const rows = [{ id: 'ended', type: 'dead', effectActive: false, message: big }];
   for (let i = 0; i < 1200; i++) rows.push({ id: 'h' + i, type: 'thumb_vote', message: big });
   assert.ok(!pruneInteractions(rows).some(x => x.id === 'ended'));

@@ -120,7 +120,7 @@ test('Role counts are exact and versioned V3.64 OTA only includes the three exis
  assert.equal(selectVerifiedRuntimeV364Delta(bad,'3.63'),null);
  const unsafe=sample();unsafe.delete=['settings.json'];
  assert.equal(selectVerifiedRuntimeV364Delta(unsafe,'3.63'),null);
- assert.match(worker,/VERSION="V3.117",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3117"/);
- assert.match(html,/<title>GMWW V3.117<\/title>/);
- assert.match(app,/const VERSION='3.117'/);
+ assert.match(worker,/VERSION="V3.118",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3118"/);
+ assert.match(html,/<title>GMWW V3.118<\/title>/);
+ assert.match(app,/const VERSION='3.118'/);
 });
