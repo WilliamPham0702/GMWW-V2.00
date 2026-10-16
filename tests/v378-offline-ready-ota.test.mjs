@@ -17,10 +17,10 @@ test('V3.78 rejects partial or tampered packages and wrong base versions',()=>{
 });
 test('V3.94 metadata and both OTA endpoints are aligned',()=>{
  const app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8'),worker=fs.readFileSync('src/index.js','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
- assert.equal(pkg.version,'3.115.0');
- assert.match(app,/const VERSION='3.115'/);
- assert.match(html,/<title>GMWW V3.115<\/title>/);
- assert.match(html,/app\.js\?v=3\.115-orbit/);
- assert.match(worker,/VERSION="V3.115",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3115"/);
+ assert.equal(pkg.version,'3.116.0');
+ assert.match(app,/const VERSION='3.116'/);
+ assert.match(html,/<title>GMWW V3.116<\/title>/);
+ assert.match(html,/app\.js\?v=3\.116-orbit/);
+ assert.match(worker,/VERSION="V3.116",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3116"/);
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV378Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta'));
 });
