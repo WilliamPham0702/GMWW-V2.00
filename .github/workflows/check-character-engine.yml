@@ -14,8 +14,8 @@ on:
       - "assets/village/index.html"
       - "tests/character-engine.test.mjs"
       - "tests/character-renderer.test.mjs"
-      - "server-game/current/app.js"
-      - "server-game/current/GMWW.html"
+      # Generic GM UI files remain covered by Check Player Web Worker (all unit tests).
+      # This heavy screenshot suite runs when character-specific renderers change.
       - "server-game/current/character-renderer.js"
       - "server-game/current/character-renderer.css"
       - ".github/workflows/build-server-game-ipa.yml"

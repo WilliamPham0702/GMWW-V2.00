@@ -13,6 +13,8 @@ on:
       - "wrangler.jsonc"
       - "package.json"
       - ".github/workflows/check-player-web.yml"
+      - ".github/workflows/deploy-production.yml"
+      - ".github/workflows/check-character-engine.yml"
       - ".github/scripts/**"
   workflow_dispatch:
 
@@ -28,7 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+          cache: npm
+      - run: npm ci
       - run: npm run check
       - name: Verify synchronized GMWW version numbers
         run: node .github/scripts/verify-gmww-versions.mjs
