@@ -10,5 +10,9 @@ test('Gathering spacing slider supports 70–135%, persists local preference and
 test('GM info box is removed and top two audio/auto controls spread evenly',()=>{
  assert.doesNotMatch(html,/id="battleInfoToggle"/);
  assert.match(html,/id="battleGMAudio"/);assert.match(html,/id="battleGMAuto"/);
- assert.match(css,/#battleGMAudio,[\s\S]*?#battleGMAuto\{grid-column:span 3!important/);
+ const compact=css.slice(css.indexOf('/* V3.121 — Wolf GM tools:'));
+ assert.match(compact,/display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important/);
+ assert.match(compact,/overflow-x:auto!important/);
+ assert.match(compact,/#battleGMAudio/);
+ assert.match(compact,/#battleGMAuto/);
 });
