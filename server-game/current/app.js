@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.114';
+const VERSION='3.115';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -846,7 +846,7 @@ function bindCore(){
   $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
   $$('.libtab').forEach(b=>b.onclick=()=>{$$('.libtab').forEach(x=>x.classList.toggle('active',x===b));$$('.libpane').forEach(p=>p.classList.toggle('active',p.id==='lib-'+b.dataset.lib));$('#library').scrollTop=0;if(b.dataset.lib==='themes')renderTheme();if(b.dataset.lib==='audio')renderAudio();if(b.dataset.lib==='templates')loadPlayGameTemplates()});
   $$('[data-filter-kind]').forEach(row=>$$('.filter',row).forEach(b=>b.onclick=()=>{$$('.filter',row).forEach(x=>x.classList.toggle('active',x===b));if(row.dataset.filterKind==='cards')cardFilter=b.dataset.filter;else artifactFilter=b.dataset.filter;renderEntityGrid(row.dataset.filterKind)}));
-  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');
+  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');const exportGameCardsBtn=$('#exportGameCards');if(exportGameCardsBtn)exportGameCardsBtn.onclick=()=>exportGameCardsData();
   const topBack=$('#topBackEntity');if(topBack)topBack.onclick=closeEntityEditor;$('#backEntity').onclick=closeEntityEditor;$('#saveEntity').onclick=saveEntity;$('#hideEntity').onclick=toggleCurrentEntityHidden;$('#deleteEntity').onclick=deleteEntity;
   $$('.face-switch button').forEach(b=>b.onclick=()=>setFace(b.dataset.face));
   $('#entityName').oninput=()=>{if(editDraft){editDraft.name=$('#entityName').value;renderEntityFront()}};
@@ -3926,6 +3926,27 @@ async function loadPlayGameTemplates(){
   try{await migrateV109GameTemplates();const data=await gmApi('/api/gm/game-templates');playSceneRuntime.gameTemplates=Array.isArray(data?.templates)?data.templates:[]}catch(err){playSceneRuntime.gameTemplates=[];playGameStatus('Không tải được danh sách Ván Mẫu: '+String(err?.message||'Lỗi kết nối'),'error')}
   const sel=document.getElementById('playGameTemplateSelect'),mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play';if(sel){sel.innerHTML=(mode==='library'?'<option value="">Tạo Ván Mẫu mới</option>':'<option value="">Chọn Ván Mẫu</option>')+playSceneRuntime.gameTemplates.map(x=>'<option value="'+playEsc(x.id)+'">'+playEsc(x.name)+' • '+Number(x.playerCount||0)+' người</option>').join('');sel.value=playSceneState.gameTemplateId||''}
   renderGameTemplateLibrary();
+}
+async function exportGameCardsData(){
+  const btn=document.getElementById('exportGameCards');
+  try{
+    if(btn){btn.disabled=true;btn.textContent='ĐANG XUẤT…'}
+    const list=await gmApi('/api/gm/game-templates');
+    const templates=[];
+    for(const t of (list?.templates||[])){
+      const id=String(t?.id||'');if(!id)continue;
+      try{const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));templates.push(data?.template||{id,error:'TEMPLATE_EMPTY'})}
+      catch(err){templates.push({id,error:String(err?.message||err)})}
+    }
+    let sharedArtifacts=null;
+    try{sharedArtifacts=await gmApi('/api/gm/artifacts/shared')}catch(err){sharedArtifacts={error:String(err?.message||err)}}
+    const payload={exportedAt:new Date().toISOString(),app:'GMWW '+VERSION,templateCount:templates.length,templates,sharedArtifacts};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='gmww-cards-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(err){alert('Xuất dữ liệu thất bại: '+String(err?.message||err))}
+  finally{if(btn){btn.disabled=false;btn.textContent='⬇ XUẤT'}}
 }
 function renderGameTemplateLibrary(){
   const box=document.getElementById('gameTemplateLibraryList');if(!box)return;box.innerHTML='';
