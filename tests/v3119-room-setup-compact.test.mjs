@@ -27,8 +27,8 @@ test('Online, enabled, and next-step controls remain present and compact',()=>{
   assert.match(app,/playToggleRoomEnabled/);
 });
 
-test('Current Runtime version is retained; no V3.114 release-version downgrade',()=>{
-  assert.equal(pkg.version,'3.119.0');
-  assert.match(html,/<title>GMWW V3\.119<\/title>/);
-  assert.match(html,/app\.js\?v=3\.119-orbit&status=1/);
+test('Room layout fix advances to OTA V3.120 without a version downgrade',()=>{
+  assert.equal(pkg.version,'3.120.0');
+  assert.match(html,/<title>GMWW V3\.120<\/title>/);
+  assert.match(html,/app\.js\?v=3\.120-orbit&status=1/);
 });
