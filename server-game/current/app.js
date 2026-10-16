@@ -846,7 +846,7 @@ function bindCore(){
   $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
   $$('.libtab').forEach(b=>b.onclick=()=>{$$('.libtab').forEach(x=>x.classList.toggle('active',x===b));$$('.libpane').forEach(p=>p.classList.toggle('active',p.id==='lib-'+b.dataset.lib));$('#library').scrollTop=0;if(b.dataset.lib==='themes')renderTheme();if(b.dataset.lib==='audio')renderAudio();if(b.dataset.lib==='templates')loadPlayGameTemplates()});
   $$('[data-filter-kind]').forEach(row=>$$('.filter',row).forEach(b=>b.onclick=()=>{$$('.filter',row).forEach(x=>x.classList.toggle('active',x===b));if(row.dataset.filterKind==='cards')cardFilter=b.dataset.filter;else artifactFilter=b.dataset.filter;renderEntityGrid(row.dataset.filterKind)}));
-  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');const exportGameCardsBtn=$('#exportGameCards');if(exportGameCardsBtn)exportGameCardsBtn.onclick=()=>exportGameCardsData();
+  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');const exportLocalBtn=$('#exportLocalData');if(exportLocalBtn)exportLocalBtn.onclick=()=>exportLocalGameData();
   const topBack=$('#topBackEntity');if(topBack)topBack.onclick=closeEntityEditor;$('#backEntity').onclick=closeEntityEditor;$('#saveEntity').onclick=saveEntity;$('#hideEntity').onclick=toggleCurrentEntityHidden;$('#deleteEntity').onclick=deleteEntity;
   $$('.face-switch button').forEach(b=>b.onclick=()=>setFace(b.dataset.face));
   $('#entityName').oninput=()=>{if(editDraft){editDraft.name=$('#entityName').value;renderEntityFront()}};
@@ -3927,26 +3927,61 @@ async function loadPlayGameTemplates(){
   const sel=document.getElementById('playGameTemplateSelect'),mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play';if(sel){sel.innerHTML=(mode==='library'?'<option value="">Tạo Ván Mẫu mới</option>':'<option value="">Chọn Ván Mẫu</option>')+playSceneRuntime.gameTemplates.map(x=>'<option value="'+playEsc(x.id)+'">'+playEsc(x.name)+' • '+Number(x.playerCount||0)+' người</option>').join('');sel.value=playSceneState.gameTemplateId||''}
   renderGameTemplateLibrary();
 }
-async function exportGameCardsData(){
-  const btn=document.getElementById('exportGameCards');
+function readLegacyTemplatesForExport(){
+  const out=[];
+  for(const key of ['GMWW_V109_GAME_TEMPLATES','GMWW_V1_09_GAME_TEMPLATES','GMWW_V109_STATE','GMWW_V1_09_STATE']){
+    let raw=null;try{raw=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}
+    const buckets=Array.isArray(raw)?raw:(raw&&typeof raw==='object'?['gameTemplates','templates','sampleGames','games'].flatMap(k=>Array.isArray(raw[k])?raw[k]:[]):[]);
+    for(const item of buckets){const cfg=item?.compiledConfig||item?.gameConfig||item;if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)continue;out.push({id:String(item?.id||cfg.id||''),name:String(item?.name||cfg.name||''),roleCount:cfg.roles.length,source:key})}
+  }
+  return out;
+}
+async function readIndexedDbForExport(){
+  const names=[];
+  try{for(const d of (await indexedDB.databases())||[]){if(d?.name&&String(d.name).startsWith('GMWW'))names.push(String(d.name))}}catch{}
+  if(!names.length)names.push('GMWW_ASSETS_921','GMWW_THEME_ASSETS_946','GMWW_THEME_UI_987','GMWW_MATCH_CACHE_933','GMWW_AUDIO_LIBRARY','GMWW_V208_THEME_ASSETS');
+  const out=[];
+  for(const name of names){
+    const entry={name,stores:{},error:''};
+    try{
+      const db=await new Promise((res,rej)=>{const r=indexedDB.open(name);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||new Error('không mở được'));r.onupgradeneeded=()=>{try{r.transaction.abort()}catch{}}});
+      for(const storeName of Array.from(db.objectStoreNames)){
+        const rows=await new Promise((res,rej)=>{const tx=db.transaction(storeName,'readonly');const st=tx.objectStore(storeName);const k=st.getAllKeys(),v=st.getAll();tx.oncomplete=()=>res({keys:k.result,values:v.result});tx.onerror=()=>rej(tx.error||new Error('đọc lỗi'));tx.onabort=()=>rej(tx.error||new Error('đọc bị hủy'))});
+        entry.stores[storeName]=rows.keys.map((key,i)=>({key:globalThis.gmwwJsonSafe(key),value:globalThis.gmwwJsonSafe(rows.values[i])}));
+      }
+      db.close();
+    }catch(err){entry.error=String(err?.message||err)}
+    out.push(entry);
+  }
+  return out;
+}
+async function exportLocalGameData(){
+  const btn=document.getElementById('exportLocalData'),label=btn?.querySelector('b');
   try{
-    if(btn){btn.disabled=true;btn.textContent='ĐANG XUẤT…'}
-    const list=await gmApi('/api/gm/game-templates');
-    const templates=[];
-    for(const t of (list?.templates||[])){
-      const id=String(t?.id||'');if(!id)continue;
-      try{const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));templates.push(data?.template||{id,error:'TEMPLATE_EMPTY'})}
-      catch(err){templates.push({id,error:String(err?.message||err)})}
-    }
-    let sharedArtifacts=null;
-    try{sharedArtifacts=await gmApi('/api/gm/artifacts/shared')}catch(err){sharedArtifacts={error:String(err?.message||err)}}
-    const payload={exportedAt:new Date().toISOString(),app:'GMWW '+VERSION,templateCount:templates.length,templates,sharedArtifacts};
+    if(btn){btn.disabled=true;if(label)label.textContent='ĐANG XUẤT…'}
+    const entries=[];
+    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);entries.push({key,value:localStorage.getItem(key)})}
+    const legacyTemplates=readLegacyTemplatesForExport();
+    const indexedDB=await readIndexedDbForExport();
+    let serverTemplates=[],serverError='';
+    try{
+      const list=await gmApi('/api/gm/game-templates');
+      for(const t of list?.templates||[]){
+        const id=String(t?.id||'');if(!id)continue;
+        try{const d=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));serverTemplates.push(d?.template||{id,error:'TEMPLATE_EMPTY'})}
+        catch(err){serverTemplates.push({id,error:String(err?.message||err)})}
+      }
+    }catch(err){serverError='Không đọc được danh sách Ván Mẫu trên server: '+String(err?.message||err)}
+    let serverArtifacts=null;
+    try{serverArtifacts=await gmApi('/api/gm/artifacts/shared')}catch(err){serverArtifacts={error:String(err?.message||err)}}
+    const payload=globalThis.gmwwBuildLocalExport({localStorage:entries,indexedDB,serverTemplates,legacyTemplates,serverArtifacts,serverError,app:'GMWW '+VERSION});
     const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
-    const link=document.createElement('a');link.href=url;link.download='gmww-cards-'+new Date().toISOString().slice(0,10)+'.json';
+    const link=document.createElement('a');link.href=url;link.download='gmww-local-export-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),4000);
+    const s=payload.summary;alert('Đã xuất: '+s.localStorageKeys+' khóa local, '+s.indexedDbDatabases+' kho IndexedDB, '+s.legacyTemplatesUnsynced+' Ván Mẫu chưa đồng bộ, '+s.errors+' lỗi.');
   }catch(err){alert('Xuất dữ liệu thất bại: '+String(err?.message||err))}
-  finally{if(btn){btn.disabled=false;btn.textContent='⬇ XUẤT'}}
+  finally{if(btn){btn.disabled=false;if(label)label.textContent='XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ'}}
 }
 function renderGameTemplateLibrary(){
   const box=document.getElementById('gameTemplateLibraryList');if(!box)return;box.innerHTML='';
