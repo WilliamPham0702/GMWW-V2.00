@@ -10,7 +10,7 @@ test('Village shows one compact name badge with a colored presence dot, never a 
   assert.match(make,/nameText\.className="name-text";nameText\.textContent=playerName/);
   assert.match(make,/presence\.className="player-presence";presence\.dataset\.online=data\?\.online===false\?"false":"true"/);
   assert.match(make,/name\.append\(nameText,presence\)/);
-  assert.match(make,/over\.append\(name\)/);
+  assert.match(make,/over\.append\(name,role\)/);
   assert.doesNotMatch(make,/className="player-status"/);
   assert.match(css,/\.player \.player-presence\{[\s\S]*?background:#39e680/);
   assert.match(css,/\.player \.player-presence\[data-online="false"\]\{[\s\S]*?background:#ff5363/);

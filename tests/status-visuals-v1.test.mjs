@@ -179,7 +179,7 @@ test('V2 production Player Web uses the approved shared orbit renderer, not lega
 test('V3.124: Player Web updates overlay on same stable avatar and skips unchanged heartbeats',()=>{
   assert.match(village,/function statusVisualSignature\(data\)/);
   assert.match(village,/dataset\.gmwwStatusSig!==nextStatusSig/);
-  assert.match(village,/querySelectorAll\(':scope > \.gmww-sv-overlay, :scope > \.gmww-sv-badges'\)/);
+  assert.match(village,/querySelectorAll\(':scope > \.gmww-sv-overlay, \.player-over > \.gmww-sv-badges'\)/);
   assert.match(village,/button\.classList\.toggle\("gmww-sv-dead",active\.includes\("dead"\)\)/);
   assert.match(village,/if\(active\.length\)button\.insertAdjacentHTML\("beforeend",visuals\.overlay\(ids\)\)/);
 });

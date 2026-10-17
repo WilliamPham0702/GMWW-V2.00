@@ -46,7 +46,7 @@ test('V3.129: Player Web uses authoritative Seat before stale world or pregame m
   assert.match(player,/matchStartedAt=Date\.parse\(room\.startedAt\|\|""\)\|\|0/);
   assert.match(player,/seatOffset=layout\.normalizeSeatOffset\(room\.seatOffset\)/);
   assert.match(player,/const visualSeats=layout\.projectedSeatIds/);
-  assert.match(read('assets/village/index.html'),/seat=3129/);
+  assert.match(read('assets/village/index.html'),/seat=3131/);
 });
 
 test('V3.129: every selected Seat Mẫu layout has unique fire-centred locations on an iPhone viewport',()=>{
