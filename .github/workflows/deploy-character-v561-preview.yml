@@ -54,9 +54,30 @@ jobs:
           node --check src/character-v561-preview-worker.mjs
           node --check .github/scripts/build-character-v561-preview.mjs
           node .github/scripts/build-character-v561-preview.mjs
-          test "$(find .character-v561-preview-assets -type f | wc -l | tr -d ' ')" -eq 10
+          test "$(find .character-v561-preview-assets -type f | wc -l | tr -d ' ')" -eq 11
           ! grep -Eq '(DurableObject|roomStub|\/api\/update|\/updates\/runtime)' src/character-v561-preview-worker.mjs
+          test -s .character-v561-preview-assets/characters/v5/gmww-character-v562.bundle.js
+          grep -Fq '<script defer src="./gmww-character-v562.bundle.js"></script>' .character-v561-preview-assets/characters/v5/test-skin-v562.html
+          ! grep -Fq '<script type="module">' .character-v561-preview-assets/characters/v5/test-skin-v562.html
           npx wrangler deploy --config wrangler.character-v561-preview.jsonc --dry-run
+      - name: Safari-compatible bundled preview renders a real Three.js frame in Chromium
+        run: |
+          set -euo pipefail
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          test -n "$CHROME"
+          python3 -m http.server 18776 --bind 127.0.0.1 --directory .character-v561-preview-assets >/tmp/gmww-character-bundle.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill "$WEB_PID" 2>/dev/null || true' EXIT
+          sleep 1
+          timeout 60s "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage             --enable-unsafe-swiftshader --use-angle=swiftshader --virtual-time-budget=3500             --dump-dom "http://127.0.0.1:18776/characters/v5/test-skin-v562.html"             > /tmp/character-v562-bundled.html 2>/tmp/character-v562-browser.log || {
+              tail -n 30 /tmp/character-v562-browser.log; exit 1;
+            }
+          grep -Fq 'data-gmww-v562="ready"' /tmp/character-v562-bundled.html || {
+            tail -n 30 /tmp/character-v562-browser.log
+            grep -o 'data-gmww-v562="[^"]*"' /tmp/character-v562-bundled.html || true
+            exit 1
+          }
+          echo 'Classic-script iPhone Preview bundle: 3D renderer and original V4.17 swatch PASS.'
 
   deploy-preview:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -96,6 +117,11 @@ jobs:
           grep -Fq '4 chuyển động • Skin 3D' /tmp/gmww-character-v562-test.html
           grep -Fq 'window.__gmwwV562ReportError=report;' /tmp/gmww-character-v562-test.html
           grep -Fq 'data-action="result"' /tmp/gmww-character-v562-test.html
+          grep -Fq '<script defer src="./gmww-character-v562.bundle.js"></script>' /tmp/gmww-character-v562-test.html
+          ! grep -Fq '<script type="module">' /tmp/gmww-character-v562-test.html
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2             "$BASE/characters/v5/gmww-character-v562.bundle.js?verify=$(date +%s)" > /tmp/gmww-v562-live-bundle.js
+          test -s /tmp/gmww-v562-live-bundle.js
+          test "$(shasum -a 256 .character-v561-preview-assets/characters/v5/gmww-character-v562.bundle.js | awk '{print $1}')" = "$(shasum -a 256 /tmp/gmww-v562-live-bundle.js | awk '{print $1}')"
           for REL in \
             characters/v5/skin-v562-original-sleeves.mjs \
             characters/v5/skin-v561-original-art-uv.mjs \
