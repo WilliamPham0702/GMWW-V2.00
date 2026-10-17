@@ -42,3 +42,25 @@ export async function selectBuildVerifiedManifest(catalog,version,shell){
     return snapshot;
   }catch{return null}
 }
+
+// Both inventories must come from build-verified catalogs. Unknown bases always
+// receive the complete package; a client version alone is never an inventory.
+export function selectCatalogDelta(target,base,installedVersion){
+  if(!base||base.releaseVersion!==installedVersion||
+     !valid(target,target.releaseVersion,target.shellVersion)||
+     !valid(base,base.releaseVersion,target.shellVersion))return target;
+  const compare=(a,b)=>{
+    const left=a.split('.').map(Number),right=b.split('.').map(Number);
+    for(let i=0;i<Math.max(left.length,right.length);i++){
+      if((left[i]||0)!==(right[i]||0))return (left[i]||0)>(right[i]||0)?1:-1;
+    }
+    return 0;
+  };
+  if(compare(target.releaseVersion,installedVersion)<=0)return target;
+  const before=new Map(base.runtime.files.map(f=>[f.path,f.sha256]));
+  const after=new Set(target.runtime.files.map(f=>f.path));
+  if([...before.keys()].some(path=>!after.has(path)))return target;
+  const files=target.runtime.files.filter(f=>before.get(f.path)!==f.sha256);
+  if(!files.length)return target;
+  return {...target,runtime:{...target.runtime,files},deltaFrom:installedVersion};
+}

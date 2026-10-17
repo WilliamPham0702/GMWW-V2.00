@@ -31,7 +31,7 @@ test('catalog rejects unsafe or incomplete metadata',async()=>{
   for(const change of variants){const m=manifest();change(m);await assert.rejects(build(m));}
 });
 
-async function workerWith(catalog){
+async function workerWith(catalog,bases=[]){
   const {readFile,writeFile,mkdtemp}=await import('node:fs/promises');
   const {tmpdir}=await import('node:os');
   const {resolve,join}=await import('node:path');
@@ -39,6 +39,7 @@ async function workerWith(catalog){
   const src=resolve('src');
   let source=await readFile(join(src,'index.js'),'utf8');
   source=source.replace('import {releaseCatalog} from "./gmww-release-catalog.js";','const releaseCatalog='+JSON.stringify(catalog)+';');
+  source=source.replace('import {releaseBases} from "./gmww-release-bases.js";','const releaseBases='+JSON.stringify(bases)+';');
   source=source.replace('import { DurableObject } from "cloudflare:workers";','class DurableObject {}');
   source=source.replace(/from "(\.\/[^"]+)"/g,(_,p)=>'from '+JSON.stringify(pathToFileURL(resolve(src,p)).href));
   source=source.replace(/import "(\.\.\/assets\/[^"]+)";/g,(_,p)=>'import '+JSON.stringify(pathToFileURL(resolve(src,p)).href)+';');
@@ -64,4 +65,21 @@ test('real Worker preserves fail-closed fallback for missing or damaged catalog'
     assert.equal(response.status,503);
     assert.equal((await response.json()).error,'UPDATE_MANIFEST_UNAVAILABLE');
   }
+});
+test('real Worker uses verified base checksums, falling back to full for corrupt or unknown bases',async()=>{
+  const make=v=>{const m=manifest();m.releaseVersion=m.runtimeVersion=v;m.runtime.files=m.runtime.files.map(f=>({...f,url:f.url.replace('V3.999','V'+v)}));return m};
+  const before=make('3.120'),after=make('3.121');
+  const base=await build(before);
+  // Change the target's app bytes and rebuild its integrity envelope.
+  after.runtime.files[1].sha256=createHash('sha256').update('new app').digest('hex');
+  const changed=await build(after,path=>path==='app.js'?Buffer.from('new app'):bytes);
+  const worker=await workerWith(changed,[base]);
+  const request=current=>new Request(origin+'/api/update/manifest?current='+current);
+  const delta=await (await worker.fetch(request('3.120'),{})).json();
+  assert.equal(delta.deltaFrom,'3.120');assert.deepEqual(delta.runtime.files.map(f=>f.path),['app.js']);
+  const full=await (await worker.fetch(request('3.119'),{})).json();assert.equal(full.runtime.files.length,core.length);
+  base.sha256='0'.repeat(64);
+  const corrupt=await workerWith(changed,[base]);
+  const fallback=await (await corrupt.fetch(request('3.120'),{})).json();
+  assert.equal(fallback.runtime.files.length,core.length);assert.equal(fallback.deltaFrom,undefined);
 });
