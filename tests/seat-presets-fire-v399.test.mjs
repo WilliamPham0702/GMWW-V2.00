@@ -77,6 +77,6 @@ test('GM shows automatic shape, center fire icon and exact seat capacity; server
   assert.match(html,/id="playSeatPresetClose"/);
   assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);
   assert.match(worker,/changedCount\?villageLayout\.recommendedSeatShape\(requested\)/);
-  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
-  assert.match(player,/ps=positions\(seatCount,seatLayout\)/);
+  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
+  assert.match(player,/ps=positions\(seatCount,seatLayout,seatOffset,seatSpacing\)/);
 });
