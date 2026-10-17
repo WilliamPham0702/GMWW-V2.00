@@ -243,6 +243,7 @@
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
           <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, cuộn ngang"></div>
+          <button id="playActionLogOpen" class="play-action-log-trigger" type="button" title="Xem toàn bộ lịch sử tác động của phòng">📜 NHẬT KÝ TÁC ĐỘNG</button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
@@ -986,5 +987,13 @@
   });
 })();
 </script>
+  <section id="playActionLogSheet" class="play-action-log-sheet" hidden role="dialog" aria-modal="true" aria-label="Nhật ký tác động">
+    <div class="play-action-log-card">
+      <header><b>📜 NHẬT KÝ TÁC ĐỘNG</b><button id="playActionLogClose" type="button" aria-label="Đóng nhật ký">✕</button></header>
+      <p>Lưu toàn bộ hành động đã ghi nhận. Cuộn và tải tiếp để xem các tác động cũ; dữ liệu không giới hạn ở 100 dòng.</p>
+      <div id="playActionLogRows" class="play-action-log-rows" role="log" aria-live="polite"></div>
+      <button id="playActionLogMore" type="button" hidden>TẢI TIẾP NHẬT KÝ</button>
+    </div>
+  </section>
 </body>
 </html>
