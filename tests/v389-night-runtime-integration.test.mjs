@@ -8,6 +8,7 @@ import {defaultPriorityFirst,artifactCycleKey,reserveArtifactActivation} from '.
 import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage} from '../src/gmww-battle-action-policy.js';
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
+import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -23,7 +24,7 @@ const STATUS_DEFS=vm.runInNewContext('('+statusDefsMatch[1]+')');
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,STATUS_DEFS,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
