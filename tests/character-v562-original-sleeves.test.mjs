@@ -44,3 +44,30 @@ test('V5.62 imports genuine V4.17 mapped V5.61 fabric, never 2D body cutouts',()
  assert.match(html,/Chưa đạt Skin gốc hoàn chỉnh/);
  assert.match(build,/test-skin-v562\.html/);
 });
+
+test('V5.62 accepted-motion gate has exactly four user-approved animation choices',()=>{
+ const html=readFileSync(new URL('../assets/characters/v5/test-skin-v562.html',import.meta.url),'utf8');
+ const buttons=[...html.matchAll(/<button data-action="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(buttons,['idle','walk','run','result']);
+ assert.match(html,/APPROVED_ACTIONS=new Set\(\['idle','walk','run','result'\]\)/);
+ assert.match(html,/!APPROVED_ACTIONS\.has\(b\.dataset\.action\)/);
+ for(const disallowed of ['sit','sit-down','stand-up','wave','vote']){
+  assert.ok(!buttons.includes(disallowed),'unapproved button '+disallowed);
+ }
+ // The heritage V5.00 engine stays backwards compatible: production is unchanged.
+ const core=readFileSync(new URL('../assets/characters/v5/character-motion-v500.mjs',import.meta.url),'utf8');
+ assert.match(core,/V500_ACTIONS=Object\.freeze/);
+ assert.match(html,/data-gmww-v562-actions/);
+});
+test('V5.62 demonstrates actual travel and one-shot celebration without entering the live game',()=>{
+ const html=readFileSync(new URL('../assets/characters/v5/test-skin-v562.html',import.meta.url),'utf8');
+ assert.match(html,/setDestination\(motion,x,z,action==='run'\)/);
+ assert.match(html,/function startPatrol\(\)/);
+ assert.match(html,/motion\.actionTime>=2\.0/);
+ assert.match(html,/setAction\(motion,'idle'\);setActive\('idle'\)/);
+ assert.match(html,/travel\.addEventListener\('change'/);
+ assert.match(html,/new THREE\.WebGLRenderer/);
+ assert.match(html,/animateSkinnedChibi\(rig,motion\)/);
+ assert.match(html,/addV562OriginalFabricSleevesToRig\(rig/);
+ assert.match(html,/Chưa đạt Skin gốc hoàn chỉnh/);
+});
