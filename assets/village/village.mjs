@@ -7,7 +7,7 @@ import {startVillagePerformanceReporter} from "./village-performance.mjs";
 import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character-renderer.mjs?v=ce5";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
-export function positions(count,shape=""){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count,shape)}
+export function positions(count,shape="",offset=null,spacing=100){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count,shape,offset,spacing)}
 export function safeText(v){return String(v??"").slice(0,80)}
 // A disconnected participant keeps presence/ready data, but does not need an OFFLINE · READY chip.
 export function visibleVillagePlayerStatus(data,{moving=false,gm=false}={}){
@@ -74,7 +74,7 @@ if(game){
     }catch{return "";}
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
-  let night=false,selectedId=null,count=12,seatLayout="",setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
+  let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
   const mountedPlayerNodes=new Map(),mountedEmptySeatNodes=new Map();
   let sitWakeTimer=0;
@@ -107,7 +107,7 @@ if(game){
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
     if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
-    const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout)[sid-1]:null;
+    const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
     return seat||spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
@@ -142,7 +142,7 @@ if(game){
     button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
     if(Array.isArray(data.statusTags)&&data.statusTags.length){
-      const visualEffects={frozen:"snowfall",protected:"blue-shield",wolf_bitten:"wolf-claws",marked:"secret-mark",dead:"gray-smoke",expelled:"iron-cage",infected:"green-rain",mute:"silenced",disabled_permanent:"power-seal",disabled_2n:"power-seal",linked:"soul-link"};
+      const visualEffects={frozen:"orbit",protected:"orbit",wolf_bitten:"orbit",marked:"orbit",dead:"gray-smoke",expelled:"orbit",infected:"orbit",mute:"orbit",disabled_permanent:"orbit",disabled_2n:"orbit",linked:"orbit"};
       const rows=data.statusTags.filter(x=>Object.prototype.hasOwnProperty.call(visualEffects,x.statusId)),panel=document.createElement("span"),badges=document.createElement("span");
       if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");
         const approvedVisuals=globalThis.GMWW_STATUS_VISUALS;
@@ -255,7 +255,7 @@ if(game){
     cancelAnimationFrame(moveFrame);moveFrame=0;
     if(sitWakeTimer){clearTimeout(sitWakeTimer);sitWakeTimer=0}
     villageRenderMetrics.renders++;
-    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount,seatLayout),seatMap=new Map(),unseated=[];
+    const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount,seatLayout,seatOffset,seatSpacing),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     const desiredPlayers=[];roster.replaceChildren();
     // Empty leaves are optional; occupied seats must always render their characters.
@@ -337,17 +337,22 @@ if(game){
   });
   let muted=true,speaker=true;document.getElementById("mic").addEventListener("click",e=>{muted=!muted;e.target.textContent=muted?"🎙️ Micro: Tắt":"🎙️ Micro: Bật (mô phỏng)"});
   document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
+  let lastExternalRenderSignature="";
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase(),nextSetup=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},nextCount=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));
     
-    seatLayout=layout.normalizeSeatLayout(room.seatLayout);const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
+    seatLayout=layout.normalizeSeatLayout(room.seatLayout);seatOffset=layout.normalizeSeatOffset(room.seatOffset);seatSpacing=layout.normalizeSeatSpacing(room.seatSpacing);const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",room.playerSceneMode==="battle");
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
     const fire=document.querySelector('.fire'),point=screenPoint(layout.fire);if(fire){fire.style.left=point.x+'%';fire.style.top=point.y+'%';}
-    render();
+    const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,
+      setupState,all.map(x=>[x.id,x.seatId,x.positionX,x.positionY,x.movementStatus,x.moveId,
+        x.moveFromX,x.moveFromY,x.moveToX,x.moveToY,x.moveStartedAt,x.moveDurationMs,
+        x.online,x.gameCharacterId,x.avatarId,x.avatarUrl,x.displayName,x.ready,x.statusLabel,x.statusTags])]);
+    if(nextSig!==lastExternalRenderSignature){lastExternalRenderSignature=nextSig;render()}
   }
   if(embedded){
     document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
@@ -360,7 +365,7 @@ if(game){
     window.addEventListener("message",event=>{
       if(event.origin!==window.location.origin||event.source!==window.parent)return;
       if(event.data?.type==="gmww:village-state")applyExternalState(event.data);
-      else if(event.data?.type==="gmww:seat-position-request"){const seatId=Number(event.data.seatId||0),ps=positions(Math.max(1,Math.min(30,Number(count)||12)),seatLayout),p=ps[seatId-1];if(p)try{window.parent.postMessage({type:"gmww:seat-position",seatId,x:p.x,y:p.y},window.location.origin)}catch{}}
+      else if(event.data?.type==="gmww:seat-position-request"){const seatId=Number(event.data.seatId||0),ps=positions(Math.max(1,Math.min(30,Number(count)||12)),seatLayout,seatOffset,seatSpacing),p=ps[seatId-1];if(p)try{window.parent.postMessage({type:"gmww:seat-position",seatId,x:p.x,y:p.y},window.location.origin)}catch{}}
     });
     startVillagePerformanceReporter();
     try{window.parent.postMessage({type:"gmww:village-ready"},window.location.origin)}catch{}
