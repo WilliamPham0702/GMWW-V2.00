@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#09283a">
+<title>GMWW — Preview Trạng Thái V1 · PR #277</title>
+<link rel="stylesheet" href="/village/status-visuals.css?v=pr277-abc">
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;color:#e7f8ff;background:#071c2d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,#236478,#092a40 55%,#071b2c)}
+header{padding:16px clamp(14px,4vw,32px);border-bottom:1px solid #286178;background:#071d2cde}
+h1{font-size:clamp(19px,4vw,27px);margin:4px 0 6px}h2{font-size:17px;margin:0 0 10px}
+p{margin:4px 0 10px;color:#afcfdd;font-size:13px;line-height:1.55}
+.kicker{font-weight:750;font-size:12px;letter-spacing:.04em;color:#80e0dc}
+.wrap{max-width:1180px;margin:auto;padding:18px clamp(12px,3vw,24px) 44px}
+.trio{display:grid;grid-template-columns:minmax(250px,1fr) minmax(235px,1fr) minmax(235px,1fr);gap:12px}
+section{border:1px solid #296179;border-radius:16px;background:linear-gradient(155deg,#143c52,#0a2335);padding:14px;min-width:0}
+.preview-viewport{height:240px;display:flex;align-items:center;justify-content:center;overflow:visible;border-radius:11px;border:1px solid #3b6878;background:radial-gradient(ellipse at 48% 78%,#276179,#0b263b 72%);position:relative}
+.avatar-box{position:relative;width:112px;height:172px;display:inline-flex;align-items:center;justify-content:center}
+.avatar-box>img{width:100%;height:100%;object-fit:contain;position:relative;z-index:3;filter:drop-shadow(0 3px 6px #010e17)}
+.avatar-box .gmww-sv-overlay{z-index:6;overflow:visible}
+.avatar-box .gmww-sv-badges{bottom:calc(100% + 7px)}
+.action-demo{height:86px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative}
+.action-title{font-weight:800;color:#d9faff}
+.action-box{border:1px solid #66bdd2;border-radius:11px;padding:9px 14px;background:#123950;display:flex;gap:12px;align-items:center;max-width:100%}
+.action-icon{width:48px;height:48px;display:inline-flex;position:relative;align-items:center;justify-content:center;isolation:isolate}
+.action-icon .gmww-sv-overlay{inset:7px 13px 7px}
+.action-icon .gmww-sv-badges{display:none}
+.action-chip{font-size:11px;line-height:1.5;max-width:160px}
+.mini{height:136px}.mini .avatar-box{width:68px;height:98px}.mini .gmww-sv-fx{inset:-10% -10%}
+.mini .gmww-sv-badges{display:none}
+fieldset{border:0;margin:0;padding:0;min-width:0}.controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:10px 0}
+select,button{font:inherit;border:1px solid #498f9b;border-radius:9px;color:#defaff;background:#1c5062;padding:8px 11px;cursor:pointer}
+button:hover{border-color:#9ae7ec}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #c8fff8;outline-offset:2px}
+button.active{background:#286e7e;border-color:#a8f7ff}
+.tabbar{display:flex;gap:8px;margin:20px 0 12px;flex-wrap:wrap}
+.group{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:12px}
+.state-card{background:linear-gradient(155deg,#144057,#081f31);border:1px solid #2b657c;border-radius:13px;overflow:visible;padding:12px}
+.state-card.selected{outline:2px solid #7debd5}
+.state-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.state-name{font-weight:800;font-size:14px;flex:1}.state-number{font-size:11px;color:#88c5cb}
+.state-desc{font-size:12px;min-height:32px;margin:8px 0}
+.state-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;padding-top:8px;border-top:1px solid #27556a}
+.state-foot label{display:flex;gap:5px;align-items:center;cursor:pointer}
+input[type=checkbox]{width:17px;height:17px;accent-color:#77e7d3}
+.state-card button{font-size:12px;padding:5px 10px}
+.notice{font-size:12px;background:#0f3448;border:1px solid #25566e;border-radius:9px;padding:10px;margin:12px 0;color:#c3dce7}
+footer{text-align:center;color:#84b7c8;font-size:11px;margin:25px 0}
+@media(max-width:900px){.trio{grid-template-columns:1fr 1fr}.trio section:first-child{grid-row:span 2}}
+@media(max-width:570px){.trio{grid-template-columns:1fr}.trio section:first-child{grid-row:auto}.preview-viewport{height:200px}}
+@media(prefers-reduced-motion:reduce){.gmww-sv-gray-smoke i,.gmww-sv-gray-smoke:before,.gmww-sv-gray-smoke:after{animation:none!important}}
+</style>
+<script src="/status-visuals.js?v=pr277-abc" defer></script>
+</head>
+<body>
+<header><div class="kicker">GMWW · BẢN THỬ RIÊNG PR #277 · KHÔNG TÁC ĐỘNG PHÒNG THẬT</div><h1>Trạng Thái V1 — Kiểm tra A → B → C</h1><p>15 hiệu ứng · 10 trạng thái duy trì · 5 hiệu ứng tức thời · Preview sử dụng chính mã animation của GM và Player Web.</p></header>
+<main class="wrap">
+<div class="controls"><label for="char">Nhân vật thử:</label><select id="char"></select><button type="button" id="clear">Xóa hiệu ứng thử</button><button type="button" id="showDead">Thử Đã Chết 💨</button></div>
+<div class="trio">
+  <section><h2>A · Nhân vật GM</h2><div class="preview-viewport"><span id="gmStage" class="avatar-box gmww-sv-stage"></span></div><p>Hiển thị nhiều trạng thái đồng thời, ưu tiên Đã Chết hoặc Bị Đuổi. Nhân vật Đã Chết đứng bất động và có khói xám liên tục.</p></section>
+  <section><h2>B · Xem trước Player Web</h2><div class="preview-viewport"><span id="webStage" class="avatar-box gmww-sv-stage"></span></div><p>Chỉ thể hiện các trạng thái đang bật «Hiển thị Player Web» ở phần bên dưới (mô phỏng cài đặt, không lưu).</p></section>
+  <section><h2>C · Box Hành Động</h2><div class="preview-viewport"><div class="action-demo"><div class="action-title">ĐẾN LƯỢT NGƯỜI CHƠI</div><div class="action-box"><span id="actionIcon" class="action-icon gmww-sv-stage"></span><span id="actionText" class="action-chip">Chưa có trạng thái</span></div></div></div><p>Hiệu ứng động dạng thu nhỏ và tên trạng thái được hiển thị cùng box Hành Động.</p></section>
+</div>
+<div class="notice">Chạm <b>Thử trên nhân vật</b> để bật/tắt hiệu ứng. Công tắc «Hiển thị Player Web» tại đây chỉ mô phỏng quyền xem; công tắc thật nằm ở Thư viện Trạng Thái GM. Chưa triển khai lên main/Production.</div>
+<nav class="tabbar" aria-label="Loại hiệu ứng"><button id="persistentBtn" class="active" type="button">Duy trì (10)</button><button id="instantBtn" type="button">Tức thời (5)</button><button id="allBtn" type="button">Tất cả (15)</button></nav>
+<div id="cards" class="group"></div>
+<footer>Bản kiểm tra giao diện tách biệt · không gửi hành động, thay đổi Rule hay dữ liệu ván.</footer>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const api=window.GMWW_STATUS_VISUALS;if(!api){document.getElementById('cards').textContent='Không thể tải mã Trạng Thái. Hãy tải lại trang.';return}
+const active=new Set(['frozen']),permissions=new Map(api.entries.map(e=>[e.id,e.playerWeb])),select=document.getElementById('char');let filter='persistent';
+for(let i=1;i<=42;i++){const option=document.createElement('option');option.value=String(i).padStart(2,'0');option.textContent='Character '+option.value;if(i===1)option.selected=true;select.append(option)}
+const avatar=()=>'/characters/v253/chibi-'+select.value+'.webp';
+const safe=api.safe;
+function stage(htmlIds){return '<img src="'+avatar()+'" alt="Nhân vật GMWW">'+api.overlay(htmlIds)}
+function sync(){
+ const chosen=[...active],permitted=chosen.filter(id=>permissions.get(id));
+ document.getElementById('gmStage').innerHTML=stage(chosen);
+ document.getElementById('webStage').innerHTML=stage(permitted);
+ document.getElementById('actionIcon').innerHTML='<span style="color:#a5e0df;font-size:20px">✦</span>'+api.overlay(chosen);
+ document.getElementById('actionText').textContent=chosen.length?chosen.map(id=>(api.byId[id]?.icon||'')+' '+(api.byId[id]?.name||id)).join(' · '):'Chưa có trạng thái';
+ for(const el of document.querySelectorAll('.state-card'))el.classList.toggle('selected',active.has(el.dataset.state));
+}
+function cards(){
+ document.getElementById('cards').innerHTML=api.entries.filter(x=>filter==='all'||x.type===filter).map((x,i)=>
+ '<article class="state-card" data-state="'+safe(x.id)+'"><div class="state-top"><span>'+x.icon+'</span><span class="state-name">'+safe(x.name)+'</span><span class="state-number">'+String(api.entries.indexOf(x)+1).padStart(2,'0')+'/15</span></div>'+
+ '<div class="preview-viewport mini"><span class="avatar-box gmww-sv-stage">'+stage([x.id])+'</span></div>'+
+ '<p class="state-desc">'+safe(x.description)+'</p>'+
+ '<div class="state-foot"><button type="button" data-try="'+safe(x.id)+'">Thử trên nhân vật</button>'+
+ '<label><input type="checkbox" data-web="'+safe(x.id)+'" '+(permissions.get(x.id)?'checked':'')+'>Player Web</label></div></article>').join('');
+ sync();
+}
+document.getElementById('cards').addEventListener('click',e=>{
+const btn=e.target.closest('button[data-try]');if(!btn)return;const id=btn.dataset.try;active.has(id)?active.delete(id):active.add(id);sync()
+});
+document.getElementById('cards').addEventListener('change',e=>{if(e.target.matches('input[data-web]')){permissions.set(e.target.dataset.web,e.target.checked);sync()}});
+for(const [id,value] of [['persistentBtn','persistent'],['instantBtn','instant'],['allBtn','all']])document.getElementById(id).onclick=()=>{filter=value;document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('active',b.id===id));cards()};
+select.onchange=()=>{sync();cards()};
+document.getElementById('clear').onclick=()=>{active.clear();sync()};
+document.getElementById('showDead').onclick=()=>{active.clear();active.add('dead');sync()};
+cards();
+});
+</script>
+</body>
+</html>
