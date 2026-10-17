@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09283a">
 <title>GMWW — Preview Trạng Thái V2 · PR #277</title>
-<link rel="stylesheet" href="/village/status-visuals.css?v=pr277-v2">
+<link rel="stylesheet" href="/village/status-visuals.css?v=pr277-v2b">
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;color:#e7f8ff;background:#071c2d}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,#236478,#092a40 55%,#071b2c)}
@@ -77,13 +77,22 @@ footer{text-align:center;color:#84b7c8;font-size:11px;margin:25px 0}
 #gmStage:has(.orbit-v2) .gmww-sv-overlay,#webStage:has(.orbit-v2) .gmww-sv-overlay{z-index:6}
 @media(max-width:570px){.action-box{width:235px}.gmww-sv-action-cover .orbit-v2 .orbit-symbol{--rx:94px}}
 @media(prefers-reduced-motion:reduce){.orbit-v2 .orbit-symbol,.orbit-v2 .orbit-symbol>span{animation-duration:20s!important}}
+
+/* Preview V2: shared production renderer, never a second independent animation model. */
+.avatar-box .gmww-sv-orbit{--orbit-radius:60px;--orbit-icon-size:23px}
+.mini .gmww-sv-orbit{--orbit-radius:40px;--orbit-icon-size:16px}
+.action-box .gmww-sv-orbit{--orbit-radius:97px;--orbit-icon-size:25px}
+.action-box .gmww-sv-action-cover{inset:0;overflow:visible}
+.action-box .gmww-sv-action-cover .gmww-sv-overlay{inset:0}
+.action-box .gmww-sv-action-cover .gmww-sv-badges{display:none}
+@media(max-width:570px){.action-box .gmww-sv-orbit{--orbit-radius:87px}}
 </style>
-<script src="/status-visuals.js?v=pr277-abc" defer></script>
+<script src="/status-visuals.js?v=pr277-v2b" defer></script>
 </head>
 <body>
-<header><div class="kicker">GMWW · BẢN THỬ RIÊNG PR #277 · KHÔNG TÁC ĐỘNG PHÒNG THẬT</div><h1>Trạng Thái V2 — Kiểm tra A → B → C</h1><p>15 hiệu ứng · Xem đồng thời trên GM, Player Web và phủ trên box Hành Động · Mẫu thử V2 độc lập, không ảnh hưởng dữ liệu.</p></header>
+<header><div class="kicker">GMWW · BẢN THỬ RIÊNG PR #277 · KHÔNG TÁC ĐỘNG PHÒNG THẬT</div><h1>Trạng Thái V2 — Kiểm tra A → B → C</h1><p>15 hiệu ứng V2 cập nhật · Xem đồng thời trên GM, Player Web và phủ trên box Hành Động · Mẫu thử V2 độc lập, không ảnh hưởng dữ liệu.</p></header>
 <main class="wrap">
-<div class="controls"><label for="statusSelect">Chọn Trạng Thái:</label><select id="statusSelect" aria-label="Chọn một trong 15 trạng thái"></select><button id="testSelected" type="button">Áp dụng trạng thái</button></div><div class="controls"><label for="char">Nhân vật thử:</label><select id="char"></select><button type="button" id="clear">Xóa hiệu ứng thử</button><button type="button" id="showDead">Thử Đã Chết 💨</button></div>
+<div class="controls"><label for="statusSelect">Chọn Trạng Thái:</label><select id="statusSelect" aria-label="Chọn một trong 15 trạng thái V2"></select><button id="testSelected" type="button">Áp dụng trạng thái</button></div><div class="controls"><label for="char">Nhân vật thử:</label><select id="char"></select><button type="button" id="clear">Xóa hiệu ứng thử</button><button type="button" id="showDead">Thử Đã Chết 💨</button></div>
 <div class="trio">
   <section><h2>A · Nhân vật GM</h2><div class="preview-viewport"><span id="gmStage" class="avatar-box gmww-sv-stage"></span></div><p>Hiển thị nhiều trạng thái đồng thời, ưu tiên Đã Chết hoặc Bị Đuổi. Nhân vật Đã Chết đứng bất động và có khói xám liên tục.</p></section>
   <section><h2>B · Xem trước Player Web</h2><div class="preview-viewport"><span id="webStage" class="avatar-box gmww-sv-stage"></span></div><p>Chỉ thể hiện các trạng thái đang bật «Hiển thị Player Web» ở phần bên dưới (mô phỏng cài đặt, không lưu).</p></section>
@@ -102,31 +111,13 @@ const statusSelect=document.getElementById('statusSelect');for(const e of api.en
 for(let i=1;i<=42;i++){const option=document.createElement('option');option.value=String(i).padStart(2,'0');option.textContent='Character '+option.value;if(i===1)option.selected=true;select.append(option)}
 const avatar=()=>'/characters/v253/chibi-'+select.value+'.webp';
 const safe=api.safe;
-const ORBIT_V2={
- frozen:{icon:'❄️',count:7,period:5.8},protected:{icon:'🛡️',count:6,period:5.4},
- wolf_bitten:{icon:'🐾',count:6,period:5.1},expelled:{icon:'🌪️',count:6,period:6.3},
- recover:{icon:'⭐',count:7,period:4.6},disabled_permanent:{icon:'🚫',count:6,period:6}
-};
-function orbit(ids,action=false){
- const selected=ids.filter(id=>ORBIT_V2[id]);
- return selected.map((id,k)=>{
-   const config=ORBIT_V2[id],period=config.period+k*1.4;
-   const radius=action?(window.innerWidth<570?94:110):60;
-   return '<span class="orbit-v2" data-orbit="'+safe(id)+'">'+Array.from({length:config.count},(_,i)=>
-     '<span class="orbit-symbol" style="--period:'+period+'s;--delay:'+(-period*i/config.count)+'s;--rx:'+radius+'px"><span>'+config.icon+'</span></span>').join('')+'</span>';
- }).join('');
-}
-function overlay(ids,action=false){
- const other=ids.filter(id=>!ORBIT_V2[id]);
- return (other.length?api.overlay(other):'')+orbit(ids,action);
-}
-
+function overlay(ids){return api.overlay(ids)}
 function stage(htmlIds){return '<img src="'+avatar()+'" alt="Nhân vật GMWW">'+overlay(htmlIds)}
 function sync(){
  const chosen=[...active],permitted=chosen.filter(id=>permissions.get(id));
  document.getElementById('gmStage').innerHTML=stage(chosen);
  document.getElementById('webStage').innerHTML=stage(permitted);
- document.getElementById('actionIcon').innerHTML=overlay(chosen,true);
+ document.getElementById('actionIcon').innerHTML=overlay(chosen);
  document.getElementById('actionText').textContent=chosen.length?chosen.map(id=>(api.byId[id]?.icon||'')+' '+(api.byId[id]?.name||id)).join(' · '):'Chưa có trạng thái';
  for(const el of document.querySelectorAll('.state-card'))el.classList.toggle('selected',active.has(el.dataset.state));
 }
