@@ -181,7 +181,7 @@ test('V3.124: Player Web updates overlay on same stable avatar and skips unchang
   assert.match(village,/dataset\.gmwwStatusSig!==nextStatusSig/);
   assert.match(village,/querySelectorAll\(':scope > \.gmww-sv-overlay, \.player-over > \.gmww-sv-badges'\)/);
   assert.match(village,/button\.classList\.toggle\("gmww-sv-dead",active\.includes\("dead"\)\)/);
-  assert.match(village,/if\(active\.length\)button\.insertAdjacentHTML\("beforeend",visuals\.overlay\(ids\)\)/);
+  assert.match(village,/if\(active\.length\)\{button\.insertAdjacentHTML\("beforeend",visuals\.overlay\(ids\)\)/);
 });
 test('V3.124: GM avoids continuous heavy DOM rewrites; animation and Player CSS remain identical',()=>{
   assert.match(app,/dataset\.gmwwPlayerDomSig===domSig/);
