@@ -2,7 +2,7 @@
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#082b42">
-<title>GMWW · V5.62 iPhone 3D • 4 động tác</title>
+<title>GMWW · V5.63 Full Ocean Skin 3D • 4 động tác</title>
 <style>
 :root{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#effaff;background:#071d31}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%}
@@ -30,9 +30,9 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
 </style></head><body>
 <main>
 <header>
- <div class="kicker">GMWW CHARACTER · V5.62 · iPHONE TEST</div>
- <h1>4 chuyển động • Skin 3D</h1>
- <p>Đứng · Đi · Chạy · Ăn mừng — 8 hướng. Nhân vật phải hiện trong khung ngay khi tải xong.</p>
+ <div class="kicker">GMWW CHARACTER · V5.63 · FULL SEA SKIN</div>
+ <h1>Chàng Biển 3D · Full Skin</h1>
+ <p>Đứng · Đi · Chạy · Ăn mừng — 8 hướng. Bản dựng 3D liền phong cách biển từ hình Skin bạn duyệt, cùng Skeleton 16 xương.</p>
 </header>
 <div class="layout">
  <div class="stage" id="stage"><canvas id="canvas" aria-label="Mô hình Chàng Biển 3D thực"></canvas><div class="stagehint" id="notice" role="status" aria-live="polite">Đang tải 3D… Nếu nhân vật không xuất hiện, lỗi sẽ hiện ở đây.</div></div>
@@ -47,14 +47,14 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
   <label><input id="travel" type="checkbox"> Đi/chạy di chuyển thật trên sân (bỏ chọn để xem bước tại chỗ theo 8 hướng)</label>
   <label>Góc nhìn</label>
   <select id="direction"><option value="front">Trước</option><option value="front-right">Trước phải</option><option value="right">Phải</option><option value="back-right">Sau phải</option><option value="back">Sau</option><option value="back-left">Sau trái</option><option value="left">Trái</option><option value="front-left">Trước trái</option></select>
-  <label><input id="wireframe" type="checkbox"> Hiện lưới áo và hai tay áo 3D</label>
+  <label><input id="wireframe" type="checkbox"> Xem toàn bộ lưới Skin 3D (đầu, thân, áo, tay, chân)</label>
   <button id="retry" type="button">↻ Tải lại bản test 3D</button>
   <div class="status" id="texture-load">Chất liệu V4.17: đang kiểm tra…</div>
   <div class="status" id="status">Đang khởi tạo…</div>
   <div class="status" id="diagnostics" aria-live="polite">Kiểm tra JavaScript và mô hình WebGL…</div>
   <details><summary>Thông tin Skin và giới hạn bản thử</summary>
-   <div class="warn">Mẫu pixel hoa văn áo Chàng Biển V4.17 xác minh SHA-256 được UV-map lên lưới thân và hai tay áo 3D, pha trọng số ngực–vai–khuỷu tay. <b>Chưa đạt Skin gốc hoàn chỉnh</b> ở mặt, tóc, quần và phụ kiện. Không phải bản game chính.</div>
-   <div class="mini">Nguồn ảnh: GMWW V4.17 Character-01 Front; vùng áo x326–464/y634–766 thành WebP 128×128; đây là swatch, không phải full UV atlas. Preview không kết nối tài khoản, phòng chơi hay OTA.</div>
+   <div class="warn">Bản V5.63 <b>đã dựng toàn thân 3D trên 16 xương</b>: mặt, tóc xanh đen, hoa cài tóc, áo biển hoa, tay áo, quần, chân, dép, vòng và phụ kiện ngọc trai. <b>Đây là bản sculpt 3D mô phỏng phong cách hình bạn chốt, chưa chuyển nguyên từng pixel ảnh 2D thành UV atlas 3D</b>. Chỉ để test chuyển động và đánh giá Skin, chưa vào game chính.</div>
+   <div class="mini">Họa tiết áo vẫn lấy từ GMWW V4.17. Toàn bộ mặt, tóc, quần và phụ kiện là lưới 3D mới dựng theo hình tham chiếu bạn đã chọn; không dùng tấm ảnh 2D cắt ghép. Preview không kết nối tài khoản, phòng chơi hay OTA.</div>
   </details>
  </section>
 </div>
@@ -98,7 +98,7 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
 import * as THREE from './vendor/three.module.min.js';
 import {createSkinnedChibi,animateSkinnedChibi} from './character-rig-v510.mjs';
 import {createMotionState,setAction,setDestination,setFacing,facingAngle,tickMotion} from './character-motion-v500.mjs';
-import {addV562OriginalFabricSleevesToRig} from './skin-v562-original-sleeves.mjs';
+import {addV563FullOceanSkinToRig} from './skin-v562-original-sleeves.mjs'; // internally calls addV562OriginalFabricSleevesToRig
 const $=id=>document.getElementById(id),cv=$('canvas'),stage=$('stage');
 const notice=$('notice'),status=$('status');
 window.__gmwwV562Phase='modules-loaded';
@@ -126,7 +126,7 @@ window.__gmwwV562Phase='building-skeleton';
 const rig=createSkinnedChibi(true);scene.add(rig.root);
 let originalTextureReady=false,framesRendered=0;
 window.__gmwwV562Phase='binding-original-uv-skin';
-const skin=addV562OriginalFabricSleevesToRig(rig,{onTextureLoaded:({ok,error})=>{
+const skin=addV563FullOceanSkinToRig(rig,{onTextureLoaded:({ok,error})=>{
  originalTextureReady=ok;
  const el=document.getElementById('texture-load');
  if(el)el.textContent=ok?'Chất liệu V4.17: đã tải thành công':'Lỗi chất liệu gốc: '+error;
@@ -165,7 +165,10 @@ travel.addEventListener('change',()=>{
  if(!travel.checked){motion.goal=null;setAction(motion,action);setFacing(motion,$('direction').value);}
  else {patrolSign=1;startPatrol();}
 });
-$('wireframe').addEventListener('change',e=>skin.surface.material.wireframe=e.target.checked);
+$('wireframe').addEventListener('change',e=>{
+ skin.surface.material.wireframe=e.target.checked;
+ skin.fullBody.material.wireframe=e.target.checked;
+});
 function resize(){
  const width=stage.clientWidth,height=stage.clientHeight;
  renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
@@ -199,16 +202,16 @@ function loop(now){
  }
  // The browser smoke test only passes when the TRUE V4.17 WebP has decoded
  // and the real THREE renderer has successfully drawn multiple frames.
- if(originalTextureReady && skin.sleeveMeshesAreRealSkinned && skin.sameSkeletonAsV510 && skin.sleeveElbowDrivenVertices>0 && framesRendered>=2){
+ if(originalTextureReady && skin.sleeveMeshesAreRealSkinned && skin.sameSkeletonAsV510 && skin.sleeveElbowDrivenVertices>0 && skin.fullBodyMeshesAreRealSkinned && skin.fullBodySharesSkeleton && skin.fullBodyVertices>5000 && framesRendered>=2){
  document.documentElement.setAttribute('data-gmww-v562','ready');
  if(framesRendered===2){
-  notice.textContent='3D đang chạy • 4 động tác • chọn nút bên dưới để kiểm tra';
-  $('diagnostics').textContent='PASS: Renderer + Skeleton 16 khớp + UV áo/tay áo + Texture V4.17.';
+  notice.textContent='Full Skin 3D đang chạy • 4 động tác • chọn nút bên dưới';
+  $('diagnostics').textContent='PASS: Full Skin 3D ('+skin.fullBodyVertices+' đỉnh), Skeleton 16 khớp, áo biển V4.17.';
  }
 }
  frames++;
  if(now-fpsTick>1200){fps=Math.round(frames*1000/(now-fpsTick));fpsTick=now;frames=0;
-  status.textContent='WebGL ✓ · '+skin.bones+' xương chung · '+skin.vertexCount+' đỉnh áo · '+skin.blendedVertices+' đỉnh thân áo pha 2 xương · '+skin.sleeveVertexCount+' đỉnh tay áo · '+skin.sleeveElbowDrivenVertices+' đỉnh theo khuỷu tay · '+fps+' FPS · '+motion.action;
+  status.textContent='Full Skin 3D ✓ · '+skin.bones+' xương · '+skin.fullBodyVertices+' đỉnh cơ thể và phụ kiện · '+skin.sleeveVertexCount+' đỉnh tay áo · '+fps+' FPS · '+motion.action;
  }
  requestAnimationFrame(loop);
 }
