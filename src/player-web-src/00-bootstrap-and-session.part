@@ -1,0 +1,28 @@
+(()=>{
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const state={
+  token:localStorage.getItem('gmww_token')||'',member:null,avatars:[],selectedAvatarId:null,
+  rooms:[],roomCode:'',room:null,participantId:null,players:[],ready:false,ws:null,lobbyPlayers:[],lobbyPoll:null,gmPresence:null,gmPresencePoll:null,gmMotionTimer:null,swapShown:new Set(),gameCharacters:[],selectedGameCharacterId:'',selectedSeatId:null,roomSetupOpen:false,movementCompleteTimer:null,lobbyMotionTimer:null,lobbyMotionWaypoints:[],lobbyMotionIndex:0,lobbyMotionPhase:'roam',lobbyMotionHoldUntil:0,lobbyMotionPaused:false,lobbySeatWalkPending:null,
+  role:null,roles:[],roleIndex:0,roleOpen:false,rolePoll:null,artifact:null,artifactOpen:false,artifactCycle:{cycleKey:'',count:0,max:3},artifactFocus:'',artifactBusy:false,presenceTimer:null,gameStateTimer:null,wsPingTimer:null,serverClockOffsetMs:0,lastResultKey:'',dead:false,roomNavigationAuthorized:false,avatarPickerMode:'register',avatarPickerDraftId:null,profileDraftAvatarId:null,profileDraftGameCharacterId:null,characterPreviewTimer:null,roleEffects:{},activeScreenId:'',historyReady:false,characterScale:100,uiSettingsLoadedAt:0
+};
+const GMWW_CHARACTER_SCALES=[75,100,125,150,175,200];
+function normalizeCharacterScale(value,fallback=100){const n=Number(value);if(!Number.isFinite(n))return fallback;return GMWW_CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,GMWW_CHARACTER_SCALES[0])}
+const targetRoom=((document.body.dataset.targetRoom||'').trim()||sessionStorage.getItem('gmww_pending_room')||'').toUpperCase();
+const ACTIVE_ROOM_KEY='gmww_active_room_v4',ACTIVE_ROLE_KEY='gmww_active_role_v4',DISMISSED_RESULT_KEY='gmww_dismissed_result_v1';
+const GMWW_WEB_VERSION='__GMWW_WEB_VERSION__',GMWW_WEB_SYNC_KEY='gmww_web_sync_generation_v1';
+let gmwwWebUpdateTimer=null,gmwwWebUpdateVersion='';
+const ARTIFACT_DRAFT_KEY='gmww_artifact_draft_v1';
+function savedArtifactDraft(){try{const x=JSON.parse(localStorage.getItem(ARTIFACT_DRAFT_KEY)||'null');return x&&x.roomCode?x:null}catch{return null}}
+function rememberArtifactDraft(targetId=''){try{if(!state.roomCode||!state.artifact)return;localStorage.setItem(ARTIFACT_DRAFT_KEY,JSON.stringify({roomCode:state.roomCode,matchId:String(state.room?.matchId||state.artifact?.matchId||''),artifactId:String(state.artifact?.artifactId||''),targetId:String(targetId||''),savedAt:Date.now()}))}catch{}}
+function clearArtifactDraft(){try{localStorage.removeItem(ARTIFACT_DRAFT_KEY)}catch{}}
+function resultMatchKey(matchId=''){return String(matchId||state.room?.matchId||state.role?.matchId||state.room?.startedAt||state.room?.roleDeliveredAt||state.roomCode||'').trim()}
+function dismissedResultKey(){try{return String(sessionStorage.getItem(DISMISSED_RESULT_KEY)||'')}catch{return''}}
+function rememberDismissedResult(k){try{if(k)sessionStorage.setItem(DISMISSED_RESULT_KEY,String(k))}catch{}}
+
+function savedActiveRoom(){try{const x=JSON.parse(localStorage.getItem(ACTIVE_ROOM_KEY)||'null');return x&&x.roomCode?x:null}catch{return null}}
+function savedActiveRole(){try{const x=JSON.parse(localStorage.getItem(ACTIVE_ROLE_KEY)||'null');return x&&x.roomCode&&x.role?x:null}catch{return null}}
+function rememberActiveRoom(roomCode,participantId){try{const code=String(roomCode||'').trim().toUpperCase();if(!code)return;const old=savedActiveRoom();if(old?.roomCode&&old.roomCode!==code)localStorage.removeItem(ACTIVE_ROLE_KEY);localStorage.setItem(ACTIVE_ROOM_KEY,JSON.stringify({roomCode:code,participantId:String(participantId||''),savedAt:Date.now()}))}catch{}}
+function rememberActiveRole(role){try{if(!role||!state.roomCode)return;localStorage.setItem(ACTIVE_ROLE_KEY,JSON.stringify({roomCode:String(state.roomCode).trim().toUpperCase(),matchId:String(role.matchId||state.room?.matchId||''),role,roles:Array.isArray(state.roles)&&state.roles.length?state.roles:[role],roleIndex:Number(state.roleIndex||0),savedAt:Date.now()}))}catch{}}
+function clearActiveRoom(){try{localStorage.removeItem(ACTIVE_ROOM_KEY);localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{}}
+function restoreCachedRole(){const x=savedActiveRole(),code=String(state.roomCode||'').trim().toUpperCase(),match=String(state.room?.matchId||'');if(!x||x.roomCode!==code)return false;if(match&&x.matchId&&x.matchId!==match)return false;state.roles=Array.isArray(x.roles)&&x.roles.length?x.roles:[x.role];state.roleIndex=Math.min(Math.max(0,Number(x.roleIndex||0)),state.roles.length-1);state.role=state.roles[state.roleIndex]||x.role;renderRole();maybeOpenGame();return true}
