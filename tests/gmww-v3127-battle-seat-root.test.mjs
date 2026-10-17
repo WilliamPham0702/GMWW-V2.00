@@ -74,4 +74,5 @@ test('V3.127 starts a match with authoritative persisted seats and no inherited 
   assert.match(web,/projectedSeatIds\(incoming\.filter\(p=>!p\.isGM\),nextCount\)/);
   assert.match(web,/displaySeatId\|\|item\?\.seatId/);
   assert.match(web,/Number\(p\.moveStartedAt\)<=matchStartedAt/);
+  assert.match(read('src/gmww-members-live.js'),/startedAt:String\(room\.startedAt\|\|''\)\.slice\(0,64\)/);
 });
