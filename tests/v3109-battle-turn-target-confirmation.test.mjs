@@ -22,11 +22,11 @@ test('V3.109 retains valid tap and drag target selection before confirmation',()
   assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
 });
 
-test('V3.109 target sheet shows only HUY and OK after all targets are selected',()=>{
+test('V3.109 target sheet reduces the final panel to OK while preserving selection cancellation',()=>{
   assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
   assert.match(app,/candidates\.hidden=targetReady/);
-  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|!targetReady/);
+  assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|battleState\.syncPending\|\|!targetReady/);
   assert.match(css,/battleTargetSheet\.is-confirm-only>header/);
   assert.match(css,/battleTargetSheet\.is-confirm-only>#battleTargetPrompt/);
-  assert.match(html,/<button type="button" id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm">OK<\/button>/);
+  assert.match(html,/id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm" title="Ghi nhận hành động lên Server">OK<\/button>/);
 });

@@ -5560,3 +5560,31 @@ body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not
 #start .play-player-token .play-player-over{bottom:calc(100% + 3px)!important;gap:2px;z-index:13}
 #start .play-player-token .play-player-over .play-player-role{margin:0 auto!important;max-width:100%;transform:none!important}
 #start .play-player-token .play-player-over .gmww-sv-badges{position:static!important;left:auto!important;bottom:auto!important;transform:none!important;display:flex;flex-wrap:wrap;justify-content:center;max-width:130px;width:max-content;white-space:normal;gap:2px;margin:0 auto}
+
+
+/* V3.132: confirmation is one compact OK button; the HUY control remains only while choosing a target. */
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399.is-confirm-only{
+ left:50%!important;right:auto!important;transform:translateX(-50%)!important;
+ width:max-content!important;min-width:0!important;max-width:calc(100vw - 24px)!important;
+ min-height:0!important;max-height:none!important;height:auto!important;
+ padding:4px!important;gap:0!important;border-radius:11px!important;
+ bottom:calc(env(safe-area-inset-bottom) + 91px)!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only>footer{
+ display:flex!important;width:auto!important;gap:0!important;padding:0!important;margin:0!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only #battleTargetCancel{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only #battleTargetConfirm{
+ flex:none!important;width:64px!important;min-width:64px!important;max-width:64px!important;
+ height:42px!important;min-height:42px!important;padding:0!important;font-size:13px!important;
+}
+#start #playShell[data-step="battle"] #battlePending:not([hidden]){
+ width:max-content!important;min-width:0!important;max-width:100%!important;padding:4px!important;justify-content:center!important;
+}
+#start #playShell[data-step="battle"] #battlePending #battlePendingText{
+ position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;
+}
+#start #playShell[data-step="battle"] #battlePending #battleConfirm{
+ min-width:64px!important;width:64px!important;min-height:42px!important;padding:0!important;
+}

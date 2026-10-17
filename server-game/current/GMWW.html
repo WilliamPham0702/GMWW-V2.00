@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.131</title>
-<link rel="stylesheet" href="style.css?v=3.131-statuslayout&status=2">
+<title>GMWW V3.132</title>
+<link rel="stylesheet" href="style.css?v=3.132-confirm-fast&status=2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v7">
 <style>
@@ -252,7 +252,7 @@
           <header><b id="battleTargetTitle">CHỌN MỤC TIÊU</b><button id="battleTargetClose" type="button" aria-label="Đóng chọn mục tiêu">×</button></header>
           <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
-          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm">OK</button></footer>
+          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Ghi nhận hành động lên Server">OK</button></footer>
         </section>
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
@@ -270,7 +270,7 @@
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
             <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><button id="battleDetailsClose" type="button" aria-label="Đóng Thông Tin trận đấu">×</button></div>
             <div class="battle-action-instruction">Hành động được hiển thị trong thanh cuộn phía dưới màn hình.</div>
-            <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleCancel" type="button">HỦY</button><button id="battleConfirm" type="button">OK</button></div>
+            <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleConfirm" type="button" title="Ghi nhận hành động lên Server">OK</button></div>
             <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
             <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
           </div>
@@ -853,7 +853,7 @@
 <script src="battle-controls.js?v=battle-391&night225"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v7"></script>
-<script src="app.js?v=3.131-statuslayout&status=2"></script>
+<script src="app.js?v=3.132-confirm-fast&status=2"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
