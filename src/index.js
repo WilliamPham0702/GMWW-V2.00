@@ -1,4 +1,5 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
+import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1238,8 +1239,7 @@ export class RoomDurableObject extends DurableObject {
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
-    if(interactions.some(row=>normalizeLoginId(row?.loginId)===actorId&&row?.effectActive!==false&&
-      (!row.matchId||String(row.matchId)===matchId)&&(["frozen","dead","expelled"].includes(String(row?.type||""))||(row?.type==="status"&&STATUS_DEFS[row?.statusId]?.blocks===true))))
+    if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||"")]);
