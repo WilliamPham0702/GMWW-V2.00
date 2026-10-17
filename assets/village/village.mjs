@@ -106,9 +106,12 @@ if(game){
   }
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
-    if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
+    // For a seated player, the authoritative seat map always wins over stale
+    // pre-layout world coordinates retained by older room versions.
     const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
-    return seat||spawnPosition(data?.id)
+    if(seat)return seat;
+    if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
+    return spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
     const clock=Number(nextSetup?.clockOffsetMs||setupState.clockOffsetMs||0),now=Date.now()+clock,previous=new Map(previousRows.map(p=>[String(p?.id||''),p])),seen=new Set();
