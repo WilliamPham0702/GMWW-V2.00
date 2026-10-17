@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -23,5 +24,5 @@ test("Bố cục tinh gọn có hỗ trợ điện thoại hẹp và không can 
   assert.match(css,/@media\(max-width:330px\)/);
   assert.match(css,/#members \.member-unified-box/);
   assert.doesNotMatch(css.slice(css.indexOf('/* V3.37 — Thành Viên')),/#start/);
-  assert.match(html,/<title>GMWW V3\.121<\/title>/);
+  assertCurrentRelease();
 });

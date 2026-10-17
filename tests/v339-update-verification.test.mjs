@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -73,7 +74,7 @@ test('V3.58 exposes explicit on-screen retry without IPA reinstall',()=>{
   assert.match(html,/id="retryUpdateCheck"/);
   assert.match(app,/retryUpdateCheck\.addEventListener\('click'/);
   assert.match(app,/else if\(kind==='unverified'\)/);
-  assert.match(html,/<title>GMWW V3\.121<\/title>/);
+  assertCurrentRelease();
 });
 
 test('An existing V3.39 install is offered the immutable V3.58 runtime',async()=>{

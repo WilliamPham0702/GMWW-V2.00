@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,5 @@ test('Online, enabled, and next-step controls remain present and compact',()=>{
 });
 
 test('Room layout fix advances to OTA V3.121 without a version downgrade',()=>{
-  assert.equal(pkg.version,'3.121.0');
-  assert.match(html,/<title>GMWW V3\.121<\/title>/);
-  assert.match(html,/app\.js\?v=3\.121-orbit&status=1/);
+  assertCurrentRelease();
 });

@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -22,7 +23,5 @@ test('Có gì mới shows each note in a dedicated safe bullet',()=>{
  assert.ok(css.includes('max-height:166px;overflow-y:auto'));
 });
 test('V3.94 is a separate OTA release on IPA 3.17',()=>{
- assert.ok(html.includes('<title>GMWW V3.121</title>'));
- assert.ok(app.includes("const VERSION='3.121'"));
- assert.ok(worker.includes('VERSION="V3.121",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3121"'));
+ assertCurrentRelease();
 });

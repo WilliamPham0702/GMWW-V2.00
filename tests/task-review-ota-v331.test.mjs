@@ -1,3 +1,4 @@
+import {assertCurrentRelease,currentRuntimeVersion} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,16 +13,13 @@ const lock=JSON.parse(read("package-lock.json"));
 const shell="3.121";
 
 test("task approval is a newer OTA than the previously released V3.30",()=>{
-  const version="3.121";
+  const version=currentRuntimeVersion;
   assert.equal(pkg.version,version+".0");
   assert.equal(lock.version,pkg.version);
   assert.equal(lock.packages[""].version,pkg.version);
-  assert.match(app,/const VERSION='3.121';/);
-  assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
+  assertCurrentRelease();
   assert.ok(Number(version.split(".")[1])>30,"same-version deployment cannot trigger installed app OTA");
-  assert.equal(shell,"3.121");
-  assert.match(html,/<title>GMWW V3.121<\/title>/);
-  assert.match(html,/app\.js\?v=3\.121-orbit/);
+  assertCurrentRelease();
 });
 
 test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{

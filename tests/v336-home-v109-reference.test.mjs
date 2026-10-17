@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -40,7 +41,7 @@ test("Trang Chủ tuân theo theme Biển trên điện thoại, chỉ bổ sung
   assert.match(css,/@media\(max-width:380px\)/);
   assert.match(css,/gmww-village-day-v260\.webp/);
   assert.doesNotMatch(css.slice(css.indexOf('/* GMWW V3.37 — Trang Chủ')),/#start/);
-  assert.match(html,/<title>GMWW V3\.121<\/title>/);
+  assertCurrentRelease();
 });
 
 
@@ -54,7 +55,7 @@ test("Trang Chủ mới hiển thị ba thẻ và điều hướng năm mục",(
  const labels=["Bộ Bài","Thành Viên","Ván Mẫu"].filter(label=>home.includes("<b>"+label+"</b>"));
  assert.deepEqual(labels,["Bộ Bài","Thành Viên","Ván Mẫu"]);
  assert.match(html,/id="bottomNav"/);
- assert.ok(html.includes("style.css?v=3.121-orbit"));
+ assertCurrentRelease();
  assert.match(home,/gmww-home-rebuild-v350/);
  for(const n of [3,6,1])assert.ok(!home.includes(">"+n+"</strong>"),"No fabricated counters");
  assert.ok(app.includes("function gmwwHomeRenderExtras(rows,ranking,leader)"));

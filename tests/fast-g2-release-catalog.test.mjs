@@ -38,6 +38,7 @@ async function workerWith(catalog,bases=[]){
   const {pathToFileURL}=await import('node:url');
   const src=resolve('src');
   let source=await readFile(join(src,'index.js'),'utf8');
+  source=source.replace(/VERSION="V[0-9.]+"/, 'VERSION="V3.121"');
   source=source.replace('import {releaseCatalog} from "./gmww-release-catalog.js";','const releaseCatalog='+JSON.stringify(catalog)+';');
   source=source.replace('import {releaseBases} from "./gmww-release-bases.js";','const releaseBases='+JSON.stringify(bases)+';');
   source=source.replace('import { DurableObject } from "cloudflare:workers";','class DurableObject {}');
