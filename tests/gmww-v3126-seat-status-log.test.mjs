@@ -53,13 +53,13 @@ test('V3.126: GM can toggle Player Web permission offline then atomically synchr
   assert.doesNotMatch(block,/\(isLive\?'':' disabled'\)/);
 });
 test('V3.126: complete action history is archived in durable individual rows and paginated',()=>{
-  assert.match(worker,/async persistInteractions\(rows\)/);
+  assert.match(worker,/actionLog:.*interaction\\.id/);
   assert.match(worker,/async gmActionLog\(request\)/);
   assert.match(worker,/actionLogBackfilled/);
   assert.match(worker,/prefix:"actionLog:",reverse:true,limit:limit\+1/);
   assert.match(worker,/if\(before\)query.end=before/);
   assert.match(worker,/if\(url.pathname==="\/gm\/action-log"&&request.method==="GET"\)/);
-  assert.ok((worker.match(/await this\.persistInteractions\(rows\)/g)||[]).length>=8);
+  assert.ok((worker.match(/await this\\.ctx\\.storage\\.put\\("interactions",pruneInteractions\\(rows\\)\\)/g)||[]).length>=8);
   assert.match(runtime,/playLoadActionLog\(reset=false\)/);
   assert.match(file('server-game/current/GMWW.html'),/id="playActionLogMore"/);
 });
