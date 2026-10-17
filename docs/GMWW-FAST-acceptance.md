@@ -6,7 +6,7 @@ G1 CI/CD (#269) and owner-accepted G2 OTA are retained. G3 covered interaction
 retention, actor admission, lifecycle expiry, configuration, private cards,
 village/player state, public room DTOs, readable GM source, readable Player JS,
 and original embedded Player artwork/HTML sources. The final source extraction
-is in #295, following #274/#275/#278/#286/#287/#290/#291/#293/#294.
+is in #295, following #274/#275/#278/#286/#287/#289/#291/#293/#294.
 
 Authoring entry points:
 - `src/gmww-*-rules.js`, eligibility, cycle-expiry, retention, wolf-resolution,
