@@ -1,5 +1,6 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
+import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { resolveWolfNight } from "./gmww-wolf-night-resolution.js";
@@ -2238,34 +2239,8 @@ function extractRoleImage(obj,depth=0){
   for(const [k,v] of Object.entries(obj)){if(/image|art|avatar|photo|cover|thumb|media|asset/i.test(k)){const hit=extractRoleImage(v,depth+1);if(hit)return hit}}
   return null
 }
-function sanitizePlayerArtifactCard(v){
-  const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{})})):[];
-  const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
-  return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
-}
-function privateArtifact(a){return{matchId:a.matchId||null,matchRevision:Number(a.matchRevision||0),artifactId:a.artifactId,artifactName:a.artifactName,description:a.description,artifactImage:a.artifactImage||null,artworkAssetId:a.artworkAssetId||a.artworkId||null,artworkId:a.artworkAssetId||a.artworkId||null,artworkAvailable:a.artworkAvailable!==false,artifactCard:a.artifactCard||null,singleUse:a.singleUse===true,deliveredAt:a.deliveredAt||null,viewedAt:a.viewedAt||null,usedAt:a.usedAt||null,lastActivation:a.lastActivation||null}}
 function currentArtifactCycleKey(meta){const n=Math.max(1,Number(meta?.cycleNight||1)),phase=String(meta?.cyclePhase||"").toLowerCase();return phase==="day"||phase==="morning"?String(meta?.matchId||"match")+":day:"+n:artifactCycleKey(meta?.matchId||"match",n)}
 function gameLabelKey(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
-function sanitizePlayerRoleCard(v){
-  const x=(v&&typeof v==="object")?v:{};
-  const actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null})):[];
-  const functions=Array.isArray(x.functions)?x.functions.slice(0,40).map(fn=>({
-    id:String(fn?.id||fn?.actionId||"").slice(0,120),
-    actionId:String(fn?.actionId||fn?.id||"").slice(0,120),
-    usageMode:["eachNight","onceGame","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
-    usageCount:Math.max(1,Math.min(100,Math.trunc(Number(fn?.usageCount)||1)))
-  })):null;
-  const flags=x.flags&&typeof x.flags.allowMultipleActions==="boolean"?
-    {allowMultipleActions:x.flags.allowMultipleActions}:null;
-  const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
-  return{version:Number(x.version||x.playerCardVersion||7),name:String(x.name||x.roleName||"").slice(0,120),faction:x.faction==null?null:String(x.faction).slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),objective:x.objective==null?null:String(x.objective).slice(0,3000),actions,functions,flags,limits:x.limits??null,artworkAssetId,artworkId:artworkAssetId}
-}
-function mergePlayerRoleCard(base,over){
-  const b=(base&&typeof base==="object")?base:{},o=(over&&typeof over==="object")?over:{};
-  const artworkAssetId=o.artworkAssetId??o.artworkId??b.artworkAssetId??b.artworkId??null;
-  return{version:Number(o.version||b.version||7),name:o.name||b.name||"",faction:o.faction??b.faction??null,information:o.information??b.information??null,objective:o.objective??b.objective??null,actions:(Array.isArray(o.actions)&&o.actions.length)?o.actions:(Array.isArray(b.actions)?b.actions:[]),functions:o.functions??b.functions??null,flags:o.flags??b.flags??null,limits:o.limits??b.limits??null,artworkAssetId,artworkId:artworkAssetId}
-}
-function privateRole(r){return{matchId:r.matchId||null,matchRevision:Number(r.matchRevision||0),roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,order:r.order,roleImage:r.roleImage||null,artworkAssetId:r.artworkAssetId||r.artworkId||null,artworkId:r.artworkAssetId||r.artworkId||null,artworkAvailable:r.artworkAvailable!==false,playerCardVersion:r.playerCardVersion||7,roleCard:r.roleCard||null,deliveredAt:r.deliveredAt,viewedAt:r.viewedAt||null}}
 function normalizeWinnerFaction(v){const raw=String(v||"").trim();if(!raw)return"";const n=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase();if(n.includes("phe dan"))return"Phe Dân";if(n.includes("phe soi"))return"Phe Sói";if(n.includes("phe ba")||n.includes("phe thu 3")||n.includes("phe thu ba"))return"Phe Ba";if(n.includes("phe khac"))return"Phe Khác";return raw.replace(/^[^A-Za-zÀ-ỹ0-9]+/u,"").trim().slice(0,120)}
 const GAME_CHARACTER_COUNT=20;
 function normalizeVillageCoord(v,fallback=50){const n=Number(v);return Number.isFinite(n)?Math.max(4,Math.min(96,Math.round(n*100)/100)):Math.max(4,Math.min(96,Number(fallback)||50))}

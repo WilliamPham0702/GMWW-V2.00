@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { defaultPriorityFirst, artifactPriorityFirst, buildNightQueue, reserveArtifactActivation } from '../src/gmww-game-scene-rules.js';
+import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const gm=fs.readFileSync('server-game/current/app.js','utf8');
@@ -13,7 +14,8 @@ test('priority-first Artifact option is editable, visible, persisted and sent in
   assert.match(gm,/\$\('#artifactPriorityFirst'\)\.checked=!!a\.priorityFirst/);
   assert.match(gm,/\['artifactPriorityFirst','priorityFirst'\]/);
   assert.match(gm,/priorityFirst:artifact\?\.artifact\?\.priorityFirst===true/);
-  assert.match(worker,/priorityFirst:typeof \(x\.priorityFirst/);
+  assert.equal(sanitizePlayerArtifactCard({artifactName:'Tráng Gương',priorityFirst:false}).priorityFirst,false);
+  assert.equal(sanitizePlayerArtifactCard({artifactName:'Tráng Gương'}).priorityFirst,true);
   assert.match(worker,/artifactPriorityFirst:artifact\?artifact\.priorityFirst===true:null/);
   assert.match(worker,/priorityFirst:artifactCard\.priorityFirst===true/);
 });
