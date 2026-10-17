@@ -86,18 +86,19 @@
     }
     return result;
   }
+  function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
     const safe=n=>Number.isFinite(Number(n))?Math.max(-10,Math.min(10,Math.round(Number(n)*10)/10)):0;
     return {x:safe(value?.x),y:safe(value?.y)};
   }
-  function positions(count,shape='',offset=null){
+  function positions(count,shape='',offset=null,spacing=100){
     // NEVER render 24 seats for a 12-player room: seat IDs and template points
     // must use the same seatCount on GM, Worker and Player Web.
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
     const points=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
-    const shift=normalizeSeatOffset(offset);
-    if(!shift.x&&!shift.y)return points;
-    return points.map(p=>({...clampPoint(p.x+shift.x,p.y+shift.y),ring:0}));
+    const shift=normalizeSeatOffset(offset),scale=normalizeSeatSpacing(spacing)/100;
+    if(!shift.x&&!shift.y&&scale===1)return points;
+    return points.map(p=>({...clampPoint(fire.x+(p.x-fire.x)*scale+shift.x,fire.y+(p.y-fire.y)*scale+shift.y),ring:0}));
   }
   function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(26+h%4800/100,65+(h>>>8)%1400/100)}
   function fitMode(w,h){const ratio=Number(w)/Math.max(1,Number(h));return ratio>=.85?"stretch":ratio>=.72?"contain":"cover"}
@@ -112,5 +113,5 @@
     const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*2)),total=lengths.reduce((s,v)=>s+v,0);let distance=t*total;
     for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const f=Math.min(1,distance/(lengths[i]||1));return clampPoint(path[i].x+(path[i+1].x-path[i].x)*f,path[i].y+(path[i+1].y-path[i].y)*f)}distance-=lengths[i]}return b;
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);
