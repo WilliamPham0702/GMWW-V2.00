@@ -83,9 +83,9 @@ test('busy state prevents duplicate forced end requests',async()=>{
   assert.equal(requests,0);
 });
 test('fixed seats use stable, distinct positions for every room size',()=>{
-  const ctx={};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8'),ctx);vm.runInContext(section('function playGatherSpacing()','function playEsc(v)'),ctx);
+  const ctx={playSceneRuntime:{room:{}},playSeatSpacingPreview:null};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8'),ctx);vm.runInContext(section('function playGatherSpacing()','function playEsc(v)'),ctx);
   for(let n=1;n<=30;n++){
-    const points=ctx.playSeatPositions(n),expected=Math.max(24,n);assert.equal(points.length,expected);assert.equal(new Set(points.map(p=>p.map(v=>v.toFixed(2)).join(','))).size,expected);
+    const points=ctx.playSeatPositions(n),expected=n;assert.equal(points.length,expected);assert.equal(new Set(points.map(p=>p.map(v=>v.toFixed(2)).join(','))).size,expected);
     for(const [x,y] of points){assert.ok(x>=14&&x<=86);assert.ok(y>=32&&y<=70)}
   }
 });
