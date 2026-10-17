@@ -139,6 +139,17 @@
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
           <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
+          <div class="play-seat-shift-controls" aria-label="Căn chỉnh tất cả Seat quanh đốm lửa">
+            <span>CHỈNH VỊ TRÍ SEAT</span>
+            <div class="play-seat-shift-buttons">
+              <button type="button" data-seat-shift="left" aria-label="Dịch tất cả Seat sang trái">←</button>
+              <button type="button" data-seat-shift="up" aria-label="Dịch tất cả Seat lên trên">↑</button>
+              <button type="button" data-seat-shift="down" aria-label="Dịch tất cả Seat xuống dưới">↓</button>
+              <button type="button" data-seat-shift="right" aria-label="Dịch tất cả Seat sang phải">→</button>
+              <button type="button" data-seat-shift="reset" aria-label="Đặt lại Seat về vị trí tâm lửa">↺</button>
+            </div>
+            <output id="playSeatOffsetValue" aria-live="polite">X 0 · Y 0</output>
+          </div>
           <div class="play-gather-toolbar-actions">
             <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
             <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
