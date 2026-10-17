@@ -704,8 +704,8 @@ function renderPlayPlayers(){
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
       token.dataset.gmwwStatuses=sig;
-      token.querySelectorAll(':scope > .gmww-sv-overlay, :scope > .gmww-sv-badges').forEach(n=>n.remove());
-      if(ids.length)token.insertAdjacentHTML('beforeend',visual.overlay(ids));
+      token.querySelectorAll(':scope > .gmww-sv-overlay, .play-player-over > .gmww-sv-badges').forEach(n=>n.remove());
+      if(ids.length){token.insertAdjacentHTML('beforeend',visual.overlay(ids));const badge=token.querySelector(':scope > .gmww-sv-badges');if(badge)token.querySelector('.play-player-over')?.prepend(badge);}
     }
     syncPlayMovementTicker();
     if(playSceneState.step==='battle')battleMarkPlayers();
@@ -720,11 +720,11 @@ function renderPlayPlayers(){
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,presenceLabel=m?.online===false?'Offline':'Online';
     const gmAssignments=(playSceneRuntime.assignments||[]).length?playSceneRuntime.assignments:(playSceneState.assignmentsPreview||[]);
-    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b></div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(m?(showRole?'<span class="play-player-role">'+playEsc(roleLabel)+'</span>':''):'<b>Vị trí '+seatId+'</b>');
+    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
       el.dataset.gmwwStatuses=statusVisuals.join('|');
-      if(statusVisuals.length)el.insertAdjacentHTML('beforeend',globalThis.GMWW_STATUS_VISUALS.overlay(statusVisuals));
+      if(statusVisuals.length){el.insertAdjacentHTML('beforeend',globalThis.GMWW_STATUS_VISUALS.overlay(statusVisuals));const badge=el.querySelector(':scope > .gmww-sv-badges');if(badge)el.querySelector('.play-player-over')?.prepend(badge);}
     }
     el.setAttribute('aria-label',name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'')+(m&&playPlayerStatuses(m.loginId).length?' • '+playPlayerStatuses(m.loginId).map(x=>x.label).join(', '):''));el.title=name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'');
     if(m){
