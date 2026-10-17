@@ -2900,7 +2900,7 @@ function renderPlayPlayers(){
   // A server heartbeat does not invalidate 30 chibi rigs plus their animated
   // status orbits. Rebuild the layer only when visible gameplay inputs change.
   const domSig=JSON.stringify([
-    playPlayerRenderSignature(members),playSceneState.step,playSceneState.phase,
+    playPlayerRenderSignature(members).split(':status:')[0],playSceneState.step,playSceneState.phase,
     playSceneState.activePlayerId,(playSceneState.selectedMemberIds||[]).join(','),
     seatCount,previewNew,seating,playSceneState.roomMode,playSceneState.seatMoveMode,
     playSceneRuntime.room?.seatOffset,playGatherSpacing(),
@@ -2910,6 +2910,19 @@ function renderPlayPlayers(){
     ring.clientWidth,ring.clientHeight
   ]);
   if(ring.dataset.gmwwPlayerDomSig===domSig&&ring.children.length){
+    // Preserve every character rig. Updating one overlay must not rebuild all
+    // 12–30 characters, reset their animation, or stutter the iPhone canvas.
+    const visual=globalThis.GMWW_STATUS_VISUALS;
+    if(visual)for(const member of members){
+      const id=String(member.loginId||member.participantId||'');
+      const token=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');
+      if(!token)continue;
+      const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
+      if(token.dataset.gmwwStatuses===sig)continue;
+      token.dataset.gmwwStatuses=sig;
+      token.querySelectorAll(':scope > .gmww-sv-overlay, :scope > .gmww-sv-badges').forEach(n=>n.remove());
+      if(ids.length)token.insertAdjacentHTML('beforeend',visual.overlay(ids));
+    }
     syncPlayMovementTicker();
     if(playSceneState.step==='battle')battleMarkPlayers();
     return;
@@ -2926,6 +2939,7 @@ function renderPlayPlayers(){
     const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b></div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(m?(showRole?'<span class="play-player-role">'+playEsc(roleLabel)+'</span>':''):'<b>Vị trí '+seatId+'</b>');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
+      el.dataset.gmwwStatuses=statusVisuals.join('|');
       if(statusVisuals.length)el.insertAdjacentHTML('beforeend',globalThis.GMWW_STATUS_VISUALS.overlay(statusVisuals));
     }
     el.setAttribute('aria-label',name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'')+(m&&playPlayerStatuses(m.loginId).length?' • '+playPlayerStatuses(m.loginId).map(x=>x.label).join(', '):''));el.title=name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'');
