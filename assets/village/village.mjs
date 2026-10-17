@@ -74,6 +74,7 @@ if(game){
     }catch{return "";}
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
+  let matchStartedAt=0;
   let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
   const mountedPlayerNodes=new Map(),mountedEmptySeatNodes=new Map();
@@ -91,21 +92,30 @@ if(game){
   // UI-only anchor: a deceased person's displayed position must remain fixed
   // even when a separate autonomous movement system continues publishing coordinates.
   const deceasedDisplayPoints=new Map();
+  function seatedMovementAllowed(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){
+    if(data?.movementStatus!=="moving")return false;
+    const started=Number(data?.moveStartedAt||0),duration=Number(data?.moveDurationMs||0);
+    if(!(started>0&&duration>0&&now<started+duration))return false;
+    // Assigned Seats remain on the fire-centred template in all setup stages.
+    // In an actual match only newly started manual movements may override it.
+    return !Number(data?.displaySeatId||data?.seatId||0)||
+      (matchStartedAt>0&&started>matchStartedAt);
+  }
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     const id=String(data?.id||data?.participantId||'');
     const dead=visuallyDeceased(data);
     if(!dead&&id)deceasedDisplayPoints.delete(id);
     if(dead&&id&&deceasedDisplayPoints.has(id))
       return{...deceasedDisplayPoints.get(id),progress:1,moving:false,sitting:false,sitRemainingMs:0};
-    const pos=data?.movementStatus==='moving'?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1)))),sitting=sittingNow(data,now);
+    const activeMove=seatedMovementAllowed(data,now),pos=activeMove?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1)))),sitting=sittingNow(data,now);
     if(dead){
       if(id)deceasedDisplayPoints.set(id,{x:pos.x,y:pos.y});
       return{...pos,progress:1,moving:false,sitting:false,sitRemainingMs:0};
     }
-    return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1,sitting,sitRemainingMs:sitting?Math.max(0,Number(data.sitUntil)-now):0};
+    return{...pos,progress,moving:activeMove&&progress<1,sitting,sitRemainingMs:sitting?Math.max(0,Number(data.sitUntil)-now):0};
   }
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
-    if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
+    if(seatedMovementAllowed(data,now))return layout.interpolate(data,now);
     // For a seated player, the authoritative seat map always wins over stale
     // pre-layout world coordinates retained by older room versions.
     const sid=Number(data?.displaySeatId||data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
@@ -354,7 +364,7 @@ if(game){
     // Same deterministic seat repair as GM, without modifying server Seat IDs.
     // Old running rooms with missing IDs no longer spawn players in a clump.
     const visualSeats=layout.projectedSeatIds(incoming.filter(p=>!p.isGM),nextCount);
-    const matchStartedAt=Date.parse(room.startedAt||"")||0;
+    matchStartedAt=Date.parse(room.startedAt||"")||0;
     for(const p of incoming){
       if(p.isGM)continue;
       p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
@@ -400,7 +410,12 @@ if(game){
       roomCode,
       visibility:()=>!document.hidden,
       onState:state=>{
-        all=mapPublicPlayers(state);const room=state.room||{};seatLayout=layout.normalizeSeatLayout(room.seatLayout);count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
+        all=mapPublicPlayers(state);const room=state.room||{};seatLayout=layout.normalizeSeatLayout(room.seatLayout);
+        seatOffset=layout.normalizeSeatOffset(room.seatOffset);seatSpacing=layout.normalizeSeatSpacing(room.seatSpacing);
+        count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
+        matchStartedAt=Date.parse(room.startedAt||"")||0;
+        const visualSeats=layout.projectedSeatIds(all.filter(p=>!p.isGM),count);
+        for(const p of all)if(!p.isGM)p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
         if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
         render();if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
       },
