@@ -9,6 +9,7 @@ import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActio
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
+import {resolveWolfNight} from '../src/gmww-wolf-night-resolution.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -24,7 +25,7 @@ const STATUS_DEFS=vm.runInNewContext('('+statusDefsMatch[1]+')');
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,STATUS_DEFS,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
@@ -345,4 +346,56 @@ test('G4 live DO: two-night disabled status expires at night 3, not night 2',asy
   assert.equal(third.expired.some(x=>x.id==='disable-two-nights'&&x.reason==='NIGHTS_ELAPSED'),true);
   assert.equal(h.data.get('interactions')[0].effectActive,false);
   assert.equal((await checkNight(3)).ok,true);
+});
+
+const g43notice=(actionId,loginId,{actorId='gm',direction=''}={})=>({
+  id:'notice:'+actionId+':'+loginId,type:'effect_notice',actionId,actorId,loginId,
+  direction,matchId:'test-match',night:1,cycleKey:'night-1',effectActive:false
+});
+const g43seated=h=>{
+  const seats={alice:1,bob:2,carol:3,dave:4};
+  for(const p of Object.values(h.data.get('players')))p.seatId=seats[p.loginId];
+  return h;
+};
+test('G4.3 real DO morning: confirmed direct wolf bite produces an active death once',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[g43notice('action_wolf_bite','bob')]);
+  const result=await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(result.ok,true);
+  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'&&x.effectActive!==false),x=>x.loginId),['bob']);
+  await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(h.data.get('interactions').filter(x=>x.type==='dead').length,1,'replay must not create second death');
+});
+test('G4.3 real DO morning: Fairy transfers guarded bite, then checks guard on final target',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[
+    g43notice('action_wolf_bite','bob'),g43notice('action_protect','bob'),
+    g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
+  ]);
+  await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'),x=>x.loginId),['carol']);
+  const guarded=g43seated(harness({artifact:false}));
+  guarded.data.set('interactions',[
+    g43notice('action_wolf_bite','bob'),g43notice('action_protect','carol'),
+    g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
+  ]);
+  await guarded.room.applyCycle(await guarded.meta(),'morning',1,'morning-1','lab');
+  assert.equal(guarded.data.get('interactions').filter(x=>x.type==='dead').length,0);
+});
+test('G4.3 real DO morning: Fairy without a bite cannot create a death',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'left'})]);
+  await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(h.data.get('interactions').filter(x=>x.type==='dead').length,0);
+});
+test('G4.3 real DO morning: unrelated death survives protection and next-night state',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[g43notice('action_protect','bob'),{
+    id:'witch-death',type:'dead',loginId:'bob',matchId:'test-match',night:1,effectActive:true,
+    actionId:'action_witch_kill'
+  }]);
+  await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(h.data.get('interactions').filter(x=>x.type==='dead'&&x.effectActive!==false).length,1);
+  await h.room.applyCycle(await h.meta(),'night',2,'night-2','lab');
+  assert.equal(h.data.get('interactions').some(x=>x.id==='witch-death'&&x.effectActive),true);
 });
