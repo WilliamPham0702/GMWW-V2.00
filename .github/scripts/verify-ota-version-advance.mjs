@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import {isV562IsolatedPreviewAsset} from './character-v562-preview-isolation.mjs';
 
 const productionOrigin = 'https://gmww-v2-00.williampham0702.workers.dev';
 const runtimeSourcePatterns = [
@@ -35,7 +36,7 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
   }
 
   const changed = (Array.isArray(changedFiles) ? changedFiles : [])
-    .map(path => String(path || '').trim()).filter(Boolean);
+    .map(path => String(path || '').trim()).filter(path=>path && !isV562IsolatedPreviewAsset(path));
   const runtimeChanged = changed.some(path => runtimeSourcePatterns.some(pattern => pattern.test(path)));
 
   if (runtimeChanged) {
