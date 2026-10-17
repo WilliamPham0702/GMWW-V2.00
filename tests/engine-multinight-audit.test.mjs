@@ -53,7 +53,7 @@ test('multi-night: consumed Artifact is omitted from normal queue',()=>{
   for(const night of [1,2,3]){
     const {queue}=runNight(night,owners);
     assert.equal(queue.some(x=>x.artifactId==='swap'),false);
-    assert.equal(queue[1].actions.length,0);
+    assert.equal(queue.find(x=>x.kind==='early-artifact-window').actions.length,0);
   }
 });
 test('audit: real policy blocks frozen actors and honours expired effects',()=>{

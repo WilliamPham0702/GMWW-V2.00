@@ -7,9 +7,9 @@ test("opening window uses editable Artifact flag, not a hardcoded role list",()=
  const first=buildNightQueue({night:1,artifactOwners:owners,normalTurns:[{kind:"normal",playerId:"other"}]});
  assert.deepEqual(first.map(x=>x.kind),["wolf-introduction","early-artifact-window","normal","village-wakeup"]);
  assert.deepEqual(first[1].actions.map(x=>x.name),names.slice(0,3));
- assert.deepEqual(buildNightQueue({night:2,artifactOwners:owners}).map(x=>x.kind),["wolf-introduction","early-artifact-window","village-wakeup"]);
+ assert.deepEqual(buildNightQueue({night:2,artifactOwners:owners}).map(x=>x.kind),["early-artifact-window","village-wakeup"]);
  const custom=buildNightQueue({night:2,artifactOwners:[{artifactName:"Bùa Hộ Mệnh",playerId:"p",priorityFirst:true},{artifactName:"Tráng Gương",playerId:"q",priorityFirst:false}]});
- assert.deepEqual(custom[1].actions.map(x=>x.name),["Bùa Hộ Mệnh"]);
+ assert.deepEqual(custom.find(x=>x.kind==="early-artifact-window").actions.map(x=>x.name),["Bùa Hộ Mệnh"]);
 });
 test("early use skips duplicate main turn; skipped early turn retains main turn",()=>{
  const normalTurns=[{playerId:"1",artifactName:"Tráng Gương"}];

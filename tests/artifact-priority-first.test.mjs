@@ -29,11 +29,11 @@ test('early priority schedules before normal roles but does not consume an unuse
   const owners=[{playerId:'member:p1',artifactId:'a',artifactName:'Tráng Gương',priorityFirst:true},{playerId:'member:p2',artifactId:'b',artifactName:'Mắt Tiên Tri',priorityFirst:false}];
   const normalTurns=[{kind:'role',playerId:'member:p3'},{kind:'artifact-main',playerId:'member:p1',artifactId:'a'},{kind:'artifact-main',playerId:'member:p2',artifactId:'b'}];
   assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
-  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
-  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners}).map(x=>x.kind),['early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['early-artifact-window','role','artifact-main','village-wakeup']);
 });
 
-test('empty early window stays visible with no actions',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['wolf-introduction','early-artifact-window','village-wakeup']);assert.deepEqual(queue[1].actions,[])});
+test('empty early window stays visible with no actions',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['early-artifact-window','village-wakeup']);assert.deepEqual(queue[0].actions,[])});
 
 test('usage ledger refuses duplicate activation and maintains retry idempotency',()=>{
   const cycleKey='game:night:1',base={cycleKey,accepted:[]};

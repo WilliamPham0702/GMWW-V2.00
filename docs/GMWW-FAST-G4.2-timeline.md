@@ -1,7 +1,11 @@
 # GMWW FAST G4.2 — Night Timeline consistency
 
-The production Durable Object's `getNightRuntime` already includes `wolf-introduction` only when `night===1`. Two pure helper projections had diverged: `buildNightQueue` inserted it every night; `timelineDisplaySteps` fabricated it even if absent in the server queue.
+Production Durable Object `getNightRuntime` schedules Bầy Sói only when `n===1`. Two pure projections diverged: `buildNightQueue` inserted it every night and `timelineDisplaySteps` fabricated it when absent from the queue.
 
-This change makes the stored/server queue authoritative for the opening step. The early Artifact window and final village-wakeup step remain one each; role ordering, player state, history, Native IPA, Runtime files and saved room data are unchanged.
+The server queue is now authoritative. The early Artifact window and village-wakeup remain once each, and every assigned role/Artifact action is retained. No data, schema, Native, OTA package, or gameplay Durable Object change.
 
-TDD: RED commit `778549746d05ea49b49913d9b93ae484bb07047c` failed exactly two intended regressions, with 941/943 tests passing. GREEN commit fixes only the two projections. This PR must pass every required check before any merge/deployment.
+TDD evidence:
+- RED `778549746d05ea49b49913d9b93ae484bb07047c` — 941/943 tests passed, two new tests failed as expected.
+- First GREEN attempt `d1922def0951ac258accd727ed887b1676c738a4` exposed four historical tests asserting the outdated every-night wolf introduction or fixed array indices.
+- The four historical tests are updated to assert the verified real DO contract and locate Artifact steps by `kind`, not by positional index.
+- All mandatory CI checks must return SUCCESS on the final commit before merge/deploy.
