@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
-test('Gathering spacing slider supports 70–135%, persists local preference and updates players',()=>{
+test('Gathering spacing slider supports 70–135%, synchronizes to server and updates players',()=>{
  assert.match(html,/id="playGatherSpacing" type="range" min="70" max="135" step="5"/);
  assert.match(app,/localStorage\.setItem\('gmww_gather_spacing'/);
  assert.match(app,/input\.addEventListener\('input',update\)/);
