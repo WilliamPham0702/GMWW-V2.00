@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -27,6 +28,5 @@ test("Character-02 patch character scaling affects avatar only",()=>{
 test("Character-02 patch avoids rebuilding GM player DOM on every unchanged heartbeat",()=>{
   assert.match(app,/playPlayerRenderSignature/);
   assert.match(app,/if\(playerRenderChanged\)renderPlayPlayers\(\)/);
-  assert.equal(pkg.version,"3.121.0");
-  assert.match(worker,/VERSION="V3.121"/);
+  assertCurrentRelease();
 });

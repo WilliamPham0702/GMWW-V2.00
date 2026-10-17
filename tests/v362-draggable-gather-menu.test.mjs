@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -61,7 +62,7 @@ test('V3.62 updates IPA V3.61 using only signed GM UI assets; no deletion or med
  const badHash=fresh();badHash.runtime.files[0].sha256='bad';assert.equal(selectVerifiedRuntimeV362Delta(badHash,'3.61'),null);
  const badUrl=fresh();badUrl.runtime.files[0].url='https://invalid.example/GMWW.html';assert.equal(selectVerifiedRuntimeV362Delta(badUrl,'3.61'),null);
  const deleted=fresh();deleted.delete=['storage'];assert.equal(selectVerifiedRuntimeV362Delta(deleted,'3.61'),null);
- assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
+ assertCurrentRelease();
  assert.match(worker,/selectVerifiedRuntimeV362Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
  assert.match(worker,/selectVerifiedRuntimeV362Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
 });

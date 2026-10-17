@@ -66,6 +66,8 @@ jobs:
         run: node tests/home-v389-iphone-webkit.mjs
       - name: Check night timeline on iPhone-sized WebKit
         run: node tests/night-timeline-iphone-webkit.mjs
+      - name: Check OTA startup recovery in WebKit
+        run: node tests/runtime-recovery-webkit.mjs
       - name: Upload WebKit Home preview
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -42,9 +43,5 @@ test('Both IPA update-manifest routes run V3.65 fast overlay ahead of older algo
  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const app=fs.readFileSync('server-game/current/app.js','utf8');
- assert.equal(pkg.version,'3.121.0');
- assert.match(html,/<title>GMWW V3.121<\/title>/);
- assert.match(html,/app\.js\?v=3\.121-orbit/);
- assert.match(app,/const VERSION='3.121'/);
- assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
+ assertCurrentRelease();
 });

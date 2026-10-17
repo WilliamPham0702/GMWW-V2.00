@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -182,7 +183,7 @@ test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   assert.match(worker,/validRuntime=/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
-  assert.match(worker,/NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
+  assertCurrentRelease();
   assert.match(prepare,/character-renderer\.js','character-renderer\.js/);
   assert.match(prepare,/character-renderer\.css','character-renderer\.css/);
 });

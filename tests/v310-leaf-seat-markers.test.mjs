@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -24,13 +25,12 @@ test('V3.17 Player Web uses the supplied fantasy leaf artwork and removes genera
 });
 
 test('V3.17 runtime is aligned with native shell V3.17',()=>{
-  assert.match(html,/<title>GMWW V3\.121<\/title>/);
-  assert.match(app,/const VERSION='3\.121'/);
-  assert.match(server,/VERSION="V3\.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
-  assert.ok(['3.10','3.11','3.12','3.13','3.17','3.109','3.110','3.113','3.114','3.115','3.116','3.117','3.118','3.119','3.120','3.121'].includes(manifest.releaseVersion));
+  assertCurrentRelease();
+  assert.match(manifest.releaseVersion,/^\d+\.\d+$/);
   assert.ok(['native','runtime'].includes(manifest.releaseType));
-  assert.ok(['3.09','3.11','3.17','3.110'].includes(manifest.shellVersion));
-  assert.ok(['3.10','3.11','3.12','3.17','3.109','3.110','3.113','3.114','3.115','3.116','3.117','3.118','3.119','3.120','3.121'].includes(manifest.runtimeVersion));
+  assert.match(manifest.shellVersion,/^\d+\.\d+$/);
+  assert.ok(manifest.runtimeVersion.localeCompare(manifest.shellVersion,undefined,{numeric:true})>=0);
+  assert.equal(manifest.runtimeVersion,manifest.releaseVersion);
   if(manifest.releaseType==='native')assert.ok(manifest.ipa?.url);
   if(manifest.releaseType==='runtime')assert.ok(manifest.runtime.files.some(x=>x.path==='style.css'));
   if(manifest.releaseType==='runtime')assert.ok(manifest.runtime.files.some(x=>x.path==='character-renderer.js'));

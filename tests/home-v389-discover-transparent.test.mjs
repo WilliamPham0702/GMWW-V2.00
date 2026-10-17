@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,6 +34,5 @@ test('V3.89 installs from V3.87 via three verified UI files; deletion forbidden'
    const corrupted=structuredClone(m);mutate(corrupted);
    assert.equal(selectVerifiedRuntimeV389Delta(corrupted,'3.88'),null);
  }
- assert.match(app,/const VERSION='3\.121'/);
- assert.match(html,/<title>GMWW V3\.121<\/title>/);
+ assertCurrentRelease();
 });

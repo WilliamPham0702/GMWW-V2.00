@@ -34,7 +34,8 @@ test('real package producer emits a verified catalog for a future Runtime withou
       assert.equal(createHash('sha256').update(bytes).digest('hex'),file.sha256);
     }
     put('server-game/current/app.js',"const VERSION='3.1000';");
-    put('server-game/current/GMWW.html','<title>GMWW V3.1000</title><script src="app.js"></script>');
+    put('server-game/current/runtime-recovery.js','// independent recovery fixture');
+    put('server-game/current/GMWW.html','<title>GMWW V3.1000</title><script src="runtime-recovery.js" data-runtime="3.1000"></script><script src="app.js"></script>');
     const next=spawnSync(process.execPath,[path.resolve('.github/scripts/prepare-update-channel.mjs'),'runtime'],{cwd:root,encoding:'utf8'});
     assert.equal(next.status,0,next.stderr);
     const baseModule=fs.readFileSync(path.join(root,'src/gmww-release-bases.js'),'utf8');
@@ -42,5 +43,8 @@ test('real package producer emits a verified catalog for a future Runtime withou
     assert.equal(releaseBases.length,1);
     assert.equal(releaseBases[0].manifest.releaseVersion,'3.999');
     assert.ok(await selectBuildVerifiedManifest(releaseBases[0],'3.999','3.110'));
+    fs.rmSync(path.join(root,'server-game/current/runtime-recovery.js'));
+    const broken=spawnSync(process.execPath,[path.resolve('.github/scripts/prepare-update-channel.mjs'),'runtime'],{cwd:root,encoding:'utf8'});
+    assert.notEqual(broken.status,0,'a referenced but missing recovery bootstrap must block publishing');
   }finally{fs.rmSync(root,{recursive:true,force:true})}
 });

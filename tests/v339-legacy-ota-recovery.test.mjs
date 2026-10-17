@@ -5,7 +5,9 @@ import {readFileSync} from 'node:fs';
 import {recoverLegacyRuntimeManifest} from '../src/gmww-runtime-recovery.js';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 const root='https://gmww-v2-00.williampham0702.workers.dev',version='3.121';
-const src=new Map(['GMWW.html','app.js','style.css','battle-controls.js','home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg'].map(x=>[x,readFileSync('server-game/current/'+x)]));
+const src=new Map(['GMWW.html','app.js','style.css','battle-controls.js','home-art/home-sea-portal-v354.svg','home-art/home-sea-cards-v354.svg','home-art/home-sea-members-v354.svg','home-art/home-sea-templates-v354.svg'].map(x=>[x,readFileSync('assets/updates/runtime/V3.119/'+x)]));
+// The rescue fixture stays historical even when the live Runtime advances.
+for(const name of ['GMWW.html','app.js'])src.set(name,Buffer.from(src.get(name).toString().replace(/<title>GMWW V[0-9.]+<\/title>/,'<title>GMWW V'+version+'</title>').replace(/const VERSION='[0-9.]+'/ ,"const VERSION='"+version+"'")));
 const cfg={requestUrl:root+'/api/update/manifest?current=3.38',version,shellVersion:'3.17',installedVersion:'3.38'};
 function mock(block,override={}){return{fetch:async req=>{
  const filename=new URL(req.url).pathname.split('/').slice(4).join('/');

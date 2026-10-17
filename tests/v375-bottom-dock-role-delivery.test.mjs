@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -49,5 +50,5 @@ test('V3.76 UI update is a signed three-file patch only from V3.75',()=>{
   assert.equal(selectVerifiedRuntimeV376Delta(m,'3.72'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,delete:['artwork']},'3.75'),null);
   assert.equal(selectVerifiedRuntimeV376Delta({...m,runtime:{files:m.runtime.files.slice(1)}},'3.75'),null);
-  assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
+  assertCurrentRelease();
 });

@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -27,10 +28,7 @@ test('V3.100 to V3.101 is a no-delete SHA-verified four-file overlay',()=>{
 test('V3.104 preserves the V3.101 Smart Seat GM/Worker/Player contract together while preserving existing gameplay and assignments',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),player=fs.readFileSync('assets/village/village.mjs','utf8');
- assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
- assert.match(app,/const VERSION='3.121'/);
- assert.match(html,/village-layout\.js\?v=3\.121-orbit/);
- assert.match(html,/GMWW V3\.121/);
+ assertCurrentRelease();
  assert.match(player,/fire3101/);
  assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);
  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout\)/);

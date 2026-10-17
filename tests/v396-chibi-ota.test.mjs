@@ -1,3 +1,4 @@
+import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,9 +30,7 @@ test('Worker V3.104 keeps the V3.96 migration available for older installs',()=>
   const worker=fs.readFileSync('src/index.js','utf8');
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  assert.match(worker,/VERSION="V3.121",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3121"/);
-  assert.match(app,/const VERSION='3.121'/);
-  assert.match(html,/<title>GMWW V3.121<\/title>/);
+  assertCurrentRelease();
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
   assert.equal(worker.split('selectVerifiedRuntimeV397Delta(').length-1,2);
   assert.match(worker,/selectVerifiedRuntimeV397Delta\(manifest,url\.searchParams\.get\("current"\)\)\|\|selectVerifiedRuntimeV396Delta/);
