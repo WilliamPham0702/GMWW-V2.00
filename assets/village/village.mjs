@@ -87,8 +87,20 @@ if(game){
 
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){return layout.spawn(id)}
+  // UI-only anchor: a deceased person's displayed position must remain fixed
+  // even when a separate autonomous movement system continues publishing coordinates.
+  const deceasedDisplayPoints=new Map();
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
+    const id=String(data?.id||data?.participantId||'');
+    const dead=visuallyDeceased(data);
+    if(!dead&&id)deceasedDisplayPoints.delete(id);
+    if(dead&&id&&deceasedDisplayPoints.has(id))
+      return{...deceasedDisplayPoints.get(id),progress:1,moving:false,sitting:false,sitRemainingMs:0};
     const pos=data?.movementStatus==='moving'?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1)))),sitting=sittingNow(data,now);
+    if(dead){
+      if(id)deceasedDisplayPoints.set(id,{x:pos.x,y:pos.y});
+      return{...pos,progress:1,moving:false,sitting:false,sitRemainingMs:0};
+    }
     return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1,sitting,sitRemainingMs:sitting?Math.max(0,Number(data.sitUntil)-now):0};
   }
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
@@ -249,7 +261,7 @@ if(game){
     for(const data of unseated){const pos=movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
     const alive=new Set(all.map(p=>String(p.id)));
-    for(const id of mountedPlayerNodes.keys())if(!alive.has(id))mountedPlayerNodes.delete(id);
+    for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
     villageRenderMetrics.mounted=mountedPlayerNodes.size;
     document.getElementById("count").textContent=all.filter(x=>Number(x?.seatId||0)>0).length+"/"+seatCount;
     renderPortal();
