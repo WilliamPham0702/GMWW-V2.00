@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const read=p=>fs.readFileSync(p,'utf8');
 const src=read('server-game/current/status-visuals.js');
+const previewRenderer=read('assets/status-visuals.js');
+const previewPage=read('assets/status-visuals-preview.html');
 const gmCss=read('server-game/current/status-visuals.css');
 const webCss=read('assets/village/status-visuals.css');
 const app=read('server-game/current/app.js');
@@ -109,4 +111,16 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.doesNotMatch(src,/effect:'fallen'/);
   assert.doesNotMatch(gmCss,/\.gmww-sv-fallen/);
   assert.doesNotMatch(webCss,/rotate\(76deg\)/);
+});
+
+test('Preview asset: same exact 15-status renderer, no room modification, usable on iPhone',()=>{
+  assert.equal(previewRenderer,src);
+  assert.match(previewPage,/<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
+  assert.match(previewPage,/\/status-visuals\.js\?v=pr277-abc/);
+  assert.match(previewPage,/\/village\/status-visuals\.css\?v=pr277-abc/);
+  assert.match(previewPage,/api\.entries\.filter/);
+  assert.match(previewPage,/permissions\.get\(id\)/);
+  assert.match(previewPage,/api\.overlay\(chosen\)/);
+  assert.match(previewPage,/active\.add\('dead'\)/);
+  assert.doesNotMatch(previewPage,/fetch\(|XMLHttpRequest|localStorage\.|\/gm\/interaction|\/player\/interaction/);
 });
