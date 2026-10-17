@@ -61,7 +61,7 @@ test('8–30 seats form exactly ONE continuous perimeter around the fire',()=>{
     }
   }
   assert.equal(layout.normalizeSeatLayout('diamond'),'ellipse','V3.101 rooms retain legacy layout compatibility');
-  assert.equal(layout.positions(12).length,24,'legacy slots remain 24');
+  assert.equal(layout.positions(12).length,12,'rooms with 12 seats must draw exactly 12 seat positions');
   assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback also has no inner ring');
 });
 
