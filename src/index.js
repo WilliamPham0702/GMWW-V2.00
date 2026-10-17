@@ -832,7 +832,45 @@ export class RoomDurableObject extends DurableObject {
     meta.multiAssign=multiAssign;meta.matchId=String(body?.matchId||meta.matchId||"")||null;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.deliveryVersion=nextDeliveryVersion;meta.phase="role_delivery";meta.status="role_delivery";meta.gmStage="deal";meta.roleDeliveredAt=nextPublishedAt;meta.updatedAt=meta.roleDeliveredAt;await this.ctx.storage.put("meta",meta);
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),assignments:summary,multiAssign});
   }
-  async gmStart(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,assignments=(await this.ctx.storage.get("assignments"))||[],incomingMatchId=String(body?.matchId||"");if(!assignments.length)return j({ok:false,error:"ROLES_NOT_DELIVERED",message:"Hãy phân và phát Vai Trò trước khi bắt đầu."},409);if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Dữ liệu Phòng thuộc một ván khác. Hãy Phát Vai lại."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.deliveryVersion=Number(body?.deliveryVersion||meta.deliveryVersion||0);meta.phase="running";meta.status="running";meta.gmStage="battle";meta.locked=false;meta.startedAt=new Date().toISOString();meta.endedAt=null;await this.ctx.storage.put("interactions",[]);meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=Number(meta.resultVersion||0);meta.updatedAt=meta.startedAt;await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
+  async gmStart(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,assignments=(await this.ctx.storage.get("assignments"))||[],
+      incomingMatchId=String(body?.matchId||"");
+    if(!assignments.length)return j({ok:false,error:"ROLES_NOT_DELIVERED",message:"Hãy phân và phát Vai Trò trước khi bắt đầu."},409);
+    if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)
+      return j({ok:false,error:"MATCH_MISMATCH",message:"Dữ liệu Phòng thuộc một ván khác. Hãy Phát Vai lại."},409);
+    const players=(await this.ctx.storage.get("players"))||{},
+      members=Object.values(players).filter(p=>p?.kind==="member"),
+      seatCount=normalizeSeatCount(meta.seatCount,members.length||12);
+    if(members.length>seatCount)return j({ok:false,error:"SEATING_INCOMPLETE",
+      message:"Số người lớn hơn số seat. Vui lòng chọn đủ seat trước khi Vào Trận."},409);
+    const projected=villageLayout.projectedSeatIds(members,seatCount),
+      anchors=villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing);
+    // Revalidate every roster member before changing match state. Preserve all
+    // valid seat IDs, repair only absent/duplicate IDs, and terminate stale
+    // pre-match wander animations before the first in-match frame is published.
+    for(const p of members){
+      const key=String(p.participantId||(p.loginId?"member:"+p.loginId:"")),
+        seat=projected[key],point=anchors[seat-1];
+      if(!seat||!point)return j({ok:false,error:"SEATING_INCOMPLETE",
+        message:"Chưa thể xác định vị trí cho tất cả người chơi."},409);
+      p.seatId=seat;
+      clearPlayerMovement(p,{keepPosition:true});
+      p.positionX=point.x;p.positionY=point.y;
+    }
+    if(incomingMatchId)meta.matchId=incomingMatchId;
+    meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);
+    meta.deliveryVersion=Number(body?.deliveryVersion||meta.deliveryVersion||0);
+    meta.phase="running";meta.status="running";meta.gmStage="battle";
+    meta.locked=false;meta.seatsLocked=true;meta.startedAt=new Date().toISOString();meta.endedAt=null;
+    await this.ctx.storage.put("players",players);
+    await this.ctx.storage.put("interactions",[]);
+    meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=Number(meta.resultVersion||0);
+    meta.updatedAt=meta.startedAt;await this.ctx.storage.put("meta",meta);
+    await this.scheduleRoomAlarm(meta);
+    this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
+    return j({ok:true,room:publicRoom(meta)});
+  }
   async gmConfig(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,cfg=sanitizeGameConfig(body?.gameConfig);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG",message:"Ván Mẫu không hợp lệ."},400);await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(body?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(body.cardBackImage));if(body?.matchId)meta.matchId=String(body.matchId);meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.gameName=cfg.name||meta.gameName||"";meta.playerCount=Number(cfg.playerCount||0);meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),gameConfig:cfg})}
 
   async gmAuto(request,body){
