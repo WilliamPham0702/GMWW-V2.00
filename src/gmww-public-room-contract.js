@@ -21,11 +21,35 @@ const STATUS_VISUAL_LEGACY={
   dead:{label:"Đã Chết",icon:"💀"},
   assassin_mark:{label:"Đánh Dấu",icon:"🎯",statusId:"marked"}
 };
+// Read-only UI projection of confirmed night actions. No gameplay status is written.
+// effect_notice receipts intentionally have effectActive=false; that means "no persistent
+// rule effect", NOT "unconfirmed". Never publish hidden night targets by default.
+export function confirmedNightStatusVisuals(rows,meta){
+  const matchId=String(meta?.matchId||""),night=Number(meta?.cycleNight||0);
+  if(!matchId||!Number.isInteger(night)||night<1||
+    String(meta?.phase||"").toLowerCase()!=="running"||
+    String(meta?.cyclePhase||"").toLowerCase()!=="night")return [];
+  const visualActions={action_protect:{statusId:"protected",label:"Bảo Vệ",icon:"🛡️"},
+    action_wolf_bite:{statusId:"wolf_bitten",label:"Sói Cắn",icon:"🐾"}};
+  return (Array.isArray(rows)?rows:[]).filter(x=>
+    x?.type==="effect_notice"&&visualActions[String(x?.actionId||"")]&&
+    String(x?.matchId||"")===matchId&&Number(x?.night)===night&&
+    !!normalizeLoginId(x?.loginId)&&!x?.undone&&!x?.expiredAt)
+    .map(x=>({...x,type:"status",statusId:visualActions[x.actionId].statusId,
+      label:visualActions[x.actionId].label,icon:visualActions[x.actionId].icon,
+      effectActive:true,visualOnly:true}));
+}
 export function statusTagsFor(rows,meta,loginId){
   const display=meta?.statusDisplay||{},now=Date.now(),matchId=String(meta?.matchId||"");
   const valid=x=>x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now);
   const expanded=activeStatusRows(rows,loginId,matchId).filter(x=>valid(x)&&STATUS_DEFS[x.statusId]&&display[x.statusId]===true).map(x=>({statusId:x.statusId,label:STATUS_DEFS[x.statusId].label,icon:STATUS_DEFS[x.statusId].icon}));
   const tags=new Map(expanded.map(x=>[x.statusId,x]));
+  // Explicit GM permission is mandatory for private night-action receipts.
+  // Do not synthesize visible gameplay status records, alter duration, or leak the actor.
+  for(const x of confirmedNightStatusVisuals(rows,meta)){
+    if(normalizeLoginId(x.loginId)!==normalizeLoginId(loginId)||display[x.statusId]!==true)continue;
+    tags.set(x.statusId,{statusId:x.statusId,label:x.label,icon:x.icon});
+  }
   for(const row of (Array.isArray(rows)?rows:[])){
     const kind=STATUS_VISUAL_LEGACY[row?.type];if(!kind||!valid(row)||normalizeLoginId(row?.loginId)!==normalizeLoginId(loginId))continue;
     if(row?.matchId&&matchId&&String(row.matchId)!==matchId)continue;
