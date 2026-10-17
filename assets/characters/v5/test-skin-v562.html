@@ -2,7 +2,7 @@
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#082b42">
-<title>GMWW · V5.62 kiểm tra artwork gốc trên Skin 3D thật</title>
+<title>GMWW · V5.62 iPhone 3D • 4 động tác</title>
 <style>
 :root{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#effaff;background:#071d31}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%}
@@ -13,7 +13,11 @@ header{display:grid;gap:5px}h1{margin:0;font-size:clamp(22px,5vw,30px);line-heig
 .layout{display:grid;gap:12px;grid-template-columns:minmax(0,1fr) 300px;align-items:start}
 .stage{height:min(68vh,630px);min-height:360px;position:relative;overflow:hidden;border-radius:20px;border:1px solid #59b8bb;background:#91d9e4}
 canvas{display:block;width:100%;height:100%;touch-action:none}
-.stagehint{position:absolute;left:10px;top:10px;right:10px;background:#04344bd9;padding:8px 10px;border-radius:11px;font-size:11px}
+.stagehint{position:absolute;left:10px;top:10px;right:10px;background:#04344bd9;padding:8px 10px;border-radius:11px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none}
+.stagehint.error{background:#722c2ae8;border:1px solid #ffbcb8;pointer-events:auto}
+#diagnostics{white-space:pre-wrap}
+#retry{background:#b98b2c;color:#072638;min-height:42px}
+details{font-size:12px;color:#cde6e8}summary{padding:9px;cursor:pointer;font-weight:700}
 .card{border-radius:18px;border:1px solid #407c90;background:#0b334c;padding:13px;display:grid;gap:11px}
 .card h2{font-size:15px;margin:0} .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 button{border-radius:11px;background:#146d86;border:1px solid #63adb8;color:white;font:700 12px/1.25 inherit;min-height:44px;padding:8px 5px;cursor:pointer;touch-action:manipulation}
@@ -26,13 +30,12 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
 </style></head><body>
 <main>
 <header>
- <div class="kicker">GMWW CHARACTER · BẢNG THỬ RIÊNG V5.62 · ÁO VÀ TAY ÁO</div>
- <h1>V5.62: tay áo GMWW gốc trên Skin 3D</h1>
- <p>V5.62 gắn pixel hoa văn áo GMWW V4.17 thật lên thân áo và hai tay áo 3D; cùng bộ xương 16 khớp. Tay áo biến dạng theo vai và khuỷu tay. Thử 4 chuyển động đã chốt (Đứng, Đi, Chạy, Ăn mừng) theo 8 hướng. Bản HTML này chỉ là phòng thử nghiệm riêng.</p>
+ <div class="kicker">GMWW CHARACTER · V5.62 · iPHONE TEST</div>
+ <h1>4 chuyển động • Skin 3D</h1>
+ <p>Đứng · Đi · Chạy · Ăn mừng — 8 hướng. Nhân vật phải hiện trong khung ngay khi tải xong.</p>
 </header>
-<div class="warn">Mẫu chất liệu từ chính pixel hoa văn áo Chàng Biển V4.17 (đã xác minh SHA-256) được UV-map lên <b>lưới thân áo và tay áo 3D có trọng số xương thật</b>. Đã bổ sung mesh 3D hai tay áo với weight pha trộn ngực–vai–khuỷu tay. Chưa có atlas UV đầy đủ hay Skin gốc hoàn chỉnh ở đầu, tóc, quần và phụ kiện. <b>Chưa đạt Skin gốc hoàn chỉnh; chưa đưa vào game chính.</b></div>
 <div class="layout">
- <div class="stage" id="stage"><canvas id="canvas" aria-label="Mô hình Chàng Biển 3D thực"></canvas><div class="stagehint" id="notice">Đang kiểm tra WebGL và tải mô hình 3D thật…</div></div>
+ <div class="stage" id="stage"><canvas id="canvas" aria-label="Mô hình Chàng Biển 3D thực"></canvas><div class="stagehint" id="notice" role="status" aria-live="polite">Đang tải 3D… Nếu nhân vật không xuất hiện, lỗi sẽ hiện ở đây.</div></div>
  <section class="card">
   <h2>4 chuyển động đã chốt</h2>
   <div class="controls" id="actions">
@@ -45,13 +48,52 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
   <label>Góc nhìn</label>
   <select id="direction"><option value="front">Trước</option><option value="front-right">Trước phải</option><option value="right">Phải</option><option value="back-right">Sau phải</option><option value="back">Sau</option><option value="back-left">Sau trái</option><option value="left">Trái</option><option value="front-left">Trước trái</option></select>
   <label><input id="wireframe" type="checkbox"> Hiện lưới áo và hai tay áo 3D</label>
-  <div class="status" id="texture-load">Đang tải chất liệu V4.17 từ nội dung nội tuyến…</div><div class="status" id="status">Đang khởi tạo…</div>
-  <div class="mini">Nguồn pixels: GMWW V4.17 Character-01 Front, chi tiết vùng áo x326–464/y634–766, chuyển thành chất liệu WebP 128×128. Đây là mẫu họa tiết, không phải UV atlas đầy đủ. Game mẫu Unity chỉ dùng để tham khảo quy trình Skin/Skeleton, không sao chép tài nguyên.</div>
-  <div class="mini">Chỉ 4 động tác đã duyệt: đứng / đi / chạy / ăn mừng. Ăn mừng tự về đứng. Đi/chạy có thể bật di chuyển thật trong sân để kiểm tra root motion.</div>
-  <div class="mini">Preview độc lập chỉ chứa tài nguyên Character; không kết nối tài khoản, phòng chơi hay OTA.</div>
+  <button id="retry" type="button">↻ Tải lại bản test 3D</button>
+  <div class="status" id="texture-load">Chất liệu V4.17: đang kiểm tra…</div>
+  <div class="status" id="status">Đang khởi tạo…</div>
+  <div class="status" id="diagnostics" aria-live="polite">Kiểm tra JavaScript và mô hình WebGL…</div>
+  <details><summary>Thông tin Skin và giới hạn bản thử</summary>
+   <div class="warn">Mẫu pixel hoa văn áo Chàng Biển V4.17 xác minh SHA-256 được UV-map lên lưới thân và hai tay áo 3D, pha trọng số ngực–vai–khuỷu tay. <b>Chưa đạt Skin gốc hoàn chỉnh</b> ở mặt, tóc, quần và phụ kiện. Không phải bản game chính.</div>
+   <div class="mini">Nguồn ảnh: GMWW V4.17 Character-01 Front; vùng áo x326–464/y634–766 thành WebP 128×128; đây là swatch, không phải full UV atlas. Preview không kết nối tài khoản, phòng chơi hay OTA.</div>
+  </details>
  </section>
 </div>
 </main>
+<script>
+// Classic-script watchdog runs even when iPhone WKWebView refuses to load ES modules.
+(function(){
+ const notice=document.getElementById('notice'),diag=document.getElementById('diagnostics');
+ window.__gmwwV562FrameCount=0;
+ window.__gmwwV562Phase='waiting-for-modules';
+ window.__gmwwV562Error=false;
+ const ua=navigator.userAgent||'';
+ const inApp=/ChatGPT|FBAN|FBAV|Instagram|Line\//i.test(ua);
+ function report(detail){
+  if(window.__gmwwV562FrameCount>0)return;
+  window.__gmwwV562Error=true;
+  const msg=String(detail||'Không rõ lỗi').slice(0,420);
+  notice.classList.add('error');
+  notice.textContent='KHÔNG TẢI ĐƯỢC MÔ HÌNH 3D\n'+msg+'\nHãy mở liên kết trong Safari để kiểm tra WebGL.';
+  diag.textContent='Trạng thái: lỗi khởi tạo • '+window.__gmwwV562Phase+'\nChi tiết: '+msg+'\nTrình duyệt: '+ua.slice(0,160)+(inApp?'\nĐang ở trình duyệt trong ứng dụng. Hãy thử Safari riêng.':'');
+  document.documentElement.setAttribute('data-gmww-v562','error');
+ }
+ window.__gmwwV562ReportError=report;
+ window.addEventListener('error',function(e){
+  if(window.__gmwwV562FrameCount>0)return;
+  report(e.message || (e.target&&e.target.src?'Tài nguyên không tải: '+e.target.src:'JavaScript hoặc module bị chặn.'));
+ },true);
+ window.addEventListener('unhandledrejection',function(e){
+  if(window.__gmwwV562FrameCount>0)return;
+  report(e.reason && (e.reason.message||String(e.reason)) || 'Module không khởi tạo được.');
+ });
+ setTimeout(function(){
+  if(window.__gmwwV562FrameCount===0)report('Quá 9 giây vẫn chưa có khung hình 3D. Có thể module/WebGL bị chặn ở trình duyệt hiện tại.');
+ },9000);
+ document.getElementById('retry').addEventListener('click',function(){
+  const u=new URL(location.href);u.searchParams.set('retry',String(Date.now()));location.assign(u.href);
+ });
+})();
+</script>
 <script type="module">
 import * as THREE from './vendor/three.module.min.js';
 import {createSkinnedChibi,animateSkinnedChibi} from './character-rig-v510.mjs';
@@ -59,11 +101,18 @@ import {createMotionState,setAction,setDestination,setFacing,facingAngle,tickMot
 import {addV562OriginalFabricSleevesToRig} from './skin-v562-original-sleeves.mjs';
 const $=id=>document.getElementById(id),cv=$('canvas'),stage=$('stage');
 const notice=$('notice'),status=$('status');
+window.__gmwwV562Phase='modules-loaded';
 let renderer;
+const iOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
 try{
- renderer=new THREE.WebGLRenderer({canvas:cv,alpha:false,antialias:true,powerPreference:'high-performance'});
-}catch(err){notice.textContent='Không thể khởi tạo WebGL: '+err.message;throw err}
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+ window.__gmwwV562Phase='creating-WebGL-renderer';
+ // Conservative iPhone WebKit settings: no mandatory high-power GPU or MSAA.
+ renderer=new THREE.WebGLRenderer({canvas:cv,alpha:false,antialias:!iOS,powerPreference:iOS?'low-power':'default',failIfMajorPerformanceCaveat:false});
+}catch(err){
+ window.__gmwwV562ReportError('Không thể tạo WebGL renderer: '+(err&&err.message||err));
+ throw err;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,iOS?1:1.5));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.25;
@@ -73,9 +122,16 @@ const sun=new THREE.DirectionalLight('#fff9e9',2.2);sun.position.set(-3,8,6);sce
 const ground=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.8,.22,48),new THREE.MeshLambertMaterial({color:'#f0d49d'}));
 ground.position.y=-.16;scene.add(ground);
 const camera=new THREE.PerspectiveCamera(34,1,.05,50);camera.position.set(0,3.05,9.0);camera.lookAt(0,1.8,0);
+window.__gmwwV562Phase='building-skeleton';
 const rig=createSkinnedChibi(true);scene.add(rig.root);
 let originalTextureReady=false,framesRendered=0;
-const skin=addV562OriginalFabricSleevesToRig(rig,{onTextureLoaded:({ok,error})=>{originalTextureReady=ok;const el=document.getElementById('texture-load');if(el)el.textContent=ok?'Texture hoa văn V4.17 đã tải (WebP nội tuyến)':'Không tải được texture gốc: '+error;}});
+window.__gmwwV562Phase='binding-original-uv-skin';
+const skin=addV562OriginalFabricSleevesToRig(rig,{onTextureLoaded:({ok,error})=>{
+ originalTextureReady=ok;
+ const el=document.getElementById('texture-load');
+ if(el)el.textContent=ok?'Chất liệu V4.17: đã tải thành công':'Lỗi chất liệu gốc: '+error;
+ if(!ok)window.__gmwwV562ReportError('Không tải được texture WebP V4.17: '+error);
+}});
 // This user-approved four-action contract is exclusive to the V5.62 lab:
  // the legacy V5.00 engine retains historical actions for older previews.
 const APPROVED_ACTIONS=new Set(['idle','walk','run','result']);
@@ -114,7 +170,9 @@ function resize(){
  const width=stage.clientWidth,height=stage.clientHeight;
  renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
-new ResizeObserver(resize).observe(stage);resize();
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(stage);
+else window.addEventListener('resize',resize);
+resize();
 let last=performance.now(),fpsTick=last,frames=0,fps=0;
 function loop(now){
  const dt=Math.min(.05,(now-last)/1000);last=now;
@@ -128,17 +186,38 @@ function loop(now){
   patrolSign*=-1;startPatrol();
  }
  animateSkinnedChibi(rig,motion);
- renderer.render(scene,camera);
- framesRendered++;
+ try{renderer.render(scene,camera);}
+ catch(err){
+  window.__gmwwV562Phase='render-failed';
+  window.__gmwwV562ReportError('WebGL không vẽ được nhân vật: '+(err&&err.message||err));
+  return;
+ }
+ framesRendered++;window.__gmwwV562FrameCount=framesRendered;
+ if(framesRendered===1){
+  notice.textContent='Đã vẽ khung hình 3D. Đang hoàn tất texture gốc…';
+  $('diagnostics').textContent='WebGL đã hiển thị nhân vật • 16 xương • 4 động tác.';
+ }
  // The browser smoke test only passes when the TRUE V4.17 WebP has decoded
  // and the real THREE renderer has successfully drawn multiple frames.
- if(originalTextureReady && skin.sleeveMeshesAreRealSkinned && skin.sameSkeletonAsV510 && skin.sleeveElbowDrivenVertices>0 && framesRendered>=2)document.documentElement.setAttribute('data-gmww-v562','ready');
+ if(originalTextureReady && skin.sleeveMeshesAreRealSkinned && skin.sameSkeletonAsV510 && skin.sleeveElbowDrivenVertices>0 && framesRendered>=2){
+ document.documentElement.setAttribute('data-gmww-v562','ready');
+ if(framesRendered===2){
+  notice.textContent='3D đang chạy • 4 động tác • chọn nút bên dưới để kiểm tra';
+  $('diagnostics').textContent='PASS: Renderer + Skeleton 16 khớp + UV áo/tay áo + Texture V4.17.';
+ }
+}
  frames++;
  if(now-fpsTick>1200){fps=Math.round(frames*1000/(now-fpsTick));fpsTick=now;frames=0;
   status.textContent='WebGL ✓ · '+skin.bones+' xương chung · '+skin.vertexCount+' đỉnh áo · '+skin.blendedVertices+' đỉnh thân áo pha 2 xương · '+skin.sleeveVertexCount+' đỉnh tay áo · '+skin.sleeveElbowDrivenVertices+' đỉnh theo khuỷu tay · '+fps+' FPS · '+motion.action;
  }
  requestAnimationFrame(loop);
 }
-notice.textContent='V5.62 • Thân áo + hai tay áo weighted SkinnedMesh • 16 xương V5.10 • họa tiết áo nguồn V4.17';
+window.__gmwwV562Phase='animation-loop-ready';
+notice.textContent='Đang vẽ nhân vật 3D trên iPhone…';
+cv.addEventListener('webglcontextlost',e=>{
+ e.preventDefault();
+ if(window.__gmwwV562FrameCount===0)window.__gmwwV562ReportError('WebGL context bị mất trên iPhone.');
+ else {notice.classList.add('error');notice.textContent='WebGL bị mất kết nối. Nhấn Tải lại bản test 3D.';document.documentElement.setAttribute('data-gmww-v562','lost');}
+});
 requestAnimationFrame(loop);
 </script></body></html>
