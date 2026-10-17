@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {selectVerifiedRuntimeV360Delta} from '../src/gmww-ota-delta.js';
+import {sanitizeGameConfig} from '../src/gmww-room-config-rules.js';
 const app=readFileSync('server-game/current/app.js','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
@@ -19,7 +20,8 @@ test('Chọn Ván uses shared defaults and allows per-role overrides',()=>{
   assert.match(app,/roles:\(base\.roles\|\|\[\]\)\.map\(r=>\(\{\.\.\.r,actionDurationSec:playRoleDurationSec\(r\.roleId,timing\.defaultActionSec\)\}\)\)/);
 });
 test('Server accepts separate Artifact duration and uses it for early/main turns',()=>{
-  assert.match(worker,/artifactActionSec:clampSec\(v\?\.timing\?\.artifactActionSec\?\?30\)/);
+  assert.equal(sanitizeGameConfig({}).timing.artifactActionSec,30);
+  assert.equal(sanitizeGameConfig({timing:{artifactActionSec:51}}).timing.artifactActionSec,51);
   const night=worker.slice(worker.indexOf('async buildNightRuntime('),worker.indexOf('async artifactUsedInNight('));
   assert.ok(night.includes('artifactActionSec'));
   assert.match(night,/kind:"early-artifact-window"[\s\S]*?durationSec:artifactActionSec/);

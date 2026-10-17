@@ -1,4 +1,5 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
+import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { resolveWolfNight } from "./gmww-wolf-night-resolution.js";
@@ -2221,22 +2222,6 @@ async function gmRoomState(env,raw,request){const c=normalizeRoomCode(raw);if(!i
 function playerPage(code){return new Response(gmwwMembersPage(code),{headers:{...corsHeaders(),"content-type":"text/html; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0"}})}
 function avatarImage(id){const a=GMWW_MEMBER_AVATARS.find(x=>x.id===id);if(!a)return new Response("Not found",{status:404});const m=a.img.match(/^data:(image\/[^;]+);base64,(.+)$/);if(!m)return new Response("Invalid asset",{status:500});const bin=atob(m[2]);return new Response(Uint8Array.from(bin,c=>c.charCodeAt(0)),{headers:{"content-type":m[1],"cache-control":"public, max-age=31536000, immutable","x-content-type-options":"nosniff"}})}
 function roomStub(env,c){return env.ROOMS.get(env.ROOMS.idFromName(c))}function memberStore(env){return env.ROOMS.get(env.ROOMS.idFromName(MEMBER_STORE_NAME))}function generateRoomCode(){const b=new Uint8Array(ROOM_CODE_LENGTH);crypto.getRandomValues(b);let c="";for(const x of b)c+=ROOM_ALPHABET[x%ROOM_ALPHABET.length];return c}function secureShuffle(values){const out=[...values];for(let i=out.length-1;i>0;i--){const limit=Math.floor(0x100000000/(i+1))*(i+1);let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0]}while(n>=limit);const j=n%(i+1),tmp=out[i];out[i]=out[j];out[j]=tmp}return out}function normalizeRoomCode(v){return String(v||"").trim().toUpperCase()}function isValidRoomCode(c){return new RegExp(`^[${ROOM_ALPHABET}]{${ROOM_CODE_LENGTH}}$`).test(c)}
-function sanitizeGameConfig(v){
-  if(!v||typeof v!=="object")return null;
-  const clampSec=x=>Math.max(0,Math.min(3600,Math.trunc(Number(x)||0))),defaultActionSec=clampSec(v?.timing?.defaultActionSec??v?.defaultActionSec??45);
-  const roles=Array.isArray(v.roles)?v.roles.slice(0,100).map(r=>{
-    const src=(r&&typeof r==="object")?r:{};
-    const nested=(src.role&&typeof src.role==="object")?src.role:{};
-    const roleId=String(src.roleId||src.id||nested.id||nested.roleId||"").slice(0,120);
-    const roleName=String(src.roleName||src.name||nested.name||nested.roleName||"").slice(0,120);
-    const faction=String(src.faction||src.factionName||nested.faction||nested.factionName||"").slice(0,120);
-    const description=String(src.description||src.roleDescription||nested.description||nested.roleDescription||"").slice(0,6000);
-    const actionDurationSec=clampSec(src.actionDurationSec??src.durationSec??defaultActionSec);
-    return {roleId,roleName,faction,description,count:Math.max(1,Math.min(20,Number(src.count||1))),order:Number(src.order||0),actionDurationSec};
-  }):[];
-  const timing={villageDiscussionSec:clampSec(v?.timing?.villageDiscussionSec??v?.villageDiscussionSec??300),wolfDiscussionSec:clampSec(v?.timing?.wolfDiscussionSec??v?.wolfDiscussionSec??30),earlyArtifactSec:clampSec(v?.timing?.earlyArtifactSec??v?.earlyArtifactSec??60),defaultActionSec,artifactActionSec:clampSec(v?.timing?.artifactActionSec??30),autoAdvance:v?.timing?.autoAdvance!==false};
-  return{id:String(v.id||"").slice(0,120),name:String(v.name||"Game Online").slice(0,120),playerCount:Math.max(0,Math.min(100,Number(v.playerCount||0))),roles,artifactsEnabled:v.artifactsEnabled===false?false:(v.artifactsEnabled===true||(Array.isArray(v.artifacts)&&v.artifacts.length>0)),artifacts:v.artifactsEnabled===false?[]:(Array.isArray(v.artifacts)?v.artifacts.slice(0,100).map(a=>({artifactId:String(a?.artifactId||"").slice(0,100),order:Number(a?.order||0)})):[]),artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(v.artifactLimitPerCycle??3)||0))),timing}
-}
 function validImageDataUrl(v){return typeof v==="string"&&/^data:image\/(?:webp|png|jpeg);base64,/i.test(v)&&v.length<1900000}
 function normalizeRoleImage(v){
   if(typeof v!=="string")return null;let s=v.trim();if(!s)return null;
@@ -2283,12 +2268,9 @@ function mergePlayerRoleCard(base,over){
 function privateRole(r){return{matchId:r.matchId||null,matchRevision:Number(r.matchRevision||0),roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,order:r.order,roleImage:r.roleImage||null,artworkAssetId:r.artworkAssetId||r.artworkId||null,artworkId:r.artworkAssetId||r.artworkId||null,artworkAvailable:r.artworkAvailable!==false,playerCardVersion:r.playerCardVersion||7,roleCard:r.roleCard||null,deliveredAt:r.deliveredAt,viewedAt:r.viewedAt||null}}
 function normalizeWinnerFaction(v){const raw=String(v||"").trim();if(!raw)return"";const n=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase();if(n.includes("phe dan"))return"Phe Dân";if(n.includes("phe soi"))return"Phe Sói";if(n.includes("phe ba")||n.includes("phe thu 3")||n.includes("phe thu ba"))return"Phe Ba";if(n.includes("phe khac"))return"Phe Khác";return raw.replace(/^[^A-Za-zÀ-ỹ0-9]+/u,"").trim().slice(0,120)}
 const GAME_CHARACTER_COUNT=20;
-function normalizeRoomMode(v){return String(v||"").trim().toLowerCase()==="offline"?"offline":"online"}
-function normalizeSeatMoveMode(v){return String(v||"").trim().toLowerCase()==="walk"?"walk":"instant"}
 function normalizeVillageCoord(v,fallback=50){const n=Number(v);return Number.isFinite(n)?Math.max(4,Math.min(96,Math.round(n*100)/100)):Math.max(4,Math.min(96,Number(fallback)||50))}
 function currentMovementPosition(p,now=Date.now(),fallbackX=50,fallbackY=78){if(p?.movementStatus==='moving'&&p?.moveStartedAt&&p?.moveDurationMs)return villageLayout.interpolate(p,now);return{x:normalizeVillageCoord(p?.positionX,fallbackX),y:normalizeVillageCoord(p?.positionY,fallbackY)}}
 function clearPlayerMovement(p,{keepPosition=false}={}){if(!p)return p;if(!keepPosition){const pos=currentMovementPosition(p);p.positionX=pos.x;p.positionY=pos.y}p.moveId=null;p.moveFromX=null;p.moveFromY=null;p.moveToX=null;p.moveToY=null;p.moveStartedAt=null;p.moveDurationMs=null;p.moveTargetSeatId=null;p.movementStatus="idle";p.autoMotionPhase=null;p.villageActivity="idle";p.sitStartedAt=null;p.sitUntil=null;return p}
-function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
 function normalizeSeatLayout(shape){return villageLayout.normalizeSeatLayout(shape)}
 function normalizeSeatId(v,seatCount){const n=Math.trunc(Number(v));return Number.isFinite(n)&&n>=1&&n<=normalizeSeatCount(seatCount)?n:null}
 function normalizeGameCharacterId(v){const id=String(v||"").trim();return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:""}

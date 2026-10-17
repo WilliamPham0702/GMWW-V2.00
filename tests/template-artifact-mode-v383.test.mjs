@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
+import {sanitizeGameConfig} from '../src/gmww-room-config-rules.js';
 import {selectVerifiedRuntimeV383Delta} from '../src/gmww-ota-delta.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
 const section=(source,from,to)=>{
   const a=source.indexOf(from),b=source.indexOf(to,a);
   assert.ok(a>=0&&b>a,'source fragment not found: '+from);
@@ -23,19 +22,18 @@ test('Artifact toggle, catalog, time and quota exist only in the Ván Mẫu edit
   assert.match(app,/if\(document\.querySelector\('\.play-game-sheet-card'\)\?\.dataset\.mode==='library'\)renderPlayArtifactPicker\(\)/);
 });
 test('The Worker preserves explicit Artifact on/off and accepts previous templates',()=>{
-  const src=section(worker,'function sanitizeGameConfig(v){','function validImageDataUrl(v){');
-  const api=vm.runInNewContext(src+';({sanitizeGameConfig})');
+
   const data={name:'Test',roles:[{roleId:'wolf'}],artifacts:[{artifactId:'mirror',order:1}]};
-  const disabled=api.sanitizeGameConfig({...data,artifactsEnabled:false});
+  const disabled=sanitizeGameConfig({...data,artifactsEnabled:false});
   assert.equal(disabled.artifactsEnabled,false);
   assert.equal(disabled.artifacts.length,0);
-  const enabled=api.sanitizeGameConfig({...data,artifactsEnabled:true});
+  const enabled=sanitizeGameConfig({...data,artifactsEnabled:true});
   assert.equal(enabled.artifactsEnabled,true);
   assert.equal(enabled.artifacts[0].artifactId,'mirror');
-  const legacy=api.sanitizeGameConfig(data);
+  const legacy=sanitizeGameConfig(data);
   assert.equal(legacy.artifactsEnabled,true);
   assert.equal(legacy.artifacts[0].artifactId,'mirror');
-  const none=api.sanitizeGameConfig({...data,artifacts:[]});
+  const none=sanitizeGameConfig({...data,artifacts:[]});
   assert.equal(none.artifactsEnabled,false);
 });
 test('Save prepares the reusable Artifact catalog; choose only references stored template',()=>{
