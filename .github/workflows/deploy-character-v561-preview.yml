@@ -76,11 +76,16 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://gmww-character-v561-preview.williampham0702.workers.dev"
-          curl --fail --silent --show-error --retry 8 --retry-delay 2 \
+          # Newly published Workers/assets may need a short propagation delay.
+          sleep 4
+          echo "V5.61 preview Worker health and HTML smoke (run_worker_first enabled)."
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/api/health" > /tmp/gmww-character-preview-health.json
+          cat /tmp/gmww-character-preview-health.json
           grep -Fq '"liveGameModified":false' /tmp/gmww-character-preview-health.json
-          curl --location --fail --silent --show-error --retry 8 --retry-delay 2 \
+          curl --location --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v561-test.html
+          echo "Fetched V5.61 HTML: $(wc -c </tmp/gmww-character-v561-test.html) bytes"
           grep -Fq 'Chàng Biển: hoa văn gốc trên Skin 3D' /tmp/gmww-character-v561-test.html
           for REL in \
             characters/v5/skin-v561-original-art-uv.mjs \
@@ -90,7 +95,7 @@ jobs:
             characters/v5/character-motion-v500.mjs \
             characters/v5/vendor/three.module.min.js \
             characters/v4/skin-v414.mjs; do
-            curl --location --fail --silent --show-error --retry 8 --retry-delay 2 \
+            curl --location --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
               "$BASE/$REL?verify=$(date +%s)" > /tmp/v561-check
             test -s /tmp/v561-check
             test "$(shasum -a 256 "assets/$REL" | awk '{print $1}')" = "$(shasum -a 256 /tmp/v561-check | awk '{print $1}')"
