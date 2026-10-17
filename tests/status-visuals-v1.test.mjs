@@ -53,7 +53,7 @@ test('B: server display settings are separate from game statuses',()=>{
   assert.match(statusPolicy,/STATUS_VISUAL_LEGACY/);
   assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId\)/);
   assert.match(statusPolicy,/display\[x\.statusId\]===true/);
-  assert.match(worker,/statusId!=="marked"/);
+  assert.match(statusPolicy,/statusId!=="marked"/);
   assert.equal(vis.byId.marked.playerWeb,false);
 });
 test('C: GM actor, preview, and action box share visual state data',()=>{
