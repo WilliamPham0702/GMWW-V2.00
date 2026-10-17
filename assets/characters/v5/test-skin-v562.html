@@ -102,7 +102,7 @@ function loop(now){
  framesRendered++;
  // The browser smoke test only passes when the TRUE V4.17 WebP has decoded
  // and the real THREE renderer has successfully drawn multiple frames.
- if(originalTextureReady && framesRendered>=2)document.documentElement.setAttribute('data-gmww-v562','ready');
+ if(originalTextureReady && skin.sleeveMeshesAreRealSkinned && skin.sameSkeletonAsV510 && skin.sleeveElbowDrivenVertices>0 && framesRendered>=2)document.documentElement.setAttribute('data-gmww-v562','ready');
  frames++;
  if(now-fpsTick>1200){fps=Math.round(frames*1000/(now-fpsTick));fpsTick=now;frames=0;
   status.textContent='WebGL ✓ · '+skin.bones+' xương chung · '+skin.vertexCount+' đỉnh áo · '+skin.blendedVertices+' đỉnh thân áo pha 2 xương · '+skin.sleeveVertexCount+' đỉnh tay áo · '+skin.sleeveElbowDrivenVertices+' đỉnh theo khuỷu tay · '+fps+' FPS · '+motion.action;
