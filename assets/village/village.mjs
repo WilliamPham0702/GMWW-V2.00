@@ -94,12 +94,14 @@ if(game){
   const deceasedDisplayPoints=new Map();
   function seatedMovementAllowed(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     if(data?.movementStatus!=="moving")return false;
+    // Preserve previous interpolation for unseated visitors and the stored
+    // per-person death anchor even after the movement duration elapses.
+    if(!Number(data?.displaySeatId||data?.seatId||0))return true;
     const started=Number(data?.moveStartedAt||0),duration=Number(data?.moveDurationMs||0);
     if(!(started>0&&duration>0&&now<started+duration))return false;
-    // Assigned Seats remain on the fire-centred template in all setup stages.
-    // In an actual match only newly started manual movements may override it.
-    return !Number(data?.displaySeatId||data?.seatId||0)||
-      (matchStartedAt>0&&started>matchStartedAt);
+    // Assigned Seats remain on the fire-centred template in setup; only a
+    // genuine post-start move may leave a locked Seat during battle.
+    return matchStartedAt>0&&started>matchStartedAt;
   }
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     const id=String(data?.id||data?.participantId||'');
