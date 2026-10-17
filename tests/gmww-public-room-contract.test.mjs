@@ -25,7 +25,8 @@ test('G3.7: public status tags respect visibility, lifetime, owner and match',()
   const meta={matchId:'match-1',statusDisplay:{marked:true,infected:false,disabled_permanent:true,mute:true}};
   assert.deepEqual(activeStatusRows(rows,'ALICE','match-1').map(x=>x.id),['a','b']);
   assert.deepEqual(statusTagsFor(rows,meta,'Alice'),[
-    {statusId:'marked',label:STATUS_DEFS.marked.label,icon:STATUS_DEFS.marked.icon}
+    {statusId:'marked',label:STATUS_DEFS.marked.label,icon:STATUS_DEFS.marked.icon},
+    {statusId:'dead',label:'Đã Chết',icon:'💀'}
   ]);
   assert.deepEqual(statusTagsFor(rows,meta,'bob'),[
     {statusId:'marked',label:STATUS_DEFS.marked.label,icon:STATUS_DEFS.marked.icon}
@@ -86,4 +87,20 @@ test('G3.7: public status policy is imported instead of duplicated in Worker',()
   assert.doesNotMatch(worker,/^const STATUS_DEFS=/m);
   assert.doesNotMatch(worker,/^function publicRoom\(/m);
   assert.match(worker,/publicRoom\(meta\)/);
+});
+
+test('V1: legacy status presentation is filtered by owner, match, expiry and GM display privacy',()=>{
+  const rows=[
+    {type:'dead',loginId:'Alice',matchId:'m1',effectActive:true},
+    {type:'frozen',loginId:'Alice',matchId:'m1',effectActive:true},
+    {type:'assassin_mark',loginId:'Alice',matchId:'m1',effectActive:true},
+    {type:'expelled',loginId:'Bob',matchId:'m1',effectActive:true},
+    {type:'dead',loginId:'Alice',matchId:'m2',effectActive:true},
+    {type:'dead',loginId:'Alice',matchId:'m1',effectActive:false},
+    {type:'dead',loginId:'Alice',matchId:'m1',effectActive:true,expiresAt:'2020-01-01T00:00:00Z'}
+  ];
+  assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{}},'alice').map(x=>x.statusId),['dead','frozen']);
+  assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{dead:false,frozen:false,marked:false}},'alice'),[]);
+  assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{marked:true}},'alice').map(x=>x.statusId),['dead','frozen','marked']);
+  assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{}},'bob').map(x=>x.statusId),['expelled']);
 });

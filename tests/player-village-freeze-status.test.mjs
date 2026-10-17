@@ -27,7 +27,8 @@ test('public freeze status includes only active frozen interactions for the curr
 
 test('public room API adds only a boolean frozen field and checks server expiry', () => {
   assert.match(server, /activeFrozenLoginIds\(interactions,meta,Date\.now\(\)\)/);
-  assert.match(server, /frozen:frozenLogins\.has\(normalizeLoginId\(p\?\.loginId\)\)/);
+  assert.match(server, /frozen:meta\?\.statusDisplay\?\.frozen===false\?false:frozenLogins\.has\(normalizeLoginId\(p\?\.loginId\)\)/);
+  assert.match(server, /statusTags:statusTagsFor\(interactions,meta,p\?\.loginId\)/);
   assert.match(server, /async publicState\(\)/);
 });
 

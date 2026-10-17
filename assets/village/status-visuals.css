@@ -1,0 +1,130 @@
+/* Shared GMWW status visual language: same classes in GM, library and Player Web. */
+.gmww-sv-stage,.gmww-sv-target{position:relative;isolation:isolate}
+.gmww-sv-overlay{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:visible}
+.gmww-sv-fx{position:absolute;inset:-12% -9%;z-index:1;display:block;pointer-events:none}
+.gmww-sv-fx i{position:absolute;display:block;pointer-events:none}
+.gmww-sv-badges{position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);display:flex;gap:2px;z-index:9;white-space:nowrap;pointer-events:none}
+.gmww-sv-badges>span{display:inline-flex;align-items:center;justify-content:center;min-width:18px;min-height:18px;font-size:11px;background:rgba(4,27,46,.88);border:1px solid rgba(139,211,244,.68);border-radius:8px}
+.gmww-sv-snowfall{background:repeating-linear-gradient(90deg,transparent 0 14%,rgba(190,244,255,.08) 14% 15%,transparent 15% 28%);filter:drop-shadow(0 0 4px #9aefff)}
+.gmww-sv-snowfall:before,.gmww-sv-snowfall:after{content:"❄  ❄  ❄";position:absolute;left:0;right:0;top:-70%;text-align:center;font-size:13px;color:#e7fcff;text-shadow:0 0 6px #72dfff;animation:gmwwSvFall 2.6s linear infinite}
+.gmww-sv-snowfall:after{animation-delay:-1.3s;font-size:9px;opacity:.7}
+.gmww-sv-blue-shield{border:2px solid rgba(109,224,255,.78);border-radius:50% 50% 37% 37%;box-shadow:inset 0 0 15px rgba(67,199,255,.26),0 0 14px rgba(76,204,255,.7);animation:gmwwSvPulse 2s ease-in-out infinite}
+.gmww-sv-blue-shield:after{content:"♢";position:absolute;top:-15%;left:38%;color:#d1f7ff;font-size:20px}
+.gmww-sv-wolf-claws:before,.gmww-sv-wolf-claws:after{content:"╱ ╱ ╱";position:absolute;left:12%;top:25%;color:#ff7581;font-size:18px;font-weight:900;text-shadow:0 0 8px #e92b4d;transform:rotate(-20deg);animation:gmwwSvClaw 2.5s ease-in-out infinite}
+.gmww-sv-wolf-claws:after{animation-delay:-1.25s;left:5%;top:50%}
+.gmww-sv-secret-mark:before{content:"✥";position:absolute;top:-35%;left:50%;transform:translateX(-50%);color:#ffcf80;font-size:22px;text-shadow:0 0 10px #ef9bff;animation:gmwwSvGlint 2.2s ease-in-out infinite}
+/* Deceased: a still chibi silhouette framed by gently rising neutral-gray smoke. */
+.gmww-sv-gray-smoke{
+  inset:-17% -30%!important;
+  overflow:visible;
+  pointer-events:none;
+  opacity:.94;
+  filter:none;
+}
+.gmww-sv-gray-smoke:before,.gmww-sv-gray-smoke:after{
+  content:"";
+  position:absolute;
+  inset:8% -2% 3%;
+  border-radius:48% 52% 46% 54%;
+  background:radial-gradient(ellipse at 5% 59%,rgba(156,161,169,.62),transparent 38%),
+    radial-gradient(ellipse at 93% 43%,rgba(154,159,167,.69),transparent 35%),
+    radial-gradient(ellipse at 48% 89%,rgba(102,109,123,.54),transparent 38%);
+  filter:blur(7px);
+  animation:gmwwSvGrayMist 4.8s ease-in-out infinite alternate;
+}
+.gmww-sv-gray-smoke:after{
+  inset:3% -9% 18%;
+  opacity:.75;
+  filter:blur(10px);
+  animation-delay:-2.4s;
+  animation-direction:alternate-reverse;
+}
+.gmww-sv-gray-smoke i{
+  width:56%;height:37%;
+  bottom:5%;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 40% 50%,rgba(177,182,190,.88),rgba(111,118,131,.47) 47%,transparent 76%);
+  filter:blur(5px);
+  animation:gmwwSvGrayPuff 3.9s ease-out infinite;
+}
+.gmww-sv-gray-smoke i:nth-child(1){left:-16%;--smoke-drift:-10px;animation-delay:0s}
+.gmww-sv-gray-smoke i:nth-child(2){right:-17%;--smoke-drift:12px;animation-delay:-1.35s}
+.gmww-sv-gray-smoke i:nth-child(3){left:30%;bottom:26%;width:47%;--smoke-drift:0px;animation-delay:-2.7s}
+@keyframes gmwwSvGrayPuff{
+  0%{opacity:0;transform:translate(0,14px) scale(.65)}
+  22%{opacity:.84}
+  78%{opacity:.62}
+  100%{opacity:0;transform:translate(var(--smoke-drift),-36px) scale(1.55)}
+}
+@keyframes gmwwSvGrayMist{
+  from{opacity:.72;transform:translateY(4px) scale(.94)}
+  to{opacity:1;transform:translateY(-6px) scale(1.08)}
+}
+.gmww-sv-iron-cage{border-left:3px solid #9195ad;border-right:3px solid #9195ad;border-top:5px solid #9298ad;border-bottom:5px solid #656b81;border-radius:11px 11px 5px 5px;background:repeating-linear-gradient(90deg,transparent 0 19%,rgba(169,183,203,.74) 19% 22%,transparent 22% 32%);box-shadow:0 0 9px #212533aa}
+.gmww-sv-green-rain:before,.gmww-sv-green-rain:after{content:"••  • •  ••";position:absolute;top:-65%;left:0;right:0;text-align:center;color:#64ec91;text-shadow:0 0 9px #00ca63;animation:gmwwSvFall 2.8s linear infinite}
+.gmww-sv-green-rain:after{animation-delay:-1.4s;opacity:.6}
+.gmww-sv-silenced:before{content:"⌁";position:absolute;top:-27%;left:50%;transform:translateX(-50%);color:#eed5ff;font-size:23px;text-shadow:0 0 7px #b27be3}
+.gmww-sv-silenced:after{content:"⊘";position:absolute;top:-36%;left:47%;color:#f2ceff;font-size:16px}
+.gmww-sv-power-seal{border:2px dashed #be83ff;border-radius:50%;box-shadow:0 0 10px #ae70ff,inset 0 0 8px #c28cff55;animation:gmwwSvRotate 7s linear infinite}
+.gmww-sv-power-seal:before{content:"✧";position:absolute;left:38%;top:23%;color:#d5b4ff;font-size:25px}
+.gmww-sv-soul-link:after{content:"≋ ─ ≋";position:absolute;top:43%;left:50%;white-space:nowrap;color:#75e9ff;text-shadow:0 0 8px #56bfff;animation:gmwwSvGlint 2s infinite}
+.gmww-sv-healing{border-radius:50%;box-shadow:0 0 20px 9px #66ffd35e;animation:gmwwSvPulse 1.9s infinite}
+.gmww-sv-healing:before{content:"✦ ✧ ✦";position:absolute;top:0;left:0;right:0;text-align:center;color:#beffdc;animation:gmwwSvRise 2.2s infinite}
+.gmww-sv-transformation{border:3px dotted #bdb0ff;border-radius:50%;animation:gmwwSvRotate 2.6s linear infinite}
+.gmww-sv-slash:before,.gmww-sv-slash:after{content:"╱ ╱";position:absolute;left:16%;top:38%;font-size:28px;font-weight:900;color:#ffdc9c;text-shadow:0 0 10px #ff7845;animation:gmwwSvClaw 1.8s infinite}
+.gmww-sv-slash:after{animation-delay:-.9s}
+.gmww-sv-scan:before{content:"";position:absolute;top:5%;left:-10%;width:120%;height:5px;background:#b3fcff;box-shadow:0 0 15px 4px #55ddff;animation:gmwwSvScan 2.2s linear infinite}
+.gmww-sv-shifting:before{content:"⇢";position:absolute;left:0;top:35%;font-size:29px;color:#c9adff;text-shadow:0 0 12px #8d79ff;animation:gmwwSvShift 1.6s ease-in-out infinite}
+@keyframes gmwwSvFall{from{transform:translateY(0);opacity:0}18%{opacity:1}to{transform:translateY(135%);opacity:0}}
+@keyframes gmwwSvPulse{0%,100%{opacity:.66;filter:brightness(.86)}50%{opacity:1;filter:brightness(1.25)}}
+@keyframes gmwwSvClaw{0%,60%,100%{opacity:0;transform:translate(-8px,-4px) rotate(-20deg)}18%,36%{opacity:1;transform:translate(7px,7px) rotate(-20deg)}}
+@keyframes gmwwSvGlint{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes gmwwSvRotate{to{transform:rotate(360deg)}}
+@keyframes gmwwSvRise{to{transform:translateY(-20px);opacity:0}}
+@keyframes gmwwSvScan{from{transform:translateY(0)}to{transform:translateY(95px)}}
+@keyframes gmwwSvShift{0%,100%{transform:translateX(0);opacity:.2}50%{transform:translateX(42px);opacity:1}}
+.status-library-grid.gmww-sv-library{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.gmww-sv-library .status-card{padding:10px;gap:8px;border-color:#5385a2;background:linear-gradient(150deg,#123a55,#092234)}
+.gmww-sv-library .status-card-header{display:flex;gap:8px;align-items:center}
+.gmww-sv-library .status-card-index{opacity:.65;font-size:10px;margin-left:auto}
+.gmww-sv-preview{position:relative;height:152px;border:1px solid #456e8a;border-radius:10px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse at 50% 88%,#31596b,#0a2236 70%)}
+.gmww-sv-preview .gmww-sv-target{height:105px;width:76px;display:block}
+.gmww-sv-preview .gmww-sv-avatar{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px #07141b)}
+.gmww-sv-preview .gmww-sv-fx{inset:0}
+.gmww-sv-library .status-card small{line-height:1.35;min-height:28px}
+.gmww-sv-library .status-card-toggle{margin-top:auto;padding-top:8px;border-top:1px solid #47758a;justify-content:space-between}
+.gmww-sv-library .status-card-toggle input{width:18px;height:18px;accent-color:#43c9ee}
+.gmww-sv-library .gmww-sv-preview-note{font-size:10px;opacity:.76}
+#start .play-player-token.gmww-sv-stage .gmww-sv-overlay{inset:11% 22% 14%;z-index:5}
+#start .play-player-token.gmww-sv-stage .gmww-sv-badges{bottom:calc(100% + 24px)}
+#battleActionBar .gmww-sv-action-tags{display:block;font-size:10px;margin-top:2px;line-height:1.2;color:#b8efff;font-weight:800;white-space:nowrap}
+#battleActionBar [data-battle-action].gmww-sv-action-active{border-color:#73cdec!important;box-shadow:inset 0 0 0 1px #62d9f399}
+@media(prefers-reduced-motion:reduce){.gmww-sv-overlay *, .gmww-sv-overlay *:before, .gmww-sv-overlay *:after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* Visual-only deceased state. The sprite remains upright and motionless;
+   status validity and the movement/Rule Engine are unchanged. */
+#start .play-player-token.is-dead{filter:none;opacity:1}
+#start .play-player-token.is-dead .play-player-avatar{filter:grayscale(.87) brightness(.87);animation:none!important}
+#start .play-player-token.is-dead .play-player-avatar:after{content:none!important;display:none!important}
+#start .play-player-token.is-dead .gmww-segmented-rig[data-state="dead"]{
+  animation:none!important;
+}
+#start .play-player-token.is-dead .gmww-rig-part,
+#start .play-player-token.is-dead .gmww-rig-shadow{animation:none!important}
+
+/* Action C: a compact living sample of the same status visuals shown on characters. */
+#battleActionBar [data-battle-action] .gmww-sv-action-preview{display:inline-flex;position:relative;vertical-align:middle;width:38px;height:42px;margin:0 6px 0 2px;align-items:center;justify-content:center;overflow:visible;isolation:isolate}
+#battleActionBar [data-battle-action] .gmww-sv-action-avatar{font-size:18px;color:#bcdde6;opacity:.65}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-overlay{inset:7px 11px 10px;z-index:1;overflow:visible}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-badges{display:none}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-fx{inset:-8px -10px}
+
+/* Player Web: use the same animation primitives and proportions as GM. */
+.player.gmww-sv-stage .gmww-sv-overlay{inset:7% 25% 24%;z-index:12}
+.player.gmww-sv-stage .gmww-sv-badges{bottom:calc(100% + 8px);z-index:12}
+.player.gmww-sv-stage .gmww-sv-fx{inset:0}
+/* Player Web death presentation: static character; ONLY smoke particles animate. */
+.player.gmww-sv-dead .portrait{filter:grayscale(.87) brightness(.87);opacity:.92;animation:none!important}
+.player.gmww-sv-dead .gmww-segmented-rig[data-state="dead"],
+.player.gmww-sv-dead .gmww-rig-part,
+.player.gmww-sv-dead .gmww-rig-shadow{animation:none!important}

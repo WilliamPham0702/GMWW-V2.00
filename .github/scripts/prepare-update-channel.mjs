@@ -45,6 +45,8 @@ copy('server-game/current/gmww-local-export.js','gmww-local-export.js');
 copy('server-game/current/artifact-sea-import.js','artifact-sea-import.js');
 copy('server-game/current/battle-controls.js','battle-controls.js');
 copy('server-game/current/style.css','style.css');
+copy('server-game/current/status-visuals.js','status-visuals.js');
+copy('server-game/current/status-visuals.css','status-visuals.css');
 copy('server-game/current/character-renderer.js','character-renderer.js');
 copy('server-game/current/character-renderer.css','character-renderer.css');
 copy('server-game/current/gmww-village-coast.svg','gmww-village-coast.svg');

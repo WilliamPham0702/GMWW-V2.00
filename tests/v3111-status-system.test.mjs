@@ -68,14 +68,15 @@ test('GM client has the full catalog, chips for new statuses, and a blocking hel
 test('status library renders all nine statuses with a Player Web toggle for the new ones',()=>{
   assert.match(html,/id="statusLibraryGrid"/);
   assert.match(app,/function renderStatusLibrary\(\)/);
-  assert.match(app,/data-status-display="'\+id\+'"/);
+  assert.match(app,/data-status-display="\'\+visuals\.safe\(id\)\+\'"/);
   assert.match(app,/type:'status_display'/);
   assert.doesNotMatch(html,/data-character-status="frozen"/);
 });
 
 test('Player Web renders visible status tags on the village token',()=>{
   assert.match(village,/statusTags:Array\.isArray\(p\.statusTags\)/);
-  assert.match(village,/className="status-tags"|className = "status-tags"|"status-tags"/);
+  assert.match(village,/gmww-sv-overlay/);
+  assert.match(village,/gmww-sv-badges/);
   assert.match(villageCss,/\.status-tags\{/);
 });
 
