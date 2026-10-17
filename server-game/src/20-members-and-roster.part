@@ -1,0 +1,827 @@
+function gmwwSettingsHubHealth(kind,message){
+  const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
+  if(box)box.dataset.status=kind||'idle';
+  if(label)label.textContent=message||'Chưa kiểm tra';
+}
+
+/* GMWW Operations Center — Cài Đặt. Read-only health, room & release checks; no credential exposure. */
+const GMWW_OPS_AUTO_KEY='GMWW_OPS_AUTO_CHECK_V1';
+let gmwwOpsBusy=false,gmwwOpsSnapshot=null;
+function gmwwOpsAutoEnabled(){
+  try{return localStorage.getItem(GMWW_OPS_AUTO_KEY)==='1'}catch{return false}
+}
+function gmwwOpsLine(key,kind,label,note){
+  const el=document.querySelector('#opsReport [data-ops-check="'+key+'"]');
+  if(!el)return;
+  el.className=kind||'idle';
+  const badge=el.querySelector('b'),caption=el.querySelector('small');
+  if(badge)badge.textContent=label||'—';
+  if(caption)caption.textContent=note||'';
+}
+function gmwwOpsTop(key,value,kind){
+  const el=document.getElementById(key);
+  if(el){el.textContent=value||'—';el.dataset.status=kind||'idle'}
+}
+function gmwwOpsResult(kind,label,note,extra={}){
+  return {kind,label,note,...extra};
+}
+function gmwwOpsServerPart(server,deep){
+  const v=String(server?.data?.version||'');
+  if(!server?.ok)return gmwwOpsResult('bad','LỖI SERVER','Không thể truy cập Cloudflare Worker.',{http:server?.status||0});
+  if(!deep?.ok||deep?.data?.checks?.memberStorage!=='ready')
+    return gmwwOpsResult('bad','LỖI DỮ LIỆU','Durable Objects chưa sẵn sàng.',{http:deep?.status||0,version:v});
+  return gmwwOpsResult('ok','ỔN ĐỊNH','Worker '+v+' • phản hồi '+server.latency+' ms',{http:server.status,latencyMs:server.latency,version:v});
+}
+function gmwwOpsRoomSnapshot(){
+  const selected=typeof isLivePlayRoom==='function'&&isLivePlayRoom();
+  if(!selected||!playSceneState?.roomCode)
+    return {room:gmwwOpsResult('idle','CHƯA CHỌN','Chưa có phòng được chọn trong Trang Chơi.'),
+      realtime:gmwwOpsResult('idle','CHƯA KẾT NỐI','Chưa có phòng để đo kết nối realtime.'),
+      players:0,seats:0,online:0};
+  const room=playSceneRuntime?.room||{},members=Array.isArray(playSceneRuntime?.players)?playSceneRuntime.players:[],
+    online=members.filter(p=>p?.online!==false).length,
+    seatCount=Math.max(0,Math.min(30,Number(room?.seatCount||playSceneState?.seatCount||0))),
+    socket=playSceneRuntime?.socket,
+    socketOpen=!!socket&&socket.readyState===1,
+    lastSync=Number(playSceneRuntime?.lastSyncAt||0),
+    syncAgeSec=lastSync>0?Math.max(0,Math.floor((Date.now()-lastSync)/1000)):null,
+    mode=String(room?.roomMode||playSceneState?.roomMode||'').toUpperCase(),
+    enabled=room?.enabled!==false;
+  return {
+    room:gmwwOpsResult(enabled?'ok':'warn',enabled?'PHÒNG ON':'PHÒNG OFF',
+      mode+' • '+members.length+'/'+seatCount+' vị trí • '+online+' online',
+      {mode,enabled,participants:members.length,seats:seatCount,online}),
+    realtime:socketOpen?gmwwOpsResult(syncAgeSec!==null&&syncAgeSec>90?'warn':'ok',syncAgeSec!==null&&syncAgeSec>90?'CHẬM ĐỒNG BỘ':'ĐÃ KẾT NỐI',
+      'WebSocket đang mở'+(syncAgeSec===null?'':' • cập nhật '+syncAgeSec+' giây trước'),{socketOpen,syncAgeSec})
+      :gmwwOpsResult('warn','CHƯA KẾT NỐI','Mở Trang Chơi để kết nối realtime; không tự reset phòng.',{socketOpen:false,syncAgeSec})
+  };
+}
+function gmwwOpsDraw(snapshot){
+  if(!snapshot)return;
+  const states=snapshot.checks||{};
+  for(const [key,value] of Object.entries(states))gmwwOpsLine(key,value.kind,value.label,value.note);
+  gmwwOpsTop('opsServerState',states.server?.label,states.server?.kind);
+  gmwwOpsTop('opsStorageState',states.storage?.label,states.storage?.kind);
+  gmwwOpsTop('opsRealtimeState',states.realtime?.label,states.realtime?.kind);
+  gmwwOpsTop('opsReleaseState',states.update?.label,states.update?.kind);
+  const values=Object.values(states),failed=values.filter(v=>v?.kind==='bad'),
+    warned=values.filter(v=>v?.kind==='warn'),
+    overall=failed.length?'bad':warned.length?'warn':'ok',
+    label=failed.length?'PHÁT HIỆN LỖI':warned.length?'CẦN CHÚ Ý':'HỆ THỐNG ỔN';
+  const dot=document.getElementById('opsDot'),pill=document.getElementById('opsOverall'),advice=document.getElementById('opsAdvice'),
+    time=document.getElementById('opsLastChecked');
+  if(dot)dot.className='ops-dot '+overall;
+  if(pill){pill.className='ops-pill '+overall;pill.textContent=label}
+  if(advice)advice.textContent=failed.length?'Có '+failed.length+' mục gặp lỗi. Xem chi tiết bên dưới; có thể sử dụng SỬA NHANH ở mục Tự chẩn đoán.'
+    :warned.length?'Có '+warned.length+' cảnh báo. Kiểm tra trạng thái phòng và phiên bản trước khi chơi.'
+    :'Kiểm tra đạt. Không cần xoá cache, reset phòng hoặc cài lại IPA.';
+  if(time)time.textContent='Lần kiểm tra: '+new Date(snapshot.checkedAt).toLocaleString('vi-VN')+' • Chỉ đọc, không thay đổi dữ liệu game.';
+  if(typeof gmwwSettingsHubHealth==='function')gmwwSettingsHubHealth(overall,
+    failed.length?failed.length+' lỗi cần kiểm tra':warned.length?warned.length+' cảnh báo':'Server & game hoạt động tốt');
+}
+async function gmwwOpsRun({kind='all',silent=false}={}){
+  if(gmwwOpsBusy)return gmwwOpsSnapshot;
+  gmwwOpsBusy=true;
+  const buttonId=kind==='room'?'opsCheckRoom':kind==='release'?'opsCheckRelease':'opsRunFullAudit';
+  const button=document.getElementById(buttonId);
+  if(button)button.disabled=true;
+  const overall=document.getElementById('opsOverall');
+  if(overall&&!silent){overall.textContent='ĐANG KIỂM TRA';overall.className='ops-pill checking'}
+  try{
+    const checks={...(gmwwOpsSnapshot?.checks||{})},stamp=Date.now();
+    const runAll=kind==='all',runRoom=runAll||kind==='room',runRelease=runAll||kind==='release';
+    let server=null,deep=null,manifest=null;
+    if(runAll||runRelease){
+      const jobs=[
+        gmwwJsonProbe('/api/health?ops='+stamp,d=>d?.ok===true&&d?.project==='GMWW-V2.00'),
+        gmwwJsonProbe('/api/health/deep?ops='+stamp,d=>d?.ok===true&&d?.checks?.memberStorage==='ready'),
+        gmwwJsonProbe('/api/update/manifest?ops='+stamp,d=>d?.ok===true&&!!d?.releaseVersion)
+      ];
+      if(runAll)jobs.push(gmwwJsonProbe('/api/web-sync?ops='+stamp,d=>d?.ok===true),
+        gmwwJsonProbe('/api/game-characters?ops='+stamp,d=>Array.isArray(d?.characters)&&d.characters.length>=20));
+      const results=await Promise.all(jobs);
+      [server,deep,manifest]=results;
+      const combination=gmwwOpsServerPart(server,deep);
+      checks.server=server?.ok?gmwwOpsResult('ok','ONLINE','Cloudflare Worker '+String(server.data?.version||'')+' • '+server.latency+' ms',
+        {http:server.status,latencyMs:server.latency,version:String(server.data?.version||'')})
+        :gmwwOpsResult('bad','OFFLINE','Server không phản hồi hoặc sai cấu hình.',{http:server?.status||0});
+      checks.storage=deep?.ok?gmwwOpsResult('ok','SẴN SÀNG','Durable Objects phản hồi • chỉ đọc dữ liệu.',
+        {http:deep.status}):gmwwOpsResult('bad','KHÔNG SẴN SÀNG','Kiểm tra lưu trữ thất bại.',{http:deep?.status||0});
+      const serverVersion=String(server?.data?.version||'').replace(/^V/i,'');
+      const updateVersion=String(manifest?.data?.releaseVersion||'').replace(/^V/i,'');
+      const aligned=manifest?.ok&&server?.ok&&serverVersion===updateVersion;
+      const shell=typeof gmwwShellVersion==='function'?gmwwShellVersion():'—';
+      const runtime=typeof gmwwRuntimeVersion==='function'?gmwwRuntimeVersion():'—';
+      checks.update=aligned?gmwwOpsResult('ok','ĐỒNG BỘ','Server '+serverVersion+' • Runtime '+runtime+' • IPA '+shell,
+        {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest.status})
+        :gmwwOpsResult('warn','KIỂM TRA LẠI','Server và kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
+          {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest?.status||0});
+      if(runAll){
+        const [player,characters]=results.slice(3);
+        checks.player=player?.ok?gmwwOpsResult('ok','HOẠT ĐỘNG','Player Web và trạng thái đồng bộ phản hồi • '+player.latency+' ms',
+          {http:player.status,latencyMs:player.latency})
+          :gmwwOpsResult('bad','LỖI KẾT NỐI','Player Web không phản hồi.',{http:player?.status||0});
+        const count=Array.isArray(characters?.data?.characters)?characters.data.characters.length:0;
+        checks.characters=characters?.ok?gmwwOpsResult('ok','SẴN SÀNG',count+' nhân vật trong manifest.',
+          {http:characters.status,count}):gmwwOpsResult('warn','THIẾU DỮ LIỆU','Không đọc được đầy đủ danh sách nhân vật.',{http:characters?.status||0,count});
+      }
+    }
+    if(runRoom){
+      const state=gmwwOpsRoomSnapshot();
+      checks.room=state.room;checks.realtime=state.realtime;
+      if(state.room.kind!=='idle'&&playSceneState?.roomCode){
+        const roomCheck=await gmwwJsonProbe('/api/rooms/'+encodeURIComponent(playSceneState.roomCode)+'?ops='+stamp,
+          d=>d?.ok===true&&!!d?.room);
+        if(!roomCheck.ok)checks.room=gmwwOpsResult('bad','KHÔNG ĐỒNG BỘ','Không truy xuất được phòng đã chọn.',{http:roomCheck.status});
+        else{
+          const actual=roomCheck.data;
+          const participants=Array.isArray(actual?.players)?actual.players.length:0;
+          const online=Array.isArray(actual?.players)?actual.players.filter(p=>p?.online!==false).length:0;
+          const seatCount=Math.max(0,Math.min(30,Number(actual?.room?.seatCount)||0));
+          checks.room=gmwwOpsResult(actual?.room?.enabled===false?'warn':'ok',actual?.room?.enabled===false?'PHÒNG OFF':'PHÒNG ON',
+            String(actual?.room?.roomMode||'').toUpperCase()+' • '+participants+'/'+seatCount+' vị trí • '+online+' online',
+            {http:roomCheck.status,mode:String(actual?.room?.roomMode||''),enabled:actual?.room?.enabled!==false,
+              participants,seats:seatCount,online});
+        }
+      }
+    }
+    if(runAll){
+      const errorCount=Array.isArray(gmwwRuntimeErrors)?gmwwRuntimeErrors.length:0;
+      checks.runtime=gmwwOpsResult(errorCount?'warn':'ok',errorCount?errorCount+' CẢNH BÁO':'KHÔNG LỖI',
+        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi gần đây.':'Chưa ghi nhận lỗi JavaScript gần đây.',
+        {count:errorCount});
+    }
+    gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
+    gmwwOpsDraw(gmwwOpsSnapshot);
+    return gmwwOpsSnapshot;
+  }catch(_){
+    const advice=document.getElementById('opsAdvice');
+    if(advice)advice.textContent='Không hoàn tất được chẩn đoán. Kiểm tra mạng rồi thử lại.';
+    if(overall){overall.className='ops-pill bad';overall.textContent='KHÔNG KIỂM TRA ĐƯỢC'}
+    return null;
+  }finally{gmwwOpsBusy=false;if(button)button.disabled=false}
+}
+function gmwwOpsSafeReport(snapshot){
+  if(!snapshot)return null;
+  const fields=['kind','label','http','latencyMs','version','serverVersion','releaseVersion','runtimeVersion',
+    'shellVersion','mode','enabled','participants','seats','online','socketOpen','syncAgeSec','count'];
+  const checks={};
+  for(const [key,row] of Object.entries(snapshot.checks||{})){
+    checks[key]={};
+    for(const f of fields)if(Object.prototype.hasOwnProperty.call(row,f))checks[key][f]=row[f];
+  }
+  return {project:'GMWW-V2.00',type:'read-only-operations-report',checkedAt:snapshot.checkedAt,
+    clientVersion:String(VERSION||''),checks,
+    privacy:'No names, login IDs, player positions, room codes, IPs, tokens, or card roles included.'};
+}
+function gmwwOpsInitialize(){
+  const auto=document.getElementById('opsAutoCheck');
+  if(auto){auto.checked=gmwwOpsAutoEnabled();auto.addEventListener('change',()=>{
+    try{localStorage.setItem(GMWW_OPS_AUTO_KEY,auto.checked?'1':'0')}catch(_){}
+    if(auto.checked)gmwwOpsRun({kind:'all',silent:true});
+  })}
+  document.getElementById('opsRunFullAudit')?.addEventListener('click',()=>gmwwOpsRun({kind:'all'}));
+  document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
+  document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
+  document.getElementById('settingsRunHealth')?.addEventListener('click',async()=>{
+    const button=document.getElementById('settingsRunHealth'),note=document.getElementById('settingsHealthSummary');
+    if(button?.disabled)return;if(button)button.disabled=true;
+    if(note)note.textContent='Đang kiểm tra bảo trì, Server, realtime và chẩn đoán…';
+    try{auditLocalData();await gmwwOpsRun({kind:'all'});await checkServerHealth();await runSystemDiagnostics();if(note)note.textContent='Hoàn tất quét. Kết quả và cảnh báo hiển thị bên dưới.'}
+    catch(e){if(note)note.textContent='Còn mục chưa kiểm tra: '+String(e?.message||'Vui lòng thử lại.')}
+    finally{if(button)button.disabled=false}
+  });
+}
+gmwwOpsInitialize();
+
+/* Work backlog: only GitHub owners can close/reopen Issues; never embed write credentials. */
+let gmwwTasksBusy=false,gmwwTasksLastLoaded=0,gmwwTaskReviewPending=false;
+function gmwwTaskReviewLink(task,mode){
+  const number=Number(task?.number);
+  if(!Number.isSafeInteger(number)||number<=0)return null;
+  const labels={
+    completed:'✓ XÁC NHẬN HOÀN THÀNH',
+    skipped:'↷ BỎ QUA',
+    reopen:'↶ XEM / MỞ LẠI'
+  };
+  const link=document.createElement('a');
+  link.className='gmww-task-review-link '+mode;
+  link.href='https://github.com/WilliamPham0702/GMWW-V2.00/issues/'+number;
+  link.target='_self';
+  link.rel='noopener noreferrer';
+  link.textContent=labels[mode]||'XEM CÔNG VIỆC';
+  link.setAttribute('aria-label',(labels[mode]||'Xem công việc')+' #'+number+' trên GitHub');
+  if(mode==='completed'||mode==='skipped'){
+    link.addEventListener('click',event=>{
+      const instruction=mode==='completed'
+        ? 'Bạn xác nhận công việc #'+number+' đã đáp ứng yêu cầu và muốn chuyển sang Lịch sử hoàn tất?'
+        : 'Bạn chọn BỎ QUA công việc #'+number+' và không cần tiếp tục triển khai?';
+      if(!window.confirm(instruction+'\n\nỨng dụng sẽ mở GitHub. Đăng nhập tài khoản chủ dự án, chọn Close issue và lý do '+(mode==='completed'?'Completed (Hoàn thành).':'Not planned (Không thực hiện).')+'\n\nChỉ khi GitHub xác nhận đóng Issue thì trạng thái trên server mới thay đổi.')){
+        event.preventDefault();return;
+      }
+      gmwwTaskReviewPending=true;
+    });
+  }
+  return link;
+}
+function gmwwTaskReviewButtons(task){
+  const actions=document.createElement('div');actions.className='gmww-task-review-actions';
+  const open=['doing','pending'].includes(String(task.state||''));
+  const modes=open?['completed','skipped']:['reopen'];
+  for(const mode of modes){const link=gmwwTaskReviewLink(task,mode);if(link)actions.append(link)}
+  return actions;
+}
+function gmwwTaskItem(task){
+  const row=document.createElement('article');
+  row.className='gmww-task-item '+String(task.state||'pending');
+  const heading=document.createElement('div');heading.className='gmww-task-item-head';
+  const title=document.createElement('b');title.textContent=String(task.title||'Công việc GMWW');
+  const status=document.createElement('span');status.className='gmww-task-status '+String(task.state||'pending');
+  status.textContent=task.state==='doing'?'ĐANG THỰC HIỆN':task.state==='completed'?'HOÀN TẤT':task.state==='skipped'?'ĐÃ BỎ QUA':task.state==='closed'?'ĐÃ ĐÓNG':'CHƯA HOÀN THÀNH';
+  heading.append(title,status);row.append(heading);
+  const description=document.createElement('p');description.textContent=String(task.summary||'Đã ghi nhận yêu cầu.');row.append(description);
+  const meta=document.createElement('small');const priority=task.priority?String(task.priority)+' · ':'';
+  meta.textContent=priority+'Công việc #'+Number(task.number||0)+' · Cập nhật '+(task.updatedAt?new Date(task.updatedAt).toLocaleDateString('vi-VN'):'—');
+  row.append(meta);
+  const actions=gmwwTaskReviewButtons(task);
+  if(actions.childElementCount)row.append(actions);
+  return row;
+}
+async function gmwwTasksRefresh({silent=false}={}){
+  if(gmwwTasksBusy)return;
+  gmwwTasksBusy=true;
+  const refresh=document.getElementById('gmwwTasksReload'),summary=document.getElementById('gmwwTasksSummary'),
+    openList=document.getElementById('gmwwTasksOpenList'),closedList=document.getElementById('gmwwTasksDoneList');
+  if(refresh)refresh.disabled=true;
+  if(summary&&!silent)summary.textContent='Đang cập nhật tiến độ công việc…';
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/operations/tasks?ts='+Date.now(),{method:'GET',cache:'no-store',signal:controller.signal});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data?.ok||!Array.isArray(data.open)||!Array.isArray(data.history))throw new Error('Danh sách không hợp lệ');
+    const open=data.open.filter(x=>x.state==='pending'||x.state==='doing'),
+      done=data.history.filter(x=>x.state==='completed'||x.state==='closed'||x.state==='skipped');
+    if(openList){openList.replaceChildren();if(open.length)for(const task of open)openList.append(gmwwTaskItem(task));else{
+      const blank=document.createElement('p');blank.className='gmww-task-empty';blank.textContent='Không có công việc chưa hoàn thành được ghi nhận.';openList.append(blank)}}
+    if(closedList){closedList.replaceChildren();if(done.length)for(const task of done)closedList.append(gmwwTaskItem(task));else{
+      const blank=document.createElement('p');blank.className='gmww-task-empty';blank.textContent='Chưa có công việc đóng được ghi nhận.';closedList.append(blank)}}
+    const openCount=document.getElementById('gmwwTasksOpenCount'),doneCount=document.getElementById('gmwwTasksDoneCount');
+    if(openCount)openCount.textContent=String(open.length);
+    if(doneCount)doneCount.textContent=String(done.length);
+    if(summary)summary.textContent=(data.fallback?'BẢN DỰ PHÒNG '+String(data.generatedAt||'')+' • ':'')+open.length+' công việc chưa hoàn thành · '+open.filter(x=>x.state==='doing').length+' đang thực hiện · '+done.length+' mục lịch sử (gồm Hoàn tất/Bỏ qua).';
+    const reviewState=document.getElementById('gmwwTaskReviewHealth');
+    if(reviewState){
+      const rendered=openList?.querySelectorAll('.gmww-task-review-link.completed')?.length||0;
+      const skipped=openList?.querySelectorAll('.gmww-task-review-link.skipped')?.length||0;
+      const ready=(rendered===open.length&&skipped===open.length);
+      reviewState.textContent=ready?'Bộ xác nhận V3.32 đã sẵn sàng · '+rendered+' công việc có nút Hoàn thành / Bỏ qua.'
+        :'CẢNH BÁO: Bộ xác nhận chưa hiển thị đủ ('+rendered+'/'+open.length+'). Nhấn LÀM MỚI TIẾN ĐỘ.';
+      reviewState.dataset.ready=ready?'true':'false';
+    }
+    gmwwTasksLastLoaded=Date.now();
+  }catch(error){
+    if(summary)summary.textContent='Chưa lấy được tiến độ. Nhấn LÀM MỚI TIẾN ĐỘ để thử lại.';
+    const reviewState=document.getElementById('gmwwTaskReviewHealth');if(reviewState){reviewState.textContent='Chưa tải được công việc, không thể xác nhận. Thử LÀM MỚI TIẾN ĐỘ.';reviewState.dataset.ready='false'}
+    if(!gmwwTasksLastLoaded&&openList){openList.replaceChildren();const p=document.createElement('p');p.className='gmww-task-empty';p.textContent='Nguồn công việc tạm thời không truy cập được; không thể xác nhận tiến độ.';openList.append(p)}
+  }finally{clearTimeout(timeout);gmwwTasksBusy=false;if(refresh)refresh.disabled=false}
+}
+document.getElementById('gmwwTasksReload')?.addEventListener('click',()=>gmwwTasksRefresh());
+function gmwwTaskReviewReturn(){
+  if(!gmwwTaskReviewPending)return;
+  if(!document.getElementById('settings')?.classList.contains('active'))return;
+  gmwwTaskReviewPending=false;
+  gmwwTasksLastLoaded=0;
+  gmwwTasksRefresh({silent:false});
+}
+
+/* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
+/* V2.29 — V1 Member management + Ranking + History */
+window.addEventListener('focus',gmwwTaskReviewReturn);
+window.addEventListener('pageshow',gmwwTaskReviewReturn);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gmwwTaskReviewReturn()});
+const memberAdminState={members:[],avatars:[],busy:false,loaded:false,tab:'directory',filter:'all',query:'',historyResult:'all',historyLogin:'',sheetMode:'',sheetMember:null,selectedAvatarId:'',characterPreviewTimer:null};
+
+function gmHeaders(extra={}){return {...extra,Authorization:'Bearer '+GMWW_GM_AUTH}}
+async function gmApi(path,opts={}){
+  const {timeoutMs=10000,...requestOptions}=opts;
+  const headers=gmHeaders(requestOptions.headers||{});
+  if(requestOptions.body!==undefined&&!headers['content-type'])headers['content-type']='application/json';
+  // Image uploads and room preloads are intentionally slower than ordinary API calls.
+  const controller=new AbortController(),limit=Math.max(1000,Math.min(90000,Number(timeoutMs)||10000)),timer=setTimeout(()=>controller.abort(),limit);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+path,{...requestOptions,headers,cache:'no-store',signal:controller.signal});
+    let data={};try{data=await res.json()}catch{}
+    if(!res.ok){const err=new Error(data.message||data.error||('HTTP '+res.status));err.status=res.status;err.code=data.error||'';throw err}
+    return data;
+  }catch(err){
+    if(controller.signal.aborted)throw new Error('Server phản hồi quá thời gian chờ. Vui lòng nhấn thử lại; dữ liệu đã lưu không bị xóa.');
+    throw err;
+  }finally{clearTimeout(timer)}
+}
+const MEMBER_CHARACTER_COUNT=42;
+const MEMBER_ANIMATED_CHARACTER_COUNT=20;
+function memberCharacterCatalog(serverRows=[]){
+  const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
+  return Array.from({length:MEMBER_CHARACTER_COUNT},(_,i)=>{
+    const n=String(i+1).padStart(2,'0'),id='character-'+n,remote=source.get(id)||{};
+    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
+  });
+}
+function memberCharacterFrameUrl(id,frame=1){
+  const raw=String(id||''),m=raw.match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));
+  if(!m)return memberAvatarUrl(raw);
+  return Number(m[1])<=MEMBER_ANIMATED_CHARACTER_COUNT
+    ?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/frame/'+f
+    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image';
+}
+function memberSelectedCharacterId(m){
+  const direct=String(m?.gameCharacterId||m?.avatarId||'');
+  if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(direct))return direct;
+  const legacy=String(m?.avatarId||'').match(/^avatar-cut-(\d{3})$/i),n=legacy?Number(legacy[1]):0;
+  if(n>=1&&n<=MEMBER_CHARACTER_COUNT)return 'character-'+String(n).padStart(2,'0');
+  return memberAdminState.avatars[0]?.id||'character-01';
+}
+function ensureMemberCharacterPreviewStyle(){
+  if(document.getElementById('gmwwMemberCharacterPreviewStyle'))return;
+  const st=document.createElement('style');st.id='gmwwMemberCharacterPreviewStyle';
+  st.textContent='@keyframes gmwwMemberCharacterFloat{from{transform:translateY(1px)}to{transform:translateY(-3px)}}#memberAvatarGrid .member-avatar-choice img{object-fit:contain!important}#memberAvatarGrid .member-avatar-choice img.member-character-static{animation:gmwwMemberCharacterFloat .7s ease-in-out infinite alternate}';
+  document.head.appendChild(st);
+}
+function ensureMemberCharacterPreviewTicker(){
+  if(memberAdminState.characterPreviewTimer)return;
+  memberAdminState.characterPreviewTimer=setInterval(()=>{
+    const frame=(Math.floor(performance.now()/120)%6)+1;
+    document.querySelectorAll('#memberAvatarGrid img[data-member-character]').forEach(img=>{
+      const id=String(img.dataset.memberCharacter||'');if(!id)return;
+      const key=id+':'+frame;if(img.dataset.memberFrame===key)return;
+      img.dataset.memberFrame=key;img.src=memberCharacterFrameUrl(id,frame);
+    });
+  },95);
+}
+function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
+function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
+function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image'}
+function memberDate(v,withTime=false){
+  if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
+  return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function memberStats(m){const s=m?.stats||{},w=Number(s.wins||0),l=Number(s.losses||0),games=w+l,rate=games?Math.round(w*100/games):0;return{w,l,games,rate}}
+function setMemberBusy(on){
+  memberAdminState.busy=!!on;
+  const refresh=document.getElementById('refreshMembers');if(refresh){refresh.disabled=!!on;refresh.classList.toggle('is-busy',!!on)}
+  const add=document.getElementById('addMember');if(add)add.disabled=!!on;
+}
+async function loadMembers(force=false){
+  if(memberAdminState.busy)return;
+  if(memberAdminState.loaded&&!force){renderMembersAll();return}
+  setMemberBusy(true);
+  const list=document.getElementById('memberDirectoryList');if(list)list.innerHTML='<div class="member-empty">Đang đồng bộ Thành Viên…</div>';
+  try{
+    const [dir,characters]=await Promise.all([
+      gmApi('/api/gm/members'),
+      fetch(GMWW_SERVER_BASE+'/api/game-characters?gm='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():({characters:[]})).catch(()=>({characters:[]}))
+    ]);
+    memberAdminState.members=Array.isArray(dir?.members)?dir.members:[];
+    memberAdminState.avatars=memberCharacterCatalog(characters?.characters);
+    memberAdminState.loaded=true;
+    renderMembersAll();
+  }catch(err){
+    if(list)list.innerHTML='<div class="member-empty member-error">'+memberEsc(err.message||'Không tải được Thành Viên.')+'</div>';
+  }finally{setMemberBusy(false)}
+}
+function renderMembersAll(){renderMemberSummary();renderMemberDirectory();renderMemberRanking();renderMemberHistory();renderHistoryMemberOptions()}
+function renderMemberSummary(){
+  const rows=memberAdminState.members,put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
+  const online=rows.filter(m=>m.online).length,resets=rows.filter(m=>m.resetRequestedAt).length,games=rows.reduce((n,m)=>n+memberStats(m).games,0);
+  put('memberTotal',rows.length);put('memberOnline',online);put('memberResetRequests',resets);put('memberGames',games);
+}
+function filteredMembers(){
+  const q=memberAdminState.query.trim().toLocaleLowerCase('vi'),f=memberAdminState.filter;
+  return memberAdminState.members.filter(m=>{
+    const hit=!q||String(m.displayName||'').toLocaleLowerCase('vi').includes(q)||String(m.loginId||'').toLowerCase().includes(q);
+    const status=f==='all'||(f==='online'&&m.online)||(f==='offline'&&!m.online)||(f==='reset'&&m.resetRequestedAt);
+    return hit&&status;
+  });
+}
+function renderMemberDirectory(){
+  const box=document.getElementById('memberDirectoryList');if(!box)return;
+  const rows=filteredMembers();box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Không có Thành Viên phù hợp.</div>';return}
+  for(const m of rows){
+    const s=memberStats(m),card=document.createElement('article');card.className='member-card';
+    card.innerHTML=
+      '<img class="member-avatar" alt="">'+
+      '<div class="member-card-main"><div class="member-name-row"><div><b></b><small></small></div><span class="member-status"></span></div>'+
+      '<div class="member-meta"><span class="member-room"></span><span>'+s.w+' Thắng</span><span>'+s.l+' Thua</span><span>'+s.rate+'%</span></div>'+
+      '<div class="member-flags"></div></div>'+
+      '<div class="member-card-actions">'+
+      '<button data-act="reset" type="button" aria-label="Đặt lại mật khẩu thành viên" title="Đặt lại mật khẩu">↻</button><button data-act="delete" class="danger-mini" type="button" aria-label="Xóa thành viên" title="Xóa tài khoản">✕</button></div>';
+    const img=card.querySelector('.member-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    card.querySelector('.member-card-main b').textContent=m.displayName||m.loginId;
+    card.querySelector('.member-card-main small').textContent='@'+m.loginId;
+    const status=card.querySelector('.member-status');status.textContent='';status.classList.toggle('online',!!m.online);
+    status.setAttribute('aria-label',m.online?'Trực tuyến':'Ngoại tuyến');status.title=m.online?'Trực tuyến':'Ngoại tuyến';
+    card.querySelector('.member-room').textContent=m.currentRoomCode?('Phòng '+m.currentRoomCode+(m.ready?' • Sẵn sàng':'')):'Chưa vào phòng';
+    const flags=card.querySelector('.member-flags');
+    if(m.resetRequestedAt)flags.innerHTML+='<span class="member-flag reset">YÊU CẦU ĐẶT LẠI</span>';
+    if(m.source)flags.innerHTML+='<span class="member-flag">'+memberEsc(m.source)+'</span>';
+    const bindAction=(btn,handler)=>{if(!btn)return;btn.onclick=e=>{e.preventDefault();e.stopPropagation();if(memberAdminState.busy)return;handler()}};
+    bindAction(card.querySelector('[data-act="reset"]'),()=>resetMemberPassword(m));
+    bindAction(card.querySelector('[data-act="delete"]'),()=>deleteMember(m));
+    // Edit only by double-tap / double-click on the member card body.
+    card.ondblclick=e=>{if(e.target.closest('.member-card-actions'))return;if(e.detail>=2&&matchMedia('(pointer:fine)').matches){e.preventDefault();openMemberSheet('edit',m)}};
+    let lastTap=0;
+    card.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||e.target.closest('.member-card-actions'))return;const now=Date.now();if(now-lastTap<450){e.preventDefault();lastTap=0;openMemberSheet('edit',m)}else lastTap=now},{passive:false});
+    box.appendChild(card);
+  }
+}
+function renderMemberRanking(){
+  const box=document.getElementById('memberRankingList');if(!box)return;
+  const rows=[...memberAdminState.members].sort((a,b)=>{
+    const A=memberStats(a),B=memberStats(b);
+    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi');
+  });
+  box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Chưa có dữ liệu xếp hạng.</div>';return}
+  rows.forEach((m,i)=>{
+    const s=memberStats(m),row=document.createElement('article');row.className='ranking-row'+(i<3?' podium':'');
+    row.innerHTML='<div class="rank-no"></div><img class="rank-avatar" alt=""><div class="rank-main"><b></b><small></small></div><div class="rank-stats"><b>'+s.w+'</b><small>Thắng</small></div><div class="rank-stats"><b>'+s.rate+'%</b><small>Tỷ lệ</small></div><div class="rank-stats"><b>'+s.games+'</b><small>Ván</small></div>';
+    row.querySelector('.rank-no').textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+    const img=row.querySelector('.rank-avatar');img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    row.querySelector('.rank-main b').textContent=m.displayName||m.loginId;
+    row.querySelector('.rank-main small').textContent=s.l+' Thua'+(m.online?' • Online':'');
+    box.appendChild(row);
+  });
+}
+function allHistoryRows(){
+  const out=[];
+  for(const m of memberAdminState.members){
+    for(const h of (Array.isArray(m.history)?m.history:[]))out.push({...h,loginId:m.loginId,displayName:m.displayName||m.loginId,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId});
+  }
+  return out.sort((a,b)=>(Date.parse(b.playedAt||0)||0)-(Date.parse(a.playedAt||0)||0));
+}
+function renderHistoryMemberOptions(){
+  const sel=document.getElementById('historyMemberFilter');if(!sel)return;
+  const value=memberAdminState.historyLogin||'';
+  sel.innerHTML='<option value="">Tất cả Thành Viên</option>'+memberAdminState.members.map(m=>'<option value="'+memberEsc(m.loginId)+'">'+memberEsc(m.displayName||m.loginId)+'</option>').join('');
+  sel.value=value;
+}
+function renderMemberHistory(){
+  const box=document.getElementById('memberHistoryList');if(!box)return;
+  const member=memberAdminState.historyLogin,result=memberAdminState.historyResult;
+  const rows=allHistoryRows().filter(h=>(!member||h.loginId===member)&&(result==='all'||h.result===result));
+  box.innerHTML='';
+  if(!rows.length){box.innerHTML='<div class="member-empty">Chưa có lịch sử chơi phù hợp.</div>';return}
+  for(const h of rows){
+    const row=document.createElement('article');row.className='history-row';
+    const win=h.result==='win';
+    row.innerHTML='<img class="history-avatar" alt=""><div class="history-main"><div class="history-title"><b></b><span class="history-result '+(win?'win':'lose')+'">'+(win?'THẮNG':'THUA')+'</span></div><small class="history-sub"></small><small class="history-detail"></small></div><time></time>';
+    const img=row.querySelector('.history-avatar');img.src=memberAvatarUrl(h.gameCharacterId||h.avatarId);img.onerror=()=>{img.style.visibility='hidden'};
+    row.querySelector('.history-title b').textContent=h.displayName||h.loginId;
+    row.querySelector('.history-sub').textContent=[h.roomName||h.gameName||'Ván GMWW',h.roleName||'',h.faction||''].filter(Boolean).join(' • ');
+    row.querySelector('.history-detail').textContent=[h.winnerFaction?('Thắng: '+h.winnerFaction):'',h.roomCode?('Phòng '+h.roomCode):''].filter(Boolean).join(' • ');
+    row.querySelector('time').textContent=memberDate(h.playedAt,true);
+    box.appendChild(row);
+  }
+}
+function switchMemberTab(tab){
+  // Trang Thành Viên luôn hiện đủ các nhóm; không còn chia tab ẩn nội dung.
+  memberAdminState.tab=tab;
+  if(tab==='history')renderMemberHistory();
+  if(tab==='ranking')renderMemberRanking();
+  const target=document.getElementById(tab==='ranking'?'memberGroupRanking':'memberGroupDirectory');
+  if(target&&tab!=='directory')target.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function openMemberSheet(mode,m=null){
+  memberAdminState.sheetMode=mode;memberAdminState.sheetMember=m;
+  if(!memberAdminState.avatars.length)memberAdminState.avatars=memberCharacterCatalog();
+  memberAdminState.selectedAvatarId=memberSelectedCharacterId(m);
+  const sheet=document.getElementById('memberSheet'),title=document.getElementById('memberSheetTitle'),body=document.getElementById('memberSheetBody'),save=document.getElementById('memberSheetSave');
+  if(!sheet||!body)return;
+  {
+    const editing=mode==='edit';
+    title.textContent=editing?'Sửa Thành Viên':'Thêm Thành Viên';
+    body.innerHTML='<div class="member-form">'+
+      '<label>Tên đăng nhập<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Vui lòng nhập tên đăng nhập" autocomplete="username"></label>'+
+      '<label>Tên Hiển Thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Bạn mong muốn người chơi khác thấy tên gì?" autocomplete="name"></label>'+
+      (editing?'':'<div class="member-password-optional"><button class="member-password-toggle" id="memberPasswordToggle" type="button" aria-expanded="false">＋ Đặt mật khẩu cho tài khoản nếu muốn</button><label class="hidden" id="memberPasswordWrap">Mật khẩu<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label></div>')+
+      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ 42 Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+    renderMemberAvatarPicker();
+    if(!editing){const toggle=document.getElementById('memberPasswordToggle'),wrap=document.getElementById('memberPasswordWrap');if(toggle&&wrap)toggle.onclick=()=>{const open=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!open);toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';if(open)setTimeout(()=>document.getElementById('memberPassword')?.focus(),30)}}
+    document.getElementById('memberDisplayName')?.addEventListener('blur',e=>{e.target.value=memberTitleCase(e.target.value)});
+    document.getElementById('memberAvatarRefresh').onclick=async()=>{
+      const btn=document.getElementById('memberAvatarRefresh');btn.disabled=true;btn.textContent='Đang đồng bộ…';
+      try{await refreshAvatarLibrary();renderMemberAvatarPicker()}catch(e){alert('Không cập nhật được Bộ Nhân Vật: '+e.message)}
+      finally{btn.disabled=false;btn.textContent='↻ Đồng bộ Nhân vật'}
+    };
+    save.textContent=editing?'LƯU THAY ĐỔI':'TẠO THÀNH VIÊN';
+  }
+  sheet.classList.remove('hidden');
+  refreshAvatarLibrary().then(()=>{memberAdminState.selectedAvatarId=memberSelectedCharacterId(m);renderMemberAvatarPicker()}).catch(err=>console.warn('Bộ Nhân Vật:',err.message));
+}
+async function refreshAvatarLibrary(){
+  const response=await fetch(GMWW_SERVER_BASE+'/api/game-characters?gm='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('Không tải được Bộ Nhân Vật từ server');
+  const data=await response.json();
+  memberAdminState.avatars=memberCharacterCatalog(data?.characters);
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=MEMBER_CHARACTER_COUNT+' nhân vật';
+}
+function renderMemberAvatarPicker(){
+  const box=document.getElementById('memberAvatarGrid');if(!box)return;box.innerHTML='';
+  ensureMemberCharacterPreviewStyle();
+  const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=MEMBER_CHARACTER_COUNT+' nhân vật';
+  for(const a of memberAdminState.avatars){
+    const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
+    b.innerHTML='<img alt=""><small></small>';
+    const img=b.querySelector('img'),num=Number(String(a.id).slice(-2));
+    img.alt=a.name||a.id;img.src=memberCharacterFrameUrl(a.id,1);
+    if(num<=MEMBER_ANIMATED_CHARACTER_COUNT)img.dataset.memberCharacter=a.id;else img.classList.add('member-character-static');
+    img.onerror=()=>{img.onerror=null;img.src=memberAvatarUrl(a.id)};
+    b.querySelector('small').textContent=a.name||a.id;
+    b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
+  }
+  if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Bộ Nhân Vật.</div>';
+  ensureMemberCharacterPreviewTicker();
+}
+function closeMemberSheet(){
+  const s=document.getElementById('memberSheet');if(s)s.classList.add('hidden');
+  if(memberAdminState.characterPreviewTimer){clearInterval(memberAdminState.characterPreviewTimer);memberAdminState.characterPreviewTimer=null}
+  memberAdminState.sheetMode='';memberAdminState.sheetMember=null;
+}
+async function saveMemberSheet(){
+  const btn=document.getElementById('memberSheetSave');if(btn?.disabled)return;
+  const mode=memberAdminState.sheetMode,m=memberAdminState.sheetMember;
+  try{
+    if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+    {
+      const loginId=document.getElementById('memberLoginId')?.value.trim()||m?.loginId||'',displayName=memberTitleCase(document.getElementById('memberDisplayName')?.value||''),gameCharacterId=memberAdminState.selectedAvatarId,avatarId=gameCharacterId;
+      if(displayName.length<2)throw new Error('Tên Hiển Thị phải có ít nhất 2 ký tự.');
+      if(!gameCharacterId)throw new Error('Vui lòng chọn Nhân Vật.');
+      if(mode==='edit'){
+        await gmApi('/api/gm/members/edit',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,gameCharacterId})});
+      }else{
+        const password=document.getElementById('memberPassword')?.value||'';if(password&&password.length<4)throw new Error('Mật khẩu phải có ít nhất 4 ký tự.');
+        await gmApi('/api/gm/members/create',{method:'POST',body:JSON.stringify({loginId,displayName,avatarId,gameCharacterId,password})});
+      }
+    }
+    closeMemberSheet();memberAdminState.loaded=false;await loadMembers(true);
+  }catch(err){alert(err.message||'Không thể lưu Thành Viên.')}
+  finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function resetMemberPassword(m){
+  if(!m)return;
+  const yes=window.confirm('Bạn có muốn reset mật khẩu của "'+(m.displayName||m.loginId)+'" về 0000 không?\n\nNhấn OK để xác nhận.');
+  if(!yes)return;
+  let ok=false;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-password',{method:'POST',body:JSON.stringify({loginId:m.loginId})});memberAdminState.loaded=false;ok=true}
+  catch(err){alert(err.message||'Không thể reset mật khẩu.')}
+  finally{setMemberBusy(false)}
+  if(ok){alert('Đã reset mật khẩu về 0000.');await loadMembers(true)}
+}
+async function resetRanking(){
+  if(!confirm('Xếp hạng lại từ đầu?\nThao tác này sẽ đưa Thắng/Thua về 0 và xoá toàn bộ lịch sử cũ của tất cả Thành Viên.'))return;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/reset-ranking',{method:'POST'});memberAdminState.loaded=false;setMemberBusy(false);await loadMembers(true);switchMemberTab('ranking')}
+  catch(err){alert(err.message||'Không thể xếp hạng lại.')}finally{setMemberBusy(false)}
+}
+async function clearMemberHistory(){
+  if(!confirm('Xoá toàn bộ Lịch Sử?\nThống kê Thắng/Thua hiện tại sẽ được giữ nguyên.'))return;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/history',{method:'DELETE'});memberAdminState.loaded=false;setMemberBusy(false);await loadMembers(true);switchMemberTab('history')}
+  catch(err){alert(err.message||'Không thể xoá lịch sử.')}finally{setMemberBusy(false)}
+}
+async function deleteMember(m){
+  if(!m)return;
+  const yes=window.confirm('Bạn có muốn xoá Thành Viên "'+(m.displayName||m.loginId)+'" không?\n\nNhấn OK để xác nhận.');
+  if(!yes)return;
+  let ok=false;
+  try{setMemberBusy(true);await gmApi('/api/gm/members/'+encodeURIComponent(m.loginId),{method:'DELETE'});memberAdminState.loaded=false;ok=true}
+  catch(err){alert(err.message||'Không thể xoá Thành Viên.')}
+  finally{setMemberBusy(false)}
+  if(ok){alert('Đã xoá Thành Viên.');await loadMembers(true)}
+}
+const memberTabsEl=document.getElementById('memberTabs');if(memberTabsEl)memberTabsEl.addEventListener('click',e=>{const b=e.target.closest('[data-member-tab]');if(b)switchMemberTab(b.dataset.memberTab)});
+const memberSearchEl=document.getElementById('memberSearch');if(memberSearchEl)memberSearchEl.addEventListener('input',()=>{memberAdminState.query=memberSearchEl.value;renderMemberDirectory()});
+const memberFilterRow=document.getElementById('memberFilterRow');if(memberFilterRow)memberFilterRow.addEventListener('click',e=>{const b=e.target.closest('[data-member-filter]');if(!b)return;memberAdminState.filter=b.dataset.memberFilter;memberFilterRow.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderMemberDirectory()});
+const historyResultFilter=document.getElementById('historyResultFilter');if(historyResultFilter)historyResultFilter.addEventListener('click',e=>{const b=e.target.closest('[data-history-result]');if(!b)return;memberAdminState.historyResult=b.dataset.historyResult;historyResultFilter.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderMemberHistory()});
+const historyMemberFilter=document.getElementById('historyMemberFilter');if(historyMemberFilter)historyMemberFilter.addEventListener('change',()=>{memberAdminState.historyLogin=historyMemberFilter.value;renderMemberHistory()});
+const refreshMembers=document.getElementById('refreshMembers');if(refreshMembers)refreshMembers.addEventListener('click',()=>{memberAdminState.loaded=false;loadMembers(true)});
+const addMember=document.getElementById('addMember');if(addMember)addMember.addEventListener('click',()=>openMemberSheet('create'));
+const resetRankingBtn=document.getElementById('resetRanking');if(resetRankingBtn)resetRankingBtn.addEventListener('click',resetRanking);
+const clearHistoryBtn=document.getElementById('clearHistory');if(clearHistoryBtn)clearHistoryBtn.addEventListener('click',clearMemberHistory);
+const memberSheetClose=document.getElementById('memberSheetClose');if(memberSheetClose)memberSheetClose.addEventListener('click',closeMemberSheet);
+const memberSheetCancel=document.getElementById('memberSheetCancel');if(memberSheetCancel)memberSheetCancel.addEventListener('click',closeMemberSheet);
+const memberSheetSave=document.getElementById('memberSheetSave');if(memberSheetSave)memberSheetSave.addEventListener('click',saveMemberSheet);
+const memberSheet=document.getElementById('memberSheet');if(memberSheet)memberSheet.addEventListener('click',e=>{if(e.target===memberSheet)closeMemberSheet()});
+document.querySelectorAll('[data-page="members"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadMembers(false),40)));
+
+/* V3.36 — Trang Chủ: cảm hứng bố cục V1, tất cả số liệu dựa trên máy chủ thật. */
+let gmwwHomeBusy=false,gmwwHomeLastLoaded=0,gmwwHomeAllRecent=false,gmwwHomeCachedRows=[];
+function gmwwHomeText(id,text){
+  const node=document.getElementById(id);
+  if(node)node.textContent=String(text??'—');
+}
+
+function gmwwHomeTop3Ranked(rows){
+  return (Array.isArray(rows)?rows:[]).filter(member=>{
+    const stats=memberStats(member);
+    return stats.games>0&&stats.w>=0&&stats.l>=0&&Number.isFinite(stats.games);
+  }).sort((left,right)=>{
+    const a=memberStats(left),b=memberStats(right);
+    return b.w*a.games-a.w*b.games||b.games-a.games||b.w-a.w
+      ||String(left.displayName||left.loginId||'').localeCompare(String(right.displayName||right.loginId||''),'vi');
+  }).slice(0,3);
+}
+function gmwwHomeRenderTop3(rows){
+  const target=document.getElementById('gmwwHomeTop3');
+  const status=document.getElementById('gmwwHomeTop3Status');
+  if(!target)return;
+  target.replaceChildren();
+  const best=gmwwHomeTop3Ranked(rows);
+  if(status){
+    status.hidden=best.length>0;
+    status.textContent=!Array.isArray(rows)?'Không tải được xếp hạng. Nhấn làm mới để thử lại.'
+      :'Chưa có người chơi hoàn tất ván để xếp hạng.';
+  }
+  for(const index of [1,0,2]){
+    const member=best[index];
+    if(!member)continue;
+    const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
+    const button=document.createElement('button');
+    button.type='button';button.className='gmww-home-top3-card-v377';
+    button.dataset.rank=String(place);
+    button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
+    const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
+    crown.textContent=place===1?'♛':place===2?'✦':'✧';crown.setAttribute('aria-hidden','true');
+    const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
+    const avatar=document.createElement('span');avatar.className='gmww-home-top3-avatar-v377';
+    const avatarId=String(member.gameCharacterId||member.avatarId||'');
+    if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
+      const image=document.createElement('img');image.src=memberAvatarUrl(avatarId);image.alt='';image.loading='lazy';
+      image.onerror=()=>{image.remove();avatar.textContent='✦'};
+      avatar.append(image);
+    }else avatar.textContent='✦';
+    const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';
+    name.textContent=String(member.displayName||member.loginId||'Thành viên');
+    const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';
+    percent.textContent=rate+'%';
+    const percentLabel=document.createElement('span');percentLabel.className='gmww-home-top3-percent-label-v377';percentLabel.textContent='TỶ LỆ THẮNG';
+    const meter=document.createElement('span');meter.className='gmww-home-top3-meter-v377';
+    const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,rate))+'%';meter.append(fill);
+    const record=document.createElement('small');record.className='gmww-home-top3-record-v377';
+    record.textContent=stats.w+' thắng / '+stats.games+' ván';
+    button.append(crown,badge,avatar,name,percent,percentLabel,meter,record);
+    button.addEventListener('click',()=>gmwwHomeOpenMemberRanking());
+    target.append(button);
+  }
+}
+function gmwwHomeOpenMemberRanking(){
+  const section=document.getElementById('memberGroupRanking');
+  if(section)section.open=true;
+  gmwwHomeNavigate('members');
+}
+
+function gmwwHomeRenderExtras(rows,ranking,leader){
+  const totalLeader=document.getElementById('gmwwHomeLeaderWins');
+  if(totalLeader)totalLeader.textContent=leader?String(memberStats(leader).w):'—';
+  const label=document.getElementById('gmwwHomeLeaderboard');
+  if(label)label.textContent=leader?String(leader.displayName||leader.loginId||'Thành viên'):'Chưa xếp hạng';
+  const target=document.getElementById('gmwwHomeRecentRows');
+  const status=document.getElementById('gmwwHomeRecentResult');
+  if(!target)return;
+  target.replaceChildren();
+  gmwwHomeCachedRows=rows;
+  const recent=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,member:m})))
+    .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
+    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt)).slice(0,gmwwHomeAllRecent?50:3);
+  const more=document.getElementById('gmwwHomeOpenRanking');if(more)more.textContent=gmwwHomeAllRecent?'Thu gọn ❮':'Xem tất cả ❯';
+  if(status)status.hidden=recent.length>0;
+  const ago=t=>{
+    const minutes=Math.max(0,Math.floor((Date.now()-Date.parse(t))/60000));
+    if(minutes<60)return minutes+' phút trước';
+    const hours=Math.floor(minutes/60);
+    if(hours<24)return hours+' giờ trước';
+    return Math.floor(hours/24)+' ngày trước';
+  };
+  for(const h of recent){
+    const button=document.createElement('button');
+    button.type='button';button.className='gmww-home-recent-row';button.dataset.result=h.result==='win'?'win':h.result==='loss'?'loss':'played';
+    button.setAttribute('aria-label','Mở Thành Viên: '+String(h.member.displayName||h.member.loginId||''));
+    const avatar=document.createElement('div');avatar.className='gmww-home-recent-avatar';
+    const avatarId=String(h.member.gameCharacterId||h.member.avatarId||'');
+    if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
+      const image=document.createElement('img');image.src=memberAvatarUrl(avatarId);image.alt='';image.loading='lazy';
+      image.onerror=()=>{image.remove();avatar.textContent='♟'};
+      avatar.append(image);
+    }else avatar.textContent='♟';
+    const name=document.createElement('b');name.textContent=String(h.member.displayName||h.member.loginId||'Thành viên');
+    const action=document.createElement('span');action.textContent=h.result==='win'?'Đã thắng một ván':h.result==='loss'?'Đã kết thúc ván':'Tham gia ván chơi';
+    const time=document.createElement('small');time.textContent=ago(h.playedAt);
+    const arrow=document.createElement('i');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
+    const marker=document.createElement('span');marker.className='gmww-home-recent-marker-v377';marker.textContent=h.result==='win'?'✦':h.result==='loss'?'·':'◦';marker.setAttribute('aria-hidden','true');
+    button.append(marker,avatar,name,action,time,arrow);
+    button.addEventListener('click',()=>gmwwHomeNavigate('members'));
+    target.append(button);
+  }
+}
+
+function gmwwHomeRenderMembers(rows){
+  if(!Array.isArray(rows))return;
+  gmwwHomeRenderTop3(rows);
+  gmwwHomeText('gmwwHomeMemberCount',rows.length);
+  gmwwHomeText('gmwwHomeOnlineCount',rows.filter(m=>m?.online).length);
+  const played=rows.reduce((sum,m)=>sum+memberStats(m).games,0);
+  const matches=new Set(rows.flatMap(m=>Array.isArray(m.history)?m.history:[]).map(h=>String(h.matchId||'')).filter(Boolean));
+  gmwwHomeText('gmwwHomePlaysCount',matches.size||played);
+  const ranking=[...rows].sort((a,b)=>{
+    const A=memberStats(a),B=memberStats(b);
+    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId||'').localeCompare(String(b.displayName||b.loginId||''),'vi');
+  });
+  const leader=ranking.find(m=>memberStats(m).games>0);
+  gmwwHomeText('gmwwHomeLeaderboard',leader
+    ?'Dẫn đầu: '+String(leader.displayName||leader.loginId||'Thành viên')+' · '+memberStats(leader).w+' thắng'
+    :'Chưa có kết quả để xếp hạng.');
+  const last=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,memberName:m.displayName||m.loginId})))
+    .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
+    .sort((a,b)=>Date.parse(b.playedAt)-Date.parse(a.playedAt))[0];
+  gmwwHomeText('gmwwHomeRecentResult',last
+    ?String(last.memberName||'Thành viên')+' · '+(last.result==='win'?'Thắng':last.result==='loss'?'Thua':'Đã tham gia')+' · '+memberDate(last.playedAt,true)
+    :'Chưa có lịch sử ván được ghi nhận.');  gmwwHomeRenderExtras(rows,ranking,leader);
+}
+
+async function gmwwHomeRefresh(force=false){
+  const home=document.getElementById('home');
+  if(!home||gmwwHomeBusy||(!force&&gmwwHomeLastLoaded&&Date.now()-gmwwHomeLastLoaded<60000))return;
+  gmwwHomeBusy=true;
+  const badge=document.getElementById('gmwwHomeServerState');
+  if(badge){badge.dataset.status='checking';const label=badge.querySelector('span');if(label)label.textContent='Đang kết nối'}
+  gmwwHomeText('gmwwHomeVersion','GMWW V'+VERSION);
+  try{
+    const [health,members]=await Promise.allSettled([
+      fetch(GMWW_SERVER_BASE+'/api/health?home='+Date.now(),{cache:'no-store'})
+        .then(async r=>{const data=await r.json();if(!r.ok||data.ok!==true)throw new Error('Server không phản hồi');return data}),
+      gmApi('/api/gm/members')
+    ]);
+    if(badge){const ok=health.status==='fulfilled';badge.dataset.status=ok?'online':'offline';
+      const label=badge.querySelector('span');if(label)label.textContent=ok?'Server kết nối':'Mất kết nối'}
+    if(members.status==='fulfilled'&&Array.isArray(members.value?.members))
+      gmwwHomeRenderMembers(members.value.members);
+    else{
+      gmwwHomeRenderTop3(null);
+      gmwwHomeText('gmwwHomeMemberCount','—');
+      gmwwHomeText('gmwwHomeOnlineCount','—');
+      gmwwHomeText('gmwwHomePlaysCount','—');
+      gmwwHomeText('gmwwHomeLeaderboard','Chưa kết nối được dữ liệu thành viên.');
+      gmwwHomeText('gmwwHomeLeaderWins','—');
+      document.getElementById('gmwwHomeRecentRows')?.replaceChildren();
+      const msg=document.getElementById('gmwwHomeRecentResult');if(msg)msg.hidden=false;
+      gmwwHomeText('gmwwHomeRecentResult','Không tải được lịch sử. Nhấn Làm mới để thử lại.');
+    }
+    gmwwHomeLastLoaded=Date.now();
+  }finally{gmwwHomeBusy=false}
+}
+function gmwwHomeNavigate(target){
+  if(!['start','members','library','settings'].includes(target))return;
+  const nav=document.querySelector('#bottomNav .nav[data-page="'+target+'"]');
+  if(nav)nav.click();
+}
+document.getElementById('gmwwHomeEnterVillage')?.addEventListener('click',()=>gmwwHomeNavigate('start'));
+document.querySelectorAll('[data-home-destination]').forEach(button=>button.addEventListener('click',()=>{gmwwHomeNavigate(button.dataset.homeDestination);const tab=button.dataset.homeLibraryTab;if(tab&&button.dataset.homeDestination==='library')document.querySelector('#library .libtab[data-lib="'+tab+'"]')?.click()}));
+document.getElementById('gmwwHomeOpenRanking')?.addEventListener('click',()=>{
+  gmwwHomeAllRecent=!gmwwHomeAllRecent;
+  if(gmwwHomeCachedRows.length)gmwwHomeRenderMembers(gmwwHomeCachedRows);
+});
+document.getElementById('gmwwHomeTop3Ranking')?.addEventListener('click',gmwwHomeOpenMemberRanking);
+document.getElementById('gmwwHomeRefresh')?.addEventListener('click',()=>gmwwHomeRefresh(true));
+document.querySelectorAll('#bottomNav .nav[data-page="home"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>gmwwHomeRefresh(false),35)));
+setTimeout(()=>{if(document.getElementById('home')?.classList.contains('active'))gmwwHomeRefresh()},150);
+
+
+
+/* GMWW V2.57 — immersive 2D village GM flow */
+const GMWW_PLAY_SCENE_KEY='GMWW_V264_PLAY_SCENE';
+const GMWW_OLD_PLAY_SCENE_KEYS=['GMWW_V263_PLAY_SCENE','GMWW_V257_PLAY_SCENE','GMWW_V256_PLAY_SCENE','GMWW_V255_PLAY_SCENE','GMWW_V250_PLAY_SCENE','GMWW_V247_PLAY_SCENE','GMWW_V246_PLAY_SCENE'];
+const PLAY_STEPS=['lobby','room','seats','game','roles','deal','battle'];
+let playGatherToolsDismissed=false;
+let playSeatPresetOpen=false;
+const PLAY_STEP_COPY={
+  lobby:{k:'SẢNH CHỜ',t:'Tạo Phòng',x:'Mọi người tập trung tại làng. Nhấn Tiếp tục để vào bước Tạo phòng.',a:'TẠO PHÒNG'},
+  room:{k:'TẠO PHÒNG',t:'Tạo Phòng',x:'Chọn ONLINE hoặc OFFLINE rồi tạo Phòng.',a:'TẠO PHÒNG'},
+  game:{k:'CHỌN VÁN MẪU',t:'Chọn Ván Mẫu',x:'Server chuẩn bị sẵn cấu hình Ván Mẫu; Player Web chưa nhận Vai Trò.',a:'CHỌN VÁN MẪU'},
+  seats:{k:'TẬP HỢP DÂN LÀNG',t:'Tập Hợp Dân Làng',x:'Gọi thành viên vào làng, sắp ngẫu nhiên ưu tiên 8 vị trí vòng trong hoặc GM bố trí thủ công.',a:'CHỐT VỊ TRÍ'},
+  roles:{k:'PHÂN VAI',t:'Phân Vai',x:'Vai Trò và Artifact được phân nội bộ, chưa gửi xuống Player Web.',a:'PHÂN VAI'},
+  deal:{k:'PHÁT VAI',t:'Phát Vai',x:'Chỉ tại bước này Server mới gửi Vai Trò/Artifact riêng xuống Player Web.',a:'PHÁT VAI'},
+  battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
+};
+let playSceneState=(()=>{
+  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
+  try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.roomEnabled=saved.roomEnabled===true;saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(saved.step==='members')saved.step='seats';saved.lobbyGeneration=Math.max(0,Number(saved.lobbyGeneration||0));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.roomEnabled=false;saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='lobby';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))&&!['lobby','room'].includes(saved.step))saved.step='lobby';if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))){saved.roomCode='—';saved.gmToken='';saved.selectedMemberIds=[];saved.activePlayerId=''}return saved}catch{return base}
+})();
+const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
+function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
+function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
+function playLiveMembers(){
+  if(Array.isArray(playSceneRuntime.players)&&playSceneRuntime.players.length)return playSceneRuntime.players.filter(p=>p?.kind==='member');
+  const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[],wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  if(wanted.size)return rows.filter(m=>wanted.has(String(m.loginId)));
+  return [];
+}
