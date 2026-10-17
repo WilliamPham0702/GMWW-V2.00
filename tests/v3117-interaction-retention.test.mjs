@@ -1,14 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { pruneInteractions } from '../src/gmww-interaction-retention.js';
 
 const src = fs.readFileSync('src/index.js', 'utf8');
-const start = src.indexOf('const INTERACTION_BYTE_BUDGET');
-const fnStart = src.indexOf('function pruneInteractions');
-const fnText = src.slice(fnStart, src.indexOf('\n}\n', fnStart) + 3);
-const { pruneInteractions } = new Function(
-  src.slice(start, src.indexOf('function pruneInteractions', start)) + fnText + '; return { pruneInteractions };'
-)();
 const big = 'x'.repeat(2000);
 
 test('V3.119 interactions are not trimmed to a fixed row count', () => {

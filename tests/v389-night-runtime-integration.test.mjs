@@ -6,6 +6,7 @@ import {webcrypto} from 'node:crypto';
 import {combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,timelineDisplaySteps} from '../src/gmww-night-turn-rules.js';
 import {defaultPriorityFirst,artifactCycleKey,reserveArtifactActivation} from '../src/gmww-game-scene-rules.js';
 import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage} from '../src/gmww-battle-action-policy.js';
+import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -14,10 +15,10 @@ const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
 const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
-const pruneHelper=source.slice(source.indexOf('const INTERACTION_BYTE_BUDGET'),source.indexOf('\n}\n',source.indexOf('function pruneInteractions'))+3);
-const Room=vm.runInNewContext(cycleHelper+pruneHelper+'; (class { '+methods+activate+' })',{
+
+const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
