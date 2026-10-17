@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const read=p=>fs.readFileSync(p,'utf8');
+const gm=read('server-game/current/app.js'),gmSrc=read('server-game/src/30-village-and-setup.part');
+const worker=read('src/index.js'),html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
+const gmStatus=read('server-game/current/status-visuals.css'),webStatus=read('assets/village/status-visuals.css');
+const web=read('assets/village/village.mjs'),webCss=read('assets/village/village.css');
+const context={};vm.runInNewContext(read('server-game/current/status-visuals.js'),context);
+const vis=context.GMWW_STATUS_VISUALS;
+test('V3.131: rejected journal UI is gone; unbounded server audit remains',()=>{
+  for(const s of [gm,gmSrc,html,css])assert.doesNotMatch(s,/playActionLog(?:Open|Close|Sheet|Rows|More)|playLoadActionLog|play-action-log-trigger/);
+  assert.match(worker,/async gmActionLog\(request\)/);
+  assert.match(worker,/prefix:"actionLog:",reverse:true,limit:limit\+1/);
+  assert.match(worker,/await this.ctx.storage.put\("actionLog:"/);
+});
+test('V3.131: small natural-color icons orbit around body axis with constant size',()=>{
+  assert.match(gmStatus,/--orbit-radius:30px;--orbit-height:9px;--orbit-icon-size:12px/);
+  assert.match(gmStatus,/@keyframes gmwwSvVerticalOrbit/);
+  assert.match(gmStatus,/animation:gmwwSvVerticalOrbit 6s linear infinite/);
+  assert.doesNotMatch(gmStatus,/gmww-sv-red-wolf|gmwwSvOrbitCounter/);
+  assert.equal(webStatus.slice(0,gmStatus.length),gmStatus);
+  const bite=vis.overlay(['wolf_bitten']);
+  assert.match(bite,/🐺/);assert.doesNotMatch(bite,/red-wolf/);
+  const multi=vis.overlay(['protected','hunt','wolf_bitten']);
+  assert.match(multi,/🛡️ Bảo Vệ/);
+  assert.match(multi,/🏹 Săn/);
+  assert.match(multi,/🐺 Sói Cắn/);
+  assert.match(multi,/--orbit-delay:-/);
+});
+test('V3.131: status, name, role are above GM and Player Web sprites',()=>{
+  assert.match(gmSrc,/showRole\?'<span class="play-player-role">/);
+  assert.match(gmSrc,/play-player-over/);
+  assert.match(gm,/querySelector\(':scope > \.gmww-sv-badges'\)/);
+  assert.match(gmSrc,/\.play-player-over > \.gmww-sv-badges/);
+  assert.match(web,/over\.append\(name,role\);button\.append\(over,avatar\)/);
+  assert.match(web,/statusBadge\)over\.prepend\(statusBadge\)/);
+  assert.match(web,/\.player-over > \.gmww-sv-badges/);
+  assert.match(css,/\.play-player-over \.play-player-role\{margin:0 auto!important/);
+  assert.match(webCss,/\.player \.player-over \.player-role\{margin:0 auto/);
+});

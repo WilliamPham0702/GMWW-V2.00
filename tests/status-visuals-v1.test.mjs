@@ -73,7 +73,7 @@ test('C: Player Web receives status IDs and mirrors GM animation assets',()=>{
   assert.match(village,/statusId:safeText\(x\?\.statusId/);
   assert.match(village,/gmww-sv-overlay/);
   assert.match(village,/gmww-sv-badges/);
-  assert.match(villageCss,/@import "\.\/status-visuals\.css\?v=3130"/);
+  assert.match(villageCss,/@import "\.\/status-visuals\.css\?v=3131"/);
   for(const v of vis.entries)assert.ok(webCss.includes('gmww-sv-'+v.effect));
   assert.equal(webCss.slice(0,gmCss.length),gmCss);
 });
@@ -120,8 +120,8 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
 test('Preview asset: same exact 15-status renderer, no room modification, usable on iPhone',()=>{
   assert.equal(previewRenderer,src);
   assert.match(previewPage,/<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
-  assert.match(previewPage,/\/status-visuals\.js\?v=v3126-orbit/);
-  assert.match(previewPage,/\/village\/status-visuals\.css\?v=v3126-orbit/);
+  assert.match(previewPage,/\/status-visuals\.js\?v=v3131-vertical/);
+  assert.match(previewPage,/\/village\/status-visuals\.css\?v=v3131-vertical/);
   assert.match(previewPage,/api\.entries\.filter/);
   assert.match(previewPage,/permissions\.get\(id\)/);
   assert.match(previewPage,/api\.overlay\(ids\)/);
@@ -164,16 +164,16 @@ test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=
   assert.match(vis.overlay(['marked']),/👎/);
   assert.match(vis.overlay(['dead']),/gmww-sv-gray-smoke/);
   assert.match(vis.overlay(['wolf_bitten']),/🐺/);
-  assert.match(gmCss,/gmwwSvOrbitSpin/);
+  assert.match(gmCss,/gmwwSvVerticalOrbit/);
   assert.match(gmCss,/\[data-battle-action\] \.gmww-sv-action-preview\{position:absolute;inset:0/);
   assert.match(previewPage,/function overlay\(ids\)\{return api\.overlay\(ids\)\}/);
 });
 
 test('V2 production Player Web uses the approved shared orbit renderer, not legacy visual mapping',()=>{
-  assert.ok(village.includes('import "../status-visuals.js?v=v3126-orbit";'));
+  assert.ok(village.includes('import "../status-visuals.js?v=v3131-vertical";'));
   assert.ok(village.includes('approvedVisuals.overlay(rows.map(x=>x.statusId))'));
   assert.ok(village.includes('if(approvedVisuals)button.insertAdjacentHTML'));
-  assert.match(read('assets/village/index.html'),/visual=v6/);
+  assert.match(read('assets/village/index.html'),/visual=v7/);
 });
 
 test('V3.124: Player Web updates overlay on same stable avatar and skips unchanged heartbeats',()=>{
