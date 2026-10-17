@@ -47,7 +47,7 @@
     const count=Math.max(6,ids.length);
     const slots=Array.from({length:count},(_,i)=>{
       const id=ids[i%ids.length],icons=orbitIcons[id],angle=360*i/count;
-      return '<span class="gmww-sv-orbit-item" data-orbit="'+safe(id)+'" style="--i:'+i+';--angle:'+angle+'deg"><span class="'+(id==='wolf_bitten'?'gmww-sv-red-wolf':'')+'">'+safe(icons[Math.floor(i/ids.length)%icons.length])+'</span></span>';
+      return '<span class="gmww-sv-orbit-item" data-orbit="'+safe(id)+'" style="--i:'+i+';--angle:'+angle+'deg;--orbit-delay:-'+(6*i/count).toFixed(4)+'s"><span>'+safe(icons[Math.floor(i/ids.length)%icons.length])+'</span></span>';
     }).join('');
     return '<span class="gmww-sv-orbit"'+(ids.length===1?' data-orbit="'+safe(ids[0])+'"':'')+'>'+slots+'</span>';
   }
@@ -55,7 +55,7 @@
     const collection=layers(ids);
     if(!collection.items.length)return'';
     const effects=(collection.shown.includes('dead')?'<span class="gmww-sv-fx gmww-sv-gray-smoke" data-status-fx="dead" aria-hidden="true"><i></i><i></i><i></i></span>':'')+orbitMarkup(collection.shown);
-    const badges=collection.items.map(id=>'<span title="'+safe(byId[id].name)+'">'+safe(byId[id].icon)+'</span>').join('');
+    const badges=collection.items.map(id=>'<span title="'+safe(byId[id].name)+'">'+safe(byId[id].icon)+' '+safe(byId[id].name)+'</span>').join('');
     return '<span class="gmww-sv-overlay" aria-hidden="true">'+effects+'</span><span class="gmww-sv-badges" aria-hidden="true">'+badges+'</span>';
   }
   const api=Object.freeze({entries:Object.freeze(entries.map(x=>Object.freeze(x))),byId:Object.freeze(byId),normalize,resolveRows,layers,overlay,safe});
