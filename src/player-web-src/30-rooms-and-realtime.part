@@ -1,0 +1,235 @@
+function renderRooms(){
+  const list=$('#rooms .room-list');if(!list)return;list.innerHTML='';
+  if(!state.rooms.length){list.innerHTML='<article class="room-card"><div class="wait-note">Hiện chưa có phòng Online đang mở.</div></article>';return}
+  for(const r of state.rooms){
+    const card=document.createElement('article');card.className='room-card';card.dataset.roomCode=r.code;
+    card.innerHTML='<div class="room-head"><div><h3></h3><small></small></div><span class="live">● LIVE</span></div><div class="room-metrics"><div class="metric"><b></b><span>Đã cấu hình cho ván</span></div><div class="metric"><b></b><span>Người đã tham gia</span></div></div><button class="primary join-btn">THAM GIA</button><div class="room-detail"><div class="section-title" style="margin-top:0">Thành viên</div><div class="joinedPlayers"></div><div class="wait-note"></div><div class="room-actions"><button class="secondary leaveButton">RỜI ĐI</button></div></div>';
+    card.querySelector('h3').textContent=r.roomName||('Phòng '+r.code);card.querySelector('small').textContent=(String(r.roomMode||'online').toLowerCase()==='offline'?'OFFLINE':'ONLINE')+' • Mã '+r.code+(r.gameName?' • '+r.gameName:'');const metrics=card.querySelectorAll('.metric b'),current=state.roomCode===r.code&&!!state.participantId,slots=Number(r.seatCount||0)||Number(current?state.room?.seatCount:0)||12,joined=current?state.players.length:Number(r.joinedCount||0);metrics[0].textContent=slots+' Vị trí';metrics[1].textContent=joined+' / '+slots;
+    const join=card.querySelector('.join-btn');if(r.locked){join.disabled=true;join.textContent='PHÒNG ĐÃ KHÓA';join.classList.add('loading')}else join.onclick=()=>joinRoom(r.code);
+    if(state.roomCode===r.code&&state.participantId){card.classList.add('joined');join.style.display='none';renderRoomMembers(card)}
+    list.appendChild(card);
+  }
+}
+function renderRoomMembers(card){
+  const box=card.querySelector('.joinedPlayers');if(!box)return;box.innerHTML='';
+  for(const p of state.players){const row=document.createElement('div');row.className='member-row';row.innerHTML='<img><div><b></b><small></small></div><span class="badge"></span>';row.querySelector('img').src=p.gameCharacterId?gameCharacterImageUrl(p.gameCharacterId):avatarUrl(p.avatarId);row.querySelector('b').textContent=p.displayName;const sm=row.querySelector('small'),bd=row.querySelector('.badge');sm.textContent='Vị trí '+(p.seatId||'—')+' • '+(p.ready?'Đã sẵn sàng':p.setupComplete?'Đang chuẩn bị':'Chưa chọn Nhân Vật/Vị trí');sm.className=p.ready?'ready-yes':'ready-no';bd.textContent=p.ready?'READY':p.setupComplete?'WAIT':'SETUP';bd.classList.add(p.ready?'win':'lose');box.appendChild(row)}
+  const note=card.querySelector('.wait-note'),ended=String(state.room?.phase||'').toLowerCase()==='ended';note.textContent=ended?'':(state.ready?'✓ Đã sẵn sàng • Đang chờ Quản Trò bắt đầu ván chơi.':'Đã được gọi vào phòng • Chờ GM xếp vị trí.');
+  const lb=card.querySelector('.leaveButton');if(lb){const sticky=!!state.room?.locked&&String(state.room?.phase||'').toLowerCase()!=='ended';if(sticky){lb.textContent='PHÒNG ĐÃ KHÓA';lb.disabled=true;lb.onclick=null}else{lb.textContent='RỜI ĐI';lb.disabled=false;lb.onclick=leaveRoom}}
+}
+async function joinRoom(code){
+  if(!state.token){go('login');return false}
+  code=String(code||'').trim().toUpperCase();if(!code)return false;
+  try{const d=await api('/api/rooms/'+encodeURIComponent(code)+'/join',{method:'POST',body:JSON.stringify({token:state.token})});state.roomCode=code;state.room=d.room||state.rooms.find(x=>x.code===code)||null;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];state.selectedGameCharacterId=String(d.player?.gameCharacterId||'');state.selectedSeatId=Number(d.player?.seatId||d.player?.moveTargetSeatId||0)||null;state.lastResultKey='';state.lobbyMotionPaused=false;resetLobbyMotionPlan();rememberActiveRoom(code,state.participantId);restoreCachedRole();await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);maybeOpenGame();await loadGameCharacters();state.roomSetupOpen=false;closeRoomSetup();ensureVillageReadyDock();scheduleMovementCompletion(d.player);syncVillageFrame();scheduleLobbyMotion(500);return true}catch(e){toast(e.message);return false}
+}
+window.joinRoom=joinRoom;
+async function leaveRoom(){
+  if(!state.participantId)return;
+  if(state.room?.locked&&String(state.room?.phase||'').toLowerCase()!=='ended'){toast('Phòng đã khóa. Chỉ GM có thể Kick hoặc Mở Phòng.');return}
+  try{await api('/api/rooms/'+state.roomCode+'/leave',{method:'POST',body:JSON.stringify({participantId:state.participantId})})}
+  catch(e){toast(e.message||'Không thể rời Phòng.');return}
+  clearActiveRoom();disconnectRoom();await sendPresence();await enterVillage();
+}
+window.leaveRoom=leaveRoom;
+
+function disconnectRoom(){
+  try{state.ws?.close(1000,'PLAYER_LEFT_ROOM')}catch{};if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}if(state.gameStateTimer){clearInterval(state.gameStateTimer);state.gameStateTimer=null}
+  clearMovementCompletionTimer();state.lobbyMotionPaused=false;state.lobbySeatWalkPending=null;resetLobbyMotionPlan();state.ws=null;state.roomCode='';state.room=null;state.participantId=null;state.players=[];state.ready=false;state.selectedGameCharacterId='';state.selectedSeatId=null;state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');$('#gmwwVillageReadyDock')?.classList.remove('show');state.role=null;state.roleOpen=false;state.lastResultKey='';state.dead=false;
+}
+async function handleRoomMembershipLost(message='Bạn đã rời Phòng.'){
+  if(!state.participantId&&!state.roomCode)return;
+  clearActiveRoom();disconnectRoom();state.roles=[];state.roleIndex=0;state.roleEffects={};state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.roomNavigationAuthorized=true;$('#roleCard')?.classList.remove('revealed');renderRoleEffects();
+  try{await api('/api/members/presence',{method:'POST',headers:auth(),body:JSON.stringify({roomCode:null,ready:false})})}catch{}
+  try{await loadRooms(false)}catch{}renderRooms();await enterVillage();toast(message);
+}
+async function sendRoomHeartbeat(){if(!state.roomCode||!state.participantId)return;try{const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/heartbeat',{method:'POST',body:JSON.stringify({participantId:state.participantId,ready:state.ready})});if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()==='ended')showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'')}}catch(e){if(e?.status===403||e?.status===404||e?.status===423||e?.code==='ROOM_DISABLED')await handleRoomMembershipLost()}}
+async function sendPresence(){if(!state.token)return;const hint=savedActiveRoom();const roomCode=state.participantId?state.roomCode:(hint?.roomCode||null);try{const presence=await api('/api/members/presence',{method:'POST',headers:auth(),body:JSON.stringify({roomCode,ready:state.participantId?state.ready:false})});if(presence?.roomRevoked&&state.participantId){await handleRoomMembershipLost('GM đã mời bạn về Sảnh chờ.');return}}catch{}if(state.participantId)await sendRoomHeartbeat()}
+function startPresence(){clearInterval(state.presenceTimer);sendPresence();state.presenceTimer=setInterval(()=>{sendPresence();if($('#rooms')?.classList.contains('active')&&!state.participantId)loadRooms(false)},30000)}
+function roleEffectPriority(type){return type==='dead'?4:type==='expelled'?3:type==='frozen'?2:type==='assassin_mark'?1:0}
+function ensureRoleEffectUi(){
+  const back=$('#roleCard .role-back');if(!back)return null;let el=$('#gmwwRoleEffect');
+  if(el&&el.parentElement!==back)el.remove();
+  if(!el){el=document.createElement('div');el.id='gmwwRoleEffect';el.innerHTML='<div class="fx-icon"></div><div class="fx-title"></div><div class="fx-msg"></div><div class="fx-actions"></div>';back.appendChild(el)}
+  return el
+}
+function renderRoleEffects(){
+  const shell=$('#game .role-card-shell'),el=ensureRoleEffectUi();if(!shell||!el)return;
+  const rows=Object.values(state.roleEffects||{}).filter(Boolean).sort((a,b)=>roleEffectPriority(b.type)-roleEffectPriority(a.type));
+  const fx=rows[0],actions=el.querySelector('.fx-actions');if(!fx){el.className='';el.classList.remove('show');if(actions)actions.innerHTML='';shell.classList.remove('gmww-effect-locked');return}
+  const meta=interactionMeta(fx.type);el.className='show fx-'+meta[2];el.querySelector('.fx-icon').textContent=meta[0];el.querySelector('.fx-title').textContent=meta[1];el.querySelector('.fx-msg').textContent=fx.message||'Hiệu Ứng đang áp dụng.';
+  if(actions){actions.innerHTML='';if(fx.type==='assassin_mark'){const opts=Array.isArray(fx.options)&&fx.options.length?fx.options:['👍','👎'];for(const x of opts){const b=document.createElement('button');b.textContent=x;b.className=x==='👍'?'gold':'';b.onclick=e=>{e.stopPropagation();respondInteraction(fx.id,x)};actions.appendChild(b)}}}
+  shell.classList.add('gmww-effect-locked');
+  if(state.roleOpen){clearRolePrivacyTimer();state.roleOpen=false;$('#roleCard')?.classList.remove('revealed')}
+}
+function setRoleEffect(ix){
+  if(!ix||!['frozen','expelled','dead','assassin_mark'].includes(ix.type))return;
+  state.roleEffects=state.roleEffects||{};state.roleEffects[ix.type]={type:ix.type,id:ix.id||'',message:ix.message||'',matchId:ix.matchId||'',cycleKey:ix.cycleKey||ix.roundKey||ix.nightKey||'',expiresAt:ix.expiresAt||null,options:Array.isArray(ix.options)?ix.options.slice(0,4):[]};
+  renderRoleEffects()
+}
+function syncRoleEffects(rows){
+  const arr=Array.isArray(rows)?rows:[];const next={};
+  for(const ix of arr){if(!ix||!['frozen','expelled','dead','assassin_mark'].includes(ix.type))continue;if(ix.expiresAt&&Date.parse(ix.expiresAt)<=Date.now())continue;next[ix.type]=ix}
+  state.roleEffects=next;renderRoleEffects()
+}
+function clearTemporaryRoleEffects(phase='',night=0){phase=String(phase||'').toLowerCase()==='day'?'morning':String(phase||'').toLowerCase();night=Number(night||0);if(!state.roleEffects){renderRoleEffects();return}if(phase==='morning'){const fx=state.roleEffects.frozen;if(!fx||!Number(fx.night||0)||!night||night>=Number(fx.night||0))delete state.roleEffects.frozen}else if(phase==='night'){const fr=state.roleEffects.frozen;if(fr&&(!Number(fr.night||0)||!night||night>Number(fr.night||0)))delete state.roleEffects.frozen;const ex=state.roleEffects.expelled;if(ex&&Number(ex.night||0)>0&&night>Number(ex.night||0))delete state.roleEffects.expelled}renderRoleEffects()}
+function roleIsEffectLocked(){return Object.keys(state.roleEffects||{}).some(k=>['frozen','expelled','dead','assassin_mark'].includes(k))}
+function ensureInteractionUi(){
+  if($('#gmwwPlayerInteraction'))return;
+  const st=document.createElement('style');st.id='gmwwPlayerInteractionStyle';st.textContent='#gmwwPlayerInteraction{position:fixed;inset:0;z-index:99999;background:#02050be8;display:none;align-items:center;justify-content:center;padding:20px}#gmwwPlayerInteraction.show{display:flex}#gmwwPlayerInteraction .ix-card{width:min(100%,520px);border:2px solid #d59a43;border-radius:26px;background:linear-gradient(180deg,#14101c,#070b12);box-shadow:0 24px 70px #000;padding:26px 20px;text-align:center;color:#fff;position:relative;overflow:hidden}#gmwwPlayerInteraction .ix-card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;background:radial-gradient(circle at 50% 0,#d7a64b22,transparent 55%)}#gmwwPlayerInteraction .ix-card.ix-frozen{border-color:#75cfff;background:linear-gradient(180deg,#092945,#06111f)}#gmwwPlayerInteraction .ix-card.ix-dead{border-color:#d94d5c;background:linear-gradient(180deg,#2b0c12,#08070b)}#gmwwPlayerInteraction .ix-card.ix-expelled{border-color:#e8a94e;background:linear-gradient(180deg,#3a2510,#0d0b0a)}#gmwwPlayerInteraction .ix-card.ix-vote{border-color:#ae77ff;background:linear-gradient(180deg,#23143b,#090914)}#gmwwPlayerInteraction .ix-card.ix-notice{border-color:#69b7ef;background:linear-gradient(180deg,#102b42,#07111c)}#gmwwPlayerInteraction .ix-icon{font-size:62px;line-height:1;margin-bottom:10px}#gmwwPlayerInteraction h2{margin:0;color:#ffd477;font-size:30px}#gmwwPlayerInteraction p{font-size:18px;line-height:1.45;color:#d6dce5;margin:14px 0 20px}#gmwwPlayerInteraction .ix-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#gmwwPlayerInteraction .ix-actions.one{grid-template-columns:1fr}#gmwwPlayerInteraction button{min-height:62px;border-radius:16px;border:1px solid #d59a43;background:#14283c;color:#fff;font-size:22px;font-weight:900}#gmwwPlayerInteraction button.gold{background:linear-gradient(#d89235,#9b5619);color:#fff6dd}';
+  document.head.appendChild(st);
+  const el=document.createElement('div');el.id='gmwwPlayerInteraction';el.innerHTML='<div class="ix-card"><div class="ix-icon"></div><h2></h2><p></p><div class="ix-actions"></div></div>';document.body.appendChild(el)
+}
+function interactionMeta(type){return type==='frozen'?['❄️','BỊ ĐÓNG BĂNG','frozen']:type==='expelled'?['🚪','BỊ ĐUỔI KHỎI LÀNG','expelled']:type==='dead'?['💀','BẠN ĐÃ CHẾT','dead']:type==='assassin_mark'?['🎯','BỊ ĐÁNH DẤU','marked']:type==='thumb_vote'?['⚖️','HÃY CHỌN DẤU','vote']:['✨','HIỆU ỨNG','notice']}
+function showPlayerInteraction(ix){
+  if(!ix||!ix.id||ix.status&&ix.status!=='pending')return;if(String(ix.loginId||'').toLowerCase()!==String(state.member?.loginId||'').toLowerCase())return;
+  if(ix.type==='assassin_mark'){setRoleEffect(ix);return}
+  if(['frozen','expelled','dead'].includes(ix.type)){setRoleEffect(ix);respondInteraction(ix.id,'ĐÃ HIỂU',true);return}
+  ensureInteractionUi();if(state.activeInteractionId===ix.id&&$('#gmwwPlayerInteraction')?.classList.contains('show'))return;state.activeInteractionId=ix.id;state.activeInteraction=ix;
+  const el=$('#gmwwPlayerInteraction'),meta=interactionMeta(ix.type),card=el.querySelector('.ix-card');card.className='ix-card ix-'+meta[2];el.querySelector('.ix-icon').textContent=meta[0];el.querySelector('h2').textContent=meta[1];el.querySelector('p').textContent=ix.message||'Thông báo từ Quản Trò.';
+  const actions=el.querySelector('.ix-actions'),opts=Array.isArray(ix.options)&&ix.options.length?ix.options:(ix.type==='thumb_vote'?['👍','👎']:['ĐÃ HIỂU']);actions.className='ix-actions '+(opts.length===1?'one':'');actions.innerHTML='';
+  for(const x of opts){const b=document.createElement('button');b.textContent=x;b.className=x==='👍'||x==='ĐÃ HIỂU'?'gold':'';b.onclick=()=>respondInteraction(ix.id,x);actions.appendChild(b)}
+  if(ix.type==='dead')setDead(true);el.classList.add('show')
+}
+function handlePendingInteractions(rows){for(const ix of (Array.isArray(rows)?rows:[]))if(ix?.status==='pending'){showPlayerInteraction(ix);break}}
+async function respondInteraction(id,response,silent=false){
+  if(!state.roomCode||!state.token)return;
+  try{await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/interaction/respond',{method:'POST',headers:auth(),body:JSON.stringify({interactionId:id,response})});if(state.roleEffects?.assassin_mark?.id===id){delete state.roleEffects.assassin_mark;renderRoleEffects()}const el=$('#gmwwPlayerInteraction');if(el)el.classList.remove('show');state.activeInteractionId='';state.activeInteraction=null;if(!silent)toast(response==='👍'||response==='👎'?'Đã gửi '+response+' cho Quản Trò.':'Đã xác nhận.');setTimeout(()=>pollRoomState(),120)}catch(e){if(!silent)toast(e.message||'Không gửi được phản hồi.')}
+}
+window.GMWWPlayerInteraction={show:showPlayerInteraction,respond:respondInteraction};
+async function pollRoomState(){
+  if(!state.roomCode||!state.participantId)return;
+  await loadUiSettings();
+  try{
+    const pub=await api('/api/rooms/'+encodeURIComponent(state.roomCode));
+    if(pub?.room){if(pub.room.enabled===false){await handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=pub.room;if(Array.isArray(pub.players)){state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId)){await handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}}if(String(pub.room.phase||'').toLowerCase()==='ended'){showResult(pub.room.winnerFaction||pub.room.winnerLabel||'',pub.room.matchId||'');return}maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock();syncVillageFrame()}
+  }catch(_){}
+  if(!state.token)return;
+  try{
+    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/me',{headers:auth()});
+    if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()!=='ended')maybeOpenGame()}if(d?.cardBackImage){state.cardBackImage=d.cardBackImage;applyRoleCardBack()}
+    if(d?.player){const me=d.player;state.ready=!!me.ready}
+    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);
+    if(d?.role){state.role=d.role;renderRole();maybeOpenGame()}
+    if(String(d?.room?.phase||'').toLowerCase()==='ended')showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');
+  }catch(e){if(e?.status===403||e?.status===404||e?.status===423||e?.code==='ROOM_DISABLED')await handleRoomMembershipLost()}
+}
+function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(state.member)refreshGmPresence();if(state.roomCode&&state.participantId)pollRoomState()}});
+
+function connectWS(){
+  if(!state.roomCode||!state.participantId)return;try{state.ws?.close();const proto=location.protocol==='https:'?'wss:':'ws:';state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));
+  state.ws.onopen=()=>{if(state.wsPingTimer)clearInterval(state.wsPingTimer);sendRoomHeartbeat();try{state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{};state.wsPingTimer=setInterval(()=>{try{if(state.ws?.readyState===WebSocket.OPEN)state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{}},10000);startRoomStateWatch()};state.ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return};const movementEvent=d.type==='player_move'||d.type==='player_move_complete';if(Number.isFinite(Number(d.serverTime)))state.serverClockOffsetMs=Number(d.serverTime)-Date.now();if(d.type==='room_disbanded'){handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}if(d.type==='room_state'||movementEvent){if(d.room?.enabled===false){handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=d.room||state.room;state.players=d.players||state.players||[];const me=state.players.find(x=>x.participantId===state.participantId);if(!me&&state.participantId){handleRoomMembershipLost();return}if(me){state.ready=!!me.ready;if(me.gameCharacterId)state.selectedGameCharacterId=String(me.gameCharacterId);state.selectedSeatId=Number(me.seatId||me.moveTargetSeatId||0)||null;scheduleMovementCompletion(me)}if(!movementEvent){renderRooms();refreshPrivateRole(true)}if(d.room?.phase==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'')}else{if(!movementEvent){maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock()}syncVillageFrame()}}else if(d.type==='room_cycle'){state.room=d.room||state.room;state.villageCycle={phase:d.phase||state.room?.cyclePhase||'',night:Number(d.night||state.room?.cycleNight||0),day:Number(d.day||0)};syncVillageFrame();clearTemporaryRoleEffects(d.phase,d.night);refreshPrivateRole(true)}else if(d.type==='night_turn'||d.type==='auto_gm'){state.room=d.room||state.room;if(state.room)state.villageCycle={phase:state.room.cyclePhase||'',night:Number(state.room.cycleNight||0),day:0};syncVillageFrame()}else if(d.type==='role_ready'||d.type==='role_progress'||d.type==='artifact_progress'||d.type==='artifact_activation'){refreshPrivateRole(true)}else if(d.type==='player_interaction'){showPlayerInteraction(d.interaction)}else if(d.type==='room_disabled'){handleRoomMembershipLost('Phòng đã được Quản Trò Tắt. Bạn đã được đưa về Phòng chờ.')}else if(d.type==='room_hard_reset'){handleRoomMembershipLost(d.forcedEnd?'Quản Trò đã kết thúc cưỡng ép ván chơi. Bạn đã trở về sảnh chờ.':'Quản Trò đã RESET Phòng. Hãy chọn Phòng để tham gia lại.')}else if(d.type==='room_reset'){state.room=d.room||state.room;state.players=d.players||state.players;const me=state.players.find(x=>x.participantId===state.participantId);state.ready=me?!!me.ready:true;state.role=null;state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.artifactFocus='';clearArtifactDraft();state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};renderRooms();if(!$('#resultOverlay')?.classList.contains('show'))enterVillage()}else if(d.type==='player_status'&&d.participantId===state.participantId){setDead(d.status==='dead')}else if(d.type==='player_kicked'&&d.participantId===state.participantId){handleRoomMembershipLost('GM đã Kick bạn khỏi Phòng.')}else if(d.type==='game_result'){showResult(d.winnerFaction||d.winnerLabel||'',d.matchId||d.room?.matchId||'')}};
+  state.ws.onclose=e=>{if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(e?.reason==='ROOM_DISABLED'){handleRoomMembershipLost('Phòng đã được Quản Trò Tắt. Bạn đã được đưa về Phòng chờ.');return}if(e?.reason==='PLAYER_KICKED'){handleRoomMembershipLost('GM đã Kick bạn khỏi Phòng.');return}if(e?.reason==='PLAYER_OFFLINE_KICKED'){handleRoomMembershipLost('Bạn đã rời Phòng vì mất kết nối quá lâu.');return}if(e?.reason==='ROOM_HARD_RESET'){handleRoomMembershipLost('Quản Trò đã RESET Phòng. Hãy chọn Phòng để tham gia lại.');return}if(state.participantId&&state.roomCode)setTimeout(connectWS,1800)};}catch{}
+}
+async function refreshPrivateRole(force=false){
+  if(!state.roomCode||!state.token||!state.participantId)return false;
+  try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=String(state.artifact?.artifactId||'');state.artifact=d?.artifact||null;state.artifactCycle=d?.artifactCycle||{cycleKey:'',count:0,max:3};if(oldArtifactId&&state.artifact&&oldArtifactId!==String(state.artifact.artifactId||'')){state.artifactOpen=false;state.artifactFocus='';clearArtifactDraft()}const incoming=Array.isArray(d?.roles)&&d.roles.length?d.roles:(d?.role?[d.role]:[]),previous=state.role,prevKey=previous?String(previous.assignmentIndex??previous.roleId??''):'';state.roles=incoming;if(incoming.length){let ix=incoming.findIndex(x=>String(x?.assignmentIndex??x?.roleId??'')===prevKey);if(ix<0)ix=Math.min(Math.max(0,Number(state.roleIndex||0)),incoming.length-1);state.roleIndex=ix;state.role=incoming[ix]||incoming[0]}else{state.roleIndex=0;state.role=null}state.room=d.room||state.room;if(String(d.room?.phase||'').toLowerCase()==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'');return false}if(state.role){rememberActiveRole(state.role);if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}else if(['role_delivery','running'].includes(d.room?.phase)&&!state.rolePoll){restoreCachedRole();state.rolePoll=setInterval(()=>refreshPrivateRole(true),1800)}return !!state.role}catch(e){if(e?.status===403){await handleRoomMembershipLost();return false}if(e?.status===404){restoreCachedRole();return !!state.role}if(force)console.warn('[GMWW role]',e);restoreCachedRole();return !!state.role}
+}
+async function ensureRoleGameView(timeoutMs=5200){const phase=String(state.room?.phase||'').toLowerCase();if(!['role_delivery','running'].includes(phase))return false;if(state.role||restoreCachedRole()){maybeOpenGame();return true}const end=Date.now()+Math.max(1200,Number(timeoutMs)||5200);while(Date.now()<end&&state.roomCode&&state.participantId){const ok=await refreshPrivateRole(true);if(ok&&state.role){maybeOpenGame();return true}await new Promise(r=>setTimeout(r,450))}restoreCachedRole();if(state.role){maybeOpenGame();return true}return false}
+function ensureMultiRoleNav(){
+  const shell=$('#game .role-card-shell');if(!shell)return;let nav=$('#gmwwMultiRoleNav');
+  if(!nav){const st=document.createElement('style');st.id='gmwwMultiRoleStyle';st.textContent='#gmwwMultiRoleNav{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none}#gmwwMultiRoleNav:empty{display:none}#gmwwMultiRoleNav button{flex:0 0 auto;min-height:38px;padding:7px 12px;border-radius:999px;border:1px solid #52779b;background:#0b2033;color:#d9ecff;font-size:12px;font-weight:900}#gmwwMultiRoleNav button.active{border-color:#e2ad52;background:linear-gradient(#b87626,#74400f);color:#fff7dc;box-shadow:0 0 0 1px #f4ce7a55 inset}';document.head.appendChild(st);nav=document.createElement('div');nav.id='gmwwMultiRoleNav';shell.parentNode?.insertBefore(nav,shell)}
+  const roles=Array.isArray(state.roles)&&state.roles.length?state.roles:(state.role?[state.role]:[]);nav.innerHTML='';if(roles.length<2)return;roles.forEach((r,i)=>{const pc=r?.roleCard||{},b=document.createElement('button');b.type='button';b.className=i===state.roleIndex?'active':'';b.textContent=(i+1)+' • '+String(pc.name||r?.roleName||r?.name||'Vai Trò');b.onclick=()=>{if(i===state.roleIndex)return;clearRolePrivacyTimer();state.roleOpen=false;$('#roleCard')?.classList.remove('revealed');state.roleIndex=i;state.role=roles[i];renderRole()};nav.appendChild(b)})
+}
+
+function ensureArtifactStack(){
+  const shell=$('#game .role-card-shell'),roleCard=$('#roleCard');if(!shell||!roleCard)return;
+  shell.classList.add('gmww-card-stack-host');
+  if(!$('#gmwwArtifactStackStyle')){
+    const st=document.createElement('style');st.id='gmwwArtifactStackStyle';st.textContent=`
+      .gmww-card-stack-host{position:relative;isolation:isolate;overflow:visible!important}
+      #roleCard,#artifactCard{transition:transform .25s ease,filter .25s ease,opacity .25s ease;transform-origin:50% 92%}
+      #roleCard.gmww-stack-back{transform:translate(-9px,12px) rotate(-2.1deg) scale(.965);filter:brightness(.78);z-index:2!important}
+      #roleCard.gmww-stack-front{transform:translate(0,0) rotate(0) scale(1);filter:none;z-index:5!important}
+      #artifactCard{position:absolute;inset:0;z-index:4;border-radius:22px;border:2px solid rgba(243,207,116,.78);background:linear-gradient(165deg,#0c4965,#08283f 58%,#061b2c);box-shadow:0 16px 35px rgba(1,12,23,.43),inset 0 0 0 1px rgba(116,235,244,.18);color:#effcff;overflow:hidden;padding:0;text-align:left}
+      #artifactCard.gmww-stack-back{transform:translate(10px,13px) rotate(2.2deg) scale(.965);filter:brightness(.75);z-index:2}
+      #artifactCard.gmww-stack-front{transform:translate(0,0) rotate(0) scale(1);filter:none;z-index:6}
+      #artifactCard .gmww-art-front,#artifactCard .gmww-art-back{position:absolute;inset:0;backface-visibility:hidden;transition:transform .45s ease;display:flex;flex-direction:column}
+      #artifactCard .gmww-art-front{transform:rotateY(180deg);background:linear-gradient(180deg,rgba(8,42,61,.28),rgba(4,22,37,.96))}
+      #artifactCard .gmww-art-back{transform:rotateY(0);align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle at 50% 32%,rgba(93,232,239,.26),transparent 42%),linear-gradient(145deg,#0d5c72,#08263f);font-weight:1000;letter-spacing:.08em}
+      #artifactCard.revealed .gmww-art-front{transform:rotateY(0)}#artifactCard.revealed .gmww-art-back{transform:rotateY(-180deg)}
+      #artifactCard .gmww-art-picture{position:relative;flex:0 0 56%;min-height:180px;background:linear-gradient(160deg,#52d6df,#166388);overflow:hidden}
+      #artifactCard .gmww-art-picture img{width:100%;height:100%;object-fit:cover;display:block}
+      #artifactCard .gmww-art-copy{padding:12px 14px;display:grid;gap:6px;min-height:0}
+      #artifactCard .gmww-art-tag{font-size:9px;font-weight:1000;color:#ffe7a0;letter-spacing:.12em}
+      #artifactCard .gmww-art-name{font-size:20px;line-height:1.05;color:#fff7d5;font-weight:1000}
+      #artifactCard .gmww-art-info{font-size:11px;line-height:1.4;color:#caedf4;overflow:auto;white-space:pre-line}
+      #artifactCard .gmww-art-used{display:none;position:absolute;right:10px;top:10px;border-radius:999px;padding:5px 8px;background:#25313a;color:#b9cbd1;border:1px solid #70818a;font-size:8px;font-weight:1000}
+      #artifactCard.used .gmww-art-used{display:block}#artifactCard.used .gmww-art-picture{filter:grayscale(.55) brightness(.72)}
+      .gmww-artifact-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;margin:10px 0 2px;padding:9px 10px;border:1px solid rgba(128,225,241,.2);border-radius:13px;background:rgba(5,28,43,.88);color:#d9f8ff}
+      .gmww-artifact-bar strong{font-size:11px;color:#fff1aa}.gmww-artifact-bar small{font-size:9px;color:#89afbd}
+      .gmww-artifact-bar button{border:1px solid #7ce7ef;background:linear-gradient(180deg,#45d8e8,#168aa9);color:#062738;border-radius:10px;padding:8px 10px;font-weight:1000;font-size:10px}
+      .gmww-artifact-bar button:disabled{filter:grayscale(.7);opacity:.5}
+      .gmww-artifact-target{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:6px}
+      .gmww-artifact-target select{min-width:0;border:1px solid rgba(142,226,239,.25);background:#071d2d;color:#e9fbff;border-radius:9px;padding:8px;font-size:10px}
+      @media(max-width:390px){#artifactCard .gmww-art-picture{min-height:150px;flex-basis:52%}#artifactCard .gmww-art-name{font-size:17px}}
+      @media(prefers-reduced-motion:reduce){#roleCard,#artifactCard,#artifactCard .gmww-art-front,#artifactCard .gmww-art-back{transition:none}}
+    `;document.head.appendChild(st)
+  }
+  let card=$('#artifactCard');
+  if(!state.artifact){if(card)card.remove();$('#gmwwArtifactBar')?.remove();roleCard.classList.remove('gmww-stack-back','gmww-stack-front');return}
+  if(!card){
+    card=document.createElement('button');card.type='button';card.id='artifactCard';card.setAttribute('aria-label','Artifact');
+    card.innerHTML='<div class="gmww-art-front"><div class="gmww-art-picture"><img alt=""><span class="gmww-art-used">ĐÃ DÙNG</span></div><div class="gmww-art-copy"><span class="gmww-art-tag">ARTIFACT</span><b class="gmww-art-name">Artifact</b><p class="gmww-art-info"></p></div></div><div class="gmww-art-back"><span style="font-size:38px">✦</span><b>ARTIFACT</b><small>Chạm để xem</small></div>';
+    card.onclick=e=>{e.preventDefault();e.stopPropagation();toggleArtifact()};shell.appendChild(card)
+  }
+  let bar=$('#gmwwArtifactBar');
+  if(!bar){
+    bar=document.createElement('div');bar.id='gmwwArtifactBar';bar.className='gmww-artifact-bar';
+    bar.innerHTML='<strong id="gmwwArtifactSlots">0/3</strong><small id="gmwwArtifactStatus">Artifact chưa xem</small><button id="gmwwArtifactActivate" type="button">KÍCH HOẠT</button><div class="gmww-artifact-target"><select id="gmwwArtifactTarget"><option value="">Không chọn mục tiêu</option></select><button id="gmwwArtifactInspect" type="button">XEM LÁ</button></div>';
+    shell.insertAdjacentElement('afterend',bar);$('#gmwwArtifactActivate').onclick=activateArtifact;$('#gmwwArtifactInspect').onclick=()=>{state.artifactFocus='artifact';state.artifactOpen=true;renderArtifactStack()}
+  }
+  renderArtifactStack()
+}
+function artifactUsedState(){
+  const a=state.artifact,cycleKey=String(state.artifactCycle?.cycleKey||'');
+  return{singleUsed:!!a&&a.singleUse===true&&!!a.usedAt,usedThisCycle:!!a?.lastActivation?.cycleKey&&String(a.lastActivation.cycleKey)===cycleKey}
+}
+function artifactDefaultFront(){
+  if(!state.artifact)return'role';
+  const used=artifactUsedState();if(used.singleUsed||used.usedThisCycle)return'role';
+  if(state.artifactFocus==='role'||state.artifactFocus==='artifact')return state.artifactFocus;
+  return state.role?.viewedAt?'artifact':'role'
+}
+function renderArtifactTargets(){
+  const sel=$('#gmwwArtifactTarget');if(!sel||!state.artifact)return;
+  const old=String(sel.value||''),draft=savedArtifactDraft(),saved=(draft&&draft.roomCode===state.roomCode&&String(draft.artifactId||'')===String(state.artifact.artifactId||''))?String(draft.targetId||''):'';
+  const rows=(state.players||[]).filter(p=>p?.participantId&&p.participantId!==state.participantId);
+  sel.innerHTML='<option value="">Không chọn mục tiêu</option>'+rows.map(p=>'<option value="'+String(p.participantId).replace(/"/g,'&quot;')+'">'+String(p.displayName||p.loginId||'Người Chơi').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</option>').join('');
+  const wanted=old||saved;if(wanted&&rows.some(p=>String(p.participantId)===wanted))sel.value=wanted;else sel.value='';
+  sel.onchange=()=>rememberArtifactDraft(sel.value)
+}
+function renderArtifactStack(){
+  const roleCard=$('#roleCard'),card=$('#artifactCard'),a=state.artifact;if(!roleCard||!a||!card)return;
+  const ac=a.artifactCard||{},name=String(ac.name||a.artifactName||'Artifact'),info=String(ac.information||a.description||'Chưa có thông tin.'),aid=String(a.artworkAssetId||a.artworkId||ac.artworkAssetId||ac.artworkId||''),base=state.roomCode?('/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/'):'',img=card.querySelector('.gmww-art-picture img'),picture=card.querySelector('.gmww-art-picture');
+  const used=artifactUsedState();card.querySelector('.gmww-art-name').textContent=name;card.querySelector('.gmww-art-info').textContent=info;card.classList.toggle('revealed',!!state.artifactOpen);card.classList.toggle('used',used.singleUsed||used.usedThisCycle);
+  if(img){const candidates=[a.artifactImage,aid&&base+encodeURIComponent(aid)+'/image'].filter(Boolean);let ix=0;const next=()=>{if(ix>=candidates.length){img.style.display='none';return}const src=candidates[ix++],sep=src.includes('?')?'&':'?';img.style.display='block';img.src=src+sep+'v='+encodeURIComponent(String(a.matchId||state.room?.matchId||Date.now()))};img.onerror=next;img.onload=()=>{img.style.display='block'};next()}
+  const front=artifactDefaultFront();roleCard.classList.toggle('gmww-stack-front',front==='role');roleCard.classList.toggle('gmww-stack-back',front!=='role');card.classList.toggle('gmww-stack-front',front==='artifact');card.classList.toggle('gmww-stack-back',front!=='artifact');
+  const count=Math.max(0,Number(state.artifactCycle?.count||0)),max=Math.max(1,Number(state.artifactCycle?.max||3));const slots=$('#gmwwArtifactSlots'),status=$('#gmwwArtifactStatus'),activate=$('#gmwwArtifactActivate');
+  if(slots)slots.textContent=count+'/'+max;
+  if(status)status.textContent=used.singleUsed?'Đã dùng trong ván • vẫn có thể xem lại':used.usedThisCycle?'Đã dùng trong chu kỳ này • sẽ mở lại ở chu kỳ sau':(!a.viewedAt?'Chưa xem Artifact':'Đã xem • sẵn sàng sử dụng');
+  if(activate){activate.disabled=state.artifactBusy||used.singleUsed||used.usedThisCycle||count>=max||String(state.room?.phase||'')!=='running';activate.textContent=state.artifactBusy?'ĐANG GỬI…':used.singleUsed?'ĐÃ DÙNG TRONG VÁN':used.usedThisCycle?'ĐÃ DÙNG CHU KỲ NÀY':count>=max?'ĐỦ '+max+'/'+max:'KÍCH HOẠT'}
+  renderArtifactTargets()
+}
+function toggleArtifact(){
+  if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;renderArtifactStack();
+  if(state.artifactOpen&&!state.artifact.viewedAt)api('/api/rooms/'+state.roomCode+'/artifact/viewed',{method:'POST',headers:auth(),body:'{}'}).then(d=>{if(state.artifact){state.artifact.viewedAt=d.viewedAt;renderArtifactStack()}}).catch(()=>{})
+}
+async function activateArtifact(){
+  if(!state.artifact||state.artifactBusy)return;
+  const used=artifactUsedState(),cycle=state.artifactCycle||{count:0,max:3},max=Math.max(1,Number(cycle.max||3));
+  if(used.singleUsed){toast('Artifact này chỉ được dùng 1 lần trong ván.');return}
+  if(used.usedThisCycle){toast('Artifact này đã dùng trong chu kỳ hiện tại.');return}
+  if(Number(cycle.count||0)>=max){toast('Chu kỳ này đã đủ '+max+'/'+max+' lượt Artifact.');return}
+  const sel=$('#gmwwArtifactTarget'),targetId=String(sel?.value||'');rememberArtifactDraft(targetId);state.artifactBusy=true;renderArtifactStack();
+  try{
+    const requestId='artifact-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+    const d=await api('/api/rooms/'+state.roomCode+'/artifact/activate',{method:'POST',headers:auth(),body:JSON.stringify({requestId,targetId,originalTargetId:targetId})});
+    if(d?.activation){state.artifact.usedAt=d.activation.createdAt||new Date().toISOString();state.artifact.lastActivation=d.activation}
+    state.artifactCycle={cycleKey:d?.activation?.cycleKey||state.artifactCycle?.cycleKey||'',count:Number(d?.count||0),max:Number(d?.max||3)};state.artifactFocus='role';state.artifactOpen=false;clearArtifactDraft();renderArtifactStack();await refreshPrivateRole(true)
+  }catch(err){
+    const code=String(err?.data?.error||err?.message||err||''),status=$('#gmwwArtifactStatus');
+    const message=code.includes('ARTIFACT_CYCLE_LIMIT')?'Đã đủ '+max+'/'+max+' Artifact trong chu kỳ này':code.includes('ARTIFACT_ALREADY_USED_THIS_CYCLE')?'Artifact này đã dùng trong chu kỳ hiện tại':code.includes('ARTIFACT_ALREADY_USED')?'Artifact này chỉ được dùng 1 lần trong ván':code.includes('GAME_NOT_RUNNING')?'Chỉ kích hoạt Artifact khi ván đang chạy':String(err?.message||err||'Không kích hoạt được Artifact.');
+    if(status)status.textContent=message;toast(message)
+  }finally{state.artifactBusy=false;renderArtifactStack()}
+}
+window.toggleArtifact=toggleArtifact;
