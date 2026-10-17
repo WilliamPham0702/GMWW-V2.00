@@ -1,4 +1,4 @@
-import "../status-visuals.js?v=v3126-orbit";
+import "../status-visuals.js?v=v3131-vertical";
 import "./village-layout.js?v=fire3101&seat=3128";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
@@ -189,9 +189,9 @@ if(game){
     const nameText=document.createElement("span");nameText.className="name-text";nameText.textContent=playerName;
     const presence=document.createElement("span");presence.className="player-presence";presence.dataset.online=data?.online===false?"false":"true";presence.setAttribute("aria-hidden","true");
     name.append(nameText,presence);
-    const over=document.createElement("span");over.className="player-over";over.append(name);
+    const over=document.createElement("span");over.className="player-over";
     const role=document.createElement("span");role.className="player-role";role.textContent=safeText(data.roleName||"");if(!role.textContent)role.hidden=true;
-    button.append(over,avatar,role);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+(data?.online===false?" · Offline":" · Online"));
+    over.append(name,role);button.append(over,avatar);const statusBadge=button.querySelector(":scope > .gmww-sv-badges");if(statusBadge)over.prepend(statusBadge);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+(data?.online===false?" · Offline":" · Online"));
     button._gmwwLive={data,actualSeat,playerName,isGM};
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
@@ -222,13 +222,13 @@ if(game){
     if(button.dataset.gmwwStatusSig!==nextStatusSig){
       button.dataset.gmwwStatusSig=nextStatusSig;
       // Remove only direct status overlays, never the existing character/rig.
-      button.querySelectorAll(':scope > .gmww-sv-overlay, :scope > .gmww-sv-badges').forEach(el=>el.remove());
+      button.querySelectorAll(':scope > .gmww-sv-overlay, .player-over > .gmww-sv-badges').forEach(el=>el.remove());
       const ids=(Array.isArray(data?.statusTags)?data.statusTags:[]).map(x=>String(x?.statusId||""));
       const visuals=globalThis.GMWW_STATUS_VISUALS;
       const active=visuals?visuals.layers(ids).items:[];
       button.classList.toggle("gmww-sv-stage",active.length>0);
       button.classList.toggle("gmww-sv-dead",active.includes("dead"));
-      if(active.length)button.insertAdjacentHTML("beforeend",visuals.overlay(ids));
+      if(active.length){button.insertAdjacentHTML("beforeend",visuals.overlay(ids));const badge=button.querySelector(":scope > .gmww-sv-badges");if(badge)button.querySelector(".player-over")?.prepend(badge);}
     }
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi");
     button._gmwwLive={data,actualSeat,playerName,isGM:gm};
