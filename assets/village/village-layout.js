@@ -5,9 +5,11 @@
      The sea, roofs, landscaped terraces and lawns remain beyond this boundary.
      This shared object is loaded unchanged in Worker, GM IPA and Player Web. */
   const fire={x:50,y:49.7};
-  const polygon=[[30,36],[70,36],[78,41],[82,52],[80,60],[75,71],
-    [64,84],[60,89],[60,94],[40,94],[40,89],[36,84],
-    [25,71],[20,60],[18,52],[22,41]];
+  // The central paving must accommodate the whole 30-seat rectangle.
+  // Outer roofs/sea are excluded, while the lower bridge remains walkable.
+  const polygon=[[21,33],[79,33],[82,44],[82,60],[79,74],
+    [64,86],[62,90],[62,99],[38,99],[38,90],[36,86],
+    [21,74],[18,60],[18,44]];
   const fireRadius={x:7,y:4.2};
   function polygonInside(x,y){
     let hit=false;
@@ -22,7 +24,7 @@
   function clampPoint(x,y){
     x=Number(x);y=Number(y);
     if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:75};
-    y=Math.max(37,Math.min(93,y));
+    y=Math.max(34,Math.min(98,y));
     // Never clamp just the Y coordinate then leave X in a roof or water area.
     // Find the actual left/right courtyard intersections at this latitude.
     const xs=[];
@@ -95,20 +97,34 @@
     return{x:0,y:-ry};
   }
   function seatTemplatePositions(count,shape){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12))),
-      kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
-    // There is exactly one seat ring; never reuse old positionX/Y
-    // or account-hash spawn for a seated/provisionally seated player.
-    const rx=kind==='circle'?22.2:kind==='ellipse'?26.0:26.3;
-    const ry=kind==='circle'?12.0:kind==='ellipse'?12.4:12.6;
-    const sample=kind==='rectangle'?rectangleContour:ovalContour;
-    // The rectangle is distributed by equal SCREEN perimeter distance,
-    // including its two long sides, rather than by raw vertex index.
-    const points=Array.from({length:n},(_,i)=>{
-      const p=sample(i/n,rx,ry),q=clampPoint(fire.x+p.x,fire.y+p.y);
-      return{x:q.x,y:q.y,ring:0};
-    });
-    return points;
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
+    // Radius adapts to available courtyard, with fire permanently at
+    // world (50,49.7). For 30 players we expand ONE rectangle, not rings.
+    const rx=kind==='circle'?22.8:kind==='ellipse'?27.4:27.5;
+    const ry=kind==='circle'?13.1:kind==='ellipse'?12.9:13.2;
+    // A small deterministic phase search keeps 25–30 adjacent players
+    // from bunching diagonally around rectangle corners.
+    let phase=0;
+    if(kind==='rectangle'){
+      let bestDistance=-1;
+      for(let step=0;step<32;step++){
+        const shift=step/(32*n),points=Array.from({length:n},(_,i)=>
+          rectangleContour(i/n+shift,rx,ry));
+        const minGap=Math.min(...points.map((p,i)=>{
+          const q=points[(i+1)%n];
+          return Math.hypot(p.x-q.x,SCREEN_Y_SCALE*(p.y-q.y));
+        }));
+        if(minGap>bestDistance+1e-8){bestDistance=minGap;phase=shift}
+      }
+    }
+    const result=[];
+    for(let i=0;i<n;i++){
+      const p=kind==='rectangle'?rectangleContour(i/n+phase,rx,ry):ovalContour(i/n,rx,ry);
+      const point=clampPoint(fire.x+p.x,fire.y+p.y);
+      result.push({x:point.x,y:point.y,ring:0});
+    }
+    return result;
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
