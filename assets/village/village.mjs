@@ -118,6 +118,12 @@ if(game){
     const out=incoming.map(p=>{
       const id=String(p?.id||'');if(!id)return p;seen.add(id);
       if(p?.movementStatus==='moving'){visualFallbackMoves.delete(id);return p}
+      // Fixed seats are never visually interpolated from stale room positions.
+      // That legacy correction moved seated players away from the fire ring.
+      if(Number(p?.displaySeatId||p?.seatId||0)>0){
+        visualFallbackMoves.delete(id);
+        return p;
+      }
       const target=visualPlayerPoint(p,nextCount,now),existing=visualFallbackMoves.get(id);
       if(existing){
         const sameTarget=Math.hypot(Number(existing.moveToX)-target.x,(Number(existing.moveToY)-target.y)*2)<.65;
@@ -363,7 +369,7 @@ if(game){
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
     const fire=document.querySelector('.fire'),point=screenPoint(layout.fire);if(fire){fire.style.left=point.x+'%';fire.style.top=point.y+'%';}
     const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,
-      setupState,all.map(x=>[x.id,x.seatId,x.positionX,x.positionY,x.movementStatus,x.moveId,
+      setupState,all.map(x=>[x.id,x.seatId,x.displaySeatId,x.positionX,x.positionY,x.movementStatus,x.moveId,
         x.moveFromX,x.moveFromY,x.moveToX,x.moveToY,x.moveStartedAt,x.moveDurationMs,
         x.online,x.gameCharacterId,x.avatarId,x.avatarUrl,x.displayName,x.ready,x.statusLabel,x.statusTags])]);
     if(nextSig!==lastExternalRenderSignature){lastExternalRenderSignature=nextSig;render()}
