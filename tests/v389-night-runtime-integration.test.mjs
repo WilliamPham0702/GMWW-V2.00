@@ -286,3 +286,62 @@ test('G4 engine integration: disabled actor cannot confirm a role action, expire
   const allowed=await result(await h.room.gmBattleAction(null,payload));
   assert.equal(allowed.ok,true,'actor must act again once the status expires');
 });
+
+test('G4 live DO: frozen actor is blocked on night 1, thawed by morning, acts on night 2; dead actor stays blocked',async()=>{
+  const h=harness({artifact:false});await h.jump('role');
+  h.data.set('interactions',[
+    {id:'freeze-night-one',loginId:'alice',type:'frozen',matchId:'test-match',cycleKey:'night-1',night:1,effectActive:true},
+    {id:'dead-night-one',loginId:'carol',type:'dead',matchId:'test-match',cycleKey:'night-1',night:1,effectActive:true}
+  ]);
+  const meta1=await h.meta(),first=await h.runtime();
+  const payload={turnId:first.currentId,actorId:'alice',type:'effect_notice',actionId:'inspect',
+    targetIds:['bob'],matchId:meta1.matchId,cycleKey:meta1.cycleKey,
+    clientEventId:'g4-night-1-attempt',night:1};
+  const blocked=await result(await h.room.gmBattleAction(null,payload));
+  assert.equal(blocked.error,'ACTOR_CANNOT_ACT');
+  assert.equal(h.data.has('battleActionReceipt:test-match:g4-night-1-attempt'),false);
+  const morning=await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(morning.expired.some(x=>x.id==='freeze-night-one'),true);
+  assert.equal(h.data.get('interactions').find(x=>x.id==='freeze-night-one').effectActive,false);
+  assert.equal(h.data.get('interactions').find(x=>x.id==='dead-night-one').effectActive,true);
+  const night2=await h.room.applyCycle(await h.meta(),'night',2,'night-2','lab');
+  const seerIndex=night2.nightRuntime.queue.findIndex(row=>
+    ['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('alice'));
+  assert.ok(seerIndex>=0,'seer waking step exists on night 2');
+  await h.room.gmTurn(null,{action:'jump',targetIndex:seerIndex});
+  const meta2=await h.meta(),current=await h.room.getNightRuntime(meta2,2,false);
+  const success=await result(await h.room.gmBattleAction(null,{...payload,night:2,
+    turnId:current.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-night-2-success'}));
+  assert.equal(success.ok,true,'once thawed the actor can use their role');
+  const wolfIndex=current.queue.findIndex(row=>
+    ['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('carol'));
+  assert.ok(wolfIndex>=0,'wolf waking step exists on night 2');
+  await h.room.gmTurn(null,{action:'jump',targetIndex:wolfIndex});
+  const wolf=await h.room.getNightRuntime(await h.meta(),2,false);
+  const denied=await result(await h.room.gmBattleAction(null,{...payload,actorId:'carol',
+    turnId:wolf.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-dead-wolf-denied',night:2}));
+  assert.equal(denied.error,'ACTOR_CANNOT_ACT','death must persist across night transitions');
+});
+test('G4 live DO: two-night disabled status expires at night 3, not night 2',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('interactions',[{id:'disable-two-nights',type:'status',statusId:'disabled_2n',
+    loginId:'alice',matchId:'test-match',cycleKey:'night-1',night:1,effectActive:true,
+    duration:'nights',nights:2}]);
+  const checkNight=async(n)=>{
+    const meta=await h.meta(),runtime=await h.room.getNightRuntime(meta,n,true);
+    const idx=runtime.queue.findIndex(row=>['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('alice'));
+    assert.ok(idx>=0);
+    await h.room.gmTurn(null,{action:'jump',targetIndex:idx});
+    const m=await h.meta(),turn=await h.room.getNightRuntime(m,n,false);
+    return result(await h.room.gmBattleAction(null,{turnId:turn.currentId,actorId:'alice',
+      type:'effect_notice',actionId:'inspect',targetIds:['bob'],matchId:m.matchId,
+      cycleKey:m.cycleKey,clientEventId:'g4-two-night-'+n,night:n}));
+  };
+  await h.room.applyCycle(await h.meta(),'night',2,'night-2','lab');
+  assert.equal(h.data.get('interactions')[0].effectActive,true);
+  assert.equal((await checkNight(2)).error,'ACTOR_CANNOT_ACT');
+  const third=await h.room.applyCycle(await h.meta(),'night',3,'night-3','lab');
+  assert.equal(third.expired.some(x=>x.id==='disable-two-nights'&&x.reason==='NIGHTS_ELAPSED'),true);
+  assert.equal(h.data.get('interactions')[0].effectActive,false);
+  assert.equal((await checkNight(3)).ok,true);
+});

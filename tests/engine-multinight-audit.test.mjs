@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildNightQueue, reserveArtifactActivation, artifactCycleKey } from '../src/gmww-game-scene-rules.js';
 import { combineConfiguredTurns, timelineDisplaySteps, isAlreadyUsedArtifact } from '../src/gmww-night-turn-rules.js';
+import { isBattleActorBlocked } from '../src/gmww-battle-actor-eligibility.js';
 
 // Integration audit harness: uses production scheduling/Artifact rule functions.
-// Effect resolution below is an ORACLE, not the game's production Effect Engine.
-// A passing test DOES NOT prove freeze or protection enforcement in Production.
+// The DO integration tests validate real freeze/disable expiry across nights.
+// These scheduling tests do not establish protection or Yêu Tinh precedence.
 const roles = [
   {kind:'role',name:'Sói Tuyết',playerId:'wolf',order:1},
   {kind:'role',name:'Bảo Vệ',playerId:'guard',order:2},
@@ -49,9 +50,11 @@ test('multi-night: consumed Artifact is omitted from normal queue',()=>{
     assert.equal(queue[1].actions.length,0);
   }
 });
-test('audit oracle: frozen actor MUST be blocked by real action executor (NOT VERIFIED HERE)',()=>{
-  const oracle=(actor,action)=>actor.frozen?{allowed:false,reason:'FROZEN'}:{allowed:true,action};
-  assert.deepEqual(oracle({frozen:true},'seer'),{allowed:false,reason:'FROZEN'});
-  // TODO: Replace oracle with the actual server action endpoint/executor.
-  // Do not mark the freeze integration as passing until a real endpoint test rejects it.
+test('audit: real policy blocks frozen actors and honours expired effects',()=>{
+  const row={type:'frozen',loginId:'seer',matchId:'simulation-only',effectActive:true};
+  const args={actorId:'seer',matchId:'simulation-only'};
+  assert.equal(isBattleActorBlocked([row],args),true);
+  assert.equal(isBattleActorBlocked([{...row,effectActive:false}],args),false);
+  // See v389-night-runtime-integration.test.mjs for actual Durable Object
+  // confirmation/rollback and multi-night expiration sequence tests.
 });
