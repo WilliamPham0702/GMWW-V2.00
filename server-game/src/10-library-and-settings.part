@@ -1,0 +1,733 @@
+function renderEntityGrid(kind){
+  const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),favGrid=$(kind==='cards'?'#cardFavoriteGrid':'#artifactFavoriteGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
+  const all=entityList(kind);
+  const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
+  const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
+  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' Vai Trò, tổng '+visibleTotal+' Vai Trò':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
+  favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Vai Trò được đánh ★</div>';
+  if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
+  let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
+  list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
+  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Vai Trò':'Thêm ARTIFACT')+'</b></button>';
+  grid.innerHTML=add+list.map(e=>entityTileHtml(kind,e)).join('');
+  bindEntityTiles(kind,grid,list);
+  const addBtn=$('[data-add-entity="'+kind+'"]',grid);if(addBtn)addBtn.onclick=()=>createEntity(kind);
+}
+
+function togglePref(kind,id,type){const p=prefFor(kind,id);if(type==='star'){if(p.starred){p.starred=false;p.starOrder=null}else{p.hidden=false;p.starred=true;const orders=Object.values(prefs[kind]||{}).filter(x=>x.starred).map(x=>Number(x.starOrder)||0);p.starOrder=Math.max(0,...orders)+1}}else{p.hidden=!p.hidden;if(p.hidden){p.starred=false;p.starOrder=null}}savePrefs();renderEntityGrid(kind)}
+
+async function renderEntityFront(){
+  const e=editDraft;if(!e)return;const card=$('#playerCard'),badge=$('#playerFactionBadge');
+  card.className='player-card '+(currentKind==='artifacts'?'artifact':(e.factionId||'village'));
+  $('#playerName').textContent=(e.name||'').toUpperCase();
+  if(currentKind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon;badge.setAttribute('aria-label',f.label)}else{badge.textContent='✦';badge.setAttribute('aria-label','Artifacts')}
+  $('#playerInformation').textContent=formatInformation(e.information||'');
+  $('#playerDisplay').src=await resolveArtwork(currentKind,e.id,'display');
+  fitPlayerCardTitle();fitPlayerCardInformation();
+}
+function fitPlayerCardTitle(){
+  const title=$('#playerName');if(!title)return;
+  title.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  requestAnimationFrame(()=>{let size=25;while(size>18&&title.scrollWidth>title.clientWidth+1){size=Math.max(18,size-.5);title.style.fontSize=size+'px'}});
+}
+function fitPlayerCardInformation(){
+  const box=$('#playerInformation');if(!box)return;
+  box.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  requestAnimationFrame(()=>{let size=14.5;while(size>12&&box.scrollHeight>box.clientHeight+1){size=Math.max(12,size-.5);box.style.fontSize=size+'px'}});
+}
+function actionOptions(selected){const k=currentKind==='artifacts'?'artifacts':'role';return actionList(k).map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(selected)?'selected':'')+'>'+esc(a.name)+'</option>').join('')}
+function functionHtml(fn,index){
+  const to=fn.toNight===null||fn.toNight===''?'end':String(fn.toNight);
+  return '<div class="function-card" data-fn-index="'+index+'"><div class="function-head"><b>Hành Động #'+(index+1)+'</b><button data-remove-fn="'+index+'" aria-label="Xoá">×</button></div>'+
+    '<div class="function-grid">'+
+      '<label class="full">Hành Động<select data-f="actionId">'+actionOptions(fn.actionId)+'</select></label>'+
+      '<label class="full">Mô tả riêng trên Lá<textarea class="function-description" data-t="description">'+esc(fn.description||'')+'</textarea></label>'+
+      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
+      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
+      '<label>Số lần<select data-f="usageCount">'+numOptions(1,10,fn.usageCount||1)+'</select></label>'+
+      '<label>Cooldown (đêm)<select data-f="cooldownNights">'+numOptions(0,10,fn.cooldownNights||0)+'</select></label>'+
+      '<label>Số mục tiêu<select data-f="targetCount">'+numOptions(0,8,fn.targetCount??1)+'</select></label>'+
+      '<label>Giới hạn mỗi người<select data-f="perUserLimit">'+numOptions(0,5,fn.perUserLimit||0)+'</select></label>'+
+      '<div class="range-row"><label>Từ đêm<select data-f="fromNight">'+numOptions(1,20,fn.fromNight||1)+'</select></label><label>Đến đêm<select data-f="toNight"><option value="end" '+(to==='end'?'selected':'')+'>Hết ván</option>'+numOptions(1,20,to)+'</select></label></div>'+
+      '<label class="full">Kích hoạt khi<select data-f="activation">'+selectOptions([['','Chủ động / Theo lượt'],['stake_execution','Bị Treo Cổ'],['SOURCE_DEATH','Nguồn chết'],['morning','Buổi sáng'],['night_start','Bắt đầu đêm'],['day_start','Bắt đầu ngày']],fn.activation||'')+'</select></label>'+
+    '</div>'+
+    '<div class="function-checks">'+
+      checkHtml('noSelf','Không được chọn bản thân',fn.noSelf)+
+      checkHtml('allowDead','Cho phép chọn người đã chết',fn.allowDead)+
+      checkHtml('noTarget','Không cần chọn mục tiêu',fn.noTarget)+
+      checkHtml('allowConsecutive','Cho phép chọn cùng mục tiêu liên tiếp',fn.allowConsecutive)+
+      checkHtml('passive','Hành Động thụ động',fn.passive)+
+      checkHtml('targetPreviousCycleOnly','Chỉ mục tiêu chu kỳ trước',fn.targetPreviousCycleOnly)+
+      checkHtml('pushToPlayerWeb','Đẩy xuống Player Web',fn.pushToPlayerWeb)+
+      checkHtml('systemRequired','Yêu cầu Hệ Thống',fn.systemRequired)+
+      checkHtml('usesPackBite','Dùng Sói Cắn chung',fn.usesPackBite)+
+      checkHtml('requiresNoOtherLivingWolf','Chỉ khi không còn Sói khác sống',fn.requiresNoOtherLivingWolf)+
+      checkHtml('actorMayBeDead','Người thực hiện có thể đã chết',fn.actorMayBeDead)+
+      checkHtml('allowFriendlyFaction','Cho phép chọn cùng Phe',fn.allowFriendlyFaction)+
+      checkHtml('replacesWolfBite','Thay thế Sói Cắn',fn.replacesWolfBite)+
+    '</div></div>';
+}
+function checkHtml(key,label,checked){return '<label class="check"><input type="checkbox" data-b="'+key+'" '+(checked?'checked':'')+'><span>'+esc(label)+'</span></label>'}
+function renderEntityBack(){
+  const e=editDraft;if(!e)return;
+  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Vai Trò':'Cài đặt ARTIFACTS';
+  $('#entityName').value=e.name||'';$('#entityInformation').value=e.information||'';
+  $('#factionBlock').classList.toggle('hidden',currentKind!=='cards');$('#livesField').classList.toggle('hidden',currentKind!=='cards');
+  if(currentKind==='cards')$$('#factionSeg button').forEach(b=>b.classList.toggle('active',b.dataset.faction===e.factionId));
+  $('#entityLives').value=Math.max(1,Number(e.lives||1));
+  const f=e.flags||{};$('#flagUseDay').checked=!!f.useDay;$('#flagUseNight').checked=!!f.useNight;$('#flagNightImmune').checked=!!f.nightImmune;$('#flagAllowMultipleActions').checked=!!f.allowMultipleActions;$('#flagPassive').checked=!!f.passive;$('#flagSoloWolfOnly').checked=!!f.soloWolfOnly;$('#winCondition').value=e.winCondition||'';
+  $('#passiveRuleEnabled').checked=!!e.passiveRule?.enabled;$('#passiveRuleType').value=e.passiveRule?.type||'stake_survive';
+  $('#passiveFirstTime').value=e.passiveRule?.firstTime||'';$('#passiveNextTime').value=e.passiveRule?.nextTime||'';$('#passiveOnDeath').checked=!!e.passiveRule?.onDeath;$('#passiveSkipDead').checked=!!e.passiveRule?.skipIfTargetAlreadyDead;
+  $('#groupGateEnabled').checked=!!e.groupActionGate?.enabled;$('#groupGateAction').innerHTML='<option value="">Chọn Hành Động</option>'+actionList(currentKind==='artifacts'?'artifacts':'role').map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(e.groupActionGate?.actionId)?'selected':'')+'>'+esc(a.name)+'</option>').join('');
+  $('#groupGateScope').value=e.groupActionGate?.scope||'self';$('#gateExpelled').checked=(e.groupActionGate?.blockOn||[]).includes('expelled');$('#gateBlocked').checked=(e.groupActionGate?.blockOn||[]).includes('blocked');
+  const sr=e.specialRules||{};$('#ruleSystemRequired').checked=!!sr.systemRequired;$('#ruleUsesPackBite').checked=!!sr.usesPackBite;$('#ruleRequiresSoloWolf').checked=!!sr.requiresNoOtherLivingWolf;$('#ruleActorMayBeDead').checked=!!sr.actorMayBeDead;$('#ruleAllowFriendlyFaction').checked=!!sr.allowFriendlyFaction;$('#ruleReplacesWolfBite').checked=!!sr.replacesWolfBite;
+  $('#specialLimits').value=typeof e.limits==='string'?e.limits:JSON.stringify(e.limits||'');$('#specialConditions').value=typeof e.conditions==='string'?e.conditions:JSON.stringify(e.conditions||'');$('#specialAttributes').value=typeof e.attributes==='string'?e.attributes:JSON.stringify(e.attributes||'');
+  $('#artifactSpecific').classList.toggle('hidden',currentKind!=='artifacts');
+  if(currentKind==='artifacts'){const a=e.artifact||{};$('#artifactOwnerSelection').checked=!!a.ownerSelection;$('#artifactPersistentOwner').checked=!!a.persistentOwner;$('#artifactRevealFollow').checked=!!a.revealFollowTargetOnly;$('#artifactPriorityFirst').checked=!!a.priorityFirst;$('#artifactWakeRole').innerHTML='<option value="">Không</option><option value="source-2" '+(a.wakeWithRoleId==='source-2'?'selected':'')+'>Tiên Tri</option>';$('#artifactWakeAction').innerHTML='<option value="">Không</option>'+state.actions.role.map(x=>'<option value="'+esc(x.id)+'" '+(String(a.wakeWithActionId)===String(x.id)?'selected':'')+'>'+esc(x.name)+'</option>').join('')}
+  $('#functionList').innerHTML=(e.functions||[]).map(functionHtml).join('');bindFunctionControls();
+}
+function bindFunctionControls(){
+  $$('#functionList .function-card').forEach(row=>{const idx=Number(row.dataset.fnIndex),fn=editDraft.functions[idx];
+    $$('select[data-f]',row).forEach(s=>s.onchange=()=>{const k=s.dataset.f;if(k==='toNight')fn[k]=s.value==='end'?null:Number(s.value);else if(['usageCount','cooldownNights','targetCount','fromNight','perUserLimit'].includes(k))fn[k]=Number(s.value);else fn[k]=s.value;if(k==='targetCount'&&fn.targetCount>0)fn.noTarget=false;renderEntityFront()});
+    $$('textarea[data-t]',row).forEach(t=>t.oninput=()=>{fn[t.dataset.t]=t.value});
+    $$('input[data-b]',row).forEach(c=>c.onchange=()=>{const k=c.dataset.b;fn[k]=c.checked;if(k==='noTarget'&&c.checked)fn.targetCount=0;if(k==='noTarget'&&!c.checked&&fn.targetCount===0)fn.targetCount=1;renderEntityBack()});
+  });
+  $$('[data-remove-fn]').forEach(b=>b.onclick=()=>{editDraft.functions.splice(Number(b.dataset.removeFn),1);renderEntityBack()});
+}
+let editBackRendered=false;
+function updateEntityHideButton(){const b=$('#hideEntity');if(!b||!currentId)return;const hidden=!!prefFor(currentKind,currentId).hidden;b.textContent=hidden?'◉':'◌';b.title=hidden?'Hiện lại':'Ẩn';b.setAttribute('aria-label',hidden?'Hiện lại':'Ẩn');b.classList.toggle('on',hidden)}
+function toggleCurrentEntityHidden(){if(!currentId)return;togglePref(currentKind,currentId,'hide');updateEntityHideButton()}
+function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);editBackRendered=false;$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');updateEntityHideButton();setFace('front');renderEntityFront();$('#library').scrollTop=0}
+function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
+function saveEntity(){if(!editDraft)return;const kind=currentKind,id=String(currentId);const list=entityList(kind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);ensureAudioPlaceholder(kind,editDraft);saveState();renderEntityGrid(kind);closeEntityEditor();if(kind==='artifacts')void playSyncSharedArtifactLibrary({onlyIds:[id],forceIds:[id]})}
+function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];const bucket=currentKind==='cards'?'cards':'artifacts';state.audio[bucket]=(state.audio[bucket]||[]).filter(a=>a.targetId!==currentId);saveState();savePrefs();closeEntityEditor()}
+function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}Array.from(document.querySelectorAll('.face-switch button')).forEach(b=>b.classList.toggle('active',b.dataset.face===face));Array.from(document.querySelectorAll('.face')).forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
+let faceTouchStart=null;
+function bindFaceSwipe(){
+  const editor=$('#entityEditor');
+  editor.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];faceTouchStart={x:t.clientX,y:t.clientY,edge:t.clientX<30}},{passive:true});
+  editor.addEventListener('touchend',e=>{if(!faceTouchStart||!e.changedTouches.length)return;const t=e.changedTouches[0],dx=t.clientX-faceTouchStart.x,dy=t.clientY-faceTouchStart.y;const edge=faceTouchStart.edge;faceTouchStart=null;if(Math.abs(dx)<55||Math.abs(dx)<=Math.abs(dy)*1.25)return;if(edge&&dx>70){closeEntityEditor();return}const front=$('#entityFront').classList.contains('active');if(dx<0&&front)setFace('back');else if(dx>0&&!front)setFace('front')},{passive:true});
+}
+
+function renderActions(){const q=($('#actionSearch').value||'').toLowerCase().trim(),list=actionList(actionKind).filter(a=>!q||String(a.name).toLowerCase().includes(q));$('#actionGrid').innerHTML='<button class="compact-entry add-only" id="addActionBox" aria-label="Thêm">＋</button>'+list.map(a=>'<article class="compact-entry" data-action-id="'+esc(a.id)+'"><b>'+esc(a.name)+'</b></article>').join('');$$('[data-action-id]').forEach(el=>bindDouble(el,()=>openActionEditor(el.dataset.actionId)));$('#addActionBox').onclick=createAction}
+function renderEffects(){const q=($('#effectSearch').value||'').toLowerCase().trim(),list=state.effects.filter(e=>!q||String(e.name).toLowerCase().includes(q));$('#effectGrid').innerHTML='<button class="compact-entry add-only" id="addEffectBox" aria-label="Thêm">＋</button>'+list.map(e=>'<article class="compact-entry" data-effect-id="'+esc(e.id)+'"><b>'+esc(e.name)+'</b></article>').join('');$$('[data-effect-id]').forEach(el=>bindDouble(el,()=>openEffectEditor(el.dataset.effectId)));$('#addEffectBox').onclick=createEffect}
+function bindDouble(el,cb){el.addEventListener('dblclick',cb);el.addEventListener('touchend',()=>{const now=Date.now(),prev=lastTouchMap.get(el)||0;if(now-prev<420){lastTouchMap.set(el,0);cb()}else lastTouchMap.set(el,now)},{passive:true})}
+function showSheet(title,html,ctx){editContext=ctx;$('#sheetTitle').textContent=title;$('#sheetBody').innerHTML=html;$('#editSheet').classList.remove('hidden')}
+function closeSheet(){$('#editSheet').classList.add('hidden');editContext=null}
+function openActionEditor(id){const a=actionById(id);if(!a)return;showSheet('Hành Động • '+a.name,'<div class="form-grid"><label class="full">ID<input id="editActionId" value="'+esc(a.id)+'" readonly></label><label class="full">Tên<input id="editActionName" value="'+esc(a.name)+'"></label><label class="full">Mô tả<textarea id="editActionDescription">'+esc(a.description||'')+'</textarea></label><label class="full">Hiệu Ứng liên kết<select id="editActionEffect"><option value="">Không</option>'+state.effects.map(e=>'<option value="'+esc(e.id)+'" '+((a.effectIds||[]).includes(e.id)?'selected':'')+'>'+esc(e.name)+'</option>').join('')+'</select></label></div>',{type:'action',id})}
+function openEffectEditor(id){const e=effectById(id);if(!e)return;const w=e.webTemplate||{};showSheet('Hiệu Ứng • '+e.name,'<div class="form-grid"><label class="full">ID<input id="editEffectId" value="'+esc(e.id)+'" readonly></label><label class="full">Tên<input id="editEffectName" value="'+esc(e.name)+'"></label><label>Primitive<select id="editPrimitive">'+selectOptions([['EXPEL','EXPEL'],['REVIVE','REVIVE'],['KILL','KILL'],['PROTECT','PROTECT'],['BLOCK','BLOCK'],['TRANSFER_EFFECT','TRANSFER_EFFECT'],['REVEAL_FACTION','REVEAL_FACTION'],['REVEAL_ROLE','REVEAL_ROLE'],['COPY_FUNCTIONS','COPY_FUNCTIONS'],['CUSTOM','CUSTOM']],e.primitive)+'</select></label><label>Thời lượng<select id="editDuration">'+selectOptions([['instant','Tức thời'],['night','Đêm đó'],['nextDay','Đến hết sáng hôm sau'],['untilRemoved','Đến khi gỡ']],e.duration)+'</select></label><label class="full">Mô tả Engine<textarea id="editEffectDescription">'+esc(e.description||'')+'</textarea></label><label>Event type<input id="webEventType" value="'+esc(w.eventType||'')+'"></label><label>Emoji<input id="webEmoji" value="'+esc(w.emoji||'')+'"></label><label class="full">Tiêu đề Player Web<input id="webTitle" value="'+esc(w.title||'')+'"></label></div><div class="check-grid" style="margin-top:8px"><label class="check"><input type="checkbox" id="webRequireAck" '+(w.requireAck?'checked':'')+'><span>Yêu cầu xác nhận</span></label><label class="check"><input type="checkbox" id="webRequireResponse" '+(w.requireResponse?'checked':'')+'><span>Yêu cầu phản hồi</span></label></div>',{type:'effect',id})}
+function createAction(){const a={id:uid(actionKind==='role'?'action':'artifact_action'),name:'Hành Động Mới',description:'',effectIds:[]};actionList(actionKind).push(a);ensureAudioPlaceholder('actions',a);saveState();renderActions();openActionEditor(a.id)}
+function createEffect(){const e={id:uid('effect'),name:'Hiệu Ứng Mới',primitive:'CUSTOM',duration:'instant',description:'',webTemplate:{eventType:'',emoji:'',title:'',requireAck:false,requireResponse:false}};state.effects.push(e);saveState();renderEffects();openEffectEditor(e.id)}
+function saveSheet(){if(!editContext)return;if(editContext.type==='action'){const a=actionById(editContext.id);a.name=($('#editActionName').value||'').trim()||a.name;a.description=$('#editActionDescription').value||'';a.effectIds=$('#editActionEffect').value?[$('#editActionEffect').value]:[];ensureAudioPlaceholder('actions',a);saveState();renderActions()}else if(editContext.type==='effect'){const e=effectById(editContext.id);e.name=($('#editEffectName').value||'').trim()||e.name;e.primitive=$('#editPrimitive').value;e.duration=$('#editDuration').value;e.description=$('#editEffectDescription').value||'';e.webTemplate={eventType:$('#webEventType').value||'',emoji:$('#webEmoji').value||'',title:$('#webTitle').value||'',requireAck:$('#webRequireAck').checked,requireResponse:$('#webRequireResponse').checked};saveState();renderEffects()}closeSheet()}
+
+function renderThemeSeg(){const holder=$('#themeSeg');holder.innerHTML=state.themes.list.map(t=>'<button data-theme="'+esc(t.id)+'" class="'+(t.id===state.themes.selectedEditorId?'active':'')+'">'+esc(t.name)+'</button>').join('');$$('[data-theme]',holder).forEach(b=>b.onclick=()=>{state.themes.selectedEditorId=b.dataset.theme;state.themes.activeId=b.dataset.theme;saveState();renderTheme();applyActiveThemeUi();renderEntityGrid('cards');renderEntityGrid('artifacts')})}
+async function renderTheme(){
+  renderThemeSeg();const themeId=state.themes.selectedEditorId||state.themes.activeId||'theme-sea';
+  const sections=$('#themeUiSections');sections.innerHTML='';
+  for(const group of THEME_UI_GROUPS){const sec=document.createElement('details');sec.className='theme-section theme-collapsible';sec.innerHTML='<summary class="theme-section-head"><h3>'+esc(group.title)+'</h3></summary><div class="theme-slot-list"></div>';sections.appendChild(sec);const list=$('.theme-slot-list',sec);for(const [slotId,label] of group.slots){const src=await resolveUiSlot(themeId,slotId);const row=document.createElement('div');row.className='theme-slot';row.dataset.slotId=slotId;row.innerHTML='<img class="theme-slot-preview" alt=""><div class="theme-slot-main"><b>'+esc(label)+'</b><input type="url" placeholder="Link ảnh (không bắt buộc)" value="'+esc(themeById(themeId).ui?.[slotId]?.url||'')+'"></div><div class="theme-slot-actions"><button data-upload-slot="'+esc(slotId)+'" title="Tải ảnh">↑</button><button data-clear-slot="'+esc(slotId)+'" title="Mặc định">↺</button></div>';$('.theme-slot-preview',row).src=src||defaultThemeSlotPreview(slotId)||'';$('.theme-slot-preview',row).title=src?'Ảnh đang áp dụng':'Ảnh mặc định (đã liên kết)';list.appendChild(row);$('input',row).onchange=()=>saveUiSlotUrl(themeId,slotId,$('input',row).value);$('[data-upload-slot]',row).onclick=()=>pickUiSlotFile(themeId,slotId);$('[data-clear-slot]',row).onclick=()=>clearUiSlot(themeId,slotId)}}
+  await renderThemeEntityRows(themeId,'cards',$('#themeCardRows'));
+  await renderThemeEntityRows(themeId,'artifacts',$('#themeArtifactRows'));
+}
+async function renderThemeEntityRows(themeId,kind,holder){
+  if(!holder)return;holder.innerHTML='';
+  for(const c of entityList(kind)){
+    const src=await resolveArtwork(kind,c.id,'thumb');
+    const row=document.createElement('div');row.className='theme-card-row theme-card-row-simple';
+    row.innerHTML='<img alt=""><div class="theme-card-name"><b>'+esc(c.name)+'</b></div><div class="theme-slot-actions"><button data-theme-upload title="Upload Artwork">↑</button><button data-theme-clear title="Reset">↺</button></div>';
+    $('img',row).src=src;holder.appendChild(row);
+    $('[data-theme-upload]',row).onclick=()=>pickEntityThemeArtwork(themeId,kind,c.id);
+    $('[data-theme-clear]',row).onclick=()=>clearEntityTheme(themeId,kind,c.id);
+  }
+}
+
+async function saveUiSlotUrl(themeId,slotId,url){const t=themeById(themeId);t.ui=t.ui||{};t.ui[slotId]=t.ui[slotId]||{};t.ui[slotId].url=String(url||'').trim();saveState();await renderTheme();await applyActiveThemeUi()}
+function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*';i.hidden=true;document.body.appendChild(i);i.onchange=()=>{const f=i.files?.[0];i.remove();if(f)cb(f)};i.click()}
+function pickUiSlotFile(themeId,slotId){pickFile(async f=>{await dbPut(uiBlobKey(themeId,slotId),f);objectUrls.delete(uiBlobKey(themeId,slotId));await renderTheme();await applyActiveThemeUi()})}
+async function clearUiSlot(themeId,slotId){const t=themeById(themeId);if(t.ui)delete t.ui[slotId];await dbDelete(uiBlobKey(themeId,slotId)).catch(()=>{});objectUrls.delete(uiBlobKey(themeId,slotId));saveState();await renderTheme();await applyActiveThemeUi()}
+function thumbBlobFromFile(file){return new Promise(resolve=>{const u=URL.createObjectURL(file),im=new Image();const done=v=>{try{URL.revokeObjectURL(u)}catch(_){}resolve(v||file)};im.onload=()=>{try{const c=document.createElement('canvas');c.width=360;c.height=330;const g=c.getContext('2d');if(!g)return done(file);g.fillStyle='#071421';g.fillRect(0,0,360,330);const sw=im.naturalWidth||1064,sh=im.naturalHeight||1478,scale=Math.max(360/sw,330/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(360-dw)/2,(330-dh)/2,dw,dh);c.toBlob(b=>done(b||file),'image/webp',.9)}catch(_){done(file)}};im.onerror=()=>done(file);im.src=u})}
+function pickEntityThemeArtwork(themeId,kind,entityId){pickFile(async f=>{const dk=cardBlobKey(themeId,kind,entityId,'display'),tk=cardBlobKey(themeId,kind,entityId,'thumb');await dbPut(dk,f);await dbPut(tk,await thumbBlobFromFile(f));objectUrls.delete(dk);objectUrls.delete(tk);saveState();memberAdminState.loaded=false;await renderTheme();renderEntityGrid(kind)})}
+async function clearEntityTheme(themeId,kind,entityId){const t=themeById(themeId);t.mappings=t.mappings||{};delete t.mappings[entityId];for(const k of ['display','thumb']){await dbDelete(cardBlobKey(themeId,kind,entityId,k)).catch(()=>{});objectUrls.delete(cardBlobKey(themeId,kind,entityId,k))}saveState();await renderTheme();renderEntityGrid(kind)}
+
+function addTheme(){const name=prompt('Tên Chủ Đề mới');if(!String(name||'').trim())return;const id='theme-'+Date.now().toString(36),src=themeById(state.themes.activeId);state.themes.list.push({id,name:String(name).trim(),builtin:false,locked:false,ui:clone(src.ui||{}),mappings:clone(src.mappings||{})});state.themes.selectedEditorId=id;state.themes.activeId=id;saveState();renderTheme()}
+
+function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
+// Original Old Witch voice from V2.16; bundled with the OTA application.
+const gmwwBundledLegacyAudio={ "ROLE:source-18":{type:"audio/mpeg",base64:"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"} };
+function bundledAudioBlob(a){const src=a?.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]||gmwwBundledLegacyAudio[a.sourceKey]);if(!src?.base64)return null;try{const raw=atob(src.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);return new Blob([u8],{type:src.type||'audio/mpeg'})}catch(_){return null}}
+async function audioHasFile(a){if(a?.sourceKey&&window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64)return true;if(a?.url)return true;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);return rec?.blob instanceof Blob}
+async function renderAudio(){const list=state.audio[audioKind]||[];const resolved=await Promise.all(list.map(async a=>({a,ok:await audioHasFile(a)})));$('#audioGrid').innerHTML='<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+resolved.map(({a,ok})=>{const file=String(a.fileName||'').trim(),meta=file?(file+' • '+(ok?'OK':'Rỗng')):(ok?'OK':'Rỗng');return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small></div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>'}).join('');
+  $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
+  $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
+}
+async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
+function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);battleInvalidateAudioCache(audioKind,a.id);a.fileName=f.name;a.verifiedBinary=true;delete a.status;saveState();renderAudio()};i.click()}
+async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});battleInvalidateAudioCache(audioKind,a.id);saveState();renderAudio()}
+
+function bindCore(){
+  $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
+  $$('.libtab').forEach(b=>b.onclick=()=>{$$('.libtab').forEach(x=>x.classList.toggle('active',x===b));$$('.libpane').forEach(p=>p.classList.toggle('active',p.id==='lib-'+b.dataset.lib));$('#library').scrollTop=0;if(b.dataset.lib==='themes')renderTheme();if(b.dataset.lib==='audio')renderAudio();if(b.dataset.lib==='templates')loadPlayGameTemplates()});
+  $$('[data-filter-kind]').forEach(row=>$$('.filter',row).forEach(b=>b.onclick=()=>{$$('.filter',row).forEach(x=>x.classList.toggle('active',x===b));if(row.dataset.filterKind==='cards')cardFilter=b.dataset.filter;else artifactFilter=b.dataset.filter;renderEntityGrid(row.dataset.filterKind)}));
+  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');const exportLocalBtn=$('#exportLocalData');if(exportLocalBtn)exportLocalBtn.onclick=()=>exportLocalGameData();
+  const topBack=$('#topBackEntity');if(topBack)topBack.onclick=closeEntityEditor;$('#backEntity').onclick=closeEntityEditor;$('#saveEntity').onclick=saveEntity;$('#hideEntity').onclick=toggleCurrentEntityHidden;$('#deleteEntity').onclick=deleteEntity;
+  $$('.face-switch button').forEach(b=>b.onclick=()=>setFace(b.dataset.face));
+  $('#entityName').oninput=()=>{if(editDraft){editDraft.name=$('#entityName').value;renderEntityFront()}};
+  $('#entityInformation').oninput=()=>{if(editDraft){editDraft.information=$('#entityInformation').value;renderEntityFront()}};
+  $('#entityLives').oninput=()=>{if(editDraft)editDraft.lives=Math.max(1,Number($('#entityLives').value||1))};
+  $$('#factionSeg button').forEach(b=>b.onclick=()=>{if(!editDraft||currentKind!=='cards')return;editDraft.factionId=b.dataset.faction;renderEntityBack();renderEntityFront()});
+  const flagMap={flagUseDay:'useDay',flagUseNight:'useNight',flagNightImmune:'nightImmune',flagAllowMultipleActions:'allowMultipleActions',flagPassive:'passive',flagSoloWolfOnly:'soloWolfOnly'};
+  for(const [id,k] of Object.entries(flagMap))$('#'+id).onchange=()=>{if(editDraft)editDraft.flags[k]=$('#'+id).checked};
+  $('#winCondition').oninput=()=>{if(editDraft)editDraft.winCondition=$('#winCondition').value};
+  $('#passiveRuleEnabled').onchange=()=>{if(editDraft)editDraft.passiveRule.enabled=$('#passiveRuleEnabled').checked};$('#passiveRuleType').onchange=()=>{if(editDraft)editDraft.passiveRule.type=$('#passiveRuleType').value};
+  $('#passiveFirstTime').onchange=()=>{if(editDraft)editDraft.passiveRule.firstTime=$('#passiveFirstTime').value};$('#passiveNextTime').onchange=()=>{if(editDraft)editDraft.passiveRule.nextTime=$('#passiveNextTime').value};$('#passiveOnDeath').onchange=()=>{if(editDraft)editDraft.passiveRule.onDeath=$('#passiveOnDeath').checked};$('#passiveSkipDead').onchange=()=>{if(editDraft)editDraft.passiveRule.skipIfTargetAlreadyDead=$('#passiveSkipDead').checked};
+  $('#groupGateEnabled').onchange=()=>{if(editDraft)editDraft.groupActionGate.enabled=$('#groupGateEnabled').checked};$('#groupGateAction').onchange=()=>{if(editDraft)editDraft.groupActionGate.actionId=$('#groupGateAction').value};$('#groupGateScope').onchange=()=>{if(editDraft)editDraft.groupActionGate.scope=$('#groupGateScope').value};
+  for(const id of ['gateExpelled','gateBlocked'])$('#'+id).onchange=()=>{if(!editDraft)return;const arr=[];if($('#gateExpelled').checked)arr.push('expelled');if($('#gateBlocked').checked)arr.push('blocked');editDraft.groupActionGate.blockOn=arr};
+  const specialMap={ruleSystemRequired:'systemRequired',ruleUsesPackBite:'usesPackBite',ruleRequiresSoloWolf:'requiresNoOtherLivingWolf',ruleActorMayBeDead:'actorMayBeDead',ruleAllowFriendlyFaction:'allowFriendlyFaction',ruleReplacesWolfBite:'replacesWolfBite'};for(const [id,k] of Object.entries(specialMap))$('#'+id).onchange=()=>{if(editDraft)editDraft.specialRules[k]=$('#'+id).checked};
+  $('#specialLimits').oninput=()=>{if(editDraft)editDraft.limits=$('#specialLimits').value};$('#specialConditions').oninput=()=>{if(editDraft)editDraft.conditions=$('#specialConditions').value};$('#specialAttributes').oninput=()=>{if(editDraft)editDraft.attributes=$('#specialAttributes').value};
+  for(const [id,k] of [['artifactOwnerSelection','ownerSelection'],['artifactPersistentOwner','persistentOwner'],['artifactRevealFollow','revealFollowTargetOnly'],['artifactPriorityFirst','priorityFirst']])$('#'+id).onchange=()=>{if(editDraft?.artifact)editDraft.artifact[k]=$('#'+id).checked};
+  $('#artifactWakeRole').onchange=()=>{if(editDraft?.artifact)editDraft.artifact.wakeWithRoleId=$('#artifactWakeRole').value};$('#artifactWakeAction').onchange=()=>{if(editDraft?.artifact)editDraft.artifact.wakeWithActionId=$('#artifactWakeAction').value};
+  $('#addFunction').onclick=()=>{if(!editDraft)return;const list=actionList(currentKind==='artifacts'?'artifacts':'role'),a=list[0];editDraft.functions.push({id:uid('fn'),actionId:a?.id||'',phase:'night',usageMode:'unlimited',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,description:'',systemRequired:false,usesPackBite:false,requiresNoOtherLivingWolf:false,actorMayBeDead:false,allowFriendlyFaction:false,replacesWolfBite:false,effectIds:[]});renderEntityBack()};
+  $$('#actionKindSeg button').forEach(b=>b.onclick=()=>{$$('#actionKindSeg button').forEach(x=>x.classList.toggle('active',x===b));actionKind=b.dataset.actionKind;renderActions()});$('#actionSearch').oninput=renderActions;$('#effectSearch').oninput=renderEffects;
+  $('#sheetClose').onclick=closeSheet;$('#sheetCancel').onclick=closeSheet;$('#sheetSave').onclick=saveSheet;$('#editSheet').onclick=e=>{if(e.target===$('#editSheet'))closeSheet()};
+  $('#addTheme').onclick=addTheme;
+  $$('#audioKindSeg button').forEach(b=>b.onclick=()=>{$$('#audioKindSeg button').forEach(x=>x.classList.toggle('active',x===b));audioKind=b.dataset.audioKind;renderAudio()});
+}
+async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch'),stamp='V1.08|ROLE:source-18|'+a.base64.length;if(localStorage.getItem('GMWW_V1_AUDIO_SEED_SOURCE18')===stamp&&await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}));localStorage.setItem('GMWW_V1_AUDIO_SEED_SOURCE18',stamp)}catch(e){console.warn('V1 audio seed failed',e)}}
+async function boot(){try{await migrateLegacyV1Assets()}catch(e){console.warn('V1 settings migration failed',e)}bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+/* V2.76 — discrete actor-only character scale; UI geometry stays fixed */
+const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200];
+function normalizeCharacterScale(value,fallback=100){
+  const n=Number(value);if(!Number.isFinite(n))return fallback;
+  return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALE_OPTIONS[0])
+}
+function applyCharacterScale(value){
+  const n=normalizeCharacterScale(value,100),root=document.documentElement;
+  root?.style?.setProperty('--gmww-background-dim','0');
+  root?.style?.setProperty('--gmww-character-scale',String(n/100));
+  document.querySelectorAll('[data-character-scale]').forEach(btn=>{
+    const active=Number(btn.dataset.characterScale)===n;
+    btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',active?'true':'false')
+  });
+  const out=document.getElementById('characterScaleValue');if(out)out.textContent=n+'%';
+  return n
+}
+async function saveCharacterScale(value){
+  const n=applyCharacterScale(value);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/ui-settings',{method:'PUT',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({characterScale:n}),cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+  }catch(err){console.warn('GMWW_CHARACTER_SCALE_SAVE',err)}
+}
+async function initCharacterScaleSetting(){
+  const choices=document.getElementById('characterScaleChoices');if(!choices)return;
+  let n=100;
+  try{const res=await fetch(GMWW_SERVER_BASE+'/api/ui-settings?ts='+Date.now(),{cache:'no-store'}),d=await res.json();if(res.ok&&Number.isFinite(Number(d?.characterScale)))n=Number(d.characterScale)}catch(err){console.warn('GMWW_CHARACTER_SCALE_LOAD',err)}
+  applyCharacterScale(n);
+  choices.addEventListener('click',event=>{const btn=event.target.closest('[data-character-scale]');if(btn)saveCharacterScale(btn.dataset.characterScale)});
+}
+setTimeout(initCharacterScaleSetting,0);
+
+/* V2.22 — Server Health in Cài Đặt */
+const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
+const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+setTimeout(initVillageSceneManager,0);
+let gmwwGmPresenceTimer=null,gmwwGmPresenceState=null;
+const GMWW_GM_AUTO_MOVE_MS=6500,GMWW_GM_AUTO_HOLD_MS=15000,GMWW_GM_AUTO_CYCLE_MS=GMWW_GM_AUTO_MOVE_MS+GMWW_GM_AUTO_HOLD_MS,GMWW_GM_AUTO_POINTS=[[25,37],[40,35],[60,35],[75,39],[82,55],[74,77],[60,86],[40,86],[25,77],[17,58],[31,64],[51,73],[69,64],[66,45],[43,44],[34,55]];
+function gmwwGmHash(text){let h=2166136261>>>0;for(const ch of String(text||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h>>>0}
+function gmwwGmAutoPoint(session,index){let h=gmwwGmHash(session+':'+index),base=GMWW_GM_AUTO_POINTS[h%GMWW_GM_AUTO_POINTS.length],prev=GMWW_GM_AUTO_POINTS[gmwwGmHash(session+':'+Math.max(0,index-1))%GMWW_GM_AUTO_POINTS.length];if(index>0&&base===prev)base=GMWW_GM_AUTO_POINTS[(h+5)%GMWW_GM_AUTO_POINTS.length];return{x:Math.max(15,Math.min(85,base[0]+((h>>>8)%5)-2)),y:Math.max(35,Math.min(88,base[1]+((h>>>16)%5)-2))}}
+function gmwwGmActorAt(now=Date.now()){
+  const p=gmwwGmPresenceState;if(!p?.online)return null;const manualUntil=Math.max(0,Number(p.manualUntil||0)),ms=Math.max(0,Number(p.moveStartedAt||0)),md=Math.max(0,Number(p.moveDurationMs||0));
+  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return{moving,gait:moving?'run':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'}}
+  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return{moving,gait:moving?'walk':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'}
+}
+async function gmwwSendGmPresence(online=true){
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/presence',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({online:online!==false,roomCode:online!==false&&isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store',keepalive:true}),d=await res.json();if(res.ok){
+      gmwwGmPresenceState=d?.gm||null;
+      const generation=Math.max(0,Number(d?.lobbyGeneration||0));
+      if(generation>Number(playSceneState.lobbyGeneration||0)&&!playSceneRuntime.busy){
+        const mustReturn=isLivePlayRoom()||playSceneState.step!=='lobby';
+        playApplyLobbyStage(generation);
+        if(mustReturn)gmwwSendGmPresence(true);
+      }
+      if(typeof renderPlayPlayers==='function'&&document.getElementById('playPlayerRing'))renderPlayPlayers();
+    }
+  }catch(_){}
+}
+async function gmwwMoveGmCharacter(x,y){
+  const actor=gmwwGmActorAt(Date.now()),from=actor?{x:actor.x,y:actor.y}:{x:50,y:76};
+  try{const res=await fetch(GMWW_SERVER_BASE+'/api/gm/move',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({fromX:from.x,fromY:from.y,x,y,roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store'}),d=await res.json();if(!res.ok)throw new Error(d?.message||d?.error||('HTTP '+res.status));gmwwGmPresenceState=d?.gm||gmwwGmPresenceState;renderPlayPlayers();syncPlayMovementTicker();return true}catch(err){playFlashError('Không di chuyển được GM. '+(err?.message||''));return false}
+}
+function gmwwStartGmPresence(){
+  gmwwSendGmPresence(true);
+  if(gmwwGmPresenceTimer)clearInterval(gmwwGmPresenceTimer);
+  gmwwGmPresenceTimer=setInterval(()=>{if(document.visibilityState!=='hidden')gmwwSendGmPresence(true)},20000);
+}
+setTimeout(gmwwStartGmPresence,0);
+window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
+
+/* UPDATE MANAGER V1 — prepared off-main */
+let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
+
+/* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
+function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
+  const root=document.getElementById('updateProgress'),fill=document.getElementById('updateProgressFill'),
+        value=document.getElementById('updateProgressPercent'),title=document.getElementById('updateProgressTitle');
+  if(!root)return;
+  const valid=typeof percent==='number'&&Number.isFinite(percent);
+  const n=valid?Math.max(0,Math.min(100,Math.round(percent))):null;
+  root.dataset.state=status;
+  if(valid){root.setAttribute('aria-valuenow',String(n));root.removeAttribute('aria-valuetext')}
+  else{root.removeAttribute('aria-valuenow');root.setAttribute('aria-valuetext','Đang tải, chưa có dữ liệu phần trăm thực tế')}
+  if(fill)fill.style.width=valid?n+'%':'0%';
+  if(value)value.textContent=valid?n+'%':'—';
+  if(title)title.textContent=label||({idle:'Chưa bắt đầu',running:'Đang thực hiện…',done:'Đã hoàn tất',error:'Có lỗi khi thực hiện'}[status]||'');
+}
+const gmwwRuntimeVersion=()=>String(VERSION||'').replace(/^V/i,'');
+const gmwwShellVersion=()=>String(window.GMWW_NATIVE_SHELL_VERSION||VERSION||'').replace(/^V/i,'');
+function gmwwVersionParts(v){return String(v||'').replace(/^V/i,'').split('.').map(x=>Math.max(0,Number.parseInt(x,10)||0))}
+function gmwwVersionCompare(a,b){const aa=gmwwVersionParts(a),bb=gmwwVersionParts(b),n=Math.max(aa.length,bb.length);for(let i=0;i<n;i++){const d=(aa[i]||0)-(bb[i]||0);if(d)return d>0?1:-1}return 0}
+function gmwwNativePost(action,payload={}){
+  try{const h=window.webkit?.messageHandlers?.gmwwUpdater;if(!h)return false;h.postMessage({action,...payload});return true}catch(e){console.warn('GMWW_NATIVE_UPDATE_BRIDGE',e);return false}
+}
+function setUpdateUi(kind,status,message,detail=''){
+  const dot=document.getElementById('updateDot'),pill=document.getElementById('updateStatus'),msg=document.getElementById('updateMessage'),det=document.getElementById('updateDetail');
+  if(dot)dot.className='update-dot '+kind;
+  if(pill){pill.className='update-pill '+kind;pill.textContent=status}
+  if(msg)msg.textContent=message||'';
+  if(det){const repeated=/^(?:Bản cập nhật|Có gì mới)\s*:/.test(String(detail||''));det.textContent=repeated?'':detail||'';det.hidden=repeated||!detail;}
+  const put=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  put('updateShellVersion','V'+gmwwShellVersion());
+  put('updateRuntimeVersion','V'+gmwwRuntimeVersion());
+}
+function setUpdateAction(kind,context={}){
+  const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
+  const title=document.getElementById('updateDecisionTitle'),hint=document.getElementById('updateDecisionHint');
+  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=false;x.removeAttribute('aria-disabled')});
+  const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
+  const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
+  if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
+  else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
+  else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
+  else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
+  else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
+  else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
+  else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
+}
+async function installRuntimeUpdate(){
+  if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
+  const files=gmwwUpdateManifest?.runtime?.files;
+  if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
+  gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
+  if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
+    gmwwUpdateBusy=false;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
+  }
+  return true
+}
+function downloadUpdateIPA(){
+  const manifestIpa=gmwwUpdateManifest?.ipa||{},version=String(manifestIpa.version||'').replace(/^V/i,''),url=String(manifestIpa.url||'').trim(),fileName=String(manifestIpa.fileName||'').trim();
+  if(!version||!url||!fileName){
+    setUpdateUi('warn','CHƯA CÓ IPA','Server chưa công bố file IPA mới để tải.','Không tải lại IPA cũ trong máy.');
+    return false;
+  }
+  gmwwSetUpdateProgress('running',null,'Đang tải IPA • chờ dữ liệu thực tế');
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải IPA V'+version,'');
+  if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
+  return true;
+}
+async function updateDataNow(){
+  const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
+  try{
+    const d=await checkAppUpdate({notify:false});if(!d)return;
+    const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
+    if(newer&&type==='runtime'){await installRuntimeUpdate();return}
+    if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
+    gmwwSetUpdateProgress('running',0,'Đang cập nhật dữ liệu thành viên và máy chủ');
+    memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth();
+    gmwwSetUpdateProgress('done',100,'Dữ liệu đã cập nhật');
+    setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
+  }catch(e){console.warn('GMWW_UPDATE_DATA',e);gmwwSetUpdateProgress('error',null,'Không thể cập nhật dữ liệu');setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn&&!gmwwUpdateBusy)btn.disabled=false}
+}
+async function syncPlayerWebUpdate(){
+  const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
+  gmwwSetUpdateProgress('running',0,'Đang gửi yêu cầu đồng bộ Web');
+  setUpdateUi('checking','ĐANG ĐỒNG BỘ','Đang gửi tín hiệu đồng bộ tới Player Web…','');
+  try{
+    const stamp=Date.now();
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/web-sync?ts='+stamp,{
+      method:'POST',
+      headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},
+      body:JSON.stringify({source:'GM_APP',runtimeVersion:gmwwRuntimeVersion()}),
+      cache:'no-store'
+    });
+    let d={};try{d=await res.json()}catch{}
+    if(!res.ok||d.ok!==true)throw new Error(d.message||d.error||('HTTP '+res.status));
+    const webVersion=String(d.webVersion||d.version||'').replace(/^V/i,'');
+    const serverEl=document.getElementById('updateServerVersion');if(serverEl&&webVersion)serverEl.textContent='V'+webVersion;
+    gmwwSetUpdateProgress('done',100,'Máy chủ đã xác nhận đồng bộ Web');
+    setUpdateAction('none');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
+  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);gmwwSetUpdateProgress('error',null,'Đồng bộ Web không thành công');setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn)btn.disabled=false}
+}
+/* Validate both release metadata and Worker health before claiming "latest". */
+let gmwwUpdateCheckSerial=0;
+async function gmwwUpdateProbe(path){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+    try{
+      const res=await fetch(GMWW_SERVER_BASE+path,{method:'GET',cache:'no-store',signal:controller.signal});
+      let body=null;try{body=await res.json()}catch{}
+      if(!res.ok||!body||body.ok!==true){
+        const error=new Error(String(body?.error||body?.message||('HTTP '+res.status)));
+        error.code=String(body?.error||'');error.status=res.status;
+        throw error;
+      }
+      return body;
+    }catch(error){lastError=error}
+    finally{clearTimeout(timer)}
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,350));
+  }
+  throw lastError||new Error('Không nhận được phản hồi');
+}
+function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
+function gmwwReleaseNotesList(manifest){
+  const notes=Array.isArray(manifest?.releaseNotes)
+    ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean):[];
+  const current=gmwwRuntimeVersion(), latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+  if(!latest||gmwwVersionCompare(latest,current)<=0)return ['Không có thay đổi mới so với phiên bản đang sử dụng.'];
+  const previous=String(manifest?.previousVersion||manifest?.fromVersion||'').replace(/^V/i,'');
+  if(previous&&gmwwVersionCompare(previous,current)!==0)return ['Phiên bản V'+latest+' có bản cập nhật mới. Chưa có ghi chú riêng cho bước nâng cấp từ V'+current+'.'];
+  return notes.length?notes.slice(0,6):['Có bản cập nhật V'+latest+'. Chưa có ghi chú thay đổi riêng cho phiên bản này.'];
+}
+function gmwwReleaseNotesText(manifest){return gmwwReleaseNotesList(manifest).join(' • ')}
+function gmwwRenderReleaseNotes(manifest){
+  const box=document.getElementById('updateReleaseNotes');if(!box)return;
+  const title=document.createElement('b');title.className='update-release-title';title.textContent='Có gì mới';
+  const list=document.createElement('ul');list.className='update-release-list';
+  for(const note of gmwwReleaseNotesList(manifest)){
+    const item=document.createElement('li');item.textContent=note;list.appendChild(item);
+  }
+  box.replaceChildren(title,list);
+}
+async function checkAppUpdate({notify=false}={}){
+  if(gmwwUpdateBusy)return null;
+  const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
+  if(retry){retry.disabled=true;retry.setAttribute('aria-busy','true')}
+  if(serverEl)serverEl.textContent='V—';
+  setUpdateAction('unverified');
+  setUpdateUi('checking','ĐANG KIỂM TRA','Đang đối chiếu Server và gói cập nhật…','');
+  try{
+    const stamp=Date.now(),[manifestResult,healthResult]=await Promise.allSettled([
+      gmwwUpdateProbe('/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp),
+      gmwwUpdateProbe('/api/health?update='+stamp)
+    ]);
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    const manifest=manifestResult.status==='fulfilled'?manifestResult.value:null;
+    const health=healthResult.status==='fulfilled'?healthResult.value:null;
+    const server=String(health?.serverVersion||health?.version||'').replace(/^V/i,'');
+    const latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+    const serverValid=health?.project==='GMWW-V2.00'&&gmwwVersionVerified(server);
+    const manifestValid=gmwwVersionVerified(latest)&&['runtime','native','server_only'].includes(String(manifest?.releaseType||'').toLowerCase());
+    if(serverEl)serverEl.textContent=serverValid?'V'+server:'V—';
+    // Never retain a previously fetched manifest after a failed version check.
+    gmwwUpdateManifest=null;
+    if(!serverValid||!manifestValid){
+      const publishing=serverValid&&manifestResult.status==='rejected'&&
+        ['RUNTIME_MANIFEST_NOT_READY','UPDATE_MANIFEST_NOT_FOUND'].includes(String(manifestResult.reason?.code||''));
+      if(publishing){
+        setUpdateAction('pending');
+        setUpdateUi('checking','ĐANG PHÁT HÀNH','Server V'+server+' đã chạy nhưng gói cập nhật chưa sẵn sàng.','Chưa cần nhấn Cập nhật. Hệ thống sẽ kiểm tra lại khi bạn mở ứng dụng hoặc bấm ↻.');
+        return null;
+      }
+      const cause=!serverValid?'Chưa xác minh được kết nối Server.':'Chưa đọc được gói cập nhật Runtime.';
+      const retryInfo=!serverValid?healthResult.reason:manifestResult.reason;
+      console.warn('GMWW_UPDATE_UNVERIFIED',cause,retryInfo||'');
+      setUpdateAction('unverified');
+      setUpdateUi('warn','CẦN KIỂM TRA LẠI',cause,'Phiên bản Runtime V'+gmwwRuntimeVersion()+' đang chạy. Nhấn ↻ để thử lại; chưa thể kết luận đây là bản mới nhất.');
+      return null;
+    }
+    const manifestServer=String(manifest.serverVersion||latest).replace(/^V/i,'');
+    if(!gmwwVersionVerified(manifestServer)||gmwwVersionCompare(manifestServer,server)!==0){
+      setUpdateAction('unverified');
+      setUpdateUi('warn','SERVER CHƯA ĐỒNG BỘ','Server V'+server+' và kênh cập nhật V'+manifestServer+' chưa khớp.','Nhấn ↻ kiểm tra lại sau khi hệ thống đồng bộ.');
+      return null;
+    }
+    gmwwUpdateManifest=manifest;
+    gmwwRenderReleaseNotes(manifest);
+    const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
+    const newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
+    if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
+      setUpdateAction('restart',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
+      return manifest
+    }
+    if(!newer){
+      setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Game Runtime V'+runtime+' · Server V'+server+'.','');
+      return manifest
+    }
+    if(type==='native'&&shellCurrent){
+      setUpdateAction('none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','ĐÃ CÀI IPA','Đã cài IPA V'+shell,'Phiên bản IPA hiện tại.');
+      return manifest
+    }
+    if(type==='native'){
+      setUpdateAction('native',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN IPA MỚI','Có IPA V'+latest+' mới.','Nhấn TẢI IPA để cài phiên bản ứng dụng.');
+    }else if(type==='runtime'){
+      setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' mới.','Cập nhật Game Runtime để nhận thay đổi.');
+    }else{
+      setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Tải lại Player Web để xem thay đổi.');
+    }
+    if(notify&&newer){
+      const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
+      if(!sessionStorage.getItem(key)){
+        sessionStorage.setItem(key,'1');
+        if(type==='runtime'){
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nCập nhật ngay?'))installRuntimeUpdate();
+        }else if(type==='native'){
+          if(confirm('Có phiên bản IPA V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+        }else{
+          if(confirm('Player Web/Server V'+latest+' đã cập nhật.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+        }
+      }
+    }
+    return manifest
+  }catch(e){
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    gmwwUpdateManifest=null;setUpdateAction('unverified');
+    setUpdateUi('warn','CẦN KIỂM TRA LẠI','Chưa xác nhận được bản cập nhật.','Kiểm tra kết nối rồi nhấn ↻ để thử lại. Game hiện tại vẫn có thể hoạt động.');
+    console.warn('GMWW_UPDATE_CHECK',e);
+    return null
+  }finally{
+    if(serial===gmwwUpdateCheckSerial&&retry){retry.disabled=false;retry.removeAttribute('aria-busy')}
+  }
+}
+window.GMWWUpdateNative={
+  onProgress(event={}){
+    // Đọc tiến độ thật chỉ khi trình tải bản địa cung cấp dữ liệu hợp lệ.
+    if(!['installRuntime','downloadIPA'].includes(String(event.action||'')))return;
+    const percent=Number(event.percent);
+    if(!Number.isFinite(percent)||event.percent===null||event.percent===undefined)return;
+    gmwwSetUpdateProgress('running',percent,event.action==='installRuntime'?'Đang cài Runtime':'Đang tải IPA');
+  },
+  onResult(result={}){
+    gmwwUpdateBusy=false;
+    if(result.ok&&result.action==='installRuntime'){
+      gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
+      const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
+      setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Có gì mới: '+gmwwReleaseNotesText(gmwwUpdateManifest));
+      setTimeout(()=>{if(!gmwwNativePost('restartRuntime'))window.location.reload()},300);
+      return
+    }
+    if(result.ok&&result.action==='downloadIPA'){
+      gmwwSetUpdateProgress('done',100,'Đã tải xong IPA');
+      setUpdateUi('ok','ĐÃ TẢI IPA','File IPA đã sẵn sàng.','Chọn Lưu vào Tệp hoặc ứng dụng cài đặt trong bảng chia sẻ.');
+      return
+    }
+    if(result.ok===false){gmwwSetUpdateProgress('error',null,'Tác vụ không thành công');setUpdateUi('bad','CẬP NHẬT LỖI','Không thể hoàn tất cập nhật.',String(result.error||'Đã giữ nguyên phiên bản hiện tại.'));}
+  }
+};
+
+let serverHealthBusy=false;
+function setServerHealthState(kind,text,detail,data={}){
+  const pill=document.getElementById('serverHealthPill'),dot=document.getElementById('serverHealthDot');
+  if(pill){pill.className='health-pill '+kind;pill.textContent=kind==='ok'?'HOẠT ĐỘNG TỐT':kind==='warn'?'CÓ CẢNH BÁO':kind==='bad'?'MẤT KẾT NỐI':'ĐANG KIỂM TRA'}
+  if(dot)dot.className='health-dot '+kind;
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  put('serverHealthText',text);put('serverHealthDetail',detail);
+  put('healthPlayerWeb',data.web||'—');put('healthApi',data.api||'—');put('healthLatency',data.latency||'—');put('healthVersion',data.version||'—');
+  put('healthCheckedAt',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+}
+async function checkServerHealth(){
+  if(serverHealthBusy)return; serverHealthBusy=true;
+  const btn=document.getElementById('checkServerHealth');if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.classList.add('is-busy')}
+  setServerHealthState('checking','Đang kiểm tra…','Đang kiểm tra Server và Player Web');
+  const started=performance.now();
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000),stamp=Date.now();
+    const [healthRes,webRes]=await Promise.all([
+      fetch(GMWW_SERVER_BASE+'/api/health?ipa='+stamp,{method:'GET',cache:'no-store',signal:controller.signal}),
+      fetch(GMWW_SERVER_BASE+'/api/web-sync?health='+stamp,{method:'GET',cache:'no-store',signal:controller.signal})
+    ]);
+    clearTimeout(timer);
+    const latency=Math.max(1,Math.round(performance.now()-started));
+    let body={},web={};try{body=await healthRes.json()}catch{}try{web=await webRes.json()}catch{}
+    if(!healthRes.ok||body.ok!==true)throw new Error('HTTP '+healthRes.status);
+    const webOk=webRes.ok&&web.ok===true,slow=latency>800,level=webOk&&!slow?'ok':'warn';
+    setServerHealthState(level,level==='ok'?'Hoạt động tốt':slow?'Phản hồi chậm':'Player Web cần kiểm tra',
+      webOk?(slow?'Server + Player Web Online • phản hồi đang chậm':'Server + Player Web sẵn sàng'):'Server Online • chưa xác nhận được Player Web',
+      {web:webOk?'Online':'Cảnh báo',api:'Online',latency:latency+' ms',version:body.version||'—'});
+  }catch(err){
+    const latency=Math.max(1,Math.round(performance.now()-started));
+    setServerHealthState('bad','Mất kết nối','Không xác nhận được Server/Player Web',{web:'—',api:'Offline',latency:latency+' ms',version:'—'});
+  }finally{serverHealthBusy=false;if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.classList.remove('is-busy')}}
+}
+const retryUpdateCheck=document.getElementById('retryUpdateCheck');
+if(retryUpdateCheck)retryUpdateCheck.addEventListener('click',()=>{void checkAppUpdate({notify:false})});
+const refreshServerData=document.getElementById('refreshServerData');
+if(refreshServerData)refreshServerData.addEventListener('click',async()=>{refreshServerData.disabled=true;try{memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth()}finally{refreshServerData.disabled=false}});
+const openPlayerWeb=document.getElementById('openPlayerWeb');
+if(openPlayerWeb)openPlayerWeb.addEventListener('click',()=>window.location.assign(GMWW_SERVER_BASE+'/'));
+const healthButton=document.getElementById('checkServerHealth');
+if(healthButton)healthButton.addEventListener('click',checkServerHealth);
+const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',updateDataNow);
+const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
+const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
+setTimeout(()=>checkAppUpdate({notify:true}),1400);
+// Settings navigation stays lightweight; diagnostics and the GitHub board are loaded on demand.
+document.querySelectorAll('[data-page="settings"]').forEach(el=>el.addEventListener('click',()=>gmwwSettingsHubHealth('idle','Chọn HEALTHY CHECK để kiểm tra')));
+window.addEventListener('online',()=>{checkAppUpdate({notify:true});if(document.getElementById('settings')?.classList.contains('active')){checkServerHealth();if(gmwwOpsAutoEnabled())setTimeout(()=>gmwwOpsRun({kind:'all',silent:true}),330)}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){gmwwSendGmPresence(true);setTimeout(()=>checkAppUpdate({notify:true}),250)}});
+
+function setMaintenanceState(kind,text,detail){
+  const pill=document.getElementById('maintenanceStatus'),dot=document.getElementById('maintenanceDot'),msg=document.getElementById('maintenanceDetail');
+  if(pill){pill.className='maintenance-pill '+kind;pill.textContent=text}
+  if(dot)dot.className='maintenance-dot '+kind;
+  if(msg)msg.textContent=detail||'';
+}
+function auditLocalData(){
+  const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
+  try{
+    const issues=[];
+    const buckets=[['Vai Trò',state.cards],['Artifact',state.artifacts],['Hành Động Vai Trò',state.actions?.role],['Hành Động Artifact',state.actions?.artifacts],['Hiệu Ứng',state.effects]];
+    for(const [label,list] of buckets){
+      if(!Array.isArray(list)){issues.push(label+' lỗi cấu trúc');continue}
+      const ids=list.map(x=>String(x?.id||'')).filter(Boolean),dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
+      if(dupes.length)issues.push(label+' trùng ID');
+    }
+    const total=(state.cards?.length||0)+(state.artifacts?.length||0)+(state.effects?.length||0);
+    if(issues.length)setMaintenanceState('warn','CẦN KIỂM TRA',issues.slice(0,2).join(' • '));
+    else setMaintenanceState('ok','ỔN','Dữ liệu hợp lệ • '+total+' mục chính');
+  }catch(_){setMaintenanceState('bad','LỖI','Không thể kiểm tra dữ liệu.')}
+  finally{if(btn)btn.disabled=false}
+}
+async function clearSafeRuntimeCache(){
+  const btn=document.getElementById('clearRuntimeCache');if(btn)btn.disabled=true;
+  setMaintenanceState('checking','ĐANG DỌN','Đang giải phóng cache tạm…');
+  try{
+    let released=0;
+    for(const u of objectUrls.values()){try{URL.revokeObjectURL(u);released++}catch(_){}}
+    objectUrls.clear();defaultThumb='';
+    if('caches' in window){try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)))}catch(_){}}
+    renderEntityGrid('cards');renderEntityGrid('artifacts');await applyActiveThemeUi();
+    setMaintenanceState('ok','ĐÃ DỌN','Đã dọn cache tạm • giữ nguyên Artwork, Audio và dữ liệu game.');
+  }catch(_){setMaintenanceState('warn','CHƯA XONG','Không dọn được toàn bộ cache tạm.')}
+  finally{if(btn)btn.disabled=false}
+}
+const auditLocalDataBtn=document.getElementById('auditLocalData');if(auditLocalDataBtn)auditLocalDataBtn.addEventListener('click',auditLocalData);
+const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clearRuntimeCacheBtn)clearRuntimeCacheBtn.addEventListener('click',clearSafeRuntimeCache);
+const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
+
+/* V2.97 — self diagnostics for Server + Player Web */
+let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];
+function gmwwCaptureRuntimeIssue(kind,message){
+  const text=String(message||'Lỗi không xác định').replace(/\s+/g,' ').trim().slice(0,220);
+  if(!text)return;
+  gmwwRuntimeErrors.unshift({kind:String(kind||'runtime'),message:text,at:Date.now()});
+  gmwwRuntimeErrors=gmwwRuntimeErrors.slice(0,8);
+  if(document.getElementById('settings')?.classList.contains('active'))setDiagnosticState('warn','PHÁT HIỆN LỖI','Đã ghi nhận lỗi Runtime',text);
+}
+window.addEventListener('error',event=>gmwwCaptureRuntimeIssue('javascript',event?.message||event?.error?.message));
+window.addEventListener('unhandledrejection',event=>gmwwCaptureRuntimeIssue('promise',event?.reason?.message||event?.reason));
+
+function setDiagnosticState(kind,status,summary,detail=''){
+  const dot=document.getElementById('diagnosticDot'),pill=document.getElementById('diagnosticStatus'),sum=document.getElementById('diagnosticSummary'),hint=document.getElementById('diagnosticHint'),det=document.getElementById('diagnosticDetail');
+  if(dot)dot.className='diagnostic-dot '+kind;
+  if(pill){pill.className='diagnostic-pill '+kind;pill.textContent=status}
+  if(sum)sum.textContent=summary||'';
+  if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
+  if(det)det.textContent=detail||'';
+}
+function renderDiagnosticItem(key,kind,text){
+  const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
+  row.className=kind||'';const out=row.querySelector('b');if(out)out.textContent=text||'—';
+}
+async function gmwwJsonProbe(path,validate=()=>true,timeout=7000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout),started=performance.now();
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+path,{cache:'no-store',signal:controller.signal});
+    let data={};try{data=await res.json()}catch{}
+    const valid=res.ok&&validate(data,res)!==false;
+    return{ok:valid,status:res.status,data,latency:Math.max(1,Math.round(performance.now()-started)),error:valid?'':String(data?.error||data?.message||('HTTP '+res.status))}
+  }catch(err){return{ok:false,status:0,data:{},latency:Math.max(1,Math.round(performance.now()-started)),error:String(err?.name==='AbortError'?'Timeout':err?.message||'Network error')}}
+  finally{clearTimeout(timer)}
+}
+async function runSystemDiagnostics({silent=false}={}){
+  if(gmwwDiagnosticBusy)return null;gmwwDiagnosticBusy=true;
+  const btn=document.getElementById('runSystemDiagnostics');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  if(!silent)setDiagnosticState('checking','ĐANG QUÉT','Đang quét Server + Player Web…','5 nhóm kiểm tra');
+  ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'','…'));
+  try{
+    if(navigator.onLine===false){
+      ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'bad','OFFLINE'));
+      setDiagnosticState('bad','MẤT MẠNG','Thiết bị đang Offline.','Kết nối mạng rồi chạy lại Health Check.');
+      return{ok:false,offline:true}
+    }
+    const stamp=Date.now();
+    const [server,player,update,characters,settings]=await Promise.all([
+      gmwwJsonProbe('/api/health?diag='+stamp,d=>d?.ok===true&&d?.project==='GMWW-V2.00'),
+      gmwwJsonProbe('/api/web-sync?diag='+stamp,d=>d?.ok===true),
+      gmwwJsonProbe('/api/update/manifest?diag='+stamp,d=>d?.ok===true&&!!d?.releaseVersion),
+      gmwwJsonProbe('/api/game-characters?diag='+stamp,d=>Array.isArray(d?.characters)&&d.characters.length>=20),
+      gmwwJsonProbe('/api/ui-settings?diag='+stamp,()=>true)
+    ]);
+    const probes={server,player,update,characters,settings};
+    for(const [key,result] of Object.entries(probes))renderDiagnosticItem(key,result.ok?'ok':'bad',result.ok?'OK':(result.error||'LỖI').slice(0,18));
+    const failures=Object.entries(probes).filter(([,v])=>!v.ok);
+    const warnings=[];
+    const m=update.data||{},runtime=String(m.runtimeVersion||''),shell=String(m.shellVersion||''),type=String(m.releaseType||'');
+    if(update.ok&&runtime&&shell&&runtime!==shell&&type!=='runtime')warnings.push('Kênh cập nhật chưa đúng loại Runtime');
+    if(server.ok&&server.latency>800)warnings.push('Server phản hồi chậm '+server.latency+' ms');
+    if(gmwwRuntimeErrors.length)warnings.push('Runtime ghi nhận '+gmwwRuntimeErrors.length+' lỗi gần đây');
+    if(failures.length){
+      setDiagnosticState('bad','PHÁT HIỆN LỖI',failures.length+' thành phần chưa đạt',failures.map(([k,v])=>k+': '+(v.error||'Lỗi')).slice(0,2).join(' • '));
+      return{ok:false,failures,warnings,probes}
+    }
+    if(warnings.length){
+      setDiagnosticState('warn','CÓ CẢNH BÁO','5/5 thành phần kết nối được',warnings.slice(0,2).join(' • '));
+      return{ok:true,warnings,probes}
+    }
+    setDiagnosticState('ok','HỆ THỐNG TỐT','5/5 kiểm tra đạt','Health Check hoàn tất • '+server.latency+' ms');
+    return{ok:true,warnings:[],probes}
+  }finally{gmwwDiagnosticBusy=false;if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function quickRepairSystem(){
+  if(gmwwDiagnosticBusy)return;
+  const btn=document.getElementById('quickRepairSystem');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  setDiagnosticState('checking','ĐANG SỬA','Đang thực hiện sửa lỗi an toàn…','Dọn cache tạm • tải lại dữ liệu • đồng bộ Player Web');
+  try{
+    await clearSafeRuntimeCache();
+    memberAdminState.loaded=false;
+    try{await loadMembers(true)}catch(_){}
+    await syncPlayerWebUpdate();
+    await checkAppUpdate({notify:false});
+    await checkServerHealth();
+    gmwwRuntimeErrors=[];
+    const result=await runSystemDiagnostics({silent:true});
+    if(result?.ok)setDiagnosticState(result.warnings?.length?'warn':'ok',result.warnings?.length?'CÒN CẢNH BÁO':'ĐÃ SỬA XONG',result.warnings?.length?'Các kết nối đã phục hồi, còn cảnh báo cần theo dõi.':'Server + Player Web đã được kiểm tra lại.',result.warnings?.slice(0,2).join(' • ')||'Không xoá dữ liệu game.');
+  }catch(err){setDiagnosticState('bad','SỬA LỖI THẤT BẠI','Không hoàn tất được sửa nhanh.',String(err?.message||'Vui lòng thử lại.'))}
+  finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function checkPlayerWebNow(){
+  const btn=document.getElementById('checkPlayerWebNow');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  try{
+    await syncPlayerWebUpdate();
+    await runSystemDiagnostics({silent:false});
+  }finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
+const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
+const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true});false /* Workboard refreshes only when requested */}},120000);
+
+
+/* GMWW Settings: one continuous scrolling screen with consistent health status. */

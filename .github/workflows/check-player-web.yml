@@ -9,6 +9,7 @@ on:
       - "src/**"
       - "assets/**"
       - "server-game/current/**"
+      - "server-game/src/**"
       - "tests/**"
       - "wrangler.jsonc"
       - "package.json"
