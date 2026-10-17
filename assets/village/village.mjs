@@ -180,6 +180,11 @@ if(game){
     });
     return button
   }
+  // Stable character nodes must reconcile visual status independently of avatar artwork.
+  // Heartbeats must not restart the six approved orbit symbols or rebuild the rig.
+  function statusVisualSignature(data){
+    return JSON.stringify((Array.isArray(data?.statusTags)?data.statusTags:[]).map(x=>String(x?.statusId||"")).sort());
+  }
   function stablePlayerNode(data,pos,seatId,index){
     const id=String(data?.id||""),gm=data?.isGM===true||data?.kind==="gm";
     const appearance=JSON.stringify([gm,data?.gameCharacterId||"",data?.avatarId||"",data?.avatarUrl||""]);
@@ -187,10 +192,23 @@ if(game){
     if(!button||button.dataset.gmwwAppearance!==appearance){
       button=makePlayerButton(data,pos,seatId,index);
       button.dataset.gmwwAppearance=appearance;
+      button.dataset.gmwwStatusSig=statusVisualSignature(data);
       mountedPlayerNodes.set(id,button);villageRenderMetrics.created++;
       return button;
     }
     villageRenderMetrics.reused++;
+    const nextStatusSig=statusVisualSignature(data);
+    if(button.dataset.gmwwStatusSig!==nextStatusSig){
+      button.dataset.gmwwStatusSig=nextStatusSig;
+      // Remove only direct status overlays, never the existing character/rig.
+      button.querySelectorAll(':scope > .gmww-sv-overlay, :scope > .gmww-sv-badges').forEach(el=>el.remove());
+      const ids=(Array.isArray(data?.statusTags)?data.statusTags:[]).map(x=>String(x?.statusId||""));
+      const visuals=globalThis.GMWW_STATUS_VISUALS;
+      const active=visuals?visuals.layers(ids).items:[];
+      button.classList.toggle("gmww-sv-stage",active.length>0);
+      button.classList.toggle("gmww-sv-dead",active.includes("dead"));
+      if(active.length)button.insertAdjacentHTML("beforeend",visuals.overlay(ids));
+    }
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi");
     button._gmwwLive={data,actualSeat,playerName,isGM:gm};
     button.classList.toggle("selected",selectedId===data.id);

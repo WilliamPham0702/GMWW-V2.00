@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {STATUS_DEFS,activeStatusRows,statusTagsFor,roomUiStage,publicRoom} from '../src/gmww-public-room-contract.js';
+import {STATUS_DEFS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from '../src/gmww-public-room-contract.js';
 
 test('G3.7: status policy preserves all permanent and expiring status definitions',()=>{
   assert.deepEqual(Object.keys(STATUS_DEFS),[
@@ -103,4 +103,27 @@ test('V1: legacy status presentation is filtered by owner, match, expiry and GM 
   assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{dead:false,frozen:false,marked:false}},'alice'),[]);
   assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{marked:true}},'alice').map(x=>x.statusId),['dead','frozen','marked']);
   assert.deepEqual(statusTagsFor(rows,{matchId:'m1',statusDisplay:{}},'bob').map(x=>x.statusId),['expelled']);
+});
+
+test('V3.124: a real confirmed Guard action draws shields only during the matching night',()=>{
+  const receipt={type:'effect_notice',actionId:'action_protect',loginId:'Alice',
+    matchId:'m1',night:2,effectActive:false,clientEventId:'confirmed:alice'};
+  const wolf={...receipt,actionId:'action_wolf_bite',loginId:'Bob'};
+  const ignored={...receipt,actionId:'action_inspect',loginId:'Carol'};
+  const rows=[receipt,wolf,ignored];
+  const meta={matchId:'m1',phase:'running',cyclePhase:'night',cycleNight:2,statusDisplay:{}};
+  const original=structuredClone(rows);
+  assert.deepEqual(confirmedNightStatusVisuals(rows,meta).map(x=>x.statusId),['protected','wolf_bitten']);
+  assert.deepEqual(rows,original,'Projection must not write gameplay status to receipts');
+  assert.deepEqual(statusTagsFor(rows,meta,'alice'),[],'Private Guard target hidden until explicitly enabled');
+  assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{protected:true}},'alice'),
+    [{statusId:'protected',label:'Bảo Vệ',icon:'🛡️'}]);
+  assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{wolf_bitten:true}},'bob'),
+    [{statusId:'wolf_bitten',label:'Sói Cắn',icon:'🐾'}]);
+  assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{protected:true}},'bob'),[]);
+  assert.deepEqual(confirmedNightStatusVisuals(rows,{...meta,cycleNight:3}),[]);
+  assert.deepEqual(confirmedNightStatusVisuals(rows,{...meta,cyclePhase:'morning'}),[]);
+  assert.deepEqual(confirmedNightStatusVisuals(rows,{...meta,matchId:'m2'}),[]);
+  assert.deepEqual(confirmedNightStatusVisuals([{...receipt,undone:true}],meta),[]);
+  assert.deepEqual(confirmedNightStatusVisuals([{...receipt,expiredAt:'2026-10-17'}],meta),[]);
 });
