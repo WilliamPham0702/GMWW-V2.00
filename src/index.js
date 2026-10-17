@@ -1,5 +1,6 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
+import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1148,8 +1149,8 @@ export class RoomDurableObject extends DurableObject {
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
     meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
-    const rows=(await this.ctx.storage.get("interactions"))||[],expired=[];
-    for(const x of rows){const type=String(x?.type||""),sameMatch=!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId);if(!sameMatch||x?.effectActive===false||!["frozen","expelled","status"].includes(type))continue;const effectNight=Math.max(0,Number(x?.night||0)||0);let shouldExpire=false,reason="";if(type==="frozen"){if(p==="morning"&&(effectNight===0||n===0||n>=effectNight)){shouldExpire=true;reason="MORNING_START"}else if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_SELF_HEAL"}}else if(type==="expelled"){if(p==="night"&&effectNight>0&&n>effectNight){shouldExpire=true;reason="NEXT_NIGHT_START"}else if(p==="night"&&effectNight===0&&x?.cycleKey&&String(x.cycleKey)!==key){shouldExpire=true;reason="NEXT_CYCLE_FALLBACK"}}if(type==="status"){const d=STATUS_DEFS[x.statusId]||{};if(d.duration==="nights"&&p==="night"&&n>=effectNight+Number(d.nights||0)){shouldExpire=true;reason="NIGHTS_ELAPSED"}else if(d.duration==="morning"&&p==="morning"&&x.cycleKey&&String(x.cycleKey)!==key){shouldExpire=true;reason="MORNING"}}if(shouldExpire){x.effectActive=false;x.expiredAt=now;x.expiredReason=reason;expired.push({id:x.id,type,loginId:x.loginId,night:effectNight,reason})}}
+    const rows=(await this.ctx.storage.get("interactions"))||[];
+    const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}

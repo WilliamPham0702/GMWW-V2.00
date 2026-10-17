@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
+import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 
 const worker=fs.readFileSync('src/index.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
@@ -19,9 +20,19 @@ test('Worker defines every new status with a duration rule and a blocking flag',
 });
 
 test('Worker expires nights and morning statuses, and never auto-expires permanent ones',()=>{
-  assert.match(worker,/d\.duration==="nights"&&p==="night"&&n>=effectNight\+Number\(d\.nights\|\|0\)/);
-  assert.match(worker,/d\.duration==="morning"&&p==="morning"/);
-  assert.match(worker,/!\["frozen","expelled","status"\]\.includes\(type\)/);
+  assert.match(worker,/expireCycleEffects\(rows,\{phase:p,night:n,cycleKey:key,matchId:meta\.matchId,statusDefs:STATUS_DEFS,now\}\)/);
+  const base={type:'status',effectActive:true,night:1,cycleKey:'night-1',matchId:'m'};
+  const rows=[{...base,id:'timed',statusId:'disabled_2n'},
+    {...base,id:'morning',statusId:'marked'},
+    {...base,id:'permanent',statusId:'disabled_permanent'}];
+  const statusDefs={disabled_2n:{duration:'nights',nights:2},
+    marked:{duration:'morning'},disabled_permanent:{duration:'permanent'}};
+  const run=(phase,night)=>expireCycleEffects(rows,{
+    phase,night,cycleKey:phase+'-'+night,matchId:'m',statusDefs,now:'2026-10-17T00:00:00Z'});
+  assert.deepEqual(run('night',2),[]);
+  assert.equal(run('morning',2).some(x=>x.id==='morning'),true);
+  assert.equal(run('night',3).some(x=>x.id==='timed'),true);
+  assert.equal(rows.find(x=>x.id==='permanent').effectActive,true);
 });
 
 test('Worker blocks battle actions for blocking statuses and keeps legacy blocks',()=>{
