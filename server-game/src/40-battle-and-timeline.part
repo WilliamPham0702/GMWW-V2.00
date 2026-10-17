@@ -419,40 +419,6 @@ function battleMarkPlayers(){
   });
   for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
 }
-let playActionLogCursor=null,playActionLogBusy=false,playActionLogRoom='';
-async function playLoadActionLog(reset=false){
-  const list=document.getElementById('playActionLogRows'),more=document.getElementById('playActionLogMore');
-  if(!list||!more||playActionLogBusy)return;
-  if(reset){list.replaceChildren();playActionLogCursor=null;playActionLogRoom=String(playSceneState.roomCode||'')}
-  if(!isLivePlayRoom()){list.textContent='Nhật ký tác động đầy đủ được lưu trên Server khi vào Phòng Online.';more.hidden=true;return}
-  playActionLogBusy=true;more.disabled=true;more.hidden=true;
-  try{
-    const suffix=playActionLogCursor?'?before='+encodeURIComponent(playActionLogCursor):'';
-    const answer=await playRoomApi('/action-log'+suffix);
-    if(playActionLogRoom!==String(playSceneState.roomCode||''))return;
-    for(const row of (answer.items||[])){
-      const item=document.createElement('article'),label=document.createElement('b'),meta=document.createElement('small');
-      label.textContent=[row.effectName||row.message||row.actionId||row.statusId||row.type||'Tác động',
-        row.loginId?'→ '+row.loginId:''].filter(Boolean).join(' ');
-      const date=Date.parse(row.createdAt||'');
-      meta.textContent=[Number.isFinite(date)?new Date(date).toLocaleString('vi-VN'):'',
-        row.actionId||row.type||'',row.source||''].filter(Boolean).join(' · ');
-      item.append(label,meta);list.append(item);
-    }
-    if(!answer.items?.length&&!list.children.length)list.textContent='Chưa có tác động được ghi nhận.';
-    playActionLogCursor=answer.nextCursor||null;
-    more.hidden=!answer.hasMore;
-  }catch(error){const item=document.createElement('article');item.textContent='Không tải được nhật ký: '+String(error?.message||error);list.append(item)}
-  finally{playActionLogBusy=false;more.disabled=false}
-}
-document.addEventListener('click',event=>{
-  if(event.target.closest('#playActionLogOpen')){
-    const sheet=document.getElementById('playActionLogSheet');if(!sheet)return;
-    sheet.hidden=false;void playLoadActionLog(true);
-  }else if(event.target.closest('#playActionLogClose')){
-    document.getElementById('playActionLogSheet').hidden=true;
-  }else if(event.target.closest('#playActionLogMore'))void playLoadActionLog(false);
-});
 function renderPlayBattle(){
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;

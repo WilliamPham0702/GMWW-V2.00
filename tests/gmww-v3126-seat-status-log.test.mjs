@@ -52,7 +52,7 @@ test('V3.126: GM can toggle Player Web permission offline then atomically synchr
   const block=source.slice(source.indexOf('function renderStatusLibrary(){'),source.indexOf('document.querySelector(\'[data-lib="statuses"]\')'));
   assert.doesNotMatch(block,/\(isLive\?'':' disabled'\)/);
 });
-test('V3.126: complete action history is archived in durable individual rows and paginated',()=>{
+test('V3.131: action audit persists but rejected action-bar journal UI is removed',()=>{
   assert.match(worker,/actionLog:.*interaction\.id/);
   assert.match(worker,/async gmActionLog\(request\)/);
   assert.match(worker,/actionLogBackfilled/);
@@ -60,15 +60,15 @@ test('V3.126: complete action history is archived in durable individual rows and
   assert.match(worker,/if\(before\)query.end=before/);
   assert.match(worker,/if\(url.pathname==="\/gm\/action-log"&&request.method==="GET"\)/);
   assert.ok((worker.match(/await this\.ctx\.storage\.put\("interactions",pruneInteractions\(rows\)\)/g)||[]).length>=8);
-  assert.match(runtime,/playLoadActionLog\(reset=false\)/);
-  assert.match(file('server-game/current/GMWW.html'),/id="playActionLogMore"/);
+  assert.doesNotMatch(runtime,/playLoadActionLog\(reset=false\)/);
+  assert.doesNotMatch(file('server-game/current/GMWW.html'),/playActionLog(?:Open|More|Sheet)/);
 });
 test('V3.126: actor status changes are local DOM patches, not expensive character remounts',()=>{
   assert.match(source,/playPlayerRenderSignature\(members\)\.split\(':status:'\)\[0\]/);
   assert.match(source,/dataset\.gmwwStatuses===sig/);
   assert.match(source,/token\.insertAdjacentHTML\('beforeend',visual\.overlay\(ids\)\)/);
-  assert.match(runtime,/const VERSION='3\.130'/);
-  assert.match(worker,/VERSION="V3\.130"/);
+  assert.match(runtime,/const VERSION='3\.131'/);
+  assert.match(worker,/VERSION="V3\.131"/);
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(runtime,parts.map(p=>file('server-game/src/'+p)).join(''));

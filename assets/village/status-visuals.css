@@ -12,7 +12,7 @@
 .gmww-sv-snowfall:after{animation-delay:-1.3s;font-size:9px;opacity:.7}
 .gmww-sv-blue-shield{border:2px solid rgba(109,224,255,.78);border-radius:50% 50% 37% 37%;box-shadow:inset 0 0 15px rgba(67,199,255,.26),0 0 14px rgba(76,204,255,.7);animation:gmwwSvPulse 2s ease-in-out infinite}
 .gmww-sv-blue-shield:after{content:"♢";position:absolute;top:-15%;left:38%;color:#d1f7ff;font-size:20px}
-.gmww-sv-wolf-claws:before,.gmww-sv-wolf-claws:after{content:"╱ ╱ ╱";position:absolute;left:12%;top:25%;color:#ff7581;font-size:18px;font-weight:900;text-shadow:0 0 8px #e92b4d;transform:rotate(-20deg);animation:gmwwSvClaw 2.5s ease-in-out infinite}
+.gmww-sv-wolf-claws:before,.gmww-sv-wolf-claws:after{content:"╱ ╱ ╱";position:absolute;left:12%;top:25%;color:#e7edf0;font-size:18px;font-weight:900;text-shadow:0 0 8px #8db6c9;transform:rotate(-20deg);animation:gmwwSvClaw 2.5s ease-in-out infinite}
 .gmww-sv-wolf-claws:after{animation-delay:-1.25s;left:5%;top:50%}
 .gmww-sv-secret-mark:before{content:"✥";position:absolute;top:-35%;left:50%;transform:translateX(-50%);color:#ffcf80;font-size:22px;text-shadow:0 0 10px #ef9bff;animation:gmwwSvGlint 2.2s ease-in-out infinite}
 /* Deceased: a still chibi silhouette framed by gently rising neutral-gray smoke. */
@@ -122,22 +122,27 @@
 #battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-fx{inset:-8px -10px}
 
 /* V2 — identical orbiting icons on GM characters, Player Web and action boxes. */
-.gmww-sv-orbit{position:absolute;inset:0;z-index:11;pointer-events:none;animation:gmwwSvOrbitSpin 6s linear infinite;transform-origin:50% 50%}
-.gmww-sv-orbit-item{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--angle)) translateX(var(--orbit-radius,61px));transform-origin:0 0}
-.gmww-sv-orbit-item>span{display:block;font-size:var(--orbit-icon-size,23px);line-height:1;white-space:nowrap;transform:translate(-50%,-50%);text-shadow:0 0 5px rgba(120,220,255,.85);animation:gmwwSvOrbitCounter 6s linear infinite}
-.gmww-sv-orbit-item .gmww-sv-red-wolf{filter:sepia(1) saturate(12) hue-rotate(315deg) drop-shadow(0 0 6px #ff263c)}
-@keyframes gmwwSvOrbitSpin{to{transform:rotate(360deg)}}
-@keyframes gmwwSvOrbitCounter{to{transform:translate(-50%,-50%) rotate(-360deg)}}
-.gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:23px;--orbit-icon-size:14px}
+.gmww-sv-orbit{position:absolute;inset:0;z-index:11;pointer-events:none;--orbit-radius:30px;--orbit-height:9px;--orbit-icon-size:12px}
+.gmww-sv-orbit-item{position:absolute;left:50%;top:50%;width:0;height:0;animation:gmwwSvVerticalOrbit 6s linear infinite;animation-delay:var(--orbit-delay,0s)}
+.gmww-sv-orbit-item>span{display:block;font-size:var(--orbit-icon-size,12px);line-height:1;white-space:nowrap;transform:translate(-50%,-50%);text-shadow:0 0 5px rgba(120,220,255,.55)}
+}
+}
+.gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:12px;--orbit-height:4px;--orbit-icon-size:7px}
 #battleActionBar [data-battle-action]{position:relative;isolation:isolate}
 #battleActionBar [data-battle-action] .gmww-sv-action-preview{position:absolute;inset:0;width:100%;height:100%;margin:0;pointer-events:none;z-index:4}
-#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:34px;--orbit-icon-size:16px}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:17px;--orbit-height:5px;--orbit-icon-size:8px}
 #battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-overlay{inset:0}
 #battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-action-avatar{display:none}
 @media(prefers-reduced-motion:reduce){.gmww-sv-orbit,.gmww-sv-orbit-item>span{animation-duration:24s}}
 
 /* Only paint near-viewport library cards; 15 animated previews no longer compete on iPhone. */
 .gmww-sv-library .status-card{content-visibility:auto;contain-intrinsic-size:auto 320px}
+
+/* V3.131: fixed-size icons traverse a flat ellipse around the VERTICAL player axis. */
+@keyframes gmwwSvVerticalOrbit{0%,100%{transform:translate(var(--orbit-radius),0)}12.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*-.707))}25%{transform:translate(0,calc(-1*var(--orbit-height)))}37.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*-.707))}50%{transform:translate(calc(-1*var(--orbit-radius)),0)}62.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*.707))}75%{transform:translate(0,var(--orbit-height))}87.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*.707))}}
+.gmww-sv-badges>span{font-size:9px;line-height:1.1;min-height:14px;padding:2px 4px;white-space:nowrap}
+.gmww-sv-preview .gmww-sv-orbit{--orbit-radius:25px;--orbit-height:7px;--orbit-icon-size:11px}
+@media(prefers-reduced-motion:reduce){.gmww-sv-orbit-item{animation-duration:24s}}
 
 /* Player Web: use the same animation primitives and proportions as GM. */
 .player.gmww-sv-stage .gmww-sv-overlay{inset:7% 25% 24%;z-index:12}
