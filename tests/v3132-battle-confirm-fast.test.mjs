@@ -20,7 +20,7 @@ function harness(result={ok:true,undoToken:'undo-1',label:'Bảo Vệ',serverPro
   const action={name:'Bảo Vệ',actionId:'action_protect',type:'effect_notice',
     actorIds:['guard'],targetCount:1,effectIds:[],unavailable:false};
   const context={battleState,playSceneRuntime:room,playSceneState:{phase:'night',night:1},
-    battleAction:()=>action,battleTurn:()=>({id:'role:guard'}),
+    battleAction:()=>action,battleIsTransfer:()=>false,battleTurn:()=>({id:'role:guard'}),
     battleMember:id=>({displayName:id}),playRoomApi:async()=>{requests++;return result},
     playSyncRoom:()=>{syncCalls++;return sync},playFlashError:msg=>errors.push(msg),
     renderPlayBattle:()=>{renders++},battleVisualType:()=> 'protected',
