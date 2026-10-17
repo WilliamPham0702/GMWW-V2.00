@@ -1408,6 +1408,17 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
+    if(type==="status_display_batch"){
+      const items=Array.isArray(body?.items)?body.items:[];
+      if(!items.length||items.length>STATUS_VISUAL_IDS.size||
+        items.some(x=>!STATUS_VISUAL_IDS.has(String(x?.statusId||""))||typeof x?.visible!=="boolean")||
+        new Set(items.map(x=>x.statusId)).size!==items.length)return j({ok:false,error:"INVALID_STATUS_BATCH"},400);
+      const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};
+      for(const item of items)display[item.statusId]=item.visible;
+      meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()});
+      return j({ok:true,statusDisplay:display})
+    }
     if(type==="status_display"){
       const statusId=String(body?.statusId||"").trim();if(!STATUS_VISUAL_IDS.has(statusId))return j({ok:false,error:"INVALID_STATUS"},400);
       const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};display[statusId]=body?.visible===true;meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
