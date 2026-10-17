@@ -1,3 +1,4 @@
+import "../status-visuals.js?v=pr277-v2b";
 import "./village-layout.js?v=fire3101";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
@@ -143,12 +144,15 @@ if(game){
     if(Array.isArray(data.statusTags)&&data.statusTags.length){
       const visualEffects={frozen:"snowfall",protected:"blue-shield",wolf_bitten:"wolf-claws",marked:"secret-mark",dead:"gray-smoke",expelled:"iron-cage",infected:"green-rain",mute:"silenced",disabled_permanent:"power-seal",disabled_2n:"power-seal",linked:"soul-link"};
       const rows=data.statusTags.filter(x=>Object.prototype.hasOwnProperty.call(visualEffects,x.statusId)),panel=document.createElement("span"),badges=document.createElement("span");
-      if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");panel.className="gmww-sv-overlay";panel.setAttribute("aria-hidden","true");
+      if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");
+        const approvedVisuals=globalThis.GMWW_STATUS_VISUALS;
+        if(approvedVisuals)button.insertAdjacentHTML("beforeend",approvedVisuals.overlay(rows.map(x=>x.statusId)));
+        else{panel.className="gmww-sv-overlay";panel.setAttribute("aria-hidden","true");
         const unique=[...new Set(rows.map(x=>x.statusId))],priority=["dead","expelled","wolf_bitten","frozen","disabled_permanent","disabled_2n","marked","infected","protected","mute","linked"],ordered=priority.filter(id=>unique.includes(id)),visible=ordered.includes("dead")?["dead"]:ordered.includes("expelled")?["expelled"]:ordered.slice(0,3);
         for(const id of visible){const effect=document.createElement("span");effect.className="gmww-sv-fx gmww-sv-"+visualEffects[id];effect.dataset.statusFx=id;for(let i=0;i<3;i++)effect.appendChild(document.createElement("i"));panel.appendChild(effect)}
         badges.className="gmww-sv-badges";badges.setAttribute("aria-hidden","true");
         for(const x of rows){const tag=document.createElement("span");tag.textContent=x.icon;tag.title=x.label;badges.appendChild(tag)}
-        button.append(panel,badges);
+        button.append(panel,badges);}
       }
     }
     const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving)button.dataset.walkDir=walkDirection(data)
