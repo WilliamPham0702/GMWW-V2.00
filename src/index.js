@@ -910,7 +910,7 @@ export class RoomDurableObject extends DurableObject {
       const nextCount=Math.max(8,Math.min(30,Math.max(Object.keys(players).length,highest)));
       const nextShape=villageLayout.recommendedSeatShape(nextCount);
       if(nextCount!==Number(meta.seatCount)||nextShape!==normalizeSeatLayout(meta.seatLayout)){
-        const points=villageLayout.positions(nextCount,nextShape,meta.seatOffset);
+        const points=villageLayout.positions(nextCount,nextShape,meta.seatOffset,meta.seatSpacing);
         for(const p of Object.values(players)){
           const seat=normalizeSeatId(p?.seatId,nextCount);
           if(!seat)continue;
@@ -958,17 +958,17 @@ export class RoomDurableObject extends DurableObject {
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
     const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),changedCount=requested!==normalizeSeatCount(meta.seatCount),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):changedCount?villageLayout.recommendedSeatShape(requested):normalizeSeatLayout(meta.seatLayout);
-    const hasSeatOffset=!!body&&Object.prototype.hasOwnProperty.call(body,"seatOffset"),seatOffset=villageLayout.normalizeSeatOffset(hasSeatOffset?body.seatOffset:meta.seatOffset);
+    const hasSeatOffset=!!body&&Object.prototype.hasOwnProperty.call(body,"seatOffset"),seatOffset=villageLayout.normalizeSeatOffset(hasSeatOffset?body.seatOffset:meta.seatOffset),seatSpacing=villageLayout.normalizeSeatSpacing(body&&Object.prototype.hasOwnProperty.call(body,"seatSpacing")?body.seatSpacing:meta.seatSpacing);
     if(hasSeatOffset&&(!body.seatOffset||!Number.isFinite(Number(body.seatOffset.x))||!Number.isFinite(Number(body.seatOffset.y))))return j({ok:false,error:"INVALID_SEAT_OFFSET"},400);
     if(hasSeatLayout&&String(body.seatLayout||'')!==seatLayout)return j({ok:false,error:"INVALID_SEAT_LAYOUT"},400);
     const maxOccupied=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
     if(requested<maxOccupied)return j({ok:false,error:"SEAT_COUNT_BELOW_OCCUPIED",message:"Không thể giảm số ghế thấp hơn vị trí đang có người ngồi.",maxOccupied},409);
     if(seatLayout&&requested<Object.keys(players).length)return j({ok:false,error:"SEAT_TEMPLATE_TOO_SMALL",message:"Mẫu Seat ít hơn số người đã vào phòng."},409);
-    if(meta.seatsLocked&&(requested!==Number(meta.seatCount)||seatLayout!==normalizeSeatLayout(meta.seatLayout)||JSON.stringify(seatOffset)!==JSON.stringify(villageLayout.normalizeSeatOffset(meta.seatOffset))))return j({ok:false,error:"SEATS_LOCKED",message:"Mở khóa vị trí trước khi đổi Seat Mẫu."},409);
-    const reflow=seatLayout!==normalizeSeatLayout(meta.seatLayout)||requested!==Number(meta.seatCount)||JSON.stringify(seatOffset)!==JSON.stringify(villageLayout.normalizeSeatOffset(meta.seatOffset));
+    if(meta.seatsLocked&&(requested!==Number(meta.seatCount)||seatLayout!==normalizeSeatLayout(meta.seatLayout)||JSON.stringify(seatOffset)!==JSON.stringify(villageLayout.normalizeSeatOffset(meta.seatOffset))||seatSpacing!==villageLayout.normalizeSeatSpacing(meta.seatSpacing)))return j({ok:false,error:"SEATS_LOCKED",message:"Mở khóa vị trí trước khi đổi Seat Mẫu."},409);
+    const reflow=seatLayout!==normalizeSeatLayout(meta.seatLayout)||requested!==Number(meta.seatCount)||JSON.stringify(seatOffset)!==JSON.stringify(villageLayout.normalizeSeatOffset(meta.seatOffset))||seatSpacing!==villageLayout.normalizeSeatSpacing(meta.seatSpacing);
     if(seatMoveMode==="instant"&&normalizeSeatMoveMode(meta.seatMoveMode)==="walk")for(const p of Object.values(players))clearPlayerMovement(p);
     if(reflow){
-      const locations=villageLayout.positions(requested,seatLayout,seatOffset);
+      const locations=villageLayout.positions(requested,seatLayout,seatOffset,seatSpacing);
       for(const p of Object.values(players)){
         const seatId=normalizeSeatId(p?.seatId,requested);
         if(!seatId)continue;
@@ -976,7 +976,7 @@ export class RoomDurableObject extends DurableObject {
         clearPlayerMovement(p);p.positionX=point.x;p.positionY=point.y;
       }
     }
-    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;
+    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;meta.seatSpacing=seatSpacing;
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
     await this.ctx.storage.put("players",players);await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers});
@@ -1011,8 +1011,8 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);
-    if(seatId&&normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
-    if(displaced&&normalizeSeatLayout(meta.seatLayout)){const record=Object.values(players).find(p=>p.participantId===displaced.participantId);if(record?.seatId){const point=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset)[record.seatId-1];if(point){record.positionX=point.x;record.positionY=point.y}}}
+    if(seatId&&normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
+    if(displaced&&normalizeSeatLayout(meta.seatLayout)){const record=Object.values(players).find(p=>p.participantId===displaced.participantId);if(record?.seatId){const point=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[record.seatId-1];if(point){record.positionX=point.x;record.positionY=point.y}}}
     players[participantId]=player;await this.ctx.storage.put("players",players);
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatUpdated:participantId});
@@ -1033,7 +1033,7 @@ export class RoomDurableObject extends DurableObject {
     for(let index=0;index<shuffledPlayers.length;index++){
       const [participantId,player]=shuffledPlayers[index],seatId=free[index];
       player.seatId=seatId;player.ready=player.reservedByGM===true;clearPlayerMovement(player);
-      if(normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
+      if(normalizeSeatLayout(meta.seatLayout)){const point=villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[seatId-1];if(point){player.positionX=point.x;player.positionY=point.y}}
       players[participantId]=player;assigned.push({participantId,seatId});
     }
     await this.ctx.storage.put("players",players);meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
@@ -1625,7 +1625,7 @@ export class RoomDurableObject extends DurableObject {
       const item=swaps.find(x=>x.id===String(body.requestId||'')&&x.toId===id);if(!item)return j({ok:false,error:'SWAP_EXPIRED',message:'Yêu cầu đã hết hạn.'},409);
       if(body.action==='accept'){
         const from=players[item.fromId];if(!from||from.seatId!==item.fromSeat||p.seatId!==item.toSeat||from.movementStatus==='moving'||p.movementStatus==='moving')return j({ok:false,error:'SWAP_STALE',message:'Vị trí đã thay đổi. Hãy gửi yêu cầu mới.'},409);
-        [from.seatId,p.seatId]=[p.seatId,from.seatId];for(const person of [from,p]){clearPlayerMovement(person);const pos=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset)[person.seatId-1];person.positionX=pos.x;person.positionY=pos.y;person.ready=person.reservedByGM===true}await this.ctx.storage.put('players',players);
+        [from.seatId,p.seatId]=[p.seatId,from.seatId];for(const person of [from,p]){clearPlayerMovement(person);const pos=villageLayout.positions(meta.seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[person.seatId-1];person.positionX=pos.x;person.positionY=pos.y;person.ready=person.reservedByGM===true}await this.ctx.storage.put('players',players);
       }else if(body.action!=='reject')return j({ok:false,error:'INVALID_SWAP_ACTION'},400);
       swaps=swaps.filter(x=>x.id!==item.id);
     }
@@ -1640,7 +1640,7 @@ export class RoomDurableObject extends DurableObject {
 
     if(body?.seatId!==null)return j({ok:false,error:"GM_SEAT_ASSIGNMENT_REQUIRED",message:"Vị trí do GM xếp. Người chơi không thể tự đăng ký ghế."},403);
     const conflict=seatClaimConflict(players,id,seatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Vị trí đã có người chọn."},409);
-    p.gameCharacterId=gameCharacterId;p.seatId=seatId;p.ready=p.reservedByGM===true;clearPlayerMovement(p);if(seatId){const point=villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset)[seatId-1];p.positionX=point.x;p.positionY=point.y;}p.lastHeartbeatAt=Date.now();p.lastSeenAt=new Date().toISOString();players[id]=p;await this.ctx.storage.put("players",players);
+    p.gameCharacterId=gameCharacterId;p.seatId=seatId;p.ready=p.reservedByGM===true;clearPlayerMovement(p);if(seatId){const point=villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[seatId-1];p.positionX=point.x;p.positionY=point.y;}p.lastHeartbeatAt=Date.now();p.lastSeenAt=new Date().toISOString();players[id]=p;await this.ctx.storage.put("players",players);
     meta.updatedAt=p.lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,setupUpdated:id});
     return j({ok:true,room,player:publicPlayer(p),players:publicPlayers})
@@ -1658,7 +1658,7 @@ export class RoomDurableObject extends DurableObject {
       if(Number(p.seatId||0)===targetSeatId)return j({ok:true,already:true,room:publicRoom(meta),player:publicPlayer(p),players:Object.values(players).map(publicPlayer)});
       const conflict=seatClaimConflict(players,id,targetSeatId);if(conflict)return j({ok:false,error:"SEAT_TAKEN",message:"Ghế "+targetSeatId+" đã có người chọn.",seatId:targetSeatId,occupant:publicPlayer(conflict.player)},409);
     }
-    const now=Date.now(),fallback=villageLayout.spawn(id),from=villageLayout.clampPoint(currentMovementPosition(p,now,fallback.x,fallback.y).x,currentMovementPosition(p,now,fallback.x,fallback.y).y),autoMotionPhase=body?.autoMotionPhase==="gather"?"gather":body?.autoMotionPhase==="roam"?"roam":null,to=targetSeatId?villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset)[targetSeatId-1]:autoMotionPhase==="gather"?villageAutoPoint(id,Math.floor(now/1000),villageLayout):villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(450,Math.min(4200,Math.trunc(Number(body?.durationMs)||distance*42||650))),moveId=String(body?.moveId||crypto.randomUUID()).slice(0,120);
+    const now=Date.now(),fallback=villageLayout.spawn(id),from=villageLayout.clampPoint(currentMovementPosition(p,now,fallback.x,fallback.y).x,currentMovementPosition(p,now,fallback.x,fallback.y).y),autoMotionPhase=body?.autoMotionPhase==="gather"?"gather":body?.autoMotionPhase==="roam"?"roam":null,to=targetSeatId?villageLayout.positions(seatCount,meta.seatLayout,meta.seatOffset,meta.seatSpacing)[targetSeatId-1]:autoMotionPhase==="gather"?villageAutoPoint(id,Math.floor(now/1000),villageLayout):villageLayout.clampPoint(body?.x,body?.y),distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(450,Math.min(4200,Math.trunc(Number(body?.durationMs)||distance*42||650))),moveId=String(body?.moveId||crypto.randomUUID()).slice(0,120);
     p.positionX=from.x;p.positionY=from.y;p.moveId=moveId;p.moveFromX=from.x;p.moveFromY=from.y;p.moveToX=to.x;p.moveToY=to.y;p.moveStartedAt=now;p.moveDurationMs=duration;p.moveTargetSeatId=targetSeatId;p.movementStatus="moving";p.autoMotionPhase=autoMotionPhase;p.villageActivity=autoMotionPhase==="gather"?"roaming":autoMotionPhase==="roam"?"roaming":"moving";p.sitStartedAt=null;p.sitUntil=null;p.ready=p.reservedByGM===true;p.lastHeartbeatAt=now;p.lastSeenAt=new Date(now).toISOString();players[id]=p;
     await this.ctx.storage.put("players",players);meta.updatedAt=p.lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"player_move",room,player:publicPlayer(p),players:publicPlayers,serverTime:Date.now()});
