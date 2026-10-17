@@ -1,0 +1,56 @@
+<script src="/gmww-members-live.js?v=261"></script>
+<script id="gmww-v261-player-lobby-ui">
+(()=>{
+  const install=()=>{
+    if(document.getElementById('gmwwV261PlayerLobbyStyle'))return;
+    const style=document.createElement('style');
+    style.id='gmwwV261PlayerLobbyStyle';
+    style.textContent='#game.screen.active .game-top{display:none!important}'+
+      '#gmwwGameViewTabs:has([data-game-pane="role"]:disabled){display:none!important}'+
+      '#gmwwVillageHud .profile{z-index:2!important}'+
+      '#gmwwVillageHud .status{max-width:calc(100vw - 82px)!important}'+
+      '#profileAvatarButton{display:none!important}'+
+      '#profileAvatar,#profileEditAvatar{object-fit:contain!important;background:rgba(4,35,51,.72)!important}';
+    document.head.appendChild(style);
+    const syncChibi=()=>{
+      let member=null;try{member=JSON.parse(localStorage.getItem('gmww_member')||'null')}catch{}
+      const id=String(member?.gameCharacterId||'');
+      if(/^character-(?:0[1-9]|1[0-9]|20)$/.test(id)){
+        for(const image of document.querySelectorAll('#profileAvatar,#profileEditAvatar')){
+          image.dataset.gmwwWalkCharacter=id;
+          if(image.dataset.gmwwProfileCharacter!==id){image.dataset.gmwwProfileCharacter=id;image.src='/api/game-characters/'+encodeURIComponent(id)+'/frame/1'}
+        }
+      }
+      const rooms=document.querySelector('#gmwwVillageHud .rooms'),status=document.querySelector('#gmwwVillageHud .status small');
+      if(rooms&&!rooms.hidden&&status&&status.textContent!=='Sảnh chờ')status.textContent='Sảnh chờ';
+    };
+    syncChibi();new MutationObserver(syncChibi).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>
+
+<script id="gmww-web-veil-runtime">
+(()=>{'use strict';
+const DEFAULT=50,KEY='GMWW_WEB_VEIL_CACHE_V1',STYLE_ID='gmww-web-veil-runtime-style';
+const clamp=v=>Math.max(0,Math.min(100,Math.round(Number(v)||0)));
+function apply(value){
+  const level=clamp(value),scale=level/50,blur=Math.min(5,2.5*scale),top=Math.min(.20,.10*scale),mid=Math.min(.36,.18*scale),bottom=Math.min(.68,.34*scale);
+  let style=document.getElementById(STYLE_ID);if(!style){style=document.createElement('style');style.id=STYLE_ID;document.head.appendChild(style)}
+  style.textContent='.screen:after{display:block!important;content:""!important;pointer-events:none!important;position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(2,28,48,'+top.toFixed(3)+') 0%,rgba(2,28,48,'+mid.toFixed(3)+') 48%,rgba(1,18,33,'+bottom.toFixed(3)+') 100%)!important;-webkit-backdrop-filter:blur('+blur.toFixed(2)+'px)!important;backdrop-filter:blur('+blur.toFixed(2)+'px)!important}.screen>*{position:relative;z-index:1}';
+  try{localStorage.setItem(KEY,String(level))}catch(_){}
+  document.documentElement.dataset.gmwwWebVeil=String(level);return level;
+}
+function cached(){try{const v=Number(localStorage.getItem(KEY));return Number.isFinite(v)?clamp(v):DEFAULT}catch(_){return DEFAULT}}
+let busy=false,lastSync=0;
+async function sync(force=false){if(busy||(!force&&Date.now()-lastSync<5000))return;busy=true;try{const r=await fetch('/api/ui-settings',{cache:'no-store'});if(r.ok){const d=await r.json();if(Number.isFinite(Number(d?.level)))apply(d.level);lastSync=Date.now()}}catch(_){}finally{busy=false}}
+function boot(){apply(cached());sync(true);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync(true)});window.addEventListener('focus',()=>sync(true));setInterval(()=>{if(!document.hidden)sync(false)},15000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.GMWWWebVeil=Object.freeze({version:'1.0.0',apply,sync,current:()=>Number(document.documentElement.dataset.gmwwWebVeil||DEFAULT)});
+})();
+</script>
+
+</body>
+</html>`;
+export function gmwwMembersPage(roomCode=""){return HTML.replace("__GMWW_TARGET_ROOM__",esc(roomCode));}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}

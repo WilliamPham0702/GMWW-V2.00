@@ -94,3 +94,5 @@ jobs:
           # receives its private Role + Artifact together, ACKs it, can reconnect,
           # and cannot ACK a previous delivery after the GM republishes.
           node tests/worker-private-delivery-e2e.mjs
+          # FAST G4 acceptance uses real HTTP/WebSocket routes and SQLite DO storage.
+          node tests/worker-engine-multinight-e2e.mjs

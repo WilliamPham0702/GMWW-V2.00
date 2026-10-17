@@ -6,6 +6,10 @@ on:
     paths:
       - "src/gmww-player-private-card-patch.js"
       - "src/gmww-members-live.js"
+      - "src/gmww-members-page.js"
+      - "src/player-page-src/**"
+      - "src/player-web-src/**"
+      - "tests/worker-engine-multinight-e2e.mjs"
       - "src/gmww-delivery-manifest.js"
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
@@ -22,6 +26,10 @@ on:
     paths:
       - "src/gmww-player-private-card-patch.js"
       - "src/gmww-members-live.js"
+      - "src/gmww-members-page.js"
+      - "src/player-page-src/**"
+      - "src/player-web-src/**"
+      - "tests/worker-engine-multinight-e2e.mjs"
       - "src/gmww-delivery-manifest.js"
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"

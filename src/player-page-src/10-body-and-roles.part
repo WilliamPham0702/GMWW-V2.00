@@ -1,0 +1,217 @@
+<body data-target-room="__GMWW_TARGET_ROOM__" data-build="2.61-player-lobby">
+<div class="app">
+
+<!-- 1. ĐĂNG NHẬP -->
+<section id="login" class="screen active">
+  <div class="panel login-panel">
+    <div class="kicker">GMWW PLAYER</div>
+    <h1 class="form-title">Đăng Nhập</h1>
+    <label class="label">Tên đăng nhập</label>
+    <input id="loginUser" class="input" autocomplete="username" placeholder="Tên đăng nhập">
+    <small class="field-help">Vui lòng nhập tên đăng nhập của bạn vào đây.</small>
+    <div id="loginPasswordBlock" class="optional-password-fields">
+      <label class="label">Mật khẩu</label>
+      <input id="loginPass" class="input" type="password" autocomplete="current-password" placeholder="Mật khẩu">
+      <small class="field-help">Tài khoản này đã đặt mật khẩu.</small>
+    </div>
+    <button class="primary" style="margin-top:16px" onclick="login()">ĐĂNG NHẬP</button>
+    <div id="loginRegisterGuide" class="login-register-guide">Tên đăng nhập này chưa có tài khoản.<button class="auth-link" type="button" onclick="openCreateFromLogin()">Tạo tài khoản ngay</button></div>
+    <div class="linkline login-links"><span>Chưa có tài khoản? <button type="button" onclick="openCreateFromLogin()">Tạo tài khoản</button></span></div>
+  </div>
+</section>
+
+<!-- 2. TẠO TÀI KHOẢN -->
+<section id="create" class="screen">
+  <div class="topbar"><button class="back" onclick="go('login')">← QUAY VỀ</button><div></div></div>
+<div class="panel">
+    <div class="kicker">THÀNH VIÊN GMWW</div>
+    <h1 class="form-title">Tạo Tài Khoản</h1>
+    <label class="label">Tên đăng nhập</label>
+    <input id="regUser" class="input" autocomplete="username" placeholder="Tên đăng nhập">
+    <small class="field-help">Vui lòng nhập tên đăng nhập vào đây.</small>
+    <label class="label">Tên Hiển Thị</label>
+    <input id="regDisplay" class="input" autocomplete="name" placeholder="Tên Hiển Thị">
+    <small class="field-help">Bạn mong muốn người chơi khác thấy tên gì?</small>
+    <label class="label">Chọn Nhân Vật Chibi</label>
+    <div id="avatarSuggestions" class="avatar-picks"></div>
+    <div class="avatar-source"><span>42 Nhân Vật Chibi</span><strong id="avatarSourceState">Đang kết nối…</strong></div>
+    <div class="avatar-tools">
+      <button type="button" onclick="shuffleAvatarSuggestions()">↻ Gợi ý khác</button>
+      <button type="button" onclick="openAvatarLibrary()">Xem đủ 42 Nhân Vật</button>
+    </div>
+    <div id="avatarLoadError" class="avatar-error"></div>
+    <div class="optional-password">
+      <button id="registrationPasswordToggle" class="auth-link" type="button" onclick="toggleRegistrationPassword()">＋ Đặt mật khẩu cho tài khoản nếu muốn</button>
+      <div id="registrationPasswordFields" class="optional-password-fields">
+        <label class="label">Mật khẩu</label><input id="regPass" class="input" type="password" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự">
+        <label class="label">Nhập lại mật khẩu</label><input id="regPass2" class="input" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu">
+      </div>
+    </div>
+    <button class="primary violet" style="margin-top:16px" onclick="createAccount()">TẠO TÀI KHOẢN</button>
+  </div>
+</section>
+
+<section id="reset" class="screen">
+  <div class="topbar"><button class="back" onclick="go('login')">← QUAY VỀ</button><div></div></div>
+  <div class="panel">
+    <div id="resetForm">
+      <div class="kicker">GMWW PLAYER</div>
+      <h1 class="form-title">Reset Mật Khẩu</h1>
+      <p class="page-sub">Nhập User của bạn để gửi yêu cầu Reset đến GM.</p>
+      <label class="label">Tên tài khoản</label>
+      <input id="resetUser" class="input" autocomplete="username" placeholder="Tên tài khoản">
+      <button id="resetSubmit" class="primary" style="margin-top:16px" onclick="requestPasswordReset()">RESET MẬT KHẨU</button>
+    </div>
+    <div id="resetSuccess" class="reset-success" style="display:none">
+      <div class="kicker">RESET MẬT KHẨU</div>
+      <h1 class="form-title">Đã Gửi Yêu Cầu</h1>
+      <p>Chúc mừng bạn đã gửi yêu cầu reset mật khẩu thành công, vui lòng liên hệ GM - WilliamPham để biết mật khẩu của mình.</p>
+      <button class="secondary" onclick="go('login')">VỀ ĐĂNG NHẬP</button>
+    </div>
+  </div>
+</section>
+
+<div id="avatarLibraryModal" class="avatar-library-modal" onclick="avatarModalBackdrop(event)" role="dialog" aria-modal="true" aria-labelledby="avatarLibraryTitle">
+  <div class="avatar-library-sheet">
+    <div class="avatar-library-head">
+      <h3 id="avatarLibraryTitle">Chọn Nhân Vật Chibi</h3>
+      <button type="button" onclick="closeAvatarLibrary()" aria-label="Đóng thư viện Avatar">×</button>
+    </div>
+    <div id="avatarLibraryCount" class="avatar-library-count">Đang tải Nhân Vật…</div>
+    <div id="avatarLibraryGrid" class="avatar-library-grid"></div>
+    <div class="avatar-library-footer">
+      <button id="avatarConfirmButton" class="avatar-confirm-btn" type="button" onclick="confirmAvatarSelection()">XÁC NHẬN NHÂN VẬT</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. THÔNG TIN -->
+<section id="profile" class="screen">
+  <div class="kicker">TÀI KHOẢN NGƯỜI CHƠI</div>
+  <h1 class="page-title">Thông Tin</h1>
+  <p class="page-sub">Hồ sơ thành viên và lịch sử chơi của bạn.</p>
+
+  <div class="profile-main">
+    <img id="profileAvatar" src="__GMWW_EMBED_IMAGE_2__" alt="">
+    <div>
+      <h2 id="profileDisplay">William Phạm</h2>
+      <div class="id">ID: <span id="profileId">william0702</span></div>
+      <div class="meta">Thành viên GMWW • Đang online</div>
+      <details class="panel profile-edit-panel" id="profileEditPanel">
+        <summary>✎ Thay đổi thông tin</summary>
+        <div class="profile-edit-grid">
+          <label class="label">Tên hiển thị</label>
+          <input id="profileDisplayInput" class="input" maxlength="24" autocomplete="nickname" placeholder="Tên hiển thị">
+          <div class="profile-avatar-edit"><img id="profileEditAvatar" class="avatar-big" alt="Avatar GMWW"><button type="button" class="secondary" id="profileAvatarButton">ĐỔI AVATAR</button></div>
+          <details class="change-pass">
+            <summary>🔐 Đổi mật khẩu</summary>
+            <div class="pass-grid">
+              <input class="input" type="password" autocomplete="current-password" placeholder="Mật khẩu hiện tại">
+              <input class="input" type="password" autocomplete="new-password" placeholder="Mật khẩu mới">
+              <input class="input" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới">
+              <button type="button" class="secondary" onclick="changePassword()">CẬP NHẬT MẬT KHẨU</button>
+            </div>
+          </details>
+          <button type="button" class="primary gold" id="profileSaveButton">LƯU THÔNG TIN</button>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <div class="section-title">Thành Tích</div>
+  <div class="stats">
+    <div class="stat good"><strong>18</strong><span>THẮNG</span></div>
+    <div class="stat bad"><strong>11</strong><span>THUA</span></div>
+    <div class="stat"><strong>62%</strong><span>TỶ LỆ THẮNG</span></div>
+  </div>
+
+  <div class="profile-actions-row">
+    <button class="profile-exit-btn" onclick="go('login')">THOÁT</button>
+    <button class="primary gold profile-enter-room" onclick="openRooms()">VÀO PHÒNG ›</button>
+  </div>
+
+  <details class="history-fold">
+    <summary>📜 Lịch sử</summary>
+    <div class="history">
+    <div class="history-item"><div><b>Làng Trăng Đỏ</b><small>Tiên Tri • 26/09/2026 • 12 người</small></div><span class="badge win">THẮNG</span></div>
+    <div class="history-item"><div><b>Đêm Sói Tuyết</b><small>Bảo Vệ • 24/09/2026 • 10 người</small></div><span class="badge lose">THUA</span></div>
+    <div class="history-item"><div><b>Gothic Village</b><small>Sói Thường • 21/09/2026 • 15 người</small></div><span class="badge win">THẮNG</span></div>
+    </div>
+  </details>
+
+</section>
+
+<!-- 4. CHỌN PHÒNG -->
+<section id="rooms" class="screen">
+  <div class="topbar"><button class="back" onclick="go('profile')">← QUAY VỀ</button><div class="game-state">● ONLINE</div></div>
+  <div class="kicker">PHÒNG ĐANG HOẠT ĐỘNG</div>
+  <h1 class="page-title">Chọn Phòng</h1>
+  <p class="page-sub">Chỉ hiển thị các phòng GM đang mở tại thời điểm hiện tại.</p>
+
+  <div class="room-list">
+    <article id="roomA" class="room-card">
+      <div class="room-head"><div><h3>Làng Trăng Máu</h3><small>Quản Trò: William • Mã Z3ZAPP</small></div><span class="live">● LIVE</span></div>
+      <div class="room-metrics">
+        <div class="metric"><b>12 Vai Trò</b><span>Đã cấu hình cho ván</span></div>
+        <div class="metric"><b id="countA">3 / 12</b><span>Người đã tham gia</span></div>
+      </div>
+      <button class="primary join-btn" onclick="joinRoom('roomA')">THAM GIA</button>
+      <div class="room-detail">
+        <div class="section-title" style="margin-top:0">Thành viên</div>
+        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_3__"><div><b>William0702</b><small class="ready-yes">Đã sẵn sàng</small></div><span class="badge win">READY</span></div>
+        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_4__"><div><b>William Phạm</b><small class="ready-yes">Đã sẵn sàng</small></div><span class="badge win">READY</span></div>
+        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_5__"><div><b id="meRoomName">Bạn</b><small id="myReadyText" class="ready-no">Chưa sẵn sàng</small></div><span id="myReadyBadge" class="badge lose">WAIT</span></div>
+        <div id="waitNote" class="wait-note">Nhấn Sẵn Sàng khi bạn đã chuẩn bị xong.</div>
+        <div class="room-actions">
+          <button id="readyBtn" class="primary gold" onclick="toggleReady()">SẴN SÀNG</button>
+          <button class="secondary" onclick="leaveRoom()">RỜI ĐI</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="room-card">
+      <div class="room-head"><div><h3>Thành Phố Sói</h3><small>Quản Trò: Minh • Mã WOLF88</small></div><span class="live">● LIVE</span></div>
+      <div class="room-metrics"><div class="metric"><b>10 Vai Trò</b><span>Đã cấu hình</span></div><div class="metric"><b>7 / 10</b><span>Người đã tham gia</span></div></div>
+      <button class="primary join-btn" onclick="toast('Bản demo: chọn phòng Làng Trăng Máu để xem luồng đầy đủ')">THAM GIA</button>
+    </article>
+  </div>
+</section>
+
+<!-- 5. VÀO GAME -->
+<section id="game" class="screen">
+  <div class="game-top"><div><div class="kicker" style="text-align:left">GAME ĐANG DIỄN RA</div><h1 class="page-title" style="text-align:left;margin-bottom:0">Làng Trăng Máu</h1></div><span id="gameStatePill" class="game-state">ĐANG SỐNG</span></div>
+  <div class="role-stage">
+    <p id="roleHint" class="role-hint">Vai Trò của bạn được giữ bí mật.</p>
+    <div class="role-card-shell">
+      <div id="roleCard" class="role-card" onclick="toggleRole()">
+        <div class="role-face role-back" aria-label="Lá vai trò đang ẩn"></div>
+        <article class="role-face role-front">
+          <div class="role-name">TIÊN TRI</div>
+          <div class="role-art"><img src="__GMWW_EMBED_IMAGE_6__" alt="Tiên Tri"></div>
+          <div class="role-body">
+            <div class="faction">PHE • Phe Dân</div>
+            <div class="info"><b>THÔNG TIN</b><p>Mỗi đêm, Tiên Tri chọn một người chơi để kiểm tra. Quản Trò sẽ cho biết người đó có thuộc Phe Sói hay không.</p></div>
+          </div>
+        </article>
+      </div>
+    </div>
+    <div id="deadBanner" class="dead-banner">☠ BẠN ĐÃ CHẾT</div>
+    <div id="gameStatusText" class="game-status">Đang chờ Quản Trò gọi Vai Trò của bạn.</div>
+  </div>
+</section>
+
+</div>
+
+<!-- Offline-only demo controller -->
+<div id="resultOverlay" class="result-overlay">
+  <div id="confettiLayer"></div>
+  <div class="result-sheet">
+    <div class="trophy">🏆</div>
+    <div class="kicker">KẾT QUẢ VÁN CHƠI</div>
+    <h2>PHE DÂN CHIẾN THẮNG!</h2>
+    <p>Ván chơi đã kết thúc. Chúc mừng những người chơi thuộc Phe Dân.</p>
+    <button class="primary gold" onclick="closeResult()">VỀ PHÒNG CHỜ</button>
+  </div>
+</div>
+

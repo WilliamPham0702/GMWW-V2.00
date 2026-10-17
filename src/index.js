@@ -1279,7 +1279,12 @@ export class RoomDurableObject extends DurableObject {
       const assigned=(await this.ctx.storage.get("assignments"))||[];
       const row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
       if(!row)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
-      const roleCard=row.roleCard||{},actionId=String(body?.actionId||"");
+      // assignments is a public summary; limits live in the existing private role records.
+      const storedRoles=await this.ctx.storage.get("roles:"+actorId),legacyRole=await this.ctx.storage.get("role:"+actorId);
+      const privateRoles=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]);
+      const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
+        (!r?.matchId||String(r.matchId)===matchId));
+      const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
       const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
       // Recover older confirmed battle actions in an already-running match.
       const known=new Set(currentUsage.map(x=>String(x?.eventId||"")).filter(Boolean));
