@@ -4,7 +4,7 @@
   const entries=[
     {id:'frozen',name:'Đóng Băng',icon:'❄️',type:'persistent',effect:'orbit',description:'❄️ Bông tuyết quay quanh nhân vật',priority:85,stack:true,playerWeb:true},
     {id:'protected',name:'Bảo Vệ',icon:'🛡️',type:'persistent',effect:'orbit',description:'🛡️ Những chiếc khiên quay quanh nhân vật',priority:65,stack:true,playerWeb:true},
-    {id:'wolf_bitten',name:'Sói Cắn',icon:'🐺',type:'persistent',effect:'orbit',description:'Dấu bàn vuốt sói màu đỏ quay quanh nhân vật',priority:90,stack:true,playerWeb:true},
+    {id:'wolf_bitten',name:'Sói Cắn',icon:'🐺',type:'persistent',effect:'orbit',description:'🐺 Sói quay quanh nhân vật',priority:90,stack:true,playerWeb:true},
     {id:'marked',name:'Đánh Dấu',icon:'👍👎',type:'persistent',effect:'orbit',description:'👍 và 👎 quay quanh nhân vật (dấu Thần Chết)',priority:75,stack:true,playerWeb:false},
     {id:'dead',name:'Đã Chết',icon:'☠️',type:'persistent',effect:'gray-smoke',description:'Khói xám bao quanh, ☠️ quay quanh, nhân vật bất động',priority:100,stack:false,playerWeb:true},
     {id:'expelled',name:'Bị Đuổi',icon:'🌪️',type:'persistent',effect:'orbit',description:'🌪️ quay quanh nhân vật',priority:95,stack:false,playerWeb:true},
@@ -37,7 +37,7 @@
     const dominant=items.find(id=>byId[id].stack===false),shown=dominant?[dominant]:items.filter(id=>byId[id].stack!==false).slice(0,3);
     return{items,shown};
   }
-  const orbitIcons=Object.freeze({frozen:['❄️'],protected:['🛡️'],wolf_bitten:['🐾'],marked:['👍','👎'],dead:['☠️'],expelled:['🌪️'],infected:['🦠'],mute:['😷'],disabled_permanent:['🚫'],linked:['✌️'],recover:['⭐'],transform:['🥳'],attack:['⚔️'],hunt:['🏹'],inspect:['💫']});
+  const orbitIcons=Object.freeze({frozen:['❄️'],protected:['🛡️'],wolf_bitten:['🐺'],marked:['👍','👎'],dead:['☠️'],expelled:['🌪️'],infected:['🦠'],mute:['😷'],disabled_permanent:['🚫'],linked:['✌️'],recover:['⭐'],transform:['🥳'],attack:['⚔️'],hunt:['🏹'],inspect:['💫']});
   function orbitMarkup(id){
     const icons=orbitIcons[id]||[];if(!icons.length)return'';
     return '<span class="gmww-sv-orbit" data-orbit="'+safe(id)+'">'+Array.from({length:6},(_,i)=>'<span class="gmww-sv-orbit-item" style="--i:'+i+';--angle:'+(i*60)+'deg"><span class="'+(id==='wolf_bitten'?'gmww-sv-red-wolf':'')+'">'+safe(icons[i%icons.length])+'</span></span>').join('')+'</span>';
