@@ -32,7 +32,8 @@ export function timelineDisplaySteps(queue){
   const withoutEarly=steps.filter(step=>step?.kind!=="early-artifact"&&step?.kind!=="early-artifact-window"&&step?.kind!=="village-wakeup");
   const intro=withoutEarly.filter(step=>step?.kind==="wolf-introduction");
   const turns=withoutEarly.filter(step=>step?.kind!=="wolf-introduction");
-  return [...(intro.length?intro:[{kind:"wolf-introduction",label:"Bầy Sói"}]),{kind:"early-artifact-window",label:"Artifact đầu ván",actions:early},...turns,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
+  // The source queue is authoritative. Later nights intentionally omit the wolf introduction.
+  return [...intro,{kind:"early-artifact-window",label:"Artifact đầu ván",actions:early},...turns,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
 }
 
 /** One waking turn per configured order, preserving every owner and role action.
