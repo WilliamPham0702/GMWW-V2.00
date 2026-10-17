@@ -653,18 +653,6 @@ export class RoomDurableObject extends DurableObject {
     const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
     return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
   }
-  async persistInteractions(rows){
-    const previous=(await this.ctx.storage.get("interactions"))||[];
-    const known=new Set(previous.map(x=>String(x?.id||"")).filter(Boolean));
-    const updates={};
-    for(const row of (Array.isArray(rows)?rows:[])){
-      const id=String(row?.id||"");
-      if(!id||known.has(id))continue;
-      known.add(id);updates[this.actionLogKey(row)]=row;
-    }
-    if(Object.keys(updates).length)await this.ctx.storage.put(updates);
-    await this.ctx.storage.put("interactions",pruneInteractions(rows));
-  }
   async gmActionLog(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     // Backfill the currently retained legacy interactions once. Records that were
@@ -1214,8 +1202,9 @@ export class RoomDurableObject extends DurableObject {
         night:n,cycleKey:key,effectActive:true,actionId:"action_wolf_bite",
         effectId:"effect_wolf_bite",effectName:"Sói Cắn",message:"Bạn đã chết vì Sói Cắn.",
         createdAt:now,source:"wolf-night-engine",status:"pending",response:null});
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
     }
-    await this.persistInteractions(rows);
+    await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
     const room=publicRoom(meta);this.broadcast({type:"room_cycle",cycleKey:key,phase:p,night:n,matchId:String(meta.matchId||""),expired,nightRuntime,room,source,serverTime:Date.now()});
@@ -1471,9 +1460,9 @@ export class RoomDurableObject extends DurableObject {
       const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
       const rows=(await this.ctx.storage.get("interactions"))||[],now=new Date().toISOString(),night=Math.max(0,Number(meta.cycleNight||0)||0);
       for(const x of rows){if(normalizeLoginId(x?.loginId)===loginId&&x?.type==="status"&&x?.statusId===statusId&&x?.effectActive!==false){x.effectActive=false;x.expiredAt=now;x.expiredReason=body?.active===false?"GM_STATUS_CLEAR":"REPLACED"}}
-      if(body?.active===false){await this.persistInteractions(rows);this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
+      if(body?.active===false){await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
       const def=STATUS_DEFS[statusId],interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),type:"status",statusId,loginId,matchId:String(meta.matchId||""),night,cycleKey:String(meta.cycleKey||""),duration:def.duration,nights:Number(def.nights||0),effectActive:true,message:def.label,createdAt:now,source:"gm"};
-      rows.push(interaction);await this.persistInteractions(rows);this.broadcast({type:"player_status_changed",loginId,statusId,active:true,at:now});return j({ok:true,interaction})
+      rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:true,at:now});return j({ok:true,interaction})
     }
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
@@ -1481,7 +1470,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],revived=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||String(x?.type||"")!=="dead")continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_REVIVE";revived.push({id:x.id,type:x.type})}
-      await this.persistInteractions(rows);const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
       this.broadcast({type:"player_revived",loginId,revived,at:now,room,players:publicPlayers,serverTime:Date.now()});
       this.broadcast({type:"room_state",room,players:publicPlayers,serverTime:Date.now()});
       return j({ok:true,loginId,revived,room})
@@ -1491,7 +1480,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],cleared=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||!["frozen","expelled","dead","assassin_mark","status"].includes(String(x?.type||"")))continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_CLEAR";cleared.push({id:x.id,type:x.type})}
-      await this.persistInteractions(rows);this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
     }
     const allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice"]);if(!loginId||!allowed.has(type))return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
@@ -1499,7 +1488,7 @@ export class RoomDurableObject extends DurableObject {
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
-    rows.push(interaction);await this.persistInteractions(rows);
+    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
     this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
@@ -1509,7 +1498,7 @@ export class RoomDurableObject extends DurableObject {
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):(row.type==="thumb_vote"||row.type==="assassin_mark"?new Set(["👍","👎"]):new Set(["ĐÃ HIỂU","OK","✓"]));
     if(!allowed.has(response))return j({ok:false,error:"INVALID_RESPONSE"},400);
-    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.persistInteractions(rows);
+    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));
     this.broadcast({type:"player_interaction_response",interaction:row});return j({ok:true,interaction:row});
   }
   async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
@@ -1547,7 +1536,7 @@ export class RoomDurableObject extends DurableObject {
     for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_HARD_RESET")}catch{}
     return j(ack)
   }
-  async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.persistInteractions(rows);const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});return j({ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true})}
+  async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});return j({ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true})}
   async alarm(){
     try{
       let meta=await this.ctx.storage.get("meta");
