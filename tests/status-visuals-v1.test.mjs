@@ -128,3 +128,26 @@ test('Preview asset: same exact 15-status renderer, no room modification, usable
   assert.match(previewPage,/active\.add\('dead'\)/);
   assert.doesNotMatch(previewPage,/fetch\(|XMLHttpRequest|localStorage\.|\/gm\/interaction|\/player\/interaction/);
 });
+
+test('V1 death immobility: pins each chibi independently and releases visual anchor on revival',()=>{
+  const segment=village.match(/const deceasedDisplayPoints=new Map\(\);[\s\S]*?(?=\n  function visualPlayerPoint\()/)?.[0];
+  assert.ok(segment,'Expected a pure UI movement projection');
+  const factory=new Function('layout','setupState','sittingNow','spawnPosition','visuallyDeceased',segment+'; return movementPosition;');
+  const interpolate=p=>({x:Number(p.moveToX)||0,y:Number(p.moveToY)||0});
+  const layout={interpolate,clampPoint:(x,y)=>({x:Number(x),y:Number(y)})};
+  const isDead=p=>p.statusTags?.some(x=>x.statusId==='dead')===true;
+  const position=factory(layout,{clockOffsetMs:0},()=>false,()=>({x:0,y:0}),isDead);
+  const dead={id:'alice',statusTags:[{statusId:'dead'}],movementStatus:'moving',moveStartedAt:1,moveDurationMs:2000,moveToX:17,moveToY:35};
+  const first=position(dead,null,1000);
+  assert.equal(first.x,17);assert.equal(first.y,35);
+  assert.equal(first.moving,false);assert.equal(first.sitting,false);
+  const serverMoved=position({...dead,moveToX:70,moveToY:81},null,4000);
+  assert.equal(serverMoved.x,17,'server movement must not visually move a deceased avatar');
+  assert.equal(serverMoved.y,35);
+  const second=position({...dead,id:'bob',moveToX:41,moveToY:52},null,1500);
+  assert.equal(second.x,41,'other players use independent anchors');
+  const revived=position({id:'alice',statusTags:[],movementStatus:'idle',positionX:70,positionY:81},null,5000);
+  assert.equal(revived.x,70,'reviving unlocks display movement');
+  const deadAgain=position({...dead,moveToX:73,moveToY:84},null,6000);
+  assert.equal(deadAgain.x,73,'new death must not reuse previous death location');
+});
