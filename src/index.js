@@ -35,7 +35,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.131",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3131",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.132",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3132",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1304,6 +1304,7 @@ export class RoomDurableObject extends DurableObject {
    * multi-target interactions and the Artifact quota/use ledger. Only the latest
    * committed action in this exact turn and night may be restored. */
   async gmBattleAction(request,body){
+    const actionStartedAt=Date.now();
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
       token=String(body?.clientEventId||"").trim().slice(0,120),
@@ -1392,7 +1393,7 @@ export class RoomDurableObject extends DurableObject {
     for(const id of targets){
       const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
         actionNonce:token,targetIds:targets};
-      const response=await this.executeGmInteraction(request,action);
+      const response=await this.executeGmInteraction(request,action,auth);
       const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
       if(!response.ok||data.ok!==true){
         await restore(before);
@@ -1408,7 +1409,7 @@ export class RoomDurableObject extends DurableObject {
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
-    const result={ok:true,undoToken,targets,results,turnId,label:record.label};
+    const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
     this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
     return j(result);
@@ -1451,8 +1452,9 @@ export class RoomDurableObject extends DurableObject {
     if(response.ok)await this.ctx.storage.put(receiptKey,{fingerprint,result:await response.clone().json()});
     return response;
   }
-  async executeGmInteraction(request,body){
-    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+  async executeGmInteraction(request,body,verifiedAuth=null){
+    // Reuse ONLY the same-request verified authorization from gmBattleAction.
+    const auth=verifiedAuth||await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta;
     let gmArtifactStep=null;
     // The battle UI supplies an optional expected turn. Legacy GM manual overrides remain compatible.
