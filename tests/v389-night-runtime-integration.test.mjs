@@ -399,3 +399,60 @@ test('G4.3 real DO morning: unrelated death survives protection and next-night s
   await h.room.applyCycle(await h.meta(),'night',2,'night-2','lab');
   assert.equal(h.data.get('interactions').some(x=>x.id==='witch-death'&&x.effectActive),true);
 });
+
+
+test('G4.4 live DO: Guard protection does not leak into a later night; the later wolf death persists',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[
+    g43notice('action_wolf_bite','bob'),
+    g43notice('action_protect','bob')
+  ]);
+  const dawn1=await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(dawn1.wolfResolution.ok,true);
+  assert.deepEqual(Array.from(dawn1.wolfResolution.blocked),['bob']);
+  assert.equal(h.data.get('interactions').some(row=>row.type==='dead'),false);
+
+  await h.room.applyCycle(await h.meta(),'night',2,'night-2','lab');
+  h.data.get('interactions').push({...g43notice('action_wolf_bite','bob'),id:'bite-on-night-2',night:2,cycleKey:'night-2'});
+  const dawn2=await h.room.applyCycle(await h.meta(),'morning',2,'morning-2','lab');
+  assert.equal(dawn2.wolfResolution.ok,true);
+  assert.deepEqual(Array.from(dawn2.wolfResolution.victims),['bob']);
+  const deaths=()=>h.data.get('interactions').filter(row=>row.type==='dead'&&row.effectActive!==false);
+  assert.deepEqual(deaths().map(row=>row.loginId),['bob']);
+  assert.equal(deaths()[0].night,2,'wolf death must be attributed to the actual night');
+  const replay=await h.room.applyCycle(await h.meta(),'morning',2,'morning-2','lab');
+  assert.equal(replay.idempotent,true);
+  assert.equal(deaths().length,1,'retry must not create a second death');
+  await h.room.applyCycle(await h.meta(),'night',3,'night-3','lab');
+  assert.equal(deaths().length,1,'wolf death must survive a new night');
+});
+
+test('G4.4 live DO: Fairy with ambiguous seating fails closed without killing unrelated members',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.get('players')['member:carol'].seatId=2; // duplicate seat 2, no safe neighbor ordering
+  h.data.set('interactions',[
+    g43notice('action_wolf_bite','bob'),
+    g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'}),
+    {id:'existing-death',type:'dead',loginId:'dave',matchId:'test-match',night:1,effectActive:true,
+      actionId:'action_witch_kill'}
+  ]);
+  const result=await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(result.wolfResolution.ok,false);
+  assert.equal(result.wolfResolution.error,'SEAT_ORDER_UNAVAILABLE');
+  assert.deepEqual(h.data.get('interactions').filter(row=>row.type==='dead').map(row=>row.id),['existing-death'],
+    'missing seat ordering must not manufacture a new death or erase an unrelated death');
+});
+
+test('G4.4 live DO: cross-match wolf actions cannot affect another match at dawn',async()=>{
+  const h=g43seated(harness({artifact:false}));
+  h.data.set('interactions',[
+    {...g43notice('action_wolf_bite','bob'),matchId:'another-match'},
+    {...g43notice('action_protect','carol'),matchId:'another-match'},
+    {...g43notice('action_transfer_bite','alice',{direction:'left'}),matchId:'another-match'}
+  ]);
+  const morning=await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
+  assert.equal(morning.wolfResolution.ok,true);
+  assert.equal(morning.wolfResolution.biteCount,0);
+  assert.deepEqual(Array.from(morning.wolfResolution.victims),[]);
+  assert.equal(h.data.get('interactions').some(row=>row.type==='dead'),false);
+});
