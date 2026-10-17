@@ -2502,7 +2502,7 @@ function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
-  const players=playLiveMembers(),configured=Number(playSceneRuntime.room?.seatCount||playSceneState.seatCount)||24,highestSeat=Math.max(0,...players.map(p=>Number(p?.seatId)||0)),seatCount=Math.max(playSceneRuntime.room?.seatLayout?1:24,Math.min(30,Math.max(configured,players.length,highestSeat))),occupied=new Set(players.map(p=>Number(p?.seatId||0)).filter(n=>n>=1&&n<=seatCount));
+  const players=playLiveMembers(),configured=Number(playSceneRuntime.room?.seatCount||playSceneState.seatCount)||24,highestSeat=Math.max(0,...players.map(p=>Number(p?.seatId)||0)),seatCount=Math.min(30,Math.max(1,configured,players.length,highestSeat)),occupied=new Set(players.map(p=>Number(p?.seatId||0)).filter(n=>n>=1&&n<=seatCount));
   return{seatCount,occupied:occupied.size,available:Math.max(0,seatCount-occupied.size)}
 }
 function playSetBusy(on){
