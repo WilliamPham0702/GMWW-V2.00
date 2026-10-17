@@ -119,7 +119,7 @@ test('V3.124: a real confirmed Guard action draws shields only during the matchi
   assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{protected:true}},'alice'),
     [{statusId:'protected',label:'Bảo Vệ',icon:'🛡️'}]);
   assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{wolf_bitten:true}},'bob'),
-    [{statusId:'wolf_bitten',label:'Sói Cắn',icon:'🐾'}]);
+    [{statusId:'wolf_bitten',label:'Sói Cắn',icon:'🐺'}]);
   assert.deepEqual(statusTagsFor(rows,{...meta,statusDisplay:{protected:true}},'bob'),[]);
   assert.deepEqual(confirmedNightStatusVisuals(rows,{...meta,cycleNight:3}),[]);
   assert.deepEqual(confirmedNightStatusVisuals(rows,{...meta,cyclePhase:'morning'}),[]);
