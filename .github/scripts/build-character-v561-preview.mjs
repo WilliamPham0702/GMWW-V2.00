@@ -6,6 +6,8 @@ const root='.character-v561-preview-assets';
 fs.rmSync(root,{recursive:true,force:true});
 const files=[
  'assets/characters/v5/test-skin-v561.html',
+ 'assets/characters/v5/test-skin-v562.html',
+ 'assets/characters/v5/skin-v562-original-sleeves.mjs',
  'assets/characters/v5/skin-v561-original-art-uv.mjs',
  'assets/characters/v5/skin-v561-original-swatch.mjs',
  'assets/characters/v5/skin-v560-weighted-surface.mjs',
@@ -21,5 +23,5 @@ for(const src of files){
  fs.copyFileSync(src,dst);
  console.log(src,fs.statSync(dst).size,'bytes');
 }
-if(files.length!==8)throw new Error('Unexpected preview file count');
-console.log('Character V5.61 independent preview contains only',files.length,'files');
+if(files.length!==10)throw new Error('Unexpected preview file count');
+console.log('Character V5.62 independent preview contains only',files.length,'files');

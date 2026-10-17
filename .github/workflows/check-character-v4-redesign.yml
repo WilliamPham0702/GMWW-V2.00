@@ -10,6 +10,8 @@ on:
       - 'tests/character-v530-original-skin-adapter.test.mjs'
       - 'tests/character-v560-weighted-skin.test.mjs'
       - 'tests/character-v561-original-art-uv.test.mjs'
+      - 'tests/character-v562-original-sleeves.test.mjs'
+      - 'tests/character-v562-preview-isolation.test.mjs'
       - 'tests/character-v500-webgl-master.test.mjs'
       - 'tests/character-v4-action-lab.test.mjs'
       - 'tests/character-v4-media.test.mjs'
@@ -41,7 +43,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs tests/character-v520-acceptance-board.test.mjs tests/character-v530-original-skin-adapter.test.mjs tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs tests/character-v520-acceptance-board.test.mjs tests/character-v530-original-skin-adapter.test.mjs tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs tests/character-v562-original-sleeves.test.mjs tests/character-v562-preview-isolation.test.mjs
       - name: Browser smoke test V5.00 WebGL on headless Chromium
         run: |
           set -euo pipefail
@@ -103,6 +105,21 @@ jobs:
             exit 1
           fi
           echo "V5.61 original V4.17 pixels decoded and painted on 3D weighted SkinnedMesh PASS."
+
+          # V5.62 adds TWO authentic-textured 3D weighted sleeve meshes on the
+          # exact 16-bone V5.10 rig. READY requires decoded WebP and sleeve weights.
+          timeout 55s "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --enable-unsafe-swiftshader --use-angle=swiftshader --virtual-time-budget=4500 \
+            --dump-dom "http://127.0.0.1:18765/characters/v5/test-skin-v562.html" \
+            > /tmp/gmww-v562-sleeves-browser.html 2>/tmp/gmww-v562-chrome.log || {
+              tail -n 40 /tmp/gmww-v562-chrome.log; exit 1;
+            }
+          if ! grep -Fq 'data-gmww-v562="ready"' /tmp/gmww-v562-sleeves-browser.html; then
+            tail -n 30 /tmp/gmww-v562-chrome.log
+            echo "::error::V5.62 original V4.17 fabric or weighted sleeves failed in Chromium"
+            exit 1
+          fi
+          echo "V5.62 original GMWW textured 3D sleeves rendered in headless Chromium PASS."
 
       - name: Confirm no live app references new unapproved characters
         run: |

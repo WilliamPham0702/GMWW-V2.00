@@ -1,4 +1,4 @@
-name: GMWW Character V5.61 Preview (Independent)
+name: GMWW Character V5.62 Preview (Independent)
 
 on:
   pull_request:
@@ -9,7 +9,12 @@ on:
       - '.github/scripts/build-character-v561-preview.mjs'
       - '.github/workflows/deploy-character-v561-preview.yml'
       - 'assets/characters/v5/test-skin-v561.html'
+      - 'assets/characters/v5/test-skin-v562.html'
+      - 'assets/characters/v5/skin-v562-*.mjs'
       - 'assets/characters/v5/skin-v561-*.mjs'
+      - '.github/scripts/character-v562-preview-isolation.mjs'
+      - '.github/scripts/classify-update.mjs'
+      - '.github/scripts/verify-ota-version-advance.mjs'
   push:
     branches: [main]
     paths:
@@ -18,6 +23,8 @@ on:
       - '.github/scripts/build-character-v561-preview.mjs'
       - '.github/workflows/deploy-character-v561-preview.yml'
       - 'assets/characters/v5/test-skin-v561.html'
+      - 'assets/characters/v5/test-skin-v562.html'
+      - 'assets/characters/v5/skin-v562-*.mjs'
       - 'assets/characters/v5/skin-v561-*.mjs'
   workflow_dispatch:
 
@@ -40,14 +47,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Test original artwork and 3D weighted-bone binding
-        run: node --test tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs
+        run: node --test tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs tests/character-v562-original-sleeves.test.mjs tests/character-v562-preview-isolation.test.mjs
       - name: Ensure preview has no game/OTA/room data and dry-run Cloudflare
         run: |
           set -euo pipefail
           node --check src/character-v561-preview-worker.mjs
           node --check .github/scripts/build-character-v561-preview.mjs
           node .github/scripts/build-character-v561-preview.mjs
-          test "$(find .character-v561-preview-assets -type f | wc -l | tr -d ' ')" -eq 8
+          test "$(find .character-v561-preview-assets -type f | wc -l | tr -d ' ')" -eq 10
           ! grep -Eq '(DurableObject|roomStub|\/api\/update|\/updates\/runtime)' src/character-v561-preview-worker.mjs
           npx wrangler deploy --config wrangler.character-v561-preview.jsonc --dry-run
 
@@ -72,22 +79,23 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx wrangler deploy --config wrangler.character-v561-preview.jsonc
-      - name: Verify accessible independent V5.61 test and original-texture bytes
+      - name: Verify accessible independent V5.62 test and original-texture bytes
         run: |
           set -euo pipefail
           BASE="https://gmww-character-v561-preview.williampham0702.workers.dev"
           # Newly published Workers/assets may need a short propagation delay.
           sleep 4
-          echo "V5.61 preview Worker health and HTML smoke (run_worker_first enabled)."
+          echo "V5.62 preview Worker health and HTML smoke (run_worker_first enabled)."
           curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/api/health" > /tmp/gmww-character-preview-health.json
           cat /tmp/gmww-character-preview-health.json
           grep -Fq '"liveGameModified":false' /tmp/gmww-character-preview-health.json
           curl --location --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
-            "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v561-test.html
-          echo "Fetched V5.61 HTML: $(wc -c </tmp/gmww-character-v561-test.html) bytes"
-          grep -Fq 'Chàng Biển: hoa văn gốc trên Skin 3D' /tmp/gmww-character-v561-test.html
+            "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v562-test.html
+          echo "Fetched V5.62 HTML: $(wc -c </tmp/gmww-character-v562-test.html) bytes"
+          grep -Fq 'V5.62: tay áo GMWW gốc trên Skin 3D' /tmp/gmww-character-v562-test.html
           for REL in \
+            characters/v5/skin-v562-original-sleeves.mjs \
             characters/v5/skin-v561-original-art-uv.mjs \
             characters/v5/skin-v561-original-swatch.mjs \
             characters/v5/skin-v560-weighted-surface.mjs \
@@ -100,4 +108,4 @@ jobs:
             test -s /tmp/v561-check
             test "$(shasum -a 256 "assets/$REL" | awk '{print $1}')" = "$(shasum -a 256 /tmp/v561-check | awk '{print $1}')"
           done
-          echo "V5.61 original artwork UV 3D preview verified independently. Main GMWW Production and OTA untouched."
+          echo "V5.62 original artwork UV + weighted sleeves preview verified independently. Main GMWW Production and OTA untouched."
