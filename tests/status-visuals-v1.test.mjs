@@ -107,6 +107,10 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.match(village,/dead:"gray-smoke"/);
   assert.match(village,/function visuallyDeceased\(data\)/);
   assert.match(village,/if\(visuallyDeceased\(data\)\)continue/);
+  assert.match(village,/const deceasedDisplayPoints=new Map\(\)/);
+  assert.match(village,/deceasedDisplayPoints\.has\(id\)/);
+  assert.match(village,/deceasedDisplayPoints\.set\(id,\{x:pos\.x,y:pos\.y\}\)/);
+  assert.match(village,/deceasedDisplayPoints\.delete\(id\)/);
   assert.match(village,/const dead=visuallyDeceased\(data\),moving=!dead/);
   assert.doesNotMatch(src,/effect:'fallen'/);
   assert.doesNotMatch(gmCss,/\.gmww-sv-fallen/);
