@@ -22,10 +22,16 @@ test('multi-night: real queue preserves order and early Artifact window each nig
   for(const night of [1,2,3,4]){
     const owners=[{playerId:'seer',artifactId:'swap',artifactName:'Đá Đổi Vai Trò',priorityFirst:true,used:false}];
     const {queue,display}=runNight(night,owners);
-    assert.equal(queue[0].kind,'wolf-introduction');
-    assert.equal(queue[1].kind,'early-artifact-window');
+    const introCount=night===1?1:0;
+    assert.equal(queue.filter(x=>x.kind==='wolf-introduction').length,introCount,
+      'Bầy Sói is introduced on night one only');
+    assert.equal(display.filter(x=>x.kind==='wolf-introduction').length,introCount,
+      'Timeline projection must not reinsert Bầy Sói on later nights');
+    assert.equal(queue[0].kind,night===1?'wolf-introduction':'early-artifact-window');
+    assert.equal(queue.filter(x=>x.kind==='early-artifact-window').length,1);
     assert.equal(queue.at(-1).kind,'village-wakeup');
-    assert.equal(display[1].actions.length,1);
+    assert.equal(display.filter(x=>x.kind==='early-artifact-window').length,1);
+    assert.equal(display.find(x=>x.kind==='early-artifact-window').actions.length,1);
     assert.deepEqual(queue.filter(x=>x.kind==='role').map(x=>x.playerId),['wolf','guard','seer']);
   }
 });
@@ -57,4 +63,20 @@ test('audit: real policy blocks frozen actors and honours expired effects',()=>{
   assert.equal(isBattleActorBlocked([{...row,effectActive:false}],args),false);
   // See v389-night-runtime-integration.test.mjs for actual Durable Object
   // confirmation/rollback and multi-night expiration sequence tests.
+});
+
+test('Timeline projections of later nights do not manufacture an absent wolf introduction',()=>{
+  const withoutIntro=[{kind:'early-artifact-window',label:'Artifact đầu ván',actions:[]},
+    {kind:'role',label:'Tiên Tri',playerId:'seer'},{kind:'village-wakeup',label:'Làng ơi dậy đi'}];
+  const projected=timelineDisplaySteps(withoutIntro);
+  assert.deepEqual(projected.map(x=>x.kind),withoutIntro.map(x=>x.kind));
+  assert.equal(projected.filter(x=>x.kind==='village-wakeup').length,1);
+});
+
+test('Legacy night-one presentation keeps the Bầy Sói introduction exactly once',()=>{
+  const queue=buildNightQueue({night:1,normalTurns:[]});
+  const display=timelineDisplaySteps(queue);
+  assert.equal(display.filter(x=>x.kind==='wolf-introduction').length,1);
+  assert.equal(display.filter(x=>x.kind==='early-artifact-window').length,1);
+  assert.equal(display.at(-1).kind,'village-wakeup');
 });
