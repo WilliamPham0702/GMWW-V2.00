@@ -11,3 +11,7 @@
 - TDD RED CI: the first commit `e59c853e8e5af2482b44e494024b70ea61f2c1d9` failed only the missing-module regression (965/966 passed).
 - New behavior tests import and execute production implementations against default template fields, legacy nested role aliases, explicit Artifact-off, per-role timing, movement/room modes and seat limit normalization.
 - Merge/deploy only on complete required CI SUCCESS. Validate Cloudflare Worker health + OTA manifest afterward. iPhone activation is not established by a server-only refactor.
+
+## Legacy regression compatibility
+- Replace three old source-string fixtures in V3.60/V3.83/V3.98 tests with calls to the real pure module; keep Worker scheduling assertions.
+- Failures under the first GREEN candidate were 3 historical source-location assertions, not reported functional regressions.
