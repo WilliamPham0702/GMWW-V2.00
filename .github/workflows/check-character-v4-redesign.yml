@@ -8,6 +8,8 @@ on:
       - 'tests/character-v510-skinned-master.test.mjs'
       - 'tests/character-v520-acceptance-board.test.mjs'
       - 'tests/character-v530-original-skin-adapter.test.mjs'
+      - 'tests/character-v560-weighted-skin.test.mjs'
+      - 'tests/character-v561-original-art-uv.test.mjs'
       - 'tests/character-v500-webgl-master.test.mjs'
       - 'tests/character-v4-action-lab.test.mjs'
       - 'tests/character-v4-media.test.mjs'
@@ -39,7 +41,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify Character V4 decision contract
-        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs tests/character-v520-acceptance-board.test.mjs tests/character-v530-original-skin-adapter.test.mjs
+        run: node --test tests/character-v4-manifest.test.mjs tests/character-v4-web-preview.test.mjs tests/character-v4-api.test.mjs tests/character-v4-action-lab.test.mjs tests/character-v4-media.test.mjs tests/character-v4-sprite-actions.test.mjs tests/character-v4-skeleton.test.mjs tests/character-v4-skin.test.mjs tests/character-v4-skin-preview.test.mjs tests/character-v4-highres-master.test.mjs tests/character-v4-premium-artwork.test.mjs tests/character-v4-hd-artwork-v416.test.mjs tests/character-v4-layered-motion-v417.test.mjs tests/character-v4-approval-v418.test.mjs tests/character-v4-rig-integrity-v419.test.mjs tests/character-v500-webgl-master.test.mjs tests/character-v510-skinned-master.test.mjs tests/character-v520-acceptance-board.test.mjs tests/character-v530-original-skin-adapter.test.mjs tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs
       - name: Browser smoke test V5.00 WebGL on headless Chromium
         run: |
           set -euo pipefail
@@ -85,6 +87,23 @@ jobs:
           grep -Fq 'data-test-id="perf30"' /tmp/gmww-v520-test-board.html
           grep -Fq 'id="decision" data-status="pending"' /tmp/gmww-v520-test-board.html
           echo "Character V5.20 acceptance board renders ten rows and blocks unapproved live release PASS."
+
+          # V5.61 must initialize REAL Three.js 3D + decode the *exact* original
+          # V4.17 art-derived WebP texture; no gray/empty canvas "PASS".
+          timeout 55s "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --enable-unsafe-swiftshader --use-angle=swiftshader --virtual-time-budget=4500 \
+            --dump-dom "http://127.0.0.1:18765/characters/v5/test-skin-v561.html" \
+            > /tmp/gmww-v561-original-art-browser.html 2>/tmp/gmww-v561-chrome.log || {
+              tail -n 40 /tmp/gmww-v561-chrome.log; exit 1;
+            }
+          if ! grep -Fq 'data-gmww-v561="ready"' /tmp/gmww-v561-original-art-browser.html; then
+            tail -n 30 /tmp/gmww-v561-chrome.log
+            grep -o 'data-gmww-v561="[^"]*"' /tmp/gmww-v561-original-art-browser.html || true
+            echo "::error::V5.61 real 3D renderer or original V4.17 WebP could not initialize"
+            exit 1
+          fi
+          echo "V5.61 original V4.17 pixels decoded and painted on 3D weighted SkinnedMesh PASS."
+
       - name: Confirm no live app references new unapproved characters
         run: |
           test -s docs/character-v4-redesign.md
