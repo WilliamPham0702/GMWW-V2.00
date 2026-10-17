@@ -1,5 +1,7 @@
 /* Shared GMWW status visual language: same classes in GM, library and Player Web. */
-.gmww-sv-stage,.gmww-sv-target{position:relative;isolation:isolate}
+/* Status layers must not override the absolute positioning owned by scene tokens. */
+.gmww-sv-stage,.gmww-sv-target{isolation:isolate}
+.gmww-sv-stage:not(.play-player-token):not(.player),.gmww-sv-target{position:relative}
 .gmww-sv-overlay{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:visible}
 .gmww-sv-fx{position:absolute;inset:-12% -9%;z-index:1;display:block;pointer-events:none}
 .gmww-sv-fx i{position:absolute;display:block;pointer-events:none}

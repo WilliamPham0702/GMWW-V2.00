@@ -73,7 +73,7 @@ test('C: Player Web receives status IDs and mirrors GM animation assets',()=>{
   assert.match(village,/statusId:safeText\(x\?\.statusId/);
   assert.match(village,/gmww-sv-overlay/);
   assert.match(village,/gmww-sv-badges/);
-  assert.match(villageCss,/@import "\.\/status-visuals\.css"/);
+  assert.match(villageCss,/@import "\.\/status-visuals\.css\?v=3130"/);
   for(const v of vis.entries)assert.ok(webCss.includes('gmww-sv-'+v.effect));
   assert.equal(webCss.slice(0,gmCss.length),gmCss);
 });
@@ -173,7 +173,7 @@ test('V2 production Player Web uses the approved shared orbit renderer, not lega
   assert.ok(village.includes('import "../status-visuals.js?v=v3126-orbit";'));
   assert.ok(village.includes('approvedVisuals.overlay(rows.map(x=>x.statusId))'));
   assert.ok(village.includes('if(approvedVisuals)button.insertAdjacentHTML'));
-  assert.match(read('assets/village/index.html'),/visual=v5/);
+  assert.match(read('assets/village/index.html'),/visual=v6/);
 });
 
 test('V3.124: Player Web updates overlay on same stable avatar and skips unchanged heartbeats',()=>{
