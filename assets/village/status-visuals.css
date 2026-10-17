@@ -119,6 +119,21 @@
 #battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-badges{display:none}
 #battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-fx{inset:-8px -10px}
 
+/* V2 — identical orbiting icons on GM characters, Player Web and action boxes. */
+.gmww-sv-orbit{position:absolute;inset:0;z-index:11;pointer-events:none;animation:gmwwSvOrbitSpin 6s linear infinite;transform-origin:50% 50%}
+.gmww-sv-orbit-item{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--angle)) translateX(var(--orbit-radius,61px));transform-origin:0 0}
+.gmww-sv-orbit-item>span{display:block;font-size:var(--orbit-icon-size,23px);line-height:1;white-space:nowrap;transform:translate(-50%,-50%);filter:drop-shadow(0 0 5px rgba(120,220,255,.85));animation:gmwwSvOrbitCounter 6s linear infinite}
+.gmww-sv-orbit-item .gmww-sv-red-wolf{filter:sepia(1) saturate(12) hue-rotate(315deg) drop-shadow(0 0 6px #ff263c)}
+@keyframes gmwwSvOrbitSpin{to{transform:rotate(360deg)}}
+@keyframes gmwwSvOrbitCounter{to{transform:translate(-50%,-50%) rotate(-360deg)}}
+.gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:23px;--orbit-icon-size:14px}
+#battleActionBar [data-battle-action]{position:relative;isolation:isolate}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview{position:absolute;inset:0;width:100%;height:100%;margin:0;pointer-events:none;z-index:4}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-orbit{--orbit-radius:34px;--orbit-icon-size:16px}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-overlay{inset:0}
+#battleActionBar [data-battle-action] .gmww-sv-action-preview .gmww-sv-action-avatar{display:none}
+@media(prefers-reduced-motion:reduce){.gmww-sv-orbit,.gmww-sv-orbit-item>span{animation-duration:24s}}
+
 /* Player Web: use the same animation primitives and proportions as GM. */
 .player.gmww-sv-stage .gmww-sv-overlay{inset:7% 25% 24%;z-index:12}
 .player.gmww-sv-stage .gmww-sv-badges{bottom:calc(100% + 8px);z-index:12}
