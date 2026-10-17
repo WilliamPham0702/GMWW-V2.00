@@ -173,5 +173,27 @@ test('V2 production Player Web uses the approved shared orbit renderer, not lega
   assert.ok(village.includes('import "../status-visuals.js?v=pr277-v2b";'));
   assert.ok(village.includes('approvedVisuals.overlay(rows.map(x=>x.statusId))'));
   assert.ok(village.includes('if(approvedVisuals)button.insertAdjacentHTML'));
-  assert.match(read('assets/village/index.html'),/visual=v2/);
+  assert.match(read('assets/village/index.html'),/visual=v3/);
+});
+
+test('V3.124: Player Web updates overlay on same stable avatar and skips unchanged heartbeats',()=>{
+  assert.match(village,/function statusVisualSignature\(data\)/);
+  assert.match(village,/dataset\.gmwwStatusSig!==nextStatusSig/);
+  assert.match(village,/querySelectorAll\(':scope > \.gmww-sv-overlay, :scope > \.gmww-sv-badges'\)/);
+  assert.match(village,/button\.classList\.toggle\("gmww-sv-dead",active\.includes\("dead"\)\)/);
+  assert.match(village,/if\(active\.length\)button\.insertAdjacentHTML\("beforeend",visuals\.overlay\(ids\)\)/);
+});
+test('V3.124: GM avoids continuous heavy DOM rewrites; animation and Player CSS remain identical',()=>{
+  assert.match(app,/dataset\.gmwwPlayerDomSig===domSig/);
+  assert.match(app,/performance\.now\(\)/);
+  assert.match(app,/lastMotionPaintAt/);
+  assert.match(statusPolicy,/confirmedNightStatusVisuals\(rows,meta\)/);
+  assert.match(worker,/confirmedNightStatusVisuals\(interactions,meta\)/);
+  assert.match(gmCss,/content-visibility:auto/);
+  assert.match(gmCss,/text-shadow:0 0 5px/);
+  assert.equal(webCss.slice(0,gmCss.length),gmCss);
+  assert.equal(read('server-game/current/app.js'),
+    ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
+    '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part']
+     .map(x=>read('server-game/src/'+x)).join(''));
 });
