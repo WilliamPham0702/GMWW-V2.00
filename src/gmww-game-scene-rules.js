@@ -12,7 +12,8 @@ export function artifactPriorityFirst(artifact){
 }
 export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   const queue=[];
-  queue.push({kind:"wolf-introduction",label:"Bầy Sói"});
+  // Match the real Durable Object night scheduler: only night one has the wolf introduction.
+  if(Math.max(1,Number(night)||1)===1)queue.push({kind:"wolf-introduction",label:"Bầy Sói"});
   // Every cycle, eligible configured Artifacts act before roles. No unused
   // Artifact is consumed simply by appearing in this opening window.
   const earlyActions=artifactOwners.filter(owner=>!owner?.used&&artifactPriorityFirst(owner)).map(owner=>({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId}));
