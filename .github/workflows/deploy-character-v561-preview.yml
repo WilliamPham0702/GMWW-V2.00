@@ -1,0 +1,98 @@
+name: GMWW Character V5.61 Preview (Independent)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/character-v561-preview-worker.mjs'
+      - 'wrangler.character-v561-preview.jsonc'
+      - '.github/scripts/build-character-v561-preview.mjs'
+      - '.github/workflows/deploy-character-v561-preview.yml'
+      - 'assets/characters/v5/test-skin-v561.html'
+      - 'assets/characters/v5/skin-v561-*.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'src/character-v561-preview-worker.mjs'
+      - 'wrangler.character-v561-preview.jsonc'
+      - '.github/scripts/build-character-v561-preview.mjs'
+      - '.github/workflows/deploy-character-v561-preview.yml'
+      - 'assets/characters/v5/test-skin-v561.html'
+      - 'assets/characters/v5/skin-v561-*.mjs'
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-character-v561-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test original artwork and 3D weighted-bone binding
+        run: node --test tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs
+      - name: Ensure preview has no game/OTA/room data and dry-run Cloudflare
+        run: |
+          set -euo pipefail
+          node --check src/character-v561-preview-worker.mjs
+          node --check .github/scripts/build-character-v561-preview.mjs
+          node .github/scripts/build-character-v561-preview.mjs
+          test "$(find .character-v561-preview-assets -type f | wc -l | tr -d ' ')" -eq 8
+          ! grep -Eq '(DurableObject|roomStub|\/api\/update|\/updates\/runtime)' src/character-v561-preview-worker.mjs
+          npx wrangler deploy --config wrangler.character-v561-preview.jsonc --dry-run
+
+  deploy-preview:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prepare isolated Character preview assets
+        run: node .github/scripts/build-character-v561-preview.mjs
+      - name: Publish independent Cloudflare Worker (NOT gmww-v2-00)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.character-v561-preview.jsonc
+      - name: Verify accessible independent V5.61 test and original-texture bytes
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-character-v561-preview.williampham0702.workers.dev"
+          curl --fail --silent --show-error --retry 8 --retry-delay 2 \
+            "$BASE/api/health" > /tmp/gmww-character-preview-health.json
+          grep -Fq '"liveGameModified":false' /tmp/gmww-character-preview-health.json
+          curl --location --fail --silent --show-error --retry 8 --retry-delay 2 \
+            "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v561-test.html
+          grep -Fq 'Chàng Biển: hoa văn gốc trên Skin 3D' /tmp/gmww-character-v561-test.html
+          for REL in \
+            characters/v5/skin-v561-original-art-uv.mjs \
+            characters/v5/skin-v561-original-swatch.mjs \
+            characters/v5/skin-v560-weighted-surface.mjs \
+            characters/v5/character-rig-v510.mjs \
+            characters/v5/character-motion-v500.mjs \
+            characters/v5/vendor/three.module.min.js \
+            characters/v4/skin-v414.mjs; do
+            curl --location --fail --silent --show-error --retry 8 --retry-delay 2 \
+              "$BASE/$REL?verify=$(date +%s)" > /tmp/v561-check
+            test -s /tmp/v561-check
+            test "$(shasum -a 256 "assets/$REL" | awk '{print $1}')" = "$(shasum -a 256 /tmp/v561-check | awk '{print $1}')"
+          done
+          echo "V5.61 original artwork UV 3D preview verified independently. Main GMWW Production and OTA untouched."
