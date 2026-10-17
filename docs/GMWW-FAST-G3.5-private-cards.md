@@ -12,3 +12,8 @@ Source of truth: `src/gmww-private-card-contract.js`. `src/index.js` imports fun
 - TDD RED on commit `f2c2c6493481332633f71c09906f4df3fcb2c732`: 971/972 existing checks passed, the missing module failed.
 - G3.4 room/game configuration extracted in PR #286; separate PR #277 Status art remains isolated.
 - Mandatory CI, browser and Worker checks must be green before merge/deploy.
+
+## Historical test migration
+- Existing Artifact priority and role usage tests now call the real `gmww-private-card-contract.js` exports rather than searching inline code in `src/index.js`.
+- Real Durable Object harness tests keep the original DO method extraction, but pass the production Artifact sanitizer directly instead of evaluating a deleted source fragment.
+- Test coverage for legacy role/card formatting, Artifact controls and private payloads remains active.

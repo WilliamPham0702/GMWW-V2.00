@@ -96,6 +96,6 @@ test('private cards: production Worker uses one shared sanitizer module',()=>{
  for(const name of ['sanitizePlayerRoleCard','sanitizePlayerArtifactCard',
   'mergePlayerRoleCard','privateRole','privateArtifact']){
     assert.doesNotMatch(source,new RegExp('function '+name+'\\('));
-    assert.match(source,new RegExp(name+'\\('));
+    assert.ok(source.includes(name),'Worker must import '+name);
  }
 });

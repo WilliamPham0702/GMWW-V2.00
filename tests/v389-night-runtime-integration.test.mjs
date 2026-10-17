@@ -10,6 +10,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight} from '../src/gmww-wolf-night-resolution.js';
+import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -109,17 +110,13 @@ test('GM delivery preserves configured Artifact target limits through the card p
   assert.equal(card.actions[0].targetCount,2);
   assert.equal(card.actions[0].noSelf,false);
   assert.equal(card.actions[0].allowDead,true);
-  const sanitizeSource=source.slice(source.indexOf('function sanitizePlayerArtifactCard('),source.indexOf('function privateArtifact('));
-  const sanitize=vm.runInNewContext(sanitizeSource+'; sanitizePlayerArtifactCard',{defaultPriorityFirst});
-  const delivered=sanitize(card);
+  const delivered=sanitizePlayerArtifactCard(card);
   assert.equal(delivered.actions[0].targetCount,2);
   assert.equal(delivered.actions[0].noSelf,false);
   assert.equal(delivered.actions[0].allowDead,true);
 });
 test('Artifact card sanitizer retains explicit target restrictions for the server',()=>{
-  const sanitizer=source.slice(source.indexOf('function sanitizePlayerArtifactCard('),source.indexOf('function privateArtifact('));
-  const sanitize=vm.runInNewContext(sanitizer+'; sanitizePlayerArtifactCard',{defaultPriorityFirst});
-  const result=sanitize({name:'Tráng Gương',actions:[{id:'copy',targetCount:2,noSelf:true,allowDead:false},{id:'legacy'}]});
+  const result=sanitizePlayerArtifactCard({name:'Tráng Gương',actions:[{id:'copy',targetCount:2,noSelf:true,allowDead:false},{id:'legacy'}]});
   assert.equal(result.actions[0].targetCount,2);
   assert.equal(result.actions[0].noSelf,true);
   assert.equal(result.actions[0].allowDead,false);

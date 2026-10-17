@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {sanitizePlayerRoleCard,mergePlayerRoleCard} from '../src/gmww-private-card-contract.js';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
@@ -29,8 +30,11 @@ test('Actual battle action audio is wired to a matching assigned clip, not only 
 test('Role card function limits are serialized for authoritative worker validation',()=>{
   assert.match(app,/flags:\{allowMultipleActions:role\.flags\?\.allowMultipleActions===true\}/);
   assert.match(app,/functions:\(role\.functions\|\|\[\]\)\.map/);
-  assert.match(worker,/const functions=Array\.isArray\(x\.functions\)/);
-  assert.match(worker,/functions:o\.functions\?\?b\.functions/);
+  const normalized=sanitizePlayerRoleCard({functions:[{actionId:'action_exile',usageMode:'eachNight',usageCount:1}]});
+  assert.equal(normalized.functions[0].actionId,'action_exile');
+  assert.equal(normalized.functions[0].usageMode,'eachNight');
+  const merged=mergePlayerRoleCard(normalized,{name:'Đổi tên'});
+  assert.deepEqual(merged.functions,normalized.functions);
   assert.match(worker,/checkBattleRoleActionUsage\(currentUsage/);
   assert.match(worker,/battleRoleUsage:/);
   assert.match(worker,/roleUse\?usageKey:null/);
