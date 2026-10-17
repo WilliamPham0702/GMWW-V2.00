@@ -21,7 +21,7 @@ const vis=ctx.GMWW_STATUS_VISUALS;
 test('A: catalog contains precisely 10 lasting + 5 transient effects, no rule engine',()=>{
   assert.equal(vis.entries.length,15);
   assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='persistent'),x=>x.id),['frozen','protected','wolf_bitten','marked','dead','expelled','infected','mute','disabled_permanent','linked']);
-  assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='instant'),x=>x.id),['recover','transform','attack','inspect','transfer']);
+  assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='instant'),x=>x.id),['recover','transform','attack','inspect','hunt']);
   assert.ok(vis.entries.every(x=>x.name&&x.description&&x.effect));
   assert.doesNotMatch(src,/playRoomApi\(|gmBattleAction\(|applyCycle\(/);
 });
@@ -37,8 +37,8 @@ test('A: only active effects are drawn and disabled_2n reuses power seal',()=>{
   assert.deepEqual(Array.from(vis.resolveRows(rows,'a',Date.parse('2026-10-17'))),['wolf_bitten','disabled_permanent']);
   assert.deepEqual(Array.from(vis.resolveRows(rows,'b')),['dead']);
   assert.deepEqual(Array.from(vis.layers(['dead','frozen','marked']).shown),['dead']);
-  assert.match(vis.overlay(['frozen','infected']),/gmww-sv-snowfall/);
-  assert.match(vis.overlay(['frozen','infected']),/gmww-sv-green-rain/);
+  assert.match(vis.overlay(['frozen','infected']),/gmww-sv-orbit/);
+  assert.match(vis.overlay(['frozen','infected']),/data-orbit="infected"/);
 });
 test('B: library has all 15 live previews and all 15 switches',()=>{
   assert.match(html,/status-visuals\.css/);assert.match(html,/status-visuals\.js/);
@@ -120,11 +120,11 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
 test('Preview asset: same exact 15-status renderer, no room modification, usable on iPhone',()=>{
   assert.equal(previewRenderer,src);
   assert.match(previewPage,/<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
-  assert.match(previewPage,/\/status-visuals\.js\?v=pr277-abc/);
-  assert.match(previewPage,/\/village\/status-visuals\.css\?v=pr277-abc/);
+  assert.match(previewPage,/\/status-visuals\.js\?v=pr277-v2b/);
+  assert.match(previewPage,/\/village\/status-visuals\.css\?v=pr277-v2b/);
   assert.match(previewPage,/api\.entries\.filter/);
   assert.match(previewPage,/permissions\.get\(id\)/);
-  assert.match(previewPage,/api\.overlay\(chosen\)/);
+  assert.match(previewPage,/api\.overlay\(ids\)/);
   assert.match(previewPage,/active\.add\('dead'\)/);
   assert.doesNotMatch(previewPage,/fetch\(|XMLHttpRequest|localStorage\.|\/gm\/interaction|\/player\/interaction/);
 });
@@ -150,4 +150,21 @@ test('V1 death immobility: pins each chibi independently and releases visual anc
   assert.equal(revived.x,70,'reviving unlocks display movement');
   const deadAgain=position({...dead,moveToX:73,moveToY:84},null,6000);
   assert.equal(deadAgain.x,73,'new death must not reuse previous death location');
+});
+
+test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=>{
+  assert.equal(vis.entries.length,15);
+  assert.equal(vis.byId.transfer,undefined);
+  assert.equal(vis.byId.hunt.icon,'🏹');
+  const expected={frozen:'❄️',protected:'🛡️',wolf_bitten:'🐾',marked:'👍',dead:'☠️',expelled:'🌪️',infected:'🦠',mute:'😷',disabled_permanent:'🚫',linked:'✌️',recover:'⭐',transform:'🥳',attack:'⚔️',inspect:'💫',hunt:'🏹'};
+  for(const [id,icon] of Object.entries(expected)){
+    assert.match(vis.overlay([id]),/gmww-sv-orbit/);
+    assert.ok(vis.overlay([id]).includes(icon),id+' missing orbit icon');
+  }
+  assert.match(vis.overlay(['marked']),/👎/);
+  assert.match(vis.overlay(['dead']),/gmww-sv-gray-smoke/);
+  assert.match(vis.overlay(['wolf_bitten']),/gmww-sv-red-wolf/);
+  assert.match(gmCss,/gmwwSvOrbitSpin/);
+  assert.match(gmCss,/\[data-battle-action\] \.gmww-sv-action-preview\{position:absolute;inset:0/);
+  assert.match(previewPage,/function overlay\(ids\)\{return api\.overlay\(ids\)\}/);
 });
