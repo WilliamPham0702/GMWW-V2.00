@@ -1,0 +1,89 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {STATUS_DEFS,activeStatusRows,statusTagsFor,roomUiStage,publicRoom} from '../src/gmww-public-room-contract.js';
+
+test('G3.7: status policy preserves all permanent and expiring status definitions',()=>{
+  assert.deepEqual(Object.keys(STATUS_DEFS),[
+    'wolf_bitten','marked','infected','mute','disabled_permanent','disabled_2n'
+  ]);
+  assert.equal(STATUS_DEFS.disabled_permanent.blocks,true);
+  assert.equal(STATUS_DEFS.disabled_permanent.duration,'permanent');
+  assert.equal(STATUS_DEFS.disabled_2n.nights,2);
+  assert.equal(STATUS_DEFS.wolf_bitten.duration,'morning');
+});
+
+test('G3.7: public status tags respect visibility, lifetime, owner and match',()=>{
+  const rows=[
+    {id:'a',type:'status',loginId:' Alice ',statusId:'marked',effectActive:true,matchId:'match-1'},
+    {id:'b',type:'status',loginId:'alice',statusId:'infected',effectActive:true,matchId:'match-1'},
+    {id:'c',type:'status',loginId:'alice',statusId:'disabled_permanent',effectActive:false,matchId:'match-1'},
+    {id:'d',type:'status',loginId:'alice',statusId:'mute',effectActive:true,matchId:'match-2'},
+    {id:'e',type:'status',loginId:'bob',statusId:'marked',effectActive:true,matchId:'match-1'},
+    {id:'f',type:'dead',loginId:'alice',statusId:'marked',effectActive:true,matchId:'match-1'}
+  ];
+  const meta={matchId:'match-1',statusDisplay:{marked:true,infected:false,disabled_permanent:true,mute:true}};
+  assert.deepEqual(activeStatusRows(rows,'ALICE','match-1').map(x=>x.id),['a','b']);
+  assert.deepEqual(statusTagsFor(rows,meta,'Alice'),[
+    {statusId:'marked',label:STATUS_DEFS.marked.label,icon:STATUS_DEFS.marked.icon}
+  ]);
+  assert.deepEqual(statusTagsFor(rows,meta,'bob'),[
+    {statusId:'marked',label:STATUS_DEFS.marked.label,icon:STATUS_DEFS.marked.icon}
+  ]);
+  assert.deepEqual(statusTagsFor(rows,meta,'unknown'),[]);
+});
+
+test('G3.7: GM stage follows phase and validates stored state',()=>{
+  assert.equal(roomUiStage({phase:'running',gmStage:'room'}),'battle');
+  assert.equal(roomUiStage({phase:'role_delivery',gmStage:'room'}),'deal');
+  assert.equal(roomUiStage({phase:'lobby',gmStage:'seats'}),'seats');
+  assert.equal(roomUiStage({phase:'lobby',gmStage:'unknown'}),'room');
+  assert.equal(roomUiStage({}),'room');
+});
+
+test('G3.7: public room DTO retains setup, cycle and version contracts without secrets',()=>{
+  const input={
+    code:'ABCDEF',roomName:'Phòng Kiểm Thử',status:'active',phase:'lobby',gmStage:'seats',
+    playerCount:24,seatCount:80,roomMode:' offline ',seatMoveMode:' WALK ',
+    statusDisplay:{marked:true},matchId:'m1',matchRevision:7,deliveryVersion:9,resetVersion:2,
+    cycleKey:'night-3',cyclePhase:'night',cycleNight:3,
+    passwordHash:'private',token:'secret',players:{member:'private'},sessionId:'secret-session'
+  };
+  const snapshot=structuredClone(input);
+  const out=publicRoom(input);
+  assert.deepEqual(input,snapshot,'public projection must not modify stored room');
+  assert.equal(out.code,'ABCDEF');
+  assert.equal(out.gmStage,'seats');
+  assert.equal(out.roomMode,'offline');
+  assert.equal(out.seatMoveMode,'walk');
+  assert.equal(out.seatCount,30);
+  assert.equal(out.matchId,'m1');
+  assert.equal(out.matchRevision,7);
+  assert.equal(out.cycleNight,3);
+  assert.equal(out.deliveryVersion,9);
+  assert.equal(out.resetVersion,2);
+  for(const field of ['passwordHash','token','players','sessionId']){
+    assert.equal(Object.hasOwn(out,field),false,'Private field leaked: '+field);
+  }
+});
+
+test('G3.7: public room defaults remain compatible with old saved metadata',()=>{
+  const room=publicRoom({code:'ABCDEF',status:'open',createdAt:'2026-01-01'});
+  assert.equal(room.roomName,'Phòng ABCDEF');
+  assert.equal(room.phase,'lobby');
+  assert.equal(room.gmStage,'room');
+  assert.equal(room.seatCount,12);
+  assert.equal(room.enabled,true);
+  assert.equal(room.autoGM,true);
+  assert.equal(room.locked,false);
+  assert.equal(room.cycleNight,0);
+  assert.deepEqual(room.statusDisplay,{});
+});
+
+test('G3.7: public status policy is imported instead of duplicated in Worker',()=>{
+  const worker=readFileSync('src/index.js','utf8');
+  assert.match(worker,/from "\.\/gmww-public-room-contract\.js"/);
+  assert.doesNotMatch(worker,/^const STATUS_DEFS=/m);
+  assert.doesNotMatch(worker,/^function publicRoom\(/m);
+  assert.match(worker,/publicRoom\(meta\)/);
+});

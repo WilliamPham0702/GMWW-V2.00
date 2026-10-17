@@ -10,6 +10,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight} from '../src/gmww-wolf-night-resolution.js';
+import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
@@ -19,9 +20,8 @@ const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
 const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
-const statusDefsMatch=source.match(/^const STATUS_DEFS=(.*);$/m);
-assert.ok(statusDefsMatch,'Engine harness must load Production status policy');
-const STATUS_DEFS=vm.runInNewContext('('+statusDefsMatch[1]+')');
+// Run the exact production status policy rather than extracting JS text.
+const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{

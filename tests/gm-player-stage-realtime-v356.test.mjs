@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const worker=fs.readFileSync('src/index.js','utf8');
+const publicRoomContract=fs.readFileSync('src/gmww-public-room-contract.js','utf8');
 const gm=fs.readFileSync('server-game/current/app.js','utf8');
 const raw=fs.readFileSync('src/gmww-members-live.js','utf8');
 const player=JSON.parse(raw.slice(raw.indexOf(' = ')+3).trim().replace(/;$/,''));
@@ -11,7 +12,7 @@ test('GM stage is authorized, broadcast and present in room snapshots',()=>{
   assert.match(worker,/async gmStage\(request,body\)/);
   assert.match(worker,/meta\.gmStageRevision=Number\(meta\.gmStageRevision\|\|0\)\+1/);
   assert.match(worker,/stageChanged:true/);
-  assert.match(worker,/gmStage:roomUiStage\(m\)/);
+  assert.match(publicRoomContract,/gmStage:roomUiStage\(m\)/);
   assert.match(worker,/const gmStageRoute=url\.pathname\.match/);
 });
 test('GM publishes timeline and setup transitions',()=>{

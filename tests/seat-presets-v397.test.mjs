@@ -59,8 +59,8 @@ test('GM swipes the Gọi Người action menu, while dot samples stay in a sepa
 });
 
 test('server owns layout revisions and broadcasts them to GM and Player Web without remapping seat IDs',()=>{
-  const server=read('src/index.js'),player=read('assets/village/village.mjs'),gm=read('server-game/current/app.js');
-  assert.match(server,/seatLayout:normalizeSeatLayout\(m\.seatLayout\)/);
+  const server=read('src/index.js'),roomContract=read('src/gmww-public-room-contract.js'),player=read('assets/village/village.mjs'),gm=read('server-game/current/app.js');
+  assert.match(roomContract,/seatLayout:normalizeSeatLayout\(m\.seatLayout\)/);
   assert.match(server,/const reflow=seatLayout!==normalizeSeatLayout\(meta\.seatLayout\)/);
   assert.match(server,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
   assert.match(server,/this\.broadcast\(\{type:"room_state",room,players:publicPlayers\}\)/);

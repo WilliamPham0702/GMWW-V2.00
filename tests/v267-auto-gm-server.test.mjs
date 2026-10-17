@@ -6,12 +6,13 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('V2.67 moves Auto GM authority to Cloudflare Durable Object alarms',()=>{
   const server=read('src/index.js');
+  const roomContract=read('src/gmww-public-room-contract.js');
   assert.ok(server.includes('async gmAuto(request,body)'));
   assert.ok(server.includes('async scheduleRoomAlarm(meta=null)'));
   assert.ok(server.includes('async runAutoAdvanceIfDue(meta)'));
   assert.ok(server.includes('await this.runAutoAdvanceIfDue(meta)'));
   assert.ok(server.includes('meta.autoGM=enabled'));
-  assert.ok(server.includes('autoGM:m.autoGM!==false'));
+  assert.ok(roomContract.includes('autoGM:m.autoGM!==false'));
   assert.ok(server.includes('/gm/auto'));
   assert.ok(server.includes('/api\\/gm\\/rooms\\/([A-Za-z0-9]+)\\/auto'));
 });
