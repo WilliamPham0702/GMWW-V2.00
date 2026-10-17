@@ -1,6 +1,7 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
+import { resolveWolfNight } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1151,13 +1152,27 @@ export class RoomDurableObject extends DurableObject {
     meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
+    // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
+    // and night. Guards block final, potentially transferred bite destinations.
+    // An absent bite or a malformed seating ring never manufactures a death.
+    const wolfResolution=p==="morning"&&n>0?
+      resolveWolfNight({interactions:rows,players:(await this.ctx.storage.get("players"))||{},
+        matchId:String(meta.matchId||""),night:n}):null;
+    if(wolfResolution?.ok)for(const loginId of wolfResolution.victims){
+      const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
+      if(rows.some(row=>String(row?.id||"")===id))continue;
+      rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
+        night:n,cycleKey:key,effectActive:true,actionId:"action_wolf_bite",
+        effectId:"effect_wolf_bite",effectName:"Sói Cắn",message:"Bạn đã chết vì Sói Cắn.",
+        createdAt:now,source:"wolf-night-engine",status:"pending",response:null});
+    }
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
     const room=publicRoom(meta);this.broadcast({type:"room_cycle",cycleKey:key,phase:p,night:n,matchId:String(meta.matchId||""),expired,nightRuntime,room,source,serverTime:Date.now()});
     this.broadcast({type:"room_state",room,players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
     await this.scheduleRoomAlarm(meta);
-    return{ok:true,cycleKey:key,phase:p,night:n,expired,matchId:String(meta.matchId||""),nightRuntime,room}
+    return{ok:true,cycleKey:key,phase:p,night:n,expired,wolfResolution,matchId:String(meta.matchId||""),nightRuntime,room}
   }
   async autoAdvanceDue(meta){
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
