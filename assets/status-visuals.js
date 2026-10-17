@@ -28,24 +28,33 @@
       if(!row||String(row.loginId||'')!==id||row.effectActive===false)continue;
       if(row.expiresAt&&Date.parse(row.expiresAt)<=now)continue;
       const key=normalize(row.type==='status'?row.statusId:row.type);
-      if(key&&byId[key]?.type==='persistent')selected.add(key);
+      if(key)selected.add(key);
     }
     return [...selected].sort((a,b)=>byId[b].priority-byId[a].priority);
   }
   function layers(ids){
     const items=[...new Set((ids||[]).map(normalize).filter(Boolean))].sort((a,b)=>byId[b].priority-byId[a].priority);
-    const dominant=items.find(id=>byId[id].stack===false),shown=dominant?[dominant]:items.filter(id=>byId[id].stack!==false).slice(0,3);
+    const dominant=items.find(id=>byId[id].stack===false),shown=dominant?[dominant]:items.filter(id=>byId[id].stack!==false);
     return{items,shown};
   }
   const orbitIcons=Object.freeze({frozen:['❄️'],protected:['🛡️'],wolf_bitten:['🐺'],marked:['👍','👎'],dead:['☠️'],expelled:['🌪️'],infected:['🦠'],mute:['😷'],disabled_permanent:['🚫'],linked:['✌️'],recover:['⭐'],transform:['🥳'],attack:['⚔️'],hunt:['🏹'],inspect:['💫']});
-  function orbitMarkup(id){
-    const icons=orbitIcons[id]||[];if(!icons.length)return'';
-    return '<span class="gmww-sv-orbit" data-orbit="'+safe(id)+'">'+Array.from({length:6},(_,i)=>'<span class="gmww-sv-orbit-item" style="--i:'+i+';--angle:'+(i*60)+'deg"><span class="'+(id==='wolf_bitten'?'gmww-sv-red-wolf':'')+'">'+safe(icons[i%icons.length])+'</span></span>').join('')+'</span>';
+  // One compositor-driven orbit per player, sharing its slots between ALL
+  // concurrent effects. Six symbols total for 1–6 states (not 6 per state).
+  // Never suppress a newly confirmed Săn when Bảo Vệ is already active.
+  function orbitMarkup(value){
+    const ids=(Array.isArray(value)?value:[value]).filter(id=>orbitIcons[id]?.length);
+    if(!ids.length)return'';
+    const count=Math.max(6,ids.length);
+    const slots=Array.from({length:count},(_,i)=>{
+      const id=ids[i%ids.length],icons=orbitIcons[id],angle=360*i/count;
+      return '<span class="gmww-sv-orbit-item" data-orbit="'+safe(id)+'" style="--i:'+i+';--angle:'+angle+'deg"><span class="'+(id==='wolf_bitten'?'gmww-sv-red-wolf':'')+'">'+safe(icons[Math.floor(i/ids.length)%icons.length])+'</span></span>';
+    }).join('');
+    return '<span class="gmww-sv-orbit"'+(ids.length===1?' data-orbit="'+safe(ids[0])+'"':'')+'>'+slots+'</span>';
   }
   function overlay(ids){
     const collection=layers(ids);
     if(!collection.items.length)return'';
-    const effects=collection.shown.map(id=>(id==='dead'?'<span class="gmww-sv-fx gmww-sv-gray-smoke" data-status-fx="dead" aria-hidden="true"><i></i><i></i><i></i></span>':'')+orbitMarkup(id)).join('');
+    const effects=(collection.shown.includes('dead')?'<span class="gmww-sv-fx gmww-sv-gray-smoke" data-status-fx="dead" aria-hidden="true"><i></i><i></i><i></i></span>':'')+orbitMarkup(collection.shown);
     const badges=collection.items.map(id=>'<span title="'+safe(byId[id].name)+'">'+safe(byId[id].icon)+'</span>').join('');
     return '<span class="gmww-sv-overlay" aria-hidden="true">'+effects+'</span><span class="gmww-sv-badges" aria-hidden="true">'+badges+'</span>';
   }

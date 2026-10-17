@@ -30,7 +30,8 @@ export function confirmedNightStatusVisuals(rows,meta){
     String(meta?.phase||"").toLowerCase()!=="running"||
     String(meta?.cyclePhase||"").toLowerCase()!=="night")return [];
   const visualActions={action_protect:{statusId:"protected",label:"Bảo Vệ",icon:"🛡️"},
-    action_wolf_bite:{statusId:"wolf_bitten",label:"Sói Cắn",icon:"🐺"}};
+    action_wolf_bite:{statusId:"wolf_bitten",label:"Sói Cắn",icon:"🐺"},
+    action_hunt:{statusId:"hunt",label:"Săn",icon:"🏹"}};
   return (Array.isArray(rows)?rows:[]).filter(x=>
     x?.type==="effect_notice"&&visualActions[String(x?.actionId||"")]&&
     String(x?.matchId||"")===matchId&&Number(x?.night)===night&&

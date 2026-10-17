@@ -35,7 +35,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.125",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3125",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.126",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3126",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -144,6 +144,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
     if(url.pathname==="/gm/state"&&request.method==="GET")return this.gmState(request);
+    if(url.pathname==="/gm/action-log"&&request.method==="GET")return this.gmActionLog(request);
     if(url.pathname==="/gm/assign"&&request.method==="POST")return this.gmAssign(request,await safeJson(request));
     if(url.pathname==="/gm/start"&&request.method==="POST")return this.gmStart(request,await safeJson(request));
     if(url.pathname==="/gm/config"&&request.method==="POST")return this.gmConfig(request,await safeJson(request));
@@ -644,6 +645,35 @@ export class RoomDurableObject extends DurableObject {
     if(wolves===0)return{winnerFaction:"Phe Dân",winnerLabel:"Phe Dân",reason:"Không còn Người Chơi Phe Sói còn sống.",confidence:"basic-rule"};
     if(wolves>=others)return{winnerFaction:"Phe Sói",winnerLabel:"Phe Sói",reason:"Số Người Chơi Phe Sói còn sống đã bằng hoặc nhiều hơn các phe còn lại.",confidence:"basic-rule"};
     return null
+  }
+  // Immutable, unbounded action history in individual Durable Object entries.
+  // Recent interactions remain size-bounded for Rule Engine / fast realtime sync,
+  // but the audit archive is NEVER truncated to 100 or removed by a new match.
+  actionLogKey(row){
+    const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
+    return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
+  }
+  async gmActionLog(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    // Backfill the currently retained legacy interactions once. Records that were
+    // already pruned before this release cannot be reconstructed.
+    if(!(await this.ctx.storage.get("actionLogBackfilled"))){
+      const legacy=(await this.ctx.storage.get("interactions"))||[];
+      for(let i=0;i<legacy.length;i+=100){
+        const batch={};
+        for(const row of legacy.slice(i,i+100))if(row?.id)batch[this.actionLogKey(row)]=row;
+        if(Object.keys(batch).length)await this.ctx.storage.put(batch);
+      }
+      await this.ctx.storage.put("actionLogBackfilled",true);
+    }
+    const url=new URL(request.url),before=String(url.searchParams.get("before")||"");
+    if(before&&(!/^actionLog:[0-9]{13}:[A-Za-z0-9:_-]{1,140}$/.test(before)))
+      return j({ok:false,error:"INVALID_LOG_CURSOR"},400);
+    const limit=100,query={prefix:"actionLog:",reverse:true,limit:limit+1};
+    if(before)query.end=before;
+    const page=await this.ctx.storage.list(query),entries=[...page.entries()],visible=entries.slice(0,limit);
+    return j({ok:true,items:visible.map(([,row])=>row),hasMore:entries.length>limit,
+      nextCursor:entries.length>limit?visible[visible.length-1]?.[0]||null:null});
   }
   async gmState(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1172,6 +1202,7 @@ export class RoomDurableObject extends DurableObject {
         night:n,cycleKey:key,effectActive:true,actionId:"action_wolf_bite",
         effectId:"effect_wolf_bite",effectName:"Sói Cắn",message:"Bạn đã chết vì Sói Cắn.",
         createdAt:now,source:"wolf-night-engine",status:"pending",response:null});
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
     }
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
@@ -1364,6 +1395,7 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
+    const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
     this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
       serverTime:Date.now()});
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
@@ -1408,6 +1440,17 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
+    if(type==="status_display_batch"){
+      const items=Array.isArray(body?.items)?body.items:[];
+      if(!items.length||items.length>STATUS_VISUAL_IDS.size||
+        items.some(x=>!STATUS_VISUAL_IDS.has(String(x?.statusId||""))||typeof x?.visible!=="boolean")||
+        new Set(items.map(x=>x.statusId)).size!==items.length)return j({ok:false,error:"INVALID_STATUS_BATCH"},400);
+      const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};
+      for(const item of items)display[item.statusId]=item.visible;
+      meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()});
+      return j({ok:true,statusDisplay:display})
+    }
     if(type==="status_display"){
       const statusId=String(body?.statusId||"").trim();if(!STATUS_VISUAL_IDS.has(statusId))return j({ok:false,error:"INVALID_STATUS"},400);
       const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};display[statusId]=body?.visible===true;meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
@@ -1418,9 +1461,9 @@ export class RoomDurableObject extends DurableObject {
       const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
       const rows=(await this.ctx.storage.get("interactions"))||[],now=new Date().toISOString(),night=Math.max(0,Number(meta.cycleNight||0)||0);
       for(const x of rows){if(normalizeLoginId(x?.loginId)===loginId&&x?.type==="status"&&x?.statusId===statusId&&x?.effectActive!==false){x.effectActive=false;x.expiredAt=now;x.expiredReason=body?.active===false?"GM_STATUS_CLEAR":"REPLACED"}}
-      if(body?.active===false){await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
+      if(body?.active===false){await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"status_clear",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",statusId,message:`GM gỡ trạng thái ${statusId}`};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
       const def=STATUS_DEFS[statusId],interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),type:"status",statusId,loginId,matchId:String(meta.matchId||""),night,cycleKey:String(meta.cycleKey||""),duration:def.duration,nights:Number(def.nights||0),effectActive:true,message:def.label,createdAt:now,source:"gm"};
-      rows.push(interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:true,at:now});return j({ok:true,interaction})
+      rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:true,at:now});return j({ok:true,interaction})
     }
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
@@ -1428,7 +1471,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],revived=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||String(x?.type||"")!=="dead")continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_REVIVE";revived.push({id:x.id,type:x.type})}
-      await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"revive",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",message:'GM hồi sinh người chơi'};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
       this.broadcast({type:"player_revived",loginId,revived,at:now,room,players:publicPlayers,serverTime:Date.now()});
       this.broadcast({type:"room_state",room,players:publicPlayers,serverTime:Date.now()});
       return j({ok:true,loginId,revived,room})
@@ -1438,7 +1481,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],cleared=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||!["frozen","expelled","dead","assassin_mark","status"].includes(String(x?.type||"")))continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_CLEAR";cleared.push({id:x.id,type:x.type})}
-      await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"clear_state",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",message:'GM gỡ các trạng thái hiện tại'};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
     }
     const allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice"]);if(!loginId||!allowed.has(type))return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
@@ -1446,7 +1489,7 @@ export class RoomDurableObject extends DurableObject {
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
-    rows.push(interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
     this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
@@ -1456,7 +1499,7 @@ export class RoomDurableObject extends DurableObject {
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):(row.type==="thumb_vote"||row.type==="assassin_mark"?new Set(["👍","👎"]):new Set(["ĐÃ HIỂU","OK","✓"]));
     if(!allowed.has(response))return j({ok:false,error:"INVALID_RESPONSE"},400);
-    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(row.respondedAt)).padStart(13,"0")+":"+logId,{id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),message:"Người chơi đã phản hồi: "+response,createdAt:row.respondedAt,source:"player"});
     this.broadcast({type:"player_interaction_response",interaction:row});return j({ok:true,interaction:row});
   }
   async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}

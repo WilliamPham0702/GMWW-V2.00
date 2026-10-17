@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.125</title>
-<link rel="stylesheet" href="style.css?v=3.125-seats&status=1">
+<title>GMWW V3.126</title>
+<link rel="stylesheet" href="style.css?v=3.126-seatlog&status=1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
-<link rel="stylesheet" href="status-visuals.css?v=status-v4">
+<link rel="stylesheet" href="status-visuals.css?v=status-v5">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
 .sea-artifact-import-panel input[type=file]{max-width:100%;font-size:14px}
@@ -243,6 +243,7 @@
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
           <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, cuộn ngang"></div>
+          <button id="playActionLogOpen" class="play-action-log-trigger" type="button" title="Xem toàn bộ lịch sử tác động của phòng">📜 NHẬT KÝ TÁC ĐỘNG</button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
@@ -852,8 +853,8 @@
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
-<script src="status-visuals.js?v=status-v4"></script>
-<script src="app.js?v=3.125-seats&status=1"></script>
+<script src="status-visuals.js?v=status-v5"></script>
+<script src="app.js?v=3.126-seatlog&status=1"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
@@ -986,5 +987,13 @@
   });
 })();
 </script>
+  <section id="playActionLogSheet" class="play-action-log-sheet" hidden role="dialog" aria-modal="true" aria-label="Nhật ký tác động">
+    <div class="play-action-log-card">
+      <header><b>📜 NHẬT KÝ TÁC ĐỘNG</b><button id="playActionLogClose" type="button" aria-label="Đóng nhật ký">✕</button></header>
+      <p>Lưu toàn bộ hành động đã ghi nhận. Cuộn và tải tiếp để xem các tác động cũ; dữ liệu không giới hạn ở 100 dòng.</p>
+      <div id="playActionLogRows" class="play-action-log-rows" role="log" aria-live="polite"></div>
+      <button id="playActionLogMore" type="button" hidden>TẢI TIẾP NHẬT KÝ</button>
+    </div>
+  </section>
 </body>
 </html>

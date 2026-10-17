@@ -120,8 +120,8 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
 test('Preview asset: same exact 15-status renderer, no room modification, usable on iPhone',()=>{
   assert.equal(previewRenderer,src);
   assert.match(previewPage,/<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
-  assert.match(previewPage,/\/status-visuals\.js\?v=v3125-orbit/);
-  assert.match(previewPage,/\/village\/status-visuals\.css\?v=v3125-orbit/);
+  assert.match(previewPage,/\/status-visuals\.js\?v=v3126-orbit/);
+  assert.match(previewPage,/\/village\/status-visuals\.css\?v=v3126-orbit/);
   assert.match(previewPage,/api\.entries\.filter/);
   assert.match(previewPage,/permissions\.get\(id\)/);
   assert.match(previewPage,/api\.overlay\(ids\)/);
@@ -170,10 +170,10 @@ test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=
 });
 
 test('V2 production Player Web uses the approved shared orbit renderer, not legacy visual mapping',()=>{
-  assert.ok(village.includes('import "../status-visuals.js?v=v3125-orbit";'));
+  assert.ok(village.includes('import "../status-visuals.js?v=v3126-orbit";'));
   assert.ok(village.includes('approvedVisuals.overlay(rows.map(x=>x.statusId))'));
   assert.ok(village.includes('if(approvedVisuals)button.insertAdjacentHTML'));
-  assert.match(read('assets/village/index.html'),/visual=v4/);
+  assert.match(read('assets/village/index.html'),/visual=v5/);
 });
 
 test('V3.124: Player Web updates overlay on same stable avatar and skips unchanged heartbeats',()=>{

@@ -1,4 +1,4 @@
-import "../status-visuals.js?v=v3125-orbit";
+import "../status-visuals.js?v=v3126-orbit";
 import "./village-layout.js?v=fire3101";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
@@ -106,9 +106,12 @@ if(game){
   }
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
     if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
-    if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
+    // For a seated player, the authoritative seat map always wins over stale
+    // pre-layout world coordinates retained by older room versions.
     const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
-    return seat||spawnPosition(data?.id)
+    if(seat)return seat;
+    if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
+    return spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
     const clock=Number(nextSetup?.clockOffsetMs||setupState.clockOffsetMs||0),now=Date.now()+clock,previous=new Map(previousRows.map(p=>[String(p?.id||''),p])),seen=new Set();
@@ -142,7 +145,7 @@ if(game){
     button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
     if(Array.isArray(data.statusTags)&&data.statusTags.length){
-      const visualEffects={frozen:"orbit",protected:"orbit",wolf_bitten:"orbit",marked:"orbit",dead:"gray-smoke",expelled:"orbit",infected:"orbit",mute:"orbit",disabled_permanent:"orbit",disabled_2n:"orbit",linked:"orbit"};
+      const visualEffects={frozen:"orbit",protected:"orbit",wolf_bitten:"orbit",marked:"orbit",dead:"gray-smoke",expelled:"orbit",infected:"orbit",mute:"orbit",disabled_permanent:"orbit",disabled_2n:"orbit",linked:"orbit",recover:"orbit",transform:"orbit",attack:"orbit",inspect:"orbit",hunt:"orbit"};
       const rows=data.statusTags.filter(x=>Object.prototype.hasOwnProperty.call(visualEffects,x.statusId)),panel=document.createElement("span"),badges=document.createElement("span");
       if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");
         const approvedVisuals=globalThis.GMWW_STATUS_VISUALS;
