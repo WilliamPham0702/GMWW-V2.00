@@ -2829,7 +2829,9 @@ function playMovementFrame(){
   // Keep ~30 FPS motion while preserving CSS-only status orbits independently.
   if(document.visibilityState==='hidden'){playSceneRuntime.moveTicker=0;return}
   const motionNow=performance.now();
-  if(motionNow-Number(playSceneRuntime.lastMotionPaintAt||0)<33){
+  const sceneMoving=playVillageMembers().some(p=>p?.movementStatus==='moving'||p?.villageActivity==='sitting')||!!gmwwGmActorAt(Date.now())?.moving;
+  const interval=sceneMoving?33:220;
+  if(motionNow-Number(playSceneRuntime.lastMotionPaintAt||0)<interval){
     playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);return
   }
   playSceneRuntime.lastMotionPaintAt=motionNow;
