@@ -5,6 +5,7 @@ import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 
 const worker=fs.readFileSync('src/index.js','utf8');
+const statusPolicy=fs.readFileSync('src/gmww-public-room-contract.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
@@ -14,9 +15,9 @@ const villageCss=fs.readFileSync('assets/village/village.css','utf8');
 const ids=['wolf_bitten','marked','infected','mute','disabled_permanent','disabled_2n'];
 
 test('Worker defines every new status with a duration rule and a blocking flag',()=>{
-  for(const id of ids)assert.match(worker,new RegExp(id+':\\{label:'));
-  assert.match(worker,/disabled_permanent:\{label:"[^"]+",icon:"⛔",blocks:true,duration:"permanent"\}/);
-  assert.match(worker,/disabled_2n:\{label:"[^"]+",icon:"⏳",blocks:true,duration:"nights",nights:2\}/);
+  for(const id of ids)assert.match(statusPolicy,new RegExp(id+':\\{label:'));
+  assert.match(statusPolicy,/disabled_permanent:\{label:"[^"]+",icon:"⛔",blocks:true,duration:"permanent"\}/);
+  assert.match(statusPolicy,/disabled_2n:\{label:"[^"]+",icon:"⏳",blocks:true,duration:"nights",nights:2\}/);
 });
 
 test('Worker expires nights and morning statuses, and never auto-expires permanent ones',()=>{
