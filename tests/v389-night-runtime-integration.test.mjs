@@ -453,3 +453,20 @@ test('G4.4 live DO: cross-match wolf actions cannot affect another match at dawn
   assert.deepEqual(Array.from(morning.wolfResolution.victims),[]);
   assert.equal(h.data.get('interactions').some(row=>row.type==='dead'),false);
 });
+
+test('G4 acceptance: summarized assignments enforce limits from existing private role cards',async()=>{
+  const h=harness({artifact:false});await h.jump('role');
+  h.data.set('roles:alice',[{loginId:'alice',roleId:'seer',matchId:'test-match',roleCard:{
+    flags:{allowMultipleActions:false},functions:[
+      {actionId:'inspect',usageMode:'eachNight',usageCount:1},
+      {actionId:'revive',usageMode:'onceGame',usageCount:1}
+    ]
+  }}]);
+  const rt=await h.runtime(),meta=await h.meta();
+  const request={turnId:rt.currentId,actorId:'alice',type:'effect_notice',actionId:'inspect',
+    targetIds:['bob'],matchId:meta.matchId,cycleKey:meta.cycleKey,night:1,clientEventId:'private-limit'};
+  assert.equal((await result(await h.room.gmBattleAction(null,request))).ok,true);
+  assert.equal((await result(await h.room.gmBattleAction(null,{...request,actionId:'revive',type:'revive',clientEventId:'other-function'}))).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
+  assert.equal(h.data.get('battleRoleUsage:test-match').length,1);
+  assert.equal(h.data.get('assignments')[0].roleCard,undefined,'public summary shape stays unchanged');
+});
