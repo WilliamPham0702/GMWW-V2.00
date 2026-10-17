@@ -446,3 +446,13 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* V3.111 · Trạng thái hiện trên Player Web (chỉ khi GM bật "Hiện trên Player Web") */
 .status-tags{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);font-size:11px;line-height:1;white-space:nowrap;pointer-events:none;background:rgba(7,22,34,.84);border:1px solid #91dce2;border-radius:999px;padding:2px 5px;z-index:4}
+
+/* V3.125: Legacy crystal/snow pseudo-element must not overlay the approved orbit ❄️.
+   Keep only one effect renderer on Player Web; CSS class still drives gameplay cues. */
+.player.is-frozen:not(.gm) .portrait.game-character::before,
+.player.is-frozen:not(.gm) .portrait.game-character::after{
+  content:none!important;display:none!important;animation:none!important
+}
+.player.is-frozen:not(.gm) .portrait.game-character{
+  filter:none!important;box-shadow:none!important
+}
