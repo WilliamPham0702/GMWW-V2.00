@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.124</title>
-<link rel="stylesheet" href="style.css?v=3.124-orbit&status=1">
+<title>GMWW V3.125</title>
+<link rel="stylesheet" href="style.css?v=3.125-seats&status=1">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
-<link rel="stylesheet" href="status-visuals.css?v=status-v3">
+<link rel="stylesheet" href="status-visuals.css?v=status-v4">
 <style>
 .sea-artifact-import-panel{padding:14px;margin:12px 0;border:1px solid rgba(118,204,235,.35);border-radius:14px;background:rgba(4,49,74,.36);display:grid;gap:10px}
 .sea-artifact-import-panel input[type=file]{max-width:100%;font-size:14px}
@@ -139,6 +139,17 @@
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
           <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
+          <div class="play-seat-shift-controls" aria-label="Căn chỉnh tất cả Seat quanh đốm lửa">
+            <span>CHỈNH VỊ TRÍ SEAT</span>
+            <div class="play-seat-shift-buttons">
+              <button type="button" data-seat-shift="left" aria-label="Dịch tất cả Seat sang trái">←</button>
+              <button type="button" data-seat-shift="up" aria-label="Dịch tất cả Seat lên trên">↑</button>
+              <button type="button" data-seat-shift="down" aria-label="Dịch tất cả Seat xuống dưới">↓</button>
+              <button type="button" data-seat-shift="right" aria-label="Dịch tất cả Seat sang phải">→</button>
+              <button type="button" data-seat-shift="reset" aria-label="Đặt lại Seat về vị trí tâm lửa">↺</button>
+            </div>
+            <output id="playSeatOffsetValue" aria-live="polite">X 0 · Y 0</output>
+          </div>
           <div class="play-gather-toolbar-actions">
             <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
             <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
@@ -841,8 +852,8 @@
 <script src="character-renderer.js?v=ce2"></script>
 <script src="battle-controls.js?v=battle-391&night225"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
-<script src="status-visuals.js?v=status-v3"></script>
-<script src="app.js?v=3.124-orbit&status=1"></script>
+<script src="status-visuals.js?v=status-v4"></script>
+<script src="app.js?v=3.125-seats&status=1"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

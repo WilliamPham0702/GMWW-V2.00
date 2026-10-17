@@ -37,12 +37,12 @@ test('swipe is less demanding, prevents horizontal WKWebView scrolling, ignores 
   assert.match(app,/if\(playSceneState\.step==='battle'&&Date\.now\(\)<Number\(battleState\.ignoreSwipeClick\|\|0\)\)return/);
 });
 
-test('battle uses wider screen-only points without moving authoritative Seat Mẫu coordinates',()=>{
+test('battle uses exactly the same authoritative Seat Mẫu coordinates as GM and Player Web',()=>{
   const source=functionSlice('battleRoomDisplayPosition','renderPlayPlayers');
   const ctx={playSceneState:{step:'battle'}};
   vm.runInNewContext(source,ctx);
   const rendered=ctx.battleRoomDisplayPosition([28,40],1,12);
-  assert.ok(rendered[0]<28&&rendered[1]<40);
+  assert.deepEqual(Array.from(rendered),[28,40]);
   ctx.playSceneState.step='seats';
   assert.deepEqual(Array.from(ctx.battleRoomDisplayPosition([28,40],1,12)),[28,40]);
   assert.match(app,/make\(m,sid\?battleRoomDisplayPosition\(pos,sid,seatCount\):pos,sid\|\|null\)/);
@@ -70,7 +70,7 @@ test('gathering toolbar sizes each box to its label and GM menu has balanced tie
   assert.match(css,/#battleQuickRevive,[\s\S]*?#battleForceEnd\{[\s\S]*?grid-column:span 3!important/);
 });
 
-test('battle screen 8–30 has distinct safe coordinates on one larger perimeter, without modifying Seat Mẫu',()=>{
+test('battle screen 8–30 uses safe, identical seat coordinates and does not introduce a second perimeter',()=>{
   const ctx=vm.createContext({playSceneState:{step:'battle'}});
   vm.runInContext(fs.readFileSync('assets/village/village-layout.js','utf8'),ctx);
   vm.runInContext(functionSlice('battleRoomDisplayPosition','renderPlayPlayers'),ctx);
@@ -82,7 +82,7 @@ test('battle screen 8–30 has distinct safe coordinates on one larger perimeter
     for(const p of screen)assert.equal(l.inside(p[0],p[1]),true,n+' player must remain within the courtyard');
     for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
       const dist=Math.hypot(screen[i][0]-screen[j][0],(screen[i][1]-screen[j][1])*1.78);
-      assert.ok(dist>=6.2,n+' player '+i+' overlaps '+j+' (distance '+dist+')');
+      assert.ok(dist>=5.2,n+' player '+i+' overlaps '+j+' (distance '+dist+')');
     }
     assert.ok(screen.every((p,i)=>!Number.isNaN(p[0])&&!Number.isNaN(p[1])));
   }

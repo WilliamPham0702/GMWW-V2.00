@@ -1,11 +1,11 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
-test('Gathering spacing slider supports 70–135%, persists local preference and updates players',()=>{
+test('Gathering spacing slider supports 70–135%, synchronizes to server and updates players',()=>{
  assert.match(html,/id="playGatherSpacing" type="range" min="70" max="135" step="5"/);
- assert.match(app,/localStorage\.setItem\('gmww_gather_spacing'/);
- assert.match(app,/input\.addEventListener\('input',update\)/);
+ assert.match(app,/playUpdateRoomSettings\(\{seatSpacing:value\}\)/);
+ assert.match(app,/input\.addEventListener\('input'/);
  assert.match(app,/renderPlayPlayers\(\)/);
- assert.match(app,/layout\.clampPoint\(x,y\)/);
+ assert.match(app,/layout\.positions\(count,room.seatLayout,room.seatOffset,playGatherSpacing\(\)\*100\)/);
 });
 test('GM info box is removed and top two audio/auto controls spread evenly',()=>{
  assert.doesNotMatch(html,/id="battleInfoToggle"/);

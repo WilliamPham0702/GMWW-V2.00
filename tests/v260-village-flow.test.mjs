@@ -45,7 +45,7 @@ test('all 30 shared GM/Web positions are unique and inside the courtyard',()=>{
 
 test('legacy fallback capacities keep one outer perimeter, without stacking players',()=>{
   const p8=layout.positions(8),p24=layout.positions(24),p30=layout.positions(30);
-  assert.equal(p8.length,24,'legacy rooms keep 24 baseline leaves');
+  assert.equal(p8.length,8,'8-seat rooms keep precisely 8 leaves');
   assert.equal(p24.length,24);
   assert.equal(p30.length,30);
   for(const points of [p8,p24,p30]){

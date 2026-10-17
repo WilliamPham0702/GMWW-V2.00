@@ -38,7 +38,7 @@ test('layouts are distinct and form a single outline around the fire',()=>{
       assert.ok(width>30&&height>25,shape+' '+size+' must use the wider courtyard');
     }
   }
-  assert.equal(layout.positions(12).length,24,'legacy rooms retain legacy slot capacity');
+  assert.equal(layout.positions(12).length,12,'seat capacity must exactly match configured room size');
   assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback has no inner ring');
   assert.equal(layout.positions(8,'circle').length,8,'a selected 8-slot layout is not forced to 24');
 });
@@ -62,11 +62,11 @@ test('server owns layout revisions and broadcasts them to GM and Player Web with
   const server=read('src/index.js'),roomContract=read('src/gmww-public-room-contract.js'),player=read('assets/village/village.mjs'),gm=read('server-game/current/app.js');
   assert.match(roomContract,/seatLayout:normalizeSeatLayout\(m\.seatLayout\)/);
   assert.match(server,/const reflow=seatLayout!==normalizeSeatLayout\(meta\.seatLayout\)/);
-  assert.match(server,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
+  assert.match(server,/const locations=villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
   assert.match(server,/this\.broadcast\(\{type:"room_state",room,players:publicPlayers\}\)/);
   assert.match(server,/if\(meta\.seatsLocked/);
   assert.match(player,/seatLayout=layout\.normalizeSeatLayout\(room\.seatLayout\)/);
-  assert.match(player,/ps=positions\(seatCount,seatLayout\)/);
-  assert.match(gm,/layout\.positions\(count,preset\)/);
-  assert.match(gm,/playSceneRuntime\.room\?\.seatLayout\?1:24/);
+  assert.match(player,/ps=positions\(seatCount,seatLayout,seatOffset,seatSpacing\)/);
+  assert.match(gm,/layout\.positions\(count,room\.seatLayout,room\.seatOffset,playGatherSpacing\(\)\*100\)/);
+  assert.match(gm,/playSceneRuntime\.room\?\.seatOffset/);
 });

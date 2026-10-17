@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.124';
+const VERSION='3.125';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2476,17 +2476,14 @@ async function refreshPlayServerRealtime(){
   }catch(err){setPlayRealtimeState('offline');btn.classList.add('is-error');playFlashError('Không cập nhật được realtime từ server. '+(err?.message||''));setTimeout(()=>btn.classList.remove('is-error'),1100)}
   finally{delete btn.dataset.syncing;btn.classList.remove('is-syncing')}
 }
+let playSeatSpacingPreview=null;
 function playGatherSpacing(){
-  try{return Math.max(.7,Math.min(1.35,Number(localStorage.getItem('gmww_gather_spacing')||100)/100))}catch{return 1}
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  return layout.normalizeSeatSpacing(playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing??100)/100;
 }
 function playSeatPositions(count){
-  const preset=typeof playSceneRuntime==="object"?playSceneRuntime.room?.seatLayout:"";
-  const factor=playGatherSpacing(),layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  return layout.positions(count,preset).map(p=>{
-    const x=50+(p.x-50)*factor,y=49.7+(p.y-49.7)*factor;
-    const safe=layout.clampPoint(x,y);
-    return [safe.x,safe.y];
-  });
+  const room=playSceneRuntime.room||{},layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  return layout.positions(count,room.seatLayout,room.seatOffset,playGatherSpacing()*100).map(p=>[p.x,p.y]);
 }
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:'character-01'}
@@ -2832,7 +2829,9 @@ function playMovementFrame(){
   // Keep ~30 FPS motion while preserving CSS-only status orbits independently.
   if(document.visibilityState==='hidden'){playSceneRuntime.moveTicker=0;return}
   const motionNow=performance.now();
-  if(motionNow-Number(playSceneRuntime.lastMotionPaintAt||0)<33){
+  const sceneMoving=playVillageMembers().some(p=>p?.movementStatus==='moving'||p?.villageActivity==='sitting')||!!gmwwGmActorAt(Date.now())?.moving;
+  const interval=sceneMoving?33:220;
+  if(motionNow-Number(playSceneRuntime.lastMotionPaintAt||0)<interval){
     playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);return
   }
   playSceneRuntime.lastMotionPaintAt=motionNow;
@@ -2853,31 +2852,9 @@ function syncPlayMovementTicker(){
   if(active&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
   else if(!active)stopPlayMovementTicker()
 }
-function battleRoomDisplayPosition(point,seatId=0,seatCount=0){
-  // VISUAL-ONLY arrangement. No seat/coordinate write to Cloudflare or Player Web.
-  if(playSceneState.step!=='battle'||!Array.isArray(point))return point;
-  const n=Math.max(1,Math.min(30,Math.trunc(Number(seatCount)||12)));
-  const seat=Math.trunc(Number(seatId)||0);
-  if(n>20&&seat>=1&&seat<=n){
-    // One larger rectangle around the fire, making use of the lower courtyard.
-    // Top/bottom stay in walkable terrain; not two concentric seat layers.
-    const xmin=26,xmax=74,top=34.8,bottom=78.4,scale=1.78;
-    const corners=[[50,top],[xmax,top],[xmax,bottom],[xmin,bottom],[xmin,top],[50,top]];
-    const sides=corners.slice(1).map((p,i)=>Math.hypot(p[0]-corners[i][0],(p[1]-corners[i][1])*scale));
-    const length=sides.reduce((a,b)=>a+b,0);
-    let d=((seat-1)/n)*length;
-    for(let i=0;i<sides.length;i++){
-      if(d<=sides[i]||i===sides.length-1){
-        const f=Math.min(1,d/Math.max(1e-8,sides[i]));
-        return [corners[i][0]+f*(corners[i+1][0]-corners[i][0]),
-          corners[i][1]+f*(corners[i+1][1]-corners[i][1])];
-      }
-      d-=sides[i];
-    }
-  }
-  const [x,y]=point,px=50+(x-50)*1.16,py=49.7+(y-49.7)*1.22;
-  const safe=globalThis.GMWW_VILLAGE_LAYOUT?.clampPoint?.(px,py);
-  return safe?[safe.x,safe.y]:[Math.max(8,Math.min(92,px)),Math.max(34,Math.min(75,py))];
+function battleRoomDisplayPosition(point){
+  // All stages now use precisely the Worker/Player Web seat coordinates.
+  return point;
 }
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
@@ -2889,6 +2866,7 @@ function renderPlayPlayers(){
     playPlayerRenderSignature(members),playSceneState.step,playSceneState.phase,
     playSceneState.activePlayerId,(playSceneState.selectedMemberIds||[]).join(','),
     seatCount,previewNew,seating,playSceneState.roomMode,playSceneState.seatMoveMode,
+    playSceneRuntime.room?.seatOffset,playGatherSpacing(),
     (playSceneRuntime.assignments?.length?playSceneRuntime.assignments:playSceneState.assignmentsPreview||[])
       .map(a=>[a.loginId,a.roleId,a.roleName,a.artifactId]),
     !!gmwwGmPresenceState?.online,gmwwGmPresenceState?.sessionId||'',
@@ -3081,23 +3059,52 @@ async function togglePlayAutoGM(){
   finally{playSetBusy(false)}
 }
 function initPlayGatherSpacing(){
-  const input=document.getElementById('playGatherSpacing');if(!input||input.dataset.bound)return;
-  input.dataset.bound='1';input.value=String(Math.round(playGatherSpacing()*100));
-  const output=document.getElementById('playGatherSpacingValue');
-  const update=()=>{
-    const value=Math.max(70,Math.min(135,Number(input.value)||100));
-    if(output)output.textContent=value+'%';
-    try{localStorage.setItem('gmww_gather_spacing',String(value))}catch{}
-    renderPlayPlayers();
-  };
-  input.addEventListener('input',update);update();
+  const input=document.getElementById('playGatherSpacing');if(!input)return;
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playGatherSpacingValue');
+  if(!input.dataset.bound){
+    input.dataset.bound='1';
+    input.addEventListener('input',()=>{
+      const value=layout.normalizeSeatSpacing(input.value);
+      playSeatSpacingPreview=value;if(output)output.textContent=value+'%';
+      renderPlayPlayers();
+    });
+    input.addEventListener('change',async()=>{
+      const value=layout.normalizeSeatSpacing(input.value);
+      try{await playUpdateRoomSettings({seatSpacing:value})}finally{
+        playSeatSpacingPreview=null;
+        const real=layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing);
+        input.value=String(real);if(output)output.textContent=real+'%';
+        renderPlayPlayers();
+      }
+    });
+  }
+  if(playSeatSpacingPreview==null)input.value=String(layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing));
+  if(output)output.textContent=String(layout.normalizeSeatSpacing(playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing))+'%';
+}
+function initPlaySeatOffsetControls(){
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playSeatOffsetValue');
+  const value=layout.normalizeSeatOffset(playSceneRuntime.room?.seatOffset);
+  if(output)output.textContent='X '+value.x+' · Y '+value.y;
+  for(const button of document.querySelectorAll('[data-seat-shift]')){
+    button.disabled=!!playSceneRuntime.room?.seatsLocked||!!playSceneRuntime.busy;
+    if(button.dataset.bound)continue;
+    button.dataset.bound='1';
+    button.addEventListener('click',async()=>{
+      const current=layout.normalizeSeatOffset(playSceneRuntime.room?.seatOffset);
+      const direction=String(button.dataset.seatShift),delta={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1],reset:[-current.x,-current.y]}[direction];
+      if(!delta)return;
+      const next=layout.normalizeSeatOffset({x:current.x+delta[0],y:current.y+delta[1]});
+      if(next.x===current.x&&next.y===current.y)return;
+      await playUpdateRoomSettings({seatOffset:next});
+    });
+  }
 }
 function renderPlayGatherToolbar(){
   const bar=document.getElementById('playGatherToolbar');if(!bar)return;
   const visible=playSceneState.phase==='lobby'&&playSceneState.step==='seats'&&isLivePlayRoom();
   bar.classList.toggle('hidden',!visible);
   if(!visible){closePlaySeatPresetPanel();return}
-  initPlayGatherSpacing();
+  initPlayGatherSpacing();initPlaySeatOffsetControls();
   const members=playLiveMembers(),st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
   if(locked)closePlaySeatPresetPanel();
   const spacing=document.getElementById('playGatherSpacing');if(spacing)spacing.disabled=locked;

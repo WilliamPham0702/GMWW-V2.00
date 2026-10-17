@@ -31,7 +31,7 @@ test('V3.104 preserves the V3.101 Smart Seat GM/Worker/Player contract together 
  assertCurrentRelease();
  assert.match(player,/fire3101/);
  assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);
- assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
+ assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
  assert.match(app,/const shape=layout\.recommendedSeatShape\(count\)/);
  assert.match(app,/PLAY_SEAT_PRESET_NAMES=\{circle:'HÌNH TRÒN',ellipse:'ELIP',rectangle:'CHỮ NHẬT'\}/);
 });

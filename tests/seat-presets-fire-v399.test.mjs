@@ -61,7 +61,7 @@ test('8–30 seats form exactly ONE continuous perimeter around the fire',()=>{
     }
   }
   assert.equal(layout.normalizeSeatLayout('diamond'),'ellipse','V3.101 rooms retain legacy layout compatibility');
-  assert.equal(layout.positions(12).length,24,'legacy slots remain 24');
+  assert.equal(layout.positions(12).length,12,'rooms with 12 seats must draw exactly 12 seat positions');
   assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback also has no inner ring');
 });
 
@@ -77,6 +77,6 @@ test('GM shows automatic shape, center fire icon and exact seat capacity; server
   assert.match(html,/id="playSeatPresetClose"/);
   assert.match(worker,/seatLayout:villageLayout\.recommendedSeatShape\(seatCount\)/);
   assert.match(worker,/changedCount\?villageLayout\.recommendedSeatShape\(requested\)/);
-  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout\)/);
-  assert.match(player,/ps=positions\(seatCount,seatLayout\)/);
+  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
+  assert.match(player,/ps=positions\(seatCount,seatLayout,seatOffset,seatSpacing\)/);
 });
