@@ -2883,6 +2883,23 @@ function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const previewNew=playRoomUiState.editorMode==='new'&&!document.getElementById('playCreateRoomSheet')?.classList.contains('hidden');
   const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),bySeat=new Map((previewNew?[]:playLiveMembers()).filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  // A server heartbeat does not invalidate 30 chibi rigs plus their animated
+  // status orbits. Rebuild the layer only when visible gameplay inputs change.
+  const domSig=JSON.stringify([
+    playPlayerRenderSignature(members),playSceneState.step,playSceneState.phase,
+    playSceneState.activePlayerId,(playSceneState.selectedMemberIds||[]).join(','),
+    seatCount,previewNew,seating,playSceneState.roomMode,playSceneState.seatMoveMode,
+    (playSceneRuntime.assignments?.length?playSceneRuntime.assignments:playSceneState.assignmentsPreview||[])
+      .map(a=>[a.loginId,a.roleId,a.roleName,a.artifactId]),
+    !!gmwwGmPresenceState?.online,gmwwGmPresenceState?.sessionId||'',
+    ring.clientWidth,ring.clientHeight
+  ]);
+  if(ring.dataset.gmwwPlayerDomSig===domSig&&ring.children.length){
+    syncPlayMovementTicker();
+    if(playSceneState.step==='battle')battleMarkPlayers();
+    return;
+  }
+  ring.dataset.gmwwPlayerDomSig=domSig;
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
     const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=effect!=='dead'&&m?.movementStatus==='moving',sitting=effect!=='dead'&&!!m&&playCharacterSitting(m),isOnlinePick=false;
