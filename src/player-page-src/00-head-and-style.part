@@ -1,0 +1,444 @@
+const HTML=`<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050711">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=wolf1">
+<link rel="shortcut icon" href="/favicon.svg?v=wolf1">
+<title>GMWW Members</title>
+<style>
+:root{
+  --gold:#ffd27b;--gold2:#d8913e;--line:rgba(231,166,78,.78);--ink:#fff8ee;--muted:#d9d0d6;
+  --green:#68e6a2;--red:#ff6b73;--blue:#7db9ff;--violet:#c98aff;
+  --glass:rgba(8,10,18,.64);--glass2:rgba(12,10,20,.78);
+  --head:Arial,Helvetica,sans-serif;--body:Arial,Helvetica,sans-serif;
+  --bg:url("__GMWW_EMBED_IMAGE_0__");
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#02040a;color:var(--ink);font-family:var(--body);font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+body:before{content:"";position:fixed;inset:0;z-index:-2;background:radial-gradient(circle at 50% 0,#33203b 0,#080811 48%,#020309 100%)}
+.app{width:100%;max-width:none;min-height:100dvh;margin:0;position:relative;overflow:hidden;background:#050711;box-shadow:none}\n#login .panel,#create .panel,#reset .panel{width:min(100%,430px);margin-left:auto;margin-right:auto}
+.screen{display:none;min-height:100dvh;position:relative;padding:max(54px,calc(env(safe-area-inset-top) + 18px)) 16px max(28px,calc(env(safe-area-inset-bottom) + 22px));background-image:linear-gradient(180deg,rgba(4,5,11,.14),rgba(3,5,11,.62)),var(--bg);background-size:cover;background-position:center top;background-attachment:scroll}
+.screen:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 0 26%,rgba(2,4,9,.08) 45%,rgba(2,4,9,.48) 100%)}
+.screen>*{position:relative;z-index:1}
+.screen.active{display:block}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}
+.back{width:42px;height:42px;border-radius:50%;border:1px solid #d89b4c;background:#1e141ab5;color:var(--gold);font-size:24px;display:grid;place-items:center;box-shadow:0 7px 18px #0008}
+.kicker{font-size:10px;letter-spacing:.18em;color:#e7bd77;font-weight:900;text-align:center}
+.page-title{font:900 30px/1.08 var(--head);color:var(--gold);margin:4px 0 6px;text-align:center;text-shadow:0 3px 14px #000}
+.page-sub{font-size:12px;line-height:1.5;color:#e9dfe5;text-align:center;margin:0 auto 18px;max-width:340px}
+.panel,.room-card,.history-item,.member-row,.stat,.profile-main,.role-stage,.result-sheet{
+  border:1px solid var(--line);background:linear-gradient(145deg,rgba(16,12,21,.72),rgba(4,10,18,.70));
+  -webkit-backdrop-filter:blur(18px) saturate(1.16);backdrop-filter:blur(18px) saturate(1.16);
+  box-shadow:0 14px 34px #0008,inset 0 0 0 1px rgba(255,226,165,.08)
+}
+.panel{border-radius:19px;padding:16px}
+.hero img{width:180px;height:180px;object-fit:cover;border-radius:50%;border:1px solid rgba(229,165,75,.64);filter:drop-shadow(0 18px 24px #000b);-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 78%);mask-image:radial-gradient(circle,#000 58%,transparent 78%)}
+.form-title{font:900 25px var(--head);color:var(--gold);text-align:center;margin:0 0 15px}
+.label{display:block;color:#f1ca86;font-size:11px;font-weight:900;margin:12px 2px 6px}
+.input{width:100%;height:49px;border:1px solid #7c96b8;border-radius:11px;background:rgba(3,13,25,.62);color:#fff;padding:0 13px;outline:0;box-shadow:inset 0 1px 0 #ffffff0c}
+.input:focus{border-color:#e2a451;box-shadow:0 0 0 2px rgba(226,164,81,.13)}
+.primary{width:100%;min-height:52px;border:1px solid #ffc16b;border-radius:13px;background:linear-gradient(#d63a24,#861015);color:white;font-size:16px;font-weight:900;box-shadow:inset 0 0 0 2px rgba(86,9,10,.72),0 9px 20px #0008}
+.primary.gold{background:linear-gradient(#eea34d,#a85b21);color:#fff9e9}
+.primary.violet{background:linear-gradient(#9237ea,#4e168e);border-color:#c98aff}
+.linkline{text-align:center;font-size:12px;color:#e9dfe4;margin-top:16px}
+.linkline button{border:0;background:none;color:var(--gold);font-weight:900;text-decoration:underline;text-underline-offset:3px;padding:0;min-width:0;font-size:inherit;letter-spacing:0;text-transform:none;box-shadow:none;text-shadow:none}.linkline button:active{transform:none;filter:none;box-shadow:none;opacity:.72}
+.login-panel{margin-top:4px}
+.avatar-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}
+.avatar-picks button{padding:2px;border:1px solid #a56d31;border-radius:50%;background:#0d1423}
+.avatar-picks button.selected{border-color:#ffe2a0;box-shadow:0 0 0 2px #cf8435,0 0 18px rgba(237,139,49,.45)}
+.avatar-picks img{display:block;width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover}
+.create-art{width:100%;height:160px;object-fit:cover;border-radius:17px;border:1px solid rgba(232,168,79,.62);margin-bottom:-26px;box-shadow:0 12px 28px #0008}
+.profile-main{border-radius:20px;padding:17px;display:grid;grid-template-columns:92px 1fr;gap:14px;align-items:center}
+.profile-main img{width:92px;height:92px;object-fit:cover;border-radius:50%;border:2px solid #d89a43;box-shadow:0 8px 22px #000a}
+.profile-main h2{font:900 23px var(--head);color:var(--gold);margin:0 0 5px}
+.profile-main .id{font-size:11px;color:var(--green);margin-bottom:6px}
+.profile-main .meta{font-size:11px;color:#e6dce2}
+.section-title{font:900 20px var(--head);color:var(--gold);margin:20px 2px 10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stat{border-radius:14px;padding:12px 8px;text-align:center}
+.stat strong{display:block;font:900 24px var(--head);color:#fff1ca}
+.stat span{display:block;font-size:9px;color:#cabfc7;margin-top:3px}
+.stat.good strong{color:#7cf0ad}.stat.bad strong{color:#ff858b}
+.change-pass{margin-top:12px}
+.change-pass summary{list-style:none;cursor:pointer;color:var(--gold);font-weight:900;font-size:12px}
+.change-pass summary::-webkit-details-marker{display:none}
+.change-pass .pass-grid{display:grid;gap:8px;margin-top:10px}
+.history{display:grid;gap:8px}
+.history-item{border-radius:13px;padding:11px 12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.history-item b{font-size:12px;color:#fff5e7}.history-item small{display:block;font-size:9px;color:#cfc4cc;margin-top:3px}
+.badge{font-size:9px;font-weight:900;padding:5px 8px;border-radius:99px;border:1px solid}
+.badge.win{color:#75edac;border-color:#4eb47d;background:#12352299}.badge.lose{color:#ff8a90;border-color:#b7595e;background:#35131699}
+.room-list{display:grid;gap:12px}
+.room-card{border-radius:18px;padding:14px}
+.room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.room-head h3{font:900 20px var(--head);color:var(--gold);margin:0 0 3px}
+.room-head small{color:#d8cdd5;font-size:10px}
+.live{font-size:9px;color:#6df0aa;font-weight:900;border:1px solid #3e9d70;border-radius:99px;padding:5px 8px;background:#0d2d2096}
+.room-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.metric{border:1px solid rgba(162,116,57,.62);border-radius:11px;padding:9px;background:#080e18a8}
+.metric b{display:block;font-size:15px;color:#ffe4a9}.metric span{display:block;font-size:9px;color:#cbbfc7;margin-top:2px}
+.join-btn{min-height:43px}
+.room-detail{display:none;margin-top:13px;border-top:1px solid rgba(217,151,65,.35);padding-top:12px}
+.room-card.joined .room-detail{display:block}
+.member-row{border-radius:12px;padding:8px 10px;margin:7px 0;display:grid;grid-template-columns:44px 1fr auto;gap:9px;align-items:center;background:#08101d9c}
+.member-row img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid #ca8738}
+.member-row b{font-size:12px}.member-row small{display:block;font-size:9px;margin-top:3px}
+.ready-yes{color:#67e7a3}.ready-no{color:#e2a7a7}
+.wait-note{font-size:11px;color:#f0d6a4;text-align:center;margin:10px 0 2px}
+.room-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.secondary{min-height:46px;border-radius:12px;border:1px solid #b57534;background:#260f15c9;color:#ffd38a;font-weight:900}
+.game-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.game-state{font-size:10px;color:#75eeb0;font-weight:900;border:1px solid #3fa16d;border-radius:99px;padding:6px 9px;background:#103122a6}
+.role-stage{border-radius:22px;padding:14px}
+.role-hint{text-align:center;color:#e8dce4;font-size:11px;line-height:1.45;margin:0 0 10px}
+.role-card-shell{perspective:1200px;width:min(318px,87vw);height:468px;margin:auto}
+.role-card{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .62s cubic-bezier(.2,.72,.2,1),filter .35s,opacity .35s}
+.role-card.revealed{transform:rotateY(180deg)}
+.role-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:22px;overflow:hidden;border:2px solid #c58a3e;box-shadow:0 20px 48px #000d,0 0 24px #8f421f55;background:#090a12}
+.role-back{display:grid;place-items:end center;background:linear-gradient(180deg,#0001,#090510df),url("__GMWW_EMBED_IMAGE_1__") center/cover}
+.role-back:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 35%,transparent,#060309d8 80%)}
+.role-back b{z-index:2;margin-bottom:32px;font:900 22px var(--head);color:var(--gold);text-shadow:0 2px 9px #000}
+.role-front{transform:rotateY(180deg);display:flex;flex-direction:column;background:linear-gradient(#1b1023,#060810)}
+.role-name{font:900 24px var(--head);color:var(--gold);text-align:center;padding:11px 10px 8px;border-bottom:1px solid rgba(190,131,58,.45);text-shadow:0 2px 8px #000}
+.role-art{height:56%;overflow:hidden;background:#090a12}
+.role-art img{width:100%;height:100%;object-fit:cover;display:block}
+.role-body{padding:10px 12px 12px;min-height:0}
+.faction{border:1px solid rgba(190,131,58,.58);border-radius:10px;padding:8px 10px;background:#28131ab7;color:#ffe0a0;font-weight:900;font-size:11px}
+.info{margin-top:8px;border:1px solid rgba(190,131,58,.48);border-radius:10px;padding:8px 10px;background:#07101aad}
+.info b{display:block;color:var(--gold);font:900 12px var(--head);margin-bottom:4px}
+.info p{font-size:10px;line-height:1.43;color:#eee4ea;margin:0;max-height:78px;overflow:auto}
+.role-card.dead{filter:grayscale(1) brightness(.58);opacity:.72}
+.dead-banner{display:none;margin:12px auto 0;width:min(318px,87vw);padding:11px;border:1px solid #9a6060;border-radius:12px;background:#1b0c0ed9;color:#ffb0b0;text-align:center;font-weight:900}
+.dead-banner.show{display:block}
+.game-status{margin-top:12px;padding:12px;border:1px solid rgba(149,110,58,.6);border-radius:13px;background:#080e18aa;text-align:center;font-size:11px;color:#e6dce2}
+.demo-toggle{position:fixed;right:max(12px,calc(env(safe-area-inset-right) + 12px));bottom:max(12px,env(safe-area-inset-bottom));z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid #df9c47;background:#28141ae8;color:#ffd27b;font-weight:900;box-shadow:0 8px 20px #000a}
+.demo-sheet{position:fixed;z-index:89;left:50%;bottom:70px;transform:translateX(-50%) translateY(20px);width:min(390px,calc(100% - 24px));padding:10px;border:1px solid #b77937;border-radius:14px;background:#070a12ed;opacity:0;pointer-events:none;transition:.2s;box-shadow:0 18px 40px #000b}
+.demo-sheet.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.demo-sheet b{display:block;color:#ffd27b;font-size:10px;margin-bottom:7px}
+.demo-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.demo-actions button{min-height:38px;border:1px solid #855c33;border-radius:9px;background:#17101b;color:#f6e6c8;font-size:9px;font-weight:800}
+.result-overlay{display:none;position:fixed;z-index:120;inset:0;background:radial-gradient(circle at 50% 30%,rgba(82,43,24,.44),rgba(3,5,10,.92) 70%);align-items:center;justify-content:center;padding:20px;overflow:hidden}
+.result-overlay.show{display:flex}
+.result-sheet{width:min(370px,100%);border-radius:24px;padding:26px 18px;text-align:center;z-index:2}
+.result-sheet .trophy{font-size:58px;filter:drop-shadow(0 8px 18px #000)}
+.result-sheet h2{font:900 33px var(--head);color:#ffd27b;margin:6px 0}
+.result-sheet p{margin:0 0 18px;color:#f0e6ec;line-height:1.5}
+.confetti{position:absolute;top:-16px;width:9px;height:18px;border-radius:2px;animation:fall linear infinite}
+@keyframes fall{to{transform:translate3d(var(--drift),110vh,0) rotate(760deg)}}
+@media(max-width:360px){.screen{padding-left:11px;padding-right:11px}.role-card-shell{height:435px}.profile-main{grid-template-columns:78px 1fr}.profile-main img{width:78px;height:78px}}
+
+/* GMWW role-card WebKit stacking fix */
+.role-card{
+  -webkit-transform-style:preserve-3d;
+  transform-style:preserve-3d;
+  isolation:isolate;
+}
+.role-face{
+  -webkit-backface-visibility:hidden !important;
+  backface-visibility:hidden !important;
+  -webkit-transform-style:preserve-3d;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.role-back{
+  -webkit-transform:rotateY(0deg) translateZ(1px);
+  transform:rotateY(0deg) translateZ(1px);
+  z-index:2;
+}
+.role-front{
+  -webkit-transform:rotateY(180deg) translateZ(1px) !important;
+  transform:rotateY(180deg) translateZ(1px) !important;
+  z-index:1;
+}
+.role-card.revealed .role-back{z-index:1}
+.role-card.revealed .role-front{z-index:2}
+
+/* Trang Tạo tài khoản: không còn banner/form cũ chồng phía trên */
+#create .panel{margin-top:0}
+#create .topbar{margin-bottom:8px}
+
+
+.avatar-source{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 1px 8px;font-size:9px;color:#cfc4cc}
+.avatar-source strong{color:#73e6aa}
+.avatar-tools{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin-top:9px}
+.avatar-tools button{min-height:38px;border:1px solid #a97034;border-radius:10px;background:#0b111dce;color:#ffd27b;font-size:10px;font-weight:900}
+.avatar-library-modal{display:none;position:fixed;z-index:180;inset:0;background:#02040ad9;-webkit-backdrop-filter:blur(13px);backdrop-filter:blur(13px);align-items:flex-end;justify-content:center}
+.avatar-library-modal.open{display:flex}
+.avatar-library-sheet{width:min(430px,100%);max-height:84dvh;overflow:auto;border:1px solid #bd8039;border-radius:22px 22px 0 0;background:linear-gradient(#17101d,#070a12 55%);padding:17px 14px max(22px,calc(env(safe-area-inset-bottom) + 14px));box-shadow:0 -18px 55px #000c}
+.avatar-library-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.avatar-library-head h3{font:900 21px var(--head);color:#ffd27b;margin:0}
+.avatar-library-head button{width:36px;height:36px;border-radius:50%;border:1px solid #a97034;background:#25151b;color:#ffd27b;font-size:20px}
+.avatar-library-count{font-size:9px;color:#bdb2ba;margin:-5px 0 12px}
+.avatar-library-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;padding-bottom:88px}
+.avatar-library-grid button{position:relative;padding:3px;border:1px solid #98652e;border-radius:50%;background:#0b111e}
+.avatar-library-grid button.selected{border-color:#ffe2a0;box-shadow:0 0 0 2px #cf8435,0 0 18px rgba(237,139,49,.45)}
+.avatar-library-grid img{display:block;width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover}
+.avatar-picks button{overflow:hidden}
+#create .avatar-picks button,body:has(#create.screen.active) .avatar-library-modal .avatar-library-grid button{border-radius:14px;background:rgba(4,35,51,.78)}
+#create .avatar-picks img,body:has(#create.screen.active) .avatar-library-modal .avatar-library-grid img{aspect-ratio:.76;border-radius:10px;object-fit:contain;background:transparent}
+body:has(#create.screen.active) .avatar-library-modal .avatar-library-grid{grid-template-columns:repeat(4,1fr)}
+.avatar-library-footer{position:sticky;bottom:0;z-index:3;margin:14px -14px -22px;padding:12px 14px max(14px,env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,10,18,.12),#070a12 28%);border-top:1px solid rgba(189,128,57,.65)}
+.avatar-confirm-btn{width:100%;min-height:50px;border:1px solid #ffd27b;border-radius:13px;background:linear-gradient(180deg,#e79d43,#9e5720);color:#fffaf0;font-size:14px;font-weight:1000;letter-spacing:.04em;box-shadow:0 8px 20px #0008}
+.avatar-confirm-btn:disabled{opacity:.48;filter:grayscale(.35)}
+.avatar-error{display:none;margin-top:8px;padding:8px 10px;border:1px solid #7d4d4d;border-radius:9px;background:#260e12bb;color:#ffb4b4;font-size:9px;line-height:1.4}
+
+
+.profile-avatar-edit{display:flex;align-items:center;gap:14px;margin:10px 0 12px}.profile-avatar-edit .avatar-big{width:74px;height:74px;border-radius:50%;object-fit:cover;border:2px solid #c7893e}.profile-avatar-edit .secondary{flex:1}
+.profile-edit-panel{margin-top:12px}
+.profile-edit-panel summary{list-style:none;cursor:pointer;color:var(--gold);font-weight:900;font-size:12px}
+.profile-edit-panel summary::-webkit-details-marker{display:none}
+.profile-edit-panel .profile-edit-grid{display:grid;gap:8px;margin-top:10px}
+
+/* GMWW 0.16.0: deterministic role reveal; avoids Safari/WebKit showing the back face twice */
+.role-card{transform:none!important;-webkit-transform:none!important;transform-style:flat!important;-webkit-transform-style:flat!important}
+.role-card .role-face{transform:none!important;-webkit-transform:none!important;backface-visibility:visible!important;-webkit-backface-visibility:visible!important}
+.role-card .role-back{display:grid!important;z-index:2!important}
+.role-card .role-front{display:none!important;z-index:3!important}
+.role-card.revealed .role-back{display:none!important}
+.role-card.revealed .role-front{display:flex!important;transform:none!important;-webkit-transform:none!important}
+.role-card.revealed{transform:none!important;-webkit-transform:none!important}
+.login-links{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.login-links button{display:inline;padding:0!important;min-height:0!important;width:auto!important}.login-link-sep{opacity:.45}.reset-success{text-align:center;padding:8px 0 2px}.reset-success p{color:#e8dfe6;line-height:1.65;margin:6px 0 18px}.reset-success .secondary{width:100%}
+
+
+/* GMWW 0.27.2 — Player role card theo bố cục card trong game */
+#game .role-stage{
+  width:min(98vw,426px)!important;
+  max-width:none!important;
+  margin-left:50%!important;
+  margin-right:0!important;
+  transform:translateX(-50%)!important;
+  padding:4px!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#game .role-card-shell{
+  width:min(96vw,414px)!important;
+  max-width:none!important;
+  height:auto!important;
+  aspect-ratio:0.72!important;
+  margin:0 auto!important;
+  perspective:none!important;
+}
+#game .role-card{
+  width:100%!important;
+  height:100%!important;
+  margin:0 auto!important;
+  border-radius:24px!important;
+}
+#game .role-face{
+  border-radius:24px!important;
+  border:1px solid rgba(230,181,103,.92)!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(204,146,71,.13),transparent 28%),
+    linear-gradient(180deg,#160d16 0%,#080a10 48%,#05070b 100%)!important;
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.78),
+    0 0 0 1px rgba(255,224,164,.12) inset,
+    0 0 26px rgba(164,96,37,.20)!important;
+  overflow:hidden!important;
+}
+#game .role-front{
+  padding:9px!important;
+  gap:0!important;
+}
+#game .role-front:before{
+  content:"";
+  position:absolute;
+  inset:6px;
+  border:1px solid rgba(214,158,79,.44);
+  border-radius:18px;
+  pointer-events:none;
+  z-index:8;
+}
+#game .role-name{
+  position:relative!important;
+  z-index:3!important;
+  margin:0 8px 8px!important;
+  padding:10px 14px 9px!important;
+  min-height:48px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:0!important;
+  border-bottom:1px solid rgba(214,158,79,.72)!important;
+  background:
+    linear-gradient(90deg,transparent,rgba(77,36,48,.68) 15%,rgba(92,41,54,.90) 50%,rgba(77,36,48,.68) 85%,transparent)!important;
+  color:#f8d48d!important;
+  font:900 clamp(23px,6.8vw,29px)/1.05 var(--head)!important;
+  letter-spacing:.035em!important;
+  text-shadow:0 2px 10px #000,0 0 18px rgba(214,158,79,.20)!important;
+}
+#game .role-name:before,
+#game .role-name:after{
+  content:"◆";
+  color:rgba(222,167,83,.68);
+  font-size:8px;
+  margin:0 9px;
+}
+#game .role-art{
+  position:relative!important;
+  height:auto!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  margin:0 7px!important;
+  overflow:hidden!important;
+  border:1px solid rgba(218,165,87,.72)!important;
+  border-radius:15px!important;
+  background:#05070c!important;
+  box-shadow:0 0 0 1px rgba(255,226,164,.07) inset,0 12px 28px rgba(0,0,0,.42)!important;
+}
+#game .role-art:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent 64%,rgba(3,5,9,.30) 84%,rgba(3,5,9,.64) 100%);
+}
+#game .role-art img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center 24%!important;
+  display:block!important;
+}
+#game .role-body{
+  position:relative!important;
+  z-index:3!important;
+  flex:0 0 auto!important;
+  padding:9px 8px 7px!important;
+  background:transparent!important;
+}
+#game .faction{
+  width:max-content!important;
+  max-width:90%!important;
+  margin:-1px auto 7px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:29px!important;
+  padding:5px 14px!important;
+  border:1px solid rgba(218,165,87,.76)!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,rgba(53,25,31,.96),rgba(23,15,20,.96))!important;
+  color:#f5d087!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  letter-spacing:.08em!important;
+  text-transform:uppercase!important;
+  box-shadow:0 5px 13px rgba(0,0,0,.34),0 0 0 1px rgba(255,226,164,.06) inset!important;
+}
+#game .info{
+  margin:0!important;
+  padding:9px 12px 10px!important;
+  border:1px solid rgba(203,148,72,.46)!important;
+  border-radius:12px!important;
+  background:
+    linear-gradient(180deg,rgba(16,15,20,.92),rgba(7,10,15,.96))!important;
+  box-shadow:0 7px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,226,164,.05)!important;
+}
+#game .info b{
+  display:block!important;
+  margin:0 0 5px!important;
+  color:#dcae67!important;
+  font:900 11px/1.1 var(--head)!important;
+  letter-spacing:.11em!important;
+  text-transform:uppercase!important;
+}
+#game .info p{
+  margin:0!important;
+  max-height:78px!important;
+  overflow:auto!important;
+  color:#efe7e8!important;
+  font-size:10.5px!important;
+  line-height:1.48!important;
+  text-align:left!important;
+}
+#game .dead-banner{width:min(96vw,414px)!important}
+@media(max-width:360px){
+  #game .role-stage{width:99vw!important;padding:3px!important}
+  #game .role-card-shell{width:97vw!important;aspect-ratio:.715!important}
+  #game .role-front{padding:7px!important}
+  #game .role-name{margin:0 6px 7px!important;font-size:22px!important;min-height:44px!important}
+  #game .role-art{margin:0 5px!important}
+  #game .role-body{padding:8px 6px 6px!important}
+  #game .info p{font-size:10px!important;max-height:70px!important}
+}
+
+/* GMWW Sea UI 0.40.13 */
+:root{--bg:url("/gmww-sea-background.webp?v=20261001-webp90");--glass:rgba(5,34,52,.54);--glass2:rgba(4,27,45,.68);--line:rgba(255,207,105,.82);--ink:#fffdf4;--muted:#e9f8ff}
+body{background-position:center top;background-size:cover;background-attachment:fixed}
+.screen:before{background:linear-gradient(180deg,rgba(1,36,63,.10),rgba(2,22,39,.34))}
+.panel,.profile-main,.stat,.history-item,.room-card,.role-stage{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.back{width:auto;min-width:112px;height:42px;padding:0 14px;border-radius:13px;display:flex;gap:7px;align-items:center;justify-content:center;font-size:12px;font-weight:900;letter-spacing:.03em;background:rgba(3,48,73,.76);border-color:#ffd27b;color:#fff5cf}
+.history-fold{margin-top:18px;border-radius:16px;overflow:hidden}
+.history-fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 14px;font:900 16px var(--head);color:#fff5cf;background:rgba(3,48,73,.70);border:1px solid rgba(255,210,123,.72);border-radius:16px}
+.history-fold>summary::-webkit-details-marker{display:none}.history-fold>summary:after{content:"⌄";font-size:20px}.history-fold[open]>summary:after{content:"⌃"}.history-fold .history{padding-top:9px}
+.profile-edit-panel .change-pass{margin-top:12px;background:rgba(2,43,67,.45)}
+.profile-edit-panel .change-pass summary{min-height:40px;display:flex;align-items:center}
+.avatar-library-head h3:after{content:" • Chủ đề Biển";font-size:10px;color:#83e8ff;margin-left:6px}
+
+/* Background clear 0.40.15: Sea artwork without global veil */
+html,body,.app{background:transparent!important}
+body:before{display:none!important;background:none!important}
+.screen{background-image:var(--bg)!important;background-color:transparent!important}
+.screen:after,.screen:before{display:none!important;background:none!important;content:none!important}
+
+/* Auth clarity 0.40.18: readable sea background + visible auth controls */
+#login,#create,#reset{background-image:var(--bg)!important;background-color:#06253a!important}
+#login:before,#create:before,#reset:before{display:none!important}
+#login:after,#create:after,#reset:after{
+  display:block!important;content:""!important;position:absolute!important;inset:0!important;pointer-events:none!important;
+  background:linear-gradient(180deg,rgba(1,22,38,.28) 0%,rgba(1,24,43,.34) 48%,rgba(1,17,31,.45) 100%)!important;
+  -webkit-backdrop-filter:blur(1.5px)!important;backdrop-filter:blur(1.5px)!important
+}
+#login .panel,#create .panel,#reset .panel{
+  background:linear-gradient(155deg,rgba(2,20,35,.64),rgba(3,25,43,.56))!important;
+  -webkit-backdrop-filter:blur(10px) saturate(1.08)!important;backdrop-filter:blur(10px) saturate(1.08)!important;
+  border-color:rgba(255,209,124,.78)!important;box-shadow:0 12px 34px rgba(0,20,36,.42),inset 0 0 0 1px rgba(255,255,255,.05)!important
+}
+#login .label,#create .label{color:#ffe0a1!important;text-shadow:0 2px 7px rgba(0,20,35,.75)}
+#login .input,#create .input{background:rgba(2,25,45,.78)!important;color:#fff!important;border-color:rgba(178,216,255,.68)!important}
+#login .input::placeholder,#create .input::placeholder{color:rgba(239,248,255,.70)!important;opacity:1}
+.field-help{display:block;margin:5px 2px 0;color:#f4ead8;font-size:10px;line-height:1.35;text-shadow:0 2px 7px rgba(0,18,31,.9)}
+.auth-link{appearance:none;border:0;background:none;color:#ffe09a;font:900 12px/1.35 Arial,Helvetica,sans-serif;text-decoration:underline;text-underline-offset:3px;padding:4px 0;box-shadow:none;text-shadow:0 2px 8px rgba(0,22,38,.9)}
+.auth-link:active{opacity:.75;transform:none}
+.login-links{color:#fff4df!important;font-weight:700}
+.login-links button{color:#ffe09a!important;font-size:13px!important}
+.login-register-guide{display:none;margin-top:12px;padding:11px 12px;border:1px solid rgba(255,211,126,.72);border-radius:12px;background:rgba(2,27,47,.78);color:#fff5e4;font-size:11px;line-height:1.45;text-align:center}
+.login-register-guide.show{display:block}
+.login-register-guide .auth-link{display:inline-block;margin-left:4px}
+.optional-password{margin-top:12px}
+.optional-password-fields{display:none;gap:0}
+.optional-password-fields.open{display:block}
+#create .form-title,#login .form-title{color:#ffd87f!important;text-shadow:0 3px 12px rgba(0,24,43,.88)}
+
+
+/* Profile room actions: Enter Room + Exit on one row */
+.profile-actions-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:stretch;margin-top:18px}
+.profile-actions-row .profile-enter-room{margin:0;min-width:0}
+.profile-exit-btn{min-width:104px;min-height:52px;padding:0 16px;border:1.5px solid #ff766f;border-radius:13px;background:linear-gradient(180deg,#d84a43,#8f211f);color:#fff7ef;font-size:14px;font-weight:1000;letter-spacing:.06em;box-shadow:0 7px 18px #0007,0 0 15px #ff5b4d44;text-shadow:0 1px 2px #5a0d0d}
+.profile-exit-btn:active{transform:scale(.96);filter:brightness(1.12)}
+@media(max-width:360px){.profile-actions-row{grid-template-columns:92px minmax(0,1fr);gap:8px}.profile-exit-btn{min-width:92px;padding:0 10px;font-size:13px}}
+
+/* GMWW 0.42.5 — universal device-safe typography */
+html,body,button,input,select,textarea{font-family:Arial,Helvetica,sans-serif!important}
+button,input,select,textarea{font:inherit}
+
+/* Background soft veil 0.40.17: restore a subtle readable layer over Sea artwork */
+.screen:after{
+  display:block!important;
+  content:""!important;
+  pointer-events:none!important;
+  position:absolute!important;
+  inset:0!important;
+  background:linear-gradient(180deg,rgba(2,28,48,.10) 0%,rgba(2,28,48,.18) 48%,rgba(1,18,33,.34) 100%)!important;
+  -webkit-backdrop-filter:blur(2.5px)!important;
+  backdrop-filter:blur(2.5px)!important;
+}
+.screen>*{position:relative;z-index:1}
+</style>
+</head>
