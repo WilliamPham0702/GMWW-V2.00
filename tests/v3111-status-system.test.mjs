@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 
 const worker=fs.readFileSync('src/index.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
@@ -24,8 +25,17 @@ test('Worker expires nights and morning statuses, and never auto-expires permane
 });
 
 test('Worker blocks battle actions for blocking statuses and keeps legacy blocks',()=>{
-  assert.match(worker,/row\?\.type==="status"&&STATUS_DEFS\[row\?\.statusId\]\?\.blocks===true/);
-  assert.match(worker,/\["frozen","dead","expelled"\]\.includes\(String\(row\?\.type\|\|""\)\)/);
+  assert.match(worker,/if\(isBattleActorBlocked\(interactions,\{actorId,matchId,statusDefs:STATUS_DEFS\}\)\)/);
+  const base={loginId:'gm-player',matchId:'m1',effectActive:true};
+  const rules={disabled_permanent:{blocks:true},disabled_2n:{blocks:true},infected:{blocks:false}};
+  const evaluate=(type,extra={})=>isBattleActorBlocked([{...base,type,...extra}],
+    {actorId:'gm-player',matchId:'m1',statusDefs:rules});
+  for(const type of ['frozen','dead','expelled'])
+    assert.equal(evaluate(type),true,type);
+  assert.equal(evaluate('status',{statusId:'disabled_permanent'}),true);
+  assert.equal(evaluate('status',{statusId:'disabled_2n'}),true);
+  assert.equal(evaluate('status',{statusId:'infected'}),false);
+  assert.equal(evaluate('dead',{effectActive:false}),false);
 });
 
 test('Worker lets GM toggle Player Web visibility per status and exposes visible tags',()=>{

@@ -7,6 +7,7 @@ import {combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,timelineDispl
 import {defaultPriorityFirst,artifactCycleKey,reserveArtifactActivation} from '../src/gmww-game-scene-rules.js';
 import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage} from '../src/gmww-battle-action-policy.js';
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
+import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -15,10 +16,14 @@ const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
 const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
+const statusDefsMatch=source.match(/^const STATUS_DEFS=(.*);$/m);
+assert.ok(statusDefsMatch,'Engine harness must load Production status policy');
+const STATUS_DEFS=vm.runInNewContext('('+statusDefsMatch[1]+')');
+
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
@@ -263,4 +268,21 @@ test('partial failure of a multi-target confirmation restores entire interaction
   assert.equal(failed.error,'BATTLE_ACTION_ABORTED');
   assert.equal(h.data.has('interactions'),false);
   assert.equal(h.data.has('battleLastAction:test-match'),false);
+});
+
+test('G4 engine integration: disabled actor cannot confirm a role action, expired status restores action',async()=>{
+  const h=harness({artifact:false});await h.jump('role');
+  const meta=await h.meta(),rt=await h.runtime();
+  const payload={turnId:rt.currentId,actorId:'alice',type:'effect_notice',actionId:'inspect',
+    targetIds:['bob'],matchId:meta.matchId,cycleKey:meta.cycleKey,
+    clientEventId:'blocked-actor-g4',night:1};
+  h.data.set('interactions',[{id:'locked',loginId:'alice',type:'status',statusId:'disabled_permanent',
+    effectActive:true,matchId:meta.matchId}]);
+  const denied=await result(await h.room.gmBattleAction(null,payload));
+  assert.equal(denied.error,'ACTOR_CANNOT_ACT');
+  assert.equal(h.data.has('battleActionReceipt:test-match:blocked-actor-g4'),false);
+  assert.equal(h.data.get('interactions').length,1,'rejected action must not write new effects');
+  h.data.get('interactions')[0].effectActive=false;
+  const allowed=await result(await h.room.gmBattleAction(null,payload));
+  assert.equal(allowed.ok,true,'actor must act again once the status expires');
 });
