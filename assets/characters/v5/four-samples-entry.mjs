@@ -15,11 +15,17 @@ const add=n=>{if(n<0||n>=seen.length||seen[n])return;seen[n]=1;const k=n*4;if(d[
 for(let x=0;x<c.width;x++){add(x);add((c.height-1)*c.width+x);}for(let y=0;y<c.height;y++){add(y*c.width);add(y*c.width+c.width-1);}
 while(head<tail){const n=queue[head++],x=n%c.width;if(x)add(n-1);if(x<c.width-1)add(n+1);add(n-c.width);add(n+c.width);}ctx.putImageData(id,0,0);
 const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
+let skinTexture=texture;
+if(mode===1){
+ const atlas=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Không tải được bộ lớp 8 hướng'));image.src='/layers-eight-v573.webp';});
+ skinTexture=[];
+ for(let i=0;i<8;i++){const canvas=document.createElement('canvas');canvas.width=540;canvas.height=720;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(atlas,(i%4)*540,Math.floor(i/4)*720,540,720,0,0,540,720);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;map.userData.pixels=ctx.getImageData(0,0,540,720);skinTexture.push(map);}
+}
 const renderer=new THREE.WebGLRenderer({canvas:$('view'),antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#b9dfe3');
 if(mode===3){scene.add(new THREE.HemisphereLight('#fff8ed','#7a9daa',2.4));const light=new THREE.DirectionalLight('#fff8ed',2);light.position.set(-3,7,6);scene.add(light);}
 const camera=new THREE.PerspectiveCamera(32,1,.05,40);camera.position.set(0,2,9);camera.lookAt(0,1.94,0);
-const rig=createSkinnedChibi();scene.add(rig.root);const skin=mountSample(rig,texture,mode),motion=createMotionState();
+const rig=createSkinnedChibi();scene.add(rig.root);const skin=mountSample(rig,skinTexture,mode),motion=createMotionState();
 const ground=new THREE.Mesh(new THREE.CylinderGeometry(2,2.12,.12,64),new THREE.MeshBasicMaterial({color:'#ead9ae'}));ground.position.y=-.09;scene.add(ground);
 function resize(){const r=$('stage').getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.position.z=r.width/r.height<.78?10:8.5;camera.updateProjectionMatrix();}new ResizeObserver(resize).observe($('stage'));resize();
 for(const action of HYBRID_ACTIONS){const b=document.createElement('button');b.textContent={idle:'Idle · Đứng',walk:'Walk · Đi',run:'Run · Chạy',result:'Result · Ăn mừng'}[action];b.dataset.action=action;b.onclick=()=>{setAction(motion,action);document.querySelectorAll('[data-action]').forEach(x=>x.classList.toggle('active',x===b));};$('actions').append(b);if(action==='idle')b.classList.add('active');}
