@@ -108,7 +108,7 @@ if(game){
     if(data?.movementStatus==='moving'&&data?.moveStartedAt&&data?.moveDurationMs)return layout.interpolate(data,now);
     // For a seated player, the authoritative seat map always wins over stale
     // pre-layout world coordinates retained by older room versions.
-    const sid=Number(data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
+    const sid=Number(data?.displaySeatId||data?.seatId||0),seat=sid?positions(Math.max(1,Math.min(30,Number(seatCount)||12)),seatLayout,seatOffset,seatSpacing)[sid-1]:null;
     if(seat)return seat;
     if(data?.positionX!=null&&data?.positionY!=null)return layout.clampPoint(data.positionX,data.positionY);
     return spawnPosition(data?.id)
@@ -259,7 +259,7 @@ if(game){
     if(sitWakeTimer){clearTimeout(sitWakeTimer);sitWakeTimer=0}
     villageRenderMetrics.renders++;
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount,seatLayout,seatOffset,seatSpacing),seatMap=new Map(),unseated=[];
-    for(const item of all){const sid=Number(item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
+    for(const item of all){const sid=Number(item?.displaySeatId||item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
     const desiredPlayers=[];roster.replaceChildren();
     // Empty leaves are optional; occupied seats must always render their characters.
     ps.forEach((p,i)=>{
@@ -344,7 +344,18 @@ if(game){
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase(),nextSetup=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},nextCount=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));
     
-    seatLayout=layout.normalizeSeatLayout(room.seatLayout);seatOffset=layout.normalizeSeatOffset(room.seatOffset);seatSpacing=layout.normalizeSeatSpacing(room.seatSpacing);const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
+    seatLayout=layout.normalizeSeatLayout(room.seatLayout);seatOffset=layout.normalizeSeatOffset(room.seatOffset);seatSpacing=layout.normalizeSeatSpacing(room.seatSpacing);
+    // Same deterministic seat repair as GM, without modifying server Seat IDs.
+    // Old running rooms with missing IDs no longer spawn players in a clump.
+    const visualSeats=layout.projectedSeatIds(incoming.filter(p=>!p.isGM),nextCount);
+    const matchStartedAt=Date.parse(room.startedAt||"")||0;
+    for(const p of incoming){
+      if(p.isGM)continue;
+      p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
+      if(matchStartedAt&&p.movementStatus==="moving"&&Number(p.moveStartedAt)>0&&
+        Number(p.moveStartedAt)<=matchStartedAt)p.movementStatus="idle";
+    }
+    const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",room.playerSceneMode==="battle");
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
