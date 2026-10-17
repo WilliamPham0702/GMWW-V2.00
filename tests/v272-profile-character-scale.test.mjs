@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const identity=read('src/gmww-player-identity-rules.js');
 
 test('V2.87 keeps six discrete character sizes and removes the slider',()=>{
   const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
@@ -15,7 +16,7 @@ test('V2.87 keeps six discrete character sizes and removes the slider',()=>{
   assert.ok(css.includes('--gmww-character-scale:1'));
   assert.ok(css.includes('width:56px!important;height:74px!important'));
   assert.ok(css.includes('transform:scale(var(--gmww-character-scale,1))'));
-  assert.ok(server.includes('const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200]'));
+  assert.ok(identity.includes('const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200]'));
   assert.ok(server.includes('normalizeCharacterScale(raw,100)'));
   assert.doesNotMatch(server,/globalWebVeilGet|globalWebVeilPut|global-settings\/web-veil/);
 });

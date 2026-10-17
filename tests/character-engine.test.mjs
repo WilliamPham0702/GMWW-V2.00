@@ -104,7 +104,9 @@ test('Worker exposes character engine manifest and semantic animation in public 
   const worker=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
   assert.ok(worker.includes('from "./gmww-character-engine.js"'));
   assert.ok(worker.includes('/api/character-engine/manifest'));
-  assert.ok(worker.includes('characterAnimation:characterStateFromPlayer(p)'));
+  const playerModule=fs.readFileSync(new URL('../src/gmww-village-player-state.js',import.meta.url),'utf8');
+  assert.ok(worker.includes('from "./gmww-village-player-state.js"'));
+  assert.ok(playerModule.includes('characterAnimation:characterStateFromPlayer(p)'));
 });
 
 

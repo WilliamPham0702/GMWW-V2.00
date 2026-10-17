@@ -11,7 +11,7 @@ test('Player Web uses animated frame assets before static V4 fallback',()=>{
 });
 
 test('Static V4 four-direction character portrait stays on image endpoint',()=>{
- const begin=source.indexOf('async function gameCharacterImage('),end=source.indexOf('function firstFreeSeat(',begin);
+ const begin=source.indexOf('async function gameCharacterImage('),end=source.indexOf('function activeFrozenLoginIds(',begin);
  assert.ok(begin>=0&&end>begin);
  const route=source.slice(begin,end);
  assert.match(route,/if\(Number\(m\[1\]\)<=2\)\{const portrait=await gameCharacterV4Sprite\(env,id,request\);if\(portrait\)return portrait;\}/);
