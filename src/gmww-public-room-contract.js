@@ -13,5 +13,26 @@ export function roomUiStage(m){
 // V3.112 · Trạng thái mở rộng. "exiled/frozen/dead" dùng luồng cũ; các mục dưới đây dùng type "status" + statusId.
 export const STATUS_DEFS={wolf_bitten:{label:"Bị sói cắn",icon:"🐺",blocks:false,duration:"morning"},marked:{label:"Bị đánh dấu",icon:"🎯",blocks:false,duration:"morning"},infected:{label:"Bị nhiễm bệnh",icon:"🦠",blocks:false,duration:"permanent"},mute:{label:"Bị câm",icon:"🤐",blocks:false,duration:"permanent"},disabled_permanent:{label:"Mất năng lực vĩnh viễn",icon:"⛔",blocks:true,duration:"permanent"},disabled_2n:{label:"Mất năng lực 2 đêm",icon:"⏳",blocks:true,duration:"nights",nights:2}};
 export function activeStatusRows(rows,loginId,matchId){return (Array.isArray(rows)?rows:[]).filter(x=>x?.type==="status"&&x?.effectActive!==false&&normalizeLoginId(x?.loginId)===normalizeLoginId(loginId)&&(!x?.matchId||!matchId||String(x.matchId)===String(matchId)))}
-export function statusTagsFor(rows,meta,loginId){const display=meta?.statusDisplay||{};return activeStatusRows(rows,loginId,meta?.matchId).filter(x=>STATUS_DEFS[x.statusId]&&display[x.statusId]===true).map(x=>({statusId:x.statusId,label:STATUS_DEFS[x.statusId].label,icon:STATUS_DEFS[x.statusId].icon}))}
+// Visual display permission IDs do not define gameplay status, duration, or priority.
+export const STATUS_VISUAL_IDS=new Set(["frozen","protected","wolf_bitten","marked","dead","expelled","infected","mute","disabled_permanent","linked","recover","transform","attack","inspect","hunt","disabled_2n"]);
+const STATUS_VISUAL_LEGACY={
+  frozen:{label:"Đóng Băng",icon:"❄️"},
+  expelled:{label:"Bị Đuổi",icon:"🚪"},
+  dead:{label:"Đã Chết",icon:"💀"},
+  assassin_mark:{label:"Đánh Dấu",icon:"🎯",statusId:"marked"}
+};
+export function statusTagsFor(rows,meta,loginId){
+  const display=meta?.statusDisplay||{},now=Date.now(),matchId=String(meta?.matchId||"");
+  const valid=x=>x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now);
+  const expanded=activeStatusRows(rows,loginId,matchId).filter(x=>valid(x)&&STATUS_DEFS[x.statusId]&&display[x.statusId]===true).map(x=>({statusId:x.statusId,label:STATUS_DEFS[x.statusId].label,icon:STATUS_DEFS[x.statusId].icon}));
+  const tags=new Map(expanded.map(x=>[x.statusId,x]));
+  for(const row of (Array.isArray(rows)?rows:[])){
+    const kind=STATUS_VISUAL_LEGACY[row?.type];if(!kind||!valid(row)||normalizeLoginId(row?.loginId)!==normalizeLoginId(loginId))continue;
+    if(row?.matchId&&matchId&&String(row.matchId)!==matchId)continue;
+    const statusId=kind.statusId||row.type;
+    const canSee=Object.prototype.hasOwnProperty.call(display,statusId)?display[statusId]===true:statusId!=="marked";
+    if(canSee)tags.set(statusId,{statusId,label:kind.label,icon:kind.icon});
+  }
+  return [...tags.values()];
+}
 export function publicRoom(m){return{statusDisplay:m.statusDisplay&&typeof m.statusDisplay==="object"?m.statusDisplay:{},gmStage:roomUiStage(m),gmStageRevision:Number(m.gmStageRevision||0),code:m.code,roomName:m.roomName||("Phòng "+m.code),matchId:m.matchId||null,matchRevision:Number(m.matchRevision||0),deliveryVersion:Number(m.deliveryVersion||0),resetVersion:Number(m.resetVersion||0),status:m.status,phase:m.phase||"lobby",locked:!!m.locked,seatsLocked:!!m.seatsLocked,enabled:m.enabled!==false,autoGM:m.autoGM!==false,roomMode:normalizeRoomMode(m.roomMode),seatMoveMode:normalizeSeatMoveMode(m.seatMoveMode),seatCount:normalizeSeatCount(m.seatCount,Number(m.playerCount||0)||12),seatLayout:normalizeSeatLayout(m.seatLayout),gameName:m.gameName||"",playerCount:Number(m.playerCount||0),cycleKey:m.cycleKey||null,cyclePhase:m.cyclePhase||null,cycleNight:Number(m.cycleNight||0),cycleStartedAt:m.cycleStartedAt||null,roleDeliveredAt:m.roleDeliveredAt||null,startedAt:m.startedAt||null,endedAt:m.endedAt||null,winnerFaction:m.winnerFaction||null,winnerLabel:m.winnerLabel||null,resultVersion:Number(m.resultVersion||0),deletedAt:m.deletedAt||null,createdAt:m.createdAt,updatedAt:m.updatedAt}}

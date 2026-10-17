@@ -1,3 +1,4 @@
+import "../status-visuals.js?v=pr277-v2b";
 import "./village-layout.js?v=fire3101";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
@@ -44,7 +45,7 @@ export function mapPublicPlayers(state){
     moveFromX:p.moveFromX==null?null:Number(p.moveFromX),moveFromY:p.moveFromY==null?null:Number(p.moveFromY),
     moveToX:p.moveToX==null?null:Number(p.moveToX),moveToY:p.moveToY==null?null:Number(p.moveToY),
     moveStartedAt:Number(p.moveStartedAt||0)||null,moveDurationMs:Number(p.moveDurationMs||0)||null,moveTargetSeatId:Number(p.moveTargetSeatId||0)||null,
-    ready:!!p.ready,setupComplete:!!p.setupComplete,online:p.online!==false,statusLabel:safeText(p.statusLabel||""),roleName:safeText(p.roleName||""),frozen:p?.frozen===true,statusTags:Array.isArray(p.statusTags)?p.statusTags.slice(0,4).map(x=>({icon:safeText(x?.icon||""),label:safeText(x?.label||"")})):[]
+    ready:!!p.ready,setupComplete:!!p.setupComplete,online:p.online!==false,statusLabel:safeText(p.statusLabel||""),roleName:safeText(p.roleName||""),frozen:p?.frozen===true,statusTags:Array.isArray(p.statusTags)?p.statusTags.slice(0,8).map(x=>({statusId:safeText(x?.statusId||""),icon:safeText(x?.icon||""),label:safeText(x?.label||"")})):[]
   }));
 }
 const game=typeof document==="undefined"?null:document.getElementById("game");
@@ -87,8 +88,20 @@ if(game){
 
   function easeMove(t){t=Math.max(0,Math.min(1,Number(t)||0));return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
   function spawnPosition(id){return layout.spawn(id)}
+  // UI-only anchor: a deceased person's displayed position must remain fixed
+  // even when a separate autonomous movement system continues publishing coordinates.
+  const deceasedDisplayPoints=new Map();
   function movementPosition(data,seatPos=null,now=Date.now()+Number(setupState.clockOffsetMs||0)){
+    const id=String(data?.id||data?.participantId||'');
+    const dead=visuallyDeceased(data);
+    if(!dead&&id)deceasedDisplayPoints.delete(id);
+    if(dead&&id&&deceasedDisplayPoints.has(id))
+      return{...deceasedDisplayPoints.get(id),progress:1,moving:false,sitting:false,sitRemainingMs:0};
     const pos=data?.movementStatus==='moving'?layout.interpolate(data,now):seatPos||((data?.positionX!=null&&data?.positionY!=null)?layout.clampPoint(data.positionX,data.positionY):spawnPosition(data?.id)),progress=Math.max(0,Math.min(1,(now-Number(data?.moveStartedAt||0))/Math.max(1,Number(data?.moveDurationMs||1)))),sitting=sittingNow(data,now);
+    if(dead){
+      if(id)deceasedDisplayPoints.set(id,{x:pos.x,y:pos.y});
+      return{...pos,progress:1,moving:false,sitting:false,sitRemainingMs:0};
+    }
     return{...pos,progress,moving:data?.movementStatus==='moving'&&progress<1,sitting,sitRemainingMs:sitting?Math.max(0,Number(data.sitUntil)-now):0};
   }
   function visualPlayerPoint(data,seatCount=count,now=Date.now()+Number(setupState.clockOffsetMs||0)){
@@ -120,21 +133,35 @@ if(game){
   function screenPoint(p,width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536){return layout.toScreen(p,width,height)}
   function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?dir=left":"";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
-  function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const moving=!!position?.moving,sitting=!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
+  function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
+  function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!dead&&!!position?.moving,sitting=!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
-    if(Array.isArray(data.statusTags)&&data.statusTags.length){const tags=document.createElement("span");tags.className="status-tags";tags.setAttribute("aria-hidden","true");tags.textContent=data.statusTags.map(x=>x.icon).filter(Boolean).join(" ");tags.title=data.statusTags.map(x=>x.label).filter(Boolean).join(", ");button.appendChild(tags)}
+    if(Array.isArray(data.statusTags)&&data.statusTags.length){
+      const visualEffects={frozen:"snowfall",protected:"blue-shield",wolf_bitten:"wolf-claws",marked:"secret-mark",dead:"gray-smoke",expelled:"iron-cage",infected:"green-rain",mute:"silenced",disabled_permanent:"power-seal",disabled_2n:"power-seal",linked:"soul-link"};
+      const rows=data.statusTags.filter(x=>Object.prototype.hasOwnProperty.call(visualEffects,x.statusId)),panel=document.createElement("span"),badges=document.createElement("span");
+      if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");
+        const approvedVisuals=globalThis.GMWW_STATUS_VISUALS;
+        if(approvedVisuals)button.insertAdjacentHTML("beforeend",approvedVisuals.overlay(rows.map(x=>x.statusId)));
+        else{panel.className="gmww-sv-overlay";panel.setAttribute("aria-hidden","true");
+        const unique=[...new Set(rows.map(x=>x.statusId))],priority=["dead","expelled","wolf_bitten","frozen","disabled_permanent","disabled_2n","marked","infected","protected","mute","linked"],ordered=priority.filter(id=>unique.includes(id)),visible=ordered.includes("dead")?["dead"]:ordered.includes("expelled")?["expelled"]:ordered.slice(0,3);
+        for(const id of visible){const effect=document.createElement("span");effect.className="gmww-sv-fx gmww-sv-"+visualEffects[id];effect.dataset.statusFx=id;for(let i=0;i<3;i++)effect.appendChild(document.createElement("i"));panel.appendChild(effect)}
+        badges.className="gmww-sv-badges";badges.setAttribute("aria-hidden","true");
+        for(const x of rows){const tag=document.createElement("span");tag.textContent=x.icon;tag.title=x.label;badges.appendChild(tag)}
+        button.append(panel,badges);}
+      }
+    }
     const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving)button.dataset.walkDir=walkDirection(data)
     const avatar=document.createElement("span");avatar.className="portrait";
     const rawCharacterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
     const legacyIndex=rawCharacterId?Number(rawCharacterId.slice(-2)):0,seed=String(data.id||data.participantId||data.displayName||index),seedHash=[...seed].reduce((h,ch)=>((h*31)+ch.charCodeAt(0))>>>0,0);
     const characterId=rawCharacterId?"character-"+String(((legacyIndex-1)%20)+1).padStart(2,"0"):"character-"+String((seedHash%20)+1).padStart(2,"0");
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
-    const direction=position?.moving?walkDirection(data):"right",gmUrl=isGM?trustedAvatarUrl(data.avatarUrl||"/gm/gm-white-wolf.webp"):"",characterUrl=isGM?"":(position?.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
+    const direction=position?.moving&&!visuallyDeceased(data)?walkDirection(data):"right",gmUrl=isGM?trustedAvatarUrl(data.avatarUrl||"/gm/gm-white-wolf.webp"):"",characterUrl=isGM?"":(position?.sitting&&!visuallyDeceased(data)&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
     const sources=(isGM?[gmUrl]:[characterUrl,legacyUrl,safeDefault]).filter((u,i,a)=>u&&a.indexOf(u)===i);
     if(sources.length){avatar.classList.add("has-image","game-character");if(isGM)avatar.classList.add("gm-character");const scale=normalizeCharacterScale(setupState.characterScale)/100,compact=window.innerWidth<=390,baseW=compact?50:62,baseH=compact?67:82;avatar.style.width=baseW+"px";avatar.style.height=baseH+"px";button.style.setProperty("--gmww-character-scale",String(scale));button.style.minWidth=Math.max(52,baseW+10)+"px";if(isGM){const runtime=document.createElement("span"),shell=document.createElement("span"),shadow=document.createElement("span");runtime.className="gm-wolf-character";runtime.dataset.gmWolfRuntime="1";shell.className="gm-wolf-sprite";shadow.className="gm-wolf-shadow";runtime.append(shadow,shell);for(const cls of ["gm-wolf-segment gm-wolf-body","gm-wolf-segment gm-wolf-rear-legs","gm-wolf-segment gm-wolf-front-legs","gm-wolf-segment gm-wolf-head"]){const img=document.createElement("img");img.className=cls;img.src=sources[0];img.alt="";img.loading="eager";img.decoding="async";shell.append(img)}const dx=Number(data?.moveToX??position?.x??0)-Number(data?.moveFromX??position?.x??0);button.style.setProperty("--gm-run-dir",String(dx<0?-1:1));avatar.append(runtime)}else{const command=animationCommandFor({...data,gameCharacterId:characterId},position),renderer=mountCharacterRenderer(avatar,{characterId,command,sources,sitting:!!position?.sitting});const img=renderer?.querySelector?.("img[data-walk-character]");if(img){img.dataset.walkFrame=String(walkFrameFor(data));img.dataset.walkDir=direction}}}
     const name=document.createElement("span");name.className="name";
@@ -238,7 +265,7 @@ if(game){
     for(const data of unseated){const pos=movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
     const alive=new Set(all.map(p=>String(p.id)));
-    for(const id of mountedPlayerNodes.keys())if(!alive.has(id))mountedPlayerNodes.delete(id);
+    for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
     villageRenderMetrics.mounted=mountedPlayerNodes.size;
     document.getElementById("count").textContent=all.filter(x=>Number(x?.seatId||0)>0).length+"/"+seatCount;
     renderPortal();
@@ -254,7 +281,7 @@ if(game){
     const nowMs=Date.now()+Number(setupState.clockOffsetMs||0),width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536;
     for(const data of all){
       if(data?.movementStatus!=="moving")continue;
-      const el=mountedPlayerNodes.get(String(data.id));if(!el||!el.isConnected)continue;
+      const el=mountedPlayerNodes.get(String(data.id));if(!el||!el.isConnected)continue;if(visuallyDeceased(data))continue; // Display-only: deceased chibi does not visually walk.
       const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
       const avatar=el.querySelector(".portrait.game-character"),renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId,
       semantic=animationCommandFor({...data,gameCharacterId:renderedId},pos);
