@@ -52,9 +52,9 @@ test('Worker blocks battle actions for blocking statuses and keeps legacy blocks
 
 test('Worker lets GM toggle Player Web visibility per status and exposes visible tags',()=>{
   assert.match(worker,/if\(type==="status_display"\)/);
-  assert.match(worker,/statusDisplay:m\.statusDisplay/);
+  assert.match(statusPolicy,/statusDisplay:m\.statusDisplay/);
   assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId\)/);
-  assert.match(worker,/display\[x\.statusId\]===true/);
+  assert.match(statusPolicy,/display\[x\.statusId\]===true/);
 });
 
 test('GM client has the full catalog, chips for new statuses, and a blocking helper',()=>{
