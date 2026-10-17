@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Player Web lobby motion chooses a random point, sits 30 seconds, then continues elsewhere',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js'),village=read('assets/village/village.mjs');
+  const live=read('src/gmww-members-live.js'),server=read('src/index.js'),village=read('assets/village/village.mjs'),playerModule=read('src/gmww-village-player-state.js');
   assert.ok(live.includes('const LOBBY_MOTION_HOLD_MS=30000'));
   assert.ok(live.includes('function lobbyRandomPoint()'));
   assert.ok(live.includes('function buildLobbyMotionRoute(){return[lobbyRandomPoint()]}'));
@@ -16,7 +16,7 @@ test('Player Web lobby motion chooses a random point, sits 30 seconds, then cont
   assert.ok(live.includes('Tự đi ngẫu nhiên trong Làng, dừng lại, ngồi 30 giây rồi đứng dậy đi tới điểm khác.'));
   assert.ok(server.includes('VILLAGE_AUTO_SIT_MS'));
   assert.ok(server.includes('villageAutoPoint("member:"'));
-  assert.ok(server.includes('return villageAutoLife({id,now,anchorAt,anchorPoint,stagger:false},villageLayout)'));
+  assert.ok(playerModule.includes('return villageAutoLife({id,now,anchorAt,anchorPoint,stagger:false},villageLayout)'));
   assert.ok(village.includes('villageActivity==="sitting"&&Number(data?.sitUntil||0)>now'));
 });
 

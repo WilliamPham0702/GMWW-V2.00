@@ -52,7 +52,8 @@ test('actual Player Web renderer handles sitting and visible idle sequence for a
 
 test('server no longer sends gather motion to the fixed fire point',()=>{
   const worker=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const playerModule=fs.readFileSync(new URL('../src/gmww-village-player-state.js',import.meta.url),'utf8');
   assert.ok(worker.includes('villageAutoPoint("member:"'));
-  assert.ok(worker.includes('villageAutoLife({id'));
+  assert.ok(playerModule.includes('villageAutoLife({id'));
   assert.ok(!worker.includes('villageGatherPoint(id,gatherIds)'));
 });

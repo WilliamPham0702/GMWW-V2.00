@@ -7,6 +7,7 @@ const app=read('server-game/current/app.js');
 const css=read('server-game/current/style.css');
 const html=read('server-game/current/GMWW.html');
 const server=read('src/index.js');
+const playerModule=read('src/gmww-village-player-state.js');
 const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
@@ -85,7 +86,7 @@ test('GM sheet exposes immediate Kill and Revive and server implements revive',(
 });
 
 test('room presence is websocket-authoritative with realtime heartbeat and disconnect state',()=>{
-  assert.match(server,/ROOM_PLAYER_TTL=70\*1000/);
+  assert.match(playerModule,/ROOM_PLAYER_TTL=70\*1000/);
   assert.match(server,/async webSocketMessage\(ws,message\)/);
   assert.match(server,/presenceChanged:true/);
   assert.match(server,/async markSocketDisconnected\(ws\)/);
