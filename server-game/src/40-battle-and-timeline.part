@@ -257,7 +257,7 @@ async function advancePlayPhase(){
 }
 
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
-const battleState={key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,impacts:new Map()};
+const battleState={key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleActions=()=>{
@@ -336,7 +336,7 @@ function battleTickCountdown(){
   clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
 }
 async function battleNavigateIndex(index){
-  if(battleState.busy||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+  if(battleState.busy||battleState.syncPending||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
   const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
   if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
   if(battleUsed(queue[index])){playFlashError('Artifact này đã dùng ở lượt trước; không thể dùng lại trong đêm.');return}
@@ -388,8 +388,9 @@ function battleRenderTransferPanel(){
   const ok=panel.querySelector('[data-transfer-ok]');if(ok)ok.onclick=()=>battleConfirm(true);
 }
 function battleClear(){battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
-function battlePickAction(id){const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
+function battlePickAction(id){if(battleState.busy||battleState.syncPending)return;const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
 function battlePickTarget(id,actionId){
+  if(battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
   if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
   const m=battleMember(id);
@@ -461,9 +462,9 @@ function renderPlayBattle(){
   set('battleTurnTitle',phase==='day'?'LÀNG ƠI DẬY ĐI':(t?battleRules().displayLabel(t,'Lượt chơi'):(rt?.completed?'ĐÃ KẾT THÚC ĐÊM '+night:'BẮT ĐẦU ĐÊM 1')));
   set('battleTurnProgress',phase==='night'?(Math.min((rt?.cursor||0)+1,rt?.queue?.length||1)+'/'+(rt?.queue?.length||1)):phase==='day'?'THẢO LUẬN':'SẴN SÀNG');
   const action=battleAction(),pending=document.getElementById('battlePending'),roster=document.getElementById('battleRoster'),toggle=document.getElementById('battleRosterToggle');
-  if(pending){pending.hidden=!action||!battleState.targets.length;
+  if(pending){pending.hidden=!action||!battleState.targets.length||battleState.targetSheet;
     set('battlePendingText',action?action.name+' → '+battleState.targets.map(x=>battleMember(x)?.displayName||x).join(', ')+' ('+battleState.targets.length+'/'+action.targetCount+')':'');
-    document.getElementById('battleConfirm').disabled=battleState.busy||!action||battleState.targets.length!==action.targetCount;
+    document.getElementById('battleConfirm').disabled=battleState.busy||battleState.syncPending||!action||battleState.targets.length!==action.targetCount;
   }
   if(roster)roster.hidden=!battleState.roster;
   if(toggle){toggle.textContent=battleState.roster?'▴ Ẩn danh sách':'☷ Chọn thủ công';toggle.setAttribute('aria-expanded',String(battleState.roster))}
@@ -490,7 +491,7 @@ function renderPlayBattle(){
       candidates.innerHTML=act?playLiveMembers().filter(m=>m.loginId&&battleRules().targetAllowed(act,m,playPlayerEffect(m.loginId))).map(m=>
         '<button type="button" data-battle-candidate="'+playEsc(m.loginId)+'" class="'+(battleState.targets.includes(String(m.loginId))?'is-selected':'')+'">'+(battleState.targets.includes(String(m.loginId))?'✓ ':'○ ')+playEsc(m.displayName||m.loginId)+'</button>').join(''):'';
     }
-    if(pickerOK)pickerOK.disabled=battleState.busy||!targetReady;
+    if(pickerOK)pickerOK.disabled=battleState.busy||battleState.syncPending||!targetReady;
   }
   const undo=document.getElementById('battleUndoButton');
   if(undo){undo.disabled=battleState.busy||battleState.undoBusy||!playSceneRuntime.battleUndo?.token;
@@ -519,12 +520,12 @@ function renderPlayBattle(){
   battleMarkPlayers();battleTickCountdown()
 }
 async function battleConfirm(confirmed=false){
-  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
+  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');
   if(expected!==battleState.key){playFlashError('Lượt đã thay đổi. Hãy chọn lại mục tiêu.');renderPlayBattle();return}
   if(!confirmed&&!confirm('Xác nhận '+a.name+' lên '+battleState.targets.map(id=>battleMember(id)?.displayName||id).join(', ')+'?'))return;
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
-  const targets=[...battleState.targets];
+  const targets=[...battleState.targets],startedAt=globalThis.performance?.now?.()??Date.now();
   try{
     const seerReveal=a.actionId==='action_seer'&&!a.artifactId;
     const payload={targetIds:(seerReveal||transferAct)?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
@@ -536,9 +537,23 @@ async function battleConfirm(confirmed=false){
     else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
+    const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
+    // Confirm only after the Durable Object commits, never after an extra room reload.
+    console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
     for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
+    if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     battleClear();
-    await playSyncRoom(true);
+    battleState.syncPending=true;
+    const title=document.getElementById('playPhaseTitle');
+    if(title)title.textContent='✓ ĐÃ GHI NHẬN';
+    const syncStartedAt=globalThis.performance?.now?.()??Date.now();
+    // Prevent another action on stale turn/usage data until the server refresh completes.
+    void playSyncRoom(true).then(data=>{
+      console.info('GMWW battle-sync timing',{syncMs:Math.round((globalThis.performance?.now?.()??Date.now())-syncStartedAt),ok:!!data});
+      if(!data){playFlashError('Đã ghi nhận trên Server nhưng chưa đồng bộ. Vui lòng tải lại Phòng để tiếp tục.');return}
+      battleState.syncPending=false;
+      renderPlayBattle();
+    }).catch(err=>{playFlashError('Đã ghi nhận trên Server nhưng đồng bộ bị lỗi: '+String(err?.message||err));});
   }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
   finally{battleState.busy=false;renderPlayBattle()}
 }
@@ -608,7 +623,7 @@ function battleCloseTargetSheet(){
   battleState.nonce='';renderPlayBattle();
 }
 async function battleUndoLast(){
-  const rec=playSceneRuntime.battleUndo;if(!rec?.token||battleState.busy||battleState.undoBusy)return;
+  const rec=playSceneRuntime.battleUndo;if(!rec?.token||battleState.busy||battleState.syncPending||battleState.undoBusy)return;
   if(!confirm('Khôi phục hành động vừa xác nhận: '+String(rec.label||'Hành động')+'?'))return;
   battleState.undoBusy=true;renderPlayBattle();
   try{
@@ -731,8 +746,8 @@ function initBattleControls(){
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
   document.getElementById('battleRosterToggle')?.addEventListener('click',()=>{battleState.roster=!battleState.roster;renderPlayBattle()});
   document.getElementById('battleRosterClose')?.addEventListener('click',()=>{battleState.roster=false;renderPlayBattle()});
-  document.getElementById('battleCancel')?.addEventListener('click',()=>{battleState.targets=[];battleState.nonce='';renderPlayBattle()});
-  document.getElementById('battleConfirm')?.addEventListener('click',()=>{void battleConfirm()});
+  // One-tap confirmation; change the target by tapping another player before OK.
+  document.getElementById('battleConfirm')?.addEventListener('click',()=>{void battleConfirm(true)});
   document.getElementById('battleTargetClose')?.addEventListener('click',battleCloseTargetSheet);
   document.getElementById('battleTargetCancel')?.addEventListener('click',battleCloseTargetSheet);
   document.getElementById('battleTargetConfirm')?.addEventListener('click',()=>{void battleConfirm(true)});
