@@ -9,6 +9,7 @@ const webCss=read('assets/village/status-visuals.css');
 const app=read('server-game/current/app.js');
 const html=read('server-game/current/GMWW.html');
 const worker=read('src/index.js');
+const statusPolicy=read('src/gmww-public-room-contract.js');
 const playerWeb=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');
@@ -47,11 +48,11 @@ test('B: library has all 15 live previews and all 15 switches',()=>{
   for(const v of vis.entries)assert.ok(gmCss.includes('gmww-sv-'+v.effect));
 });
 test('B: server display settings are separate from game statuses',()=>{
-  assert.match(worker,/STATUS_VISUAL_IDS=new Set/);
+  assert.match(statusPolicy,/STATUS_VISUAL_IDS=new Set/);
   assert.match(worker,/if\(!STATUS_VISUAL_IDS\.has\(statusId\)\)/);
-  assert.match(worker,/STATUS_VISUAL_LEGACY/);
+  assert.match(statusPolicy,/STATUS_VISUAL_LEGACY/);
   assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId\)/);
-  assert.match(worker,/display\[x\.statusId\]===true/);
+  assert.match(statusPolicy,/display\[x\.statusId\]===true/);
   assert.match(worker,/statusId!=="marked"/);
   assert.equal(vis.byId.marked.playerWeb,false);
 });
@@ -59,6 +60,9 @@ test('C: GM actor, preview, and action box share visual state data',()=>{
   assert.match(app,/globalThis\.GMWW_STATUS_VISUALS\.overlay\(statusVisuals\)/);
   assert.match(app,/const battleActorEffects=actions\.map/);
   assert.match(app,/gmww-sv-action-tags/);
+  assert.match(app,/gmww-sv-action-preview/);
+  assert.match(app,/visualApi\.overlay\(\(battleActorEffects\.find/);
+  assert.match(gmCss,/gmww-sv-action-preview/);
   assert.match(app,/playPlayerBlocked\(actorId\)/);
   assert.match(app,/battleRules\(\)\?\.actionsForTurn/);
 });
