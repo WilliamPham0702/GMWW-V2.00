@@ -71,3 +71,22 @@ test('V5.62 demonstrates actual travel and one-shot celebration without entering
  assert.match(html,/addV562OriginalFabricSleevesToRig\(rig/);
  assert.match(html,/Chưa đạt Skin gốc hoàn chỉnh/);
 });
+
+test('V5.62 iPhone diagnostic watchdog detects nonloading modules and unsupported WebGL',()=>{
+ const html=readFileSync(new URL('../assets/characters/v5/test-skin-v562.html',import.meta.url),'utf8');
+ assert.match(html,/Classic-script watchdog runs even when iPhone WKWebView refuses to load ES modules/);
+ assert.match(html,/window\.__gmwwV562ReportError=report/);
+ assert.match(html,/window\.addEventListener\('error'/);
+ assert.match(html,/window\.addEventListener\('unhandledrejection'/);
+ assert.match(html,/window\.__gmwwV562FrameCount===0/);
+ assert.match(html,/setTimeout\(function\(\)/);
+ assert.match(html,/data-gmww-v562','error'/);
+ assert.match(html,/powerPreference:iOS\?'low-power':'default'/);
+ assert.match(html,/iOS\?1:1\.5/);
+ assert.match(html,/id="retry"/);
+ assert.match(html,/webglcontextlost/);
+ assert.match(html,/role="status" aria-live="polite"/);
+ assert.match(html,/3D đang chạy/);
+ assert.ok(html.indexOf('<div class="stage"')<html.indexOf('Thông tin Skin và giới hạn bản thử'),
+   'mobile should show 3D stage before disclaimers');
+});
