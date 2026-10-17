@@ -5490,3 +5490,68 @@ body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not
     flex-basis:98px!important;width:98px!important;min-width:98px!important;max-width:98px!important
   }
 }
+
+/* V3.125 — Create Room: one enclosing card, not two floating inner frames. */
+#playCreateRoomSheet>.play-room-page-card{
+  box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+  width:min(94vw,470px)!important;max-width:94vw!important;
+  height:auto!important;max-height:85dvh!important;min-height:0!important;
+  padding:16px!important;gap:12px!important;overflow-y:auto!important;overflow-x:hidden!important
+}
+#playCreateRoomSheet .play-room-page-head{width:100%!important;min-width:0!important;margin:0!important}
+#playCreateRoomSheet .play-room-page-body{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  width:100%!important;min-width:0!important;gap:11px!important;margin:0!important;
+  box-sizing:border-box!important
+}
+#playCreateRoomSheet .play-room-picker-card,
+#playCreateRoomSheet .play-room-section-card,
+#playCreateRoomSheet .play-room-step,
+#playCreateRoomSheet .play-room-editor{
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  flex:0 0 auto!important;box-sizing:border-box!important;margin:0!important
+}
+#playCreateRoomSheet .play-room-picker-card{padding:12px!important}
+#playCreateRoomSheet .play-room-strip{
+  display:flex!important;width:100%!important;min-width:0!important;
+  max-width:100%!important;justify-content:flex-start!important;
+  overflow-x:auto!important;overflow-y:hidden!important
+}
+#playCreateRoomSheet .play-room-created-list{min-width:0!important;flex:0 0 auto!important}
+#playCreateRoomSheet .play-room-control-row{
+  width:100%!important;max-width:100%!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px!important;
+  gap:8px!important;margin:0!important
+}
+#playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+  width:44px!important;min-width:44px!important;height:40px!important
+}
+@media(max-width:390px){
+  #playCreateRoomSheet>.play-room-page-card{padding:12px!important;gap:9px!important}
+  #playCreateRoomSheet .play-room-picker-card{padding:9px!important}
+  #playCreateRoomSheet .play-room-control-row{gap:6px!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px!important}
+  #playCreateRoomSheet .play-room-control-row>.play-room-step-next{width:38px!important;min-width:38px!important}
+}
+/* GM seat offset follows Worker room metadata, always relative to the fixed fire. */
+.play-seat-shift-controls{
+  display:flex;align-items:center;justify-content:space-between;gap:5px;
+  padding:4px 3px;min-width:0;color:#b8e9ed;font-size:9px;font-weight:800
+}
+.play-seat-shift-controls>span{flex:0 1 auto;white-space:nowrap}
+.play-seat-shift-buttons{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
+.play-seat-shift-buttons>button{
+  min-width:31px;height:30px;padding:2px 5px;border-radius:8px;
+  border:1px solid rgba(108,216,239,.55);background:#174f63;
+  color:#f0fcff;font-size:19px;font-weight:850;touch-action:manipulation
+}
+.play-seat-shift-buttons>button:disabled{opacity:.45}
+#playSeatOffsetValue{font-size:9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:390px){.play-seat-shift-controls{flex-wrap:wrap;justify-content:center}.play-seat-shift-controls>span{width:100%;text-align:center}}
+/* Deprecated V2.46 freeze letters generated an unwanted SECOND visual layer.
+   Frozen orbit ❄️ from the shared approved renderer is now the only symbol. */
+#start .play-player-token.is-frozen .play-player-avatar::before,
+#start .play-player-token.is-frozen .play-player-avatar::after{
+  content:none!important;display:none!important;animation:none!important
+}
+/* Avoid continuously repainting every chibi from whole-token CSS filters. */
+#start .play-player-token.is-dead{filter:none!important}
