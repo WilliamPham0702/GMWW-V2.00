@@ -145,7 +145,7 @@ if(game){
     button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
     button.dataset.style=String(((actualSeat||index+1)-1)%5);button.dataset.playerId=safeText(data.id||("sample-"+(index+1)));if(actualSeat)button.dataset.seatId=String(actualSeat);if(data.moveId)button.dataset.moveId=String(data.moveId);
     if(Array.isArray(data.statusTags)&&data.statusTags.length){
-      const visualEffects={frozen:"orbit",protected:"orbit",wolf_bitten:"orbit",marked:"orbit",dead:"gray-smoke",expelled:"orbit",infected:"orbit",mute:"orbit",disabled_permanent:"orbit",disabled_2n:"orbit",linked:"orbit"};
+      const visualEffects={frozen:"orbit",protected:"orbit",wolf_bitten:"orbit",marked:"orbit",dead:"gray-smoke",expelled:"orbit",infected:"orbit",mute:"orbit",disabled_permanent:"orbit",disabled_2n:"orbit",linked:"orbit",recover:"orbit",transform:"orbit",attack:"orbit",inspect:"orbit",hunt:"orbit"};
       const rows=data.statusTags.filter(x=>Object.prototype.hasOwnProperty.call(visualEffects,x.statusId)),panel=document.createElement("span"),badges=document.createElement("span");
       if(rows.length){button.classList.add("gmww-sv-stage");if(rows.some(x=>x.statusId==="dead"))button.classList.add("gmww-sv-dead");
         const approvedVisuals=globalThis.GMWW_STATUS_VISUALS;
