@@ -1395,6 +1395,7 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
+    const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
     this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
       serverTime:Date.now()});
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
@@ -1460,7 +1461,7 @@ export class RoomDurableObject extends DurableObject {
       const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
       const rows=(await this.ctx.storage.get("interactions"))||[],now=new Date().toISOString(),night=Math.max(0,Number(meta.cycleNight||0)||0);
       for(const x of rows){if(normalizeLoginId(x?.loginId)===loginId&&x?.type==="status"&&x?.statusId===statusId&&x?.effectActive!==false){x.effectActive=false;x.expiredAt=now;x.expiredReason=body?.active===false?"GM_STATUS_CLEAR":"REPLACED"}}
-      if(body?.active===false){await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
+      if(body?.active===false){await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"status_clear",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",statusId,message:`GM gỡ trạng thái ${statusId}`};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);this.broadcast({type:"player_status_changed",loginId,statusId,active:false,at:now});return j({ok:true,loginId,statusId,active:false})}
       const def=STATUS_DEFS[statusId],interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),type:"status",statusId,loginId,matchId:String(meta.matchId||""),night,cycleKey:String(meta.cycleKey||""),duration:def.duration,nights:Number(def.nights||0),effectActive:true,message:def.label,createdAt:now,source:"gm"};
       rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_status_changed",loginId,statusId,active:true,at:now});return j({ok:true,interaction})
     }
@@ -1470,7 +1471,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],revived=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||String(x?.type||"")!=="dead")continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_REVIVE";revived.push({id:x.id,type:x.type})}
-      await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"revive",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",message:'GM hồi sinh người chơi'};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
       this.broadcast({type:"player_revived",loginId,revived,at:now,room,players:publicPlayers,serverTime:Date.now()});
       this.broadcast({type:"room_state",room,players:publicPlayers,serverTime:Date.now()});
       return j({ok:true,loginId,revived,room})
@@ -1480,7 +1481,7 @@ export class RoomDurableObject extends DurableObject {
       if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],cleared=[],now=new Date().toISOString();
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||!["frozen","expelled","dead","assassin_mark","status"].includes(String(x?.type||"")))continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_CLEAR";cleared.push({id:x.id,type:x.type})}
-      await this.ctx.storage.put("interactions",pruneInteractions(rows));this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"clear_state",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",message:'GM gỡ các trạng thái hiện tại'};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);this.broadcast({type:"player_state_cleared",loginId,cleared,at:now});return j({ok:true,loginId,cleared})
     }
     const allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice"]);if(!loginId||!allowed.has(type))return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
@@ -1498,7 +1499,7 @@ export class RoomDurableObject extends DurableObject {
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):(row.type==="thumb_vote"||row.type==="assassin_mark"?new Set(["👍","👎"]):new Set(["ĐÃ HIỂU","OK","✓"]));
     if(!allowed.has(response))return j({ok:false,error:"INVALID_RESPONSE"},400);
-    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(row.respondedAt)).padStart(13,"0")+":"+logId,{id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),message:"Người chơi đã phản hồi: "+response,createdAt:row.respondedAt,source:"player"});
     this.broadcast({type:"player_interaction_response",interaction:row});return j({ok:true,interaction:row});
   }
   async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
