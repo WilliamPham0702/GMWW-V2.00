@@ -14,6 +14,8 @@ on:
       - "tests/night-timeline-iphone-webkit.mjs"
       - "server-game/current/battle-controls.js"
       - "server-game/current/app.js"
+      - "server-game/current/runtime-recovery.js"
+      - "tests/runtime-recovery-webkit.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
   pull_request:
     branches: [main]
@@ -28,6 +30,8 @@ on:
       - "tests/night-timeline-iphone-webkit.mjs"
       - "server-game/current/battle-controls.js"
       - "server-game/current/app.js"
+      - "server-game/current/runtime-recovery.js"
+      - "tests/runtime-recovery-webkit.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
