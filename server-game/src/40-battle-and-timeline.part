@@ -494,7 +494,7 @@ function renderPlayBattle(){
     if(pickerOK)pickerOK.disabled=battleState.busy||battleState.syncPending||!targetReady;
   }
   const undo=document.getElementById('battleUndoButton');
-  if(undo){undo.disabled=battleState.busy||battleState.undoBusy||!playSceneRuntime.battleUndo?.token;
+  if(undo){undo.disabled=battleState.busy||battleState.syncPending||battleState.undoBusy||!playSceneRuntime.battleUndo?.token;
     undo.title=playSceneRuntime.battleUndo?.token?'Khôi phục: '+playSceneRuntime.battleUndo.label:'Chưa có hành động để khôi phục';}
   const next=document.getElementById('battleAdvance');
   if(next){
@@ -609,6 +609,7 @@ function initBattleFloatingClock(){
 }
 
 function battleOpenTargetSheet(actionId,mode='list',ambiguous=false){
+  if(battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===actionId);
   if(!a||a.unavailable||a.noTarget||!a.targetCount)return;
   if(battleState.actionId!==actionId){battleClear();battleState.actionId=actionId}
