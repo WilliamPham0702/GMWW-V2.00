@@ -168,3 +168,10 @@ test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=
   assert.match(gmCss,/\[data-battle-action\] \.gmww-sv-action-preview\{position:absolute;inset:0/);
   assert.match(previewPage,/function overlay\(ids\)\{return api\.overlay\(ids\)\}/);
 });
+
+test('V2 production Player Web uses the approved shared orbit renderer, not legacy visual mapping',()=>{
+  assert.match(village,/import "\.\.\\/status-visuals\\.js\\?v=pr277-v2b"/);
+  assert.match(village,/approvedVisuals\.overlay\(rows\.map\(x=>x\.statusId\)\)/);
+  assert.match(village,/if\(approvedVisuals\)button\.insertAdjacentHTML/);
+  assert.match(read('assets/village/index.html'),/visual=v2/);
+});
