@@ -1,8 +1,10 @@
 import * as THREE from './vendor/three.module.min.js';
+import {mountVolume360} from './skin-volume-360.mjs';
 import {buildHybridGeometry,DIRECTION_CORRECTIONS} from './skin-v570-combined-final.mjs';
 export const SAMPLE_NAMES=['2.5D cắt lớp','Mesh từng mảng + texture chuẩn','Full 3D base body','Hiệu chỉnh theo 8 hướng'];
 export function mountSample(rig,texture,mode){
  if(![1,2,3,4].includes(mode))throw Error('INVALID_SAMPLE');
+ if(mode===3)return mountVolume360(rig,texture);
  const data=buildHybridGeometry(),layers=[],base=[];
  const selected=mode===3?data.base:data.layers;
  for(const part of selected){

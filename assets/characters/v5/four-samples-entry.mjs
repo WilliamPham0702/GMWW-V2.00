@@ -17,6 +17,7 @@ while(head<tail){const n=queue[head++],x=n%c.width;if(x)add(n-1);if(x<c.width-1)
 const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
 const renderer=new THREE.WebGLRenderer({canvas:$('view'),antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#b9dfe3');
+if(mode===3){scene.add(new THREE.HemisphereLight('#fff8ed','#7a9daa',2.4));const light=new THREE.DirectionalLight('#fff8ed',2);light.position.set(-3,7,6);scene.add(light);}
 const camera=new THREE.PerspectiveCamera(32,1,.05,40);camera.position.set(0,2,9);camera.lookAt(0,1.94,0);
 const rig=createSkinnedChibi();scene.add(rig.root);const skin=mountSample(rig,texture,mode),motion=createMotionState();
 const ground=new THREE.Mesh(new THREE.CylinderGeometry(2,2.12,.12,64),new THREE.MeshBasicMaterial({color:'#ead9ae'}));ground.position.y=-.09;scene.add(ground);
