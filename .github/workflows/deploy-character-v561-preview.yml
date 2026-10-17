@@ -93,7 +93,9 @@ jobs:
           curl --location --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v562-test.html
           echo "Fetched V5.62 HTML: $(wc -c </tmp/gmww-character-v562-test.html) bytes"
-          grep -Fq 'V5.62: tay áo GMWW gốc trên Skin 3D' /tmp/gmww-character-v562-test.html
+          grep -Fq '4 chuyển động • Skin 3D' /tmp/gmww-character-v562-test.html
+          grep -Fq 'window.__gmwwV562ReportError=report;' /tmp/gmww-character-v562-test.html
+          grep -Fq 'data-action="result"' /tmp/gmww-character-v562-test.html
           for REL in \
             characters/v5/skin-v562-original-sleeves.mjs \
             characters/v5/skin-v561-original-art-uv.mjs \
