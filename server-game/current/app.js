@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.126';
+const VERSION='3.127';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2872,11 +2872,11 @@ function playMovementFrame(){
     playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);return
   }
   playSceneRuntime.lastMotionPaintAt=motionNow;
-  const rows=playVillageMembers().filter(p=>p?.movementStatus==='moving'||p?.villageActivity==='sitting');
+  const rows=playVillageMembers().filter(p=>playSeatMovementActive(p)||p?.villageActivity==='sitting');
   const now=playNow(),ring=document.getElementById('playPlayerRing');if(!ring){playSceneRuntime.moveTicker=0;return}let active=updatePlayGmToken(now);
   for(const m of rows){
     const id=String(m?.loginId||m?.participantId||''),el=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');if(!el)continue;
-    const effect=playPlayerEffect(m.loginId),moving=effect!=='dead'&&m?.movementStatus==='moving',sitting=effect!=='dead'&&playCharacterSitting(m,now);active=active||moving||sitting;
+    const effect=playPlayerEffect(m.loginId),moving=effect!=='dead'&&playSeatMovementActive(m),sitting=effect!=='dead'&&playCharacterSitting(m,now);active=active||moving||sitting;
     if(moving){const point=playMovementPoint(m,null,now),pt=playMapDisplay(point[0],point[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]))}
     const host=el.querySelector('.play-player-avatar'),rigUpdated=host?playUpdateCharacterRig(host,m,{moving,sitting,effect}):false,im=rigUpdated?null:host?.querySelector('img'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,now):1,src=playCharacterVisualUrl(m,frame,direction,now),key=(sitting?'sit':direction)+':'+frame;
     el.dataset.walkDir=direction;el.classList.toggle('is-moving',moving);el.classList.toggle('is-sitting',sitting);if(im&&im.dataset.walkKey!==key){im.dataset.walkKey=key;im.src=src}
@@ -2885,9 +2885,17 @@ function playMovementFrame(){
   if(active)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);else playSceneRuntime.moveTicker=0
 }
 function syncPlayMovementTicker(){
-  const active=!!gmwwGmPresenceState?.online||playVillageMembers().some(p=>playPlayerEffect(p.loginId)!=='dead'&&(p?.movementStatus==='moving'||p?.villageActivity==='sitting'));
+  const active=!!gmwwGmPresenceState?.online||playVillageMembers().some(p=>playPlayerEffect(p.loginId)!=='dead'&&(playSeatMovementActive(p)||p?.villageActivity==='sitting'));
   if(active&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
   else if(!active)stopPlayMovementTicker()
+}
+function playSeatMovementActive(member){
+  if(member?.movementStatus!=='moving')return false;
+  const started=Number(member?.moveStartedAt),duration=Number(member?.moveDurationMs);
+  if(!(started>0&&duration>0)||playNow()>=started+duration)return false;
+  const matchStart=Date.parse(playSceneRuntime.room?.startedAt||'')||0;
+  // A pre-match wander must never overwrite the assigned seat during battle.
+  return !(playSceneState.step==='battle'&&matchStart&&started<=matchStart);
 }
 function battleRoomDisplayPosition(point){
   // All stages now use precisely the Worker/Player Web seat coordinates.
@@ -2896,7 +2904,7 @@ function battleRoomDisplayPosition(point){
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const previewNew=playRoomUiState.editorMode==='new'&&!document.getElementById('playCreateRoomSheet')?.classList.contains('hidden');
-  const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),bySeat=new Map((previewNew?[]:playLiveMembers()).filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),projectedSeats=globalThis.GMWW_VILLAGE_LAYOUT.projectedSeatIds(members,seatCount),bySeat=new Map((previewNew?[]:playLiveMembers()).filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
   // A server heartbeat does not invalidate 30 chibi rigs plus their animated
   // status orbits. Rebuild the layer only when visible gameplay inputs change.
   const domSig=JSON.stringify([
@@ -2930,7 +2938,7 @@ function renderPlayPlayers(){
   ring.dataset.gmwwPlayerDomSig=domSig;
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
-    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=effect!=='dead'&&m?.movementStatus==='moving',sitting=effect!=='dead'&&!!m&&playCharacterSitting(m),isOnlinePick=false;
+    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=effect!=='dead'&&playSeatMovementActive(m),sitting=effect!=='dead'&&!!m&&playCharacterSitting(m),isOnlinePick=false;
     el.type='button';if(seatId)el.dataset.seatId=String(seatId);if(m)el.dataset.playPlayerId=String(m.loginId||m.participantId||'');
     el.className='play-player-token gmww-sv-stage'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-position':'')+(moving?' is-moving':'')+(sitting?' is-sitting':'')+(m&&seatId?' is-seat-occupied':'');
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
@@ -2969,7 +2977,7 @@ function renderPlayPlayers(){
     const waiting=playLiveMembers().filter(m=>!Number(m?.seatId||0));for(const [i,m] of waiting.entries())make(m,playRoamPoint(m.loginId),null)
   }else{
     members.sort((a,b)=>String(a.loginId).localeCompare(String(b.loginId))).forEach((m,i)=>{
-      const sid=Number(m?.seatId||0),x=m?.positionX,y=m?.positionY,valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+      const identity=String(m?.participantId||(m?.loginId?'member:'+m.loginId:'')),sid=Number(projectedSeats[identity]||m?.seatId||0),x=m?.positionX,y=m?.positionY,valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
       const pos=sid>=1&&sid<=seatCount?positions[sid-1]:valid(x)&&valid(y)?Object.values(globalThis.GMWW_VILLAGE_LAYOUT.clampPoint(x,y)):playRoamPoint(m.loginId,i,members.length);make(m,sid?battleRoomDisplayPosition(pos,sid,seatCount):pos,sid||null)
     })
   }

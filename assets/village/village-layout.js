@@ -100,6 +100,38 @@
     if(!shift.x&&!shift.y&&scale===1)return points;
     return points.map(p=>({...clampPoint(fire.x+(p.x-fire.x)*scale+shift.x,fire.y+(p.y-fire.y)*scale+shift.y),ring:0}));
   }
+  // Presentation/transition repair: old rooms can contain members without seats
+  // even after role delivery. Keep every valid seat ID and deterministically
+  // allocate only the missing ones, without changing an existing assignment.
+  // GM and Player Web use the SAME pure mapping (no account-name-based spawn).
+  function seatIdentity(p){
+    return String(p?.participantId||(p?.loginId?'member:'+p.loginId:'')||p?.id||'');
+  }
+  function projectedSeatIds(players,seatCount){
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(seatCount)||12)));
+    const rows=Array.isArray(players)?players.slice():Object.values(players||{});
+    rows.sort((a,b)=>seatIdentity(a).localeCompare(seatIdentity(b)));
+    const taken=new Set(),mapping=Object.create(null),waiting=[];
+    for(const p of rows){
+      const key=seatIdentity(p),raw=Number(p?.seatId);
+      if(!key||Object.prototype.hasOwnProperty.call(mapping,key))continue;
+      const seat=Number.isInteger(raw)&&raw>=1&&raw<=n&&!taken.has(raw)?raw:0;
+      if(seat){mapping[key]=seat;taken.add(seat)}else waiting.push(key);
+    }
+    for(const key of waiting){
+      let choice=0,best=-1;
+      for(let seat=1;seat<=n;seat++){
+        if(taken.has(seat))continue;
+        const gap=taken.size?Math.min(...[...taken].map(other=>{
+          const delta=Math.abs(seat-other);return Math.min(delta,n-delta);
+        })):n;
+        if(gap>best){best=gap;choice=seat}
+      }
+      if(!choice)break;
+      mapping[key]=choice;taken.add(choice);
+    }
+    return mapping;
+  }
   function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(26+h%4800/100,65+(h>>>8)%1400/100)}
   function fitMode(w,h){const ratio=Number(w)/Math.max(1,Number(h));return ratio>=.85?"stretch":ratio>=.72?"contain":"cover"}
   function rect(w,h){w=Math.max(1,Number(w)||864);h=Math.max(1,Number(h)||1536);const mode=fitMode(w,h);if(mode==="stretch")return{width:w,height:h,left:0,top:0,mode};const s=(mode==="contain"?Math.min:Math.max)(w/864,h/1536),width=864*s,height=1536*s;return{width,height,left:(w-width)/2,top:(h-height)/2,mode}}
@@ -113,5 +145,5 @@
     const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*2)),total=lengths.reduce((s,v)=>s+v,0);let distance=t*total;
     for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const f=Math.min(1,distance/(lengths[i]||1));return clampPoint(path[i].x+(path[i+1].x-path[i].x)*f,path[i].y+(path[i+1].y-path[i].y)*f)}distance-=lengths[i]}return b;
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);
