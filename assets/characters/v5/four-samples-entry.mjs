@@ -16,13 +16,14 @@ for(let x=0;x<c.width;x++){add(x);add((c.height-1)*c.width+x);}for(let y=0;y<c.h
 while(head<tail){const n=queue[head++],x=n%c.width;if(x)add(n-1);if(x<c.width-1)add(n+1);add(n-c.width);add(n+c.width);}ctx.putImageData(id,0,0);
 const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
 let skinTexture=texture;
-if(mode===1){
+if(mode===1||mode===2||mode===4){
  const atlas=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Không tải được bộ lớp 8 hướng'));image.src='/layers-eight-v573.webp';});
  skinTexture=[];
  for(let i=0;i<8;i++){const canvas=document.createElement('canvas');canvas.width=540;canvas.height=720;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(atlas,(i%4)*540,Math.floor(i/4)*720,540,720,0,0,540,720);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;map.userData.pixels=ctx.getImageData(0,0,540,720);skinTexture.push(map);}
 }
 const renderer=new THREE.WebGLRenderer({canvas:$('view'),antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#b9dfe3');
+if(mode===2){scene.add(new THREE.HemisphereLight('#ffffff','#9cc1cb',1.3));const key=new THREE.DirectionalLight('#fff8ee',.9);key.position.set(-3,6,5);scene.add(key);}
 if(mode===3){scene.add(new THREE.HemisphereLight('#fff8ed','#7a9daa',2.4));const light=new THREE.DirectionalLight('#fff8ed',2);light.position.set(-3,7,6);scene.add(light);}
 const camera=new THREE.PerspectiveCamera(32,1,.05,40);camera.position.set(0,2,9);camera.lookAt(0,1.94,0);
 const rig=createSkinnedChibi();scene.add(rig.root);const skin=mountSample(rig,skinTexture,mode),motion=createMotionState();
