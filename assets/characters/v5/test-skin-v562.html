@@ -28,29 +28,26 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
 <header>
  <div class="kicker">GMWW CHARACTER · BẢNG THỬ RIÊNG V5.62 · ÁO VÀ TAY ÁO</div>
  <h1>V5.62: tay áo GMWW gốc trên Skin 3D</h1>
- <p>V5.62 gắn pixel hoa văn áo GMWW V4.17 thật lên thân áo và hai tay áo 3D; cùng bộ xương 16 khớp. Tay áo biến dạng theo vai và khuỷu tay. Thử 9 chuyển động và 8 hướng.</p>
+ <p>V5.62 gắn pixel hoa văn áo GMWW V4.17 thật lên thân áo và hai tay áo 3D; cùng bộ xương 16 khớp. Tay áo biến dạng theo vai và khuỷu tay. Thử 4 chuyển động đã chốt (Đứng, Đi, Chạy, Ăn mừng) theo 8 hướng. Bản HTML này chỉ là phòng thử nghiệm riêng.</p>
 </header>
 <div class="warn">Mẫu chất liệu từ chính pixel hoa văn áo Chàng Biển V4.17 (đã xác minh SHA-256) được UV-map lên <b>lưới thân áo và tay áo 3D có trọng số xương thật</b>. Đã bổ sung mesh 3D hai tay áo với weight pha trộn ngực–vai–khuỷu tay. Chưa có atlas UV đầy đủ hay Skin gốc hoàn chỉnh ở đầu, tóc, quần và phụ kiện. <b>Chưa đạt Skin gốc hoàn chỉnh; chưa đưa vào game chính.</b></div>
 <div class="layout">
  <div class="stage" id="stage"><canvas id="canvas" aria-label="Mô hình Chàng Biển 3D thực"></canvas><div class="stagehint" id="notice">Đang kiểm tra WebGL và tải mô hình 3D thật…</div></div>
  <section class="card">
-  <h2>Thử chuyển động</h2>
+  <h2>4 chuyển động đã chốt</h2>
   <div class="controls" id="actions">
    <button data-action="idle" class="active">Đứng</button>
    <button data-action="walk">Đi</button>
    <button data-action="run">Chạy</button>
-   <button data-action="sit-down">Ngồi xuống</button>
-   <button data-action="sit">Ngồi</button>
-   <button data-action="stand-up">Đứng dậy</button>
-   <button data-action="wave">Vẫy tay</button>
-   <button data-action="vote">Giơ tay</button>
    <button data-action="result">Ăn mừng</button>
   </div>
+  <label><input id="travel" type="checkbox"> Đi/chạy di chuyển thật trên sân (bỏ chọn để xem bước tại chỗ theo 8 hướng)</label>
   <label>Góc nhìn</label>
   <select id="direction"><option value="front">Trước</option><option value="front-right">Trước phải</option><option value="right">Phải</option><option value="back-right">Sau phải</option><option value="back">Sau</option><option value="back-left">Sau trái</option><option value="left">Trái</option><option value="front-left">Trước trái</option></select>
   <label><input id="wireframe" type="checkbox"> Hiện lưới áo và hai tay áo 3D</label>
   <div class="status" id="texture-load">Đang tải chất liệu V4.17 từ nội dung nội tuyến…</div><div class="status" id="status">Đang khởi tạo…</div>
   <div class="mini">Nguồn pixels: GMWW V4.17 Character-01 Front, chi tiết vùng áo x326–464/y634–766, chuyển thành chất liệu WebP 128×128. Đây là mẫu họa tiết, không phải UV atlas đầy đủ. Game mẫu Unity chỉ dùng để tham khảo quy trình Skin/Skeleton, không sao chép tài nguyên.</div>
+  <div class="mini">Chỉ 4 động tác đã duyệt: đứng / đi / chạy / ăn mừng. Ăn mừng tự về đứng. Đi/chạy có thể bật di chuyển thật trong sân để kiểm tra root motion.</div>
   <div class="mini">Preview độc lập chỉ chứa tài nguyên Character; không kết nối tài khoản, phòng chơi hay OTA.</div>
  </section>
 </div>
@@ -58,7 +55,7 @@ select{width:100%;border:1px solid #66a4b4;background:#0b4663;color:#fff;border-
 <script type="module">
 import * as THREE from './vendor/three.module.min.js';
 import {createSkinnedChibi,animateSkinnedChibi} from './character-rig-v510.mjs';
-import {createMotionState,setAction,setFacing,tickMotion} from './character-motion-v500.mjs';
+import {createMotionState,setAction,setDestination,setFacing,facingAngle,tickMotion} from './character-motion-v500.mjs';
 import {addV562OriginalFabricSleevesToRig} from './skin-v562-original-sleeves.mjs';
 const $=id=>document.getElementById(id),cv=$('canvas'),stage=$('stage');
 const notice=$('notice'),status=$('status');
@@ -79,15 +76,39 @@ const camera=new THREE.PerspectiveCamera(34,1,.05,50);camera.position.set(0,3.05
 const rig=createSkinnedChibi(true);scene.add(rig.root);
 let originalTextureReady=false,framesRendered=0;
 const skin=addV562OriginalFabricSleevesToRig(rig,{onTextureLoaded:({ok,error})=>{originalTextureReady=ok;const el=document.getElementById('texture-load');if(el)el.textContent=ok?'Texture hoa văn V4.17 đã tải (WebP nội tuyến)':'Không tải được texture gốc: '+error;}});
+// This user-approved four-action contract is exclusive to the V5.62 lab:
+ // the legacy V5.00 engine retains historical actions for older previews.
+const APPROVED_ACTIONS=new Set(['idle','walk','run','result']);
+document.documentElement.setAttribute('data-gmww-v562-actions',[...APPROVED_ACTIONS].join(','));
 const motion=createMotionState();setFacing(motion,'front');
-let action='idle';
+let action='idle',patrolSign=1;
+const travel=$('travel');
+function startPatrol(){
+ if(!travel.checked||!['walk','run'].includes(action))return;
+ const angle=facingAngle($('direction').value);
+ const dx=Math.sin(angle)*1.8*patrolSign,dz=Math.cos(angle)*1.8*patrolSign;
+ const x=Math.max(-1.25,Math.min(1.25,motion.x+dx));
+ const z=Math.max(-1.25,Math.min(1.25,motion.z+dz));
+ if(Math.hypot(x-motion.x,z-motion.z)<.13){patrolSign*=-1;return;}
+ setDestination(motion,x,z,action==='run');
+}
 function setActive(v){for(const b of $('actions').querySelectorAll('button'))b.classList.toggle('active',b.dataset.action===v)}
 $('actions').addEventListener('click',e=>{
  const b=e.target.closest('button[data-action]');if(!b)return;
+ if(!APPROVED_ACTIONS.has(b.dataset.action))return;
  action=b.dataset.action;
+ patrolSign=1;motion.goal=null;
  setAction(motion,action);setActive(action);
+ startPatrol();
 });
-$('direction').addEventListener('change',e=>setFacing(motion,e.target.value));
+$('direction').addEventListener('change',e=>{
+ setFacing(motion,e.target.value);
+ if(travel.checked&&['walk','run'].includes(action)){patrolSign=1;motion.goal=null;startPatrol();}
+});
+travel.addEventListener('change',()=>{
+ if(!travel.checked){motion.goal=null;setAction(motion,action);setFacing(motion,$('direction').value);}
+ else {patrolSign=1;startPatrol();}
+});
 $('wireframe').addEventListener('change',e=>skin.surface.material.wireframe=e.target.checked);
 function resize(){
  const width=stage.clientWidth,height=stage.clientHeight;
@@ -97,7 +118,16 @@ new ResizeObserver(resize).observe(stage);resize();
 let last=performance.now(),fpsTick=last,frames=0,fps=0;
 function loop(now){
  const dt=Math.min(.05,(now-last)/1000);last=now;
- tickMotion(motion,dt);animateSkinnedChibi(rig,motion);
+ tickMotion(motion,dt);
+ // Result plays once and returns to standing; walking/running can patrol
+ // a small arena with true root translation rather than sliding the camera.
+ if(action==='result'&&motion.actionTime>=2.0){
+  action='idle';setAction(motion,'idle');setActive('idle');
+ }
+ if(travel.checked&&['walk','run'].includes(action)&&!motion.goal&&motion.action==='idle'){
+  patrolSign*=-1;startPatrol();
+ }
+ animateSkinnedChibi(rig,motion);
  renderer.render(scene,camera);
  framesRendered++;
  // The browser smoke test only passes when the TRUE V4.17 WebP has decoded
