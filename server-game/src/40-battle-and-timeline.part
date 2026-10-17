@@ -67,7 +67,7 @@ function initPlaySeatOffsetControls(){
   if(output)output.textContent='X '+value.x+' · Y '+value.y;
   for(const button of document.querySelectorAll('[data-seat-shift]')){
     button.disabled=!!playSceneRuntime.room?.seatsLocked||!!playSceneRuntime.busy;
-    if(button.dataset.bound)return;
+    if(button.dataset.bound)continue;
     button.dataset.bound='1';
     button.addEventListener('click',async()=>{
       const current=layout.normalizeSeatOffset(playSceneRuntime.room?.seatOffset);
