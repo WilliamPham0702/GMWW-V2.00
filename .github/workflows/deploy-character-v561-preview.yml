@@ -1,4 +1,4 @@
-name: GMWW Character V5.62 Preview (Independent)
+name: GMWW Character V5.63 Preview (Independent)
 
 on:
   pull_request:
@@ -77,7 +77,7 @@ jobs:
             grep -o 'data-gmww-v562="[^"]*"' /tmp/character-v562-bundled.html || true
             exit 1
           }
-          echo 'Classic-script iPhone Preview bundle: 3D renderer and original V4.17 swatch PASS.'
+          echo 'V5.63 original swatch + whole-body 3D skinned mesh render PASS.'
 
   deploy-preview:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -106,7 +106,7 @@ jobs:
           BASE="https://gmww-character-v561-preview.williampham0702.workers.dev"
           # Newly published Workers/assets may need a short propagation delay.
           sleep 4
-          echo "V5.62 preview Worker health and HTML smoke (run_worker_first enabled)."
+          echo "V5.63 preview Worker health and HTML smoke (run_worker_first enabled)."
           curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/api/health" > /tmp/gmww-character-preview-health.json
           cat /tmp/gmww-character-preview-health.json
@@ -114,7 +114,8 @@ jobs:
           curl --location --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             "$BASE/?verify=$(date +%s)" > /tmp/gmww-character-v562-test.html
           echo "Fetched V5.62 HTML: $(wc -c </tmp/gmww-character-v562-test.html) bytes"
-          grep -Fq '4 chuyển động • Skin 3D' /tmp/gmww-character-v562-test.html
+          grep -Fq 'Chàng Biển 3D · Full Skin' /tmp/gmww-character-v562-test.html
+          grep -Fq 'chưa chuyển nguyên từng pixel ảnh 2D thành UV atlas 3D' /tmp/gmww-character-v562-test.html
           grep -Fq 'window.__gmwwV562ReportError=report;' /tmp/gmww-character-v562-test.html
           grep -Fq 'data-action="result"' /tmp/gmww-character-v562-test.html
           grep -Fq '<script defer src="./gmww-character-v562.bundle.js"></script>' /tmp/gmww-character-v562-test.html
@@ -136,4 +137,4 @@ jobs:
             test -s /tmp/v561-check
             test "$(shasum -a 256 "assets/$REL" | awk '{print $1}')" = "$(shasum -a 256 /tmp/v561-check | awk '{print $1}')"
           done
-          echo "V5.62 original artwork UV + weighted sleeves preview verified independently. Main GMWW Production and OTA untouched."
+          echo "V5.63 Full Ocean Skin Preview verified independently. Main GMWW Production and OTA untouched."
