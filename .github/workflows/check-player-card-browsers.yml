@@ -20,6 +20,9 @@ on:
       - "server-game/current/app.js"
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
+      - "tests/seat-css-webkit.mjs"
+      - "server-game/current/status-visuals.css"
+      - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
   pull_request:
     branches: [main]
@@ -40,6 +43,9 @@ on:
       - "server-game/current/app.js"
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
+      - "tests/seat-css-webkit.mjs"
+      - "server-game/current/status-visuals.css"
+      - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
@@ -78,6 +84,8 @@ jobs:
         run: node tests/home-v389-iphone-webkit.mjs
       - name: Check night timeline on iPhone-sized WebKit
         run: node tests/night-timeline-iphone-webkit.mjs
+      - name: Check Seat anchors with production status CSS in WebKit
+        run: node tests/seat-css-webkit.mjs
       - name: Check OTA startup recovery in WebKit
         run: node tests/runtime-recovery-webkit.mjs
       - name: Upload WebKit Home preview
