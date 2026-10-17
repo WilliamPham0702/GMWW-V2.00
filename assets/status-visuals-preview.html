@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09283a">
-<title>GMWW — Preview Trạng Thái V1 · PR #277</title>
-<link rel="stylesheet" href="/village/status-visuals.css?v=pr277-abc">
+<title>GMWW — Preview Trạng Thái V2 · PR #277</title>
+<link rel="stylesheet" href="/village/status-visuals.css?v=pr277-v2">
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;color:#e7f8ff;background:#071c2d}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,#236478,#092a40 55%,#071b2c)}
@@ -50,17 +50,44 @@ footer{text-align:center;color:#84b7c8;font-size:11px;margin:25px 0}
 @media(max-width:900px){.trio{grid-template-columns:1fr 1fr}.trio section:first-child{grid-row:span 2}}
 @media(max-width:570px){.trio{grid-template-columns:1fr}.trio section:first-child{grid-row:auto}.preview-viewport{height:200px}}
 @media(prefers-reduced-motion:reduce){.gmww-sv-gray-smoke i,.gmww-sv-gray-smoke:before,.gmww-sv-gray-smoke:after{animation:none!important}}
+
+/* V2 orbiting status symbols: one visual model shared by GM, Player Web, and action overlay. */
+.orbit-v2{position:absolute;inset:-11% -29%;pointer-events:none;z-index:9;isolation:isolate}
+.orbit-v2 .orbit-symbol{position:absolute;left:50%;top:50%;width:0;height:0;transform-origin:0 0;animation:gmwwV2Orbit var(--period,5s) linear infinite;animation-delay:var(--delay,0s)}
+.orbit-v2 .orbit-symbol>span{position:absolute;left:var(--rx,60px);top:0;display:block;font-size:var(--symbol-size,22px);line-height:1;white-space:nowrap;filter:drop-shadow(0 1px 3px #031421);transform:translate(-50%,-50%);animation:gmwwV2CounterOrbit var(--period,5s) linear infinite;animation-delay:var(--delay,0s)}
+.orbit-v2 .orbit-symbol:nth-child(even)>span{filter:drop-shadow(0 0 6px #b8eaff)}
+.orbit-v2 .wolf-paw{font-size:26px;filter:drop-shadow(0 0 4px #f47a67)}
+@keyframes gmwwV2Orbit{to{transform:rotate(360deg)}}
+@keyframes gmwwV2CounterOrbit{to{transform:translate(-50%,-50%) rotate(-360deg)}}
+.action-box{width:min(280px,100%);height:116px;position:relative;overflow:visible;isolation:isolate;justify-content:center;flex-direction:column;gap:5px;padding:12px 18px}
+.action-main{font-weight:850;font-size:15px;letter-spacing:.05em;z-index:2}
+.action-box .action-chip{z-index:2;max-width:100%;text-align:center}
+.gmww-sv-action-cover{position:absolute;inset:0;z-index:5;pointer-events:none}
+.gmww-sv-action-cover .gmww-sv-overlay{inset:0;z-index:1;pointer-events:none}
+.gmww-sv-action-cover .gmww-sv-badges{display:none}
+.gmww-sv-action-cover .orbit-v2{inset:0}
+.gmww-sv-action-cover .orbit-v2 .orbit-symbol>span{font-size:var(--symbol-size,24px)}
+.gmww-sv-action-cover .orbit-v2 .orbit-symbol{--rx:110px}
+.action-box .gmww-sv-fx{inset:0}
+.action-demo{height:auto;min-height:170px}
+.avatar-box .orbit-v2{z-index:11}
+.mini .orbit-v2{inset:-10% -35%}
+.mini .orbit-v2 .orbit-symbol{--rx:40px}
+.mini .orbit-v2 .orbit-symbol>span{font-size:15px}
+#gmStage:has(.orbit-v2) .gmww-sv-overlay,#webStage:has(.orbit-v2) .gmww-sv-overlay{z-index:6}
+@media(max-width:570px){.action-box{width:235px}.gmww-sv-action-cover .orbit-v2 .orbit-symbol{--rx:94px}}
+@media(prefers-reduced-motion:reduce){.orbit-v2 .orbit-symbol,.orbit-v2 .orbit-symbol>span{animation-duration:20s!important}}
 </style>
 <script src="/status-visuals.js?v=pr277-abc" defer></script>
 </head>
 <body>
-<header><div class="kicker">GMWW · BẢN THỬ RIÊNG PR #277 · KHÔNG TÁC ĐỘNG PHÒNG THẬT</div><h1>Trạng Thái V1 — Kiểm tra A → B → C</h1><p>15 hiệu ứng · 10 trạng thái duy trì · 5 hiệu ứng tức thời · Preview sử dụng chính mã animation của GM và Player Web.</p></header>
+<header><div class="kicker">GMWW · BẢN THỬ RIÊNG PR #277 · KHÔNG TÁC ĐỘNG PHÒNG THẬT</div><h1>Trạng Thái V2 — Kiểm tra A → B → C</h1><p>15 hiệu ứng · Xem đồng thời trên GM, Player Web và phủ trên box Hành Động · Mẫu thử V2 độc lập, không ảnh hưởng dữ liệu.</p></header>
 <main class="wrap">
-<div class="controls"><label for="char">Nhân vật thử:</label><select id="char"></select><button type="button" id="clear">Xóa hiệu ứng thử</button><button type="button" id="showDead">Thử Đã Chết 💨</button></div>
+<div class="controls"><label for="statusSelect">Chọn Trạng Thái:</label><select id="statusSelect" aria-label="Chọn một trong 15 trạng thái"></select><button id="testSelected" type="button">Áp dụng trạng thái</button></div><div class="controls"><label for="char">Nhân vật thử:</label><select id="char"></select><button type="button" id="clear">Xóa hiệu ứng thử</button><button type="button" id="showDead">Thử Đã Chết 💨</button></div>
 <div class="trio">
   <section><h2>A · Nhân vật GM</h2><div class="preview-viewport"><span id="gmStage" class="avatar-box gmww-sv-stage"></span></div><p>Hiển thị nhiều trạng thái đồng thời, ưu tiên Đã Chết hoặc Bị Đuổi. Nhân vật Đã Chết đứng bất động và có khói xám liên tục.</p></section>
   <section><h2>B · Xem trước Player Web</h2><div class="preview-viewport"><span id="webStage" class="avatar-box gmww-sv-stage"></span></div><p>Chỉ thể hiện các trạng thái đang bật «Hiển thị Player Web» ở phần bên dưới (mô phỏng cài đặt, không lưu).</p></section>
-  <section><h2>C · Box Hành Động</h2><div class="preview-viewport"><div class="action-demo"><div class="action-title">ĐẾN LƯỢT NGƯỜI CHƠI</div><div class="action-box"><span id="actionIcon" class="action-icon gmww-sv-stage"></span><span id="actionText" class="action-chip">Chưa có trạng thái</span></div></div></div><p>Hiệu ứng động dạng thu nhỏ và tên trạng thái được hiển thị cùng box Hành Động.</p></section>
+  <section><h2>C · Box Hành Động</h2><div class="preview-viewport"><div class="action-demo"><div class="action-title">ĐẾN LƯỢT NGƯỜI CHƠI</div><div id="actionBox" class="action-box gmww-sv-stage"><span class="action-main">⚔️ HÀNH ĐỘNG</span><span id="actionText" class="action-chip">Chưa có trạng thái</span><span id="actionIcon" class="gmww-sv-action-cover" aria-hidden="true"></span></div></div></div><p>Hiệu ứng quay trực tiếp phủ lên toàn bộ bề mặt và viền box Hành Động; không nằm bên cạnh.</p></section>
 </div>
 <div class="notice">Chạm <b>Thử trên nhân vật</b> để bật/tắt hiệu ứng. Công tắc «Hiển thị Player Web» tại đây chỉ mô phỏng quyền xem; công tắc thật nằm ở Thư viện Trạng Thái GM. Chưa triển khai lên main/Production.</div>
 <nav class="tabbar" aria-label="Loại hiệu ứng"><button id="persistentBtn" class="active" type="button">Duy trì (10)</button><button id="instantBtn" type="button">Tức thời (5)</button><button id="allBtn" type="button">Tất cả (15)</button></nav>
@@ -71,15 +98,35 @@ footer{text-align:center;color:#84b7c8;font-size:11px;margin:25px 0}
 document.addEventListener('DOMContentLoaded',()=>{
 const api=window.GMWW_STATUS_VISUALS;if(!api){document.getElementById('cards').textContent='Không thể tải mã Trạng Thái. Hãy tải lại trang.';return}
 const active=new Set(['frozen']),permissions=new Map(api.entries.map(e=>[e.id,e.playerWeb])),select=document.getElementById('char');let filter='persistent';
+const statusSelect=document.getElementById('statusSelect');for(const e of api.entries){const o=document.createElement('option');o.value=e.id;o.textContent=e.icon+' '+e.name;statusSelect.append(o)}
 for(let i=1;i<=42;i++){const option=document.createElement('option');option.value=String(i).padStart(2,'0');option.textContent='Character '+option.value;if(i===1)option.selected=true;select.append(option)}
 const avatar=()=>'/characters/v253/chibi-'+select.value+'.webp';
 const safe=api.safe;
-function stage(htmlIds){return '<img src="'+avatar()+'" alt="Nhân vật GMWW">'+api.overlay(htmlIds)}
+const ORBIT_V2={
+ frozen:{icon:'❄️',count:7,period:5.8},protected:{icon:'🛡️',count:6,period:5.4},
+ wolf_bitten:{icon:'🐾',count:6,period:5.1},expelled:{icon:'🌪️',count:6,period:6.3},
+ recover:{icon:'⭐',count:7,period:4.6},disabled_permanent:{icon:'🚫',count:6,period:6}
+};
+function orbit(ids,action=false){
+ const selected=ids.filter(id=>ORBIT_V2[id]);
+ return selected.map((id,k)=>{
+   const config=ORBIT_V2[id],period=config.period+k*1.4;
+   const radius=action?(window.innerWidth<570?94:110):60;
+   return '<span class="orbit-v2" data-orbit="'+safe(id)+'">'+Array.from({length:config.count},(_,i)=>
+     '<span class="orbit-symbol" style="--period:'+period+'s;--delay:'+(-period*i/config.count)+'s;--rx:'+radius+'px"><span>'+config.icon+'</span></span>').join('')+'</span>';
+ }).join('');
+}
+function overlay(ids,action=false){
+ const other=ids.filter(id=>!ORBIT_V2[id]);
+ return (other.length?api.overlay(other):'')+orbit(ids,action);
+}
+
+function stage(htmlIds){return '<img src="'+avatar()+'" alt="Nhân vật GMWW">'+overlay(htmlIds)}
 function sync(){
  const chosen=[...active],permitted=chosen.filter(id=>permissions.get(id));
  document.getElementById('gmStage').innerHTML=stage(chosen);
  document.getElementById('webStage').innerHTML=stage(permitted);
- document.getElementById('actionIcon').innerHTML='<span style="color:#a5e0df;font-size:20px">✦</span>'+api.overlay(chosen);
+ document.getElementById('actionIcon').innerHTML=overlay(chosen,true);
  document.getElementById('actionText').textContent=chosen.length?chosen.map(id=>(api.byId[id]?.icon||'')+' '+(api.byId[id]?.name||id)).join(' · '):'Chưa có trạng thái';
  for(const el of document.querySelectorAll('.state-card'))el.classList.toggle('selected',active.has(el.dataset.state));
 }
@@ -93,11 +140,13 @@ function cards(){
  sync();
 }
 document.getElementById('cards').addEventListener('click',e=>{
-const btn=e.target.closest('button[data-try]');if(!btn)return;const id=btn.dataset.try;active.has(id)?active.delete(id):active.add(id);sync()
+const btn=e.target.closest('button[data-try]');if(!btn)return;const id=btn.dataset.try;active.has(id)?active.delete(id):active.add(id);statusSelect.value=id;sync()
 });
 document.getElementById('cards').addEventListener('change',e=>{if(e.target.matches('input[data-web]')){permissions.set(e.target.dataset.web,e.target.checked);sync()}});
 for(const [id,value] of [['persistentBtn','persistent'],['instantBtn','instant'],['allBtn','all']])document.getElementById(id).onclick=()=>{filter=value;document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('active',b.id===id));cards()};
 select.onchange=()=>{sync();cards()};
+document.getElementById('testSelected').onclick=()=>{active.clear();active.add(statusSelect.value);sync()};
+statusSelect.onchange=()=>{active.clear();active.add(statusSelect.value);sync()};
 document.getElementById('clear').onclick=()=>{active.clear();sync()};
 document.getElementById('showDead').onclick=()=>{active.clear();active.add('dead');sync()};
 cards();
