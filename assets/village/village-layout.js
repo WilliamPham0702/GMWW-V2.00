@@ -1,9 +1,49 @@
 /* One coordinate contract for Worker, Player Web and the packaged GM app. */
 (function(root){
-  /* Courtyard plus the lower wooden bridge. Houses, sea and sky stay outside. */
-  const fire={x:50,y:49.7},polygon=[[22,33],[78,33],[88,57],[75,84],[62,89],[62,99],[38,99],[38,89],[25,84],[12,57]];
-  function inside(x,y){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit&&Math.hypot((Number(x)-fire.x)/6,(Number(y)-fire.y)/3)>=1}
-  function clampPoint(x,y){x=Number(x);y=Number(y);if(arguments[0]==null||arguments[1]==null||!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:76};y=Math.max(34,Math.min(98,y));const xs=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length];if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]))}}if(xs.length)x=Math.max(Math.min(...xs)+1.5,Math.min(Math.max(...xs)-1.5,x));if(Math.hypot((x-fire.x)/6,(y-fire.y)/3)<1)y=fire.y+(y<fire.y?-3.1:3.1);return{x,y}}
+  /* V3.128 — ONLY the paving of Asahi Village is walkable.
+     A deliberately conservative courtyard + central bridge corridor.
+     The sea, roofs, landscaped terraces and lawns remain beyond this boundary.
+     This shared object is loaded unchanged in Worker, GM IPA and Player Web. */
+  const fire={x:50,y:49.7};
+  // The central paving must accommodate the whole 30-seat rectangle.
+  // Outer roofs/sea are excluded, while the lower bridge remains walkable.
+  const polygon=[[21,33],[79,33],[82,44],[82,60],[79,74],
+    [64,86],[62,90],[62,99],[38,99],[38,90],[36,86],
+    [21,74],[18,60],[18,44]];
+  const fireRadius={x:7,y:4.2};
+  function polygonInside(x,y){
+    let hit=false;
+    for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+      const a=polygon[i],b=polygon[j];
+      if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])hit=!hit;
+    }
+    return hit;
+  }
+  function fireClear(x,y){return Math.hypot((x-fire.x)/fireRadius.x,(y-fire.y)/fireRadius.y)>=1;}
+  function inside(x,y){x=Number(x);y=Number(y);return Number.isFinite(x)&&Number.isFinite(y)&&polygonInside(x,y)&&fireClear(x,y)}
+  function clampPoint(x,y){
+    x=Number(x);y=Number(y);
+    if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:75};
+    y=Math.max(34,Math.min(98,y));
+    // Never clamp just the Y coordinate then leave X in a roof or water area.
+    // Find the actual left/right courtyard intersections at this latitude.
+    const xs=[];
+    for(let i=0;i<polygon.length;i++){
+      const a=polygon[i],b=polygon[(i+1)%polygon.length];
+      if((a[1]<=y&&b[1]>=y)||(b[1]<=y&&a[1]>=y)){
+        if(a[1]!==b[1])xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));
+      }
+    }
+    if(xs.length>=2)x=Math.max(Math.min(...xs)+1.4,Math.min(Math.max(...xs)-1.4,x));
+    if(!fireClear(x,y)){
+      // Push away from the fire along the least-disruptive axis, never inside it.
+      const dx=x-fire.x,dy=y-fire.y;
+      if(Math.abs(dx/fireRadius.x)>Math.abs(dy/fireRadius.y))
+        x=fire.x+(dx>=0?1:-1)*(fireRadius.x+0.7);
+      else y=fire.y+(dy>=0?1:-1)*(fireRadius.y+0.7);
+    }
+    return{x,y};
+  }
   /* Single perimeter, like a real Werewolf circle of people seated around the fire.
      Coordinates shared by GM IPA, Cloudflare Worker, and Player Web. */
   const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
@@ -137,13 +177,62 @@
   function rect(w,h){w=Math.max(1,Number(w)||864);h=Math.max(1,Number(h)||1536);const mode=fitMode(w,h);if(mode==="stretch")return{width:w,height:h,left:0,top:0,mode};const s=(mode==="contain"?Math.min:Math.max)(w/864,h/1536),width=864*s,height=1536*s;return{width,height,left:(w-width)/2,top:(h-height)/2,mode}}
   function toScreen(p,w,h){const r=rect(w,h);return{x:(r.left+r.width*p.x/100)/w*100,y:(r.top+r.height*p.y/100)/h*100}}
   function fromScreen(x,y,w,h){const r=rect(w,h);return{x:(x-r.left)/r.width*100,y:(y-r.top)/r.height*100}}
-  function route(a,b){a=clampPoint(a.x,a.y);b=clampPoint(b.x,b.y);const dx=b.x-a.x,dy=(b.y-a.y)*2,t=Math.max(0,Math.min(1,((fire.x-a.x)*dx+(fire.y-a.y)*2*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(a.x+dx*t-fire.x,(a.y+dy*t/2-fire.y)*2);if(d<7){const side=(a.y+b.y)/2<fire.y?-1:1,near={x:fire.x+(a.x<=b.x?-9:9),y:fire.y+side*5},far={x:fire.x+(a.x<=b.x?9:-9),y:fire.y+side*5};return[a,clampPoint(near.x,near.y),clampPoint(far.x,far.y),b]}return[a,b]}
+  // Visibility-graph route planner. Cached per pair of endpoints; all path
+  // segments remain inside the paving, avoiding the fire and outer gardens.
+  const routeCache=new Map();
+  const waypoints=[[50,38],[36,40],[64,40],[40.5,50],[59.5,50],
+    [32,59],[68,59],[42,60],[58,60],[50,65],[35,73],[65,73],
+    [50,79],[50,87],[50,92]].map(p=>({x:p[0],y:p[1]}));
+  function safeSegment(a,b){
+    const steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      if(!inside(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t))return false;
+    }
+    return true;
+  }
+  function route(a,b){
+    a=clampPoint(a?.x,a?.y);b=clampPoint(b?.x,b?.y);
+    const key=[a.x,a.y,b.x,b.y].map(n=>n.toFixed(2)).join('|');
+    if(routeCache.has(key))return routeCache.get(key);
+    const nodes=[a,b,...waypoints.filter(p=>inside(p.x,p.y))],best=new Array(nodes.length).fill(Infinity),
+      parent=new Array(nodes.length).fill(-1),visited=new Set();
+    best[0]=0;
+    for(let count=0;count<nodes.length;count++){
+      let u=-1;
+      for(let i=0;i<nodes.length;i++)if(!visited.has(i)&&(u<0||best[i]<best[u]))u=i;
+      if(u<0||best[u]===Infinity||u===1)break;
+      visited.add(u);
+      for(let v=1;v<nodes.length;v++){
+        if(v===u||visited.has(v)||!safeSegment(nodes[u],nodes[v]))continue;
+        const weight=Math.hypot(nodes[v].x-nodes[u].x,(nodes[v].y-nodes[u].y)*1.78);
+        if(best[u]+weight<best[v]){best[v]=best[u]+weight;parent[v]=u}
+      }
+    }
+    const out=[b];
+    if(parent[1]>=0){let at=1;while(parent[at]>0){at=parent[at];out.unshift(nodes[at])}out.unshift(a)}
+    else out.unshift(a); // Interpolation still clamps each frame if no connected route.
+    if(routeCache.size>=128)routeCache.clear();
+    routeCache.set(key,out);
+    return out;
+  }
   function interpolate(p,now=Date.now()){
     const fallback=p?.seatId?positions(p.seatCount||30)[Number(p.seatId)-1]:clampPoint(p?.positionX,p?.positionY);
     if(p?.movementStatus!=='moving'||!p?.moveStartedAt||!p?.moveDurationMs)return fallback;
-    const a={x:Number(p.moveFromX),y:Number(p.moveFromY)},b={x:Number(p.moveToX),y:Number(p.moveToY)};if([p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].some(v=>v==null||v===''||!Number.isFinite(Number(v))))return fallback;
-    const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*2)),total=lengths.reduce((s,v)=>s+v,0);let distance=t*total;
-    for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const f=Math.min(1,distance/(lengths[i]||1));return clampPoint(path[i].x+(path[i+1].x-path[i].x)*f,path[i].y+(path[i+1].y-path[i].y)*f)}distance-=lengths[i]}return b;
+    const a={x:Number(p.moveFromX),y:Number(p.moveFromY)},b={x:Number(p.moveToX),y:Number(p.moveToY)};
+    if([p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].some(v=>v==null||v===''||!Number.isFinite(Number(v))))return fallback;
+    const path=route(a,b),t=Math.max(0,Math.min(1,(now-Number(p.moveStartedAt))/Math.max(1,Number(p.moveDurationMs)))),
+      lengths=path.slice(1).map((q,i)=>Math.hypot(q.x-path[i].x,(q.y-path[i].y)*1.78)),
+      total=lengths.reduce((sum,v)=>sum+v,0);
+    let distance=t*total;
+    for(let i=0;i<lengths.length;i++){
+      if(distance<=lengths[i]||i===lengths.length-1){
+        const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
+        return clampPoint(path[i].x+(path[i+1].x-path[i].x)*f,path[i].y+(path[i+1].y-path[i].y)*f);
+      }
+      distance-=lengths[i];
+    }
+    return clampPoint(b.x,b.y);
   }
   root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);

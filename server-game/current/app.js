@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.127';
+const VERSION='3.128';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2904,7 +2904,11 @@ function battleRoomDisplayPosition(point){
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const previewNew=playRoomUiState.editorMode==='new'&&!document.getElementById('playCreateRoomSheet')?.classList.contains('hidden');
-  const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),projectedSeats=globalThis.GMWW_VILLAGE_LAYOUT.projectedSeatIds(members,seatCount),bySeat=new Map((previewNew?[]:playLiveMembers()).filter(m=>Number(m?.seatId||0)>0).map(m=>[Number(m.seatId),m])),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  const seating=previewNew||(isLivePlayRoom()&&['room','seats'].includes(playSceneState.step)&&!playSceneRuntime.room?.seatsLocked),members=previewNew?[]:playVillageMembers(),seatCount=previewNew?24:playSeatStats().seatCount,positions=playSeatPositions(seatCount),projectedSeats=globalThis.GMWW_VILLAGE_LAYOUT.projectedSeatIds(members,seatCount),bySeat=new Map((previewNew?[]:members).map(m=>{
+    const key=String(m?.participantId||(m?.loginId?'member:'+m.loginId:''));
+    const seat=Number(projectedSeats[key]||m?.seatId||0);
+    return[seat,m];
+  }).filter(([seat])=>seat>=1&&seat<=seatCount)),selectedIds=new Set((playSceneState.selectedMemberIds||[]).map(String));
   // A server heartbeat does not invalidate 30 chibi rigs plus their animated
   // status orbits. Rebuild the layer only when visible gameplay inputs change.
   const domSig=JSON.stringify([
@@ -2974,7 +2978,10 @@ function renderPlayPlayers(){
   };
   if(seating){
     for(let i=0;i<seatCount;i++){const seatId=i+1,m=bySeat.get(seatId)||null,pos=positions[i]||[50,57];make(m,pos,seatId)}
-    const waiting=playLiveMembers().filter(m=>!Number(m?.seatId||0));for(const [i,m] of waiting.entries())make(m,playRoamPoint(m.loginId),null)
+    // Only overflow participants have no place: never hash-spawn unassigned
+    // accounts into a random cluster near buildings or the bridge.
+    const waiting=members.filter(m=>!Number(projectedSeats[String(m?.participantId||(m?.loginId?'member:'+m.loginId:''))]||0));
+    for(const m of waiting)make(m,playRoamPoint(m.loginId),null)
   }else{
     members.sort((a,b)=>String(a.loginId).localeCompare(String(b.loginId))).forEach((m,i)=>{
       const identity=String(m?.participantId||(m?.loginId?'member:'+m.loginId:'')),sid=Number(projectedSeats[identity]||m?.seatId||0),x=m?.positionX,y=m?.positionY,valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));

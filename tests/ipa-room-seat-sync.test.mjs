@@ -21,7 +21,7 @@ test('V3.17 runtime keeps offline/online room flow with GM-only seating',()=>{
 });
 
 test('IPA renders fixed seat IDs and prefers game characters over legacy avatars',()=>{
-  assert.match(app,/bySeat=new Map\(\(previewNew\?\[\]:playLiveMembers\(\)\)\.filter\(m=>Number\(m\?\.seatId\|\|0\)>0\)\.map\(m=>\[Number\(m\.seatId\),m\]\)\)/);
+  assert.ok(app.includes('bySeat=new Map((previewNew?[]:members).map'), 'GM must render projected seats during gathering');
   assert.match(app,/play-player-over/);
   assert.match(app,/play-player-role/);
   assert.match(app,/playCharacterUrl\(m\.gameCharacterId\)/);
