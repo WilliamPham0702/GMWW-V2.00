@@ -156,14 +156,14 @@ test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=
   assert.equal(vis.entries.length,15);
   assert.equal(vis.byId.transfer,undefined);
   assert.equal(vis.byId.hunt.icon,'🏹');
-  const expected={frozen:'❄️',protected:'🛡️',wolf_bitten:'🐾',marked:'👍',dead:'☠️',expelled:'🌪️',infected:'🦠',mute:'😷',disabled_permanent:'🚫',linked:'✌️',recover:'⭐',transform:'🥳',attack:'⚔️',inspect:'💫',hunt:'🏹'};
+  const expected={frozen:'❄️',protected:'🛡️',wolf_bitten:'🐺',marked:'👍',dead:'☠️',expelled:'🌪️',infected:'🦠',mute:'😷',disabled_permanent:'🚫',linked:'✌️',recover:'⭐',transform:'🥳',attack:'⚔️',inspect:'💫',hunt:'🏹'};
   for(const [id,icon] of Object.entries(expected)){
     assert.match(vis.overlay([id]),/gmww-sv-orbit/);
     assert.ok(vis.overlay([id]).includes(icon),id+' missing orbit icon');
   }
   assert.match(vis.overlay(['marked']),/👎/);
   assert.match(vis.overlay(['dead']),/gmww-sv-gray-smoke/);
-  assert.match(vis.overlay(['wolf_bitten']),/gmww-sv-red-wolf/);
+  assert.match(vis.overlay(['wolf_bitten']),/🐺/);
   assert.match(gmCss,/gmwwSvOrbitSpin/);
   assert.match(gmCss,/\[data-battle-action\] \.gmww-sv-action-preview\{position:absolute;inset:0/);
   assert.match(previewPage,/function overlay\(ids\)\{return api\.overlay\(ids\)\}/);
