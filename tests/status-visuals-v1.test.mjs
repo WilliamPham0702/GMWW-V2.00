@@ -101,7 +101,7 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.match(gmCss,/@keyframes gmwwSvGrayMist/);
   assert.match(gmCss,/\.play-player-token\.is-dead \.play-player-avatar\{filter:grayscale/);
   assert.match(gmCss,/\.play-player-token\.is-dead \.gmww-segmented-rig\[data-state="dead"\]/);
-  assert.match(app,/moving=effect!=='dead'&&m\?\.movementStatus/);
+  assert.match(app,/moving=effect!=='dead'&&playSeatMovementActive\(m\)/);
   assert.match(app,/sitting=effect!=='dead'/);
   assert.match(webCss,/\.player\.gmww-sv-dead \.portrait\{filter:grayscale/);
   assert.match(village,/dead:"gray-smoke"/);
