@@ -12,6 +12,9 @@ on:
       - 'assets/characters/v5/test-skin-v562.html'
       - 'assets/characters/v5/skin-v562-*.mjs'
       - 'assets/characters/v5/skin-v561-*.mjs'
+      - '.github/scripts/character-v562-preview-isolation.mjs'
+      - '.github/scripts/classify-update.mjs'
+      - '.github/scripts/verify-ota-version-advance.mjs'
   push:
     branches: [main]
     paths:
@@ -44,7 +47,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Test original artwork and 3D weighted-bone binding
-        run: node --test tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs tests/character-v562-original-sleeves.test.mjs
+        run: node --test tests/character-v560-weighted-skin.test.mjs tests/character-v561-original-art-uv.test.mjs tests/character-v562-original-sleeves.test.mjs tests/character-v562-preview-isolation.test.mjs
       - name: Ensure preview has no game/OTA/room data and dry-run Cloudflare
         run: |
           set -euo pipefail
