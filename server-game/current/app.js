@@ -2324,24 +2324,60 @@ async function applyPlayPlayerState(type){
     await playRoomApi('/interaction',{method:'POST',body:JSON.stringify({loginId,type,matchId:playSceneRuntime.room?.matchId||playSceneState.matchId||'',night:Number(playSceneState.night||0),cycleKey:playSceneRuntime.room?.cycleKey||''})});await playSyncRoom(true);return true
   }catch(err){playFlashError(err.message);return false}finally{playSetBusy(false)}
 }
+const GMWW_STATUS_DISPLAY_DRAFT_KEY='gmww-status-display-draft-v3126';
+function playStatusDisplayDraft(){
+  try{const value=JSON.parse(localStorage.getItem(GMWW_STATUS_DISPLAY_DRAFT_KEY)||'{}');
+    return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}
+  catch{return{}}
+}
+function playStoreStatusDisplayDraft(value){
+  try{localStorage.setItem(GMWW_STATUS_DISPLAY_DRAFT_KEY,JSON.stringify(value))}catch{}
+}
+async function playSyncStatusDisplayDraft(){
+  if(!isLivePlayRoom())return;
+  const draft=playStatusDisplayDraft(),visuals=globalThis.GMWW_STATUS_VISUALS;
+  const items=Object.entries(draft).filter(([id,v])=>visuals?.byId[id]&&typeof v==='boolean')
+    .map(([statusId,visible])=>({statusId,visible}));
+  if(!items.length)return;
+  // One authorized, atomic settings update; never expose private targets by default.
+  const answer=await playRoomApi('/interaction',{method:'POST',
+    body:JSON.stringify({type:'status_display_batch',items})});
+  if(answer?.ok!==true)throw new Error(answer?.message||answer?.error||'STATUS_DRAFT_SYNC_FAILED');
+  if(playSceneRuntime.room)playSceneRuntime.room.statusDisplay=answer.statusDisplay||{};
+  try{localStorage.removeItem(GMWW_STATUS_DISPLAY_DRAFT_KEY)}catch{}
+}
 function renderStatusLibrary(){
   const grid=document.getElementById('statusLibraryGrid'),visuals=globalThis.GMWW_STATUS_VISUALS;if(!grid||!visuals)return;
-  const display=playSceneRuntime.room?.statusDisplay||{},isLive=isLivePlayRoom();
+  const display=playSceneRuntime.room?.statusDisplay||{},isLive=isLivePlayRoom(),draft=playStatusDisplayDraft();
   const previewMember={gameCharacterId:'character-01'},avatarSrc=playCharacterVisualUrl(previewMember,1,'right');
   grid.classList.add('gmww-sv-library');
   grid.innerHTML=visuals.entries.map((item,index)=>{
-    const id=item.id,visible=Object.prototype.hasOwnProperty.call(display,id)?display[id]===true:item.playerWeb===true&&['frozen','expelled','dead'].includes(id);
+    const id=item.id,defaultVisible=item.playerWeb===true&&['frozen','expelled','dead'].includes(id);
+    const visible=Object.prototype.hasOwnProperty.call(draft,id)?draft[id]===true:
+      Object.prototype.hasOwnProperty.call(display,id)?display[id]===true:defaultVisible;
     const instant=item.type==='instant';
     return '<article class="status-card" data-status-preview="'+visuals.safe(id)+'"><div class="status-card-header"><span class="status-card-icon" aria-hidden="true">'+item.icon+'</span><div class="status-card-copy"><h3>'+visuals.safe(item.name)+'</h3></div><span class="status-card-index">'+String(index+1).padStart(2,'0')+'/15</span></div>'+
       '<div class="gmww-sv-preview"><span class="gmww-sv-target gmww-sv-stage"><img class="gmww-sv-avatar" alt="" src="'+visuals.safe(avatarSrc)+'">'+visuals.overlay([id])+'</span></div>'+
       '<small>'+visuals.safe(item.description)+'</small><span class="gmww-sv-preview-note">'+(instant?'Hiệu ứng tức thời · Preview chạy lặp':'Trạng thái duy trì · Chỉ gỡ khi dữ liệu thay đổi')+'</span>'+
-      '<label class="status-card-toggle"><span>Hiển thị Player Web</span><input type="checkbox" data-status-display="'+visuals.safe(id)+'"'+(visible?' checked':'')+(isLive?'':' disabled')+' aria-label="Hiển thị '+visuals.safe(item.name)+' trên Player Web"></label></article>';
+      '<label class="status-card-toggle"><span>Hiển thị Player Web</span><input type="checkbox" data-status-display="'+visuals.safe(id)+'"'+(visible?' checked':'')+' aria-label="Hiển thị '+visuals.safe(item.name)+' trên Player Web"></label></article>';
   }).join('');
   grid.querySelectorAll('[data-status-display]').forEach(input=>input.onchange=async()=>{
-    if(!isLivePlayRoom()){playFlashError('Cần có Phòng Online để lưu lựa chọn hiển thị.');input.checked=!input.checked;return}
+    const id=input.dataset.statusDisplay,value=input.checked;
+    if(!isLivePlayRoom()){
+      playStoreStatusDisplayDraft({...playStatusDisplayDraft(),[id]:value});
+      input.title='Đã lưu lựa chọn; tự đồng bộ khi kết nối Phòng Online';
+      return;
+    }
     input.disabled=true;
-    try{await playRoomApi('/interaction',{method:'POST',body:JSON.stringify({type:'status_display',statusId:input.dataset.statusDisplay,visible:input.checked})});await playSyncRoom(true);renderStatusLibrary()}
-    catch(err){playFlashError(err.message);input.checked=!input.checked;input.disabled=false}
+    try{
+      const result=await playRoomApi('/interaction',{method:'POST',
+        body:JSON.stringify({type:'status_display',statusId:id,visible:value})});
+      if(result?.ok!==true)throw new Error(result?.message||result?.error||'Không lưu được');
+      if(playSceneRuntime.room)playSceneRuntime.room.statusDisplay=result.statusDisplay||{};
+      const d=playStatusDisplayDraft();
+      if(Object.prototype.hasOwnProperty.call(d,id)){delete d[id];playStoreStatusDisplayDraft(d)}
+    }catch(err){playFlashError(err.message);input.checked=!value}
+    finally{input.disabled=false}
   });
 }
 document.querySelector('[data-lib="statuses"]')?.addEventListener('click',()=>setTimeout(renderStatusLibrary,0));
@@ -2806,6 +2842,7 @@ async function playSyncRoom(force=false){
       playSceneState.phase='lobby';
       if(playSceneState.step==='battle')playSceneState.step=data.assignments?.length?'deal':'room';
     }
+    try{await playSyncStatusDisplayDraft()}catch(error){console.warn('Status permissions will retry on next room sync',error)}
     savePlayScene();connectPlaySocket();ensurePlayRealtimePoll();renderPlayScene();return data;
   }catch(err){
     if(syncSerial!==playSceneRuntime.syncSerial)return null;
