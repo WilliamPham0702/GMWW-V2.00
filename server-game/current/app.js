@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.128';
+const VERSION='3.129';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2894,7 +2894,14 @@ function playSeatMovementActive(member){
   const started=Number(member?.moveStartedAt),duration=Number(member?.moveDurationMs);
   if(!(started>0&&duration>0)||playNow()>=started+duration)return false;
   const matchStart=Date.parse(playSceneRuntime.room?.startedAt||'')||0;
-  // A pre-match wander must never overwrite the assigned seat during battle.
+  // Once a person owns a Seat, old wander data must never move them away from
+  // the selected template during Ván Mẫu / Phân Vai / Phát Vai or previews.
+  // The seating step can animate an explicitly requested Seat change, and a
+  // battle can still show movement that genuinely started after match start.
+  if(Number(member?.seatId||0)>0){
+    if(playSceneState.step==='battle')return !!matchStart&&started>matchStart;
+    return playSceneState.step==='seats'&&Number(member?.moveTargetSeatId||0)>0;
+  }
   return !(playSceneState.step==='battle'&&matchStart&&started<=matchStart);
 }
 function battleRoomDisplayPosition(point){
@@ -2915,6 +2922,8 @@ function renderPlayPlayers(){
     playPlayerRenderSignature(members).split(':status:')[0],playSceneState.step,playSceneState.phase,
     playSceneState.activePlayerId,(playSceneState.selectedMemberIds||[]).join(','),
     seatCount,previewNew,seating,playSceneState.roomMode,playSceneState.seatMoveMode,
+    // A template switch must invalidate the DOM even if seat IDs are unchanged.
+    globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatLayout(playSceneRuntime.room?.seatLayout),
     playSceneRuntime.room?.seatOffset,playGatherSpacing(),
     (playSceneRuntime.assignments?.length?playSceneRuntime.assignments:playSceneState.assignmentsPreview||[])
       .map(a=>[a.loginId,a.roleId,a.roleName,a.artifactId]),
