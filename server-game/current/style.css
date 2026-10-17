@@ -5556,15 +5556,7 @@ body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not
 /* Avoid continuously repainting every chibi from whole-token CSS filters. */
 #start .play-player-token.is-dead{filter:none!important}
 
-/* V3.126 — append-only GM action journal, paginated to avoid list-render lag. */
-.play-action-log-trigger{display:block;width:fit-content;margin:4px 10px 6px auto;min-height:30px;padding:4px 12px;border:1px solid rgba(129,216,243,.55);border-radius:10px;background:#083248;color:#d3f8ff;font-size:11px;font-weight:800}
-.play-action-log-sheet[hidden]{display:none!important}
-.play-action-log-sheet{position:fixed;inset:0;display:grid;place-items:center;z-index:200000;background:rgba(0,10,20,.78);padding:12px;pointer-events:auto}
-.play-action-log-card{width:min(100%,560px);max-height:min(86dvh,900px);display:flex;flex-direction:column;overflow:hidden;background:#072d43;border:1px solid #60b9cd;border-radius:18px;padding:13px;color:#e8fcff}
-.play-action-log-card header{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:16px}
-.play-action-log-card header button{border:1px solid #5eb8c7;border-radius:10px;padding:8px 14px;background:#123f56;color:#fff}
-.play-action-log-card p{font-size:11px;color:#a4dce6;margin:8px 0}
-.play-action-log-rows{overflow-y:auto;min-height:100px;max-height:68dvh;overscroll-behavior:contain;display:flex;flex-direction:column;gap:5px;content-visibility:auto}
-.play-action-log-rows>article{padding:8px;border:1px solid rgba(107,179,193,.3);border-radius:9px;font-size:12px;background:rgba(0,0,0,.18)}
-.play-action-log-rows>article small{display:block;font-size:10px;opacity:.76;overflow-wrap:anywhere}
-#playActionLogMore{margin-top:8px;min-height:40px;border:1px solid #4fbad9;border-radius:10px;background:#11607d;color:#fff;font-weight:800}
+/* V3.131: status, name, role are one stack above the GM sprite. */
+#start .play-player-token .play-player-over{bottom:calc(100% + 3px)!important;gap:2px;z-index:13}
+#start .play-player-token .play-player-over .play-player-role{margin:0 auto!important;max-width:100%;transform:none!important}
+#start .play-player-token .play-player-over .gmww-sv-badges{position:static!important;left:auto!important;bottom:auto!important;transform:none!important;display:flex;flex-wrap:wrap;justify-content:center;max-width:130px;width:max-content;white-space:normal;gap:2px;margin:0 auto}
