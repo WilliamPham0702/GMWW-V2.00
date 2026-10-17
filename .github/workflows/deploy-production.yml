@@ -180,6 +180,23 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
+          # Independent Character V5.61 skin lab: assert REAL public bytes and
+          # exact SHA-256 for all three ES modules. No IPA/room/live game switch.
+          echo "Verify Production: independent V5.61 original-art 3D Skin lab."
+          curl --location --fail --silent --show-error --retry 6 --retry-delay 2 --max-time 30 \
+            "$URL/characters/v5/test-skin-v561.html?verify=$(date +%s)" > /tmp/v561-lab.html
+          test -s /tmp/v561-lab.html
+          grep -Fq 'Chàng Biển: hoa văn gốc trên Skin 3D' /tmp/v561-lab.html
+          for REL in skin-v561-original-art-uv.mjs skin-v561-original-swatch.mjs skin-v560-weighted-surface.mjs; do
+            SOURCE="assets/characters/v5/$REL"
+            DEST="/tmp/v561-$REL"
+            curl --fail --silent --show-error --retry 6 --retry-delay 2 --max-time 30 \
+              "$URL/characters/v5/$REL?verify=$(date +%s)" > "$DEST"
+            test -s "$DEST"
+            test "$(shasum -a 256 "$SOURCE" | awk '{print $1}')" = "$(shasum -a 256 "$DEST" | awk '{print $1}')"
+          done
+          grep -Fq 'V561_SWATCH_IMAGE_DATA_URI' /tmp/v561-skin-v561-original-swatch.mjs
+          echo "Verify Production: V5.61 HTML and original-art 3D Skin modules live (SHA-256 PASS)."
           # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
           curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
           grep -q '<main class="game day"' /tmp/gmww-production-village.html
