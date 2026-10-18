@@ -72,7 +72,7 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   });
   if(action==='action_aura_read'){
     const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),
-      message:(result.functions.join(' · ')||'Không có chức năng')};
+      message:result.roleName+' · '+(result.functions.join(' · ')||'Không có chức năng')};
   }
   if(action==='action_destroyer_scry')
     return {kind:'role',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleName:x.roleName})),message:reads[0].roleName};
@@ -82,6 +82,7 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
       found,message:found?'TIÊN TRI':'KHÔNG PHẢI TIÊN TRI'};
   }
   if(action==='action_compare_faction'){
+    if(!reads[0].faction||!reads[1].faction)return null;
     const same=reads[0].faction===reads[1].faction;
     return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
       same,message:same?'CÙNG PHE':'KHÁC PHE'};
@@ -89,5 +90,5 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   // The Alpha Wolf deceives the regular Seer only, not a group check.
   const wolves=reads.some(x=>x.wolf&&(action!=='action_seer'||x.roleId!=='role_alpha_wolf'));
   return {kind:'wolf-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
-    wolf:wolves,message:wolves?'CÓ SÓI':'KHÔNG CÓ SÓI'};
+    wolf:wolves,message:wolves?'CÓ SÓI':action==='action_seer'?'KHÔNG PHẢI SÓI':'KHÔNG CÓ SÓI'};
 }
