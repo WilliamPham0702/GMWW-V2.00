@@ -77,7 +77,11 @@ jobs:
 
           echo 'b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801  /tmp/charv605-avatar.webp' | sha256sum -c -
           echo 'ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9  /tmp/charv605-skin.glb' | sha256sum -c -
+          curl -fsS http://127.0.0.1:8791/api/character-v605/portrait-catalog > /tmp/char-v606-portrait-catalog.json
+          node -e 'const x=require("/tmp/char-v606-portrait-catalog.json");if(x.totalPortraitOnly!==9||x.characters.some(c=>c.rigApproved||c.modelUrl!==null))process.exit(1)'
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/api/character-v605/character-22/avatar)
+          test "$STATUS" = '200'
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/api/character-v605/character-22/skin)
           test "$STATUS" = '404'
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8791/api/character-v605/catalog)
           test "$STATUS" = '405'
