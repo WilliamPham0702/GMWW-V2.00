@@ -5810,3 +5810,40 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battle
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultGrip{min-height:16px!important;background:transparent!important;border:0!important;padding:0!important;justify-content:flex-end}
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultTitle{display:none!important}
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultMessage{font-size:13px!important;font-weight:900!important;text-align:center!important;padding:2px 4px!important;margin:0!important;white-space:normal!important}
+
+/* V3.146 — Battle action popovers follow the Timeline's frosted-glass treatment.
+   No filter is applied to the village, player tokens, or the full viewport. */
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.battle-target-sheet-v399,
+body.play-immersive #start #playShell[data-step="battle"] #battleResultPopup.gmww-battle-result-popup,
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu,
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleDetails,
+body.play-immersive #start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-card{
+  background:var(--gmww-stage-glass-v330)!important;
+  border:1px solid var(--gmww-stage-glass-border-v330)!important;
+  box-shadow:var(--gmww-stage-glass-shadow-v330)!important;
+  backdrop-filter:blur(13px) saturate(145%)!important;
+  -webkit-backdrop-filter:blur(13px) saturate(145%)!important;
+  color:#f3faff!important;
+}
+/* Drag the title of both GM menus or the nested manual roster. The confirmation
+   remains draggable using its OK control, without changing its click action. */
+body.play-immersive #start #playShell[data-step="battle"] #battleWolfMenu>header,
+body.play-immersive #start #playShell[data-step="battle"] #battleDetails>.play-battle-turn,
+body.play-immersive #start #playShell[data-step="battle"] #battleRoster>header{
+  cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleWolfMenu>header:active,
+body.play-immersive #start #playShell[data-step="battle"] #battleDetails>.play-battle-turn:active,
+body.play-immersive #start #playShell[data-step="battle"] #battleRoster>header:active{cursor:grabbing}
+body.play-immersive #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultGrip{
+  min-height:5px!important;max-height:5px!important;padding:0!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultMessage{
+  touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;
+}
+/* Closing is by outside tap; no dedicated corner close controls consume space. */
+body.play-immersive #start #playShell[data-step="battle"] #battleResultClose,
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetClose,
+body.play-immersive #start #playShell[data-step="battle"] #battleWolfClose,
+body.play-immersive #start #playShell[data-step="battle"] #battleDetailsClose,
+body.play-immersive #start #playShell[data-step="battle"] #battleRosterClose{display:none!important}

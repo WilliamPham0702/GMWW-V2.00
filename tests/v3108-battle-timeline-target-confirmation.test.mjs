@@ -15,7 +15,8 @@ test('battle timeline updates when the active turn changes and marks exactly the
 
 test('target confirmation reduces confirmed targets to OK without losing the selection exit',()=>{
   assert.match(app,/targetReady=!!act&&battleState\.targets\.length===act\.targetCount/);
-  assert.match(app,/pickerClose\.hidden=targetReady/);
+  assert.doesNotMatch(html,/id="battleTargetClose"/);
+  assert.match(app,/if\(picker&&!picker.hidden&&!picker.contains\(target\)/);
   assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
   assert.match(app,/candidates\.hidden=targetReady/);
   assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|battleState\.syncPending\|\|!targetReady/);

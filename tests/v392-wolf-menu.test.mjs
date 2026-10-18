@@ -21,8 +21,10 @@ test('floating timer replaces bottom bar; GM wolf owns controls',()=>{
  assert.match(css,/#playBattleDock\.battle-float-v396/);
 });
 test('wolf actions keep confirmation and do not mutate game state on menu open',()=>{
- for(const id of ['battleWolfClose','battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleGMAuto'])
+ for(const id of ['battleExit','battleForceEnd','battleGMAudio','battleQuickRevive','battleQuickKill','battleGMAuto'])
   assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
+ assert.doesNotMatch(html,/id="battleWolfClose"/);
+ assert.match(app,/if\(battleState.wolfOpen&&!inside\('#battleWolfMenu,\.play-core-pearl'\)\)/);
  assert.match(app,/function initBattleFloatingClock\(/);
  assert.match(app,/function battleToggleWolfMenu\(/);
  assert.match(app,/async function battleQuickApply\(loginId\)/);
