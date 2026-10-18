@@ -11,6 +11,7 @@ on:
       - 'src/player-web-src/**'
       - 'src/gmww-members-live.js'
       - 'scripts/build-character21-v605-game-staging.mjs'
+      - 'scripts/build-character22-30-art-review.mjs'
       - '.github/workflows/deploy-character21-v605-game-staging.yml'
   workflow_dispatch:
 
@@ -40,12 +41,17 @@ jobs:
         run: npm test
       - name: Verify canonical GM and Player source and Character21 contracts
         run: |
+          node .github/scripts/assemble-gm-app.mjs --write
+          node .github/scripts/assemble-player-web.mjs --write
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
           node --test tests/character-v605-gm-player-staging.test.mjs tests/character-overhaul-v605-accepted.test.mjs tests/character-overhaul-v605-staging.test.mjs
           node --check src/index.js
       - name: Create isolated GM browser app and audit approved GLB/avatar
-        run: node scripts/build-character21-v605-game-staging.mjs
+        run: |
+          node scripts/build-character21-v605-game-staging.mjs
+          node scripts/build-character22-30-art-review.mjs
+          node --test tests/character-v606-next-art-review.test.mjs
       - name: Ensure production configuration and artifacts are never modified
         shell: bash
         run: |
@@ -93,9 +99,14 @@ jobs:
           node -e 'const h=require("/tmp/char21-deep.json"); if(!h.ok||h.checks?.memberStorage!=="ready")process.exit(1)'
           curl -fsS "$BASE/character-v605-gm/GMWW.html?characterV605=1" > /tmp/char21-gm.html
           grep -q 'gmww-v605-stage-banner' /tmp/char21-gm.html
+          grep -q 'character-v605-review/index.html' /tmp/char21-gm.html
           curl -fsS "$BASE/character-v605-gm/app.js" > /tmp/char21-gm-app.js
           grep -q 'const GMWW_SERVER_BASE=location.origin;' /tmp/char21-gm-app.js
           grep -q 'gmwwCharacterV605SkinnedPreview' /tmp/char21-gm-app.js
+          curl -fsS "$BASE/character-v605-review/index.html" > /tmp/char-v606-review.html
+          grep -q 'Character 22' /tmp/char-v606-review.html
+          grep -q 'character-30' /tmp/char-v606-review.html
+          grep -q 'gmww-character-v600-review' /tmp/char-v606-review.html
           curl -fsS "$BASE/?characterV605=1" > /tmp/char21-player.html
           grep -q 'GMWW PLAYER' /tmp/char21-player.html
           curl -fsS "$BASE/gmww-members-live.js" > /tmp/char21-player-app.js
