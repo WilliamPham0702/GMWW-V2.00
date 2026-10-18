@@ -1832,14 +1832,15 @@ const MEMBER_CHARACTER_V605_PREVIEW=typeof location!=='undefined'
   &&/^(?:localhost|127\.0\.0\.1|gmww-character[0-9a-z-]*-(?:preview|staging)\.williampham0702\.workers\.dev)$/.test(location.hostname)
   &&new URLSearchParams(location.search).get('characterV605')==='1';
 function memberCharacterV605Avatar(id){
- return MEMBER_CHARACTER_V605_PREVIEW&&String(id)==='character-21'
-   ?location.origin+'/api/character-v605/character-21/avatar':'';
+ const raw=String(id||'');
+ return MEMBER_CHARACTER_V605_PREVIEW&&/^character-(?:2[1-9]|30)$/.test(raw)
+   ?location.origin+'/api/character-v605/'+raw+'/avatar':'';
 }
 function memberCharacterV605Skin(id){
  return MEMBER_CHARACTER_V605_PREVIEW&&String(id)==='character-21'
    ?location.origin+'/api/character-v605/character-21/skin':'';
 }
-const MEMBER_CHARACTER_COUNT=42;
+const MEMBER_CHARACTER_COUNT=MEMBER_CHARACTER_V605_PREVIEW?30:42;
 const MEMBER_ANIMATED_CHARACTER_COUNT=20;
 function memberCharacterCatalog(serverRows=[]){
   const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
@@ -2027,7 +2028,7 @@ function openMemberSheet(mode,m=null){
       '<label>Tên đăng nhập<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Vui lòng nhập tên đăng nhập" autocomplete="username"></label>'+
       '<label>Tên Hiển Thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Bạn mong muốn người chơi khác thấy tên gì?" autocomplete="name"></label>'+
       (editing?'':'<div class="member-password-optional"><button class="member-password-toggle" id="memberPasswordToggle" type="button" aria-expanded="false">＋ Đặt mật khẩu cho tài khoản nếu muốn</button><label class="hidden" id="memberPasswordWrap">Mật khẩu<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label></div>')+
-      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ 42 Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ '+MEMBER_CHARACTER_COUNT+' Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
     renderMemberAvatarPicker();
     if(!editing){const toggle=document.getElementById('memberPasswordToggle'),wrap=document.getElementById('memberPasswordWrap');if(toggle&&wrap)toggle.onclick=()=>{const open=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!open);toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';if(open)setTimeout(()=>document.getElementById('memberPassword')?.focus(),30)}}
     document.getElementById('memberDisplayName')?.addEventListener('blur',e=>{e.target.value=memberTitleCase(e.target.value)});
@@ -2059,13 +2060,24 @@ function renderMemberAvatarPicker(){
     img.alt=a.name||a.id;img.src=memberCharacterV605Avatar(a.id)||memberCharacterFrameUrl(a.id,1);
     if(num<=MEMBER_ANIMATED_CHARACTER_COUNT&&!memberCharacterV605Avatar(a.id))img.dataset.memberCharacter=a.id;else img.classList.add('member-character-static');
     img.onerror=()=>{img.onerror=null;img.src=memberAvatarUrl(a.id)};
-    b.querySelector('small').textContent=a.name||a.id;
+    b.querySelector('small').textContent=(MEMBER_CHARACTER_V605_PREVIEW&&/^character-(?:2[2-9]|30)$/.test(a.id))
+      ?('Nhân vật '+String(a.id).slice(-2)+' · Ảnh trước'):a.name||a.id;
     b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
   }
   if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Bộ Nhân Vật.</div>';
   ensureMemberCharacterPreviewTicker();
   // V6.05: mount the actual 16-bone WebGL scene INSIDE GM's staging character picker.
   // Never mount on Production, never touch the player/member record.
+  const portraitOnly=MEMBER_CHARACTER_V605_PREVIEW&&/^character-(?:2[2-9]|30)$/.test(memberAdminState.selectedAvatarId);
+  let notice=document.getElementById('gmwwCharacterV606PortraitNotice');
+  if(!portraitOnly){notice?.remove()}
+  else{
+    if(!notice){notice=document.createElement('p');notice.id='gmwwCharacterV606PortraitNotice';
+      notice.style.cssText='margin:10px 0;padding:10px;border:1px solid #c89c58;border-radius:9px;color:#ffe4b3;font-size:12px';}
+    notice.textContent='Character '+memberAdminState.selectedAvatarId.slice(-2)+' · Đã duyệt trang phục và avatar mặt trước. Chưa có skin 8 hướng/4 chuyển động, chưa áp dụng trong trận.';
+    const parent=document.getElementById('memberAvatarGrid')?.parentElement;
+    if(parent&&!notice.isConnected)parent.append(notice);
+  }
   const eligible=MEMBER_CHARACTER_V605_PREVIEW&&memberAdminState.selectedAvatarId==='character-21';
   let panel=document.getElementById('gmwwCharacterV605SkinnedPreview');
   if(!eligible){if(panel)panel.remove()}
