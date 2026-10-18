@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.143</title>
-<link rel="stylesheet" href="style.css?v=3.143-compact-room">
+<title>GMWW V3.144</title>
+<link rel="stylesheet" href="style.css?v=3.144-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -562,7 +562,7 @@
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
           <div class="settings-health-action"><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
-<p class="settings-tools-grid-summary" id="settingsToolsGridSummary">Đầy đủ 14 công cụ · Cuộn xuống để xem tất cả</p>
+<p class="settings-tools-grid-summary" id="settingsToolsGridSummary">Đầy đủ 15 công cụ · Cuộn xuống để xem tất cả</p>
           <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="14 công cụ kiểm tra và bảo trì hiển thị theo lưới">
 <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
           <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
@@ -572,13 +572,10 @@
           </div>
           
         </div>
-            <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý và dọn dẹp Cloudflare">
-              <b class="settings-operation-tool-heading">☁ Quản lý Cloudflare</b>
-              <p style="margin:8px 0;color:#a9cad6;font-size:12px">Namespaces, Preview, quét định kỳ và nhật ký. Quyền dọn dẹp chỉ dành cho quản trị viên đã xác thực.</p>
+            <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
               <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" onclick="window.open('https://gmww-cloudflare-admin.williampham0702.workers.dev/','_blank','noopener,noreferrer')"><span>☁</span><b>MỞ QUẢN LÝ CLOUDFLARE</b></button>
+                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" onclick="window.location.assign('https://gmww-cloudflare-admin.williampham0702.workers.dev/')"><span>☁</span><b>MỞ QUẢN LÝ CLOUDFLARE</b></button>
               </div>
-              <small>Trang quản trị riêng; GM/Player không nhận API token. Quét và dọn thủ công có xác thực qua GitHub.</small>
             </div>
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
               <b class="settings-operation-tool-heading">Vận hành</b>
@@ -646,22 +643,8 @@
             <small class="diagnostic-detail" id="diagnosticDetail">—</small>
           </div>
         </div>
-        <div class="settings-unified-box" id="settingsGroupTasks">
-          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Công việc & Tiến độ</h3></div></div>
-          <div class="settings-operation-console settings-task-console" aria-label="Trạng thái công việc">
-          <div class="gmww-task-summary" id="gmwwTasksSummary" role="status" aria-live="polite">Đang tải công việc từ GitHub…</div>
-          <p class="gmww-task-review-health" id="gmwwTaskReviewHealth" role="status" aria-live="polite" data-ready="false">Bộ xác nhận V3.32 đang kiểm tra giao diện và dữ liệu công việc…</p>
-          <p class="gmww-task-review-help">Để xác nhận một công việc: chọn <b>XÁC NHẬN HOÀN THÀNH</b> hoặc <b>BỎ QUA</b> dưới công việc. Đăng nhập GitHub và chọn lý do đóng Issue tương ứng. Khi quay lại, nhấn Làm mới tiến độ để cập nhật.</p>
-          <div class="gmww-task-section"><h4>Việc cần tiếp tục <span id="gmwwTasksOpenCount">—</span></h4>
-            <div class="gmww-task-list" id="gmwwTasksOpenList"><p class="gmww-task-empty">Đang tải danh sách công việc…</p></div>
-          </div>
-          <details class="gmww-task-history" id="gmwwTasksHistory"><summary>Lịch sử hoàn tất <span id="gmwwTasksDoneCount">0</span></summary><div class="gmww-task-list" id="gmwwTasksDoneList"><p class="gmww-task-empty">Chưa có mục hoàn tất được ghi nhận.</p></div></details>
-          </div>
-          <div class="gmww-task-actions"><button class="settings-action settings-action-server" id="gmwwTasksReload" type="button"><span>↻</span><b>LÀM MỚI TIẾN ĐỘ</b></button></div>
-          <small class="gmww-task-source" id="gmwwTasksSource">Quyền xác nhận thuộc tài khoản GitHub quản trị dự án. Ứng dụng không lưu mật khẩu hoặc mã truy cập GitHub. Việc hoàn thành và bỏ qua được lưu trong Lịch sử đúng lý do đóng Issue.</small>
-        </div>
         <div class="settings-unified-box" id="settingsGroupAppearance">
-          <div class="settings-unified-heading"><span class="settings-unified-index">04</span><div><h3>Giao diện & nhân vật</h3></div></div>
+          <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Giao diện & nhân vật</h3></div></div>
           <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
@@ -868,7 +851,7 @@
 <script src="battle-controls.js?v=3.136-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.143-compact-room&status=4"></script>
+<script src="app.js?v=3.144-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
