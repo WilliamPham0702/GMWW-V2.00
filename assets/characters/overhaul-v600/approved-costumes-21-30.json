@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "release": "V6.01-preview",
+  "reference": "2026-10-18 costume acceptance in PR #306",
+  "reviewUrl": "https://gmww-character-v600-review.williampham0702.workers.dev/",
+  "scope": "21–30 costume visual design ONLY",
+  "sourceArtResolutionNote": "approved group illustration is lower-resolution crop; derived high pixel dimensions do not imply new source detail",
+  "rig": "GMWW V5.83 geometry and V5.10 16 joints retained",
+  "animations": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Result"
+  ],
+  "directions": 8,
+  "avatarMatchesCostume": true,
+  "animationBrowserVerified": false,
+  "iphoneDeviceVerified": false,
+  "sideRearApproved": false,
+  "mainDeployApproved": false,
+  "productionChanged": false,
+  "assets": [
+    {
+      "id": "character-21",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-21/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-21/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-21/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-22",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-22/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-22/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-22/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-23",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-23/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-23/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-23/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-24",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-24/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-24/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-24/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-25",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-25/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-25/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-25/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-26",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-26/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-26/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-26/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-27",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-27/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-27/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-27/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-28",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-28/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-28/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-28/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-29",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-29/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-29/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-29/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    },
+    {
+      "id": "character-30",
+      "approval": "costume appearance only",
+      "outfit": "complete chest-and-abdomen covering armor/garment",
+      "style": "V5.83 chibi fantasy, same face and head/body proportions",
+      "artwork": "/characters/overhaul-v600/character-30/artwork.png",
+      "avatar": "/characters/overhaul-v600/character-30/avatar.webp",
+      "glb": "/characters/overhaul-v600/character-30/skin.glb",
+      "source": "owner-approved isolated V6.00 preview",
+      "binaryCommitted": false
+    }
+  ]
+}
