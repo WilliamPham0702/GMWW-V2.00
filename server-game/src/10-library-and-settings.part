@@ -267,6 +267,10 @@ function gmwwGmWalkPoint(from,to,t){
   return to;
 }
 function gmwwGmClearWalk(from,to){
+  // Stationary safe point is a valid patrol position, not a failed path.
+  // During the 15s GM hold, the route engine may return one point.
+  if(Math.hypot(Number(to.x)-Number(from.x),Number(to.y)-Number(from.y))<0.01)
+    return !!globalThis.GMWW_VILLAGE_LAYOUT?.inside?.(to.x,to.y)&&!gmwwGmNearPlayer(to.x,to.y);
   const path=gmwwGmRoute(from,to);
   if(path.length<2)return false;
   for(let i=1;i<path.length;i++){
