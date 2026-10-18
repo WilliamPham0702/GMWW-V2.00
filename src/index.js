@@ -1331,6 +1331,11 @@ export class RoomDurableObject extends DurableObject {
     if(!token||!turnId||!actorId||!allowed.has(type)||!targets.length||targets.length>30||
       targets.some(id=>!id)||new Set(targets).size!==targets.length)
       return j({ok:false,error:"INVALID_BATTLE_ACTION"},400);
+    // Assassin marks require a GM-selected secret sign and the correct role.
+    const assassinAction=String(body?.actionId||"")==="action_assassin_mark";
+    if(assassinAction&&(type!=="assassin_mark"||!["👍","👎"].includes(String(body?.assassinChoice||""))))
+      return j({ok:false,error:"INVALID_ASSASSIN_CHOICE",message:"Sát Thủ phải chọn 👍 hoặc 👎."},400);
+    if(!assassinAction&&body?.assassinChoice)return j({ok:false,error:"INVALID_ASSASSIN_CHOICE"},400);
     if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
       String(body?.matchId||"")!==matchId||String(body?.cycleKey||"")!==cycleKey)
       return j({ok:false,error:"STALE_BATTLE_ACTION"},409);
@@ -1351,7 +1356,7 @@ export class RoomDurableObject extends DurableObject {
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
-    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[]]);
+    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),String(body?.assassinChoice||""),body?.revealTargetIds||[]]);
     const prior=await this.ctx.storage.get(receiptKey);
     if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):
       j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
@@ -1364,6 +1369,7 @@ export class RoomDurableObject extends DurableObject {
         (r.loginIds||[]).map(normalizeLoginId).includes(actorId)):step.kind==="role"?step:null;
       if(!roleStep)return j({ok:false,error:"INVALID_ROLE_FOR_TURN"},403);
       const roleId=String(roleStep.roleId||"");
+      if(assassinAction&&roleId!=="role_assassin")return j({ok:false,error:"INVALID_ASSASSIN_ROLE"},403);
       const assigned=(await this.ctx.storage.get("assignments"))||[];
       const row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
       if(!row)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
@@ -1553,7 +1559,8 @@ export class RoomDurableObject extends DurableObject {
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
     const defaults={frozen:"Bạn đang bị Đóng Băng.",expelled:"Bạn đã bị Đuổi Khỏi Làng.",dead:"Bạn đã Chết.",thumb_vote:"Hãy chọn dấu phù hợp.",assassin_mark:"Bạn đã bị Đánh Dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.",effect_notice:"Bạn đã nhận một Hiệu Ứng."},rawOptions=Array.isArray(body?.options)?body.options.map(x=>String(x||"").slice(0,40)).filter(Boolean).slice(0,4):[],cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??body?.nightIndex??body?.roundIndex??meta.cycleKey??"").slice(0,160),expiresAt=body?.expiresAt?String(body.expiresAt).slice(0,64):null,effectActive=["frozen","expelled","dead","assassin_mark"].includes(type),clientEventId=String(body?.clientEventId||"").slice(0,240),rows=(await this.ctx.storage.get("interactions"))||[];
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
-    const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
+    const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
+      ...(type==="assassin_mark"?{gmChoice:String(body?.assassinChoice||"")}: {}),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
     this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
