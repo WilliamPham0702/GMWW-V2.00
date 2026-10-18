@@ -19,7 +19,7 @@ test('V3.109 retains valid tap and drag target selection before confirmation',()
   assert.match(app,/if\(action&&battleState\.targets\.length===action\.targetCount\)battleOpenTargetSheet\(battleState\.actionId,'drag'\)/);
   assert.match(app,/battleResolveDropTarget\(e\.clientX,e\.clientY,nodes,allowed\)/);
   assert.match(app,/targetAllowed/);
-  assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
+  assert.ok(app.includes("battleOpenTargetSheet(d.id,'list',hit.ambiguous)"));
 });
 
 test('V3.109 target sheet reduces the final panel to OK while preserving selection cancellation',()=>{
