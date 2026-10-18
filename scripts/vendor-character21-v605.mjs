@@ -8,6 +8,17 @@ export const APPROVED_PREVIEW_URL='https://gmww-character21-v605-preview.william
 export const APPROVED_SOURCE_SHA256='0afe6ec92d6f3aa483234a148cca33603b97702fd528a0cd4dd81a087219b378';
 export const ACCEPTED_CHARACTER_ID='character-21';
 export const APPROVED_AVATAR_SHA256='b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801';
+export const APPROVED_RENDERER_CODE_SHA256='6c22fa8cccd3bc03bd6660cb51e025ae9bede6b593986a1b4e8ab33433514849';
+export const RENDERER_DEST='assets/characters/overhaul-v600/character-21/renderer.html';
+export function buildCharacter21Renderer(html){
+ const normal=html.replace(/const G='[A-Za-z0-9+/=]+'/,"const G='GLB'").replace(/FALLBACK=\[(?:"data:image\/webp;base64,[A-Za-z0-9+/=]+"(?:,\s*)?){8}\]/,'FALLBACK=[STILL8]');
+ if(sha256(Buffer.from(normal))!==APPROVED_RENDERER_CODE_SHA256)throw Error('APPROVED_WEBGL_RENDERER_CODE_CHANGED');
+ const css='<script>if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("gmww-embed");</script><style>html.gmww-embed body{background:transparent!important}html.gmww-embed main{padding:0!important;max-width:none!important}html.gmww-embed .top,html.gmww-embed main>p,html.gmww-embed .warning,html.gmww-embed .footer,html.gmww-embed .source,html.gmww-embed .stats,html.gmww-embed .side>a,html.gmww-embed .checkline{display:none!important}html.gmww-embed .layout{display:grid!important;grid-template-columns:1fr!important}html.gmww-embed .stage{height:390px!important;min-height:310px!important}html.gmww-embed .side{padding:8px!important;gap:8px!important}html.gmww-embed button{min-height:36px!important}</style>';
+ const out=html.replace('</head>',css+'</head>').replace('PREVIEW RIÊNG · CHƯA NGHIỆM THU','IPHONE ĐÃ DUYỆT · STAGING').replace('Chưa tích hợp game, không cập nhật main/Production.','Tích hợp thử nghiệm · main và Production không thay đổi.');
+ if(out===html||!out.includes('gmww-embed'))throw Error('RENDERER_EMBED_CREATION_FAILED');
+ return out;
+}
+
 export const DEST='assets/characters/overhaul-v600/character-21/skin.glb';
 export const JOINTS=Object.freeze(['root','hips','chest','head','shoulderL','elbowL','handL','shoulderR','elbowR','handR','thighL','kneeL','footL','thighR','kneeR','footR']);
 export const CLIPS=Object.freeze(['Idle','Walk','Run','Result']);
@@ -91,6 +102,8 @@ async function main(){
  const result=retargetCharacter21(source);
  const dest=resolve(process.cwd(),DEST);
  await mkdir(dirname(dest),{recursive:true});await writeFile(dest,result.output);
+ const rendererPath=resolve(process.cwd(),RENDERER_DEST);
+ await writeFile(rendererPath,buildCharacter21Renderer(html));
  const avatarPath=resolve(process.cwd(),'assets/characters/overhaul-v600/character-21/avatar.webp');
  await writeFile(avatarPath,avatar);
  console.log(JSON.stringify({file:DEST,bytes:result.output.length,...result.validation,sourceSHA256:APPROVED_SOURCE_SHA256,outputSHA256:result.outputSHA256,binarySHA256:result.binarySHA256,avatarBytes:avatar.length,avatarSHA256:APPROVED_AVATAR_SHA256,productionChanged:false},null,2));
