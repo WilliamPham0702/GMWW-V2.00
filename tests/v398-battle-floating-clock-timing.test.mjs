@@ -55,7 +55,7 @@ test('Chọn Ván configures separate wolf introduction 30s and opening Artifact
   const overridden=sanitizeGameConfig({timing:{wolfDiscussionSec:42,earlyArtifactSec:77}}).timing;
   assert.equal(overridden.wolfDiscussionSec,42);
   assert.equal(overridden.earlyArtifactSec,77);
-  assert.match(server,/kind:"wolf-introduction",label:"Bầy Sói",durationSec:wolfDiscussionSec/);
+  assert.match(server,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",/);
   assert.match(server,/kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec/);
   assert.match(server,/kind:"artifact-main"[\s\S]{0,1200}durationSec:artifactActionSec/);
 });
