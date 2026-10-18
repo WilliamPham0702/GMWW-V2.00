@@ -42,7 +42,8 @@ test('isolation is not a catch-all escape hatch for original game or older asset
  for(const path of runtime){
   assert.equal(isV562IsolatedPreviewAsset(path),false);
   assert.equal(classify([path]),'runtime');
-  assert.throws(()=>verifyOtaVersionAdvance(manifest(),manifest(),[path]),/does not advance beyond Production/);
+  const candidate=manifest();candidate.runtime.files[0].sha256='b'.repeat(64);
+  assert.throws(()=>verifyOtaVersionAdvance(candidate,manifest(),[path]),/does not advance beyond Production/);
  }
  assert.equal(classify(['server-game/GMWW-Server/App.swift']),'native');
  assert.equal(classify(['src/index.js']),'server_only');
@@ -50,5 +51,6 @@ test('isolation is not a catch-all escape hatch for original game or older asset
 test('mixing even one live asset with preview files still BLOCKS same-version OTA',()=>{
  const p=['assets/characters/v5/test-skin-v562.html','server-game/current/app.js'];
  assert.equal(classify(p),'runtime');
- assert.throws(()=>verifyOtaVersionAdvance(manifest(),manifest(),p),/does not advance beyond Production/);
+ const candidate=manifest();candidate.runtime.files[0].sha256='b'.repeat(64);
+ assert.throws(()=>verifyOtaVersionAdvance(candidate,manifest(),p),/does not advance beyond Production/);
 });
