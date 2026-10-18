@@ -9,7 +9,7 @@ import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActio
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
-import {resolveWolfNight,resolveNightReveal} from '../src/gmww-wolf-night-resolution.js';
+import {resolveWolfNight,resolveNightReveal,resolveMaidenNight,snowWolfMayBite} from '../src/gmww-wolf-night-resolution.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -26,7 +26,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
   Date,JSON,Response,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,resolveNightReveal,STATUS_DEFS,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,resolveNightReveal,resolveMaidenNight,snowWolfMayBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
@@ -370,10 +370,10 @@ test('G4.3 real DO morning: Fairy transfers guarded bite, then checks guard on f
     g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
   ]);
   await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
-  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'),x=>x.loginId),['carol']);
+  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'),x=>x.loginId),['alice']);
   const guarded=g43seated(harness({artifact:false}));
   guarded.data.set('interactions',[
-    g43notice('action_wolf_bite','bob'),g43notice('action_protect','carol'),
+    g43notice('action_wolf_bite','bob'),g43notice('action_protect','alice'),
     g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
   ]);
   await guarded.room.applyCycle(await guarded.meta(),'morning',1,'morning-1','lab');
