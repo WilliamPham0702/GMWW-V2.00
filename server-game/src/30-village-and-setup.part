@@ -196,11 +196,11 @@ async function battleWarmAudio(kind,item){
   battleAudioLoading.set(key,promise);
   try{return await promise}finally{battleAudioLoading.delete(key)}
 }
-function battleSpeakCue(message,showError=false){
+function battleSpeakCue(message,showError=false,onFinished=null){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
-  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');return false}
-  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
-  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
+  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');onFinished?.();return false}
+  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();speech.speak(cue);return true}
+  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
 }
 let battleUnlockedAudioContext=null;
 function battleUnlockAudioFromGesture(){
@@ -216,21 +216,21 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src){
+async function battlePlayWebAudioFallback(src,onFinished=null){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    const source=ctx.createBufferSource();source.buffer=buffer;
+    const source=ctx.createBufferSource();source.buffer=buffer;source.onended=()=>onFinished?.();
     source.connect(ctx.destination);source.start();
     return true;
   }catch(_){return false}
 }
-async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
-  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
-  if(!row)return battleSpeakCue(name,showError);
+  if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500)return false;
   battleAudioLast={key,at:now};
@@ -238,15 +238,15 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
-  if(!src)return battleSpeakCue(name,showError);
+  if(!src)return battleSpeakCue(name,showError,onFinished);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
+  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     return false
   }
@@ -755,7 +755,7 @@ function renderPlayPlayers(){
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,presenceLabel=m?.online===false?'Offline':'Online';
     const gmAssignments=(playSceneRuntime.assignments||[]).length?playSceneRuntime.assignments:(playSceneState.assignmentsPreview||[]);
-    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
+    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');const factionRaw=String(assignment?.faction||assignment?.roleCard?.factionId||(state.cards||[]).find(c=>String(c.id)===String(assignment?.roleId))?.factionId||'').toLowerCase(),roleFaction=factionRaw.includes('wolf')||factionRaw.includes('sói')?'wolf':factionRaw.includes('third')||factionRaw.includes('phe ba')?'third':'village';el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role" data-faction="'+roleFaction+'">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
       el.dataset.gmwwStatuses=statusVisuals.join('|');
