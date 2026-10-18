@@ -38,4 +38,9 @@ test('Player can answer only next morning, Server compares secret signs and comm
   assert.ok(doSource.includes('this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined}'));
   assert.ok(player.includes('handlePendingInteractions(d?.interactions)'));
   assert.ok(player.includes("interaction/respond"));
+  assert.ok(player.includes("if(ix.type==='assassin_mark')setRoleEffect(ix);"));
+  assert.ok(!player.includes("if(ix.type==='assassin_mark'){setRoleEffect(ix);return}"));
+  assert.ok(player.includes("ack?.assassinOutcome==='dead'"));
+  const compiled=fs.readFileSync('src/gmww-members-live.js','utf8');
+  assert.ok(compiled.includes("assassinOutcome"));
 });
