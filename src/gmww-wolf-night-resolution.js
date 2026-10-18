@@ -4,6 +4,36 @@
  * select a different victim; saved matches and arbitrary death causes are untouched.
  */
 const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'');
+export function isWolfAssignment(a){
+  const role=String(a?.roleId||'').toLowerCase(),faction=String(a?.roleCard?.factionId||a?.factionId||a?.faction||'').toLowerCase();
+  return role.includes('wolf')||role.startsWith('role_snow_wolf')||
+    faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+}
+export function snowWolfMayBite({assignments=[],interactions=[],actorId,matchId}={}){
+  const actor=login(actorId),rows=Array.isArray(interactions)?interactions:[],match=String(matchId||'');
+  const dead=new Set(rows.filter(x=>x.type==='dead'&&x.effectActive!==false&&(!x.matchId||String(x.matchId)===match))
+    .map(x=>login(x.loginId)));
+  return !(Array.isArray(assignments)?assignments:[]).some(x=>
+    login(x?.loginId)!==actor&&isWolfAssignment(x)&&!dead.has(login(x.loginId)));
+}
+export function resolveMaidenNight({interactions=[],assignments=[],matchId,night,wolfVictims=[]}={}){
+  const match=String(matchId||''),cycle=Number(night),rows=Array.isArray(interactions)?interactions:[],
+    roles=Array.isArray(assignments)?assignments:[],visits=rows.filter(x=>
+      x.actionId==='action_visit_house'&&x.type==='effect_notice'&&!x.undone&&
+      String(x.matchId||'')===match&&Number(x.night)===cycle),
+    byId=new Map(roles.map(x=>[login(x.loginId),x])),
+    killed=new Set((Array.isArray(wolfVictims)?wolfVictims:[]).map(login));
+  for(const x of rows)if(x.type==='dead'&&x.effectActive!==false&&(!x.matchId||String(x.matchId)===match)&&
+    Number(x.night)===cycle)killed.add(login(x.loginId));
+  const newVictims=new Set(),escaped=new Set();
+  for(const visit of visits){
+    const girl=login(visit.actorId),target=login(visit.loginId);
+    if(!girl||!target||girl===target||String(byId.get(girl)?.roleId||'')!=='role_maiden')continue;
+    if(!isWolfAssignment(byId.get(target))&&!killed.has(target))escaped.add(girl);
+    if(isWolfAssignment(byId.get(target))||killed.has(target))newVictims.add(girl);
+  }
+  return {newVictims:[...newVictims],escaped:[...escaped].filter(x=>!newVictims.has(x))};
+}
 const isFrom=(row,matchId,night)=>String(row?.matchId||'')===matchId&&Number(row?.night)===night;
 const distinct=values=>[...new Set(values)];
 
@@ -34,7 +64,7 @@ export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
     let target=origin;
     if(direction){
       const n=seated.findIndex(x=>x.loginId===origin);
-      const next=(n+(direction==='right'?1:-1)+seated.length)%seated.length;
+      const next=(n+(direction==='right'?-1:1)+seated.length)%seated.length;
       target=seated[next].loginId;
       transfers.push({from:origin,to:target,direction});
     }
@@ -66,13 +96,13 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   const reads=targets.map(id=>{
     const a=byId.get(id),roleId=String(a.roleId||''),
       faction=String(a.roleCard?.factionId||a.factionId||a.faction||'').toLowerCase(),
-      wolf=faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+      wolf=isWolfAssignment(a);
     return {loginId:id,roleId,roleName:String(a.roleName||a.roleCard?.name||roleId),
       faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};
   });
   if(action==='action_aura_read'){
     const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),
-      message:result.roleName+' · '+(result.functions.join(' · ')||'Không có chức năng')};
+      message:result.roleName};
   }
   if(action==='action_destroyer_scry')
     return {kind:'role',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleName:x.roleName})),message:reads[0].roleName};
