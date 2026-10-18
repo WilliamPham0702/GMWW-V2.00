@@ -59,7 +59,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/player/artifact-activate','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -1566,14 +1566,54 @@ export class RoomDurableObject extends DurableObject {
     this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
-    const loginId=normalizeLoginId(body?.loginId),id=String(body?.interactionId||""),response=String(body?.response||"").slice(0,40),rows=(await this.ctx.storage.get("interactions"))||[],meta=await this.ctx.storage.get("meta");
-    const row=rows.find(x=>String(x?.id)===id&&normalizeLoginId(x?.loginId)===loginId);if(!row)return j({ok:false,error:"INTERACTION_NOT_FOUND"},404);
+    const loginId=normalizeLoginId(body?.loginId),id=String(body?.interactionId||""),
+      response=String(body?.response||"").slice(0,40),
+      rows=(await this.ctx.storage.get("interactions"))||[],meta=await this.ctx.storage.get("meta");
+    const row=rows.find(x=>String(x?.id)===id&&normalizeLoginId(x?.loginId)===loginId);
+    if(!row)return j({ok:false,error:"INTERACTION_NOT_FOUND"},404);
     if(row.status==="responded")return j({ok:true,interaction:row,idempotent:true});
-    if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
-    const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):(row.type==="thumb_vote"||row.type==="assassin_mark"?new Set(["👍","👎"]):new Set(["ĐÃ HIỂU","OK","✓"]));
+    if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))
+      return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
+    const isAssassin=row.type==="assassin_mark";
+    if(isAssassin){
+      // Choice must never be available at night; the server owns this gate.
+      if(String(meta?.phase)!=="running"||String(meta?.cyclePhase)!=="morning"||
+         Number(meta?.cycleNight)!==Number(row.night))
+        return j({ok:false,error:"ASSASSIN_RESPONSE_NOT_YET_OPEN"},409);
+      if(!["👍","👎"].includes(String(row.gmChoice||"")))
+        return j({ok:false,error:"ASSASSIN_CHOICE_NOT_RECORDED"},409);
+      if(rows.some(x=>normalizeLoginId(x?.loginId)===loginId&&
+         ["dead","expelled"].includes(String(x.type))&&x.effectActive!==false&&
+         (!x.matchId||String(x.matchId)===String(meta.matchId))))
+        return j({ok:false,error:"ASSASSIN_TARGET_NO_LONGER_ELIGIBLE"},409);
+    }
+    const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):
+      (row.type==="thumb_vote"||isAssassin?new Set(["👍","👎"]):new Set(["ĐÃ HIỂU","OK","✓"]));
     if(!allowed.has(response))return j({ok:false,error:"INVALID_RESPONSE"},400);
-    row.response=response;row.status="responded";row.respondedAt=new Date().toISOString();if(row.type==="assassin_mark")row.effectActive=false;row.responseVersion=1;await this.ctx.storage.put("interactions",pruneInteractions(rows));const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(row.respondedAt)).padStart(13,"0")+":"+logId,{id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),message:"Người chơi đã phản hồi: "+response,createdAt:row.respondedAt,source:"player"});
-    this.broadcast({type:"player_interaction_response",interaction:row});return j({ok:true,interaction:row});
+    const now=new Date().toISOString(),assassinOutcome=isAssassin?
+      (row.gmChoice===response?"survived":"dead"):null;
+    row.response=response;row.status="responded";row.respondedAt=now;
+    if(isAssassin)row.effectActive=false;row.responseVersion=1;
+    if(assassinOutcome==="dead"){
+      const fatal={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
+        type:"dead",loginId,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0),
+        cycleKey:String(meta.cycleKey||""),actionId:"action_assassin_mark",
+        actorId:String(row.actorId||""),source:"assassin",effectActive:true,
+        message:"Sát Thủ: người chơi chọn dấu khác GM.",createdAt:now};
+      rows.push(fatal);
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+fatal.id,fatal);
+    }
+    await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    const logId="ev-"+crypto.randomUUID();
+    await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+logId,
+      {id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),
+       message:"Người chơi phản hồi: "+response+(assassinOutcome?" · Kết quả: "+assassinOutcome:""),
+       createdAt:now,source:"player"});
+    this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined},
+      assassinOutcome,serverTime:Date.now()});
+    if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
+      statusId:"dead",active:true,serverTime:Date.now()});
+    return j({ok:true,interaction:{...row,gmChoice:undefined},assassinOutcome});
   }
   async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
   async gmReset(request,body){
@@ -1641,7 +1681,12 @@ export class RoomDurableObject extends DurableObject {
     if(!p&&canRestore){const now=new Date().toISOString();p={participantId:key,kind:"member",loginId,displayName:normalizeDisplayName(member.displayName||loginId),avatarId:String(member.avatarId||""),gameCharacterId:normalizeGameCharacterId(member.gameCharacterId)||null,seatId:null,ready:false,joinedAt:now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:now};players[key]=p;await this.ctx.storage.put("players",players);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),resumed:loginId})}
     if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn chưa ở trong phòng này."},403);
     p.lastSeenAt=new Date().toISOString();p.lastHeartbeatAt=Date.now();if(member){p.displayName=normalizeDisplayName(member.displayName||p.displayName||loginId);p.avatarId=String(member.avatarId||p.avatarId||"");p.gameCharacterId=normalizeGameCharacterId(member.gameCharacterId)||normalizeGameCharacterId(p.gameCharacterId)||null}players[key]=p;await this.ctx.storage.put("players",players);
-    const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),legacyRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),activeSnapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roleRows=privateDeliveryRoles(activeSnapshot,legacyRows),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)).slice(-10),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest);
+    const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),legacyRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),activeSnapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roleRows=privateDeliveryRoles(activeSnapshot,legacyRows),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)&&
+      (x.type!=="assassin_mark"||(String(meta?.cyclePhase||"")==="morning"&&Number(x.night)===Number(meta.cycleNight)&&
+       !rows.some(y=>normalizeLoginId(y?.loginId)===loginId&&["expelled","dead"].includes(String(y.type))&&y.effectActive!==false&&sameMatch(y)))))
+      .slice(-10).map(({gmChoice,...safe})=>safe),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
+      (x.type!=="assassin_mark"||String(meta?.cyclePhase||"")==="morning")&&
+      (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(({gmChoice,...safe})=>safe);
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
