@@ -12,10 +12,13 @@ test('V3.136: day/night lives outside timeline, village wake-up remains a real t
  assert.equal(rules.timeline('night',runtime,3)[1].label,'Làng ơi dậy đi');
  assert.equal(rules.timeline('day',runtime,3)[0].label,'Làng ơi dậy đi');
  const html=read('server-game/current/GMWW.html'),battle=read('server-game/src/40-battle-and-timeline.part');
- const back=html.indexOf('id="battleBack"'),label=html.indexOf('id="battlePeriodLabel"');
- const timeline=html.indexOf('id="battleTimeline"'),forward=html.indexOf('id="battleAdvance"');
- assert.ok(back>=0&&back<label&&label<timeline&&timeline<forward);
- assert.ok(battle.includes("periodLabel.textContent=(phase==='day'?'NGÀY THỨ ':'ĐÊM THỨ ')+night"));
+ const back=html.indexOf('id="battleBack"'),timeline=html.indexOf('id="battleTimeline"'),forward=html.indexOf('id="battleAdvance"');
+ assert.ok(back>=0&&back<timeline&&timeline<forward);
+ assert.ok(!html.includes('id="battlePeriodLabel"'));
+ assert.ok(html.includes('<b>ĐÊM THỨ 1</b></button>'));
+ assert.ok(html.includes('<b>NGÀY THỨ 1</b></button>'));
+ assert.ok(battle.includes("label.textContent='ĐÊM THỨ '+night"));
+ assert.ok(battle.includes("label.textContent='NGÀY THỨ '+night"));
  assert.ok(battle.includes('timeline.innerHTML=steps.map'));
  assert.ok(!battle.includes("timeline.innerHTML=(phase==='night'"));
 });
@@ -32,7 +35,7 @@ test('V3.136: source parts and published runtime version remain consistent',()=>
  const p=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(read('server-game/current/app.js'),p.map(name=>read('server-game/src/'+name)).join(''));
  const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
- assert.equal(v,'3.136');
+ assert.ok(Number(v.split('.')[1])>=136);
  assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
  assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
 });
