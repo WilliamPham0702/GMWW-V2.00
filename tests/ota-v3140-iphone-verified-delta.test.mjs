@@ -89,7 +89,7 @@ test('legacy iPhone V3.110 native SHA-256 staging and rollback remain unchanged;
   assert.match(app,/if\(gmwwUpdateSlowTimer\)clearTimeout\(gmwwUpdateSlowTimer\)/);
   assert.match(app,/Đã giữ nguyên phiên bản hiện tại/);
   assert.doesNotMatch(app,/gmwwSetUpdateProgress\('running',0,'Đang tải Runtime/);
-  assert.equal(JSON.parse(fs.readFileSync('package.json','utf8')).version,'3.140.0');
+  assert.ok(Number(JSON.parse(fs.readFileSync('package.json','utf8')).version.split('.')[1])>=140,'native V3.110 OTA guard must survive version advancement');
 });
 
 test('real V3.140 package builder embeds only the two audited iPhone OTA base catalogs',async()=>{

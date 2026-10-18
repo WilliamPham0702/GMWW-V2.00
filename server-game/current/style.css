@@ -5773,3 +5773,40 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battle
 #start #playShell[data-step="battle"] #battleResultPopup.is-wolf-result #battleResultMessage{
   color:#e7faff!important;font-size:12px!important;font-weight:750!important;line-height:1.6!important;padding:9px 6px 2px;
 }
+
+/* V3.141 — Fairy three buttons only, visually centred on no transfer. */
+#start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-card{
+  display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;
+  width:max-content!important;padding:5px 7px!important;gap:0!important;touch-action:none;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-directions{
+  display:grid!important;grid-template-columns:repeat(3,42px)!important;gap:5px!important;
+  white-space:nowrap!important;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-directions>button{
+  min-width:0!important;width:42px!important;height:43px!important;min-height:43px!important;
+  padding:0!important;font-size:23px!important;touch-action:manipulation;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-directions>button[data-transfer="none"]{
+  border-color:#f7e2a3!important;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-over,
+#start #playShell[data-step="battle"] #playPlayerRing.is-battle-packed .play-player-over{
+  max-width:min(144px,37vw)!important;width:max-content!important;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-role,
+#start #playShell[data-step="battle"] #playPlayerRing.is-battle-packed .play-player-role,
+#start .play-player-token .play-player-role{
+  display:block!important;width:max-content!important;max-width:min(126px,32vw)!important;
+  white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;
+  overflow:visible!important;text-overflow:clip!important;line-height:1.18!important;
+  text-align:center!important;font-size:9px!important;padding:3px 6px!important;
+  border:1px solid rgba(255,255,255,.5)!important;border-radius:8px!important;
+}
+#start .play-player-token .play-player-role[data-faction="village"]{background:#136b48!important;color:#effff4!important;border-color:#73e0a5!important}
+#start .play-player-token .play-player-role[data-faction="wolf"]{background:#992e36!important;color:#fff3f0!important;border-color:#ff9191!important}
+#start .play-player-token .play-player-role[data-faction="third"]{background:#ac621e!important;color:#fff6e8!important;border-color:#ffd18b!important}
+#start #playShell[data-step="battle"] #battleResultPopup.is-scan-result{width:max-content!important;min-width:124px;max-width:min(300px,calc(100vw - 24px))!important;padding:3px 9px 5px!important}
+#start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultGrip{min-height:16px!important;background:transparent!important;border:0!important;padding:0!important;justify-content:flex-end}
+#start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultTitle{display:none!important}
+#start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultMessage{font-size:13px!important;font-weight:900!important;text-align:center!important;padding:2px 4px!important;margin:0!important;white-space:normal!important}

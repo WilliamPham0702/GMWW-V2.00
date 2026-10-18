@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.140';
+const VERSION='3.141';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -266,7 +266,8 @@ const DEFAULT_STATE={
     ],
     system:[
       {id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false},
-      {id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false}
+      {id:'audio_system_countdown',name:'Đếm ngược 30 giây cuối',fileName:'',verifiedBinary:false},
+      {id:'audio_system_time_up',name:'Hết giờ',fileName:'',verifiedBinary:false}
     ]
   },
   themes:{
@@ -419,11 +420,29 @@ function applyV210Rules(s){
     {id:'audio_system_day_wakeup',name:'Làng ơi dậy đi',targetId:'audio_system_day_wakeup',fileName:'',verifiedBinary:false},
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false}
+    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_time_up',name:'Hết giờ',targetId:'audio_system_time_up',fileName:'',verifiedBinary:false},
+    {id:'audio_system_aura_read',name:'Tiên Tri Hào Quang · Đọc Chức Năng',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
+    {id:'audio_system_destroyer_role',name:'Kẻ Hủy Diệt · Kết Quả Soi Vai Trò',targetId:'audio_system_destroyer_role',fileName:'',verifiedBinary:false},
+    {id:'audio_system_fox_wolf',name:'Hồ Ly · Có Sói',targetId:'audio_system_fox_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_fox_no_wolf',name:'Hồ Ly · Không Có Sói',targetId:'audio_system_fox_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_bear_wolf',name:'Thần Gấu · Có Sói',targetId:'audio_system_bear_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_bear_no_wolf',name:'Thần Gấu · Không Có Sói',targetId:'audio_system_bear_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_piper_wolf',name:'Kẻ Thổi Sáo · Có Sói',targetId:'audio_system_piper_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_piper_no_wolf',name:'Kẻ Thổi Sáo · Không Có Sói',targetId:'audio_system_piper_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_find_seer_yes',name:'Sói Tiên Tri · Có Tiên Tri',targetId:'audio_system_find_seer_yes',fileName:'',verifiedBinary:false},
+    {id:'audio_system_find_seer_no',name:'Sói Tiên Tri · Không Phải Tiên Tri',targetId:'audio_system_find_seer_no',fileName:'',verifiedBinary:false},
+    {id:'audio_system_compare_same',name:'Nhà Tinh Thần Học · Cùng Phe',targetId:'audio_system_compare_same',fileName:'',verifiedBinary:false},
+    {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
   const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||a.sourceKey===c.sourceKey||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
-  s.audio.system=[...canonicalSystem,...otherSystem];
+  // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
+  // Only add missing slots; never overwrite an existing chosen file/audio binding.
+  s.audio.system=[...canonicalSystem.map(slot=>{
+    const previous=systemAudio.find(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId));
+    return {...slot,...(previous||{}),id:slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
+  }),...otherSystem];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
   if(exileAction)Object.assign(exileAction,{legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3'});
@@ -2543,11 +2562,11 @@ async function battleWarmAudio(kind,item){
   battleAudioLoading.set(key,promise);
   try{return await promise}finally{battleAudioLoading.delete(key)}
 }
-function battleSpeakCue(message,showError=false){
+function battleSpeakCue(message,showError=false,onFinished=null){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
-  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');return false}
-  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
-  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
+  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');onFinished?.();return false}
+  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();speech.speak(cue);return true}
+  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
 }
 let battleUnlockedAudioContext=null;
 function battleUnlockAudioFromGesture(){
@@ -2563,21 +2582,21 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src){
+async function battlePlayWebAudioFallback(src,onFinished=null){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    const source=ctx.createBufferSource();source.buffer=buffer;
+    const source=ctx.createBufferSource();source.buffer=buffer;source.onended=()=>onFinished?.();
     source.connect(ctx.destination);source.start();
     return true;
   }catch(_){return false}
 }
-async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
-  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
-  if(!row)return battleSpeakCue(name,showError);
+  if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500)return false;
   battleAudioLast={key,at:now};
@@ -2585,15 +2604,15 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
-  if(!src)return battleSpeakCue(name,showError);
+  if(!src)return battleSpeakCue(name,showError,onFinished);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
+  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     return false
   }
@@ -3102,7 +3121,7 @@ function renderPlayPlayers(){
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,presenceLabel=m?.online===false?'Offline':'Online';
     const gmAssignments=(playSceneRuntime.assignments||[]).length?playSceneRuntime.assignments:(playSceneState.assignmentsPreview||[]);
-    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
+    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');const factionRaw=String(assignment?.faction||assignment?.roleCard?.factionId||(state.cards||[]).find(c=>String(c.id)===String(assignment?.roleId))?.factionId||'').toLowerCase(),roleFaction=factionRaw.includes('wolf')||factionRaw.includes('sói')?'wolf':factionRaw.includes('third')||factionRaw.includes('phe ba')?'third':'village';el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role" data-faction="'+roleFaction+'">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
       el.dataset.gmwwStatuses=statusVisuals.join('|');
@@ -3497,7 +3516,7 @@ async function advancePlayPhase(){
 }
 
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
-const battleState={key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
+const battleState={wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleActions=()=>{
@@ -3570,6 +3589,16 @@ function battleTickCountdown(){
       battleState.countdownAt=now;
     }
   }
+  if(phase==='day'&&Number.isFinite(seconds)){
+    if(seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==tickKey){
+      battleState.dayCountdownCueKey=tickKey;
+      void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
+    }
+    if(seconds<=0&&battleState.dayTimeupCueKey!==tickKey){
+      battleState.dayTimeupCueKey=tickKey;
+      void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
+    }
+  }
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
@@ -3620,16 +3649,16 @@ function battleRenderTransferPanel(){
   panel.hidden=!show;
   if(!show){panel.innerHTML='';return}
   const options=[['left','↩️','Dịch trái'],['none','⏺️','Không dịch'],['right','↪️','Dịch phải']];
-  panel.innerHTML='<div class="gmww-transfer-card"><strong data-transfer-grip title="Giữ và kéo để di chuyển">DỊCH CHUYỂN VẾT CẮN ⠿</strong>'+
-    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn hướng dịch vết cắn">'+
-    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
-    '</div><button type="button" data-transfer-ok '+(!dir||battleState.busy||battleState.syncPending?'disabled':'')+'>OK</button></div>';
+  panel.innerHTML='<div class="gmww-transfer-card" title="Kéo vùng trống để di chuyển">'+
+    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn dịch vết cắn theo vị trí bên trái, giữ nguyên hoặc bên phải của nạn nhân ban đầu">'+
+    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-label="'+label+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
+    '</div></div>';
   panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
     if(battleState.busy||battleState.syncPending)return;
-    battleState.transferDir=button.dataset.transfer;panel.dataset.sig='';battleRenderTransferPanel();
+    // Each of the three buttons is the confirmation; no extra OK/title row.
+    battleState.transferDir=button.dataset.transfer;void battleConfirm(true);
   }));
-  panel.querySelector('[data-transfer-ok]')?.addEventListener('click',()=>{void battleConfirm(true)});
-  const grip=panel.querySelector('[data-transfer-grip]');let drag=null;
+  const grip=panel.querySelector('.gmww-transfer-card');let drag=null;
   grip?.addEventListener('pointerdown',e=>{
     if(e.target.closest('button'))return;
     const r=panel.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
@@ -3647,13 +3676,47 @@ function battleRenderTransferPanel(){
 function battleCloseResultPopup(){
   const popup=document.getElementById('battleResultPopup');if(popup)popup.hidden=true;
 }
-function battleShowResultPopup(title,message){
+function battleShowResultPopup(title,message,scanOnly=false){
   const popup=document.getElementById('battleResultPopup');if(!popup)return;
   const headline=document.getElementById('battleResultTitle'),body=document.getElementById('battleResultMessage');
   if(headline)headline.textContent=String(title||'KẾT QUẢ');
   if(body)body.textContent=String(message||'');
   popup.classList.toggle('is-wolf-result',String(title||'').includes('VẾT CẮN'));
+  popup.classList.toggle('is-scan-result',scanOnly);
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
+}
+function battleDivinationSystemAudioCue(actionId,result){
+  const action=String(actionId||'');
+  if(action==='action_aura_read')return 'audio_system_aura_read';
+  if(action==='action_destroyer_scry')return 'audio_system_destroyer_role';
+  if(action==='action_find_seer')return result?.found?'audio_system_find_seer_yes':'audio_system_find_seer_no';
+  if(action==='action_compare_faction')return result?.same?'audio_system_compare_same':'audio_system_compare_different';
+  const prefixes={action_seer:'seer',action_fox_scan:'fox',action_bear_scan:'bear',
+    action_scan_three:'piper',action_wolf_seer:'seer',action_rotten_seer:'seer'};
+  const prefix=prefixes[action];if(!prefix)return '';
+  const yes=!!result?.wolf;
+  return prefix==='seer'?(yes?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):
+    'audio_system_'+prefix+(yes?'_wolf':'_no_wolf');
+}
+async function battleWakeupToDay(expectedKey){
+  if(battleState.wakeAdvanceInFlight||battleState.key!==expectedKey||
+     playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleTurn()?.kind!=='village-wakeup')return;
+  battleState.wakeAdvanceInFlight=expectedKey;
+  try{
+    await advancePlayPhase(); // Complete the actual wake-up turn on the Server.
+    if(playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+       playSceneRuntime.nightRuntime?.completed)await advancePlayPhase(); // Day phase.
+  }finally{battleState.wakeAdvanceInFlight=''}
+}
+function battlePlayWakeupAndAdvance(turn,key){
+  if(battleState.wakeAudioStartedKey===key)return;
+  battleState.wakeAudioStartedKey=key;
+  const cue=battleTurnAudioCue(turn);
+  if(!cue)return;
+  // Change phase only after media or speech finishes; a stale turn can never advance.
+  void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,false,()=>{
+    Promise.resolve().then(()=>{void battleWakeupToDay(key)});
+  });
 }
 function battleWolfOutcomeText(result){
   if(!result?.ok)return 'Không thể xác định vết cắn: cần kiểm tra vị trí Seat.';
@@ -3803,7 +3866,7 @@ function renderPlayBattle(){
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
-  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night')battleAudioForTurn(t,true);/* wake-up cue is owned by the final night turn */}
+  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
   const previous=document.getElementById('battleBack');
@@ -3892,7 +3955,7 @@ function renderPlayBattle(){
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
     const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy}
   }
-  battleMarkPlayers();battleTickCountdown();if(t&&phase==='night')battleShowWitchIntel(t)
+  battleMarkPlayers();battleTickCountdown();
 }
 async function battleConfirm(confirmed=false){
   const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
@@ -3902,7 +3965,7 @@ async function battleConfirm(confirmed=false){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   const targets=[...battleState.targets],startedAt=globalThis.performance?.now?.()??Date.now();
   try{
-    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_wolf_seer','action_rotten_seer'].includes(a.actionId)&&!a.artifactId;
+    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(a.actionId)&&!a.artifactId;
     const payload={targetIds:(seerReveal||transferAct)?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
       ...(a.artifactId?{artifactId:a.artifactId}:{}),...(seerReveal?{revealTargetIds:targets}:{}),effectId:a.effectIds[0]||'',effectName:a.name,
       matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',
@@ -3919,14 +3982,12 @@ async function battleConfirm(confirmed=false){
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
     // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
-    if(result.revelation){
+    if(seerReveal&&result.revelation){
       const revelation=result.revelation;
-      const names=targets.map(id=>battleMember(id)?.displayName||id).join(', ');
-      battleShowResultPopup('🔮 KẾT QUẢ SOI XÉT',names+' — '+revelation.message);
-      const cue=revelation.kind==='wolf-check'?(revelation.wolf?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):'audio_system_seer_not_wolf';
-      void battlePlayConfiguredAudio('system',cue,revelation.message);
-    }else if(result.wolfOutcome&&['action_transfer_bite','action_wolf_bite'].includes(a.actionId)){
-      battleShowResultPopup('🐺 KẾT QUẢ VẾT CẮN',battleWolfOutcomeText(result.wolfOutcome));
+      // Only actual GM divination results own this compact popup.
+      battleShowResultPopup('',String(revelation.message||''),true);
+      const cue=battleDivinationSystemAudioCue(a.actionId,revelation);
+      if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
     }
     battleClear();
     battleState.syncPending=true;

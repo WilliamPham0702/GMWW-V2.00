@@ -36,7 +36,7 @@ test('V3.138: navigation, assignment collapse, swipe, drop sound and draggable F
  assert.match(battle,/initBattleTimelineScrollNavigation\(\)/);
  assert.ok(battle.includes('if(delta)battleNavigateRelative(delta)'));
  assert.ok(battle.includes('if(hit.id)battlePickTargetWithAudio(hit.id,d.id)'));
- assert.match(battle,/data-transfer-grip/);
+ assert.ok(battle.includes("const grip=panel.querySelector('.gmww-transfer-card')"));
  assert.match(setup,/assignmentPanelDismissed=true/);
  assert.match(setup,/assignmentPanelDismissed=false/);
  assert.match(read('server-game/current/style.css'),/battleResultPopup\.is-wolf-result/);
