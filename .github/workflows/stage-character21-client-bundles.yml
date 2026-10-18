@@ -1,0 +1,44 @@
+name: Stage Character 21 GM and Player bundles
+
+on:
+  push:
+    branches:
+      - feature/character-overhaul-v600-staging
+    paths:
+      - 'server-game/src/20-members-and-roster.part'
+      - 'src/player-web-src/20-village-and-profile.part'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compile-staging-ui:
+    if: github.repository == 'WilliamPham0702/GMWW-V2.00' && github.ref == 'refs/heads/feature/character-overhaul-v600-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/character-overhaul-v600-staging
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild canonical GM and Player Web bundles
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --write
+          node .github/scripts/assemble-player-web.mjs --write
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check server-game/current/app.js
+      - name: Commit compiled files to staging branch only
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = 'feature/character-overhaul-v600-staging'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- server-game/current/app.js src/gmww-members-live.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'build(character): stage synchronized GM and Player V6.05 preview bundles'
+          git push origin HEAD:feature/character-overhaul-v600-staging
