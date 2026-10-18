@@ -12,6 +12,7 @@ on:
       - 'src/gmww-members-live.js'
       - 'scripts/build-character21-v605-game-staging.mjs'
       - 'scripts/build-character22-30-art-review.mjs'
+      - 'scripts/verify-character22-30-staging.mjs'
       - 'assets/characters/overhaul-v600/character-2*/avatar.webp'
       - 'assets/characters/overhaul-v600/character-30/avatar.webp'
       - 'assets/characters/overhaul-v600/portraits-22-30-v606-staging.json'
