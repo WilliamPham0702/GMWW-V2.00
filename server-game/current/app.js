@@ -1828,6 +1828,7 @@ async function gmApi(path,opts={}){
   }finally{clearTimeout(timer)}
 }
 // Preview only: both opt-in query AND isolated worker host required; production stays on legacy assets.
+// V6.06 portrait rollout: preserve legacy 42-slot identity contract, expose only 30 slots on explicit game staging.
 const MEMBER_CHARACTER_V605_PREVIEW=typeof location!=='undefined'
   &&/^(?:localhost|127\.0\.0\.1|gmww-character[0-9a-z-]*-(?:preview|staging)\.williampham0702\.workers\.dev)$/.test(location.hostname)
   &&new URLSearchParams(location.search).get('characterV605')==='1';
@@ -2057,6 +2058,8 @@ function renderMemberAvatarPicker(){
   const count=document.getElementById('memberAvatarLibraryCount');if(count)count.textContent=MEMBER_CHARACTER_STAGE_COUNT+' nhân vật';
   for(const a of memberAdminState.avatars){
     const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
+    const unriggedV606=MEMBER_CHARACTER_V605_PREVIEW&&/^character-(?:2[2-9]|30)$/.test(a.id);
+    b.disabled=unriggedV606;if(unriggedV606)b.title='Ảnh được duyệt; chưa có 8 hướng/4 chuyển động — chưa cho chọn vào trận';
     b.innerHTML='<img alt=""><small></small>';
     const img=b.querySelector('img'),num=Number(String(a.id).slice(-2));
     img.alt=a.name||a.id;img.src=memberCharacterV605Avatar(a.id)||memberCharacterFrameUrl(a.id,1);
@@ -2064,7 +2067,7 @@ function renderMemberAvatarPicker(){
     img.onerror=()=>{img.onerror=null;img.src=memberAvatarUrl(a.id)};
     b.querySelector('small').textContent=(MEMBER_CHARACTER_V605_PREVIEW&&/^character-(?:2[2-9]|30)$/.test(a.id))
       ?('Nhân vật '+String(a.id).slice(-2)+' · Ảnh trước'):a.name||a.id;
-    b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
+    b.onclick=()=>{if(unriggedV606)return;memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
   }
   if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Bộ Nhân Vật.</div>';
   ensureMemberCharacterPreviewTicker();
