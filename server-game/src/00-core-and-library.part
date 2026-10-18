@@ -266,7 +266,8 @@ const DEFAULT_STATE={
     ],
     system:[
       {id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false},
-      {id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false}
+      {id:'audio_system_countdown',name:'Đếm ngược 30 giây cuối',fileName:'',verifiedBinary:false},
+      {id:'audio_system_time_up',name:'Hết giờ',fileName:'',verifiedBinary:false}
     ]
   },
   themes:{
@@ -419,11 +420,29 @@ function applyV210Rules(s){
     {id:'audio_system_day_wakeup',name:'Làng ơi dậy đi',targetId:'audio_system_day_wakeup',fileName:'',verifiedBinary:false},
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false}
+    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_time_up',name:'Hết giờ',targetId:'audio_system_time_up',fileName:'',verifiedBinary:false},
+    {id:'audio_system_aura_read',name:'Tiên Tri Hào Quang · Đọc Chức Năng',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
+    {id:'audio_system_destroyer_role',name:'Kẻ Hủy Diệt · Kết Quả Soi Vai Trò',targetId:'audio_system_destroyer_role',fileName:'',verifiedBinary:false},
+    {id:'audio_system_fox_wolf',name:'Hồ Ly · Có Sói',targetId:'audio_system_fox_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_fox_no_wolf',name:'Hồ Ly · Không Có Sói',targetId:'audio_system_fox_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_bear_wolf',name:'Thần Gấu · Có Sói',targetId:'audio_system_bear_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_bear_no_wolf',name:'Thần Gấu · Không Có Sói',targetId:'audio_system_bear_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_piper_wolf',name:'Kẻ Thổi Sáo · Có Sói',targetId:'audio_system_piper_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_piper_no_wolf',name:'Kẻ Thổi Sáo · Không Có Sói',targetId:'audio_system_piper_no_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_find_seer_yes',name:'Sói Tiên Tri · Có Tiên Tri',targetId:'audio_system_find_seer_yes',fileName:'',verifiedBinary:false},
+    {id:'audio_system_find_seer_no',name:'Sói Tiên Tri · Không Phải Tiên Tri',targetId:'audio_system_find_seer_no',fileName:'',verifiedBinary:false},
+    {id:'audio_system_compare_same',name:'Nhà Tinh Thần Học · Cùng Phe',targetId:'audio_system_compare_same',fileName:'',verifiedBinary:false},
+    {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
   const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||a.sourceKey===c.sourceKey||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
-  s.audio.system=[...canonicalSystem,...otherSystem];
+  // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
+  // Only add missing slots; never overwrite an existing chosen file/audio binding.
+  s.audio.system=[...canonicalSystem.map(slot=>{
+    const previous=systemAudio.find(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId));
+    return {...slot,...(previous||{}),id:slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
+  }),...otherSystem];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
   if(exileAction)Object.assign(exileAction,{legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3'});
