@@ -15,10 +15,10 @@ test('V3.136: day/night lives outside timeline, village wake-up remains a real t
  const back=html.indexOf('id="battleBack"'),timeline=html.indexOf('id="battleTimeline"'),forward=html.indexOf('id="battleAdvance"');
  assert.ok(back>=0&&back<timeline&&timeline<forward);
  assert.ok(!html.includes('id="battlePeriodLabel"'));
- assert.ok(html.includes('<b>ĐÊM THỨ 1</b></button>'));
- assert.ok(html.includes('<b>NGÀY THỨ 1</b></button>'));
- assert.ok(battle.includes("label.textContent='ĐÊM THỨ '+night"));
- assert.ok(battle.includes("label.textContent='NGÀY THỨ '+night"));
+ assert.ok(html.includes('<b>&lt;Đêm 1</b></button>'));
+ assert.ok(html.includes('<b>Ngày 1&gt;</b></button>'));
+ assert.ok(battle.includes("label.textContent='<Đêm '+night"));
+ assert.ok(battle.includes("label.textContent='Ngày '+night+'>'"));
  assert.ok(battle.includes('timeline.innerHTML=steps.map'));
  assert.ok(!battle.includes("timeline.innerHTML=(phase==='night'"));
 });

@@ -18,9 +18,9 @@ const villageCss=read('assets/village/village.css');
 const packager=read('.github/scripts/prepare-update-channel.mjs');
 const ctx={};vm.runInNewContext(src,ctx);
 const vis=ctx.GMWW_STATUS_VISUALS;
-test('A: catalog contains precisely 10 lasting + 5 transient effects, no rule engine',()=>{
-  assert.equal(vis.entries.length,15);
-  assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='persistent'),x=>x.id),['frozen','protected','wolf_bitten','marked','dead','expelled','infected','mute','disabled_permanent','linked']);
+test('A: catalog contains precisely 11 lasting + 5 transient effects, no rule engine',()=>{
+  assert.equal(vis.entries.length,16);
+  assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='persistent'),x=>x.id),['frozen','protected','wolf_bitten','marked','dead','expelled','infected','mute','disabled_permanent','linked','visited']);
   assert.deepEqual(Array.from(vis.entries.filter(x=>x.type==='instant'),x=>x.id),['recover','transform','attack','inspect','hunt']);
   assert.ok(vis.entries.every(x=>x.name&&x.description&&x.effect));
   assert.doesNotMatch(src,/playRoomApi\(|gmBattleAction\(|applyCycle\(/);
@@ -40,7 +40,7 @@ test('A: only active effects are drawn and disabled_2n reuses power seal',()=>{
   assert.match(vis.overlay(['frozen','infected']),/gmww-sv-orbit/);
   assert.match(vis.overlay(['frozen','infected']),/data-orbit="infected"/);
 });
-test('B: library has all 15 live previews and all 15 switches',()=>{
+test('B: library has all 16 live previews and all 16 switches',()=>{
   assert.match(html,/status-visuals\.css/);assert.match(html,/status-visuals\.js/);
   assert.match(html,/id="statusLibraryGrid"/);
   assert.match(app,/visuals\.entries\.map\(/);
@@ -53,7 +53,7 @@ test('B: server display settings are separate from game statuses',()=>{
   assert.match(statusPolicy,/STATUS_VISUAL_IDS=new Set/);
   assert.match(worker,/if\(!STATUS_VISUAL_IDS\.has\(statusId\)\)/);
   assert.match(statusPolicy,/STATUS_VISUAL_LEGACY/);
-  assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId\)/);
+  assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId,players\)/);
   assert.match(statusPolicy,/display\[x\.statusId\]===true/);
   assert.match(statusPolicy,/statusId!=="marked"/);
   assert.equal(vis.byId.marked.playerWeb,false);
@@ -117,7 +117,7 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.doesNotMatch(webCss,/rotate\(76deg\)/);
 });
 
-test('Preview asset: same exact 15-status renderer, no room modification, usable on iPhone',()=>{
+test('Preview asset: same exact 16-status renderer, no room modification, usable on iPhone',()=>{
   assert.equal(previewRenderer,src);
   assert.match(previewPage,/<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
   assert.match(previewPage,/\/status-visuals\.js\?v=v3131-vertical/);
@@ -152,11 +152,11 @@ test('V1 death immobility: pins each chibi independently and releases visual anc
   assert.equal(deadAgain.x,73,'new death must not reuse previous death location');
 });
 
-test('V2: all 15 visual orbit symbols, red wolf claw, and no transfer state',()=>{
-  assert.equal(vis.entries.length,15);
+test('V2: all 16 visual orbit symbols, red wolf claw, and no transfer state',()=>{
+  assert.equal(vis.entries.length,16);
   assert.equal(vis.byId.transfer,undefined);
   assert.equal(vis.byId.hunt.icon,'🏹');
-  const expected={frozen:'❄️',protected:'🛡️',wolf_bitten:'🐺',marked:'👍',dead:'☠️',expelled:'🌪️',infected:'🦠',mute:'😷',disabled_permanent:'🚫',linked:'✌️',recover:'⭐',transform:'🥳',attack:'⚔️',inspect:'💫',hunt:'🏹'};
+  const expected={frozen:'❄️',protected:'🛡️',wolf_bitten:'🐺',marked:'👍',dead:'☠️',expelled:'🌪️',infected:'🦠',mute:'😷',disabled_permanent:'🚫',linked:'✌️',recover:'⭐',transform:'🥳',attack:'⚔️',inspect:'💫',hunt:'🏹',visited:'💋'};
   for(const [id,icon] of Object.entries(expected)){
     assert.match(vis.overlay([id]),/gmww-sv-orbit/);
     assert.ok(vis.overlay([id]).includes(icon),id+' missing orbit icon');
@@ -187,8 +187,8 @@ test('V3.124: GM avoids continuous heavy DOM rewrites; animation and Player CSS 
   assert.match(app,/dataset\.gmwwPlayerDomSig===domSig/);
   assert.match(app,/performance\.now\(\)/);
   assert.match(app,/lastMotionPaintAt/);
-  assert.match(statusPolicy,/confirmedNightStatusVisuals\(rows,meta\)/);
-  assert.match(worker,/confirmedNightStatusVisuals\(interactions,meta\)/);
+  assert.match(statusPolicy,/confirmedNightStatusVisuals\(rows,meta,players=\{\}\)/);
+  assert.match(worker,/confirmedNightStatusVisuals\(interactions,meta,players\)/);
   assert.match(gmCss,/content-visibility:auto/);
   assert.match(gmCss,/text-shadow:0 0 5px/);
   assert.equal(webCss.slice(0,gmCss.length),gmCss);
