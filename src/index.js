@@ -6,7 +6,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, resolveNightReveal } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, resolveNightReveal, resolveMaidenNight, snowWolfMayBite } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1236,7 +1236,13 @@ export class RoomDurableObject extends DurableObject {
     const wolfResolution=p==="morning"&&n>0?
       resolveWolfNight({interactions:rows,players:(await this.ctx.storage.get("players"))||{},
         matchId:String(meta.matchId||""),night:n}):null;
-    if(wolfResolution?.ok)for(const loginId of wolfResolution.victims){
+    const maiden=p==="morning"&&n>0?resolveMaidenNight({interactions:rows,
+      assignments:(await this.ctx.storage.get("assignments"))||[],matchId:String(meta.matchId||""),
+      night:n,wolfVictims:wolfResolution?.ok?wolfResolution.victims:[]}):null;
+    const dawnVictims=new Set(wolfResolution?.ok?wolfResolution.victims:[]);
+    for(const girl of maiden?.escaped||[])dawnVictims.delete(girl);
+    for(const girl of maiden?.newVictims||[])dawnVictims.add(girl);
+    if(p==="morning")for(const loginId of dawnVictims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
       if(rows.some(row=>String(row?.id||"")===id))continue;
       rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
@@ -1354,6 +1360,11 @@ export class RoomDurableObject extends DurableObject {
       const assigned=(await this.ctx.storage.get("assignments"))||[];
       const row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
       if(!row)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
+      // Server must reject wolf-bite requests from Snow Wolf while another wolf lives.
+      if(roleId==='role_snow_wolf'&&String(body?.actionId||'')==='action_wolf_bite'&&
+         !snowWolfMayBite({assignments:assigned,interactions,actorId,matchId}))
+        return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",
+          message:"Sói Tuyết chỉ Cắn khi là Sói cuối cùng còn sống."},409);
       // assignments is a public summary; limits live in the existing private role records.
       const storedRoles=await this.ctx.storage.get("roles:"+actorId),legacyRole=await this.ctx.storage.get("role:"+actorId);
       const privateRoles=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]);
