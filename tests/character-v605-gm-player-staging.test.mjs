@@ -47,8 +47,18 @@ test('Staging Worker serves correct avatar and GLB content-types and rejects wri
   assert.equal(r.headers.get('x-gmww-character-id'),'character-21');
   assert.equal(await r.text(),body);
  }
- const bad=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/character-22/avatar'),{...enabled,...mocked});
- assert.equal(bad.status,404);
+ const portrait=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/character-22/avatar'),{...enabled,...mocked});
+ assert.equal(portrait.status,200);
+ assert.equal(portrait.headers.get('x-gmww-character-status'),'portrait-only');
+ const noSkin=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/character-22/skin'),{...enabled,...mocked});
+ assert.equal(noSkin.status,404);
+ const noRenderer=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/character-30/renderer'),{...enabled,...mocked});
+ assert.equal(noRenderer.status,404);
+ const portraitCatalog=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/portrait-catalog'),{...enabled,...mocked});
+ assert.equal(portraitCatalog.status,200);
+ const portraits=await portraitCatalog.json();
+ assert.equal(portraits.totalPortraitOnly,9);
+ assert.ok(portraits.characters.every(c=>c.rigApproved===false&&c.modelUrl===null&&c.actions.length===0&&c.directions===1));
  const write=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/catalog',{method:'POST'}),{...enabled,...mocked});
  assert.equal(write.status,405);
  assert.equal(await characterV605PreviewRoute(new Request(stage+'/api/game-characters'),enabled),null);
@@ -63,10 +73,14 @@ test('GM and Player source only alter explicitly opted-in Character 21',async()=
  assert.match(web,/characterV605ImageUrl/);
  assert.match(web,/\/api\/character-v605\/catalog/);
  assert.match(web,/GMWW_CHARACTER_V605_MODEL/);
+ assert.match(web,/portrait-catalog/);
+ assert.match(gm,/character-21\/avatar/);
  assert.match(gm,/gmwwCharacterV605SkinnedPreview/);
  assert.match(gm,/character-21\/renderer\?embed=1/);
  assert.match(web,/characterV605PlayerRenderer/);
  assert.match(web,/character-21\/renderer\?embed=1/);
  assert.ok(gm.includes("character-21")&&web.includes("character-21"));
  assert.equal(characterV605PreviewCatalog().characters.length,1);
+ assert.ok(web.includes('Chưa có skin 8 hướng/4 chuyển động'));
+ assert.ok(gm.includes('Chưa có skin 8 hướng/4 chuyển động'));
 });
