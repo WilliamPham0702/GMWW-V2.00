@@ -25,7 +25,8 @@ test('V3.98 battle has one draggable clock, no fixed bottom row, wolf owns GM to
   assert.match(css,/#playBattleDock\.battle-float-v396/);
   assert.match(css,/pointer-events:none!important/);
   assert.match(app,/function initBattleFloatingClock\(/);
-  assert.match(app,/playSceneState\.step==='battle';top\.hidden=!visible;dock\.hidden=!visible;const clockFloat=/);
+  assert.match(app,/playSceneState\.step==='battle';top\.hidden=!visible;dock\.hidden=!visible;/);
+  assert.match(app,/const clockFloat=document\.getElementById\('playBattleClockFloat'\)/);
   assert.match(app,/document\.getElementById\('battleGMAuto'\)\?\.addEventListener\('click'/);
   assert.match(app,/document\.getElementById\('battleGMAudio'\)\?\.addEventListener\('click'/);
 });
