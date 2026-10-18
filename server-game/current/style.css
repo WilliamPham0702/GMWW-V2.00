@@ -5730,3 +5730,9 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
   cursor:grab;min-height:38px;
 }
 #start #playShell[data-step="battle"] #battleTargetGrip:active{cursor:grabbing}
+
+/* V3.136: fixed day/night label beside unchanged previous/next controls; only turns scroll. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{grid-template-columns:44px max-content minmax(0,1fr) 44px!important;column-gap:5px!important}
+#start #playShell[data-step="battle"] .gmww-battle-period-label{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;flex:none;min-height:33px;padding:4px 9px;border:1px solid #bda261;border-radius:999px;background:#153849;color:#fff0ae;font-size:10px;font-weight:900}
+#start #playShell[data-step="battle"] #battleBack:disabled{opacity:.5}
+@media(max-width:390px){body.play-immersive #start #playShell[data-step="battle"] #playBattleTop{grid-template-columns:42px max-content minmax(0,1fr) 42px!important;column-gap:3px!important}#start #playShell[data-step="battle"] .gmww-battle-period-label{font-size:9px;padding:3px 6px}}
