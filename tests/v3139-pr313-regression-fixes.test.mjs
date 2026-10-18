@@ -26,33 +26,22 @@ test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative
  assert.ok(audio.includes('if(await battlePlayWebAudioFallback(src,onFinished))return true'));
  assert.ok(battle.includes("battleState.lastAudioTurnKey")&&battle.includes('battleAudioForTurn(t,true)'));
 });
-test('V3.139: GM movement follows shared paving route and stops instead of teleporting',()=>{
+test('V3.143: GM patrol and manual movement no longer run',()=>{
  const source=read('server-game/src/10-library-and-settings.part');
- const begin=source.indexOf('function gmwwGmNearPlayer('),end=source.indexOf('function gmwwGmActorAt(',begin);
- assert.ok(begin>0&&end>begin);
- const context=vm.createContext({
-  GMWW_GM_AUTO_POINTS:[[28,38],[42,36],[58,36],[72,38],[77,48],[77,60],[73,70],[63,80],[60,92],[50,94],[40,92],[37,80],[27,70],[23,60],[23,48]],
-  gmwwGmHash:()=>0,
-  playMapDisplay:(x,y)=>[x,y],
-  document:{getElementById:()=>context.ring}
- });
- vm.runInContext(read('assets/village/village-layout.js'),context);
- vm.runInContext(source.slice(begin,end),context);
- const layout=context.GMWW_VILLAGE_LAYOUT;
+ assert.doesNotMatch(source,/gmwwGmRoute\(/);
+ assert.doesNotMatch(source,/gmwwGmWalkPoint\(/);
+ assert.doesNotMatch(source,/gmwwGmKeepClear\(/);
+ assert.doesNotMatch(source,/gmwwMoveGmCharacter\(/);
+ assert.match(source,/gmwwSendGmPresence/);
+ const ctx={};vm.runInNewContext(read('assets/village/village-layout.js'),ctx);
+ const layout=ctx.GMWW_VILLAGE_LAYOUT;
  for(const n of [8,10,12,14,16,18,20,22,24,26,28,30]){
   const seats=layout.positions(n,layout.recommendedSeatShape(n));
-  context.ring={querySelectorAll:()=>seats.map(pos=>({style:{left:pos.x+'%',top:pos.y+'%'}}))};
-  const first=context.gmwwGmKeepClear({x:50,y:93,moving:true,gait:'walk'});
-  assert.equal(first.x,50);assert.equal(first.y,93);
-  const occupied=context.gmwwGmKeepClear({x:seats[0].x,y:seats[0].y,moving:true,gait:'walk'});
-  assert.equal(occupied.x,50,'GM must wait at last safe spot with '+n+' seats');
-  assert.equal(occupied.y,93,'GM must never teleport when blocked');
-  assert.equal(occupied.moving,false);
+  assert.equal(seats.length,n);
+  for(const p of seats)assert.ok(layout.inside(p.x,p.y));
  }
- const track=context.gmwwGmRoute({x:28,y:38},{x:73,y:70});
- assert.ok(track.length>=2);
- for(let i=0;i<=100;i++){const p=context.gmwwGmWalkPoint({x:28,y:38},{x:73,y:70},i/100);assert.ok(layout.inside(p.x,p.y),'Never enter water, roof or fire');}
 });
+
 test('V3.139: Player Web, preview and GM status cache versions are refreshed together',()=>{
  const index=read('assets/village/index.html'),village=read('assets/village/village.mjs');
  const villageCss=read('assets/village/village.css'),preview=read('assets/status-visuals-preview.html');
