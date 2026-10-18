@@ -74,7 +74,7 @@ test('V3.132: compact OK-only panel keeps cancellation while selecting and allow
   assert.match(css,/width:64px!important/);
   assert.match(part,/pending\.hidden=!action\|\|!battleState\.targets\.length\|\|battleState\.targetSheet/);
   assert.match(part,/battleConfirm\(true\)/);
-  assert.match(app,/const VERSION='3\.132'/);
+  assert.match(app,/const VERSION='3\.133'/);
 });
 test('V3.132: batch reuses only authenticated request; undo, receipt and action rules remain',()=>{
   assert.match(worker,/async gmBattleAction\(request,body\)\{\s*const actionStartedAt=Date\.now\(\);\s*const auth=await this\.gmAuthorized\(request\)/);
@@ -87,5 +87,5 @@ test('V3.132: batch reuses only authenticated request; undo, receipt and action 
   assert.match(worker,/isBattleActorBlocked/);
   assert.match(worker,/checkBattleRoleActionUsage/);
   assert.match(worker,/await restore\(before\)/);
-  assert.match(worker,/VERSION="V3\.132"/);
+  assert.match(worker,/VERSION="V3\.133"/);
 });
