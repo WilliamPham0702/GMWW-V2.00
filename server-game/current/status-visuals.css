@@ -143,3 +143,13 @@
 .gmww-sv-badges>span{font-size:9px;line-height:1.1;min-height:14px;padding:2px 4px;white-space:nowrap}
 .gmww-sv-preview .gmww-sv-orbit{--orbit-radius:25px;--orbit-height:7px;--orbit-icon-size:11px}
 @media(prefers-reduced-motion:reduce){.gmww-sv-orbit-item{animation-duration:24s}}
+
+/* V3.138: final status compositor only. Hide legacy frozen overlay; badges stand out in red. */
+#start .play-player-token.gmww-sv-stage.is-frozen .play-player-avatar::before,
+#start .play-player-token.gmww-sv-stage.is-frozen .play-player-avatar::after{content:none!important;display:none!important;animation:none!important}
+#start .play-player-token.gmww-sv-stage .gmww-sv-badges>span{
+ background:#a52330!important;color:#fff7ed!important;border:1px solid #ffd199!important;
+ box-shadow:0 2px 9px rgba(112,7,19,.65)!important;border-radius:7px!important;
+ padding:3px 5px!important;font-size:10px!important;font-weight:850!important;
+}
+.gmww-sv-preview .gmww-sv-badges>span{background:#a52330;color:white;border-color:#f9bc83}
