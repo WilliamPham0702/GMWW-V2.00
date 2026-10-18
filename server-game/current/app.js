@@ -4001,7 +4001,17 @@ async function battleConfirm(confirmed=false){
       // Only actual GM divination results own this compact popup.
       battleShowResultPopup('',String(revelation.message||''),true);
       const cue=battleDivinationSystemAudioCue(a.actionId,revelation);
-      if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+      if(a.actionId==='action_aura_read'){
+        // The Aura Seer must hear the actual role name, never its functions.
+        // Play the configured system cue first when available, then pronounce the
+        // exact name. This also handles roles without dedicated sound recordings.
+        const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
+        if(!playAudioMuted()&&roleName){
+          if(cue&&battleFindAudio('system',cue,revelation.message))
+            void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
+          else battleSpeakCue(roleName);
+        }
+      }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
     }
     // Advance a confirmed turn after Server sync. Scan results stay visible until GM taps outside.
     battleState.pendingNextTurnId=t.id;
