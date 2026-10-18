@@ -26,7 +26,8 @@ test("new Runtime OTA removes inaccurate task progress while providing a working
   assert.doesNotMatch(app,/function gmwwTaskReviewLink\(|gmwwTasksRefresh/);
   assert.doesNotMatch(html,/id="gmwwTasksOpenList"|settingsGroupTasks|gmww-task-review-help/);
   assert.match(html,/id="gmwwCloudflareOpen"/);
-  assert.match(html,/window\.location\.assign\('https:\/\/gmww-cloudflare-admin/);
+  assert.match(html,/id="gmwwCloudflarePanel"/);
+  assert.match(html,/window\.location\.assign\(actions\)/);
   assert.match(deploy,/Cloudflare management entry verified in live OTA runtime/);
   assert.match(deploy,/TASK_APP_URL/);
   assert.match(deploy,/TASK_HTML_URL/);
