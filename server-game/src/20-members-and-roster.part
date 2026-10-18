@@ -320,6 +320,7 @@ async function gmApi(path,opts={}){
   }finally{clearTimeout(timer)}
 }
 // Preview only: both opt-in query AND isolated worker host required; production stays on legacy assets.
+// V6.06 portrait rollout: preserve legacy 42-slot identity contract, expose only 30 slots on explicit game staging.
 const MEMBER_CHARACTER_V605_PREVIEW=typeof location!=='undefined'
   &&/^(?:localhost|127\.0\.0\.1|gmww-character[0-9a-z-]*-(?:preview|staging)\.williampham0702\.workers\.dev)$/.test(location.hostname)
   &&new URLSearchParams(location.search).get('characterV605')==='1';
