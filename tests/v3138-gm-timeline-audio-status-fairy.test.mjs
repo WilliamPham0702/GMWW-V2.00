@@ -34,8 +34,8 @@ test('V3.138: navigation, assignment collapse, swipe, drop sound and draggable F
  assert.ok(battle.includes("label.textContent='<Đêm '+night"));
  assert.ok(battle.includes("label.textContent='Ngày '+night+'>'"));
  assert.match(battle,/initBattleTimelineScrollNavigation\(\)/);
- assert.match(battle,/battleNavigateIndex\(Number\(closest.dataset.battleIndex\)\)/);
- assert.match(battle,/if\(hit.id\)\{[\s\S]*?battlePlayConfiguredAudio\('actions',action.actionId,action.name\)/);
+ assert.ok(battle.includes('if(delta)battleNavigateRelative(delta)'));
+ assert.ok(battle.includes('if(hit.id)battlePickTargetWithAudio(hit.id,d.id)'));
  assert.match(battle,/data-transfer-grip/);
  assert.match(setup,/assignmentPanelDismissed=true/);
  assert.match(setup,/assignmentPanelDismissed=false/);

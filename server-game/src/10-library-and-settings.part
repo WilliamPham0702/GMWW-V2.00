@@ -247,10 +247,34 @@ function gmwwGmNearPlayer(x,y){
     return Number.isFinite(xx)&&Number.isFinite(yy)&&Math.hypot((px-xx)/7.0,(py-yy)/9.0)<1;
   });
 }
+function gmwwGmRoute(from,to){
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  if(!layout?.inside?.(from.x,from.y)||!layout?.inside?.(to.x,to.y))return [];
+  return layout.route(from,to);
+}
+function gmwwGmWalkPoint(from,to,t){
+  const path=gmwwGmRoute(from,to);
+  if(path.length<2)return from;
+  const lengths=path.slice(1).map((v,i)=>Math.hypot(v.x-path[i].x,(v.y-path[i].y)*1.78));
+  const total=lengths.reduce((a,b)=>a+b,0);let distance=Math.max(0,Math.min(1,t))*total;
+  for(let i=0;i<lengths.length;i++){
+    if(distance<=lengths[i]||i===lengths.length-1){
+      const f=Math.max(0,Math.min(1,distance/Math.max(lengths[i],1e-9)));
+      return {x:path[i].x+(path[i+1].x-path[i].x)*f,y:path[i].y+(path[i+1].y-path[i].y)*f};
+    }
+    distance-=lengths[i];
+  }
+  return to;
+}
 function gmwwGmClearWalk(from,to){
-  if(gmwwGmNearPlayer(to.x,to.y))return false;
-  for(let i=1;i<=16;i++){
-    const t=i/16;if(gmwwGmNearPlayer(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t))return false;
+  const path=gmwwGmRoute(from,to);
+  if(path.length<2)return false;
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i],steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
+    for(let n=0;n<=steps;n++){
+      const t=n/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+      if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(x,y)||gmwwGmNearPlayer(x,y))return false;
+    }
   }
   return true;
 }
@@ -263,21 +287,25 @@ function gmwwGmAutoPoint(session,index){
 let gmwwGmLastSafePoint=null;
 function gmwwGmKeepClear(actor){
   if(!actor)return actor;
-  if(!gmwwGmNearPlayer(actor.x,actor.y)){
-    gmwwGmLastSafePoint={x:actor.x,y:actor.y};return actor;
-  }
-  // Automatic waypoints must never paint a GM token over an occupied player.
-  const choices=[gmwwGmLastSafePoint,...GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))].filter(Boolean);
-  const safe=choices.filter(p=>!gmwwGmNearPlayer(p.x,p.y))
-    .sort((a,b)=>Math.hypot(a.x-actor.x,a.y-actor.y)-Math.hypot(b.x-actor.x,b.y-actor.y))[0];
-  if(!safe)return {...actor,moving:false,x:-100,y:-100};
-  gmwwGmLastSafePoint=safe;
-  return {...actor,moving:false,x:safe.x,y:safe.y};
+  const p={x:actor.x,y:actor.y},layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  const safe=layout?.inside?.(p.x,p.y)&&!gmwwGmNearPlayer(p.x,p.y)&&
+    (!gmwwGmLastSafePoint||gmwwGmClearWalk(gmwwGmLastSafePoint,p));
+  if(safe){gmwwGmLastSafePoint=p;return actor}
+  // Pause smoothly at the last rendered safe position; never teleport across the village.
+  if(gmwwGmLastSafePoint&&layout?.inside?.(gmwwGmLastSafePoint.x,gmwwGmLastSafePoint.y))
+    return {...actor,moving:false,gait:'idle',x:gmwwGmLastSafePoint.x,y:gmwwGmLastSafePoint.y,status:'GM CHỜ ĐƯỜNG TRỐNG'};
+  // A new session may spawn on an occupied seat. Choose a nearby safe entry once.
+  const nearest=GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))
+    .filter(x=>layout?.inside?.(x.x,x.y)&&!gmwwGmNearPlayer(x.x,x.y))
+    .sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  if(!nearest)return {...actor,moving:false,gait:'idle',x:-100,y:-100};
+  gmwwGmLastSafePoint=nearest;
+  return {...actor,moving:false,gait:'idle',...nearest,status:'GM CHỜ ĐƯỜNG TRỐNG'};
 }
 function gmwwGmActorAt(now=Date.now()){
   const p=gmwwGmPresenceState;if(!p?.online)return null;const manualUntil=Math.max(0,Number(p.manualUntil||0)),ms=Math.max(0,Number(p.moveStartedAt||0)),md=Math.max(0,Number(p.moveDurationMs||0));
-  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return gmwwGmKeepClear({moving,gait:moving?'run':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'})}
-  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return gmwwGmKeepClear({moving,gait:moving?'walk':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'})
+  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return gmwwGmKeepClear({moving,gait:moving?'run':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'})}
+  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return gmwwGmKeepClear({moving,gait:moving?'walk':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'})
 }
 async function gmwwSendGmPresence(online=true){
   try{
@@ -295,7 +323,7 @@ async function gmwwSendGmPresence(online=true){
 }
 async function gmwwMoveGmCharacter(x,y){
   const actor=gmwwGmActorAt(Date.now()),from=actor?{x:actor.x,y:actor.y}:{x:50,y:76};
-  if(!gmwwGmClearWalk(from,{x,y})){playFlashError('GM không được đi xuyên qua vị trí Người Chơi. Hãy chọn đường trống.');return false}
+  if(!gmwwGmClearWalk(from,{x,y})){playFlashError('GM không có đường đi an toàn tới vị trí này. Hãy chọn nơi trống.');return false}
   try{const res=await fetch(GMWW_SERVER_BASE+'/api/gm/move',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({fromX:from.x,fromY:from.y,x,y,roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store'}),d=await res.json();if(!res.ok)throw new Error(d?.message||d?.error||('HTTP '+res.status));gmwwGmPresenceState=d?.gm||gmwwGmPresenceState;renderPlayPlayers();syncPlayMovementTicker();return true}catch(err){playFlashError('Không di chuyển được GM. '+(err?.message||''));return false}
 }
 function gmwwStartGmPresence(){
@@ -307,7 +335,7 @@ setTimeout(gmwwStartGmPresence,0);
 window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
 
 /* UPDATE MANAGER V1 — prepared off-main */
-let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
+let gmwwUpdateManifest=null,gmwwUpdateBusy=false,gmwwUpdateSlowTimer=null;
 
 /* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
 function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
@@ -360,8 +388,17 @@ async function installRuntimeUpdate(){
   const files=gmwwUpdateManifest?.runtime?.files;
   if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
   gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
+  // IPA V3.110 provides no byte-progress events; advisory only. Never
+  // fabricate percent complete or cancel a still-valid native transfer.
+  if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);
+  gmwwUpdateSlowTimer=setTimeout(()=>{
+    gmwwUpdateSlowTimer=null;
+    if(!gmwwUpdateBusy)return;
+    gmwwSetUpdateProgress('running',null,'Đang tải chậm • chờ iOS xác minh SHA-256');
+    setUpdateUi('warn','ĐANG TẢI CHẬM','iOS chưa trả kết quả tải Runtime.','Giữ ứng dụng mở và chờ kết quả; Runtime cũ và dữ liệu game chưa bị thay đổi.');
+  },45000);
   if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
-    gmwwUpdateBusy=false;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
+    gmwwUpdateBusy=false;if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
   }
   return true
 }
@@ -558,6 +595,7 @@ window.GMWWUpdateNative={
   },
   onResult(result={}){
     gmwwUpdateBusy=false;
+    if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
     if(result.ok&&result.action==='installRuntime'){
       gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');

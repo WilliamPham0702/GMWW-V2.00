@@ -1,4 +1,4 @@
-import "../status-visuals.js?v=v3131-vertical";
+import "../status-visuals.js?v=v3139-orbits";
 import "./village-layout.js?v=fire3101&seat=3128";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
