@@ -131,11 +131,13 @@ export async function runMaintenance({
     previews, namespaces, pullRequests, productionIds, now
   });
   const checked = [], deleted = [], skipped = [];
+  let cleanupAttempts = 0;
   for (const target of plan.eligible) {
     // Scan everything without mutation. Clean at most ten per maintenance run.
-    if (mode === "cleanup" && deleted.length >= MAX_DELETIONS) {
+    if (mode === "cleanup" && cleanupAttempts >= MAX_DELETIONS) {
       skipped.push({ name: target.name, reason: "BATCH_LIMIT" }); continue;
     }
+    if (mode === "cleanup") cleanupAttempts++;
     try {
       const objectPath = "/workers/durable_objects/namespaces/" +
         target.namespaceId + "/objects?limit=1000";
@@ -168,12 +170,12 @@ export async function runMaintenance({
         continue;
       }
       await cf("/workers/workers/" + WORKER + "/previews/" + target.id, "DELETE");
-      const [remainingPreview, remainingNamespaces] = await Promise.all([
-        cf("/workers/workers/" + WORKER + "/previews/" + target.id)
-          .then(() => true).catch(() => false),
+      const [remainingPreviews, remainingNamespaces] = await Promise.all([
+        listAll("/workers/workers/" + WORKER + "/previews", cf, 100),
         listAll("/workers/durable_objects/namespaces", cf, 100)
       ]);
-      if (remainingPreview || remainingNamespaces.some(x => x.id === target.namespaceId)) {
+      if (remainingPreviews.some(x => x.id === target.id) ||
+          remainingNamespaces.some(x => x.id === target.namespaceId)) {
         throw new Error("Deletion could not be independently verified");
       }
       deleted.push(target.name);
