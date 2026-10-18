@@ -25,5 +25,12 @@
   "avatarSHA256": "b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801",
   "avatarSource": "Owner-approved V6.05 front-view art, no placeholder; WebP 478x630 transparent",
   "avatarPath": "assets/characters/overhaul-v600/character-21/avatar.webp",
-  "avatarExtractionRevision": 2
+  "avatarExtractionRevision": 2,
+  "renderer": {
+    "sourceCodeSha256": "6c22fa8cccd3bc03bd6660cb51e025ae9bede6b593986a1b4e8ab33433514849",
+    "url": "/api/character-v605/character-21/renderer?embed=1",
+    "approved8Directions": true,
+    "approved4Clips": true,
+    "stagingOnly": true
+  }
 }
