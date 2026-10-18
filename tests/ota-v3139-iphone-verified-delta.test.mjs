@@ -66,7 +66,7 @@ test('unknown / tampered inventories safely return full Runtime',async()=>{
   assert.equal(await selectBuildVerifiedManifest(catalog(tampered),'3.137','3.110'),null);
   assert.equal(selectCatalogDelta(target,tampered,'3.137'),target);
   const missing=structuredClone(baselines.get('3.137').manifest);
-  missing.runtime.files.pop();
+  missing.runtime.files=missing.runtime.files.filter(file=>file.path!=='GMWW.html');
   assert.equal(selectCatalogDelta(target,missing,'3.137'),target);
 });
 
