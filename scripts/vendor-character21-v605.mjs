@@ -21,7 +21,7 @@ export function extractGlbFromReviewHtml(html){
  return buf;
 }
 export function extractAvatarFromReviewHtml(html){
- const m=/const FALLBACK=\["data:image\/webp;base64,([A-Za-z0-9+/=]+)"/.exec(html);
+ const m=/\bFALLBACK=\["data:image\/webp;base64,([A-Za-z0-9+/=]+)"/.exec(html);
  if(!m)throw Error('MISSING_APPROVED_FRONT_VIEW_AVATAR');
  const data=Buffer.from(m[1],'base64');
  if(sha256(data)!==APPROVED_AVATAR_SHA256)throw Error('APPROVED_AVATAR_SHA256_MISMATCH');
