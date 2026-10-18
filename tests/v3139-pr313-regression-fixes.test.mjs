@@ -16,7 +16,9 @@ test('V3.139: tap and drag share validated single target-audio selection',()=>{
 test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative turn',()=>{
  const battle=read('server-game/src/40-battle-and-timeline.part');
  const audio=read('server-game/src/30-village-and-setup.part');
- assert.ok(battle.includes('battleUnlockAudioFromGesture();cancel();'));\n assert.ok(battle.includes('timeline.gmwwCancelScrollNavigation=cancel'));\n assert.ok(battle.includes('if(!armed||!moved||playSceneState.step'));
+ assert.ok(battle.includes('battleUnlockAudioFromGesture();cancel();'));
+ assert.ok(battle.includes('timeline.gmwwCancelScrollNavigation=cancel'));
+ assert.ok(battle.includes('if(!armed||!moved||playSceneState.step'));
  assert.ok(battle.includes('if(delta)battleNavigateRelative(delta)'));
  assert.ok(battle.includes("body:JSON.stringify({action:'jump',targetIndex:index"));
  assert.ok(audio.includes('function battleUnlockAudioFromGesture()'));
