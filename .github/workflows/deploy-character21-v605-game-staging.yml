@@ -110,7 +110,7 @@ jobs:
           curl -fsS "$BASE/character-v605-review/index.html" > /tmp/char-v606-review.html
           grep -q 'Character 22' /tmp/char-v606-review.html
           grep -q 'character-30' /tmp/char-v606-review.html
-          test "$(grep -o 'class="card"' /tmp/char-v606-review.html | wc -l)" -eq 9
+          test "$(grep -o 'class="item"' /tmp/char-v606-review.html | wc -l)" -eq 9
           if grep -q '<iframe' /tmp/char-v606-review.html; then echo 'Unexpected remote-iframe reliance'; exit 1; fi
           for n in $(seq 22 30); do
             curl -fsS --retry 3 --retry-all-errors "$BASE/characters/overhaul-v600/character-$n/avatar.webp" > "/tmp/v606-character-$n.webp"
