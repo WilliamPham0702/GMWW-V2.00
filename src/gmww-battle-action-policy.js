@@ -10,7 +10,7 @@ export function resolveRoleActionPolicy(card,roleId,actionId){
   const singleActionPerNight=explicit?!card.flags.allowMultipleActions:role==='role_old_witch';
   const mode=String(fn?.usageMode||'').trim();
   const fallbackOnce=role==='role_old_witch'&&action==='action_revive';
-  const usageMode=['eachNight','onceGame','unlimited'].includes(mode)?mode:(fallbackOnce?'onceGame':'unlimited');
+  const usageMode=['eachNight','onceGame','nGame','unlimited'].includes(mode)?mode:(fallbackOnce?'onceGame':'unlimited');
   return {roleId:role,actionId:action,functionId:normalized(fn?.id||action),
     singleActionPerNight,usageMode,usageCount:positive(fn?.usageCount,1),
     knownAction:list.length?!!fn:(Array.isArray(card?.actions)&&card.actions.length?
