@@ -5,13 +5,13 @@ await import('../server-game/current/battle-controls.js');
 const controls=globalThis.GMWW_BATTLE_CONTROLS;
 test('first night starts with wolf recognition and ends with village wake-up',()=>{
   const runtime={cursor:0,completed:false,queue:[{id:'wolf-introduction',kind:'wolf-introduction',label:'Bầy Sói ơi dậy đi nhìn mặt nhau'},{id:'early:x',kind:'early-artifact',label:'Tráng Gương'},{id:'role:y',kind:'role',label:'Bảo Vệ'}]};
-  assert.deepEqual(controls.timeline('night',runtime,1).map(x=>x.label),['Bầy sói','Tráng Gương','Bảo Vệ','Làng ơi dậy đi']);
+  assert.deepEqual(controls.timeline('night',runtime,1).map(x=>x.label),['Bầy sói ơi dậy đi','Tráng Gương','Bảo Vệ','Ngày thứ 1']);
   assert.equal(controls.currentTurn('night',runtime)?.id,'wolf-introduction');
   runtime.cursor=2;
   assert.equal(controls.timeline('night',runtime,1)[2].status,'active');
   runtime.completed=true;assert.equal(controls.timeline('night',runtime,1).at(-1).status,'active');
   assert.equal(controls.currentTurn('night',runtime),null);
-  assert.equal(controls.timeline('day',null,1)[0].label,'Làng ơi dậy đi');
+  assert.equal(controls.timeline('day',null,1)[0].label,'Ngày thứ 1');
 });
 test('action menu derives its functions and constraints from role data, never hardcodes role list',()=>{
   const turn={id:'role:freeze',kind:'role',roleId:'role:freeze',loginIds:['member:actor'],label:'Sói Tuyết'};
