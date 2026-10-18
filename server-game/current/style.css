@@ -5588,3 +5588,116 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 #start #playShell[data-step="battle"] #battlePending #battleConfirm{
  min-width:64px!important;width:64px!important;min-height:42px!important;padding:0!important;
 }
+
+
+/* GMWW V3.133 — label-sized Create Room switches, with touch-size hit targets. */
+#playCreateRoomSheet .play-room-control-row{
+  display:flex!important;align-items:center!important;gap:8px!important;width:100%!important;
+  grid-template-columns:none!important;justify-content:flex-start!important;
+}
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  flex:0 0 auto!important;width:max-content!important;min-width:0!important;max-width:max-content!important;
+  height:44px!important;min-height:44px!important;padding:0 13px!important;
+  font-size:12px!important;letter-spacing:.01em!important;gap:7px!important;
+}
+#playCreateRoomSheet .play-room-control-row .play-room-step-next{
+  margin-left:auto!important;flex:0 0 44px!important;width:44px!important;height:44px!important;
+  min-width:44px!important;border-radius:10px!important;
+}
+/* One horizontal card with three real Fairy choices, including explicit no movement. */
+#start #playShell[data-step="battle"] #battleTransferPanel[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleTransferPanel{
+  display:flex!important;justify-content:center!important;max-width:100%!important;margin:4px auto!important;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-card{
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;
+  border:1px solid #c29d54;border-radius:13px;padding:8px;max-width:100%;
+  background:rgba(6,37,57,.95);box-shadow:0 7px 16px #00182770;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-card>strong{
+  width:100%;text-align:center;font-size:10px;letter-spacing:.07em;color:#ffe7a6;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions{
+  display:flex;gap:5px;justify-content:center;align-items:center;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions>button{
+  display:grid;place-items:center;min-width:46px;min-height:44px;
+  border-radius:9px;border:1px solid #7d9eae;background:#103c56;color:white;font-size:24px;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions>button.is-selected{
+  border-color:#ffdc80;background:#96702e;box-shadow:0 0 0 2px #ffca7a77;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-card>[data-transfer-ok]{
+  min-width:50px;min-height:44px;border-radius:9px;background:#17866c;color:#fff;
+  font-weight:900;border:1px solid #8ce4c1;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-card>[data-transfer-ok]:disabled{opacity:.4}
+/* Draggable GM-only divination and witch information; never displayed on Player Web. */
+#start #playShell[data-step="battle"] #battleResultPopup.gmww-battle-result-popup{
+  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 115px);right:auto;bottom:auto;
+  transform:translateX(-50%);width:min(320px,calc(100vw - 24px));max-height:34dvh;overflow:auto;
+  z-index:125;border-radius:15px;border:1px solid #e7cc84;padding:0 10px 10px;
+  background:rgba(6,37,55,.98);color:#fff8dd;box-shadow:0 12px 35px #001523b0;
+}
+#start #playShell[data-step="battle"] #battleResultPopup[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleResultGrip{
+  display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:42px;
+  padding:6px 2px;touch-action:none;cursor:move;user-select:none;
+}
+#start #playShell[data-step="battle"] #battleResultGrip strong{font-size:12px;letter-spacing:.07em}
+#start #playShell[data-step="battle"] #battleResultClose{
+  cursor:pointer;touch-action:manipulation;min-width:34px;min-height:34px;
+  border:1px solid #85acbe;border-radius:9px;background:#104a61;color:white;font-size:22px;
+}
+#start #playShell[data-step="battle"] #battleResultMessage{
+  white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;margin:0;font-size:12px;
+}
+#start #playShell[data-step="battle"] .gmww-timeline-night-label{
+  display:inline-flex;align-items:center;justify-content:center;min-width:max-content;
+  padding:4px 10px;font-size:10px;color:#fff0ae;border:1px solid #bda261;
+  border-radius:999px;background:#153849;font-weight:900;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only #battleTargetConfirm{
+  touch-action:none!important;user-select:none!important;-webkit-user-select:none!important;
+}
+
+
+/* V3.134: keep mode, enable and next arrow together; no auto-push to right. */
+#playCreateRoomSheet .play-room-control-row{
+  display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
+  justify-content:flex-start!important;gap:6px!important;
+  width:max-content!important;max-width:100%!important;margin:0!important;
+  grid-template-columns:none!important;
+}
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  flex:0 0 auto!important;width:max-content!important;min-width:0!important;
+  padding-inline:11px!important;height:42px!important;min-height:42px!important;
+}
+#playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+  flex:0 0 42px!important;margin:0!important;width:42px!important;min-width:42px!important;
+  max-width:42px!important;height:42px!important;min-height:42px!important;
+}
+/* Only the room tiles scroll sideways. Never stretch the modal when rooms accumulate. */
+#playCreateRoomSheet .play-room-picker-card{min-width:0!important;overflow:hidden!important}
+#playCreateRoomSheet .play-room-strip{
+  display:flex!important;align-items:stretch!important;gap:8px!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+  padding-bottom:5px!important;
+}
+#playCreateRoomSheet .play-room-add-tile{flex:0 0 auto!important;scroll-snap-align:start}
+#playCreateRoomSheet .play-room-created-list{
+  display:flex!important;flex:0 0 max-content!important;width:max-content!important;
+  min-width:max-content!important;max-width:none!important;overflow:visible!important;
+  gap:8px!important;align-items:stretch!important;
+}
+#playCreateRoomSheet .play-room-created-list>*{flex:0 0 auto!important;scroll-snap-align:start}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-control-row{gap:5px!important;grid-template-columns:none!important}
+  #playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+    flex-basis:42px!important;width:42px!important;min-width:42px!important
+  }
+}

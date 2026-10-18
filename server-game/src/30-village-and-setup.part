@@ -177,8 +177,10 @@ function battleInvalidateAudioCache(kind,id){
 function battleFindAudio(kind,targetId,name){
   const list=Array.isArray(state?.audio?.[kind])?state.audio[kind]:[];
   const target=String(targetId||''),label=String(name||'').trim().toLowerCase();
-  return list.find(item=>String(item?.targetId||'')===target)
-    ||list.find(item=>label&&String(item?.name||'').trim().toLowerCase()===label)
+  // Empty IDs are not a wildcard: this previously played "Xác nhận" for Artifact đầu ván.
+  const fold=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+  return list.find(item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target))
+    ||list.find(item=>label&&fold(item?.name)===fold(label))
     ||null;
 }
 async function battleWarmAudio(kind,item){
@@ -196,10 +198,16 @@ async function battleWarmAudio(kind,item){
   battleAudioLoading.set(key,promise);
   try{return await promise}finally{battleAudioLoading.delete(key)}
 }
+function battleSpeakCue(message,showError=false){
+  const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
+  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');return false}
+  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
+  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
+}
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
   const row=battleFindAudio(kind,targetId,name);
-  if(!row){if(showError)playFlashError('Chưa gán Audio cho '+String(name||'hành động')+'.');return false}
+  if(!row)return battleSpeakCue(name,showError);
   const key=kind+':'+row.id,now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500)return false;
   battleAudioLast={key,at:now};
@@ -207,7 +215,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
-  if(!src){if(showError)playFlashError('Audio '+String(row.name||name||'')+' chưa có file. Vào Thư Viện → Âm Thanh để nạp.');return false}
+  if(!src)return battleSpeakCue(name,showError);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
   battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
@@ -217,16 +225,22 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
     return false
   }
 }
+function battleTurnAudioCue(turn){
+  if(!turn)return null;
+  const roles=turn.kind==='role-group'?(turn.roles||[]):[turn],
+    wolfPack=turn.kind==='wolf-introduction'||roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
+  if(wolfPack)return {kind:'cards',targetId:'audio_group_wolves',name:'Bầy sói ơi dậy đi'};
+  if(turn.kind==='village-wakeup')return {kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'};
+  if(turn.kind==='early-artifact-window')return {kind:'system',targetId:'audio_system_early_artifacts',name:'Artifact đầu ván'};
+  const role=roles[0]||turn;
+  if(['artifact-main','early-artifact'].includes(turn.kind))
+    return {kind:'artifacts',targetId:turn.artifactId,name:String(turn.artifactName||turn.label||'Artifact')};
+  return {kind:'cards',targetId:role.roleId||'',name:String(role.label||turn.label||'Lượt vai trò')};
+}
 function battleAudioForTurn(turn,auto=false){
-  if(!turn)return;
-  const role=turn.kind==='role-group'?(turn.roles||[])[0]:turn,
-    kind=turn.kind==='early-artifact-window'?'system':'cards',
-    targetId=turn.kind==='wolf-introduction'?'audio_group_wolves':
-      role?.roleId||turn?.artifactId||'',
-    name=turn.kind==='wolf-introduction'?'Bầy Sói':String(role?.label||turn?.label||'');
-  if(turn.kind==='village-wakeup')return;
-  const audio=turn.kind==='wolf-introduction'?
-    (state.audio?.cards||[]).find(x=>x.targetGroup==='wolves'||x.id==='audio_group_wolves'):battleFindAudio(kind,targetId,name);
+  const cue=battleTurnAudioCue(turn);if(!cue)return;
+  const {kind,targetId,name}=cue;
+  const audio=battleFindAudio(kind,targetId,name);
   // Prepare the clip while GM is navigating, so a first tap plays before
   // losing the user-activation event on iOS Safari / WKWebView.
   const configured=battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),
@@ -235,19 +249,14 @@ function battleAudioForTurn(turn,auto=false){
     const entry=battleFindAudio('actions',action.actionId,action.name);
     if(entry)void battleWarmAudio('actions',entry);
   }
-  if(!audio)return;
-  void battleWarmAudio(turn.kind==='wolf-introduction'?'cards':kind,audio);
-  if(auto)void battlePlayConfiguredAudio(turn.kind==='wolf-introduction'?'cards':kind,
-    turn.kind==='wolf-introduction'?audio.targetId:targetId,audio.name,false)
+  if(audio)void battleWarmAudio(kind,audio);
+  if(auto)void battlePlayConfiguredAudio(kind,targetId,name,false)
 }
 function battleReplayAudio(){
   const selected=battleAction();
   if(selected){void battlePlayConfiguredAudio('actions',selected.actionId,selected.name,true);return}
-  const turn=battleTurn();if(!turn)return;
-  const role=turn.kind==='role-group'?(turn.roles||[])[0]:turn;
-  const isWolf=turn.kind==='wolf-introduction',kind='cards';
-  const target=isWolf?'audio_group_wolves':String(role?.roleId||'');
-  void battlePlayConfiguredAudio(kind,target,isWolf?'Bầy Sói':String(role?.label||turn?.label||''),true)
+  const cue=battleTurnAudioCue(battleTurn());
+  if(cue)void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,true);
 }
 
 function applyPlayAudioState(){
@@ -589,7 +598,7 @@ async function playSyncRoom(force=false){
     const data=await playRoomApi('');
     if(syncSerial!==playSceneRuntime.syncSerial)return data;
     if(Number.isFinite(Number(data?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(data.serverTime)-Date.now();
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max??3),Number(playSceneRuntime.artifactCycle?.count||0))):0;const serverMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));if(serverMemberIds.length||playSceneState.step!=='members'||playSceneState.roomMode!=='online')playSceneState.selectedMemberIds=serverMemberIds;
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);playSceneState.autoGM=room.autoGM!==false;playSceneState.roomEnabled=room.enabled!==false;playSceneState.roomMode=room.roomMode==='offline'?'offline':'online';playSceneState.seatMoveMode=room.seatMoveMode==='walk'?'walk':'instant';playSceneState.seatCount=Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12));
     if(!playStagePublishPending&&['room','seats','game','roles','deal'].includes(room.gmStage))playSceneState.step=room.gmStage;
