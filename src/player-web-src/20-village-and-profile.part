@@ -634,6 +634,11 @@ async function changePassword(){
 function characterV605PlayerRenderer(rootSelector,characterId){
  const host=$(rootSelector);
  if(!host)return;
+ if(GMWW_CHARACTER_V605_STAGING&&!host.querySelector('[data-character-v606-review]')){
+  const link=document.createElement('a');link.dataset.characterV606Review='1';link.href='/character-v605-review/index.html';link.target='_blank';link.rel='noopener';
+  link.textContent='Xem trang phục Character 22–30 (bản duyệt artwork) ↗';
+  link.style.cssText='display:block;margin:10px 0;border-radius:10px;background:#17485a;padding:9px;color:#b9f8ed';host.append(link);
+ }
  let panel=host.querySelector('[data-character-v605-webgl]');
  const eligible=GMWW_CHARACTER_V605_STAGING&&String(characterId)==='character-21';
  if(!eligible){if(panel)panel.remove();return}
