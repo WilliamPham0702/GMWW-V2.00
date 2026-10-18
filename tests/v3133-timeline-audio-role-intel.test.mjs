@@ -17,11 +17,11 @@ test('V3.133: witch receives actual attacked target, even when Guard prevents it
  assert.equal(r.attacked[0].protected,true);
 });
 test('V3.133: Fairy shifts bite in real seat order before Guard check',()=>{
- const r=resolve([wolf('bao'),wolf('chi','action_protect'),wolf('anna','action_transfer_bite','right')]);
- assert.deepEqual(r.attacked.map(x=>x.to),['chi']);
- assert.deepEqual(r.blocked,['chi']);
+ const r=resolve([wolf('bao'),wolf('anna','action_protect'),wolf('chi','action_transfer_bite','right')]);
+ assert.deepEqual(r.attacked.map(x=>x.to),['anna']);
+ assert.deepEqual(r.blocked,['anna']);
  assert.deepEqual(r.victims,[]);
- assert.deepEqual(r.transfers,[{from:'bao',to:'chi',direction:'right'}]);
+ assert.deepEqual(r.transfers,[{from:'bao',to:'anna',direction:'right'}]);
 });
 test('V3.133: explicit center button does not move bite; no bite never manufactures a victim',()=>{
  const stay=resolve([wolf('bao'),wolf('anna','action_transfer_bite','none')]);
@@ -49,7 +49,7 @@ test('V3.133: server-verified Seer recognizes regular wolf but Alpha appears non
 });
 test('V3.133: other divination can show role abilities or group wolf status without revealing to Player Web',()=>{
  const aura=resolveNightReveal({actionId:'action_aura_read',targetIds:['chi'],assignments:assigned});
- assert.match(aura.message,/Tiên Tri/);assert.deepEqual(aura.targets[0].functions,['action_seer']);
+ assert.equal(aura.message,'Tiên Tri');assert.equal(aura.targets[0].roleId,'role_seer');
  assert.equal(resolveNightReveal({actionId:'action_fox_scan',targetIds:['anna','chi','bao'],assignments:assigned}).wolf,true);
  assert.equal(resolveNightReveal({actionId:'action_witch_kill',targetIds:['anna'],assignments:assigned}),null);
  const worker=read('src/index.js');
