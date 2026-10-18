@@ -45,5 +45,5 @@ test('V3.138: GM patrol uses adjacent perimeter waypoints and checks occupied to
  assert.match(source,/function gmwwGmNearPlayer\(/);
  assert.match(source,/function gmwwGmClearWalk\(/);
  assert.match(source,/function gmwwGmKeepClear\(/);
- assert.match(source,/GMWW_GM_AUTO_POINTS\[\[25,35\]/);
+ assert.ok(source.includes('GMWW_GM_AUTO_POINTS=[[25,35]'));
 });
