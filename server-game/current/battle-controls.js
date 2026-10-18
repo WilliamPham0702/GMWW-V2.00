@@ -42,6 +42,7 @@
   }
   function resolvedType(action){
     const x=folded([action?.actionId,action?.name,...(action?.effectIds||[])].join(" "));
+    if(/(assassin_mark|danh dau)/.test(x))return "assassin_mark";
     if(/(freeze|dong_bang|dong bang|frozen)/.test(x))return "frozen";
     if(/(exile|expel|duoi|banish)/.test(x))return "expelled";
     if(/(revive|hoi_sinh|resurrect)/.test(x))return "revive";
