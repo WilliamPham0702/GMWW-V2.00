@@ -5,6 +5,11 @@ on:
     branches: [feature/character-overhaul-v600-staging]
     paths:
       - 'wrangler.character21-v605-game-staging.jsonc'
+      - 'src/index.js'
+      - 'server-game/src/**'
+      - 'server-game/current/**'
+      - 'src/player-web-src/**'
+      - 'src/gmww-members-live.js'
       - 'scripts/build-character21-v605-game-staging.mjs'
       - '.github/workflows/deploy-character21-v605-game-staging.yml'
   workflow_dispatch:
@@ -31,6 +36,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Full GMWW regression suite before isolated staging deploy
+        run: npm test
       - name: Verify canonical GM and Player source and Character21 contracts
         run: |
           node .github/scripts/assemble-gm-app.mjs --verify
