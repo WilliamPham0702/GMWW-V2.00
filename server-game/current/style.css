@@ -5923,3 +5923,11 @@ body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{
  margin:7px 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere;
 }
 #start #playShell[data-step="battle"] #battleMorningList strong{font-weight:850;color:#ffe0a4}
+
+/* Assassin makes a private GM thumb choice in the same draggable action sheet. */
+#start #playShell[data-step="battle"] #battleAssassinChoice:not([hidden]){display:grid;gap:8px;margin:7px 0;padding:8px;border-radius:11px;border:1px solid #a8d9dc5b;background:#0b374455}
+#start #playShell[data-step="battle"] #battleAssassinChoice[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleAssassinChoice>strong{font-size:12px;letter-spacing:.025em;color:#ffdf9f}
+#start #playShell[data-step="battle"] #battleAssassinChoice>div{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#start #playShell[data-step="battle"] #battleAssassinChoice button{min-height:43px;border:1px solid #81c8da;border-radius:11px;background:#144b60c7;color:#fff;font-size:14px;font-weight:800}
+#start #playShell[data-step="battle"] #battleAssassinChoice button.is-selected{background:#197a66;border-color:#ffdd83;box-shadow:0 0 0 1px #ffdd83}
