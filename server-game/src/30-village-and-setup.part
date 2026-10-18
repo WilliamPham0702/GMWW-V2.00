@@ -251,6 +251,21 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     return false
   }
 }
+// Aura Seer speaks the actual linked role-card audio's name segment, never a function list.
+async function battlePlayAuraRoleAudio(roleId,roleName){
+  if(playAudioMuted())return false;
+  const row=battleFindAudio('cards',roleId,roleName),src=row?await battleWarmAudio('cards',row):null;
+  if(!src)return battleSpeakCue(roleName);
+  try{
+    if(battleActiveAudio){battleActiveAudio.pause();battleActiveAudio.currentTime=0}
+    const audio=new Audio(src);battleActiveAudio=audio;audio.preload='auto';
+    // The role name is at the opening of a GM role cue; omit its following "wake up" wording.
+    const timer=setTimeout(()=>{try{audio.pause();audio.currentTime=0}catch{}},2600);
+    audio.onended=()=>{clearTimeout(timer);if(battleActiveAudio===audio)battleActiveAudio=null};
+    audio.onerror=()=>{clearTimeout(timer);if(battleActiveAudio===audio)battleActiveAudio=null};
+    await audio.play();return true;
+  }catch{return battleSpeakCue(roleName)}
+}
 function battleTurnAudioCue(turn){
   if(!turn)return null;
   const roles=turn.kind==='role-group'?(turn.roles||[]):[turn],
@@ -276,6 +291,11 @@ function battleAudioForTurn(turn,auto=false){
     if(entry)void battleWarmAudio('actions',entry);
   }
   if(audio)void battleWarmAudio(kind,audio);
+  // Pre-warm the next actual turn before the FIRST swipe on WKWebView.
+  const queue=playSceneRuntime.nightRuntime?.queue||[],index=queue.findIndex(row=>row.id===turn?.id);
+  const upcoming=index>=0?battleTurnAudioCue(queue[index+1]):null;
+  if(upcoming){const next=battleFindAudio(upcoming.kind,upcoming.targetId,upcoming.name);
+    if(next)void battleWarmAudio(upcoming.kind,next);}
   if(auto)void battlePlayConfiguredAudio(kind,targetId,name,false)
 }
 function battleReplayAudio(){
