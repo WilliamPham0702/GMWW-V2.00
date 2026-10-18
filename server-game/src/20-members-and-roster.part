@@ -556,6 +556,24 @@ function renderMemberAvatarPicker(){
   }
   if(!memberAdminState.avatars.length)box.innerHTML='<div class="member-empty">Không tải được Bộ Nhân Vật.</div>';
   ensureMemberCharacterPreviewTicker();
+  // V6.05: mount the actual 16-bone WebGL scene INSIDE GM's staging character picker.
+  // Never mount on Production, never touch the player/member record.
+  const eligible=MEMBER_CHARACTER_V605_PREVIEW&&memberAdminState.selectedAvatarId==='character-21';
+  let panel=document.getElementById('gmwwCharacterV605SkinnedPreview');
+  if(!eligible){if(panel)panel.remove()}
+  else{
+    if(!panel){
+      panel=document.createElement('section');panel.id='gmwwCharacterV605SkinnedPreview';
+      panel.style.cssText='margin-top:12px;padding:8px;background:#092537;border:1px solid #43819c;border-radius:12px';
+      const label=document.createElement('strong');label.textContent='Character 21 · V6.05 · 16 xương · 8 hướng · 4 hành động';
+      const iframe=document.createElement('iframe');iframe.title='Character 21 WebGL staging — GM';
+      iframe.src=location.origin+'/api/character-v605/character-21/renderer?embed=1';
+      iframe.loading='lazy';iframe.style.cssText='display:block;width:100%;height:610px;border:0;border-radius:10px;margin-top:8px';
+      panel.append(label,iframe);
+    }
+    const parent=document.getElementById('memberAvatarGrid')?.parentElement;
+    if(parent&&!panel.isConnected)parent.append(panel);
+  }
 }
 function closeMemberSheet(){
   const s=document.getElementById('memberSheet');if(s)s.classList.add('hidden');
