@@ -55,6 +55,26 @@ jobs:
           grep -q 'WebGL' /tmp/charv605-renderer.html
           test "$(wc -c </tmp/charv605-renderer.html)" -gt 3000000
           test "$(sha256sum /tmp/charv605-renderer.html | awk '{print $1}')" = "$(sha256sum assets/characters/overhaul-v600/character-21/renderer.html | awk '{print $1}')"
+
+      - name: Verify independent Cloudflare GM and Player Preview endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-character21-v605-gm-player-staging.williampham0702.workers.dev"
+          curl -fsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 40 "$BASE/api/health" > /tmp/char605-cloud-health.json
+          node -e 'const h=require("/tmp/char605-cloud-health.json");if(!h.ok||h.productionChanged!==false||h.approvedCharacterIds.join()!=="character-21")process.exit(1)'
+          curl -fsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 40 "$BASE/gm-preview" -o /tmp/char605-cloud-gm.html
+          curl -fsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 40 "$BASE/player-preview" -o /tmp/char605-cloud-player.html
+          grep -q 'GM Server' /tmp/char605-cloud-gm.html
+          grep -q 'Player Web' /tmp/char605-cloud-player.html
+          grep -q '/renderer?embed=1' /tmp/char605-cloud-gm.html
+          grep -q '/renderer?embed=1' /tmp/char605-cloud-player.html
+          curl -fsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 45 "$BASE/renderer?embed=1" -o /tmp/char605-cloud-renderer.html
+          test "$(wc -c < /tmp/char605-cloud-renderer.html)" -gt 3000000
+          grep -q 'WebGL' /tmp/char605-cloud-renderer.html
+          grep -q 'FALLBACK=\[' /tmp/char605-cloud-renderer.html
+          echo "GM and Player staging preview HTTP+renderer endpoints VERIFIED."
+
           echo 'b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801  /tmp/charv605-avatar.webp' | sha256sum -c -
           echo 'ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9  /tmp/charv605-skin.glb' | sha256sum -c -
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/api/character-v605/character-22/avatar)
