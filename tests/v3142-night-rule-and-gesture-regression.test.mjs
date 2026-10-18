@@ -77,3 +77,11 @@ test('GM safe patrol stays navigable during idle hold and resets old session anc
  assert.equal(canWalk({x:50,y:50},{x:50,y:50}),true);
  assert.ok(gm.includes("gmwwGmLastSafePoint=null; // Never carry a blocked path"));
 });
+
+test('Dead turn is informational; the GM controls timeline advance',()=>{
+ const gm=read('server-game/src/40-battle-and-timeline.part');
+ assert.ok(gm.includes("deadActors.length===actorIds.length"));
+ assert.ok(gm.includes('☠️ ĐÃ CHẾT'));
+ assert.ok(gm.includes('if(bar&&!deadOnly&&sig!==battleState.actionSig)'));
+ assert.ok(gm.includes('function battleNavigateRelative(delta)'));
+});
