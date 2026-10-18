@@ -10,13 +10,12 @@ const b=html.indexOf('</section>',a);
 const settings=html.slice(a,b);
 const groups={
   settingsGroupHealth:['settingsRunHealth','quickMaintenanceCard','auditLocalData','clearRuntimeCache','reloadApp','gmwwOpsCenter','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','serverHealthCard','checkServerHealth','refreshServerData','openPlayerWeb','systemDiagnosticsCard','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'],
-  settingsGroupTasks:['gmwwTasksSummary','gmwwTasksOpenList','gmwwTasksHistory','gmwwTasksDoneList','gmwwTasksReload'],
   settingsGroupUpdate:['updateManagerCard','installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate'],
   settingsGroupAppearance:['characterScaleCard','characterScaleChoices']
 };
 
-test('Every useful settings control lives in one of four boxes on a single scroll screen',()=>{
-  assert.equal(Object.keys(groups).length,4);
+test('Every useful settings control lives in one of three boxes on a single scroll screen',()=>{
+  assert.equal(Object.keys(groups).length,3);
   for(const [box,ids] of Object.entries(groups)){
     const start=settings.indexOf('id="'+box+'"');
     assert.ok(start>=0,'group missing '+box);
@@ -28,8 +27,7 @@ test('Every useful settings control lives in one of four boxes on a single scrol
     }
   }
   assert.ok(settings.indexOf('settingsGroupUpdate')<settings.indexOf('settingsGroupHealth'),'Update must be first');
-  assert.ok(settings.indexOf('settingsGroupHealth')<settings.indexOf('settingsGroupTasks'));
-  assert.ok(settings.indexOf('gmwwTasksOpenList')<settings.indexOf('gmwwTasksHistory'));
+  assert.ok(settings.indexOf('settingsGroupHealth')<settings.indexOf('settingsGroupAppearance'));
   assert.doesNotMatch(settings,/role="tablist"|role="tabpanel"|settingsHubTab-|settingsHubNav|data-settings-group=/);
   assert.doesNotMatch(settings,/data-settings-panel=|hidden>[\s\S]*settings-hub-panel/);
 });
@@ -41,7 +39,7 @@ test('Settings removes redundant explanatory notes while keeping live status and
     'Công cụ tích hợp trong game: theo dõi Server, phòng chơi, realtime, dữ liệu và phiên bản.'
   ])assert.ok(!settings.includes(note),'Redundant note remains: '+note);
   assert.ok(settings.includes('id="settingsHubMiniHealth"'));
-  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+  const order=['settingsGroupUpdate','settingsGroupHealth','settingsGroupAppearance'];
   const positions=order.map(id=>settings.indexOf('id="'+id+'"'));
   assert.ok(positions.every(p=>p>=0));
   assert.deepEqual([...positions].sort((a,b)=>a-b),positions);
@@ -51,13 +49,13 @@ test('Settings removes redundant explanatory notes while keeping live status and
   }
 });
 
-test('The broken export-report tool is fully removed and replaced with tracked work history',()=>{
+test('Cloudflare maintenance entry opens in the existing iOS WebView frame without extra text',()=>{
   assert.doesNotMatch(settings,/opsExportReport|opsReportFallback|XUẤT BÁO CÁO/);
-  assert.doesNotMatch(app,/function gmwwOpsExport\(|getElementById\('opsExportReport'\)/);
-  assert.match(settings,/Công việc &amp; Tiến độ|Công việc & Tiến độ/);
-  assert.match(app,/function gmwwTasksRefresh\(/);
-  assert.match(app,/function gmwwTaskItem\(/);
-  assert.match(app,/\/api\/operations\/tasks/);
+  assert.match(settings,/id="gmwwCloudflareOpen"/);
+  assert.match(settings,/window\.location\.assign\('https:\/\/gmww-cloudflare-admin\.williampham0702\.workers\.dev\/'\)/);
+  assert.doesNotMatch(settings,/Namespaces, Preview, quét định kỳ|Trang quản trị riêng; GM\/Player/);
+  const native=readFileSync(new URL('../server-game/GMWW-Server/GameView.swift',import.meta.url),'utf8');
+  assert.match(native,/UIApplication\.shared\.open\(url\)/);
 });
 
 test('Every original, non-export control remains bound to functional JS',()=>{
@@ -65,18 +63,15 @@ test('Every original, non-export control remains bound to functional JS',()=>{
     'checkServerHealth','refreshServerData','openPlayerWeb','installRuntimeUpdate',
     'downloadNewIPA','syncPlayerWebUpdate','auditLocalData','clearRuntimeCache','reloadApp',
     'runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow','opsRunFullAudit',
-    'opsCheckRoom','opsCheckRelease','opsAutoCheck','gmwwTasksReload'
+    'opsCheckRoom','opsCheckRelease','opsAutoCheck'
   ])assert.ok(app.includes("getElementById('"+id+"')"),'Missing real handler: '+id);
   for(const size of [75,100,125,150,175,200])
     assert.match(settings,new RegExp('data-character-scale="'+size+'"'));
 });
 
-test('Tasks prioritise open work while completed records are collapsed into real history',()=>{
-  assert.match(settings,/<details class="gmww-task-history" id="gmwwTasksHistory">/);
-  assert.match(settings,/id="gmwwTasksOpenList"/);
-  assert.match(settings,/id="gmwwTasksDoneList"/);
-  assert.match(app,/task\.state==='doing'\?'ĐANG THỰC HIỆN'/);
-  assert.match(app,/task\.state==='completed'\?'HOÀN TẤT'/);
+test('Retired Workboard does not render or fetch stale progress',()=>{
+  assert.doesNotMatch(settings,/settingsGroupTasks|gmwwTasksOpenList|gmwwTasksHistory|gmwwTasksReload/);
+  assert.doesNotMatch(app,/gmwwTasksRefresh|gmwwTaskReviewReturn|\/api\/operations\/tasks/);
   assert.doesNotMatch(app,/localStorage\.clear\(/);
 });
 
@@ -85,7 +80,6 @@ test('Timeline chrome is applied across settings, members and library but leaves
   assert.match(css,/#stage \.page:not\(#start\) \.member-summary>div/);
   assert.match(css,/#stage \.page:not\(#start\) \.role-tile/);
   assert.match(css,/#stage \.page:not\(#start\) \.settings-unified-box/);
-  assert.match(css,/#settings \.gmww-task-item/);
   assert.match(css,/#bottomNav\{background:var\(--gmww-glass-surface\)/);
   assert.match(css,/No effect on 2D world artwork/);
   assert.match(css,/filter:none!important;backdrop-filter:none!important/);

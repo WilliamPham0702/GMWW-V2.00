@@ -24,11 +24,11 @@ test('ChatGPT error reporting is absent from both settings UI and runtime handle
     /copy\('server-game\/current\/gmww-ai-support\./);
 });
 
-test('Removed reporting leaves four orderly settings groups and system maintenance operational',()=>{
+test('Removed reporting leaves three orderly settings groups and system maintenance operational',()=>{
   const start=html.indexOf('<section class="page" id="settings">');
   const end=html.indexOf('</section>',start);
   const settings=html.slice(start,end);
-  const expected=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+  const expected=['settingsGroupUpdate','settingsGroupHealth','settingsGroupAppearance'];
   assert.deepEqual([...settings.matchAll(/id="(settingsGroup\w+)"/g)].map(m=>m[1]),expected);
   for(let i=0;i<expected.length;i++){
     const pos=settings.indexOf('id="'+expected[i]+'"');
@@ -36,7 +36,7 @@ test('Removed reporting leaves four orderly settings groups and system maintenan
     assert.match(settings.slice(pos,next),new RegExp('settings-unified-index">0'+(i+1)+'<'));
   }
   for(const id of ['installRuntimeUpdate','downloadNewIPA','syncPlayerWebUpdate','runSystemDiagnostics',
-    'quickRepairSystem','checkPlayerWebNow','settingsRunHealth','gmwwTasksReload']){
+    'quickRepairSystem','checkPlayerWebNow','settingsRunHealth']){
     assert.match(settings,new RegExp('id="'+id+'"'));
   }
   for(const id of ['installRuntimeUpdate','syncPlayerWebUpdate','runSystemDiagnostics','quickRepairSystem'])

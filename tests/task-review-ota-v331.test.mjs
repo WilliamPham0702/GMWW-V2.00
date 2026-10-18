@@ -22,14 +22,12 @@ test("task approval is a newer OTA than the previously released V3.30",()=>{
   assertCurrentRelease();
 });
 
-test("newly delivered runtime contains owner-controlled approve and skip actions",()=>{
-  assert.match(app,/function gmwwTaskReviewLink\(task,mode\)/);
-  assert.match(app,/XÁC NHẬN HOÀN THÀNH/);
-  assert.match(app,/BỎ QUA/);
-  assert.match(app,/github\.com\/WilliamPham0702\/GMWW-V2\.00\/issues/);
-  assert.match(html,/id="gmwwTasksOpenList"/);
-  assert.match(html,/gmww-task-review-help/);
-  assert.match(deploy,/GMWW task review controls verified in live OTA runtime/);
+test("new Runtime OTA removes inaccurate task progress while providing a working Cloudflare entry",()=>{
+  assert.doesNotMatch(app,/function gmwwTaskReviewLink\(|gmwwTasksRefresh/);
+  assert.doesNotMatch(html,/id="gmwwTasksOpenList"|settingsGroupTasks|gmww-task-review-help/);
+  assert.match(html,/id="gmwwCloudflareOpen"/);
+  assert.match(html,/window\.location\.assign\('https:\/\/gmww-cloudflare-admin/);
+  assert.match(deploy,/Cloudflare management entry verified in live OTA runtime/);
   assert.match(deploy,/TASK_APP_URL/);
   assert.match(deploy,/TASK_HTML_URL/);
 });

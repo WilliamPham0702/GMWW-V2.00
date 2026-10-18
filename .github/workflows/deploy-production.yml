@@ -434,7 +434,7 @@ jobs:
             done
           fi
           if test "$EXPECTED" != "$EXPECTED_SHELL"; then
-          echo "Verify Production: checking task-review UI in versioned runtime."
+          echo "Verify Production: checking Cloudflare management and retired workboard UI in versioned runtime."
           # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
           TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
           TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
@@ -464,7 +464,7 @@ jobs:
           for(const [label,pass] of Object.entries(checks))console.log('Production Settings grid: '+label+' '+(pass?'PASS':'FAIL'));
           if(Object.values(checks).some(pass=>!pass))process.exit(1);
           NODE
-          echo "Verify Production: all 14 Settings tools visible via responsive grid PASS."
+          echo "Verify Production: Settings tools visible via responsive grid PASS."
           node - "$EXPECTED" <<'NODE'
           const fs=require('node:fs'),crypto=require('node:crypto');
           const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
@@ -473,17 +473,18 @@ jobs:
           const expectedSha=p=>manifest.runtime.files.find(f=>f.path===p)?.sha256;
           const checks={
             'JS version':app.includes("const VERSION='"+version+"';"),
-            'task review function':app.includes('function gmwwTaskReviewLink'),
-            'complete button':app.includes('XÁC NHẬN HOÀN THÀNH'),
-            'skip button':app.includes('BỎ QUA'),
-            'HTML work list':html.includes('id="gmwwTasksOpenList"'),
+            'Cloudflare maintenance button':html.includes('id="gmwwCloudflareOpen"'),
+            'iOS same-frame navigation':html.includes("window.location.assign('https://gmww-cloudflare-admin.williampham0702.workers.dev/')"),
+            'task console removed':!html.includes('id="settingsGroupTasks"')&&!html.includes('id="gmwwTasksOpenList"'),
+            'background task refresh removed':!app.includes('function gmwwTasksRefresh(')&&!app.includes('gmwwTaskReviewReturn'),
+            'Cloudflare paragraphs removed':!html.includes('Namespaces, Preview, quét định kỳ')&&!html.includes('Trang quản trị riêng; GM/Player'),
             'HTML version':html.includes('GMWW V'+version),
             'manifest JS SHA':sha(app)===expectedSha('app.js'),
             'manifest HTML SHA':sha(html)===expectedSha('GMWW.html')
           };
           for(const [label,pass] of Object.entries(checks))console.log('GMWW OTA asset check: '+label+' '+(pass?'PASS':'FAIL'));
           if(Object.values(checks).some(x=>!x))process.exit(1);
-          console.log('GMWW task review controls verified in live OTA runtime V'+version);
+          console.log('Cloudflare management entry verified in live OTA runtime V'+version);
           NODE
           echo "Verify Production: connected Theme editor controls on live IPA Runtime."
           node - <<'NODE'

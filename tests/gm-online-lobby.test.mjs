@@ -43,7 +43,9 @@ test('GM campfire control is kept and no IPA rebuild is required',()=>{
 });
 test('OTA releases retain manifest security and cache busting',()=>{
   assertCurrentRelease();
-  assert.match(server,/UPDATE_CHANNEL_REV="runtime-3143"/);
+  const version=server.match(/VERSION="V([0-9.]+)"/)?.[1];
+  assert.ok(version);
+  assert.ok(server.includes('UPDATE_CHANNEL_REV="runtime-'+version.replaceAll('.','')+'"'));
   assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
   assert.match(server,/latestLostRuntime/);
 });

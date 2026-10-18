@@ -10,9 +10,9 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('Settings renders four numbered groups and a vertical 14-tool grid',()=>{
+test('Settings renders three numbered groups and a vertical 14-tool grid',()=>{
  const section=html.slice(html.indexOf('<section class="page" id="settings">'),html.indexOf('</section>',html.indexOf('<section class="page" id="settings">')));
- const ids=['settingsGroupUpdate','settingsGroupHealth','settingsGroupTasks','settingsGroupAppearance'];
+ const ids=['settingsGroupUpdate','settingsGroupHealth','settingsGroupAppearance'];
  assert.deepEqual([...section.matchAll(/id="(settingsGroup\w+)"/g)].map(m=>m[1]),ids);
  assert.doesNotMatch(section,/id="settingsGroupMaintenance"/);
  for(const control of ['settingsRunHealth','quickMaintenanceCard','gmwwOpsCenter','serverHealthCard','systemDiagnosticsCard','characterScaleChoices'])
@@ -29,14 +29,14 @@ test('Opening Settings does not trigger long health, GitHub or operations calls'
  assert.match(app,/localStorage\.getItem\(GMWW_OPS_AUTO_KEY\)==='1'/);
 });
 
-test('Workboard fallback is a real recorded public issue snapshot',()=>{
+test('Archived issue data remains testable but is no longer exposed as inaccurate in-game progress',()=>{
  const data=normalizeGmwwTasks(GMWW_TASK_SNAPSHOT);
  assert.ok(data.open.length>0);
  assert.ok(data.history.length>0);
  assert.ok(data.open.every(t=>/^https:\/\/github\.com\/WilliamPham0702\/GMWW-V2\.00\/issues\/\d+$/.test(t.url)));
- assert.match(worker,/github_public_snapshot/);
- assert.match(worker,/fallback:true/);
- assert.match(app,/data\.fallback\?'BẢN DỰ PHÒNG/);
+ assert.doesNotMatch(worker,/github_public_snapshot|\/api\/operations\/tasks/);
+ assert.doesNotMatch(app,/gmwwTasksRefresh|gmwwTaskReviewReturn/);
+ assert.doesNotMatch(html,/settingsGroupTasks/);
 });
 
 test('Ván Mẫu uses thumbnail toggle selection; Artifact settings live in Ván Mẫu while per-match timing lives in Chọn Ván',()=>{
