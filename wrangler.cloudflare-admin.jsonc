@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmww-cloudflare-admin",
+  "main": "tools/cloudflare-admin/worker.mjs",
+  "compatibility_date": "2026-10-18",
+  "workers_dev": true,
+  "triggers": { "crons": ["10 2 * * *"] },
+  "kv_namespaces": [
+    { "binding": "AUDIT", "id": "936171b734a14539b854c4c07b1daef0" }
+  ],
+  "vars": { "CLOUDFLARE_ACCOUNT_ID": "a52bb48421671cbf28246175a6adba14" },
+  "observability": { "enabled": true, "redact_query_string": true }
+}
