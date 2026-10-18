@@ -39,7 +39,7 @@ test('GM campfire control is kept and no IPA rebuild is required',()=>{
   assert.ok(app.includes("document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});"));
   assert.match(html,/id="battleWolfMenu"/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
-  assert.match(deploy,/Runtime OTA/);
+  assert.match(deploy,/verify-ota-version-advance\.mjs/);
 });
 test('OTA releases retain manifest security and cache busting',()=>{
   assertCurrentRelease();
