@@ -37,7 +37,7 @@ jobs:
           test "$GITHUB_REF_NAME" = 'feature/character-overhaul-v600-staging'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- assets/characters/overhaul-v600/character-21/skin.glb assets/characters/overhaul-v600/character-21/avatar.webp
+          git add -- assets/characters/overhaul-v600/character-21/skin.glb assets/characters/overhaul-v600/character-21/avatar.webp assets/characters/overhaul-v600/character-21/renderer.html
           if git diff --cached --quiet; then
             echo 'Accepted GLB already vendored.'
             exit 0
