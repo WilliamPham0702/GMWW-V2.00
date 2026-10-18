@@ -196,11 +196,11 @@ async function battleWarmAudio(kind,item){
   battleAudioLoading.set(key,promise);
   try{return await promise}finally{battleAudioLoading.delete(key)}
 }
-function battleSpeakCue(message,showError=false){
+function battleSpeakCue(message,showError=false,onFinished=null){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
-  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');return false}
-  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
-  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
+  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');onFinished?.();return false}
+  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();speech.speak(cue);return true}
+  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
 }
 let battleUnlockedAudioContext=null;
 function battleUnlockAudioFromGesture(){
@@ -216,21 +216,21 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src){
+async function battlePlayWebAudioFallback(src,onFinished=null){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    const source=ctx.createBufferSource();source.buffer=buffer;
+    const source=ctx.createBufferSource();source.buffer=buffer;source.onended=()=>onFinished?.();
     source.connect(ctx.destination);source.start();
     return true;
   }catch(_){return false}
 }
-async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
-  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
-  if(!row)return battleSpeakCue(name,showError);
+  if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500)return false;
   battleAudioLast={key,at:now};
@@ -238,15 +238,15 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
-  if(!src)return battleSpeakCue(name,showError);
+  if(!src)return battleSpeakCue(name,showError,onFinished);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
+  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     return false
   }
