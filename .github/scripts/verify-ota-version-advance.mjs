@@ -53,7 +53,9 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
     // Release tooling may change Worker metadata without changing any OTA bytes.
     // A healthy manifest with an identical complete file inventory proves that
     // no installed Runtime needs a new version. Actual runtime inputs still bump.
-    const toolingOnly=changed.every(path=>!runtimeSourcePatterns.some(pattern=>pattern.test(path))||path==='.github/scripts/prepare-update-channel.mjs');
+    // A Worker Build may have published these exact immutable bytes before
+    // the main-branch deployment workflow starts. Re-deploying byte-identical
+    // verified assets is safe; a changed inventory at the same version is not.
     const inventory=m=>{
       const files=m?.runtime?.files;
       if(m?.releaseType!=='runtime'||!Array.isArray(files)||!files.length||(m.delete||[]).length)return null;
@@ -63,13 +65,16 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
           file.url!==productionOrigin+'/updates/runtime/V'+m.releaseVersion+'/'+file.path.split('/').map(encodeURIComponent).join('/'))return null;
         seen.add(file.path);
       }
-      if(!['GMWW.html','app.js','style.css'].every(path=>seen.has(path)))return null;
+      if(!['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css'].every(path=>seen.has(path)))return null;
       return JSON.stringify(files.map(f=>[f.path,f.sha256]).sort((a,b)=>a[0].localeCompare(b[0])));
     };
     const before=inventory(deployed),after=inventory(candidate);
-    const identicalToolingPackage=advance===0&&toolingOnly&&before!==null&&before===after&&
-      candidate.shellVersion===deployed.shellVersion&&candidate.runtimeVersion===deployed.runtimeVersion;
-    if ((advance === null || advance <= 0) && !sameVersionManifestRepair && !identicalToolingPackage) {
+    const identicalPublishedPackage=advance===0&&before!==null&&before===after&&
+      candidate.releaseType===deployed.releaseType&&
+      candidate.shellVersion===deployed.shellVersion&&
+      candidate.minimumShellVersion===deployed.minimumShellVersion&&
+      candidate.runtimeVersion===deployed.runtimeVersion;
+    if ((advance === null || advance <= 0) && !sameVersionManifestRepair && !identicalPublishedPackage) {
       throw new Error(
         'Runtime source changed but candidate releaseVersion ' + candidate.releaseVersion +
         ' does not advance beyond Production ' + deployed.releaseVersion +
