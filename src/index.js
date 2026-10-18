@@ -6,7 +6,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, resolveNightReveal } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1245,6 +1245,21 @@ export class RoomDurableObject extends DurableObject {
         createdAt:now,source:"wolf-night-engine",status:"pending",response:null});
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
     }
+    // Resolve Maiden only at dawn after all confirmed night attacks and wolf deaths.
+    // Retain the same idempotent death event contract used by wolf-night-engine.
+    if(p==="morning"&&n>0){
+      const maidenVictims=resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
+        interactions:rows,matchId:String(meta.matchId||""),night:n});
+      for(const loginId of maidenVictims){
+        const id="maiden-visit:"+String(meta.matchId)+":"+n+":"+loginId;
+        if(rows.some(row=>String(row?.id||"")===id))continue;
+        rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
+          night:n,cycleKey:key,effectActive:true,actionId:"action_visit_house",
+          effectId:"effect_visit_house",effectName:"Thăm Nhà",message:"Thiếu Nữ chết vì quy tắc Thăm Nhà.",
+          createdAt:now,source:"maiden-night-engine",status:"pending",response:null});
+        await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
+      }
+    }
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
@@ -1360,6 +1375,9 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      if(roleId==='role_snow_wolf'&&actionId==='action_wolf_bite'&&
+        !canSnowWolfBite({assignments:assigned,interactions,matchId}))
+        return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",message:"Sói Tuyết chỉ được Cắn khi không còn Sói khác sống trong ván."},409);
       const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
       // Recover older confirmed battle actions in an already-running match.
       const known=new Set(currentUsage.map(x=>String(x?.eventId||"")).filter(Boolean));
