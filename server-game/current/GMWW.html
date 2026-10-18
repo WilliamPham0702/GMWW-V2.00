@@ -258,22 +258,22 @@
         </section>
         </section>
         <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
-          <header id="battleTargetGrip" title="Giữ và kéo để di chuyển box nhân vật bị tác động"><b id="battleTargetTitle">CHỌN MỤC TIÊU</b><button id="battleTargetClose" type="button" aria-label="Đóng chọn mục tiêu">×</button></header>
+          <header id="battleTargetGrip" title="Giữ và kéo để di chuyển box nhân vật bị tác động"><b id="battleTargetTitle">CHỌN MỤC TIÊU</b></header>
           <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
         </section>
-        <section id="battleResultPopup" class="gmww-battle-result-popup" role="status" aria-live="polite" hidden>
+        <section id="battleResultPopup" class="gmww-battle-result-popup" role="status" aria-live="polite" aria-label="Kết quả tác động — chạm ngoài để đóng, giữ và kéo để di chuyển" hidden>
           <header id="battleResultGrip" title="Giữ và kéo để di chuyển hộp kết quả">
             <strong id="battleResultTitle">KẾT QUẢ</strong>
-            <button id="battleResultClose" type="button" aria-label="Đóng kết quả">×</button>
+            
           </header>
           <p id="battleResultMessage"></p>
         </section>
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Công cụ trên nhân vật sói GM" role="dialog" aria-modal="false">
-            <header><strong>🐺 CÔNG CỤ GM</strong><button id="battleWolfClose" type="button" aria-label="Đóng Công cụ GM">×</button></header>
+            <header><strong>🐺 CÔNG CỤ GM</strong></header>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
@@ -284,10 +284,10 @@
             </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
-            <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span><button id="battleDetailsClose" type="button" aria-label="Đóng Thông Tin trận đấu">×</button></div>
+            <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span></div>
             <div class="battle-action-instruction">Hành động được hiển thị trong thanh cuộn phía dưới màn hình.</div>
             <div id="battlePending" class="play-battle-pending" hidden><span id="battlePendingText">Chọn mục tiêu</span><button id="battleConfirm" type="button" title="Ghi nhận hành động lên Server">OK</button></div>
-            <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span><button id="battleRosterClose" type="button" aria-label="Đóng danh sách">×</button></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
+            <div id="battleRoster" class="play-battle-roster" hidden><header><b>CHỌN NGƯỜI CHƠI</b><span id="battleRosterCount"></span></header><div id="battleRosterList" class="play-battle-roster-list"></div></div>
             <div class="play-battle-footer"><button id="battleRosterToggle" type="button" aria-expanded="false" aria-controls="battleRoster">☷ Chọn thủ công</button></div>
           </div>
         </section>
