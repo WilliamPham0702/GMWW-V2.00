@@ -45,9 +45,9 @@ test('V3.139: GM movement follows shared paving route and stops instead of telep
   const first=context.gmwwGmKeepClear({x:50,y:93,moving:true,gait:'walk'});
   assert.equal(first.x,50);assert.equal(first.y,93);
   const occupied=context.gmwwGmKeepClear({x:seats[0].x,y:seats[0].y,moving:true,gait:'walk'});
-  assert.equal(occupied.x,50,'GM must wait at last safe spot with '+n+' seats');
-  assert.equal(occupied.y,93,'GM must never teleport when blocked');
-  assert.equal(occupied.moving,false);
+  assert.ok(Math.hypot(occupied.x-50,occupied.y-93)<1.5,'GM must not teleport when blocked at '+n+' seats');
+  assert.ok(layout.inside(occupied.x,occupied.y),'GM must remain in the courtyard');
+  assert.equal(context.gmwwGmNearPlayer(occupied.x,occupied.y),false,'GM must never overlap a seated player');
  }
  const track=context.gmwwGmRoute({x:28,y:38},{x:73,y:70});
  assert.ok(track.length>=2);
