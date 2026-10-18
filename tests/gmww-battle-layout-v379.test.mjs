@@ -17,13 +17,13 @@ test('Back button shows just one icon and keeps accessible label',()=>{
   assert.match(back,/aria-label="Lượt trước"/);
   assert.match(back,/<span aria-hidden="true">←<\/span>/);
   assert.doesNotMatch(back,/>Quay về</);
-  assert.ok(html.includes('battle-controls.js?v=battle-391'));
+  assert.ok(html.includes('battle-controls.js?v=3.133-timeline'));
 });
 test('Wolf introduction is named Bầy sói in current turn and the timeline without changing server step id',()=>{
   const rules=globalThis.GMWW_BATTLE_CONTROLS;
   const serverTurn={id:'wolf-introduction',kind:'wolf-introduction',label:'Bầy Sói ơi dậy đi nhìn mặt nhau'};
-  assert.equal(rules.displayLabel(serverTurn),'Bầy sói');
-  assert.equal(rules.timeline('night',{queue:[serverTurn],cursor:0,completed:false},1)[0].label,'Bầy sói');
+  assert.equal(rules.displayLabel(serverTurn),'Bầy sói ơi dậy đi');
+  assert.equal(rules.timeline('night',{queue:[serverTurn],cursor:0,completed:false},1)[0].label,'Bầy sói ơi dậy đi');
   assert.equal(rules.currentTurn('night',{queue:[serverTurn],cursor:0,completed:false},1).id,'wolf-introduction');
   const app=get('server-game/current/app.js');
   assert.match(app,/battleRules\(\)\.displayLabel\(t,'Lượt chơi'\)/);

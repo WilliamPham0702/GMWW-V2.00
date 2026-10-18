@@ -19,7 +19,7 @@ test('target confirmation reduces confirmed targets to OK without losing the sel
   assert.match(app,/picker\.classList\.toggle\('is-confirm-only'/);
   assert.match(app,/candidates\.hidden=targetReady/);
   assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|battleState\.syncPending\|\|!targetReady/);
-  assert.match(html,/id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm" title="Ghi nhận hành động lên Server">OK<\/button>/);
+  assert.match(html,/id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK<\/button>/);
   assert.match(css,/#battleTargetSheet\.is-confirm-only>footer button/);
 });
 

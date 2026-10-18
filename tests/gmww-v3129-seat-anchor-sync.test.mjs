@@ -19,7 +19,7 @@ test('V3.129: GM renderer invalidates stale DOM when Seat Mẫu shape changes',(
     assert.match(signature,/seatCount,previewNew,seating/);
     assert.match(source,/positions=playSeatPositions\(seatCount\)/);
   }
-  assert.match(read('server-game/current/GMWW.html'),/app\.js\?v=3\.132-confirm-fast/);
+  assert.match(read('server-game/current/GMWW.html'),/app\.js\?v=3\.133-timeline-audio/);
 });
 
 test('V3.129: stale motion cannot displace assigned Seats after Tập Hợp',()=>{
