@@ -17,6 +17,7 @@ function playSaveAssignments(){
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
   // Step 5 stores only the GM's private local draft. Player Web receives no cards.
   playSceneState.assignmentSavedSignature=playAssignmentSignature();
+  playSceneRuntime.assignmentPanelDismissed=true;
   savePlayScene();renderPlayRoleAssignmentPanel();
   return true;
 }
@@ -29,7 +30,7 @@ function playConfirmAssignments(){
 }
 function renderPlayRoleAssignmentPanel(){
   const panel=document.getElementById('playRoleAssignmentPanel');if(!panel)return;
-  const visible=playSceneState.phase==='lobby'&&playSceneState.step==='roles'&&isLivePlayRoom();
+  const visible=playSceneState.phase==='lobby'&&playSceneState.step==='roles'&&isLivePlayRoom()&&!playSceneRuntime.assignmentPanelDismissed;
   panel.classList.toggle('hidden',!visible);panel.hidden=!visible;
   if(!visible)return;
   const members=playLiveMembers().filter(m=>m?.loginId).slice().sort((a,b)=>{
@@ -810,6 +811,7 @@ function initPlayScene(){
   document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameSheet()});
   document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
+  document.querySelector('[data-play-step="roles"]')?.addEventListener('click',()=>{playSceneRuntime.assignmentPanelDismissed=false;renderPlayRoleAssignmentPanel()});
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
   document.getElementById('playGatherSeatPreset')?.addEventListener('click',openPlaySeatPresetPanel);
   document.getElementById('playSeatPresetClose')?.addEventListener('click',closePlaySeatPresetPanel);
