@@ -30,7 +30,7 @@ test('V3.131: small natural-color icons orbit around body axis with constant siz
   assert.match(multi,/--orbit-delay:-/);
 });
 test('V3.131: status, name, role are above GM and Player Web sprites',()=>{
-  assert.match(gmSrc,/showRole\?'<span class="play-player-role">/);
+  assert.match(gmSrc,/showRole\?'<span class="play-player-role" data-faction=/);
   assert.match(gmSrc,/play-player-over/);
   assert.match(gm,/querySelector\(':scope > \.gmww-sv-badges'\)/);
   assert.match(gmSrc,/\.play-player-over > \.gmww-sv-badges/);
