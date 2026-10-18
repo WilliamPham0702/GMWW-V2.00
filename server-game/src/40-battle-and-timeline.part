@@ -1052,7 +1052,6 @@ function initBattleControls(){
     if(!d.moved)return;
     battleState.ignoreClick=Date.now()+450;
     const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
-    battleOpenTargetSheet(d.id,hit.id?'drag':'list',hit.ambiguous);
     if(hit.id)battlePickTargetWithAudio(hit.id,d.id);
     const action=battleActions().find(a=>a.id===d.id);
     // Keep the village unobstructed for 2+/3+ successive drops; show OK at the quota.
