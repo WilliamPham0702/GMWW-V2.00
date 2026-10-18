@@ -44,7 +44,7 @@ test('V3.132: server ACK unlocks immediate recorded feedback, without waiting fo
   assert.equal(h.battleState.syncPending,true,'do not submit against stale role ledger');
   assert.equal(h.title.textContent,'✓ ĐÃ GHI NHẬN');
   assert.equal(h.room.battleUndo.token,'undo-1');
-  assert.ok(h.battleState.impacts.has('alice'));
+  assert.equal(h.battleState.impacts.has('alice'),false,'legacy expanding impact is retired; confirmed status comes from server');
   assert.equal(h.logs[0][0],'GMWW battle-confirm timing');
   assert.equal(h.logs[0][1].serverProcessingMs,45);
   h.battleState.targets=['alice'];

@@ -24,7 +24,7 @@ test('nearby players require explicit named selection instead of a guessed drag 
   assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
   assert.match(app,/Hai người đang quá gần nhau/);
   assert.match(app,/battleState\.dragAmbiguous=ambiguous/);
-  assert.match(app,/if\(hit\.id\)\{[\s\S]*?battlePickTarget\(hit\.id,d\.id\)/);
+  assert.ok(app.includes('if(hit.id)battlePickTargetWithAudio(hit.id,d.id)'));
   assert.match(app,/setPointerCapture\?\.\(e\.pointerId\)/);
 });
 

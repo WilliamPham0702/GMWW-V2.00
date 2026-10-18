@@ -524,11 +524,21 @@ function battlePickTarget(id,actionId){
   else{playFlashError('Tối đa '+a.targetCount+' mục tiêu.');return}
   renderPlayBattle()
 }
+function battlePickTargetWithAudio(id,actionId){
+  const action=battleActions().find(a=>a.id===(actionId||battleState.actionId));
+  if(!action||!id)return false;
+  const target=String(id),already=battleState.targets.includes(target);
+  battlePickTarget(target,action.id);
+  const selected=!already&&battleState.targets.includes(target);
+  if(selected)void battlePlayConfiguredAudio('actions',action.actionId,action.name);
+  return selected;
+}
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  if(battleState.impacts.size)battleState.impacts.clear();
   const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets),now=Date.now();
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
-    const id=String(el.dataset.playPlayerId||''),impact=battleState.impacts.get(id);
+    const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
     el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
     const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
@@ -538,7 +548,7 @@ function battleMarkPlayers(){
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
-    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.toggle('battle-impact-'+type,!!impact&&impact.type===type&&impact.until>now);
+    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.remove('battle-impact-'+type);
   });
   for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
 }
@@ -667,8 +677,7 @@ async function battleConfirm(confirmed=false){
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
     // Confirm only after the Durable Object commits, never after an extra room reload.
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
-    // Canonical status orbits replace the old enlarging pulse/claw impact overlay.
-    if(!globalThis.GMWW_STATUS_VISUALS)for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
+    // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     if(result.revelation){
       const revelation=result.revelation;
@@ -782,27 +791,44 @@ function initBattleFloatingUndo(){
    can be cancelled by browser panning or pointer capture on the village scene. */
 function initBattleTimelineScrollNavigation(){
   const timeline=document.getElementById('battleTimeline');if(!timeline||timeline.dataset.scrollNavReady)return;
-  timeline.dataset.scrollNavReady='1';let armed=false,startScroll=0,timer=null;
-  const settle=()=>{
-    if(!armed||playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy)return;
-    if(Math.abs(timeline.scrollLeft-startScroll)<14){armed=false;return}
-    const center=timeline.getBoundingClientRect().left+timeline.clientWidth/2;
-    const items=[...timeline.querySelectorAll('[data-battle-index]:not([disabled])')];
-    if(!items.length){armed=false;return}
-    const closest=items.reduce((best,el)=>{
-      const rect=el.getBoundingClientRect(),distance=Math.abs(rect.left+rect.width/2-center);
-      return distance<best.distance?{el,distance}:best;
-    },{el:null,distance:Infinity}).el;
-    armed=false;
-    if(closest)void battleNavigateIndex(Number(closest.dataset.battleIndex));
+  timeline.dataset.scrollNavReady='1';
+  let armed=false,moved=false,startScroll=0,startX=0,startY=0,gestureDx=0,timer=null;
+  const cancel=()=>{armed=false;moved=false;clearTimeout(timer)};
+  timeline.gmwwCancelScrollNavigation=cancel;
+  const begin=(x,y)=>{
+    battleUnlockAudioFromGesture();cancel();
+    if(playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    armed=true;startScroll=timeline.scrollLeft;startX=x;startY=y;gestureDx=0;
   };
-  const schedule=()=>{if(!armed)return;clearTimeout(timer);timer=setTimeout(settle,220)};
-  timeline.addEventListener('touchstart',()=>{armed=true;startScroll=timeline.scrollLeft},{passive:true});
-  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){armed=true;startScroll=timeline.scrollLeft}},{passive:true});
+  const move=(x,y)=>{
+    if(!armed)return;
+    const dx=x-startX,dy=y-startY;
+    if(Math.abs(dx)>=34&&Math.abs(dx)>Math.abs(dy)*1.1){moved=true;gestureDx=dx}
+  };
+  const settle=()=>{
+    if(!armed||!moved||playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+       battleState.busy||battleState.syncPending){cancel();return}
+    // Only a genuine finger/drag movement can navigate. scrollIntoView()
+    // following a button tap is programmatic and must never change the turn.
+    const delta=Math.sign(timeline.scrollLeft-startScroll)||Math.sign(-gestureDx);
+    cancel();
+    if(delta)battleNavigateRelative(delta);
+  };
+  const schedule=()=>{if(!armed||!moved)return;clearTimeout(timer);timer=setTimeout(settle,220)};
+  timeline.addEventListener('touchstart',e=>{
+    const t=e.touches?.[0];if(t)begin(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchmove',e=>{
+    const t=e.touches?.[0];if(t)move(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchend',e=>{
+    const t=e.changedTouches?.[0];if(t)move(t.clientX,t.clientY);if(moved)schedule();else cancel();
+  },{passive:true});
+  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')begin(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')move(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){move(e.clientX,e.clientY);if(moved)schedule();else cancel()}},{passive:true});
   timeline.addEventListener('scroll',schedule,{passive:true});
-  timeline.addEventListener('touchend',schedule,{passive:true});
-  timeline.addEventListener('pointerup',schedule,{passive:true});
-  timeline.addEventListener('touchcancel',()=>{armed=false;clearTimeout(timer)},{passive:true});
+  timeline.addEventListener('touchcancel',cancel,{passive:true});
 }
 function initBattleSwipeNavigation(){
   const root=document.getElementById('playShell');if(!root||root.dataset.battleSwipeReady)return;
@@ -885,7 +911,7 @@ function battleClearDropHighlights(){
 }
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
-  document.getElementById('battleBack')?.addEventListener('click',()=>{battleNavigateRelative(-1)});
+  document.getElementById('battleBack')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleNavigateRelative(-1)});
   document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
@@ -905,7 +931,7 @@ function initBattleControls(){
   });
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
-  document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
+  document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
   document.getElementById('battleRosterToggle')?.addEventListener('click',()=>{battleState.roster=!battleState.roster;renderPlayBattle()});
   document.getElementById('battleRosterClose')?.addEventListener('click',()=>{battleState.roster=false;renderPlayBattle()});
   // One-tap confirmation; change the target by tapping another player before OK.
@@ -918,7 +944,7 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
-  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled)void battleNavigateIndex(Number(b.dataset.battleIndex))});
+  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
@@ -937,7 +963,7 @@ function initBattleControls(){
     const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled&&!battleState.targetSheet)battleOpenTargetSheet(x.dataset.battleAction,'list');
   });
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled){if(battleState.quickType)void battleQuickApply(x.dataset.battleMember);else battlePickTarget(x.dataset.battleMember)}});
-  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag');else if(action&&action.targetCount>1)battleOpenTargetSheet(battleState.actionId,'list')}},true);
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTargetWithAudio(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag');else if(action&&action.targetCount>1)battleOpenTargetSheet(battleState.actionId,'list')}},true);
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
     const x=e.target.closest('[data-battle-action]');
     if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
@@ -961,11 +987,7 @@ function initBattleControls(){
     battleState.ignoreClick=Date.now()+450;
     const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
     battleOpenTargetSheet(d.id,hit.id?'drag':'list',hit.ambiguous);
-    if(hit.id){
-      battlePickTarget(hit.id,d.id);
-      const action=battleActions().find(a=>a.id===d.id);
-      if(action)void battlePlayConfiguredAudio('actions',action.actionId,action.name);
-    }
+    if(hit.id)battlePickTargetWithAudio(hit.id,d.id);
   },{passive:true});
   document.addEventListener('pointercancel',()=>{battleState.drag=null;document.getElementById('battleDragGhost')?.remove();battleClearDropHighlights()});
 }

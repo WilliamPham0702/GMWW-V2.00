@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.138';
+const VERSION='3.139';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -928,10 +928,34 @@ function gmwwGmNearPlayer(x,y){
     return Number.isFinite(xx)&&Number.isFinite(yy)&&Math.hypot((px-xx)/7.0,(py-yy)/9.0)<1;
   });
 }
+function gmwwGmRoute(from,to){
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  if(!layout?.inside?.(from.x,from.y)||!layout?.inside?.(to.x,to.y))return [];
+  return layout.route(from,to);
+}
+function gmwwGmWalkPoint(from,to,t){
+  const path=gmwwGmRoute(from,to);
+  if(path.length<2)return from;
+  const lengths=path.slice(1).map((v,i)=>Math.hypot(v.x-path[i].x,(v.y-path[i].y)*1.78));
+  const total=lengths.reduce((a,b)=>a+b,0);let distance=Math.max(0,Math.min(1,t))*total;
+  for(let i=0;i<lengths.length;i++){
+    if(distance<=lengths[i]||i===lengths.length-1){
+      const f=Math.max(0,Math.min(1,distance/Math.max(lengths[i],1e-9)));
+      return {x:path[i].x+(path[i+1].x-path[i].x)*f,y:path[i].y+(path[i+1].y-path[i].y)*f};
+    }
+    distance-=lengths[i];
+  }
+  return to;
+}
 function gmwwGmClearWalk(from,to){
-  if(gmwwGmNearPlayer(to.x,to.y))return false;
-  for(let i=1;i<=16;i++){
-    const t=i/16;if(gmwwGmNearPlayer(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t))return false;
+  const path=gmwwGmRoute(from,to);
+  if(path.length<2)return false;
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i],steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
+    for(let n=0;n<=steps;n++){
+      const t=n/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+      if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(x,y)||gmwwGmNearPlayer(x,y))return false;
+    }
   }
   return true;
 }
@@ -944,21 +968,25 @@ function gmwwGmAutoPoint(session,index){
 let gmwwGmLastSafePoint=null;
 function gmwwGmKeepClear(actor){
   if(!actor)return actor;
-  if(!gmwwGmNearPlayer(actor.x,actor.y)){
-    gmwwGmLastSafePoint={x:actor.x,y:actor.y};return actor;
-  }
-  // Automatic waypoints must never paint a GM token over an occupied player.
-  const choices=[gmwwGmLastSafePoint,...GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))].filter(Boolean);
-  const safe=choices.filter(p=>!gmwwGmNearPlayer(p.x,p.y))
-    .sort((a,b)=>Math.hypot(a.x-actor.x,a.y-actor.y)-Math.hypot(b.x-actor.x,b.y-actor.y))[0];
-  if(!safe)return {...actor,moving:false,x:-100,y:-100};
-  gmwwGmLastSafePoint=safe;
-  return {...actor,moving:false,x:safe.x,y:safe.y};
+  const p={x:actor.x,y:actor.y},layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  const safe=layout?.inside?.(p.x,p.y)&&!gmwwGmNearPlayer(p.x,p.y)&&
+    (!gmwwGmLastSafePoint||gmwwGmClearWalk(gmwwGmLastSafePoint,p));
+  if(safe){gmwwGmLastSafePoint=p;return actor}
+  // Pause smoothly at the last rendered safe position; never teleport across the village.
+  if(gmwwGmLastSafePoint&&layout?.inside?.(gmwwGmLastSafePoint.x,gmwwGmLastSafePoint.y))
+    return {...actor,moving:false,gait:'idle',x:gmwwGmLastSafePoint.x,y:gmwwGmLastSafePoint.y,status:'GM CHỜ ĐƯỜNG TRỐNG'};
+  // A new session may spawn on an occupied seat. Choose a nearby safe entry once.
+  const nearest=GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))
+    .filter(x=>layout?.inside?.(x.x,x.y)&&!gmwwGmNearPlayer(x.x,x.y))
+    .sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  if(!nearest)return {...actor,moving:false,gait:'idle',x:-100,y:-100};
+  gmwwGmLastSafePoint=nearest;
+  return {...actor,moving:false,gait:'idle',...nearest,status:'GM CHỜ ĐƯỜNG TRỐNG'};
 }
 function gmwwGmActorAt(now=Date.now()){
   const p=gmwwGmPresenceState;if(!p?.online)return null;const manualUntil=Math.max(0,Number(p.manualUntil||0)),ms=Math.max(0,Number(p.moveStartedAt||0)),md=Math.max(0,Number(p.moveDurationMs||0));
-  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return gmwwGmKeepClear({moving,gait:moving?'run':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'})}
-  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return gmwwGmKeepClear({moving,gait:moving?'walk':'idle',x:moving?from.x+(to.x-from.x)*t:to.x,y:moving?from.y+(to.y-from.y)*t:to.y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'})
+  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return gmwwGmKeepClear({moving,gait:moving?'run':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'})}
+  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return gmwwGmKeepClear({moving,gait:moving?'walk':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'})
 }
 async function gmwwSendGmPresence(online=true){
   try{
@@ -976,7 +1004,7 @@ async function gmwwSendGmPresence(online=true){
 }
 async function gmwwMoveGmCharacter(x,y){
   const actor=gmwwGmActorAt(Date.now()),from=actor?{x:actor.x,y:actor.y}:{x:50,y:76};
-  if(!gmwwGmClearWalk(from,{x,y})){playFlashError('GM không được đi xuyên qua vị trí Người Chơi. Hãy chọn đường trống.');return false}
+  if(!gmwwGmClearWalk(from,{x,y})){playFlashError('GM không có đường đi an toàn tới vị trí này. Hãy chọn nơi trống.');return false}
   try{const res=await fetch(GMWW_SERVER_BASE+'/api/gm/move',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({fromX:from.x,fromY:from.y,x,y,roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store'}),d=await res.json();if(!res.ok)throw new Error(d?.message||d?.error||('HTTP '+res.status));gmwwGmPresenceState=d?.gm||gmwwGmPresenceState;renderPlayPlayers();syncPlayMovementTicker();return true}catch(err){playFlashError('Không di chuyển được GM. '+(err?.message||''));return false}
 }
 function gmwwStartGmPresence(){
@@ -2480,6 +2508,31 @@ function battleSpeakCue(message,showError=false){
   try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
   catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
 }
+let battleUnlockedAudioContext=null;
+function battleUnlockAudioFromGesture(){
+  if(playAudioMuted())return;
+  try{
+    const Ctx=globalThis.AudioContext||globalThis.webkitAudioContext;
+    if(!Ctx)return;
+    if(!battleUnlockedAudioContext)battleUnlockedAudioContext=new Ctx();
+    const context=battleUnlockedAudioContext;
+    if(context.state!=='running')void context.resume().catch(()=>{});
+    const silent=context.createBufferSource();
+    silent.buffer=context.createBuffer(1,1,context.sampleRate);
+    silent.connect(context.destination);silent.start();
+  }catch(_){}
+}
+async function battlePlayWebAudioFallback(src){
+  const ctx=battleUnlockedAudioContext;
+  if(!ctx||ctx.state!=='running')return false;
+  try{
+    const response=await fetch(src);if(!response.ok)return false;
+    const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
+    const source=ctx.createBufferSource();source.buffer=buffer;
+    source.connect(ctx.destination);source.start();
+    return true;
+  }catch(_){return false}
+}
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
   const row=battleFindAudio(kind,targetId,name);
@@ -2497,6 +2550,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
   try{await player.play();return true}
   catch(err){
+    // WebAudio was unlocked synchronously during the original finger gesture;
+    // it can start the confirmed turn cue even after the Durable Object round trip.
+    if(await battlePlayWebAudioFallback(src))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     return false
   }
@@ -3667,11 +3723,21 @@ function battlePickTarget(id,actionId){
   else{playFlashError('Tối đa '+a.targetCount+' mục tiêu.');return}
   renderPlayBattle()
 }
+function battlePickTargetWithAudio(id,actionId){
+  const action=battleActions().find(a=>a.id===(actionId||battleState.actionId));
+  if(!action||!id)return false;
+  const target=String(id),already=battleState.targets.includes(target);
+  battlePickTarget(target,action.id);
+  const selected=!already&&battleState.targets.includes(target);
+  if(selected)void battlePlayConfiguredAudio('actions',action.actionId,action.name);
+  return selected;
+}
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  if(battleState.impacts.size)battleState.impacts.clear();
   const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets),now=Date.now();
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
-    const id=String(el.dataset.playPlayerId||''),impact=battleState.impacts.get(id);
+    const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
     el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
     const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
@@ -3681,7 +3747,7 @@ function battleMarkPlayers(){
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
-    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.toggle('battle-impact-'+type,!!impact&&impact.type===type&&impact.until>now);
+    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.remove('battle-impact-'+type);
   });
   for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
 }
@@ -3810,8 +3876,7 @@ async function battleConfirm(confirmed=false){
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
     // Confirm only after the Durable Object commits, never after an extra room reload.
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
-    // Canonical status orbits replace the old enlarging pulse/claw impact overlay.
-    if(!globalThis.GMWW_STATUS_VISUALS)for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
+    // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     if(result.revelation){
       const revelation=result.revelation;
@@ -3925,27 +3990,44 @@ function initBattleFloatingUndo(){
    can be cancelled by browser panning or pointer capture on the village scene. */
 function initBattleTimelineScrollNavigation(){
   const timeline=document.getElementById('battleTimeline');if(!timeline||timeline.dataset.scrollNavReady)return;
-  timeline.dataset.scrollNavReady='1';let armed=false,startScroll=0,timer=null;
-  const settle=()=>{
-    if(!armed||playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy)return;
-    if(Math.abs(timeline.scrollLeft-startScroll)<14){armed=false;return}
-    const center=timeline.getBoundingClientRect().left+timeline.clientWidth/2;
-    const items=[...timeline.querySelectorAll('[data-battle-index]:not([disabled])')];
-    if(!items.length){armed=false;return}
-    const closest=items.reduce((best,el)=>{
-      const rect=el.getBoundingClientRect(),distance=Math.abs(rect.left+rect.width/2-center);
-      return distance<best.distance?{el,distance}:best;
-    },{el:null,distance:Infinity}).el;
-    armed=false;
-    if(closest)void battleNavigateIndex(Number(closest.dataset.battleIndex));
+  timeline.dataset.scrollNavReady='1';
+  let armed=false,moved=false,startScroll=0,startX=0,startY=0,gestureDx=0,timer=null;
+  const cancel=()=>{armed=false;moved=false;clearTimeout(timer)};
+  timeline.gmwwCancelScrollNavigation=cancel;
+  const begin=(x,y)=>{
+    battleUnlockAudioFromGesture();cancel();
+    if(playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    armed=true;startScroll=timeline.scrollLeft;startX=x;startY=y;gestureDx=0;
   };
-  const schedule=()=>{if(!armed)return;clearTimeout(timer);timer=setTimeout(settle,220)};
-  timeline.addEventListener('touchstart',()=>{armed=true;startScroll=timeline.scrollLeft},{passive:true});
-  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){armed=true;startScroll=timeline.scrollLeft}},{passive:true});
+  const move=(x,y)=>{
+    if(!armed)return;
+    const dx=x-startX,dy=y-startY;
+    if(Math.abs(dx)>=34&&Math.abs(dx)>Math.abs(dy)*1.1){moved=true;gestureDx=dx}
+  };
+  const settle=()=>{
+    if(!armed||!moved||playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+       battleState.busy||battleState.syncPending){cancel();return}
+    // Only a genuine finger/drag movement can navigate. scrollIntoView()
+    // following a button tap is programmatic and must never change the turn.
+    const delta=Math.sign(timeline.scrollLeft-startScroll)||Math.sign(-gestureDx);
+    cancel();
+    if(delta)battleNavigateRelative(delta);
+  };
+  const schedule=()=>{if(!armed||!moved)return;clearTimeout(timer);timer=setTimeout(settle,220)};
+  timeline.addEventListener('touchstart',e=>{
+    const t=e.touches?.[0];if(t)begin(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchmove',e=>{
+    const t=e.touches?.[0];if(t)move(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchend',e=>{
+    const t=e.changedTouches?.[0];if(t)move(t.clientX,t.clientY);if(moved)schedule();else cancel();
+  },{passive:true});
+  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')begin(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')move(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){move(e.clientX,e.clientY);if(moved)schedule();else cancel()}},{passive:true});
   timeline.addEventListener('scroll',schedule,{passive:true});
-  timeline.addEventListener('touchend',schedule,{passive:true});
-  timeline.addEventListener('pointerup',schedule,{passive:true});
-  timeline.addEventListener('touchcancel',()=>{armed=false;clearTimeout(timer)},{passive:true});
+  timeline.addEventListener('touchcancel',cancel,{passive:true});
 }
 function initBattleSwipeNavigation(){
   const root=document.getElementById('playShell');if(!root||root.dataset.battleSwipeReady)return;
@@ -4028,7 +4110,7 @@ function battleClearDropHighlights(){
 }
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
-  document.getElementById('battleBack')?.addEventListener('click',()=>{battleNavigateRelative(-1)});
+  document.getElementById('battleBack')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleNavigateRelative(-1)});
   document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
@@ -4048,7 +4130,7 @@ function initBattleControls(){
   });
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
-  document.getElementById('battleAdvance')?.addEventListener('click',()=>{if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
+  document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
   document.getElementById('battleRosterToggle')?.addEventListener('click',()=>{battleState.roster=!battleState.roster;renderPlayBattle()});
   document.getElementById('battleRosterClose')?.addEventListener('click',()=>{battleState.roster=false;renderPlayBattle()});
   // One-tap confirmation; change the target by tapping another player before OK.
@@ -4061,7 +4143,7 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
-  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled)void battleNavigateIndex(Number(b.dataset.battleIndex))});
+  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
@@ -4080,7 +4162,7 @@ function initBattleControls(){
     const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled&&!battleState.targetSheet)battleOpenTargetSheet(x.dataset.battleAction,'list');
   });
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled){if(battleState.quickType)void battleQuickApply(x.dataset.battleMember);else battlePickTarget(x.dataset.battleMember)}});
-  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTarget(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag');else if(action&&action.targetCount>1)battleOpenTargetSheet(battleState.actionId,'list')}},true);
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTargetWithAudio(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag');else if(action&&action.targetCount>1)battleOpenTargetSheet(battleState.actionId,'list')}},true);
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
     const x=e.target.closest('[data-battle-action]');
     if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
@@ -4104,11 +4186,7 @@ function initBattleControls(){
     battleState.ignoreClick=Date.now()+450;
     const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
     battleOpenTargetSheet(d.id,hit.id?'drag':'list',hit.ambiguous);
-    if(hit.id){
-      battlePickTarget(hit.id,d.id);
-      const action=battleActions().find(a=>a.id===d.id);
-      if(action)void battlePlayConfiguredAudio('actions',action.actionId,action.name);
-    }
+    if(hit.id)battlePickTargetWithAudio(hit.id,d.id);
   },{passive:true});
   document.addEventListener('pointercancel',()=>{battleState.drag=null;document.getElementById('battleDragGhost')?.remove();battleClearDropHighlights()});
 }
