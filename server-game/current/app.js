@@ -3074,13 +3074,18 @@ function renderPlayPlayers(){
     ring.clientWidth,ring.clientHeight
   ]);
   if(ring.dataset.gmwwPlayerDomSig===domSig&&ring.children.length){
-    // Preserve every character rig. Updating one overlay must not rebuild all
-    // 12–30 characters, reset their animation, or stutter the iPhone canvas.
+    // Preserve 30 character rigs but always reconcile gameplay state: an expelled
+    // player returning in the next night must brighten without being tapped.
     const visual=globalThis.GMWW_STATUS_VISUALS;
-    if(visual)for(const member of members){
+    for(const member of members){
       const id=String(member.loginId||member.participantId||'');
       const token=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');
       if(!token)continue;
+      const effect=playPlayerEffect(member.loginId);
+      for(const status of ['alive','dead','frozen','expelled'])
+        token.classList.toggle('is-'+status,status===effect&&status!=='alive');
+      token.dataset.gmwwCurrentEffect=effect;
+      if(!visual)continue;
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
       token.dataset.gmwwStatuses=sig;
