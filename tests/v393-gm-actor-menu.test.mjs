@@ -12,16 +12,17 @@ test('floating countdown stands alone; Auto GM spins only inside wolf menu',()=>
  assert.match(css,/#battleGMAuto\[aria-pressed="true"\] \.battle-auto-spinner\{/);
  assert.match(css,/#battleGMAuto\[aria-pressed="false"\] \.battle-auto-spinner\{/);
 });
-test('moving GM actor alone opens its seven action controls',()=>{
- const rider=app.slice(app.indexOf('function renderPlayGmToken('),app.indexOf('function updatePlayGmToken('));
- assert.match(rider,/if\(playSceneState\.step==='battle'\)\{battleToggleWolfMenu\(\);return\}/);
- assert.match(rider,/data-play-gm-rider/);
+test('V3.143: campfire alone opens the GM action menu',()=>{
+ const setup=app.split("document.querySelector('.play-core-pearl')?.addEventListener('click'")[1]||'';
+ assert.match(setup,/battleToggleWolfMenu\(\)/);
+ assert.doesNotMatch(app,/data-play-gm-rider/);
  assert.match(dock,/id="battleWolfMenu"[^>]*hidden/);
  const menu=dock.split('id="battleWolfMenu"')[1]?.split('id="battleDetails"')[0]||'';
  for(const id of ['battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
    assert.equal((menu.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.doesNotMatch(dock,/id="battleWolfToggle"/);
 });
+
 test('Info retains actions and closes separately, without changing manual effects',()=>{
  assert.match(dock,/id="battleDetails"[^>]*hidden/);
  assert.match(dock,/id="battleDetailsClose"/);
