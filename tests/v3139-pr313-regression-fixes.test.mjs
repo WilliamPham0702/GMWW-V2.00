@@ -67,12 +67,12 @@ test('V3.139: Player Web, preview and GM status cache versions are refreshed tog
  assert.ok(read('assets/village/status-visuals.css').startsWith(read('server-game/current/status-visuals.css')));
  assert.doesNotMatch(read('server-game/current/style.css'),/\.play-player-token\.battle-impact-/);
 });
-test('V3.139: runtime sources and OTA versions remain consistent',()=>{
+test('V3.139 gameplay regression retains synchronized current Runtime and OTA metadata',()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+ const runtime=JSON.parse(read('package.json')).version.split('.').slice(0,2).join('.');
  assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
- assert.match(read('server-game/src/00-core-and-library.part'),/VERSION='3\.139'/);
- assert.equal(JSON.parse(read('package.json')).version,'3.139.0');
- assert.ok(read('src/index.js').includes('VERSION="V3.139"'));
- assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3139"'));
+ assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+runtime+"'"));
+ assert.ok(read('src/index.js').includes('VERSION="V'+runtime+'"'));
+ assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-'+runtime.replaceAll('.','')+'"'));
  assert.ok(read('src/index.js').includes('NATIVE_SHELL_VERSION="3.110"'));
 });
