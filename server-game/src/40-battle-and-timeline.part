@@ -411,7 +411,7 @@ function battleWolfOutcomeText(result){
 function battleShowWitchIntel(turn){
   const roles=turn?.kind==='role-group'?(turn.roles||[]):[turn];
   if(!roles.some(row=>String(row?.roleId||'')==='role_witch'))return;
-  if(battleState.intelShownForKey===battleState.key)return;
+  if(!playSceneRuntime.nightIntel||battleState.intelShownForKey===battleState.key)return;
   battleState.intelShownForKey=battleState.key;
   battleShowResultPopup('🐺 VẾT CẮN · PHÙ THỦY',battleWolfOutcomeText(playSceneRuntime.nightIntel));
 }
@@ -422,7 +422,7 @@ function battleBindResultPopup(){
   const grip=document.getElementById('battleResultGrip');if(!grip)return;
   let drag=null;
   grip.addEventListener('pointerdown',e=>{
-    if(e.button!==0&&e.pointerType!=='touch')return;
+    if(e.target.closest('button')||(e.button!==0&&e.pointerType!=='touch'))return;
     const r=popup.getBoundingClientRect();drag={x:e.clientX,y:e.clientY,left:r.left,top:r.top,id:e.pointerId};
     try{grip.setPointerCapture(e.pointerId)}catch{}e.preventDefault();
   });
