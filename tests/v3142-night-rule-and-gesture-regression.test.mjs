@@ -85,3 +85,5 @@ test('Dead turn is informational; the GM controls timeline advance',()=>{
  assert.ok(gm.includes('if(bar&&!deadOnly&&sig!==battleState.actionSig)'));
  assert.ok(gm.includes('function battleNavigateRelative(delta)'));
 });
+
+// CI: Cloudflare branch trigger validates without allocating a Preview Durable Object namespace.
