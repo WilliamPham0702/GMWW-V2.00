@@ -89,6 +89,25 @@ try{
  assert.equal(await page.locator('[data-battle-action]').count(),2);
  await page.locator('[data-battle-index="1"]').click();
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early');
+ // Verify an actual finger-scroll inside Timeline submits exactly one move.
+ // The click above must never be mistaken for a swipe caused by scrollIntoView.
+ const swipeTurn=await page.evaluate(async()=>{
+   const el=document.getElementById('battleTimeline');
+   const gesture=(name,key,x)=>{
+     const e=new Event(name,{bubbles:true});Object.defineProperty(e,key,{value:[{clientX:x,clientY:185}]});
+     el.dispatchEvent(e);
+   };
+   gesture('touchstart','touches',340);
+   gesture('touchmove','touches',120);
+   el.scrollLeft+=Math.max(50,el.clientWidth/2);
+   el.dispatchEvent(new Event('scroll'));
+   gesture('touchend','changedTouches',120);
+   await new Promise(resolve=>setTimeout(resolve,330));
+   return playSceneRuntime.nightRuntime.currentId;
+ });
+ assert.equal(swipeTurn,'seer','Horizontal swipe should advance one confirmed server turn');
+ await page.locator('[data-battle-index="1"]').click();
+ assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early','Tapping a turn never silently navigates again');
  const shell=page.locator('#playShell');
  await shell.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:1,clientX:350,clientY:430});
  await new Promise(resolve=>setTimeout(resolve,120));
