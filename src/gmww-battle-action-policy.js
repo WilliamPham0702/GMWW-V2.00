@@ -28,10 +28,10 @@ export function checkBattleRoleActionUsage(rows,detail){
   if(rule.singleActionPerNight&&own.some(x=>Number(x.night)===night))
     return{ok:false,error:'ROLE_NIGHT_ACTION_EXHAUSTED',message:'Vai trò đã sử dụng một chức năng trong đêm này.'};
   const uses=own.filter(x=>normalized(x.actionId)===action&&
-    (rule.usageMode==='onceGame'||Number(x.night)===night)).length;
+    (['onceGame','nGame'].includes(rule.usageMode)||Number(x.night)===night)).length;
   if(rule.usageMode!=='unlimited'&&uses>=rule.usageCount)
-    return{ok:false,error:rule.usageMode==='onceGame'?'ACTION_GAME_LIMIT_REACHED':'ACTION_NIGHT_LIMIT_REACHED',
-      message:rule.usageMode==='onceGame'?'Chức năng này đã hết lượt sử dụng trong ván.':'Chức năng này đã hết lượt sử dụng trong đêm.'};
+    return{ok:false,error:['onceGame','nGame'].includes(rule.usageMode)?'ACTION_GAME_LIMIT_REACHED':'ACTION_NIGHT_LIMIT_REACHED',
+      message:['onceGame','nGame'].includes(rule.usageMode)?'Chức năng này đã hết lượt sử dụng trong ván.':'Chức năng này đã hết lượt sử dụng trong đêm.'};
   return{ok:true,policy:rule};
 }
 export function appendBattleRoleActionUsage(rows,detail){
