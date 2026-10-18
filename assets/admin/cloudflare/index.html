@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <title>GMWW — Quản lý Cloudflare</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#eaf7f9;background:#061722}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 95% 0%,#176275 0%,transparent 48%),radial-gradient(ellipse at 0% 90%,#113c58 0%,transparent 55%),#061722}
+    .shell{max-width:940px;margin:auto;padding:clamp(18px,4vw,42px)}
+    a{color:#8ee9e5}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .brand{font-size:.78rem;letter-spacing:.19em;color:#93d9e0;font-weight:800}
+    .back{display:inline-block;color:#c2e5e9;text-decoration:none;border:1px solid #376475;border-radius:14px;padding:9px 14px}
+    h1{font-size:clamp(1.65rem,4.5vw,2.8rem);margin:25px 0 6px;line-height:1.1}
+    .intro,.note{color:#a8c9d0;line-height:1.65}
+    .pill{display:inline-block;border:1px solid #437887;border-radius:100px;padding:5px 12px;font-size:.73rem;color:#bcecf2}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px;margin:24px 0}
+    .card{background:rgba(9,37,50,.82);border:1px solid #2e5e6b;border-radius:20px;padding:21px;box-shadow:0 10px 40px #00131d40}
+    .label{color:#b2d5db;font-size:.85rem}.metric{font-size:2.3rem;margin:9px 0 5px;font-weight:760;font-variant-numeric:tabular-nums}
+    .ok{color:#7becc4}.warn{color:#f9d58b}.muted{color:#b0d0d6}
+    .bar{height:9px;border-radius:20px;background:#174451;overflow:hidden;margin:17px 0 7px}
+    .fill{height:100%;width:0;background:linear-gradient(90deg,#5fe9c2,#3cafcf);transition:width .2s}
+    h2{font-size:1.08rem;margin:0 0 14px;color:#e9f8f9}
+    .buttonRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px}
+    a.action{display:block;padding:14px;text-align:center;text-decoration:none;font-weight:700;border-radius:13px;background:#a5efe3;color:#062c37}
+    a.action.secondary{background:transparent;color:#c6f2f2;border:1px solid #5c929a}
+    .steps{margin:13px 0 0;padding-left:21px;line-height:1.8;color:#bddae0}
+    .status{border-left:3px solid #7ce1bc;padding:9px 14px;background:#102c38;border-radius:0 10px 10px 0;color:#d3f3ed}
+    footer{margin-top:20px;font-size:.79rem;color:#9ac2ca;line-height:1.65}
+    .space{margin-top:16px}.tag{display:inline-block;margin-left:7px;font-size:.7rem;color:#d8ecc0}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <span class="brand">GMWW · SERVER OPERATIONS</span>
+    <a class="back" href="/">← Về GMWW</a>
+  </div>
+  <h1>Quản lý Cloudflare</h1>
+  <p class="intro">Theo dõi tài nguyên, kiểm tra Preview không còn sử dụng và dọn dẹp an toàn. Tác vụ có quyền xoá chỉ chạy trong GitHub Actions sau khi quản trị viên đăng nhập và xác nhận.</p>
+  <span class="pill" id="freshness">Đang tải trạng thái đã kiểm toán...</span>
+  <section class="grid" aria-label="Số liệu Cloudflare">
+    <div class="card">
+      <div class="label">Durable Object namespaces</div>
+      <div class="metric" id="ns">— / 100</div>
+      <div class="bar"><div class="fill" id="usage"></div></div>
+      <div class="label" id="nsSub">Trạng thái mới nhất được kiểm toán</div>
+    </div>
+    <div class="card">
+      <div class="label">Cloudflare Previews</div>
+      <div class="metric" id="preview">—</div>
+      <div class="label">Không tính phòng chơi / instance</div>
+    </div>
+    <div class="card">
+      <div class="label">Đủ điều kiện xem xét dọn</div>
+      <div class="metric ok" id="eligible">—</div>
+      <div class="label">PR đã đóng ≥ 24 giờ, namespace riêng</div>
+    </div>
+    <div class="card">
+      <div class="label">Đã giải phóng trong lượt gần nhất</div>
+      <div class="metric" id="deleted">—</div>
+      <div class="label">Tối đa 10 Preview mỗi lượt</div>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="ops">
+    <h2 id="ops">Công cụ quản trị</h2>
+    <p class="status">🔒 Quyền quét và xoá được bảo vệ bởi tài khoản GitHub có quyền trên repository. Website này không lưu hoặc sử dụng Cloudflare API token.</p>
+    <div class="buttonRow space">
+      <a class="action" href="https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml" target="_blank" rel="noopener noreferrer">↻ Mở công cụ Quét thủ công ↗</a>
+      <a class="action secondary" href="https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml" target="_blank" rel="noopener noreferrer">♻ Mở công cụ Dọn dẹp thủ công ↗</a>
+    </div>
+    <ol class="steps">
+      <li>Đăng nhập GitHub bằng tài khoản quản trị dự án.</li>
+      <li>Chọn <strong>Run workflow</strong> rồi chọn <strong>scan</strong> (chỉ quét) hoặc <strong>cleanup</strong> (dọn dẹp).</li>
+      <li>Xem kết quả bên dưới; mọi thao tác đều có nhật ký trong GitHub Actions.</li>
+    </ol>
+  </section>
+  <section class="card space">
+    <h2>Tự động và lịch sử</h2>
+    <p class="note">Tự quét và dọn vào khoảng 09:00 hằng ngày (giờ Việt Nam), có thể chạy muộn hơn theo lịch GitHub. Hệ thống giữ nguyên Preview còn dữ liệu, PR đang mở, namespace Production và tài nguyên chưa đối chiếu.</p>
+    <p class="note" id="lastRun">Chưa có nhật ký gần nhất.</p>
+    <div class="buttonRow">
+      <a class="action secondary" href="https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml" target="_blank" rel="noopener noreferrer">Xem nhật ký GitHub Actions ↗</a>
+      <a class="action secondary" href="https://github.com/WilliamPham0702/GMWW-V2.00/issues/320" target="_blank" rel="noopener noreferrer">Xem báo cáo tài nguyên ↗</a>
+    </div>
+  </section>
+  <footer>GMWW Production và dữ liệu ván không thuộc phạm vi dọn dẹp. Không thể xoá một namespace chỉ vì đã hoàn thành ván chơi. Số liệu hiển thị từ bản kiểm toán gần nhất, không phải bộ đếm trực tiếp liên tục.</footer>
+</main>
+<script>
+(async function () {
+  "use strict";
+  const byId = id => document.getElementById(id);
+  const marker = /<!-- GMWW_CF_STATUS_START -->\s*(\{[^\n]*\})\s*<!-- GMWW_CF_STATUS_END -->/;
+  try {
+    const response = await fetch("https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/issues/320", {
+      headers: { Accept: "application/vnd.github+json" }, cache: "no-store"
+    });
+    if (!response.ok) throw new Error("GitHub HTTP " + response.status);
+    const issue = await response.json();
+    const match = String(issue.body || "").match(marker);
+    if (!match) throw new Error("Không tìm thấy báo cáo hợp lệ");
+    const data = JSON.parse(match[1]);
+    if (data.schema !== 1) throw new Error("Định dạng báo cáo không hợp lệ");
+    if (Number.isInteger(data.namespaceCount) && data.namespaceCount >= 0) {
+      byId("ns").textContent = data.namespaceCount + " / 100";
+      byId("usage").style.width = Math.min(100, data.namespaceCount) + "%";
+      byId("nsSub").textContent = "Còn khoảng " + Math.max(0, 100 - data.namespaceCount) + " vị trí theo ngưỡng đang theo dõi";
+    }
+    for (const [id, name] of [["preview","previewCount"],["eligible","eligibleCount"],["deleted","deletedCount"]]) {
+      if (Number.isInteger(data[name]) && data[name] >= 0) byId(id).textContent = String(data[name]);
+    }
+    if (data.updatedAt && !Number.isNaN(Date.parse(data.updatedAt))) {
+      const date = new Date(data.updatedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+      byId("freshness").textContent = "Đã kiểm toán: " + date + " (GMT+7)";
+      byId("lastRun").textContent =
+        "Lần gần nhất: " + (data.mode === "cleanup" ? "Dọn dẹp" : "Quét") +
+        " · " + date + " · " +
+        (data.state === "success" ? "Hoàn thành" : "Có mục được bảo vệ hoặc bỏ qua") +
+        " · Giữ lại " + (data.protectedCount ?? "—") + " Preview đang bảo vệ.";
+    } else {
+      byId("freshness").textContent = "Chưa có lần quét ghi nhận. Mở GitHub Actions để quét lần đầu.";
+    }
+  } catch (_) {
+    byId("freshness").textContent = "Không tải được báo cáo — xem GitHub Actions";
+  }
+})();
+</script>
+</body>
+</html>

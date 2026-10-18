@@ -1,0 +1,58 @@
+name: GMWW Cloudflare Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Quét an toàn hoặc dọn Preview đã đóng PR và không có dữ liệu"
+        type: choice
+        required: true
+        default: scan
+        options:
+          - scan
+          - cleanup
+  issue_comment:
+    types: [created]
+  schedule:
+    # Every morning at 09:00 Vietnam time (02:00 UTC).
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: gmww-cloudflare-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintenance:
+    # Only the owner may request manual runs via a command on the maintenance issue.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.number == 320 &&
+       github.event.comment.user.login == 'WilliamPham0702' &&
+       (github.event.comment.body == '/gmww-cloudflare scan' ||
+        github.event.comment.body == '/gmww-cloudflare cleanup'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Safety regression tests
+        run: node --test tests/cloudflare-namespace-maintenance.test.mjs tests/cleanup-closed-preview.test.mjs
+      - name: Run isolated Cloudflare maintenance backend
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GMWW_MAINTENANCE_MODE: ${{ github.event_name == 'schedule' && 'cleanup' || (github.event_name == 'issue_comment' && github.event.comment.body == '/gmww-cloudflare cleanup' && 'cleanup') || inputs.mode || 'scan' }}
+        run: node tools/cloudflare-namespace-maintenance.mjs
