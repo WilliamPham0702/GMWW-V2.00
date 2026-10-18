@@ -418,6 +418,13 @@ function applyV210Rules(s){
     {id:'audio_system_confirm',name:'Xác nhận',sourceKey:'SYSTEM:CONFIRM_TARGET',fileName:'gmww-confirm.m4a',verifiedBinary:true},
     {id:'audio_system_countdown',name:'Đếm ngược',sourceKey:'SYSTEM:DAY_COUNTDOWN_30',fileName:'gmww-countdown-30.m4a',verifiedBinary:true},
     {id:'audio_system_day_wakeup',name:'Làng ơi dậy đi',targetId:'audio_system_day_wakeup',fileName:'',verifiedBinary:false},
+    // Morning announcement segments: uploaded clips are preserved during subsequent OTAs.
+    {id:'audio_system_morning_expelled',name:'Đêm qua người chơi này đã bị đuổi khỏi làng',targetId:'audio_system_morning_expelled',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_marked',name:'Đêm qua người chơi này đã bị đánh dấu',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
+    ...Array.from({length:5},(_,i)=>({id:'audio_system_morning_number_'+(i+1),name:String(i+1),targetId:'audio_system_morning_number_'+(i+1),fileName:'',verifiedBinary:false})),
+
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
