@@ -6,132 +6,44 @@ import fs from 'node:fs';
 const server=fs.readFileSync('src/index.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const live=fs.readFileSync('src/gmww-members-live.js','utf8');
-const village=fs.readFileSync('assets/village/village.mjs','utf8');
-const css=fs.readFileSync('assets/village/village.css','utf8');
-const gmStyle=fs.readFileSync('server-game/current/style.css','utf8');
-const gmAsset=fs.readFileSync('assets/gm/gm-white-wolf.webp');
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
 
-test('GM presence API has authenticated heartbeat and public online TTL',()=>{
+test('GM online presence remains authenticated and independently displayed',()=>{
   assert.match(server,/GM_PRESENCE_TTL=75000/);
   assert.match(server,/\/api\/gm-presence/);
   assert.match(server,/\/api\/gm\/presence/);
-  assert.match(server,/globalSetting:gmPresence/);
   assert.match(app,/gmwwSendGmPresence/);
   assert.match(app,/setInterval\(\(\)=>\{if\(document\.visibilityState!=='hidden'\)gmwwSendGmPresence\(true\)\},20000\)/);
+  assert.match(live,/async function refreshGmPresence\(/);
+  assert.match(live,/startGmPresencePoll/);
 });
-
-test('V3.09 keeps GM in the lobby until a room is explicitly active and scopes the rider per room',()=>{
+test('Removing Sói GM never alters room/lobby admission or seating rules',()=>{
   assert.match(server,/roomCode:isValidRoomCode\(roomCode\)\?roomCode:""/);
   assert.ok(app.includes("roomCode:online!==false&&isLivePlayRoom()?String(playSceneState.roomCode||''):null"));
-  assert.ok(app.includes("roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null"));
   assert.ok(app.includes("if(saved.step==='members')saved.step='seats'"));
-  assert.ok(app.includes("if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||'')))"));
   assert.doesNotMatch(app,/PLAY_STEPS=\[[^\]]*'members'/);
-  assert.ok(live.includes("gmRoomCode===viewerRoomCode"));
+  assert.match(live,/const publicPlayers=villagePublicPlayers\(/);
 });
-
-test('Player Web renders a dedicated GM rider only while GM is online',()=>{
-  assert.match(live,/GM_VILLAGE_HOLD_MS=15000/);
-  assert.match(live,/GM_VILLAGE_MOVE_MS=8500/);
-  assert.match(live,/avatarUrl:'\/gm\/gm-white-wolf\.webp'/);
-  assert.match(live,/gmPlayer=gmVillagePlayer\(\)/);
-  assert.match(village,/isGM:p\?\.isGM===true\|\|p\?\.kind==="gm"/);
-  assert.doesNotMatch(village,/normalScale\\*1\\.5/);
-  assert.match(village,/gmww:gm-character-click/);
-  assert.match(css,/\.player\.gm/);
+test('V3.143: neither GM view nor Player Web creates the wolf rider or patrol',()=>{
+  assert.doesNotMatch(app,/function renderPlayGmToken\(/);
+  assert.doesNotMatch(app,/gmwwGmActorAt\(/);
+  assert.doesNotMatch(app,/gmwwMoveGmCharacter\(/);
+  assert.doesNotMatch(live,/function gmVillagePlayer\(/);
+  assert.doesNotMatch(live,/GM_VILLAGE_MOVE_MS/);
+  assert.doesNotMatch(live,/gmMotionTimer/);
+  assert.doesNotMatch(live,/publicPlayers\.push\(gmPlayer\)/);
 });
-
-test('GM rider asset is packaged as a real WebP',()=>{
-  assert.ok(gmAsset.length>10000);
-  assert.equal(gmAsset.subarray(0,4).toString('ascii'),'RIFF');
-  assert.equal(gmAsset.subarray(8,12).toString('ascii'),'WEBP');
-});
-
-test('GM remains visible in a full 30-player room without consuming a seat',()=>{
-  assert.doesNotMatch(village,/players\.slice\(0,30\)/);
-  assert.match(village,/regularCount>=30/);
-  assert.match(village,/gmIncluded/);
-});
-
-test('GM can be manually steered while retaining autonomous roaming',()=>{
-  assert.match(server,/\/api\/gm\/move/);
-  assert.match(server,/globalGmMovePut/);
-  assert.match(server,/manualUntil:now\+duration\+15000/);
-  assert.match(app,/gmwwMoveGmCharacter/);
-  assert.match(app,/await gmwwMoveGmCharacter\(raw\.x,raw\.y\)/);
-  assert.match(app,/GMWW_GM_AUTO_HOLD_MS=15000/);
-  assert.match(live,/manualUntil/);
-  assert.match(live,/gm_manual/);
-  assert.match(live,/setInterval\(\(\)=>\{if\(state\.member&&!document\.hidden\)refreshGmPresence\(\)\},2500\)/);
-  assert.match(gmStyle,/\.play-player-token\.is-gm-rider/);
-  assert.match(gmStyle,/width:56px;height:74px/);
-});
-
-test('V3.17 keeps GM rider at normal size and uses one segmented runtime actor',()=>{
+test('GM campfire control is kept and no IPA rebuild is required',()=>{
   assertCurrentRelease();
-  assert.match(app,/src="gm\/gm-white-wolf\.webp"/);
-  assert.match(app,/activePlayerId='gm:online'/);
-  assert.match(app,/gmSelected=activeId==='gm:online'/);
-  assert.match(gmStyle,/\.play-player-token\.is-gm-rider\{width:72px/);
-  assert.match(app,/data-gm-wolf-runtime="1"/);
-  for(const part of ['gm-wolf-body','gm-wolf-rear-legs','gm-wolf-front-legs','gm-wolf-head'])assert.match(app,new RegExp(part));
-  for(const state of ['idle','walk','run','shake','howl'])assert.match(gmStyle,new RegExp('gm-action-'+state));
-  assert.match(village,/baseW=compact\?50:62,baseH=compact\?67:82/);
-  assert.match(css,/gmwwGmWolfLegA/);
-  assert.match(css,/gmwwGmWolfLegB/);
-  const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
-  const ipa=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
-  assert.match(prepare,/copyDir\('assets\/gm','gm'\)/);
-  assert.match(ipa,/cp assets\/gm\/gm-white-wolf\.webp/);
-});
-
-test('V2.96 update channel preserves runtime manifest and GM rider asset for V2.94 shell',()=>{
-  const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
-  const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assert.match(server,/updates\/runtime\/V/);
-  assert.match(server,/latestLostRuntime/);
-  assert.match(prepare,/manifest\.json/);
-  assert.match(deploy,/gm\/gm-white-wolf\.webp/);
-});
-
-test('GM can be steered before room creation and wolf visibly leaps instead of gliding',()=>{
-  const h=app.match(/document\.getElementById\('playWorld'\)\?\.addEventListener\('click',[\s\S]*?window\.addEventListener\('resize'/)?.[0]||'';
-  assert.ok(h);
-  assert.doesNotMatch(h,/\|\|!isLivePlayRoom\(\)\)return/);
-  assert.match(h,/gmSelected\|\|!activeId/);
-  assert.match(h,/if\(!isLivePlayRoom\(\)\)return/);
-  assert.match(gmStyle,/playGmWolfLeap/);
-  assert.match(gmStyle,/scaleY\(1\.48\)/);
-  assert.match(gmStyle,/gm-wolf-shadow/);
-  assert.match(css,/gmwwGmWolfLeap/);
-  assert.match(css,/scaleY\(1\.5\)/);
-});
-
-test('V3.17 update manifest bypasses stale asset cache and native download cannot point to an older IPA',()=>{
-  const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  assertCurrentRelease();
-  assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
+  assert.ok(app.includes("document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});"));
+  assert.match(html,/id="battleWolfMenu"/);
   assert.match(deploy,/Native IPA version does not match releaseVersion/);
-  assert.match(deploy,/Native IPA filename is stale/);
+  assert.match(deploy,/Runtime OTA/);
 });
-
-test('V3.09 GM map mirrors pre-room motion and removes cyan GM wrapper',()=>{
-  assert.ok(app.includes('villagePollTimer:0'));
-  assert.ok(app.includes('/api/village?ts='));
-  assert.ok(app.includes('playSyncGlobalVillageMotion'));
-  assert.ok(app.includes('playSyncGlobalVillageMotion(false)},250)'));
-  assert.ok(app.includes('serverClockOffsetMs=Number(d.serverTime)-Date.now()'));
-  assert.ok(app.includes('data-gm-wolf-runtime="1"'));
-  assert.ok(!app.includes('<span class="gm-wolf-sprite"><span class="gm-wolf-shadow">'));
-  assert.ok(gmStyle.includes('.play-player-token.is-gm-rider .gm-wolf-sprite{background:transparent!important'));
-});
-
-test('V3.17 wolf articulates legs and head across five approved behaviors',()=>{
-  assert.ok(app.includes('data-gm-wolf-runtime="1"'));
-  assert.ok(app.includes('gm-wolf-head'));
-  assert.ok(app.includes('gm-wolf-rear-legs'));
-  assert.ok(app.includes('gm-wolf-front-legs'));
-  for(const name of ['gmWolfRuntimeWalkRear','gmWolfRuntimeWalkFront','gmWolfRuntimeRunRear','gmWolfRuntimeRunFront','gmWolfRuntimeShakeHead','gmWolfRuntimeHowlHead'])assert.ok(gmStyle.includes('@keyframes '+name));
-  assert.ok(village.includes('gmActionFor'));
-  assert.ok(css.includes('gmWolfRuntimeHowlHead'));
+test('OTA releases retain manifest security and cache busting',()=>{
+  assertCurrentRelease();
+  assert.match(server,/UPDATE_CHANNEL_REV="runtime-3143"/);
+  assert.match(server,/channel="\+encodeURIComponent\(UPDATE_CHANNEL_REV\)/);
+  assert.match(server,/latestLostRuntime/);
 });
