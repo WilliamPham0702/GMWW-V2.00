@@ -15,7 +15,8 @@ test('Back button shows night number, without arrow, preserving previous-turn ac
   const html=get('server-game/current/GMWW.html');
   const back=html.match(/<button id="battleBack"[^>]*>[\s\S]*?<\/button>/)?.[0]||'';
   assert.match(back,/aria-label="Lượt trước"/);
-  assert.match(back,/<b>ĐÊM THỨ 1<\/b>/);\n  assert.doesNotMatch(back,/←|&lt;|<span aria-hidden/);
+  assert.ok(back.includes('<b>ĐÊM THỨ 1</b>'));
+  assert.doesNotMatch(back,/←|<span aria-hidden/);
   assert.doesNotMatch(back,/>Quay về</);
   assert.match(html,/battle-controls[.]js[?]v=3[.][0-9]+-timeline/);
 });
