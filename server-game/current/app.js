@@ -2441,7 +2441,7 @@ async function battleWarmAudio(kind,item){
 }
 function battleSpeakCue(message,showError=false){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
-  if(!speech||!Voice){if(showError)playFlashError('Chưa có file Audio cho '+message+'. Vui lòng nạp trong Thư Viện → Âm Thanh.');return false}
+  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');return false}
   try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
   catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
 }
