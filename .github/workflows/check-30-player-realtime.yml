@@ -26,6 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: npm ci
       - name: Start isolated localhost Worker and exercise two 30-player rooms
         shell: bash
