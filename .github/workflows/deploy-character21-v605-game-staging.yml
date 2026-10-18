@@ -18,6 +18,7 @@ on:
       - 'assets/characters/overhaul-v600/character-30/avatar.webp'
       - 'assets/characters/overhaul-v600/portraits-22-30-v606-staging.json'
       - 'tests/character-v606-next-art-review.test.mjs'
+      - 'tests/character22-v607-asset-gate.test.mjs'
       - '.github/workflows/deploy-character21-v605-game-staging.yml'
   workflow_dispatch:
 
@@ -57,7 +58,7 @@ jobs:
         run: |
           node scripts/build-character21-v605-game-staging.mjs
           node scripts/build-character22-30-art-review.mjs
-          node --test tests/character-v606-next-art-review.test.mjs
+          node --test tests/character-v606-next-art-review.test.mjs tests/character22-v607-asset-gate.test.mjs
       - name: Ensure production configuration and artifacts are never modified
         shell: bash
         run: |
