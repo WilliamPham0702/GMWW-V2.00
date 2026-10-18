@@ -448,6 +448,69 @@ function battleShowResultPopup(title,message,scanOnly=false){
   popup.classList.toggle('is-scan-result',scanOnly);
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
 }
+/* Morning notices are derived only from committed interactions for this match and night.
+   They must never be synthesized from a selected target or a private role card. */
+function battleMorningRows(){
+  const night=Math.max(1,Number(playSceneState.night)||1),match=String(playSceneRuntime.room?.matchId||'');
+  const entries=Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
+  const labels={dead:'đã chết',expelled:'đã bị đuổi khỏi làng',assassin_mark:'đã bị đánh dấu',
+    marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',silenced:'đã bị câm',infected:'đã bị nhiễm bệnh'};
+  const byType=new Map();
+  for(const entry of entries){
+    if(entry?.effectActive===false||Number(entry?.night)!==night||
+       (entry?.matchId&&String(entry.matchId)!==match))continue;
+    const type=String(entry.type||''),status=String(entry.statusId||'');
+    const key=type==='status'?status:type;
+    if(!labels[key])continue;
+    const loginId=String(entry.loginId||'').replace(/^member:/,'');
+    if(!loginId)continue;
+    const signature=key+':'+loginId;
+    const member=battleMember(loginId);
+    byType.set(signature,{kind:key,name:String(member?.displayName||member?.name||loginId),label:labels[key]});
+  }
+  return [...byType.values()];
+}
+function battleMorningPlayAudio(){
+  const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
+  if(dead){
+    if(dead<=5){
+      queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+      queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+      queue.push(['audio_system_morning_dead_noun','người chết']);
+    }else queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có '+dead+' người chết']);
+  }
+  for(const row of notices){
+    if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
+    if(row.kind==='assassin_mark'||row.kind==='marked')
+      queue.push(['audio_system_morning_marked',row.name+' đã bị đánh dấu']);
+  }
+  let index=0;
+  const next=()=>{
+    if(index>=queue.length||playSceneState.phase!=='day')return;
+    const [id,label]=queue[index++];
+    void battlePlayConfiguredAudio('system',id,label,false,next);
+  };
+  next();
+}
+function battleMorningShow(){
+  const panel=document.getElementById('battleMorningReport'),body=document.getElementById('battleMorningList');
+  if(!panel||!body||playSceneState.phase!=='day')return;
+  const key=String(playSceneRuntime.room?.matchId||'')+':'+Math.max(1,Number(playSceneState.night)||1);
+  if(battleState.morningShownKey===key)return;
+  battleState.morningShownKey=key;
+  const rows=battleMorningRows(),deaths=rows.filter(x=>x.kind==='dead').length;
+  body.replaceChildren();
+  const summary=document.createElement('p');
+  summary.textContent=deaths?'Đêm qua làng chúng ta có '+deaths+' người chết.':
+    rows.length?'Đêm qua làng có những tác động sau:':'Đêm qua làng bình yên, không ghi nhận tác động xấu.';
+  body.append(summary);
+  for(const row of rows){
+    const line=document.createElement('p'),name=document.createElement('strong');
+    name.textContent=row.name;line.append(name,document.createTextNode(' '+row.label+'.'));body.append(line);
+  }
+  panel.hidden=false;
+  if(rows.length)battleMorningPlayAudio();
+}
 function battleDivinationSystemAudioCue(actionId,result){
   const action=String(actionId||'');
   if(action==='action_aura_read')return 'audio_system_aura_read';
@@ -678,12 +741,13 @@ function renderPlayBattle(){
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
-  if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true}
+  if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
+  if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
@@ -1056,6 +1120,8 @@ function initBattleControls(){
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   initBattleFloatingClock();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();
   battleBindAuxiliaryDrag('battleWolfMenu','header');
+  battleBindAuxiliaryDrag('battleMorningReport','header');
+  document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   battleBindAuxiliaryDrag('battleDetails','.play-battle-turn');
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
@@ -1064,6 +1130,8 @@ function initBattleControls(){
     const target=event.target,inside=selector=>!!target.closest?.(selector);
     const result=document.getElementById('battleResultPopup');
     if(result&&!result.hidden&&!result.contains(target))battleCloseResultPopup();
+    const morning=document.getElementById('battleMorningReport');
+    if(morning&&!morning.hidden&&!morning.contains(target))morning.hidden=true;
     const picker=document.getElementById('battleTargetSheet');
     if(picker&&!picker.hidden&&!picker.contains(target)&&
        !inside('#playPlayerRing .play-player,#playPlayerRing [data-battle-target],#battleActionBar')){
