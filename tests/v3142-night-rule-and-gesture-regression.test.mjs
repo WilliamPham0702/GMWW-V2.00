@@ -47,8 +47,8 @@ test('iPhone navigation, multi-target drag, next-turn confirmation, and popup ou
  assert.ok(audio.includes('queue[cursor+1]'));
  assert.ok(b.includes('battleState.pendingNextTurnId=t.id'));
  assert.ok(b.includes('battleAdvanceConfirmedTurn()'));
- assert.ok(b.includes('if(!popup.hidden&&!popup.contains(event.target))battleCloseResultPopup()'));
- assert.ok(b.includes('if(close)close.hidden=scanOnly'));
+ assert.ok(b.includes('if(result&&!result.hidden&&!result.contains(target))battleCloseResultPopup()'));
+ assert.ok(!b.includes("document.getElementById('battleResultClose')?.addEventListener"));
  assert.ok(b.includes("battleState.targets.length===action.targetCount)battleOpenTargetSheet"));
  assert.ok(b.includes('battle-target-quota'));
  assert.ok(audio.includes('onFinished?.();\n    return false'));
