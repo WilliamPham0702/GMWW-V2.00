@@ -22,6 +22,11 @@ export function inspectGlb(buf){
  const skinned=(gltf.meshes||[]).some(mesh=>(mesh.primitives||[]).some(p=>p.attributes?.POSITION!==undefined&&p.attributes?.TEXCOORD_0!==undefined&&p.attributes?.JOINTS_0!==undefined&&p.attributes?.WEIGHTS_0!==undefined&&p.material!==undefined));
  if(!skinned)errors.push('SKINNED_UV_TEXTURED_MESH_MISSING');
  if(!(gltf.images?.length>0&&gltf.textures?.length>0))errors.push('TEXTURE_NOT_EMBEDDED');
+ const animationNames=new Set((gltf.animations||[]).map(a=>a.name));
+ for(const motion of ['Idle','Walk','Run','Result'])if(!animationNames.has(motion))errors.push('MISSING_CLIP_'+motion.toUpperCase());
+ for(const clip of (gltf.animations||[])){
+   if(!Array.isArray(clip.channels)||!clip.channels.length||!Array.isArray(clip.samplers)||!clip.samplers.length)errors.push('EMPTY_ANIMATION_CLIP');
+ }
  return errors;
 }
 export function inspectWebp(buf){
