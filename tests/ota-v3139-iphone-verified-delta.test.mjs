@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {selectBuildVerifiedManifest,selectCatalogDelta} from '../src/gmww-release-catalog-policy.js';
 import {validateV3139Delta} from '../.github/scripts/verify-ota-v3139-production.mjs';
@@ -86,4 +89,45 @@ test('legacy iPhone V3.110 native SHA-256 staging and rollback remain unchanged;
   assert.match(app,/Đã giữ nguyên phiên bản hiện tại/);
   assert.doesNotMatch(app,/gmwwSetUpdateProgress\('running',0,'Đang tải Runtime/);
   assert.equal(JSON.parse(fs.readFileSync('package.json','utf8')).version,'3.139.0');
+});
+
+test('real V3.139 package builder embeds only the two audited iPhone OTA base catalogs',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'gmww-ota-v3139-'));
+  const put=(name,bytes)=>{
+    const target=path.join(root,name);
+    fs.mkdirSync(path.dirname(target),{recursive:true});
+    fs.writeFileSync(target,bytes);
+  };
+  try{
+    put('server-game/current/app.js',"const VERSION='3.139';");
+    put('server-game/current/GMWW.html','<title>GMWW V3.139</title><script src="app.js"></script>');
+    for(const file of ['style.css','character-renderer.js','character-renderer.css'])
+      put('server-game/current/'+file,'fixture '+file);
+    for(const file of ['home-fantasy-hero-v337.webp','home-v1-book.webp','home-v1-members.webp','home-v1-action.webp'])
+      put('server-game/current/home-art/'+file,'fixture artwork');
+    put('assets/gm/gm-white-wolf.webp','fixture GM');
+    put('server-game/shared/artwork.js','// fixture artwork');
+    put('src/index.js','const NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3139";');
+    put('server-game/GMWW-Server.xcodeproj/project.pbxproj','MARKETING_VERSION = 3.110;');
+    put(baseFile,fs.readFileSync(baseFile));
+    const roles={};
+    for(let i=0;i<63;i++){
+      const id='fixture-role-'+i;
+      roles[id]={};
+      put('server-game/legacy-assets/v252/assets/role-artwork-v251/original/'+id+'.webp','fixture role '+i);
+    }
+    put('server-game/legacy-assets/v252/role-artwork-v251.js','window.GMWW_BUILTIN_ROLE_ARTWORK='+JSON.stringify(roles));
+    const script=path.resolve('.github/scripts/prepare-update-channel.mjs');
+    const build=spawnSync(process.execPath,[script,'runtime'],{cwd:root,encoding:'utf8'});
+    assert.equal(build.status,0,build.stderr||build.stdout.slice(-2000));
+    const generated=fs.readFileSync(path.join(root,'src/gmww-release-bases.js'),'utf8');
+    const {releaseBases}=await import('data:text/javascript;base64,'+Buffer.from(generated).toString('base64'));
+    assert.deepEqual(releaseBases.map(x=>x.manifest.releaseVersion),['3.138','3.137']);
+    for(const row of releaseBases){
+      assert.ok(await selectBuildVerifiedManifest(row,row.manifest.releaseVersion,'3.110'));
+      assert.equal(row.manifest.runtime.files.length,138);
+    }
+  }finally{
+    fs.rmSync(root,{recursive:true,force:true});
+  }
 });
