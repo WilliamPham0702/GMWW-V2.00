@@ -5847,3 +5847,53 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetClose,
 body.play-immersive #start #playShell[data-step="battle"] #battleWolfClose,
 body.play-immersive #start #playShell[data-step="battle"] #battleDetailsClose,
 body.play-immersive #start #playShell[data-step="battle"] #battleRosterClose{display:none!important}
+
+/* V3.147 — firepit menu: compact draggable grip, swipe fully to the final action.
+   An explicit bounded width prevents a dragged fixed panel from expanding to its
+   scrollWidth and clipping off the last button on iOS Safari. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu{
+  box-sizing:border-box!important;width:min(94vw,520px)!important;
+  max-width:calc(100vw - 12px)!important;min-width:0!important;
+  overflow-x:hidden!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu>header{
+  min-height:17px!important;padding:2px 0 7px!important;
+  display:flex!important;justify-content:center!important;align-items:center!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleWolfMenu .battle-menu-grip{
+  width:40px;height:4px;border-radius:99px;background:rgba(194,239,246,.65);
+  display:block;pointer-events:none;
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions{
+  display:flex!important;flex-wrap:nowrap!important;
+  box-sizing:border-box!important;min-width:0!important;width:100%!important;
+  max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-x:auto!important;scroll-snap-type:none!important;
+  touch-action:pan-x!important;padding-right:14px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions>button{
+  flex-shrink:0!important;touch-action:pan-x!important;
+}
+/* Actor and target badges flow ABOVE status, name and role in the same player
+   information stack. No fixed offsets or overlay may cover a player name. */
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-turn-mark,
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-target-mark{
+  display:block!important;position:static!important;
+  top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;
+  transform:none!important;margin:0 auto 2px!important;
+  z-index:auto!important;width:max-content;max-width:100%;
+  white-space:nowrap;line-height:1.1!important;
+  padding:3px 7px!important;font-size:9px!important;
+  font-weight:900;border-radius:6px;
+  pointer-events:none;box-sizing:border-box;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-turn-mark{
+  color:#0c3317;background:#7ee08a;order:-2;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-target-mark{
+  color:#3d0b05;background:#ff6b5b;order:-1;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token.is-battle-target::after{
+  content:none!important;display:none!important;
+}
