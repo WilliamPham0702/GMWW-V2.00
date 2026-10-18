@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planCleanup, RETENTION_MS, MAX_DELETIONS } from "../tools/cloudflare-namespace-maintenance.mjs";
+import { planCleanup, runMaintenance, RETENTION_MS, MAX_DELETIONS } from "../tools/cloudflare-namespace-maintenance.mjs";
 
 const REPO = "WilliamPham0702/GMWW-V2.00";
 const now = Date.parse("2026-10-18T00:00:00Z");
@@ -71,4 +71,95 @@ test("does not treat unmatched 4 independent namespaces as candidates", () => {
     { id: "staging", name: "gmww-character21-v605-game-staging_RoomDurableObject", script: "gmww-character21-v605-game-staging" }
   );
   assert.equal(planCleanup(f).eligible.length, 1);
+});
+
+
+function createApiMock() {
+  let removed = false;
+  const calls = [];
+  const fixture = fixtures();
+  const account = "a".repeat(32);
+  const env = {
+    GITHUB_REPOSITORY: REPO, GITHUB_TOKEN: "github-test",
+    CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_API_TOKEN: "cloudflare-test",
+    GITHUB_RUN_ID: "123"
+  };
+  const cfRoot = "https://api.cloudflare.com/client/v4/accounts/" + account;
+  const ghRoot = "https://api.github.com/repos/" + REPO;
+  function response(body, status = 200) {
+    return { ok: status >= 200 && status < 300, status, json: async () => body };
+  }
+  async function request(url, options = {}) {
+    const path = new URL(url).pathname;
+    calls.push({ url, method: options.method || "GET" });
+    if (url.startsWith(cfRoot)) {
+      if (path.endsWith("/previews")) return response({
+        success: true, result: removed ? [] : fixture.previews,
+        result_info: { count: removed ? 0 : 1, total_pages: 1 }
+      });
+      if (path.endsWith("/durable_objects/namespaces")) return response({
+        success: true, result: removed ? fixture.namespaces.slice(1) : fixture.namespaces,
+        result_info: { total_pages: 1 }
+      });
+      if (path.endsWith("/settings")) return response({ success: true,
+        result: { bindings: [{ type: "durable_object_namespace", namespace_id: "production" }] }
+      });
+      if (path.endsWith("/ns1/objects")) return response({
+        success: true, result: [], result_info: { count: 0, cursor: "" }
+      });
+      if (path.endsWith("/previews/p1")) {
+        if (options.method === "DELETE") {
+          removed = true; return response({ success: true, result: null });
+        }
+        return response({ success: true, result: fixture.previews[0] });
+      }
+    }
+    if (url.startsWith(ghRoot)) {
+      if (path.endsWith("/pulls")) return response(fixture.pullRequests);
+      if (path.endsWith("/pulls/50")) return response(fixture.pullRequests[0]);
+      if (path.endsWith("/issues/320") && options.method === "PATCH") {
+        return response({ number: 320, state: "open" });
+      }
+    }
+    throw Error("Unexpected API path " + url);
+  }
+  return { env, request, calls, wasRemoved: () => removed };
+}
+
+test("scan is read-only, reports counts, and never calls DELETE", async () => {
+  const mock = createApiMock();
+  const result = await runMaintenance({
+    env: { ...mock.env, GMWW_MAINTENANCE_MODE: "scan" },
+    request: mock.request, now
+  });
+  assert.equal(result.namespaceCount, 2);
+  assert.equal(result.eligibleCount, 1);
+  assert.equal(result.deletedCount, 0);
+  assert.equal(mock.wasRemoved(), false);
+  assert.equal(mock.calls.filter(x => x.method === "DELETE").length, 0);
+});
+test("cleanup deletes only exact verified Preview ID and checks Production", async () => {
+  const mock = createApiMock();
+  const result = await runMaintenance({
+    env: { ...mock.env, GMWW_MAINTENANCE_MODE: "cleanup" },
+    request: mock.request, now
+  });
+  assert.equal(result.namespaceCount, 1);
+  assert.equal(result.deletedCount, 1);
+  assert.equal(result.productionProtected, true);
+  const destructiveCalls = mock.calls.filter(x => x.method === "DELETE");
+  assert.equal(destructiveCalls.length, 1);
+  assert.match(destructiveCalls[0].url, /\/previews\/p1$/);
+});
+test("invalid repository and missing secrets reject before any API calls", async () => {
+  const mock = createApiMock();
+  await assert.rejects(() => runMaintenance({
+    env: { ...mock.env, GITHUB_REPOSITORY: "other/repo" },
+    request: mock.request, now
+  }), /identity guard/);
+  await assert.rejects(() => runMaintenance({
+    env: { ...mock.env, CLOUDFLARE_API_TOKEN: "" },
+    request: mock.request, now
+  }), /Missing secret/);
+  assert.equal(mock.calls.length, 0);
 });
