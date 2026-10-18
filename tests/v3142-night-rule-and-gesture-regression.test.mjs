@@ -66,16 +66,12 @@ test('Cached GM characters relight at night when expulsion expires without requi
  assert.equal(effect('p1'),'alive');
  assert.ok(gm.includes("token.classList.toggle('is-'+status,status===effect&&status!=='alive')"));
 });
-test('GM safe patrol stays navigable during idle hold and resets old session anchor',()=>{
+test('V3.143: no dormant GM patrol timers or stale position state',()=>{
  const gm=read('server-game/src/10-library-and-settings.part');
- const a=gm.indexOf('function gmwwGmClearWalk('),b=gm.indexOf('function gmwwGmAutoPoint(',a);
- assert.ok(a>0&&b>a);
- const ctx={gmwwGmRoute:()=>[],gmwwGmNearPlayer:()=>false,Math,
-   GMWW_VILLAGE_LAYOUT:{inside:()=>true}};
- ctx.globalThis={GMWW_VILLAGE_LAYOUT:ctx.GMWW_VILLAGE_LAYOUT};
- const canWalk=vm.runInNewContext(gm.slice(a,b)+';gmwwGmClearWalk',ctx);
- assert.equal(canWalk({x:50,y:50},{x:50,y:50}),true);
- assert.ok(gm.includes("gmwwGmLastSafePoint=null; // Never carry a blocked path"));
+ assert.doesNotMatch(gm,/gmwwGmClearWalk\(/);
+ assert.doesNotMatch(gm,/gmwwGmLastSafePoint/);
+ assert.doesNotMatch(gm,/GMWW_GM_AUTO_HOLD_MS/);
+ assert.match(gm,/gmwwStartGmPresence/);
 });
 
 test('Dead turn is informational; the GM controls timeline advance',()=>{
