@@ -21,10 +21,10 @@ test('nearby drop resolves to named, unequivocal target, never neighbor',()=>{
 test('nearby players require explicit named selection instead of a guessed drag target',()=>{
   const p=[token('GM-A',100,100),token('GM-B',122,100)];
   assert.deepEqual(JSON.parse(JSON.stringify(drop(111,100,p))),{id:'',ambiguous:true});
-  assert.match(app,/battleOpenTargetSheet\(d\.id,hit\.id\?'drag':'list',hit\.ambiguous\)/);
+  assert.ok(app.includes("battleOpenTargetSheet(d.id,'list',hit.ambiguous)"));
   assert.match(app,/Hai người đang quá gần nhau/);
   assert.match(app,/battleState\.dragAmbiguous=ambiguous/);
-  assert.ok(app.includes('if(hit.id)battlePickTargetWithAudio(hit.id,d.id)'));
+  assert.ok(app.includes('if(hit.id){')&&app.includes('battlePickTargetWithAudio(hit.id,d.id)'));
   assert.match(app,/setPointerCapture\?\.\(e\.pointerId\)/);
 });
 
