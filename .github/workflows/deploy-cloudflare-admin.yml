@@ -1,0 +1,74 @@
+name: Deploy Cloudflare Admin Console
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/cloudflare-admin/**"
+      - "tests/cloudflare-admin.test.mjs"
+      - "wrangler.cloudflare-admin.jsonc"
+      - ".github/workflows/deploy-cloudflare-admin.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-cloudflare-admin
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Strict code validation and admin regression tests
+        run: |
+          node --check tools/cloudflare-admin/worker.mjs
+          node --check tools/cloudflare-admin/page.mjs
+          node --check tools/cloudflare-admin/policy.mjs
+          node --test tests/cloudflare-admin.test.mjs
+          npx wrangler deploy --dry-run --config wrangler.cloudflare-admin.jsonc
+      - name: Check deployment authorization
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy ISOLATED administration Worker (never Production GMWW)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.cloudflare-admin.jsonc
+      - name: Detect optional dedicated secrets
+        env:
+          MGMT: ${{ secrets.GMWW_CF_MANAGEMENT_API_TOKEN }}
+          KEY: ${{ secrets.GMWW_CF_DASHBOARD_KEY }}
+        run: |
+          if [ -n "$MGMT" ]; then echo "HAS_MANAGEMENT_TOKEN=yes" >> "$GITHUB_ENV"; fi
+          if [ -n "$KEY" ]; then echo "HAS_DASHBOARD_KEY=yes" >> "$GITHUB_ENV"; fi
+      - name: Configure dedicated management API token when supplied
+        if: ${{ env.HAS_MANAGEMENT_TOKEN == 'yes' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MGMT: ${{ secrets.GMWW_CF_MANAGEMENT_API_TOKEN }}
+        run: printf '%s' "$MGMT" | npx wrangler secret put CF_MANAGEMENT_API_TOKEN --config wrangler.cloudflare-admin.jsonc
+      - name: Configure dashboard admin secret when supplied
+        if: ${{ env.HAS_DASHBOARD_KEY == 'yes' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          KEY: ${{ secrets.GMWW_CF_DASHBOARD_KEY }}
+        run: printf '%s' "$KEY" | npx wrangler secret put ADMIN_DASHBOARD_KEY --config wrangler.cloudflare-admin.jsonc
+      - name: Smoke test isolated admin health
+        run: |
+          curl --fail --retry 4 --retry-delay 2 --max-time 20 \
+            https://gmww-cloudflare-admin.williampham0702.workers.dev/health \
+            | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{const v=JSON.parse(s);if(v.service!=='GMWW Cloudflare Administration')process.exit(1)})"
