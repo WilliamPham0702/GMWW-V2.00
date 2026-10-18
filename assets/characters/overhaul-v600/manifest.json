@@ -35,7 +35,13 @@
       "motif": "sóng biển",
       "artDirection": "tóc xanh biển, áo xanh-trắng họa tiết sóng",
       "avatarPath": "/characters/overhaul-v600/character-01/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-01/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-01/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-01/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-02",
@@ -45,7 +51,13 @@
       "motif": "ngọc trai",
       "artDirection": "tóc xanh ánh bạc, trang phục biển ngọc trai",
       "avatarPath": "/characters/overhaul-v600/character-02/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-02/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-02/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-02/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-03",
@@ -55,7 +67,13 @@
       "motif": "hải đăng",
       "artDirection": "tóc nâu, áo trắng-xanh họa tiết đèn",
       "avatarPath": "/characters/overhaul-v600/character-03/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-03/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-03/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-03/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-04",
@@ -65,7 +83,13 @@
       "motif": "phép thuật nước",
       "artDirection": "tóc lam, áo choàng thêu thủy văn",
       "avatarPath": "/characters/overhaul-v600/character-04/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-04/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-04/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-04/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-05",
@@ -75,7 +99,13 @@
       "motif": "cung sao",
       "artDirection": "tóc tím than, phụ kiện tinh tú",
       "avatarPath": "/characters/overhaul-v600/character-05/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-05/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-05/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-05/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-06",
@@ -85,7 +115,13 @@
       "motif": "khiên sóng",
       "artDirection": "tóc bạc, giáp xanh bạc",
       "avatarPath": "/characters/overhaul-v600/character-06/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-06/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-06/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-06/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-07",
@@ -95,7 +131,13 @@
       "motif": "san hô",
       "artDirection": "tóc hồng san hô, vương miện tinh thể",
       "avatarPath": "/characters/overhaul-v600/character-07/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-07/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-07/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-07/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-08",
@@ -105,7 +147,13 @@
       "motif": "lá xanh",
       "artDirection": "tóc lục, váy/tunica dây leo",
       "avatarPath": "/characters/overhaul-v600/character-08/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-08/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-08/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-08/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-09",
@@ -115,7 +163,13 @@
       "motif": "trăng",
       "artDirection": "tóc đen tím, giáp ánh bạc",
       "avatarPath": "/characters/overhaul-v600/character-09/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-09/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-09/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-09/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-10",
@@ -125,7 +179,13 @@
       "motif": "la bàn",
       "artDirection": "tóc hung, áo khoác biển và la bàn",
       "avatarPath": "/characters/overhaul-v600/character-10/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-10/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-10/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-10/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-11",
@@ -135,7 +195,13 @@
       "motif": "hoa biển",
       "artDirection": "tóc hồng, váy đính hoa",
       "avatarPath": "/characters/overhaul-v600/character-11/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-11/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-11/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-11/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-12",
@@ -145,7 +211,13 @@
       "motif": "gió",
       "artDirection": "tóc trắng lam, áo choàng nhẹ",
       "avatarPath": "/characters/overhaul-v600/character-12/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-12/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-12/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-12/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-13",
@@ -155,7 +227,13 @@
       "motif": "ngọn lửa",
       "artDirection": "tóc đỏ, giáp đỏ đồng",
       "avatarPath": "/characters/overhaul-v600/character-13/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-13/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-13/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-13/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-14",
@@ -165,7 +243,13 @@
       "motif": "cây cổ thụ",
       "artDirection": "tóc nâu, giáp lá xanh",
       "avatarPath": "/characters/overhaul-v600/character-14/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-14/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-14/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-14/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-15",
@@ -175,7 +259,13 @@
       "motif": "mây",
       "artDirection": "tóc bạc, áo xanh trắng viền mây",
       "avatarPath": "/characters/overhaul-v600/character-15/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-15/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-15/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-15/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-16",
@@ -185,7 +275,13 @@
       "motif": "băng giá",
       "artDirection": "tóc xanh nhạt, giáp thủy tinh băng",
       "avatarPath": "/characters/overhaul-v600/character-16/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-16/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-16/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-16/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-17",
@@ -195,7 +291,13 @@
       "motif": "nốt nhạc",
       "artDirection": "tóc tím, phụ kiện nhạc cụ",
       "avatarPath": "/characters/overhaul-v600/character-17/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-17/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-17/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-17/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-18",
@@ -205,7 +307,13 @@
       "motif": "mặt trời",
       "artDirection": "tóc vàng, giáp trắng vàng",
       "avatarPath": "/characters/overhaul-v600/character-18/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-18/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-18/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-18/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-19",
@@ -215,7 +323,13 @@
       "motif": "bánh răng",
       "artDirection": "tóc cam, trang phục máy móc",
       "avatarPath": "/characters/overhaul-v600/character-19/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-19/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-19/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-19/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-20",
@@ -225,7 +339,13 @@
       "motif": "dải ngân hà",
       "artDirection": "tóc xanh đêm, áo choàng sao",
       "avatarPath": "/characters/overhaul-v600/character-20/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-20/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-20/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-20/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "standard-chibi",
+      "styleRule": "same V5.83 GMWW chibi proportions and finish"
     },
     {
       "id": "character-21",
@@ -235,7 +355,13 @@
       "motif": "sóng lớn",
       "artDirection": "tóc xanh đậm, thân lực lưỡng, găng tay biển",
       "avatarPath": "/characters/overhaul-v600/character-21/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-21/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-21/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-21/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-22",
@@ -245,7 +371,13 @@
       "motif": "san hô đỏ",
       "artDirection": "tóc đỏ, thân lực lưỡng, giáp san hô",
       "avatarPath": "/characters/overhaul-v600/character-22/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-22/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-22/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-22/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-23",
@@ -255,7 +387,13 @@
       "motif": "ngọc lam",
       "artDirection": "tóc đen, thân lực lưỡng, giáp ngọc",
       "avatarPath": "/characters/overhaul-v600/character-23/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-23/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-23/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-23/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-24",
@@ -265,7 +403,13 @@
       "motif": "tia chớp",
       "artDirection": "tóc tím, thân lực lưỡng, giáp sấm",
       "avatarPath": "/characters/overhaul-v600/character-24/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-24/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-24/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-24/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-25",
@@ -275,7 +419,13 @@
       "motif": "dung nham",
       "artDirection": "tóc hung, thân lực lưỡng, giáp nham",
       "avatarPath": "/characters/overhaul-v600/character-25/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-25/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-25/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-25/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-26",
@@ -285,7 +435,13 @@
       "motif": "đinh ba",
       "artDirection": "tóc bạc, thân lực lưỡng, phụ kiện săn biển",
       "avatarPath": "/characters/overhaul-v600/character-26/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-26/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-26/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-26/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-27",
@@ -295,7 +451,13 @@
       "motif": "sắt",
       "artDirection": "tóc nâu, thân lực lưỡng, giáp thép",
       "avatarPath": "/characters/overhaul-v600/character-27/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-27/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-27/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-27/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-28",
@@ -305,7 +467,13 @@
       "motif": "rễ cây",
       "artDirection": "tóc xanh lục, thân lực lưỡng, giáp vỏ cây",
       "avatarPath": "/characters/overhaul-v600/character-28/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-28/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-28/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-28/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-29",
@@ -315,7 +483,13 @@
       "motif": "lửa xanh",
       "artDirection": "tóc đỏ đen, thân lực lưỡng, giáp chiến",
       "avatarPath": "/characters/overhaul-v600/character-29/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-29/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-29/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-29/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     },
     {
       "id": "character-30",
@@ -325,7 +499,22 @@
       "motif": "quầng sáng",
       "artDirection": "tóc vàng, thân lực lưỡng, giáp trắng vàng",
       "avatarPath": "/characters/overhaul-v600/character-30/avatar.webp",
-      "skinPath": "/characters/overhaul-v600/character-30/skin.glb"
+      "skinPath": "/characters/overhaul-v600/character-30/skin.glb",
+      "artworkPath": "/characters/overhaul-v600/character-30/artwork.png",
+      "requiredBoneCount": 16,
+      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
+      "status": "BLOCKED_MISSING_ART",
+      "bodyProfile": "muscular-chibi",
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
     }
-  ]
+  ],
+  "approval": {
+    "artwork": false,
+    "skin": false,
+    "animations": false,
+    "gm": false,
+    "playerWeb": false,
+    "iphone": false,
+    "ownerMainApproval": false
+  }
 }
