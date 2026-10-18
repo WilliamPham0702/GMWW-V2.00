@@ -1,0 +1,113 @@
+name: Deploy Character 21 V6.05 Full Game Staging (isolated)
+
+on:
+  push:
+    branches: [feature/character-overhaul-v600-staging]
+    paths:
+      - 'wrangler.character21-v605-game-staging.jsonc'
+      - 'scripts/build-character21-v605-game-staging.mjs'
+      - '.github/workflows/deploy-character21-v605-game-staging.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-character21-v605-isolated-game-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  isolate-test-and-deploy:
+    if: github.repository == 'WilliamPham0702/GMWW-V2.00' && github.ref == 'refs/heads/feature/character-overhaul-v600-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/character-overhaul-v600-staging
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify canonical GM and Player source and Character21 contracts
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/character-v605-gm-player-staging.test.mjs tests/character-overhaul-v605-accepted.test.mjs tests/character-overhaul-v605-staging.test.mjs
+          node --check src/index.js
+      - name: Create isolated GM browser app and audit approved GLB/avatar
+        run: node scripts/build-character21-v605-game-staging.mjs
+      - name: Ensure production configuration and artifacts are never modified
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const original=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          const stage=JSON.parse(fs.readFileSync('wrangler.character21-v605-game-staging.jsonc','utf8'));
+          if(original.name!=='gmww-v2-00'||stage.name!=='gmww-character21-v605-game-staging'||stage.name===original.name)
+            throw Error('WRONG_WORKER_DEPLOY_TARGET');
+          if(stage.vars?.GMWW_CHAR21_STAGING!=='1')throw Error('NO_STAGING_FLAG');
+          if(stage.durable_objects?.bindings?.[0]?.script_name)throw Error('SHARED_DO_NAMESPACE_FORBIDDEN');
+          if(stage.durable_objects?.bindings?.[0]?.class_name!=='RoomDurableObject')throw Error('MISSING_ISOLATED_ROOM_DO');
+          if(stage.assets?.directory!=='./assets')throw Error('WRONG_ASSET_DIRECTORY');
+          const gm=fs.readFileSync('assets/character-v605-gm/app.js','utf8');
+          if(!gm.includes('const GMWW_SERVER_BASE=location.origin;')||gm.includes("const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';"))
+            throw Error('STAGING_MUST_NEVER_ACCESS_PRODUCTION_GM_API');
+          console.log('Separate Worker script+DO namespace, staging source and GM-origin checks PASS');
+          NODE
+          git diff --exit-code -- src/index.js server-game/current/app.js server-game/current/GMWW.html wrangler.jsonc assets/updates/latest.json
+      - name: Wrangler staging-only dry-run
+        run: npx wrangler deploy --config wrangler.character21-v605-game-staging.jsonc --dry-run
+      - name: Publish isolated game staging — not main, no Production routes
+        env:
+          CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.character21-v605-game-staging.jsonc
+      - name: Verify full game staging, isolated data and live Character21 model
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-character21-v605-game-staging.williampham0702.workers.dev"
+          for i in $(seq 1 25); do
+            if curl -fsS --connect-timeout 7 --max-time 20 "$BASE/api/health?verify=$i" > /tmp/char21-health.json; then break; fi
+            sleep 2
+          done
+          node - <<'NODE'
+          const f=require('fs'),x=JSON.parse(f.readFileSync('/tmp/char21-health.json'));
+          if(x.project!=='GMWW-V2.00'||x.status!=='online')throw Error('STAGING_HEALTH_FAILED');
+          NODE
+          curl -fsS --retry 3 --retry-all-errors "$BASE/api/health/deep" > /tmp/char21-deep.json
+          node -e 'const h=require("/tmp/char21-deep.json"); if(!h.ok||h.checks?.memberStorage!=="ready")process.exit(1)'
+          curl -fsS "$BASE/character-v605-gm/GMWW.html?characterV605=1" > /tmp/char21-gm.html
+          grep -q 'gmww-v605-stage-banner' /tmp/char21-gm.html
+          curl -fsS "$BASE/character-v605-gm/app.js" > /tmp/char21-gm-app.js
+          grep -q 'const GMWW_SERVER_BASE=location.origin;' /tmp/char21-gm-app.js
+          grep -q 'gmwwCharacterV605SkinnedPreview' /tmp/char21-gm-app.js
+          curl -fsS "$BASE/?characterV605=1" > /tmp/char21-player.html
+          grep -q 'GMWW PLAYER' /tmp/char21-player.html
+          curl -fsS "$BASE/gmww-members-live.js" > /tmp/char21-player-app.js
+          grep -q 'characterV605PlayerRenderer' /tmp/char21-player-app.js
+          curl -fsS "$BASE/api/character-v605/catalog" > /tmp/char21-catalog.json
+          node -e 'const c=require("/tmp/char21-catalog.json");if(c.totalApproved!==1||c.characters[0]?.id!=="character-21")process.exit(1)'
+          curl -fsS "$BASE/api/character-v605/character-21/avatar" > /tmp/char21-avatar.webp
+          curl -fsS "$BASE/api/character-v605/character-21/skin" > /tmp/char21-skin.glb
+          curl -fsS "$BASE/api/character-v605/character-21/renderer?embed=1" > /tmp/char21-renderer.html
+          echo 'b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801  /tmp/char21-avatar.webp' | sha256sum -c -
+          echo 'ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9  /tmp/char21-skin.glb' | sha256sum -c -
+          test "$(wc -c < /tmp/char21-renderer.html)" -gt 3000000
+          curl -fsS "$BASE/api/game-characters" > /tmp/char21-legacy.json
+          node -e 'const c=require("/tmp/char21-legacy.json");if(c.count!==20||c.characters.length!==20)process.exit(1)'
+          ROOM=$(curl -fsS -X POST "$BASE/api/rooms" -H 'Content-Type: application/json' --data '{"roomName":"CHARACTER21 STAGING TEST"}')
+          echo "$ROOM" | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{let d=JSON.parse(s);if(!d.roomCode||!d.ok)process.exit(1);process.stdout.write('Staging Room created successfully')})"
+          NAME="char605\${GITHUB_RUN_ID}"
+          curl -fsS -X POST "$BASE/api/members/register" -H 'Content-Type: application/json' --data "{\"loginId\":\"$NAME\",\"displayName\":\"Character21 Staging\",\"gameCharacterId\":\"character-21\"}" > /tmp/char21-register.json
+          node -e 'const x=require("/tmp/char21-register.json");if(!x.ok)throw Error(JSON.stringify(x))'
+          curl -fsS "https://gmww-v2-00.williampham0702.workers.dev/api/health" > /tmp/char21-production-health.json
+          node -e 'const h=require("/tmp/char21-production-health.json");if(h.project!=="GMWW-V2.00"||h.status!=="online")process.exit(1)'
+          echo "Full isolated Worker, GM Server, Player Web, real room + synthetic member, GLB/renderer/avatar VERIFIED."
