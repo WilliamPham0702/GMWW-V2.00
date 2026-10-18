@@ -21,5 +21,8 @@
   "rendering": "2.5D directional skinned mesh, eight artist-approved views; not a full 3D sculpt",
   "artifact": "assets/characters/overhaul-v600/character-21/skin.glb",
   "metadataFix": "Correct legacy character-01 labels to character-21 without modifying GLB binary skin/animation buffers",
-  "releaseGate": "NO_AUTOMATIC_ACTIVATION; no GM Server/Player Web/main/Production/IPA mutation"
+  "releaseGate": "NO_AUTOMATIC_ACTIVATION; no GM Server/Player Web/main/Production/IPA mutation",
+  "avatarSHA256": "b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801",
+  "avatarSource": "Owner-approved V6.05 front-view art, no placeholder; WebP 478x630 transparent",
+  "avatarPath": "assets/characters/overhaul-v600/character-21/avatar.webp"
 }
