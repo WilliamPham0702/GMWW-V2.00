@@ -53,3 +53,27 @@ test('iPhone navigation, multi-target drag, next-turn confirmation, and popup ou
  assert.ok(b.includes('battle-target-quota'));
  assert.ok(audio.includes('onFinished?.();\n    return false'));
 });
+
+test('Cached GM characters relight at night when expulsion expires without requiring tap',()=>{
+ const gm=read('server-game/src/30-village-and-setup.part'),
+       start=gm.indexOf('function playPlayerEffect('),end=gm.indexOf('function playDeliveryLabel(',start);
+ assert.ok(start>0&&end>start);
+ const state={activeEffects:[{loginId:'p1',type:'expelled',effectActive:true}]};
+ const ctx={playNow:()=>2000,playSceneRuntime:state};
+ const effect=vm.runInNewContext(gm.slice(start,end)+'; playPlayerEffect',ctx);
+ assert.equal(effect('p1'),'expelled');
+ state.activeEffects[0].effectActive=false;
+ assert.equal(effect('p1'),'alive');
+ assert.ok(gm.includes("token.classList.toggle('is-'+status,status===effect&&status!=='alive')"));
+});
+test('GM safe patrol stays navigable during idle hold and resets old session anchor',()=>{
+ const gm=read('server-game/src/10-library-and-settings.part');
+ const a=gm.indexOf('function gmwwGmClearWalk('),b=gm.indexOf('function gmwwGmAutoPoint(',a);
+ assert.ok(a>0&&b>a);
+ const ctx={gmwwGmRoute:()=>[],gmwwGmNearPlayer:()=>false,Math,
+   GMWW_VILLAGE_LAYOUT:{inside:()=>true}};
+ ctx.globalThis={GMWW_VILLAGE_LAYOUT:ctx.GMWW_VILLAGE_LAYOUT};
+ const canWalk=vm.runInNewContext(gm.slice(a,b)+';gmwwGmClearWalk',ctx);
+ assert.equal(canWalk({x:50,y:50},{x:50,y:50}),true);
+ assert.ok(gm.includes("gmwwGmLastSafePoint=null; // Never carry a blocked path"));
+});
