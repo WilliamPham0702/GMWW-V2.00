@@ -9,7 +9,7 @@ const idPattern=/^character-(0[1-9]|[12][0-9]|30)$/;
 export function characterV600ById(id){return CHARACTER_V600_ROSTER.find(c=>c.id===String(id||''))||null}
 export function characterV600IsValid(id){return idPattern.test(String(id||''))}
 export function characterV600LegacyId(id){
- const n=Number(String(id||'').match(/^character-(\\d{2})$/)?.[1]||0);
+ const n=Number(String(id||'').match(/^character-(\d{2})$/)?.[1]||0);
  if(n>=1&&n<=30)return 'character-'+String(n).padStart(2,'0');
  // Preserve member data/history; only map obsolete presentation slots 31..42 deterministically.
  if(n>=31&&n<=42)return 'character-'+String(21+((n-31)%10)).padStart(2,'0');
