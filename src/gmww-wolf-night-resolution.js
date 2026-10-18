@@ -116,7 +116,7 @@ export function resolveMaidenNight({assignments=[],interactions=[],matchId,night
     String(row?.matchId||'')===match&&Number(row?.night)===cycle).map(row=>login(row.loginId)));
   const victimIds=[];
   for(const visit of rows){
-    if(visit?.type!=='effect_notice'||visit?.actionId!=='action_visit_house'||visit?.effectActive===false||
+    if(visit?.type!=='effect_notice'||visit?.actionId!=='action_visit_house'||visit?.undone||
       String(visit?.matchId||'')!==match||Number(visit?.night)!==cycle)continue;
     const maiden=login(visit.actorId),target=login(visit.loginId),visitor=roles.get(maiden),visited=roles.get(target);
     if(visitor?.roleId!=='role_maiden'||!visited||!target||!maiden||maiden===target||dead.has(maiden))continue;
