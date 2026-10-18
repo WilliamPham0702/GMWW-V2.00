@@ -25,8 +25,9 @@ test('V3.143: campfire alone opens the GM action menu',()=>{
 
 test('Info retains actions and closes separately, without changing manual effects',()=>{
  assert.match(dock,/id="battleDetails"[^>]*hidden/);
- assert.match(dock,/id="battleDetailsClose"/);
+ assert.doesNotMatch(dock,/id="battleDetailsClose"/);
  assert.match(app,/async function battleQuickApply\(loginId\)/);
- for(const id of ['battleDetailsClose','battleGMAuto','battleGMAudio','battleQuickRevive','battleQuickKill'])
+ assert.match(app,/battleState.details=false;battleState.roster=false;changed=true/);
+ for(const id of ['battleGMAuto','battleGMAudio','battleQuickRevive','battleQuickKill'])
    assert.match(app,new RegExp("getElementById\\('"+id+"'\\)\\?\\.addEventListener"));
 });
