@@ -1,4 +1,5 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -59,7 +60,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -153,6 +154,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
     if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
     if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
+    if(url.pathname==="/gm/gallows"&&request.method==="POST")return this.gmGallows(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
     if(url.pathname==="/gm/stage"&&request.method==="POST")return this.gmStage(request,await safeJson(request));
@@ -176,6 +178,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/artifact-viewed"&&request.method==="POST")return this.playerArtifactViewed(await safeJson(request));
     if(url.pathname==="/player/artifact-activate"&&request.method==="POST")return this.playerArtifactActivate(await safeJson(request));
     if(url.pathname==="/player/interaction/respond"&&request.method==="POST")return this.playerInteractionRespond(await safeJson(request));
+    if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));
     if(url.pathname==="/player/move-complete"&&request.method==="POST")return this.playerMoveComplete(await safeJson(request));
@@ -673,6 +676,92 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,items:visible.map(([,row])=>row),hasMore:entries.length>limit,
       nextCursor:entries.length>limit?visible[visible.length-1]?.[0]||null:null});
   }
+  // A ballot is scoped to one exact match and morning; old games never leak votes.
+  async gallowsState(meta){
+    const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||"");
+    const stored=await this.ctx.storage.get(key);
+    const ballot=gallowsSnapshot(stored,meta)||{
+      id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
+      day:Number(meta.cycleNight||0),stage:"nominating",candidateId:null,
+      nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
+    const players=await this.ctx.storage.get("players")||{};
+    const interactions=await this.ctx.storage.get("interactions")||[];
+    const eligible=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
+      .map(p=>normalizeLoginId(p.loginId)).filter(loginId=>!interactions.some(row=>
+        normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
+        (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
+        ["dead","expelled"].includes(String(row.type))));
+    return {key,ballot:{...ballot,eligible},eligible};
+  }
+  async gmGallows(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta;
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
+      return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
+    const {key,ballot,eligible}=await this.gallowsState(meta),command=String(body?.command||"");
+    const target=normalizeLoginId(body?.targetId||body?.loginId);
+    const now=Date.now();
+    let result;
+    if(command==="begin"){
+      if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      result=gallowsBegin(ballot,target,now);
+    }else if(command==="ban"){
+      if(!eligible.includes(target)||ballot.stage==="voting"&&now>=ballot.deadlineAt)
+        return j({ok:false,error:"GALLOWS_VOTING_CLOSED"},409);
+      result=gallowsBan(ballot,target,now);
+    }else if(command==="resolve"){
+      result=gallowsResolve(ballot,String(body?.outcome||""),now);
+      if(result.ok&&result.value.outcome==="dead"){
+        const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
+        if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&
+           String(x.type)==="dead"&&(!x.matchId||String(x.matchId)===String(meta.matchId)))){
+          const createdAt=new Date(now).toISOString(),fatal={id:"ix-"+crypto.randomUUID(),
+            type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
+            night:Number(meta.cycleNight),source:"gallows",gallowsId:ballot.id,effectActive:true,
+            message:"Người chơi đã bị hành quyết trên giàn.",createdAt};
+          rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+          await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
+          this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+        }
+      }
+    }else if(command==="restore"){
+      // Undo only the gallows-owned consequence; never erase deaths from other roles.
+      const rows=await this.ctx.storage.get("interactions")||[];
+      const owned=rows.filter(x=>x.gallowsId===ballot.id&&String(x.type)==="dead"&&x.effectActive!==false);
+      for(const row of owned){row.effectActive=false;row.expiredAt=new Date(now).toISOString();row.expiredReason="GM_GALLOWS_RESTORE"}
+      if(owned.length){await this.ctx.storage.put("interactions",pruneInteractions(rows));
+        this.broadcast({type:"player_revived",loginId:ballot.candidateId,serverTime:now})}
+      result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),stage:"nominating",
+        candidateId:null,deadlineAt:null,startedAt:null,nominations:{},votes:{},
+        outcome:null,resolvedAt:null,updatedAt:now}};
+    }else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
+    if(!result.ok)return j({ok:false,error:result.error},409);
+    await this.ctx.storage.put(key,result.value);
+    const publicBallot=gallowsSnapshot(result.value,meta,now);
+    this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
+    return j({ok:true,gallows:publicBallot,serverTime:now});
+  }
+  async playerGallows(body){
+    const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
+    if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
+      return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
+    const {key,ballot,eligible}=await this.gallowsState(meta);
+    if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
+    if(ballot.blocked.includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+    const command=String(body?.command||""),now=Date.now();
+    let result;
+    if(command==="nominate"){
+      const target=normalizeLoginId(body?.targetId);
+      if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      result=gallowsNominate(ballot,loginId,target,now);
+    }else if(command==="vote")result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
+    if(!result.ok)return j({ok:false,error:result.error},409);
+    await this.ctx.storage.put(key,result.value);
+    const publicBallot=gallowsSnapshot(result.value,meta,now);
+    this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
+    return j({ok:true,gallows:publicBallot,serverTime:now});
+  }
   async gmState(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
@@ -682,7 +771,7 @@ export class RoomDurableObject extends DurableObject {
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1700,7 +1789,7 @@ export class RoomDurableObject extends DurableObject {
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
@@ -2138,6 +2227,7 @@ export default {async fetch(request,env){
   const artifactViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/viewed$/);if(artifactViewed&&request.method==="POST")return playerArtifactViewedApi(env,artifactViewed[1],request);
   const artifactActivate=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/activate$/);if(artifactActivate&&request.method==="POST")return playerArtifactActivateApi(env,artifactActivate[1],request);
   const playerInteraction=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/interaction\/respond$/);if(playerInteraction&&request.method==="POST")return playerInteractionRespondApi(env,playerInteraction[1],request);
+  const playerGallowsRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(playerGallowsRoute&&request.method==="POST")return playerGallowsApi(env,playerGallowsRoute[1],request);
   const playerSetup=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/setup$/);if(playerSetup&&request.method==="POST")return playerRoomSetupApi(env,playerSetup[1],request);
   const playerMove=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move$/);if(playerMove&&request.method==="POST")return playerRoomMoveApi(env,playerMove[1],request);
   const playerMoveComplete=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move\/complete$/);if(playerMoveComplete&&request.method==="POST")return playerRoomMoveCompleteApi(env,playerMoveComplete[1],request);
@@ -2156,6 +2246,7 @@ export default {async fetch(request,env){
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
   const gmBattleAction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-action$/);if(gmBattleAction&&request.method==="POST")return roomProxy(env,gmBattleAction[1],"/gm/battle-action",request);
   const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
+  const gmGallowsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(gmGallowsRoute&&request.method==="POST")return roomProxy(env,gmGallowsRoute[1],"/gm/gallows",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
   const gmStageRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/stage$/);if(gmStageRoute&&request.method==="POST")return roomProxy(env,gmStageRoute[1],"/gm/stage",request);
@@ -2240,6 +2331,15 @@ async function playerDeliveryReceivedApi(env,raw,request){const c=normalizeRoomC
 async function playerRoleViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/role-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactActivateApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-activate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
+async function playerGallowsApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/gallows",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
 async function playerInteractionRespondApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/interaction/respond",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function syncRoomDirectory(env,raw){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return;try{const r=await roomStub(env,c).fetch("https://room.internal/state");if(!r.ok)return;const d=await r.json();await memberStore(env).fetch("https://member.internal/directory/rooms/upsert",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...d.room,code:c,joinedCount:Array.isArray(d.players)?d.players.length:0,leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE})})}catch(e){console.warn("GMWW_ROOM_DIRECTORY_SYNC",e)}}
 async function gmReset939(env,request){const statusRes=await memberStore(env).fetch(new Request("https://member.internal/admin/reset-939",{method:"GET",headers:request.headers})),status=await statusRes.json().catch(()=>({}));if(status?.done)return j({ok:true,done:true,already:true,record:status.record||null});const roomsRes=await gmRoomsPurge(env,request),rooms=await roomsRes.clone().json().catch(()=>({}));if(!roomsRes.ok||rooms?.failed)return j({ok:false,error:"ROOM_PURGE_FAILED",rooms},500);const membersRes=await memberStore(env).fetch(new Request("https://member.internal/members/purge",{method:"DELETE",headers:request.headers})),members=await membersRes.clone().json().catch(()=>({}));if(!membersRes.ok)return j({ok:false,error:"MEMBER_PURGE_FAILED",rooms,members},500);const record={roomsDeleted:Number(rooms?.deleted||0),membersDeleted:Number(members?.membersDeleted||0),sessionsDeleted:Number(members?.sessionsDeleted||0)};const markRes=await memberStore(env).fetch(new Request("https://member.internal/admin/reset-939",{method:"POST",headers:{...Object.fromEntries(request.headers),"content-type":"application/json"},body:JSON.stringify(record)}));if(!markRes.ok)return j({ok:false,error:"RESET_MARK_FAILED",rooms,members},500);return j({ok:true,done:true,rooms,members,...record})}
