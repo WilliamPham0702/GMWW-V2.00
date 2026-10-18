@@ -232,7 +232,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const row=battleFindAudio(kind,targetId,name);
   if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
-  if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500)return false;
+  if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500){onFinished?.();return false}
   battleAudioLast={key,at:now};
   // When preloaded, play() is invoked before the first asynchronous boundary,
   // preserving iOS WKWebView user activation on a touch/click.
@@ -248,6 +248,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     // it can start the confirmed turn cue even after the Durable Object round trip.
     if(await battlePlayWebAudioFallback(src,onFinished))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
+    onFinished?.();
     return false
   }
 }
@@ -276,6 +277,15 @@ function battleAudioForTurn(turn,auto=false){
     if(entry)void battleWarmAudio('actions',entry);
   }
   if(audio)void battleWarmAudio(kind,audio);
+  // Preload the following cue before its first arrival (e.g. Wolves -> early Artifacts).
+  const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[],cursor=Number(rt?.cursor);
+  if(Number.isInteger(cursor)&&queue[cursor]?.id===turn.id&&queue[cursor+1]){
+    const nextCue=battleTurnAudioCue(queue[cursor+1]);
+    if(nextCue){
+      const nextAudio=battleFindAudio(nextCue.kind,nextCue.targetId,nextCue.name);
+      if(nextAudio)void battleWarmAudio(nextCue.kind,nextAudio);
+    }
+  }
   if(auto)void battlePlayConfiguredAudio(kind,targetId,name,false)
 }
 function battleReplayAudio(){
