@@ -1356,7 +1356,7 @@ export class RoomDurableObject extends DurableObject {
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
-    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),String(body?.assassinChoice||""),body?.revealTargetIds||[]]);
+    const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
     if(prior)return prior.fingerprint===fingerprint?j({...prior.result,idempotent:true}):
       j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
