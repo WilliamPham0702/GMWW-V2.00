@@ -41,21 +41,11 @@ test('V3.138: navigation, assignment collapse, swipe, drop sound and draggable F
  assert.match(setup,/assignmentPanelDismissed=false/);
  assert.match(read('server-game/current/style.css'),/battleResultPopup\.is-wolf-result/);
 });
-test('V3.138: GM patrol uses adjacent perimeter waypoints and checks occupied tokens',()=>{
+test('V3.143: GM patrol is retired without impacting status rules',()=>{
  const source=read('server-game/src/10-library-and-settings.part');
- assert.match(source,/function gmwwGmNearPlayer\(/);
- assert.match(source,/function gmwwGmClearWalk\(/);
- assert.match(source,/function gmwwGmKeepClear\(/);
- const m=source.match(/GMWW_GM_AUTO_POINTS=(\[[^;]+?\]);/);
- assert.ok(m,'Patrol points must be explicit and inspectable');
- const points=JSON.parse(m[1]);
- const ctx={};vm.runInNewContext(read('assets/village/village-layout.js'),ctx);
- const layout=ctx.GMWW_VILLAGE_LAYOUT;
- for(let i=0;i<points.length;i++){
-   const a=points[i],b=points[(i+1)%points.length];
-   for(let j=0;j<=32;j++){
-     const t=j/32,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
-     assert.equal(layout.inside(x,y),true,'GM patrol leaves courtyard at segment '+i);
-   }
- }
+ assert.doesNotMatch(source,/function gmwwGmNearPlayer\(/);
+ assert.doesNotMatch(source,/function gmwwGmClearWalk\(/);
+ assert.doesNotMatch(source,/function gmwwGmKeepClear\(/);
+ assert.doesNotMatch(source,/GMWW_GM_AUTO_POINTS/);
+ assert.match(source,/gmwwSendGmPresence/);
 });
