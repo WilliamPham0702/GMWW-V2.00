@@ -19,9 +19,11 @@ test('Retired task-review UI and background refresh never appear in GM Runtime',
  }
 });
 
-test('Cloudflare console uses in-frame HTTPS navigation supported by native iOS delegate',()=>{
+test('Cloudflare dashboard stays embedded and only owner-authenticated maintenance launches outside the game',()=>{
  assert.match(html,/id="gmwwCloudflareOpen"/);
- assert.match(html,/window\.location\.assign\('https:\/\/gmww-cloudflare-admin\.williampham0702\.workers\.dev\/'\)/);
+ assert.match(html,/id="gmwwCloudflarePanel"/);
+ assert.match(html,/window\.location\.assign\(actions\)/);
+ assert.match(html,/actions\/workflows\/cloudflare-maintenance\.yml/);
  assert.doesNotMatch(html,/window\.open\('https:\/\/gmww-cloudflare-admin/);
  assert.match(native,/UIApplication\.shared\.open\(url\)/);
  assert.match(app,/setTimeout\(\(\)=>\{if\(!gmwwNativePost\('restartRuntime'\)\)window\.location\.reload\(\)\},300\)/);
