@@ -16,7 +16,7 @@ test('staging gallery embeds approved costume source and does not activate 22–
  const html=fs.readFileSync(p,'utf8');
  for(let n=22;n<=30;n++)assert.ok(html.includes('character-'+n));
  assert.ok(html.includes('gmww-character-v600-review.williampham0702.workers.dev'));
- assert.equal((html.match(/class="card"/g)||[]).length,9);
+ assert.equal((html.match(/class="(?:card|item)"/g)||[]).length,9);
  assert.ok(!html.includes('<iframe'), 'do not depend on a remote preview iframe');
  for(let n=22;n<=30;n++)assert.ok(html.includes('/characters/overhaul-v600/character-'+n+'/avatar.webp'));
  assert.ok(html.includes('Chỉ duyệt artwork'));
