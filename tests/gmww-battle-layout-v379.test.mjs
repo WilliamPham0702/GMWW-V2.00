@@ -11,11 +11,11 @@ test('Vào Trận swaps both menus without altering pre-game step menus',()=>{
   assert.ok(!swap.includes('playSetupStrip'), 'Setup timeline remains in original position');
   assert.match(swap,/max-height:min\(44dvh,420px\)/);
 });
-test('Back button shows just one icon and keeps accessible label',()=>{
+test('Back button shows night number, without arrow, preserving previous-turn accessibility',()=>{
   const html=get('server-game/current/GMWW.html');
   const back=html.match(/<button id="battleBack"[^>]*>[\s\S]*?<\/button>/)?.[0]||'';
   assert.match(back,/aria-label="Lượt trước"/);
-  assert.match(back,/<span aria-hidden="true">←<\/span>/);
+  assert.match(back,/<b>ĐÊM THỨ 1<\/b>/);\n  assert.doesNotMatch(back,/←|&lt;|<span aria-hidden/);
   assert.doesNotMatch(back,/>Quay về</);
   assert.match(html,/battle-controls[.]js[?]v=3[.][0-9]+-timeline/);
 });
