@@ -412,6 +412,7 @@ function battleShowResultPopup(title,message){
   const headline=document.getElementById('battleResultTitle'),body=document.getElementById('battleResultMessage');
   if(headline)headline.textContent=String(title||'KẾT QUẢ');
   if(body)body.textContent=String(message||'');
+  popup.classList.toggle('is-wolf-result',String(title||'').includes('VẾT CẮN'));
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
 }
 function battleWolfOutcomeText(result){
@@ -666,7 +667,8 @@ async function battleConfirm(confirmed=false){
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
     // Confirm only after the Durable Object commits, never after an extra room reload.
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
-    for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
+    // Canonical status orbits replace the old enlarging pulse/claw impact overlay.
+    if(!globalThis.GMWW_STATUS_VISUALS)for(const id of targets)battleState.impacts.set(id,{type:battleVisualType(a),until:Date.now()+4500});
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     if(result.revelation){
       const revelation=result.revelation;
