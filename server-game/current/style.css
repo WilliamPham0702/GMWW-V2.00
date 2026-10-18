@@ -5810,3 +5810,11 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battle
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultGrip{min-height:16px!important;background:transparent!important;border:0!important;padding:0!important;justify-content:flex-end}
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultTitle{display:none!important}
 #start #playShell[data-step="battle"] #battleResultPopup.is-scan-result #battleResultMessage{font-size:13px!important;font-weight:900!important;text-align:center!important;padding:2px 4px!important;margin:0!important;white-space:normal!important}
+
+/* V3.142 — scan result closes by tapping outside; no redundant X. */
+#start #playShell #battleResultPopup.is-scan-result #battleResultClose{display:none!important}
+#start #playShell #battleResultPopup.is-scan-result #battleResultGrip{border-bottom:0!important;min-height:0!important;padding:0!important}
+#start #playShell #battleResultPopup.is-scan-result #battleResultTitle{display:none!important}
+#start #playShell #battleResultPopup.is-scan-result #battleResultMessage{padding:8px 12px!important;font-size:13px!important;line-height:1.25!important;font-weight:800!important;text-align:center!important}
+/* Real per-action selection progress; display drag targets without a manual picker. */
+#start #playShell #battleActionBar .battle-multi-counter{display:inline-flex;justify-content:center;align-items:center;margin-left:5px;padding:1px 5px;border-radius:999px;border:1px solid #c2e8eb;background:#0d5261;color:#e9fbfb;font-size:10px;font-weight:900;white-space:nowrap}
