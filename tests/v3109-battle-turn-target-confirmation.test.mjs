@@ -28,5 +28,5 @@ test('V3.109 target sheet reduces the final panel to OK while preserving selecti
   assert.match(app,/pickerOK\.disabled=battleState\.busy\|\|battleState\.syncPending\|\|!targetReady/);
   assert.match(css,/battleTargetSheet\.is-confirm-only>header/);
   assert.match(css,/battleTargetSheet\.is-confirm-only>#battleTargetPrompt/);
-  assert.match(html,/id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm" title="Ghi nhận hành động lên Server">OK<\/button>/);
+  assert.match(html,/id="battleTargetCancel">HỦY<\/button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK<\/button>/);
 });
