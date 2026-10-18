@@ -24,6 +24,6 @@ test('target confirmation reduces confirmed targets to OK without losing the sel
 });
 
 test('target eligibility is still checked before a target can be selected or action confirmed',()=>{
-  assert.match(app,/battleRules\(\)\?\.targetAllowed\(a,m,playPlayerEffect\(id\)\)/);
+  assert.ok(app.includes('battleTargetAllowed(a,m,playPlayerEffect(id))'));
   assert.match(app,/if\(!confirmed&&!confirm\('Xác nhận '/);
 });
