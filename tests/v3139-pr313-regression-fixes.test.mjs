@@ -69,7 +69,7 @@ test('V3.139: Player Web, preview and GM status cache versions are refreshed tog
 });
 test('V3.139 gameplay regression retains synchronized current Runtime and OTA metadata',()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- const runtime=JSON.parse(read('package.json')).version.replace(/\\.0$/,'');
+ const runtime=JSON.parse(read('package.json')).version.split('.').slice(0,2).join('.');
  assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+runtime+"'"));
  assert.ok(read('src/index.js').includes('VERSION="V'+runtime+'"'));
