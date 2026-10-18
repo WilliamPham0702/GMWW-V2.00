@@ -319,16 +319,29 @@ async function gmApi(path,opts={}){
     throw err;
   }finally{clearTimeout(timer)}
 }
+// Preview only: both opt-in query AND isolated worker host required; production stays on legacy assets.
+const MEMBER_CHARACTER_V605_PREVIEW=typeof location!=='undefined'
+  &&/^(?:localhost|127\.0\.0\.1|gmww-character[0-9a-z-]*-(?:preview|staging)\.williampham0702\.workers\.dev)$/.test(location.hostname)
+  &&new URLSearchParams(location.search).get('characterV605')==='1';
+function memberCharacterV605Avatar(id){
+ return MEMBER_CHARACTER_V605_PREVIEW&&String(id)==='character-21'
+   ?location.origin+'/api/character-v605/character-21/avatar':'';
+}
+function memberCharacterV605Skin(id){
+ return MEMBER_CHARACTER_V605_PREVIEW&&String(id)==='character-21'
+   ?location.origin+'/api/character-v605/character-21/skin':'';
+}
 const MEMBER_CHARACTER_COUNT=42;
 const MEMBER_ANIMATED_CHARACTER_COUNT=20;
 function memberCharacterCatalog(serverRows=[]){
   const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
   return Array.from({length:MEMBER_CHARACTER_COUNT},(_,i)=>{
     const n=String(i+1).padStart(2,'0'),id='character-'+n,remote=source.get(id)||{};
-    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
+    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:memberCharacterV605Avatar(id)||(GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image'),modelUrl:memberCharacterV605Skin(id)||null,frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
   });
 }
 function memberCharacterFrameUrl(id,frame=1){
+  if(memberCharacterV605Avatar(id))return memberCharacterV605Avatar(id);
   const raw=String(id||''),m=raw.match(/^character-(0[1-9]|[1-3][0-9]|4[0-2])$/),f=Math.max(1,Math.min(6,Number(frame)||1));
   if(!m)return memberAvatarUrl(raw);
   return Number(m[1])<=MEMBER_ANIMATED_CHARACTER_COUNT
@@ -361,7 +374,7 @@ function ensureMemberCharacterPreviewTicker(){
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
-function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image'}
+function memberAvatarUrl(id){const raw=String(id||'');if(memberCharacterV605Avatar(raw))return memberCharacterV605Avatar(raw);return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image'}
 function memberDate(v,withTime=false){
   if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
   return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -535,8 +548,8 @@ function renderMemberAvatarPicker(){
     const b=document.createElement('button');b.type='button';b.className='member-avatar-choice';b.classList.toggle('selected',String(a.id)===String(memberAdminState.selectedAvatarId));
     b.innerHTML='<img alt=""><small></small>';
     const img=b.querySelector('img'),num=Number(String(a.id).slice(-2));
-    img.alt=a.name||a.id;img.src=memberCharacterFrameUrl(a.id,1);
-    if(num<=MEMBER_ANIMATED_CHARACTER_COUNT)img.dataset.memberCharacter=a.id;else img.classList.add('member-character-static');
+    img.alt=a.name||a.id;img.src=memberCharacterV605Avatar(a.id)||memberCharacterFrameUrl(a.id,1);
+    if(num<=MEMBER_ANIMATED_CHARACTER_COUNT&&!memberCharacterV605Avatar(a.id))img.dataset.memberCharacter=a.id;else img.classList.add('member-character-static');
     img.onerror=()=>{img.onerror=null;img.src=memberAvatarUrl(a.id)};
     b.querySelector('small').textContent=a.name||a.id;
     b.onclick=()=>{memberAdminState.selectedAvatarId=a.id;renderMemberAvatarPicker()};box.appendChild(b);
