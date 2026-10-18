@@ -1406,6 +1406,183 @@ export class RoomDurableObject extends DurableObject {
     return j(await this.applyCycle(meta,phase,night,cycleKey,String(body?.source||"gm").slice(0,40)))
   }
 
+  /* V3.148: server-authoritative day powers. No night turn is forged to
+   * bypass the phase gate. Every function must be explicitly tagged day/any. */
+  async gmDayAction(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
+      day=Math.max(1,Number(meta.cycleNight)||1),actorId=normalizeLoginId(body?.actorId),
+      roleId=String(body?.roleId||""),artifactId=String(body?.artifactId||""),
+      actionId=String(body?.actionId||""),token=String(body?.clientEventId||"").slice(0,120),
+      targets=Array.isArray(body?.targetIds)?body.targetIds.map(normalizeLoginId):[];
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning"||
+      String(body?.matchId||"")!==matchId||String(body?.cycleKey||"")!==cycleKey)
+      return j({ok:false,error:"DAY_PHASE_CHANGED"},409);
+    if(!token||!actorId||!actionId||(!roleId&&!artifactId)||targets.length>30||
+      targets.some(x=>!x)||new Set(targets).size!==targets.length)
+      return j({ok:false,error:"INVALID_DAY_ACTION"},400);
+    const receiptKey="dayActionReceipt:"+matchId+":"+token,
+      fingerprint=JSON.stringify([cycleKey,actorId,roleId,artifactId,actionId,targets]),
+      previous=await this.ctx.storage.get(receiptKey);
+    if(previous)return previous.fingerprint===fingerprint?
+      j({...previous.result,idempotent:true}):j({ok:false,error:"REQUEST_ID_CONFLICT"},409);
+    const members=await this.ctx.storage.get("players")||{},
+      assignments=await this.ctx.storage.get("assignments")||[],
+      interactions=await this.ctx.storage.get("interactions")||[],
+      sameMatch=x=>!x?.matchId||String(x.matchId)===matchId,
+      affected=(id,kind)=>interactions.some(x=>normalizeLoginId(x?.loginId)===id&&
+        sameMatch(x)&&x.effectActive!==false&&String(x.type)===kind);
+    if(!members["member:"+actorId]||targets.some(id=>!members["member:"+id]))
+      return j({ok:false,error:"DAY_PLAYER_NOT_IN_ROOM"},400);
+    let card=null,fn=null,owned=null;
+    if(artifactId){
+      owned=await this.ctx.storage.get("artifact:"+actorId);
+      if(!owned||String(owned.artifactId)!==artifactId||
+        (owned.matchId&&String(owned.matchId)!==matchId))
+        return j({ok:false,error:"DAY_ARTIFACT_NOT_OWNED"},403);
+      card=owned.artifactCard||{};
+      const fns=Array.isArray(card.functions)&&card.functions.length?card.functions:card.actions||[];
+      fn=fns.find(x=>String(x?.actionId||x?.id)===actionId);
+    }else{
+      owned=assignments.find(x=>normalizeLoginId(x.loginId)===actorId&&String(x.roleId)===roleId);
+      if(!owned)return j({ok:false,error:"DAY_ROLE_NOT_OWNED"},403);
+      const stored=await this.ctx.storage.get("roles:"+actorId)||[],
+        privateRoles=Array.isArray(stored)&&stored.length?stored:[await this.ctx.storage.get("role:"+actorId)].filter(Boolean);
+      const privateRow=privateRoles.find(x=>String(x.roleId)===roleId&&
+        (!x.matchId||String(x.matchId)===matchId));
+      card=privateRow?.roleCard||owned.roleCard||{};
+      fn=(card.functions||[]).find(x=>String(x?.actionId||x?.id)===actionId);
+    }
+    if(!fn||!["day","any"].includes(String(fn.phase||""))||fn.passive===true||
+      (fn.fromNight!=null&&Number(fn.fromNight)>day)||
+      (fn.toNight!=null&&Number(fn.toNight)<day))
+      return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
+    const count=fn.noTarget===true?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
+    if(targets.length!==count)return j({ok:false,error:"DAY_TARGET_COUNT_INVALID",expected:count},400);
+    if(fn.noSelf!==false&&targets.includes(actorId))
+      return j({ok:false,error:"DAY_SELF_TARGET_FORBIDDEN"},403);
+    const roleKnight=!artifactId&&roleId==="role_knight"&&actionId==="action_knight_last_strike";
+    const gallows=roleKnight?(await this.gallowsState(meta)).ballot:null;
+    const lynched=roleKnight&&gallows.stage==="resolved"&&gallows.outcome==="dead"&&
+      gallows.candidateId===actorId;
+    if(roleKnight&&!lynched)return j({ok:false,error:"KNIGHT_REQUIRES_LYNCH"},409);
+    if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
+      affected(actorId,"expelled")||affected(actorId,"frozen"))
+      return j({ok:false,error:"DAY_ACTOR_BLOCKED"},409);
+    if(targets.some(x=>fn.allowDead!==true&&affected(x,"dead")&&
+      !String(actionId).toLowerCase().includes("revive")||
+      affected(x,"expelled")))
+      return j({ok:false,error:"DAY_TARGET_NOT_ELIGIBLE"},409);
+    const usageKey="dayRoleUsage:"+matchId,
+      priorUsage=await this.ctx.storage.get(usageKey)||[],
+      own=priorUsage.filter(x=>x.actorId===actorId&&x.roleId===roleId&&x.artifactId===artifactId),
+      used=own.filter(x=>x.actionId===actionId),
+      mode=String(fn.usageMode||"unlimited"),usageCount=Math.max(1,Math.min(100,Number(fn.usageCount)||1));
+    if(!artifactId){
+      if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===day))
+        return j({ok:false,error:"DAY_ROLE_LIMIT_PER_DAY"},409);
+      if((["onceGame","nGame"].includes(mode)&&used.length>=usageCount)||
+        (mode==="eachNight"&&used.filter(x=>x.day===day).length>=usageCount))
+        return j({ok:false,error:"DAY_ROLE_QUOTA_REACHED"},409);
+      if(actionId==="action_bear_scan"&&own.some(x=>x.actionId===actionId&&x.day===day))
+        return j({ok:false,error:"BEAR_SCAN_ALREADY_USED_TODAY"},409);
+    }
+    const artifactCycleKey=currentArtifactCycleKey(meta),
+      useKey="artifactUse:"+actorId+":"+artifactId;
+    let artifactReservation=null;
+    if(artifactId){
+      if(owned.singleUse===true&&await this.ctx.storage.get(useKey))
+        return j({ok:false,error:"DAY_ARTIFACT_SINGLE_USE_EXHAUSTED"},409);
+      const ckey="artifactCycle:"+artifactCycleKey,
+        cstate=await this.ctx.storage.get(ckey)||{cycleKey:artifactCycleKey,accepted:[]},
+        limit=Math.max(0,Math.min(30,Math.trunc(Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)||0)));
+      artifactReservation=reserveArtifactActivation(cstate,{requestId:token,playerId:"member:"+actorId,
+        artifactId,cycleKey:artifactCycleKey,eligible:true,limit});
+      if(!artifactReservation.ok)return j({ok:false,error:artifactReservation.error},409);
+    }
+    const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role";
+    let message="",deadVictims=[],result=null;
+    const isWolf=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
+      return f.includes("soi")||f==="wolf"||f==="wolves"};
+    const isThird=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
+      return f.includes("phe ba")||f.includes("phe thu")||f==="third"};
+    if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
+      const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===targets[0]);
+      const correctlyStabbed=chosen.some(x=>isWolf(x)||isThird(x));
+      deadVictims=[correctlyStabbed?targets[0]:actorId];
+      message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
+      result={message,correctlyStabbed};
+    }else if(!artifactId&&actionId==="action_bear_scan"&&roleId==="role_bear"){
+      const hasWolf=targets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
+      message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
+      result={message,hasWolf};
+    }else if(roleKnight){
+      const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+targets[0];
+      if(await this.ctx.storage.get(pendingKey))
+        return j({ok:false,error:"KNIGHT_TARGET_ALREADY_QUEUED"},409);
+      changes.push({kind:"knight_pending",key:pendingKey,value:{matchId,actorId,
+        targetId:targets[0],createdAt:time,resolveDay:day+1}});
+      message="Hiệp Sĩ đã chọn mục tiêu. Hiệu lực vào sáng ngày tiếp theo.";
+      result={message};
+    }else if(artifactId){
+      const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
+      const terms=[actionId,...effects].join(" ").toLowerCase();
+      if(/revive|hoi_sinh/.test(terms)){
+        for(const id of targets){
+          const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
+            String(x.type)==="dead"&&x.effectActive!==false);
+          for(const x of changed){x.effectActive=false;x.expiredAt=time;x.expiredReason="DAY_ARTIFACT_REVIVE"}
+          changes.push({kind:"revived",loginId:id});
+        }
+        message="Artifact hồi sinh đã được ghi nhận.";
+      }else if(/kill|dead|giet|chet|poison/.test(terms)){
+        deadVictims=targets;message="Artifact đã gây tác động Chết.";
+      }else if(/expel|exile|duoi/.test(terms)){
+        for(const id of targets)changes.push({kind:"status",loginId:id,type:"expelled"});
+        message="Artifact đã thực hiện Đuổi.";
+      }else if(/freeze|frozen|dong_bang/.test(terms)){
+        for(const id of targets)changes.push({kind:"status",loginId:id,type:"frozen"});
+        message="Artifact đã thực hiện Đóng Băng.";
+      }else{
+        for(const id of targets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
+        message="Artifact đã ghi nhận hành động. Hiệu ứng đặc biệt chờ GM xử lý theo luật đã cấu hình.";
+      }
+      result={message};
+    }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
+    for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
+    for(const effect of changes){
+      if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
+      if(effect.kind==="revived")continue;
+      if(effect.type!=="effect_notice"&&affected(effect.loginId,effect.type))continue;
+      const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
+        loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
+        source:"day-action",effectActive:effect.type!=="effect_notice",
+        message:message||"Hành động Ban ngày",createdAt:time};
+      interactions.push(log);
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+log.id,log);
+      if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
+        statusId:log.type,active:true,serverTime:Date.now()});
+    }
+    await this.ctx.storage.put("interactions",pruneInteractions(interactions));
+    const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
+      roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
+    await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+audit.id,audit);
+    if(artifactId){
+      const ckey="artifactCycle:"+artifactCycleKey;
+      await this.ctx.storage.put(ckey,artifactReservation.state);
+      await this.ctx.storage.put(useKey,{requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
+      owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
+    }else{
+      await this.ctx.storage.put(usageKey,[...priorUsage,{matchId,day,actorId,roleId,
+        artifactId:"",actionId,requestId:token,createdAt:time}].slice(-1000));
+    }
+    const payload={ok:true,kind,actionId,actorId,roleId,artifactId,targetIds:targets,
+      day,result,serverTime:Date.now()};
+    await this.ctx.storage.put(receiptKey,{fingerprint,result:payload});
+    this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
+      day,serverTime:Date.now()});
+    return j(payload);
+  }
   /* V3.99: a single GM confirmation is one reversible server operation, including
    * multi-target interactions and the Artifact quota/use ledger. Only the latest
    * committed action in this exact turn and night may be restored. */
