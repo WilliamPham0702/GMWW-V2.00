@@ -1,0 +1,49 @@
+{
+  "version": "V6.04",
+  "characterId": "character-21",
+  "type": "ART_DIRECTION_REVIEW_ONLY",
+  "appearanceApproved": false,
+  "approvedOriginal": "GMWW Character 21 approved full costume front artwork (V6.00)",
+  "reference": "https://gmww-character21-v604-art-review.williampham0702.workers.dev/",
+  "studyDirections": [
+    "front",
+    "front-right",
+    "right",
+    "back-right",
+    "back",
+    "back-left",
+    "left",
+    "front-left"
+  ],
+  "angleConceptsApproved": false,
+  "artMasterForSideAndRear": false,
+  "rig": "GMWW V5.10 16-bone unchanged",
+  "actionClips": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Result"
+  ],
+  "actionRetargetCompleted": false,
+  "glbForThisStudyAvailable": false,
+  "note": "Eight AI-derived illustrations extracted for visual direction review; they are not transparent production sprites or proof of matching UV/skin/16-bone animation.",
+  "defects": [
+    "Some direction concepts do not exactly match the approved outfit or companion positioning",
+    "Character21 V6.02 and extruded V6.03 GLB failed visual 8-view acceptance"
+  ],
+  "qa": {
+    "localChromiumMobile": {
+      "javascriptErrors": 0,
+      "directionButtons": 8,
+      "viewNavigation": true,
+      "approvedFrontCompare": true
+    },
+    "cloudflarePageHttpStatus": 200,
+    "iphoneDeviceVerified": false
+  },
+  "guards": {
+    "mergeMainAllowed": false,
+    "deployProductionAllowed": false,
+    "applyToCharacters22to30": false
+  }
+}
