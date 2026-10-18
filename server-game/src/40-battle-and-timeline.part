@@ -529,7 +529,8 @@ function battleMarkPlayers(){
 }
 function renderPlayBattle(){
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
-  const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
+  const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
+  const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
   if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true}
   if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
@@ -537,11 +538,15 @@ function renderPlayBattle(){
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
-  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night')battleAudioForTurn(t,true);else if(phase==='day')void battlePlayConfiguredAudio('system','audio_system_day_wakeup','Làng ơi dậy đi')}
+  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night')battleAudioForTurn(t,true);/* wake-up cue is owned by the final night turn */}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
+  const periodLabel=document.getElementById('battlePeriodLabel');
+  if(periodLabel)periodLabel.textContent=(phase==='day'?'NGÀY THỨ ':'ĐÊM THỨ ')+night;
+  const previous=document.getElementById('battleBack');
+  if(previous){previous.disabled=phase!=='night'||!rt?.queue?.length||!Number.isInteger(rt.cursor)||rt.cursor<=0||!!rt.completed;previous.title=previous.disabled?'Không có lượt trước trong đêm hiện tại':'Về lượt trước'}
   if(timeline&&signature!==battleState.timelineSig){battleState.timelineSig=signature;
-    timeline.innerHTML=(phase==='night'?'<span role="listitem" class="gmww-timeline-night-label">ĐÊM THỨ '+night+'</span>':'')+steps.map((s,i)=>s.kind==='day'?'<span role="listitem" title="'+playEsc(s.label)+'" class="play-battle-step is-'+playEsc(s.status)+'"><b>'+playEsc(s.label)+'</b></span>':'<button type="button" role="listitem" data-battle-index="'+i+'" '+(s.status==='used'?'disabled ':'')+'title="'+playEsc(s.label)+(s.status==='used'?' (đã sử dụng)':'')+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+(s.active?' is-active':'')+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':(s.displayNumber??i+1))+'</span><b>'+playEsc(s.label)+'</b></button>').join('');
+    timeline.innerHTML=steps.map((s,i)=>s.kind==='day'?'<span role="listitem" title="'+playEsc(s.label)+'" class="play-battle-step is-'+playEsc(s.status)+'"><b>'+playEsc(s.label)+'</b></span>':'<button type="button" role="listitem" data-battle-index="'+i+'" '+(s.status==='used'?'disabled ':'')+'title="'+playEsc(s.label)+(s.status==='used'?' (đã sử dụng)':'')+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+(s.active?' is-active':'')+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':(s.displayNumber??i+1))+'</span><b>'+playEsc(s.label)+'</b></button>').join('');
     const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
   }
   const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');

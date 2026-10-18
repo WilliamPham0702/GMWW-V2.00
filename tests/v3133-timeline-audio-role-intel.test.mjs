@@ -85,11 +85,11 @@ test('V3.133: correct audio maps wolf-group, Old Witch, Snow Wolf, Artifact and 
 });
 test('V3.133: timeline numbers and GM movable controls retain role and effect safeguards',()=>{
  const ctx={};vm.runInNewContext(read('server-game/current/battle-controls.js'),ctx);
- assert.equal(ctx.GMWW_BATTLE_CONTROLS.timeline('day',null,4)[0].label,'Ngày thứ 4');
+ assert.equal(ctx.GMWW_BATTLE_CONTROLS.timeline('day',null,4)[0].label,'Làng ơi dậy đi');
  const night={cursor:0,completed:false,queue:[{id:'intro',kind:'wolf-introduction'},{id:'wake',kind:'village-wakeup'}]};
  const list=ctx.GMWW_BATTLE_CONTROLS.timeline('night',night,4);
  assert.equal(list[0].label,'Bầy sói ơi dậy đi');
- assert.equal(list[1].label,'Ngày thứ 4');
+ assert.equal(list[1].label,'Làng ơi dậy đi');
  const worker=read('src/index.js');
  assert.match(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*recognitionIds:/);
  assert.doesNotMatch(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*loginIds:/);

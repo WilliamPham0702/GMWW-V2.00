@@ -32,12 +32,12 @@
   }
   function timeline(phase,runtime,night,used=[]){
     const n=Math.max(1,Number(night)||1);
-    if(phase==="day")return [{id:"wake",kind:"day",label:"Ngày thứ "+n,status:"active",active:true}];
+    if(phase==="day")return [{id:"wake",kind:"day",label:"Làng ơi dậy đi",status:"active",active:true}];
     if(phase!=="night")return [{id:"start",kind:"start",label:"Đêm thứ "+n,status:"active",active:true}];
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
-    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:row?.kind==="village-wakeup"?"Ngày thứ "+n:displayLabel(row,"Lượt "+(i+1)),displayNumber:["role","role-group"].includes(row?.kind)&&Number.isFinite(Number(row?.order))&&Number(row.order)>0?Number(row.order):i+1,status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
-    if(!queue.some(row=>row?.kind==="village-wakeup"))rows.push({id:"wake",kind:"day",label:"Ngày thứ "+n,status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
+    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:row?.kind==="village-wakeup"?"Làng ơi dậy đi":displayLabel(row,"Lượt "+(i+1)),displayNumber:["role","role-group"].includes(row?.kind)&&Number.isFinite(Number(row?.order))&&Number(row.order)>0?Number(row.order):i+1,status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
+    if(!queue.some(row=>row?.kind==="village-wakeup"))rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
   function resolvedType(action){

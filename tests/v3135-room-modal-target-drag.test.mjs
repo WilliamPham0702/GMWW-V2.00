@@ -43,7 +43,7 @@ test('V3.135: target box dragging stays bounded within a phone viewport',()=>{
 
 test('V3.135: package, Worker, source runtime and HTML remain synchronized',()=>{
   const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
-  assert.equal(v,'3.135');
+  assert.ok(Number(v.split('.')[1])>=135);
   assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
   assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+v+"'"));
   assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
