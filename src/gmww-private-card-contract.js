@@ -3,7 +3,7 @@
 import { defaultPriorityFirst } from "./gmww-game-scene-rules.js";
 
 export function sanitizePlayerArtifactCard(v){
-  const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{}),phase:['day','night','any'].includes(String(a?.phase||''))?String(a.phase):'night',actorMayBeDead:a?.actorMayBeDead===true})):[];
+  const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{}),...(a?.phase!=null?{phase:['day','night','any'].includes(String(a.phase))?String(a.phase):'night'}:{}),...(a?.actorMayBeDead!=null?{actorMayBeDead:a.actorMayBeDead===true}:{})})):[];
   const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
   return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
 }
@@ -15,13 +15,16 @@ export function sanitizePlayerRoleCard(v){
     id:String(fn?.id||fn?.actionId||"").slice(0,120),
     actionId:String(fn?.actionId||fn?.id||"").slice(0,120),
     usageMode:["eachNight","onceGame","nGame","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
-    phase:["day","night","any"].includes(String(fn?.phase||""))?String(fn.phase):"night",
-    targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn?.targetCount??1)||0))),
-    actorMayBeDead:fn?.actorMayBeDead===true,allowDead:fn?.allowDead===true,
-    noSelf:fn?.noSelf!==false,noTarget:fn?.noTarget===true,passive:fn?.passive===true,
-    fromNight:Math.max(1,Math.trunc(Number(fn?.fromNight)||1)),
-    toNight:fn?.toNight==null?null:Math.max(1,Math.trunc(Number(fn.toNight)||1)),
-    effectIds:Array.isArray(fn?.effectIds)?fn.effectIds.map(String).slice(0,8):[],
+    ...(fn?.phase!=null?{phase:["day","night","any"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
+    ...(fn?.targetCount!=null?{targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount)||0)))}:{}),
+    ...(fn?.actorMayBeDead!=null?{actorMayBeDead:fn.actorMayBeDead===true}:{}),
+    ...(fn?.allowDead!=null?{allowDead:fn.allowDead===true}:{}),
+    ...(fn?.noSelf!=null?{noSelf:fn.noSelf!==false}:{}),
+    ...(fn?.noTarget!=null?{noTarget:fn.noTarget===true}:{}),
+    ...(fn?.passive!=null?{passive:fn.passive===true}:{}),
+    ...(fn?.fromNight!=null?{fromNight:Math.max(1,Math.trunc(Number(fn.fromNight)||1))}:{}),
+    ...(fn?.toNight!==undefined?{toNight:fn.toNight==null?null:Math.max(1,Math.trunc(Number(fn.toNight)||1))}:{}),
+    ...(Array.isArray(fn?.effectIds)?{effectIds:fn.effectIds.map(String).slice(0,8)}:{}),
     usageCount:Math.max(1,Math.min(100,Math.trunc(Number(fn?.usageCount)||1)))
   })):null;
   const flags=x.flags&&typeof x.flags.allowMultipleActions==="boolean"?
