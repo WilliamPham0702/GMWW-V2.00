@@ -9,7 +9,9 @@ test('Artifact buttons display a human name only: never artifact ID, title, owne
   assert.ok(source.includes('playEsc(a.name)'), 'the action button displays its action name');
   assert.ok(!source.includes("a.name+' · '+a.artifactName"), 'artifact name and owner are not appended to the button');
   assert.ok(source.includes("/^action[-_][a-z0-9_-]+$/i.test(rawName)"), 'legacy technical action IDs are rewritten');
-  assert.ok(source.includes("String(action.artifactName||'Hành động').trim()"), 'older catalog gets a human-readable fallback');
+  assert.ok(source.includes("?'Hành động':rawName"), 'Artifact title is never a fallback action label');
+  const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
+  assert.ok(controls.includes('"action-lone-wolf-join":"Gia nhập Bầy Sói"'), 'imported Lone Wolf action has readable function name');
   assert.ok(runtime.includes('playEsc(a.name)'), 'shipped GM Runtime mirrors source');
 });
 
