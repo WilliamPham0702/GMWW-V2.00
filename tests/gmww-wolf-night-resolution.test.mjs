@@ -32,7 +32,7 @@ test('guard on transferred destination prevents wolf bite',()=>{
   const result=resolve([bite('bob'),fairy('right'),guard('alice')]);
   assert.equal(result.ok,true);
   assert.deepEqual(result.victims,[]);
-  assert.deepEqual(result.blocked,['carol']);
+  assert.deepEqual(result.blocked,['alice']);
 });
 test('left movement wraps around circle in seated order',()=>{
   const result=resolve([bite('alice'),fairy('left')]);
