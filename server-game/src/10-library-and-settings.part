@@ -307,7 +307,7 @@ setTimeout(gmwwStartGmPresence,0);
 window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
 
 /* UPDATE MANAGER V1 — prepared off-main */
-let gmwwUpdateManifest=null,gmwwUpdateBusy=false;
+let gmwwUpdateManifest=null,gmwwUpdateBusy=false,gmwwUpdateSlowTimer=null;
 
 /* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
 function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
@@ -360,8 +360,17 @@ async function installRuntimeUpdate(){
   const files=gmwwUpdateManifest?.runtime?.files;
   if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
   gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
+  // The V3.110 IPA updater validates every file SHA-256 but exposes no byte
+  // progress. A slow transfer is advisory, never a fabricated 0% or failure.
+  if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);
+  gmwwUpdateSlowTimer=setTimeout(()=>{
+    gmwwUpdateSlowTimer=null;
+    if(!gmwwUpdateBusy)return;
+    gmwwSetUpdateProgress('running',null,'Đang tải chậm • chờ iOS xác minh SHA-256');
+    setUpdateUi('warn','ĐANG TẢI CHẬM','iOS chưa trả kết quả tải Runtime.','Giữ ứng dụng mở và chờ kết quả; Runtime cũ và dữ liệu game chưa bị thay đổi.');
+  },45000);
   if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
-    gmwwUpdateBusy=false;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
+    gmwwUpdateBusy=false;if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
   }
   return true
 }
@@ -558,6 +567,7 @@ window.GMWWUpdateNative={
   },
   onResult(result={}){
     gmwwUpdateBusy=false;
+    if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
     if(result.ok&&result.action==='installRuntime'){
       gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
