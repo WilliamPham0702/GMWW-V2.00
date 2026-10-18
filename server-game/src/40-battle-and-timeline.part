@@ -538,7 +538,7 @@ function renderPlayBattle(){
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
-  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night')battleAudioForTurn(t,true); // day wake-up audio is owned by the final night turn}
+  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night')battleAudioForTurn(t,true);/* wake-up cue is owned by the final night turn */}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
   const periodLabel=document.getElementById('battlePeriodLabel');
