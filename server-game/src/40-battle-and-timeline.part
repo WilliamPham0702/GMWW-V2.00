@@ -778,8 +778,14 @@ async function battleConfirm(confirmed=false){
       battleState.syncPending=false;
       renderPlayBattle();
       // Advance only after Durable Object confirms and Room state is synchronized.
-      if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime?.currentId===t.id)
-        void advancePlayPhase();
+      // Allow the GM-only scan result audio to finish before announcing the next role.
+      // Do not advance a newer turn if GM navigated manually during the delay.
+      const delay=seerReveal?(a.actionId==='action_aura_read'?4400:2100):0;
+      const confirmedTurnId=t.id;
+      setTimeout(()=>{
+        if(playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+           playSceneRuntime.nightRuntime?.currentId===confirmedTurnId)void advancePlayPhase();
+      },delay);
     }).catch(err=>{playFlashError('Đã ghi nhận trên Server nhưng đồng bộ bị lỗi: '+String(err?.message||err));});
   }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
   finally{battleState.busy=false;renderPlayBattle()}
