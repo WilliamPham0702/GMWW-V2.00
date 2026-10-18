@@ -69,7 +69,7 @@ jobs:
           grep -q 'Player Web' /tmp/char605-cloud-player.html
           grep -q '/renderer?embed=1' /tmp/char605-cloud-gm.html
           grep -q '/renderer?embed=1' /tmp/char605-cloud-player.html
-          curl -fsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 45 "$BASE/renderer?embed=1" -o /tmp/char605-cloud-renderer.html
+          curl -fLsS --retry 4 --retry-all-errors --connect-timeout 10 --max-time 45 "$BASE/renderer?embed=1" -o /tmp/char605-cloud-renderer.html
           test "$(wc -c < /tmp/char605-cloud-renderer.html)" -gt 3000000
           grep -q 'WebGL' /tmp/char605-cloud-renderer.html
           grep -q 'FALLBACK=\[' /tmp/char605-cloud-renderer.html
