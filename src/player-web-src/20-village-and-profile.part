@@ -452,23 +452,8 @@ function setGameViewPane(pane,{persist=true}={}){
   if(persist)try{sessionStorage.setItem('gmww_game_pane_v1',pane)}catch{}
   if(pane==='village')syncVillageFrame();
 }
-const GM_VILLAGE_MOVE_MS=8500,GM_VILLAGE_HOLD_MS=15000,GM_VILLAGE_CYCLE_MS=GM_VILLAGE_MOVE_MS+GM_VILLAGE_HOLD_MS;
-const GM_VILLAGE_POINTS=[[25,37],[40,35],[60,35],[75,39],[82,55],[74,77],[60,86],[40,86],[25,77],[17,58],[31,64],[51,73],[69,64],[66,45],[43,44],[34,55]];
-function gmHash(text){let h=2166136261>>>0;for(const ch of String(text||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h>>>0}
-function gmPoint(session,index){let h=gmHash(session+':'+index),base=GM_VILLAGE_POINTS[h%GM_VILLAGE_POINTS.length],prev=GM_VILLAGE_POINTS[gmHash(session+':'+Math.max(0,index-1))%GM_VILLAGE_POINTS.length];if(index>0&&base===prev)base=GM_VILLAGE_POINTS[(h+5)%GM_VILLAGE_POINTS.length];const jx=((h>>>8)%5)-2,jy=((h>>>16)%5)-2;return{x:Math.max(15,Math.min(85,base[0]+jx)),y:Math.max(35,Math.min(88,base[1]+jy))}}
-function scheduleGmMotionBoundary(delay){if(state.gmMotionTimer)clearTimeout(state.gmMotionTimer);state.gmMotionTimer=setTimeout(()=>{state.gmMotionTimer=null;syncVillageFrame()},Math.max(80,Math.min(Number(delay)||80,GM_VILLAGE_CYCLE_MS))+60)}
-function gmVillagePlayer(){
-  const p=state.gmPresence;if(!p?.online)return null;
-  const serverNow=Date.now()+Number(state.serverClockOffsetMs||0),manualUntil=Math.max(0,Number(p.manualUntil||0)),manualStart=Math.max(0,Number(p.moveStartedAt||0)),manualDuration=Math.max(0,Number(p.moveDurationMs||0));
-  if(manualUntil>serverNow&&manualStart>0&&manualDuration>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){
-    const moving=serverNow<manualStart+manualDuration,remaining=(moving?manualStart+manualDuration:manualUntil)-serverNow; scheduleGmMotionBoundary(remaining);
-    return{participantId:'gm:online',id:'gm:online',kind:'gm',isGM:true,displayName:'GM',avatarUrl:'/gm/gm-white-wolf.webp',gameCharacterId:'',seatId:null,positionX:moving?Number(p.moveFromX):Number(p.moveToX),positionY:moving?Number(p.moveFromY):Number(p.moveToY),movementStatus:moving?'moving':'idle',villageActivity:moving?'gm_manual':'gm_hold',moveId:'gm:manual:'+manualStart,moveFromX:Number(p.moveFromX),moveFromY:Number(p.moveFromY),moveToX:Number(p.moveToX),moveToY:Number(p.moveToY),moveStartedAt:manualStart,moveDurationMs:manualDuration,online:true,statusLabel:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'};
-  }
-  const baseStart=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||serverNow)),seed=manualUntil>0?(String(p.sessionId||baseStart)+':after:'+manualUntil):String(p.sessionId||baseStart),elapsed=Math.max(0,serverNow-baseStart),segment=Math.floor(elapsed/GM_VILLAGE_CYCLE_MS),within=elapsed%GM_VILLAGE_CYCLE_MS,manualAnchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&manualAnchor?manualAnchor:gmPoint(seed,segment),to=gmPoint(seed,segment+1),moving=within<GM_VILLAGE_MOVE_MS,segmentStartedAt=baseStart+segment*GM_VILLAGE_CYCLE_MS;
-  scheduleGmMotionBoundary(moving?GM_VILLAGE_MOVE_MS-within:GM_VILLAGE_CYCLE_MS-within);
-  return{participantId:'gm:online',id:'gm:online',kind:'gm',isGM:true,displayName:'GM',avatarUrl:'/gm/gm-white-wolf.webp',gameCharacterId:'',seatId:null,positionX:moving?from.x:to.x,positionY:moving?from.y:to.y,movementStatus:moving?'moving':'idle',villageActivity:moving?'gm_roaming':'gm_hold',moveId:'gm:auto:'+baseStart+':'+segment,moveFromX:from.x,moveFromY:from.y,moveToX:to.x,moveToY:to.y,moveStartedAt:segmentStartedAt,moveDurationMs:GM_VILLAGE_MOVE_MS,online:true,statusLabel:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'};
-}
-async function refreshGmPresence(){try{const d=await api('/api/gm-presence');state.gmPresence=d?.gm||null;if(!state.gmPresence?.online&&state.gmMotionTimer){clearTimeout(state.gmMotionTimer);state.gmMotionTimer=null}syncVillageFrame()}catch{}}
+// Sói GM retired in V3.143; online/offline presence is preserved.
+async function refreshGmPresence(){try{const d=await api('/api/gm-presence');state.gmPresence=d?.gm||null;syncVillageFrame()}catch{}}
 function startGmPresencePoll(){if(state.gmPresencePoll)return;state.gmPresencePoll=setInterval(()=>{if(state.member&&!document.hidden)refreshGmPresence()},2500)}
 let gmwwVillageLastFrame=null,gmwwVillageLastSignature='';
 function villageSceneSignature(payload){
@@ -480,7 +465,7 @@ function syncVillageFrame(force=false){
   const iframe=$('#gmwwVillageFrame');if(!iframe?.contentWindow||!state.member)return;
   const room=state.room||{},cycle=state.villageCycle||{},cyclePhase=String(cycle.phase||room.cyclePhase||'').toLowerCase(),cycleNight=Number(cycle.night||room.cycleNight||0);
   const portal=null;
-  const publicPlayers=villagePublicPlayers(state.roomCode?state.players:state.lobbyPlayers),gmPlayer=gmVillagePlayer(),viewerRoomCode=String(state.roomCode||'').trim().toUpperCase(),gmRoomCode=String(state.gmPresence?.roomCode||'').trim().toUpperCase();if(gmPlayer&&gmRoomCode===viewerRoomCode)publicPlayers.push(gmPlayer);
+  const publicPlayers=villagePublicPlayers(state.roomCode?state.players:state.lobbyPlayers);
   const playerView=playerScenePolicy(room);
   const payload={type:'gmww:village-state',portal,room:{playerSceneMode:playerView.mode,code:String(room.code||state.roomCode||'').slice(0,16),roomName:String(room.roomName||'').slice(0,100),phase:String(room.phase||'').slice(0,32),gmStage:String(room.gmStage||'').slice(0,20),gmStageRevision:Number(room.gmStageRevision||0),status:String(room.status||'').slice(0,32),roomMode:String(room.roomMode||'online'),enabled:room.enabled!==false,seatsLocked:!!room.seatsLocked,seatCount:Number(room.seatCount||room.playerCount||12),seatLayout:String(room.seatLayout||''),seatOffset:{x:Number(room.seatOffset?.x||0),y:Number(room.seatOffset?.y||0)},seatSpacing:Number(room.seatSpacing||100),startedAt:String(room.startedAt||'').slice(0,64),playerCount:Number(room.playerCount||0)},cycle:{phase:playerView.mode==='battle'?cyclePhase.slice(0,20):'lobby',night:playerView.mode==='battle'?cycleNight:0,day:playerView.mode==='battle'?Number(cycle.day||0):0},setup:{showSeats:!!state.roomCode&&room.enabled!==false&&!publicPlayers.some(p=>Number(p.seatId||0)>0),enabled:!!state.roomCode&&!room.seatsLocked,walkEnabled:!state.roomCode||(!room.seatsLocked&&['lobby','waiting'].includes(room.phase||'lobby')),previewCharacterId:String(state.selectedGameCharacterId||''),selectedSeatId:Number(state.selectedSeatId||0)||null,viewerParticipantId:String(state.participantId||('member:'+state.member.loginId)),clockOffsetMs:Number(state.serverClockOffsetMs||0),characterScale:Number(state.characterScale||100)},players:publicPlayers};
   updateVillageHud();
@@ -597,7 +582,7 @@ window.createAccount=createAccount;
 
 async function logout(){
   try{if(state.token)await api('/api/members/logout',{method:'POST',headers:auth(),body:'{}'})}catch{}
-  clearActiveRoom();disconnectRoom();clearInterval(state.presenceTimer);state.presenceTimer=null;if(state.gmPresencePoll){clearInterval(state.gmPresencePoll);state.gmPresencePoll=null}if(state.gmMotionTimer){clearTimeout(state.gmMotionTimer);state.gmMotionTimer=null}state.gmPresence=null;clearLobbyMotionTimer();state.token='';state.member=null;
+  clearActiveRoom();disconnectRoom();clearInterval(state.presenceTimer);state.presenceTimer=null;if(state.gmPresencePoll){clearInterval(state.gmPresencePoll);state.gmPresencePoll=null}state.gmPresence=null;clearLobbyMotionTimer();state.token='';state.member=null;
   localStorage.removeItem('gmww_token');localStorage.removeItem('gmww_member');
   go('login');
 }
