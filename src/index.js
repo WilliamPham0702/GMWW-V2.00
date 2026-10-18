@@ -28,8 +28,6 @@ import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-v
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { characterV4Status } from "./gmww-character-v4.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
-import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
-import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
@@ -1858,10 +1856,6 @@ export default {async fetch(request,env){
     if(admissionResponse)return admissionResponse;
   }
   if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(patchPrivatePlayerCards(gmwwMembersLiveScript).replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
-  if(url.pathname==="/api/operations/tasks"&&request.method==="GET"){
-    try{const work=await fetchGmwwTasks();return j({ok:true,source:"github_public_issues",generatedAt:new Date().toISOString(),...work})}
-    catch(error){const backup=normalizeGmwwTasks(GMWW_TASK_SNAPSHOT);return j({ok:true,source:"github_public_snapshot",fallback:true,generatedAt:GMWW_TASK_SNAPSHOT_GENERATED_AT,...backup})}
-  }
   if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
   if(url.pathname==="/api/health/deep"&&request.method==="GET"){
     try{
