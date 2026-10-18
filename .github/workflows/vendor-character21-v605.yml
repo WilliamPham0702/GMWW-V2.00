@@ -1,0 +1,46 @@
+name: Stage owner-approved Character 21 V6.05
+
+on:
+  push:
+    branches:
+      - feature/character-overhaul-v600-staging
+    paths:
+      - assets/characters/overhaul-v600/character-21-v605-accepted.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stage-character21:
+    if: github.repository == 'WilliamPham0702/GMWW-V2.00' && github.ref == 'refs/heads/feature/character-overhaul-v600-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/character-overhaul-v600-staging
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vendor GLB from approved isolated Preview (SHA256 pinned)
+        run: node scripts/vendor-character21-v605.mjs
+      - name: Test Character 21 plus original 30 character release barriers
+        run: |
+          node --test tests/character-overhaul-v605-accepted.test.mjs tests/character-overhaul-v605-staging.test.mjs tests/character-overhaul-v600.test.mjs tests/character-overhaul-v600-preflight.test.mjs tests/character-overhaul-v601-costumes.test.mjs
+          node tools/check-character-overhaul-v600.mjs --expect-blocked
+      - name: Commit Character 21 staging binary ONLY (never main)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'feature/character-overhaul-v600-staging'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- assets/characters/overhaul-v600/character-21/skin.glb
+          if git diff --cached --quiet; then
+            echo 'Accepted GLB already vendored.'
+            exit 0
+          fi
+          git commit -m 'asset(character): stage accepted V6.05 Character 21 GLB only'
+          git push origin HEAD:feature/character-overhaul-v600-staging
