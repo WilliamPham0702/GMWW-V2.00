@@ -358,10 +358,12 @@
       "skinPath": "/characters/overhaul-v600/character-21/skin.glb",
       "artworkPath": "/characters/overhaul-v600/character-21/artwork.png",
       "requiredBoneCount": 16,
-      "artworkSource": "NEW_ORIGINAL_GMWW_NOT_YET_CREATED",
-      "status": "BLOCKED_MISSING_ART",
+      "artworkSource": "V6.04_8_DIRECTIONS_OWNER_APPROVED",
+      "status": "IPHONE_ACCEPTED_V605_STAGING_ONLY",
       "bodyProfile": "muscular-chibi",
-      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only"
+      "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only",
+      "previewSkinVerified": true,
+      "productionEnabled": false
     },
     {
       "id": "character-22",
@@ -516,5 +518,18 @@
     "playerWeb": false,
     "iphone": false,
     "ownerMainApproval": false
+  },
+  "character21Approval": {
+    "version": "V6.05",
+    "approvedOnIphone": true,
+    "actionsAndDirectionsApproved": true,
+    "glbSha256": "ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9",
+    "rigJointCount": 16,
+    "actionCount": 4,
+    "directionCount": 8,
+    "previewOnly": true,
+    "gameGMIntegrationPending": true,
+    "playerWebIntegrationPending": true,
+    "mainMergeApproved": false
   }
 }
