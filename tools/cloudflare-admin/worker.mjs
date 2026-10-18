@@ -123,6 +123,25 @@ async function handler(request,env){
       "content-security-policy":"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
       "x-frame-options":"DENY","x-content-type-options":"nosniff"}});
   if(pathname==="/health")return json({service:"GMWW Cloudflare Administration",status:"online",authenticated:false});
+  if(pathname==="/api/public-status"&&request.method==="GET"){
+    // Only mirror an already-public, aggregate GitHub Actions maintenance status.
+    const u="https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/issues/320";
+    const r=await fetch(u,{headers:{accept:"application/vnd.github+json","user-agent":"GMWW-Cloudflare-Admin/1.0"}});
+    if(!r.ok)return failure("Không đọc được trạng thái bảo trì GitHub",503);
+    const issue=await r.json();
+    const match=String(issue.body||"").match(/<!-- GMWW_CF_STATUS_START -->\\s*(\\{[^\\n]*\\})\\s*<!-- GMWW_CF_STATUS_END -->/);
+    if(!match)return failure("Chưa có báo cáo bảo trì được xác minh",503);
+    const raw=JSON.parse(match[1]);
+    const num=k=>Number.isSafeInteger(raw[k])&&raw[k]>=0?raw[k]:null;
+    if(raw.schema!==1||num("namespaceCount")===null||num("previewCount")===null||raw.productionProtected!==true)
+      return failure("Báo cáo bảo trì chưa đạt điều kiện xác minh",503);
+    return json({namespaceCount:num("namespaceCount"),previewCount:num("previewCount"),
+      eligibleCount:num("eligibleCount"),protectedCount:num("protectedCount"),unlinkedCount:num("unlinkedCount"),
+      deletedCount:num("deletedCount"),updatedAt:String(raw.updatedAt||"").slice(0,32),
+      mode:String(raw.mode||"").slice(0,24),productionProtected:true,
+      reportUrl:"https://github.com/WilliamPham0702/GMWW-V2.00/issues/320",
+      actionsUrl:"https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml"});
+  }
   if(!pathname.startsWith("/api/"))return failure("Not found",404);
   if(!required(env))return failure("Backend chưa có secret quản trị hoặc audit storage",503);
   if(!await authorize(request,env))return failure("Không được phép: chỉ dành cho quản trị viên",401);
