@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "characterId": "character-21",
+  "version": "V6.05",
+  "sourcePreviewUrl": "https://gmww-character21-v605-preview.williampham0702.workers.dev/?v=605",
+  "sourceSHA256": "0afe6ec92d6f3aa483234a148cca33603b97702fd528a0cd4dd81a087219b378",
+  "source": "Owner iPhone acceptance: 8 directions and four actions",
+  "approvalDate": "2026-10-18",
+  "approvedOnIphone": true,
+  "approvedForMain": false,
+  "approvedForProduction": false,
+  "appliesToOtherCharacters": false,
+  "boneCount": 16,
+  "directions": 8,
+  "actions": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Result"
+  ],
+  "rendering": "2.5D directional skinned mesh, eight artist-approved views; not a full 3D sculpt",
+  "artifact": "assets/characters/overhaul-v600/character-21/skin.glb",
+  "metadataFix": "Correct legacy character-01 labels to character-21 without modifying GLB binary skin/animation buffers",
+  "releaseGate": "NO_AUTOMATIC_ACTIVATION; no GM Server/Player Web/main/Production/IPA mutation"
+}
