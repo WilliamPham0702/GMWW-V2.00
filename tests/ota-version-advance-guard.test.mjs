@@ -20,8 +20,10 @@ test('OTA version comparison uses numeric segments rather than lexical ordering'
   assert.equal(compareReleaseVersions('invalid','3.107'),null);
 });
 
-test('Runtime source changes cannot be published under the same installed release version',()=>{
-  assert.throws(()=>verifyOtaVersionAdvance(manifest('3.106'),manifest('3.106'),['server-game/current/app.js']),/does not advance beyond Production/);
+test('Different Runtime bytes cannot be published under the same installed release version',()=>{
+  const changed=manifest('3.106');
+  changed.runtime.files[0].sha256='b'.repeat(64);
+  assert.throws(()=>verifyOtaVersionAdvance(changed,manifest('3.106'),['server-game/current/app.js']),/does not advance beyond Production/);
   assert.throws(()=>verifyOtaVersionAdvance(manifest('3.106'),manifest('3.107'),['server-game/current/style.css']),/does not advance beyond Production/);
 });
 
@@ -53,5 +55,17 @@ test('release tooling can preserve a fully verified identical OTA package withou
   assert.doesNotThrow(()=>verifyOtaVersionAdvance(m,structuredClone(m),['.github/scripts/prepare-update-channel.mjs']));
   const changed=structuredClone(m);changed.runtime.files[0].sha256='b'.repeat(64);
   assert.throws(()=>verifyOtaVersionAdvance(changed,m,['.github/scripts/prepare-update-channel.mjs']),/does not advance/);
-  assert.throws(()=>verifyOtaVersionAdvance(m,m,['server-game/current/app.js']),/does not advance/);
+  assert.doesNotThrow(()=>verifyOtaVersionAdvance(m,structuredClone(m),['server-game/current/app.js']));
+  assert.throws(()=>verifyOtaVersionAdvance(changed,m,['server-game/current/app.js']),/does not advance/);
+});
+
+test('Same-version repair rejects unverified inventory and any shell mismatch',()=>{
+ const current=manifest('3.143',{minimumShellVersion:'3.110'});
+ const deployed=structuredClone(current);
+ assert.doesNotThrow(()=>verifyOtaVersionAdvance(current,deployed,['server-game/current/app.js']));
+ deployed.minimumShellVersion='3.109';
+ assert.throws(()=>verifyOtaVersionAdvance(current,deployed,['server-game/current/app.js']),/does not advance/);
+ deployed.minimumShellVersion='3.110';
+ deployed.runtime.files[0].sha256='invalid';
+ assert.throws(()=>verifyOtaVersionAdvance(current,deployed,['server-game/current/app.js']),/does not advance/);
 });
