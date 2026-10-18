@@ -22,8 +22,8 @@ test("Trạng thái có đèn xanh đỏ và tài khoản cực gọn, vẫn có
   assert.match(app,/aria-label="Đặt lại mật khẩu thành viên"/);
   assert.match(app,/aria-label="Xóa thành viên"/);
 });
-test("Bảo trì gộp Kiểm tra thành khung 02, Công việc 03, Giao diện 04",()=>{
-  const groups=["settingsGroupUpdate","settingsGroupHealth","settingsGroupTasks","settingsGroupAppearance"];
+test("Bảo trì nằm tại khung 02, Giao diện chuyển thành khung 03",()=>{
+  const groups=["settingsGroupUpdate","settingsGroupHealth","settingsGroupAppearance"];
   assert.ok(settings.includes('id="quickMaintenanceCard"'));
   assert.ok(settings.includes('id="settingsRunHealth"'));
   let prev=-1;
