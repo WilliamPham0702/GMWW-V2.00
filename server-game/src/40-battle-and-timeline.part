@@ -260,7 +260,72 @@ async function advancePlayPhase(){
 const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
+const battleDayActions=()=>{
+  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
+    night=Math.max(1,Number(playSceneState.night)||1),
+    matchId=String(playSceneRuntime.room?.matchId||''),
+    ledger=Array.isArray(playSceneRuntime.dayActionUsage)?playSceneRuntime.dayActionUsage:[],
+    usedArtifacts=Array.isArray(playSceneRuntime.artifactCycle?.accepted)?playSceneRuntime.artifactCycle.accepted:[],
+    names={'action_stab':'Đâm','action_bear_scan':'Soi nhóm','action_knight_last_strike':'Hiệp Sĩ chọn người chết'};
+  const catalog=(kind)=>Array.isArray(state.actions)?state.actions:Array.isArray(state.actions?.[kind])?state.actions[kind]:[];
+  const roleActions=[];
+  const add=(fn,owner,card,isArtifact)=>{
+    if(!fn||fn.passive||!['day','any'].includes(String(fn.phase||''))||
+      (fn.fromNight!=null&&night<Number(fn.fromNight))||
+      (fn.toNight!=null&&night>Number(fn.toNight)))return;
+    const actorId=String(owner.loginId||''),roleId=isArtifact?'':String(owner.roleId||''),
+      artifactId=isArtifact?String(owner.artifactId||''):'',actionId=String(fn.actionId||fn.id||'');
+    if(!actorId||!actionId)return;
+    const knight=roleId==='role_knight'&&actionId==='action_knight_last_strike'&&
+      playSceneRuntime.gallows?.stage==='resolved'&&playSceneRuntime.gallows?.outcome==='dead'&&
+      playSceneRuntime.gallows?.candidateId===actorId;
+    const dead=playPlayerEffect(actorId)==='dead',expelled=playPlayerEffect(actorId)==='expelled',
+      frozen=playPlayerEffect(actorId)==='frozen';
+    const own=ledger.filter(x=>x.actorId===actorId&&x.roleId===roleId&&x.artifactId===artifactId);
+    const hits=own.filter(x=>x.actionId===actionId);
+    const mode=String(fn.usageMode||'unlimited'),quota=Math.max(1,Number(fn.usageCount)||1);
+    let blocked=frozen||expelled||(dead&&!fn.actorMayBeDead&&!knight),
+      reason=blocked?'Người thực hiện đã chết hoặc bị khóa hành động.':'';
+    if(!isArtifact){
+      if(card?.flags?.allowMultipleActions===false&&own.some(x=>Number(x.day)===night)){
+        blocked=true;reason='Đã thực hiện một chức năng trong ngày.'}
+      if((['onceGame','nGame'].includes(mode)&&hits.length>=quota)||
+        (mode==='eachNight'&&hits.filter(x=>Number(x.day)===night).length>=quota)){
+        blocked=true;reason='Hết lượt dùng chức năng.'}
+      if(actionId==='action_bear_scan'&&hits.some(x=>Number(x.day)===night)){
+        blocked=true;reason='Thần Gấu chỉ soi một lần mỗi ngày.'}
+    }else if(usedArtifacts.some(x=>String(x.playerId||'')==='member:'+actorId&&String(x.artifactId||'')===artifactId)){
+      blocked=true;reason='Artifact đã sử dụng trong ngày.'}
+    const definitions=catalog(isArtifact?'artifacts':'role'),
+      def=definitions.find(x=>String(x?.id||'')===actionId),
+      label=String(def?.name||fn.name||names[actionId]||fn.description||'Hành động').trim();
+    const name=/^action[-_]/i.test(label)?'Hành động':label;
+    const ownerId=isArtifact?'artifact:'+artifactId:'role:'+roleId;
+    roleActions.push({id:'day:'+ownerId+':'+actorId+':'+actionId,
+      actionId,roleId,artifactId,name,actorIds:[actorId],
+      type:battleRules()?.resolvedType({actionId,name,effectIds:fn.effectIds||[]})||'effect_notice',
+      targetCount:fn.noTarget?0:Math.max(0,Math.min(30,Number(fn.targetCount??1)||0)),
+      noTarget:!!fn.noTarget,noSelf:fn.noSelf!==false,allowDead:!!fn.allowDead,
+      actorMayBeDead:!!fn.actorMayBeDead||knight,
+      effectIds:Array.isArray(fn.effectIds)?fn.effectIds:[],unavailable:blocked,
+      unavailableReason:reason});
+  };
+  for(const owner of rows){
+    const role=(state.cards||[]).find(x=>String(x.id||'')===String(owner.roleId||''));
+    if(role)for(const fn of role.functions||[])add(fn,owner,role,false);
+    const artId=String(owner.artifactId||'');
+    if(artId){
+      const art=(state.artifacts||[]).find(x=>String(x.id||'')===artId);
+      if(art){
+        const fns=Array.isArray(art.functions)&&art.functions.length?art.functions:art.actions||[];
+        for(const fn of fns)add(fn,owner,art,true);
+      }
+    }
+  }
+  return roleActions;
+};
 const battleActions=()=>{
+  if(playSceneState.phase==='day')return battleDayActions();
   const turn=battleTurn();
   const actions=battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:
     battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state,playSceneRuntime.artifactCycle?.accepted)||[];
