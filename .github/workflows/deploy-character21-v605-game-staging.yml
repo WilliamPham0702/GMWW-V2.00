@@ -12,6 +12,9 @@ on:
       - 'src/gmww-members-live.js'
       - 'scripts/build-character21-v605-game-staging.mjs'
       - 'scripts/build-character22-30-art-review.mjs'
+      - 'assets/characters/overhaul-v600/character-2*/avatar.webp'
+      - 'assets/characters/overhaul-v600/character-30/avatar.webp'
+      - 'assets/characters/overhaul-v600/portraits-22-30-v606-staging.json'
       - 'tests/character-v606-next-art-review.test.mjs'
       - '.github/workflows/deploy-character21-v605-game-staging.yml'
   workflow_dispatch:
@@ -108,6 +111,17 @@ jobs:
           grep -q 'Character 22' /tmp/char-v606-review.html
           grep -q 'character-30' /tmp/char-v606-review.html
           grep -q 'gmww-character-v600-review' /tmp/char-v606-review.html
+          grep -q 'Chưa có skin GLB 8 hướng' /tmp/char-v606-review.html
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import roster from './assets/characters/overhaul-v600/portraits-22-30-v606-staging.json' with {type:'json'};
+          const html=fs.readFileSync('/tmp/char-v606-review.html','utf8');
+          for(const row of roster.characters){
+            if(!html.includes('data-character="'+row.id+'"'))throw Error('PORTRAIT_MISSING_'+row.id);
+          }
+          NODE
+          node scripts/verify-character22-30-staging.mjs
           curl -fsS "$BASE/?characterV605=1" > /tmp/char21-player.html
           grep -q 'GMWW PLAYER' /tmp/char21-player.html
           curl -fsS "$BASE/gmww-members-live.js" > /tmp/char21-player-app.js
