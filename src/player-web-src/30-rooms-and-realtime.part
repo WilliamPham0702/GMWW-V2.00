@@ -81,7 +81,8 @@ function ensureInteractionUi(){
 function interactionMeta(type){return type==='frozen'?['❄️','BỊ ĐÓNG BĂNG','frozen']:type==='expelled'?['🚪','BỊ ĐUỔI KHỎI LÀNG','expelled']:type==='dead'?['💀','BẠN ĐÃ CHẾT','dead']:type==='assassin_mark'?['🎯','BỊ ĐÁNH DẤU','marked']:type==='thumb_vote'?['⚖️','HÃY CHỌN DẤU','vote']:['✨','HIỆU ỨNG','notice']}
 function showPlayerInteraction(ix){
   if(!ix||!ix.id||ix.status&&ix.status!=='pending')return;if(String(ix.loginId||'').toLowerCase()!==String(state.member?.loginId||'').toLowerCase())return;
-  if(ix.type==='assassin_mark'){setRoleEffect(ix);return}
+  // GM's secret choice is never provided by the server. This is the public morning answer prompt.
+  if(ix.type==='assassin_mark')setRoleEffect(ix);
   if(['frozen','expelled','dead'].includes(ix.type)){setRoleEffect(ix);respondInteraction(ix.id,'ĐÃ HIỂU',true);return}
   ensureInteractionUi();if(state.activeInteractionId===ix.id&&$('#gmwwPlayerInteraction')?.classList.contains('show'))return;state.activeInteractionId=ix.id;state.activeInteraction=ix;
   const el=$('#gmwwPlayerInteraction'),meta=interactionMeta(ix.type),card=el.querySelector('.ix-card');card.className='ix-card ix-'+meta[2];el.querySelector('.ix-icon').textContent=meta[0];el.querySelector('h2').textContent=meta[1];el.querySelector('p').textContent=ix.message||'Thông báo từ Quản Trò.';
@@ -92,7 +93,7 @@ function showPlayerInteraction(ix){
 function handlePendingInteractions(rows){for(const ix of (Array.isArray(rows)?rows:[]))if(ix?.status==='pending'){showPlayerInteraction(ix);break}}
 async function respondInteraction(id,response,silent=false){
   if(!state.roomCode||!state.token)return;
-  try{await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/interaction/respond',{method:'POST',headers:auth(),body:JSON.stringify({interactionId:id,response})});if(state.roleEffects?.assassin_mark?.id===id){delete state.roleEffects.assassin_mark;renderRoleEffects()}const el=$('#gmwwPlayerInteraction');if(el)el.classList.remove('show');state.activeInteractionId='';state.activeInteraction=null;if(!silent)toast(response==='👍'||response==='👎'?'Đã gửi '+response+' cho Quản Trò.':'Đã xác nhận.');setTimeout(()=>pollRoomState(),120)}catch(e){if(!silent)toast(e.message||'Không gửi được phản hồi.')}
+  try{const ack=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/interaction/respond',{method:'POST',headers:auth(),body:JSON.stringify({interactionId:id,response})});if(state.roleEffects?.assassin_mark?.id===id){delete state.roleEffects.assassin_mark;renderRoleEffects()}const el=$('#gmwwPlayerInteraction');if(el)el.classList.remove('show');state.activeInteractionId='';state.activeInteraction=null;if(!silent)toast(ack?.assassinOutcome==='dead'?'Sát Thủ: Bạn đã chết.':ack?.assassinOutcome==='survived'?'Sát Thủ: Bạn đã sống sót.':response==='👍'||response==='👎'?'Đã gửi '+response+' cho Quản Trò.':'Đã xác nhận.');setTimeout(()=>pollRoomState(),120)}catch(e){if(!silent)toast(e.message||'Không gửi được phản hồi.')}
 }
 window.GMWWPlayerInteraction={show:showPlayerInteraction,respond:respondInteraction};
 async function pollRoomState(){
