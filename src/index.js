@@ -1245,9 +1245,10 @@ export class RoomDurableObject extends DurableObject {
     if(p==="morning")for(const loginId of dawnVictims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
       if(rows.some(row=>String(row?.id||"")===id))continue;
+      const maidenDeath=(maiden?.newVictims||[]).includes(loginId);
       rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
-        night:n,cycleKey:key,effectActive:true,actionId:"action_wolf_bite",
-        effectId:"effect_wolf_bite",effectName:"Sói Cắn",message:"Bạn đã chết vì Sói Cắn.",
+        night:n,cycleKey:key,effectActive:true,actionId:maidenDeath?"action_visit_house":"action_wolf_bite",
+        effectId:maidenDeath?"effect_visit_house":"effect_wolf_bite",effectName:maidenDeath?"Thiếu Nữ Thăm Nhà":"Sói Cắn",message:maidenDeath?"Thiếu Nữ chết do luật Thăm Nhà.":"Bạn đã chết vì Sói Cắn.",
         createdAt:now,source:"wolf-night-engine",status:"pending",response:null});
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
     }
