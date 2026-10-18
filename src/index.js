@@ -680,7 +680,7 @@ export class RoomDurableObject extends DurableObject {
   async gallowsState(meta){
     const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||"");
     const stored=await this.ctx.storage.get(key);
-    const ballot=gallowsSnapshot(stored,meta)||{
+    const ballot=stored&&stored.matchId===String(meta.matchId||"")&&stored.cycleKey===String(meta.cycleKey||"")?stored:{
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
       day:Number(meta.cycleNight||0),stage:"nominating",candidateId:null,
       nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
