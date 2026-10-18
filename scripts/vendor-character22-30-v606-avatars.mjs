@@ -13,8 +13,14 @@ const sourceSHA=sha(Buffer.from(html));
 if(sourceSHA!==roster.sourcePageSHA256)throw Error('APPROVED_PAGE_HASH_MISMATCH: '+sourceSHA);
 // Only exact inline images labeled with their original character ID can be accepted.
 // Never crop an adjacent artwork or use the V6.05 Character21 skin as a surrogate.
-const extracted=[...html.matchAll(/<img\s+src="data:image\/webp;base64,([A-Za-z0-9+/=]+)"[^>]*\balt="(character-(?:2[2-9]|30))"/g)];
-const map=new Map(extracted.map(m=>[m[2],Buffer.from(m[1],'base64')]));
+const offset=html.indexOf('const items=');
+if(offset<0)throw Error('SOURCE_MISSING_ITEMS_ARRAY');
+const end=html.indexOf('];',offset+12);
+if(end<0)throw Error('SOURCE_ITEMS_NOT_TERMINATED');
+const items=JSON.parse(html.slice(offset+'const items='.length,end+1));
+if(!Array.isArray(items)||items.length!==30)throw Error('EXPECTED_30_APPROVED_ITEMS');
+const extracted=items.filter(x=>/^character-(2[2-9]|30)$/.test(x.id)&&x.kind==='Cơ bắp'&&String(x.src).startsWith('data:image/webp;base64,'));
+const map=new Map(extracted.map(x=>[x.id,Buffer.from(x.src.split(',')[1],'base64')]));
 if(map.size!==9)throw Error('EXPECTED_9_APPROVED_COSTUME_IMAGES_GOT_'+map.size);
 const targets=roster.characters;
 if(targets.length!==9||targets.some((r,i)=>r.id!=='character-'+(22+i)||r.availableGLB!==false||r.validArtworkViews!==1))throw Error('ROSTER_CONTRACT_FAILURE');
