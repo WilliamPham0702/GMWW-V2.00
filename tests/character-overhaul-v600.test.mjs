@@ -26,7 +26,7 @@ test('Legacy slot remap does not destroy member data or expose obsolete 31..42 s
  assert.equal(characterV600LegacyId('bogus'),null);
 });
 test('Release is BLOCKED until 30 unique approved avatar and skin assets actually exist',()=>{
- const exists=p=>fs.existsSync(path.join(root,'assets',p.replace(/^\\/characters\\//,'characters/').replace(/^characters\\//,'characters/')));
+ const exists=p=>fs.existsSync(path.join(root,'assets',String(p).replace(/^\//,'')));
  const audit=characterV600AssetAudit(exists);
  assert.equal(CHARACTER_V600_READY,false);
  assert.equal(CHARACTER_V600_MANIFEST.readyForMain,false);
