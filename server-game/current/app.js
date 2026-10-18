@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.134';
+const VERSION='3.135';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3542,6 +3542,44 @@ function battleBindResultPopup(){
   });
   const stop=()=>{drag=null};grip.addEventListener('pointerup',stop);grip.addEventListener('pointercancel',stop);
 }
+/* V3.135: draggable affected-character chooser; same clamping for title and confirm-OK drag. */
+function battleTargetClampPosition(width,height,left,top,viewportWidth=innerWidth,viewportHeight=innerHeight){
+  const gap=6;
+  return {left:Math.max(gap,Math.min(Math.max(gap,viewportWidth-width-gap),left)),
+    top:Math.max(gap,Math.min(Math.max(gap,viewportHeight-height-gap),top))};
+}
+function battlePlaceTargetSheet(sheet,left,top){
+  const p=battleTargetClampPosition(sheet.offsetWidth,sheet.offsetHeight,left,top);
+  sheet.style.setProperty('left',p.left+'px','important');sheet.style.setProperty('top',p.top+'px','important');
+  sheet.style.setProperty('right','auto','important');sheet.style.setProperty('bottom','auto','important');
+  sheet.style.setProperty('transform','none','important');
+  battleState.confirmPosition=p;
+}
+function battleBindTargetSheetDrag(){
+  const sheet=document.getElementById('battleTargetSheet'),grip=document.getElementById('battleTargetGrip');
+  if(!sheet||!grip||grip.dataset.dragReady)return;grip.dataset.dragReady='1';
+  let drag=null;
+  grip.addEventListener('pointerdown',e=>{
+    if(sheet.hidden||sheet.classList.contains('is-confirm-only')||e.target.closest('button')||(e.button!==0&&e.pointerType!=='touch'))return;
+    const rect=sheet.getBoundingClientRect();
+    drag={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,left:rect.left,top:rect.top};
+    try{grip.setPointerCapture(e.pointerId)}catch{}
+    e.preventDefault();
+  });
+  grip.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.pointerId)return;
+    battlePlaceTargetSheet(sheet,drag.left+e.clientX-drag.startX,drag.top+e.clientY-drag.startY);
+    e.preventDefault();
+  });
+  const stop=e=>{
+    if(!drag||e.pointerId!==drag.pointerId)return;
+    drag=null;try{grip.releasePointerCapture(e.pointerId)}catch{}
+  };
+  grip.addEventListener('pointerup',stop);grip.addEventListener('pointercancel',stop);
+  const keepVisible=()=>{if(!sheet.hidden&&sheet.style.top)battlePlaceTargetSheet(sheet,sheet.getBoundingClientRect().left,sheet.getBoundingClientRect().top)};
+  window.addEventListener('resize',keepVisible,{passive:true});
+  window.visualViewport?.addEventListener('resize',keepVisible,{passive:true});
+}
 function battleBindConfirmDrag(){
   const sheet=document.getElementById('battleTargetSheet'),ok=document.getElementById('battleTargetConfirm');
   if(!sheet||!ok||ok.dataset.dragReady)return;ok.dataset.dragReady='1';
@@ -3556,11 +3594,7 @@ function battleBindConfirmDrag(){
     if(!gesture||gesture.id!==e.pointerId)return;
     if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>7)gesture.moved=true;
     if(!gesture.moved)return;
-    const left=Math.max(6,Math.min(innerWidth-sheet.offsetWidth-6,gesture.left+e.clientX-gesture.x));
-    const top=Math.max(6,Math.min(innerHeight-sheet.offsetHeight-6,gesture.top+e.clientY-gesture.y));
-    sheet.style.setProperty('left',left+'px','important');sheet.style.setProperty('top',top+'px','important');
-    sheet.style.setProperty('right','auto','important');sheet.style.setProperty('bottom','auto','important');
-    sheet.style.setProperty('transform','none','important');battleState.confirmPosition={left,top};
+    battlePlaceTargetSheet(sheet,gesture.left+e.clientX-gesture.x,gesture.top+e.clientY-gesture.y);
   });
   const end=()=>{
     if(gesture?.moved)battleState.ignoreConfirmClickUntil=Date.now()+400;
@@ -3921,7 +3955,7 @@ function initBattleControls(){
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   document.getElementById('battleDetailsClose')?.addEventListener('click',()=>battleToggleDetails(false));
-  initBattleFloatingClock();initBattleFloatingUndo();battleBindConfirmDrag();battleBindResultPopup();
+  initBattleFloatingClock();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();
   document.getElementById('battleWolfClose')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle()});
   document.addEventListener('pointerdown',event=>{
     if(playSceneState.step!=='battle'||!battleState.wolfOpen)return;
