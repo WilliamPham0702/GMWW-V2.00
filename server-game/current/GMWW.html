@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.144</title>
-<link rel="stylesheet" href="style.css?v=3.144-compact-room">
+<title>GMWW V3.145</title>
+<link rel="stylesheet" href="style.css?v=3.145-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -27,6 +27,15 @@
 .gmww-lab-summary{margin:14px 0;padding:12px;border-radius:11px;background:#102f43;font-size:13px;line-height:1.55}
 .gmww-lab-log{display:grid;gap:10px}.gmww-lab-night{border:1px solid #325c79;border-radius:12px;background:rgba(6,29,45,.94);padding:12px}.gmww-lab-night h3{font-size:14px;margin:0 0 8px;color:#8ce6fb}.gmww-lab-event{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid rgba(138,207,230,.12);font-size:12px;line-height:1.5}.gmww-lab-pass{color:#9bffc5;font-weight:800;white-space:nowrap}.gmww-lab-fail{color:#ffb4a9;font-weight:800;white-space:nowrap}
 @media(max-width:360px){.gmww-lab-controls{grid-template-columns:1fr}}
+</style>
+<style>
+#settings #gmwwCloudflarePanel[hidden]{display:none!important}
+#settings #gmwwCloudflarePanel{margin:12px 0;padding:14px;border:1px solid rgba(114,208,214,.36);border-radius:14px}
+#settings #gmwwCloudflarePanel .ops-status-grid{margin:12px 0;gap:8px}
+#settings #gmwwCloudflarePanel .ops-status-grid b{font-variant-numeric:tabular-nums}
+#settings #gmwwCloudflarePanel .gmww-cloudflare-notice{display:block;margin-top:11px;line-height:1.5;opacity:.85}
+#settings #gmwwCfActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+#settings #gmwwCfActions button{min-width:0;flex:1 1 130px}
 </style>
 </head>
 <body>
@@ -563,7 +572,7 @@
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
           <div class="settings-health-action"><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
 <p class="settings-tools-grid-summary" id="settingsToolsGridSummary">Đầy đủ 15 công cụ · Cuộn xuống để xem tất cả</p>
-          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="14 công cụ kiểm tra và bảo trì hiển thị theo lưới">
+          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="15 công cụ kiểm tra và bảo trì hiển thị theo lưới">
 <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
           <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
@@ -574,7 +583,7 @@
         </div>
             <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
               <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" onclick="window.location.assign('https://gmww-cloudflare-admin.williampham0702.workers.dev/')"><span>☁</span><b>MỞ QUẢN LÝ CLOUDFLARE</b></button>
+                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b>QUẢN LÝ CLOUDFLARE</b></button>
               </div>
             </div>
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
@@ -603,6 +612,22 @@
               </div>
             </div>
           </div>
+          <section class="settings-operation-console" id="gmwwCloudflarePanel" aria-label="Quản lý Cloudflare ngay trong Server" role="region" hidden>
+            <div class="settings-operation-console-heading"><span class="ops-dot"></span><b>CLOUDFLARE · TÀI NGUYÊN &amp; BẢO TRÌ</b><span class="ops-pill" id="gmwwCfState">CHƯA TẢI</span></div>
+            <div class="ops-status-grid" aria-live="polite">
+              <div><small>NAMESPACES</small><b id="gmwwCfNamespaces">—</b></div>
+              <div><small>PREVIEW</small><b id="gmwwCfPreviews">—</b></div>
+              <div><small>ĐỦ ĐIỀU KIỆN DỌN</small><b id="gmwwCfEligible">—</b></div>
+              <div><small>ĐÃ DỌN LƯỢT GẦN NHẤT</small><b id="gmwwCfDeleted">—</b></div>
+            </div>
+            <small class="maintenance-detail" id="gmwwCfLastRun" role="status">Chưa tải được báo cáo kiểm toán.</small>
+            <div class="health-v236-actions" id="gmwwCfActions">
+              <button class="settings-action settings-action-server" id="gmwwCfRefresh" type="button"><span>↻</span><b>LÀM MỚI</b></button>
+              <button class="settings-action settings-action-server" id="gmwwCfScan" type="button"><span>⌕</span><b>QUÉT PREVIEW</b></button>
+              <button class="settings-action settings-action-server" id="gmwwCfCleanup" type="button"><span>♻</span><b>DỌN THỦ CÔNG</b></button>
+            </div>
+            <small class="gmww-cloudflare-notice">Quét / dọn thủ công mở GitHub Actions để chủ dự án xác nhận bằng tài khoản GitHub, không cần mã quản trị riêng. Tự quét &amp; dọn theo lịch đang cấu hình. Chỉ Preview đủ điều kiện và không có dữ liệu mới được phép xoá. Production và các phòng chơi luôn được giữ nguyên.</small>
+          </section>
           <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
           <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
           <small class="maintenance-detail" id="maintenanceDetail">—</small>
@@ -851,7 +876,7 @@
 <script src="battle-controls.js?v=3.136-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.144-compact-room&status=4"></script>
+<script src="app.js?v=3.145-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
@@ -982,6 +1007,59 @@
     }
     summary.textContent=nights+' đêm · '+pass+' PASS / '+fail+' FAIL (bộ mô phỏng tham chiếu). CHƯA kiểm thử Engine thực hoặc phiên chơi Production.';
   });
+})();
+</script>
+<script>
+/* GMWW Cloudflare maintenance — on-demand, read-only status in Server Settings.
+ * Destructive commands remain owner-authenticated GitHub Actions, never public GM APIs. */
+(function(){
+  'use strict';
+  const report='https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/issues/320';
+  const actions='https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml';
+  const get=id=>document.getElementById(id);
+  const set=(id,value)=>{const el=get(id);if(el)el.textContent=String(value)};
+  async function refresh(){
+    set('gmwwCfState','ĐANG QUÉT');
+    try{
+      const response=await fetch(report,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+      if(!response.ok)throw new Error('GitHub HTTP '+response.status);
+      const issue=await response.json();
+      const match=String(issue.body||'').match(/<!-- GMWW_CF_STATUS_START -->\s*(\{[^\n]*\})\s*<!-- GMWW_CF_STATUS_END -->/);
+      if(!match)throw new Error('Chưa có báo cáo');
+      const data=JSON.parse(match[1]);
+      for(const key of ['namespaceCount','previewCount','eligibleCount','deletedCount'])
+        if(!Number.isSafeInteger(data[key])||data[key]<0)throw new Error('Báo cáo không hợp lệ');
+      if(data.schema!==1||data.productionProtected!==true)throw new Error('Báo cáo chưa xác minh an toàn Production');
+      set('gmwwCfNamespaces',data.namespaceCount);
+      set('gmwwCfPreviews',data.previewCount);
+      set('gmwwCfEligible',data.eligibleCount);
+      set('gmwwCfDeleted',data.deletedCount);
+      const date=Date.parse(data.updatedAt||'');
+      set('gmwwCfLastRun',Number.isFinite(date)
+        ? 'Lần '+(data.mode==='cleanup'?'dọn':'quét')+' gần nhất: '+new Date(date).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})+' · '+(data.state==='success'?'Hoàn tất':'Có mục được bảo vệ')
+        : 'Báo cáo chưa có thời gian hợp lệ');
+      set('gmwwCfState','ĐÃ KIỂM TOÁN');
+    }catch(error){
+      set('gmwwCfState','KHÔNG KẾT NỐI');
+      set('gmwwCfLastRun','Không tải được báo cáo: '+String(error.message||error).slice(0,110));
+    }
+  }
+  function init(){
+    const button=get('gmwwCloudflareOpen'),panel=get('gmwwCloudflarePanel');
+    if(!button||!panel||button.dataset.bound)return;
+    button.dataset.bound='1';
+    button.addEventListener('click',()=>{
+      panel.hidden=!panel.hidden;
+      button.setAttribute('aria-expanded',String(!panel.hidden));
+      if(!panel.hidden)refresh();
+    });
+    const reload=get('gmwwCfRefresh');if(reload)reload.addEventListener('click',refresh);
+    for(const id of ['gmwwCfScan','gmwwCfCleanup']){
+      const item=get(id);if(item)item.addEventListener('click',()=>window.location.assign(actions));
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
 })();
 </script>
 </body>
