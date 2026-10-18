@@ -935,87 +935,6 @@ const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 setTimeout(initVillageSceneManager,0);
 let gmwwGmPresenceTimer=null,gmwwGmPresenceState=null;
-const GMWW_GM_AUTO_MOVE_MS=6500,GMWW_GM_AUTO_HOLD_MS=15000,GMWW_GM_AUTO_CYCLE_MS=GMWW_GM_AUTO_MOVE_MS+GMWW_GM_AUTO_HOLD_MS,GMWW_GM_AUTO_POINTS=[[28,38],[42,36],[58,36],[72,38],[77,48],[77,60],[73,70],[63,80],[60,92],[50,94],[40,92],[37,80],[27,70],[23,60],[23,48]];
-function gmwwGmHash(text){let h=2166136261>>>0;for(const ch of String(text||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h>>>0}
-function gmwwGmNearPlayer(x,y){
-  const ring=document.getElementById('playPlayerRing');
-  if(!ring||typeof playMapDisplay!=='function')return false;
-  const p=playMapDisplay(x,y),px=Number(p[0]),py=Number(p[1]);
-  if(!Number.isFinite(px)||!Number.isFinite(py))return false;
-  return [...ring.querySelectorAll('[data-play-player-id]')].some(el=>{
-    const xx=parseFloat(el.style.left),yy=parseFloat(el.style.top);
-    return Number.isFinite(xx)&&Number.isFinite(yy)&&Math.hypot((px-xx)/7.0,(py-yy)/9.0)<1;
-  });
-}
-function gmwwGmRoute(from,to){
-  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  if(!layout?.inside?.(from.x,from.y)||!layout?.inside?.(to.x,to.y))return [];
-  return layout.route(from,to);
-}
-function gmwwGmWalkPoint(from,to,t){
-  const path=gmwwGmRoute(from,to);
-  if(path.length<2)return from;
-  const lengths=path.slice(1).map((v,i)=>Math.hypot(v.x-path[i].x,(v.y-path[i].y)*1.78));
-  const total=lengths.reduce((a,b)=>a+b,0);let distance=Math.max(0,Math.min(1,t))*total;
-  for(let i=0;i<lengths.length;i++){
-    if(distance<=lengths[i]||i===lengths.length-1){
-      const f=Math.max(0,Math.min(1,distance/Math.max(lengths[i],1e-9)));
-      return {x:path[i].x+(path[i+1].x-path[i].x)*f,y:path[i].y+(path[i+1].y-path[i].y)*f};
-    }
-    distance-=lengths[i];
-  }
-  return to;
-}
-function gmwwGmClearWalk(from,to){
-  // Stationary safe point is a valid patrol position, not a failed path.
-  // During the 15s GM hold, the route engine may return one point.
-  if(Math.hypot(Number(to.x)-Number(from.x),Number(to.y)-Number(from.y))<0.01)
-    return !!globalThis.GMWW_VILLAGE_LAYOUT?.inside?.(to.x,to.y)&&!gmwwGmNearPlayer(to.x,to.y);
-  const path=gmwwGmRoute(from,to);
-  if(path.length<2)return false;
-  for(let i=1;i<path.length;i++){
-    const a=path[i-1],b=path[i],steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
-    for(let n=0;n<=steps;n++){
-      const t=n/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
-      if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(x,y)||gmwwGmNearPlayer(x,y))return false;
-    }
-  }
-  return true;
-}
-function gmwwGmAutoPoint(session,index){
-  const route=GMWW_GM_AUTO_POINTS,offset=gmwwGmHash(session)%route.length;
-  const n=(offset+index)%route.length,base=route[n];
-  // Follow adjacent village-perimeter waypoints, never random chords through seated players.
-  return {x:base[0],y:base[1]};
-}
-let gmwwGmLastSafePoint=null,gmwwGmLastPatrolSession='';
-function gmwwGmKeepClear(actor){
-  if(!actor)return actor;
-  const p={x:actor.x,y:actor.y},layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  const safe=layout?.inside?.(p.x,p.y)&&!gmwwGmNearPlayer(p.x,p.y)&&
-    (!gmwwGmLastSafePoint||gmwwGmClearWalk(gmwwGmLastSafePoint,p));
-  if(safe){gmwwGmLastSafePoint=p;return actor}
-  // Pause smoothly at the last rendered safe position; never teleport across the village.
-  if(gmwwGmLastSafePoint&&layout?.inside?.(gmwwGmLastSafePoint.x,gmwwGmLastSafePoint.y))
-    return {...actor,moving:false,gait:'idle',x:gmwwGmLastSafePoint.x,y:gmwwGmLastSafePoint.y,status:'GM CHỜ ĐƯỜNG TRỐNG'};
-  // A new session may spawn on an occupied seat. Choose a nearby safe entry once.
-  const nearest=GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))
-    .filter(x=>layout?.inside?.(x.x,x.y)&&!gmwwGmNearPlayer(x.x,x.y))
-    .sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
-  if(!nearest)return {...actor,moving:false,gait:'idle',x:-100,y:-100};
-  gmwwGmLastSafePoint=nearest;
-  return {...actor,moving:false,gait:'idle',...nearest,status:'GM CHỜ ĐƯỜNG TRỐNG'};
-}
-function gmwwGmActorAt(now=Date.now()){
-  const p=gmwwGmPresenceState;if(!p?.online)return null;
-  if(String(p.sessionId||'')!==gmwwGmLastPatrolSession){
-    gmwwGmLastPatrolSession=String(p.sessionId||'');
-    gmwwGmLastSafePoint=null; // Never carry a blocked path from a previous GM session.
-  }
-  const manualUntil=Math.max(0,Number(p.manualUntil||0)),ms=Math.max(0,Number(p.moveStartedAt||0)),md=Math.max(0,Number(p.moveDurationMs||0));
-  if(manualUntil>now&&ms>0&&md>0&&[p.moveFromX,p.moveFromY,p.moveToX,p.moveToY].every(v=>Number.isFinite(Number(v)))){const moving=now<ms+md,t=Math.max(0,Math.min(1,(now-ms)/Math.max(1,md))),from={x:Number(p.moveFromX),y:Number(p.moveFromY)},to={x:Number(p.moveToX),y:Number(p.moveToY)};return gmwwGmKeepClear({moving,gait:moving?'run':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG DI CHUYỂN':'GM ONLINE'})}
-  const base=manualUntil>0?manualUntil:Math.max(1,Number(p.sessionStartedAt||p.lastSeenAt||now)),seed=manualUntil>0?(String(p.sessionId||base)+':after:'+manualUntil):String(p.sessionId||base),elapsed=Math.max(0,now-base),segment=Math.floor(elapsed/GMWW_GM_AUTO_CYCLE_MS),within=elapsed%GMWW_GM_AUTO_CYCLE_MS,anchor=manualUntil>0&&Number.isFinite(Number(p.moveToX))&&Number.isFinite(Number(p.moveToY))?{x:Number(p.moveToX),y:Number(p.moveToY)}:null,from=segment===0&&anchor?anchor:gmwwGmAutoPoint(seed,segment),to=gmwwGmAutoPoint(seed,segment+1),moving=within<GMWW_GM_AUTO_MOVE_MS,t=Math.max(0,Math.min(1,within/GMWW_GM_AUTO_MOVE_MS));return gmwwGmKeepClear({moving,gait:moving?'walk':'idle',x:gmwwGmWalkPoint(from,to,moving?t:1).x,y:gmwwGmWalkPoint(from,to,moving?t:1).y,from,to,status:moving?'GM ĐANG TUẦN TRA':'GM ONLINE'})
-}
 async function gmwwSendGmPresence(online=true){
   try{
     const res=await fetch(GMWW_SERVER_BASE+'/api/gm/presence',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({online:online!==false,roomCode:online!==false&&isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store',keepalive:true}),d=await res.json();if(res.ok){
@@ -1029,11 +948,6 @@ async function gmwwSendGmPresence(online=true){
       if(typeof renderPlayPlayers==='function'&&document.getElementById('playPlayerRing'))renderPlayPlayers();
     }
   }catch(_){}
-}
-async function gmwwMoveGmCharacter(x,y){
-  const actor=gmwwGmActorAt(Date.now()),from=actor?{x:actor.x,y:actor.y}:{x:50,y:76};
-  if(!gmwwGmClearWalk(from,{x,y})){playFlashError('GM không có đường đi an toàn tới vị trí này. Hãy chọn nơi trống.');return false}
-  try{const res=await fetch(GMWW_SERVER_BASE+'/api/gm/move',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({fromX:from.x,fromY:from.y,x,y,roomCode:isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store'}),d=await res.json();if(!res.ok)throw new Error(d?.message||d?.error||('HTTP '+res.status));gmwwGmPresenceState=d?.gm||gmwwGmPresenceState;renderPlayPlayers();syncPlayMovementTicker();return true}catch(err){playFlashError('Không di chuyển được GM. '+(err?.message||''));return false}
 }
 function gmwwStartGmPresence(){
   gmwwSendGmPresence(true);
@@ -3006,26 +2920,20 @@ async function playSyncRoom(force=false){
 }
 function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')return pos;const p=globalThis.GMWW_VILLAGE_LAYOUT.interpolate(m,now);return[p.x,p.y]}
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
-function renderPlayGmToken(){
-  const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(Date.now());if(!ring)return;ring.querySelector('[data-play-gm-rider]')?.remove();if(!actor)return;
-  const pt=playMapDisplay(actor.x,actor.y),el=document.createElement('button'),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.type='button';el.dataset.playGmRider='1';const idlePhase=Math.floor(Date.now()/2200)%12,gmAction=actor.moving?(actor.gait==='run'?'run':'walk'):(idlePhase===8?'shake':idlePhase===10?'howl':'idle');el.className='play-player-token is-gm-rider gm-action-'+gmAction+(String(playSceneState.activePlayerId||'')==='gm:online'?' is-active':'')+(actor.moving?' is-moving':'');el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.innerHTML='<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">GM</span><span class="play-presence-dot" data-online="true" aria-hidden="true"></span></b></div><div class="play-player-avatar"><div class="gm-wolf-character" data-gm-wolf-runtime="1"><div class="gm-wolf-shadow"></div><div class="gm-wolf-sprite"><img class="gm-wolf-segment gm-wolf-body" src="gm/gm-white-wolf.webp" alt="GM cưỡi sói trắng"><img class="gm-wolf-segment gm-wolf-rear-legs" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-segment gm-wolf-front-legs" src="gm/gm-white-wolf.webp" alt=""><img class="gm-wolf-segment gm-wolf-head" src="gm/gm-white-wolf.webp" alt=""></div></div></div>';el.setAttribute('aria-label',playSceneState.step==='battle'?'Mở Công cụ GM trên nhân vật sói':'GM • Online');if(playSceneState.step==='battle'){el.setAttribute('aria-controls','battleWolfMenu');el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-expanded',String(battleState.wolfOpen))}el.onclick=e=>{e.stopPropagation();if(playSceneState.step==='battle'){battleToggleWolfMenu();return}playSceneState.activePlayerId='gm:online';savePlayScene();renderPlayScene()};ring.appendChild(el)
-}
-function updatePlayGmToken(now=Date.now()){
-  const ring=document.getElementById('playPlayerRing'),actor=gmwwGmActorAt(now);if(!ring||!actor)return false;let el=ring.querySelector('[data-play-gm-rider]');if(!el){renderPlayGmToken();el=ring.querySelector('[data-play-gm-rider]');if(!el)return false}const pt=playMapDisplay(actor.x,actor.y),runDir=Number(actor?.to?.x??actor.x)-Number(actor?.from?.x??actor.x)<0?-1:1;el.style.setProperty('--gm-run-dir',String(runDir));el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(15+Math.round(pt[1]));el.classList.toggle('is-moving',actor.moving);el.classList.remove('gm-action-idle','gm-action-walk','gm-action-run','gm-action-shake','gm-action-howl');const idlePhase=Math.floor(now/2200)%12,gmAction=actor.moving?(actor.gait==='run'?'run':'walk'):(idlePhase===8?'shake':idlePhase===10?'howl':'idle');el.classList.add('gm-action-'+gmAction);el.setAttribute('aria-label',playSceneState.step==='battle'?'Mở Công cụ GM trên nhân vật sói':'GM • Online');if(playSceneState.step==='battle')el.setAttribute('aria-expanded',String(battleState.wolfOpen));return true
-}
+// GM wolf removed; firepit controls preserved.
 function playMovementFrame(){
   // The online GM can be idle indefinitely; avoid full DOM/rig reads at 60 FPS.
   // Keep ~30 FPS motion while preserving CSS-only status orbits independently.
   if(document.visibilityState==='hidden'){playSceneRuntime.moveTicker=0;return}
   const motionNow=performance.now();
-  const sceneMoving=playVillageMembers().some(p=>p?.movementStatus==='moving'||p?.villageActivity==='sitting')||!!gmwwGmActorAt(Date.now())?.moving;
+  const sceneMoving=playVillageMembers().some(p=>p?.movementStatus==='moving'||p?.villageActivity==='sitting');
   const interval=sceneMoving?33:220;
   if(motionNow-Number(playSceneRuntime.lastMotionPaintAt||0)<interval){
     playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);return
   }
   playSceneRuntime.lastMotionPaintAt=motionNow;
   const rows=playVillageMembers().filter(p=>playSeatMovementActive(p)||p?.villageActivity==='sitting');
-  const now=playNow(),ring=document.getElementById('playPlayerRing');if(!ring){playSceneRuntime.moveTicker=0;return}let active=updatePlayGmToken(now);
+  const now=playNow(),ring=document.getElementById('playPlayerRing');if(!ring){playSceneRuntime.moveTicker=0;return}let active=false;
   for(const m of rows){
     const id=String(m?.loginId||m?.participantId||''),el=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');if(!el)continue;
     const effect=playPlayerEffect(m.loginId),moving=effect!=='dead'&&playSeatMovementActive(m),sitting=effect!=='dead'&&playCharacterSitting(m,now);active=active||moving||sitting;
@@ -3037,7 +2945,7 @@ function playMovementFrame(){
   if(active)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);else playSceneRuntime.moveTicker=0
 }
 function syncPlayMovementTicker(){
-  const active=!!gmwwGmActorAt(Date.now())?.moving||playVillageMembers().some(p=>playPlayerEffect(p.loginId)!=='dead'&&(playSeatMovementActive(p)||p?.villageActivity==='sitting'));
+  const active=playVillageMembers().some(p=>playPlayerEffect(p.loginId)!=='dead'&&(playSeatMovementActive(p)||p?.villageActivity==='sitting'));
   if(active&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
   else if(!active)stopPlayMovementTicker()
 }
@@ -3154,7 +3062,7 @@ function renderPlayPlayers(){
       const pos=sid>=1&&sid<=seatCount?positions[sid-1]:valid(x)&&valid(y)?Object.values(globalThis.GMWW_VILLAGE_LAYOUT.clampPoint(x,y)):playRoamPoint(m.loginId,i,members.length);make(m,sid?battleRoomDisplayPosition(pos,sid,seatCount):pos,sid||null)
     })
   }
-  renderPlayGmToken();syncPlayMovementTicker();
+  syncPlayMovementTicker();
   // Vẽ lại vòng (realtime/poll) xóa class battle; gắn lại để GM luôn thấy ai đến lượt và mục tiêu đã chọn.
   if(playSceneState.step==='battle')battleMarkPlayers();
 }
