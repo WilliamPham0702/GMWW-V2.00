@@ -363,7 +363,9 @@
       "bodyProfile": "muscular-chibi",
       "styleRule": "same V5.83 GMWW chibi face, head/body proportions, color and costume detail; greater muscle definition only",
       "previewSkinVerified": true,
-      "productionEnabled": false
+      "productionEnabled": false,
+      "avatarSource": "V6.05_IPHONE_APPROVED_FRONT_VIEW",
+      "avatarSHA256": "b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801"
     },
     {
       "id": "character-22",
@@ -530,6 +532,8 @@
     "previewOnly": true,
     "gameGMIntegrationPending": true,
     "playerWebIntegrationPending": true,
-    "mainMergeApproved": false
+    "mainMergeApproved": false,
+    "avatarSHA256": "b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801",
+    "avatarAvailableOnDraftBranch": true
   }
 }
