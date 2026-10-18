@@ -375,17 +375,90 @@ function battleRenderTransferPanel(){
   let panel=document.getElementById('battleTransferPanel');
   if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';bar.insertAdjacentElement('afterend',panel)}
   const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable;
-  const dir=battleState.transferDir,sig=show+':'+dir+':'+battleState.busy;
+  const dir=battleState.transferDir,sig=show+':'+dir+':'+battleState.busy+':'+battleState.syncPending;
   if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;
-  panel.style.cssText=show?'display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px':'display:none';
+  panel.hidden=!show;
   if(!show){panel.innerHTML='';return}
-  const btn='padding:12px 14px;border-radius:10px;border:2px solid #d9b45a;font-weight:700;font-size:15px;background:#1d2a3a;color:#fff';
-  panel.innerHTML='<span style="font-size:13px;color:#fff">Dịch chuyển vết cắn:</span>'+
-    '<button type="button" data-transfer="left" style="'+btn+(dir==='left'?';background:#d9b45a;color:#111':'')+'">⬅ Trái</button>'+
-    '<button type="button" data-transfer="right" style="'+btn+(dir==='right'?';background:#d9b45a;color:#111':'')+'">Phải ➡</button>'+
-    '<button type="button" data-transfer-ok style="'+btn+'" '+(dir&&!battleState.busy?'':'disabled')+'>OK</button>';
-  panel.querySelectorAll('[data-transfer]').forEach(b=>b.onclick=()=>{battleState.transferDir=b.dataset.transfer;panel.dataset.sig='';battleRenderTransferPanel()});
-  const ok=panel.querySelector('[data-transfer-ok]');if(ok)ok.onclick=()=>battleConfirm(true);
+  const options=[['left','↩️','Dịch trái'],['none','⏺️','Không dịch'],['right','↪️','Dịch phải']];
+  panel.innerHTML='<div class="gmww-transfer-card"><strong>DỊCH CHUYỂN VẾT CẮN</strong>'+
+    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn hướng dịch vết cắn">'+
+    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
+    '</div><button type="button" data-transfer-ok '+(!dir||battleState.busy||battleState.syncPending?'disabled':'')+'>OK</button></div>';
+  panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
+    if(battleState.busy||battleState.syncPending)return;
+    battleState.transferDir=button.dataset.transfer;panel.dataset.sig='';battleRenderTransferPanel();
+  }));
+  panel.querySelector('[data-transfer-ok]')?.addEventListener('click',()=>{void battleConfirm(true)});
+}
+function battleCloseResultPopup(){
+  const popup=document.getElementById('battleResultPopup');if(popup)popup.hidden=true;
+}
+function battleShowResultPopup(title,message){
+  const popup=document.getElementById('battleResultPopup');if(!popup)return;
+  const headline=document.getElementById('battleResultTitle'),body=document.getElementById('battleResultMessage');
+  if(headline)headline.textContent=String(title||'KẾT QUẢ');
+  if(body)body.textContent=String(message||'');
+  popup.hidden=false;popup.dataset.turnKey=battleState.key;
+}
+function battleWolfOutcomeText(result){
+  if(!result?.ok)return 'Không thể xác định vết cắn: cần kiểm tra vị trí Seat.';
+  if(!result.attacked?.length)return 'Không có vết cắn trong đêm này.';
+  return result.attacked.map(x=>{
+    const from=battleMember(x.from)?.displayName||x.from,to=battleMember(x.to)?.displayName||x.to;
+    return (x.direction!=='none'?from+' → '+to:to)+(x.protected?' · ĐƯỢC BẢO VỆ':' · BỊ SÓI CẮN');
+  }).join(' · ');
+}
+function battleShowWitchIntel(turn){
+  const roles=turn?.kind==='role-group'?(turn.roles||[]):[turn];
+  if(!roles.some(row=>String(row?.roleId||'')==='role_witch'))return;
+  if(battleState.intelShownForKey===battleState.key)return;
+  battleState.intelShownForKey=battleState.key;
+  battleShowResultPopup('🐺 VẾT CẮN · PHÙ THỦY',battleWolfOutcomeText(playSceneRuntime.nightIntel));
+}
+function battleBindResultPopup(){
+  const popup=document.getElementById('battleResultPopup');if(!popup||popup.dataset.dragReady)return;
+  popup.dataset.dragReady='1';
+  document.getElementById('battleResultClose')?.addEventListener('click',battleCloseResultPopup);
+  const grip=document.getElementById('battleResultGrip');if(!grip)return;
+  let drag=null;
+  grip.addEventListener('pointerdown',e=>{
+    if(e.button!==0&&e.pointerType!=='touch')return;
+    const r=popup.getBoundingClientRect();drag={x:e.clientX,y:e.clientY,left:r.left,top:r.top,id:e.pointerId};
+    try{grip.setPointerCapture(e.pointerId)}catch{}e.preventDefault();
+  });
+  grip.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const left=Math.max(6,Math.min(innerWidth-popup.offsetWidth-6,drag.left+e.clientX-drag.x));
+    const top=Math.max(6,Math.min(innerHeight-popup.offsetHeight-6,drag.top+e.clientY-drag.y));
+    popup.style.left=left+'px';popup.style.top=top+'px';popup.style.right='auto';popup.style.bottom='auto';popup.style.transform='none';
+  });
+  const stop=()=>{drag=null};grip.addEventListener('pointerup',stop);grip.addEventListener('pointercancel',stop);
+}
+function battleBindConfirmDrag(){
+  const sheet=document.getElementById('battleTargetSheet'),ok=document.getElementById('battleTargetConfirm');
+  if(!sheet||!ok||ok.dataset.dragReady)return;ok.dataset.dragReady='1';
+  let gesture=null;
+  ok.addEventListener('pointerdown',e=>{
+    if(!sheet.classList.contains('is-confirm-only')||(e.button!==0&&e.pointerType!=='touch'))return;
+    const r=sheet.getBoundingClientRect();
+    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false};
+    try{ok.setPointerCapture(e.pointerId)}catch{}
+  });
+  ok.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>7)gesture.moved=true;
+    if(!gesture.moved)return;
+    const left=Math.max(6,Math.min(innerWidth-sheet.offsetWidth-6,gesture.left+e.clientX-gesture.x));
+    const top=Math.max(6,Math.min(innerHeight-sheet.offsetHeight-6,gesture.top+e.clientY-gesture.y));
+    sheet.style.setProperty('left',left+'px','important');sheet.style.setProperty('top',top+'px','important');
+    sheet.style.setProperty('right','auto','important');sheet.style.setProperty('bottom','auto','important');
+    sheet.style.setProperty('transform','none','important');battleState.confirmPosition={left,top};
+  });
+  const end=()=>{
+    if(gesture?.moved)battleState.ignoreConfirmClickUntil=Date.now()+400;
+    gesture=null;
+  };
+  ok.addEventListener('pointerup',end);ok.addEventListener('pointercancel',end);
 }
 function battleClear(){battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
 function battlePickAction(id){if(battleState.busy||battleState.syncPending)return;const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
