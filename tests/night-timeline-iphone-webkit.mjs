@@ -81,11 +81,13 @@ try{
  assert.equal(sent[0].actorId,'alice');assert.equal(sent[0].actionId,'swap');
  assert.deepEqual(sent[0].targetIds,['bob','carol']);
  assert.equal(await page.locator('#battleTargetSheet').isVisible(),false);
- assert.equal(await page.locator('[data-battle-action]').count(),1);
- assert.equal(await page.locator('[data-battle-action]').textContent(),'Soi');
- // The floating undo restores the last action plus the Artifact-use reservation.
+ // V3.142: OK advances to the next role automatically, here the wake-up turn.
+ await page.waitForFunction(()=>playSceneRuntime.nightRuntime.currentId==='wake');
+ assert.equal(await page.locator('[data-battle-action]').count(),0);
+ // Undo is still available on the next turn and restores Artifact use.
  await page.locator('#battleUndoButton').click();
  assert.equal(await page.evaluate(()=>calls.filter(x=>x.path==='/battle-undo').length),1);
+ await page.locator('[data-battle-index="2"]').click();
  assert.equal(await page.locator('[data-battle-action]').count(),2);
  await page.locator('[data-battle-index="1"]').click();
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early');

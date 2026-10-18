@@ -87,11 +87,11 @@ try{
  await jump('guard');ok(await action('guard','effect_notice','action_protect',['witch']));
  await manual('guard','status',{statusId:'disabled_2n'});
  await jump('wolf');ok(await action('wolf','effect_notice','action_wolf_bite',['witch']));
- await jump('fairy');ok(await action('fairy','effect_notice','action_transfer_bite',['witch'],{direction:'right'}));
+ await jump('fairy');ok(await action('fairy','effect_notice','action_transfer_bite',['witch'],{direction:'left'}));
  await manual('seer','expelled');await jump('seer');
  assert.equal((await action('seer','effect_notice','inspect',['guard'])).error,'ACTOR_CANNOT_ACT');
  const dawn=await cycle('morning',1);
- // Seat 5 (witch) -> seat 6 (alpha); guard on the old target cannot prevent redirected death.
+ // Seat 5 (witch) -> seat 6 (alpha) via visual LEFT, after inverted arrow correction; Guard on old target does not prevent death.
  s=await state();assert.equal(active(s,'alpha','dead').length,1);assert.equal(active(s,'witch','dead').length,0);
  assert.equal(active(s,'victim','frozen').length,0);
  assert.equal(ok(await gm('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'})).idempotent,true);

@@ -25,18 +25,18 @@ test('guard prevents direct wolf bite, not unrelated deaths',()=>{
 test('fairy moves bite to adjacent occupied seat BEFORE protection check',()=>{
   const result=resolve([bite('bob'),guard('bob'),fairy('right')]);
   assert.equal(result.ok,true);
-  assert.deepEqual(result.victims,['carol']);
-  assert.deepEqual(result.transfers,[{from:'bob',to:'carol',direction:'right'}]);
+  assert.deepEqual(result.victims,['alice']);
+  assert.deepEqual(result.transfers,[{from:'bob',to:'alice',direction:'right'}]);
 });
 test('guard on transferred destination prevents wolf bite',()=>{
-  const result=resolve([bite('bob'),fairy('right'),guard('carol')]);
+  const result=resolve([bite('bob'),fairy('right'),guard('alice')]);
   assert.equal(result.ok,true);
   assert.deepEqual(result.victims,[]);
-  assert.deepEqual(result.blocked,['carol']);
+  assert.deepEqual(result.blocked,['alice']);
 });
 test('left movement wraps around circle in seated order',()=>{
   const result=resolve([bite('alice'),fairy('left')]);
-  assert.deepEqual(result.victims,['dave']);
+  assert.deepEqual(result.victims,['bob']);
 });
 test('fairy can act with no wolf bite without producing a death',()=>{
   const result=resolve([fairy('right'),guard('alice')]);
