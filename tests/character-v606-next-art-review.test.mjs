@@ -20,6 +20,14 @@ test('staging gallery embeds approved costume source and does not activate 22–
  assert.ok(!html.includes('<iframe'), 'do not depend on a remote preview iframe');
  for(let n=22;n<=30;n++)assert.ok(html.includes('/characters/overhaul-v600/character-'+n+'/avatar.webp'));
  assert.ok(html.includes('Chỉ duyệt artwork'));
+ assert.ok(html.includes('id="inspection"'),'Individual character inspection must be visible');
+ assert.ok(html.includes('id="inspection-image"'));
+ assert.ok(html.includes('Chưa đạt: 7 góc nhìn còn lại'),'Directions must not be faked');
+ assert.ok(html.includes('Chưa đạt: skin GLB riêng + rig 16 xương'));
+ assert.ok(html.includes('Chưa đạt: Idle / Walk / Run / Result'));
+ assert.equal((html.match(/class="pick"/g)||[]).length,9,'Individual selector per real approved artwork');
+ for(let n=22;n<=30;n++)assert.ok(html.includes('data-id="character-'+n+'"'));
+ assert.ok(!html.includes('model/gltf-binary'),'No unapproved GLB in portrait-only inspector');
  assert.ok(!html.includes('22/skin.glb')&&!html.includes('character-22/skin.glb'));
  const gm=fs.readFileSync('assets/character-v605-gm/GMWW.html','utf8');
  assert.ok(gm.includes('/character-v605-review/index.html'));
