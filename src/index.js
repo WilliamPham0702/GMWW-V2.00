@@ -1663,7 +1663,7 @@ export class RoomDurableObject extends DurableObject {
       rows=(await this.ctx.storage.get("interactions"))||[],meta=await this.ctx.storage.get("meta");
     const row=rows.find(x=>String(x?.id)===id&&normalizeLoginId(x?.loginId)===loginId);
     if(!row)return j({ok:false,error:"INTERACTION_NOT_FOUND"},404);
-    if(row.status==="responded")return j({ok:true,interaction:row,idempotent:true});
+    if(row.status==="responded"){const {gmChoice,...safe}=row;return j({ok:true,interaction:safe,idempotent:true});}
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))
       return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const isAssassin=row.type==="assassin_mark";
