@@ -380,16 +380,16 @@ function battleRenderTransferPanel(){
   panel.hidden=!show;
   if(!show){panel.innerHTML='';return}
   const options=[['left','↩️','Dịch trái'],['none','⏺️','Không dịch'],['right','↪️','Dịch phải']];
-  panel.innerHTML='<div class="gmww-transfer-card"><strong data-transfer-grip title="Giữ và kéo để di chuyển">DỊCH CHUYỂN VẾT CẮN ⠿</strong>'+
-    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn hướng dịch vết cắn">'+
-    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
-    '</div><button type="button" data-transfer-ok '+(!dir||battleState.busy||battleState.syncPending?'disabled':'')+'>OK</button></div>';
+  panel.innerHTML='<div class="gmww-transfer-card" title="Kéo vùng trống để di chuyển">'+
+    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn dịch vết cắn theo vị trí bên trái, giữ nguyên hoặc bên phải của nạn nhân ban đầu">'+
+    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-label="'+label+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
+    '</div></div>';
   panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
     if(battleState.busy||battleState.syncPending)return;
-    battleState.transferDir=button.dataset.transfer;panel.dataset.sig='';battleRenderTransferPanel();
+    // Each of the three buttons is the confirmation; no extra OK/title row.
+    battleState.transferDir=button.dataset.transfer;void battleConfirm(true);
   }));
-  panel.querySelector('[data-transfer-ok]')?.addEventListener('click',()=>{void battleConfirm(true)});
-  const grip=panel.querySelector('[data-transfer-grip]');let drag=null;
+  const grip=panel.querySelector('.gmww-transfer-card');let drag=null;
   grip?.addEventListener('pointerdown',e=>{
     if(e.target.closest('button'))return;
     const r=panel.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
