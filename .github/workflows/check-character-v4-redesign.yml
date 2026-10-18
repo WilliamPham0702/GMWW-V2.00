@@ -33,6 +33,11 @@ on:
       - 'tests/character-v4-manifest.test.mjs'
       - '.github/workflows/check-character-v4-redesign.yml'
   workflow_dispatch:
+
+concurrency:
+  group: gmww-character-v4-check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   contract:
     runs-on: ubuntu-latest
