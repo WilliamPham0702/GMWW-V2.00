@@ -1,0 +1,60 @@
+name: Check Character 21 V6.05 Staging Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gmww-character-v605-gateway.js"
+      - "src/index.js"
+      - "assets/characters/overhaul-v600/character-21/**"
+      - "server-game/current/app.js"
+      - "src/gmww-members-live.js"
+      - "tests/character-v605-gm-player-staging.test.mjs"
+      - ".github/workflows/check-character21-v605-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staged-character-api:
+    if: github.event.pull_request.number == 306 || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify generated GM and Player Web scripts and preview guard contracts
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/character-v605-gm-player-staging.test.mjs
+          node --test tests/character-overhaul-v605-accepted.test.mjs tests/character-overhaul-v605-staging.test.mjs
+      - name: Read-only staged gateway HTTP smoke with actual 1.97MB GLB and avatar
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8791 --var GMWW_CHAR21_STAGING:1 > /tmp/gmww-character-v605-staging.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true; cat /tmp/gmww-character-v605-staging.log || true' EXIT
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:8791/api/health > /tmp/charv605-health.json; then break; fi
+            sleep 1
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/charv605-health.json
+          curl -fsS http://127.0.0.1:8791/api/character-v605/catalog > /tmp/charv605-catalog.json
+          node -e 'const c=require("/tmp/charv605-catalog.json");if(c.totalApproved!==1||c.characters[0].id!=="character-21"||c.characters[0].productionEnabled!==false)process.exit(1)'
+          curl -fsS http://127.0.0.1:8791/api/character-v605/character-21/avatar -o /tmp/charv605-avatar.webp
+          curl -fsS http://127.0.0.1:8791/api/character-v605/character-21/skin -o /tmp/charv605-skin.glb
+          echo 'b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801  /tmp/charv605-avatar.webp' | sha256sum -c -
+          echo 'ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9  /tmp/charv605-skin.glb' | sha256sum -c -
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/api/character-v605/character-22/avatar)
+          test "$STATUS" = '404'
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8791/api/character-v605/catalog)
+          test "$STATUS" = '405'
+          curl -fsS http://127.0.0.1:8791/api/game-characters > /tmp/charv605-legacy-catalog.json
+          node -e 'const x=require("/tmp/charv605-legacy-catalog.json");if(x.count!==20||x.characters.length!==20)process.exit(1)'
