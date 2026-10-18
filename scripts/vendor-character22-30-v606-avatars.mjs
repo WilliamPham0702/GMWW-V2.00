@@ -15,7 +15,7 @@ if(sourceSHA!==roster.sourcePageSHA256)throw Error('APPROVED_PAGE_HASH_MISMATCH:
 // Never crop an adjacent artwork or use the V6.05 Character21 skin as a surrogate.
 const offset=html.indexOf('const items=');
 if(offset<0)throw Error('SOURCE_MISSING_ITEMS_ARRAY');
-const end=html.indexOf('];',offset+12);
+const end=html.indexOf(']',offset+'const items='.length);
 if(end<0)throw Error('SOURCE_ITEMS_NOT_TERMINATED');
 const items=JSON.parse(html.slice(offset+'const items='.length,end+1));
 if(!Array.isArray(items)||items.length!==30)throw Error('EXPECTED_30_APPROVED_ITEMS');
