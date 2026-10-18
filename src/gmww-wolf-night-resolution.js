@@ -47,17 +47,47 @@ export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
   return {ok:true,victims:distinct(victims),blocked:distinct(protectedTargets),transfers,attacked,biteCount:bites.length};
 }
 
-// GM-only role result; no secret faction or role data is ever placed on Player Web.
+// All real scan actions in the V2 card catalog. Keep this GM-only:
+ // faction, role and function information must never be projected to Player Web.
+export const DIVINATION_ACTION_IDS=Object.freeze([
+  'action_seer','action_aura_read','action_fox_scan','action_bear_scan',
+  'action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction',
+  'action_wolf_seer','action_rotten_seer'
+]);
 export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   const action=String(actionId||'');
-  if(!/^(action_seer|action_aura_read|action_fox_scan|action_bear_scan|action_wolf_seer|action_rotten_seer)$/.test(action))return null;
+  if(!DIVINATION_ACTION_IDS.includes(action))return null;
   const targets=[...new Set((Array.isArray(targetIds)?targetIds:[]).map(login).filter(Boolean))];
-  if(!targets.length)return null;
+  const required=['action_fox_scan','action_scan_three'].includes(action)?3:
+    ['action_bear_scan','action_compare_faction'].includes(action)?2:1;
+  if(targets.length!==required)return null;
   const byId=new Map((Array.isArray(assignments)?assignments:[]).map(a=>[login(a.loginId),a]));
   if(targets.some(x=>!byId.has(x)))return null;
-  const reads=targets.map(id=>{const a=byId.get(id),roleId=String(a.roleId||''),faction=String(a.roleCard?.factionId||a.factionId||a.faction||'').toLowerCase(),wolf=(faction==='wolf'||faction.includes('sói')||faction.includes('soi'))&&roleId!=='role_alpha_wolf';return {loginId:id,roleId,roleName:String(a.roleName||a.roleCard?.name||''),wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};});
-  const wolves=reads.some(x=>x.wolf);
-  if(action==='action_aura_read')return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),message:reads.map(x=>(x.roleName||x.roleId||'Chưa xác định')+(x.functions.length?' · '+x.functions.join(', '):'')).join(' / ')};
-  return {kind:'wolf-check',actionId:action,targets:reads.map(({loginId,wolf})=>({loginId,wolf})),wolf:wolves,message:wolves?'CÓ SÓI':'KHÔNG PHẢI SÓI'};
+  const reads=targets.map(id=>{
+    const a=byId.get(id),roleId=String(a.roleId||''),
+      faction=String(a.roleCard?.factionId||a.factionId||a.faction||'').toLowerCase(),
+      wolf=faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+    return {loginId:id,roleId,roleName:String(a.roleName||a.roleCard?.name||roleId),
+      faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};
+  });
+  if(action==='action_aura_read'){
+    const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),
+      message:(result.functions.join(' · ')||'Không có chức năng')};
+  }
+  if(action==='action_destroyer_scry')
+    return {kind:'role',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleName:x.roleName})),message:reads[0].roleName};
+  if(action==='action_find_seer'){
+    const found=reads[0].roleId==='role_seer';
+    return {kind:'seer-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
+      found,message:found?'TIÊN TRI':'KHÔNG PHẢI TIÊN TRI'};
+  }
+  if(action==='action_compare_faction'){
+    const same=reads[0].faction===reads[1].faction;
+    return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
+      same,message:same?'CÙNG PHE':'KHÁC PHE'};
+  }
+  // The Alpha Wolf deceives the regular Seer only, not a group check.
+  const wolves=reads.some(x=>x.wolf&&(action!=='action_seer'||x.roleId!=='role_alpha_wolf'));
+  return {kind:'wolf-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
+    wolf:wolves,message:wolves?'CÓ SÓI':'KHÔNG CÓ SÓI'};
 }
-
