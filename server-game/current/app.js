@@ -3370,7 +3370,7 @@ const battleActions=()=>{
     // artifact title or the owner's name). Older catalogs may carry raw action-* identifiers.
     const rawName=String(action.name||'').trim();
     const name=action.artifactId&&/^action[-_][a-z0-9_-]+$/i.test(rawName)
-      ?String(action.artifactName||'Hành động').trim():rawName;
+      ?'Hành động':rawName;
     return {...action,name,actorIds,unavailable:!actorIds.length,unavailableReason};
   });
 };
