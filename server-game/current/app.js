@@ -3870,9 +3870,9 @@ function renderPlayBattle(){
     const title=phase==='night'&&rt?.completed?'Làng ơi dậy đi':phase==='day'?'Đêm tiếp theo':phase==='lobby'?'Bắt đầu Đêm 1':'Tiếp tục';
     next.title=title;next.setAttribute('aria-label',title);const label=next.querySelector('b');if(label)label.textContent='Ngày '+night+'>';
   }
-  const wolfMenu=document.getElementById('battleWolfMenu'),gmActor=document.querySelector('#playPlayerRing [data-play-gm-rider]');
+  const wolfMenu=document.getElementById('battleWolfMenu');
   if(wolfMenu)wolfMenu.hidden=!battleState.wolfOpen;
-  if(gmActor){gmActor.setAttribute('aria-expanded',String(battleState.wolfOpen));gmActor.classList.toggle('is-menu-open',battleState.wolfOpen)}
+  
   const clockMenu=document.getElementById('battleClockPopover'),clockToggle=document.getElementById('battleClockButton');
   if(clockMenu)clockMenu.hidden=!battleState.clockOpen;
   if(clockToggle){clockToggle.setAttribute('aria-expanded',String(battleState.clockOpen));clockToggle.classList.toggle('is-open',battleState.clockOpen)}
@@ -4079,7 +4079,7 @@ function initBattleSwipeNavigation(){
   root.dataset.battleSwipeReady='1';
   let gesture=null;
   const interactive='button,input,select,textarea,a,[role="button"],[role="dialog"],[contenteditable="true"]';
-  const overlays='#playBattleTop,#playBattleDock,#battleBottomControls,#battleWolfMenu,#battleDetails,#battleTargetSheet,.play-gm-sheet,[data-play-gm-rider]';
+  const overlays='#playBattleTop,#playBattleDock,#battleBottomControls,#battleWolfMenu,#battleDetails,#battleTargetSheet,.play-gm-sheet';
   const eligible=target=>{
     if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||
        battleState.drag||battleState.targetSheet||battleState.roster||battleState.details||
@@ -4164,13 +4164,13 @@ function initBattleControls(){
   document.getElementById('battleWolfClose')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle()});
   document.addEventListener('pointerdown',event=>{
     if(playSceneState.step!=='battle'||!battleState.wolfOpen)return;
-    if(event.target.closest('[data-play-gm-rider],#battleWolfMenu,#battleDetails,#playBattleClockFloat'))return;
+    if(event.target.closest('#battleWolfMenu,#battleDetails,#playBattleClockFloat'))return;
     battleState.wolfOpen=false;battleState.clockOpen=false;renderPlayBattle();
   },{passive:true});
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&playSceneState.step==='battle'&&(battleState.wolfOpen||battleState.clockOpen)){
       battleState.wolfOpen=false;battleState.clockOpen=false;renderPlayBattle();
-      document.querySelector('#playPlayerRing [data-play-gm-rider]')?.focus();
+      document.querySelector('.play-core-pearl')?.focus();
     }
   });
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
@@ -5622,7 +5622,7 @@ function initPlayScene(){
   document.getElementById('playCreateRoomDelete')?.addEventListener('click',playDeleteCreatedRoom);
   document.getElementById('playCreateRoomClose')?.addEventListener('click',()=>document.getElementById('playCreateRoomSheet')?.classList.add('hidden'));
   document.getElementById('playUserAvatar')?.setAttribute('hidden','');
-  document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const activeId=String(playSceneState.activePlayerId||''),gmSelected=activeId==='gm:online',p=selectedPlayPlayer();if(gmSelected||!activeId){await gmwwMoveGmCharacter(raw.x,raw.y);return}if(!isLivePlayRoom())return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
+  document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const p=selectedPlayPlayer();if(!isLivePlayRoom()||!p)return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
   window.addEventListener('resize',renderPlayScene);
   // No bulk Artifact sync at startup: one item per idle window outside active games.
   playScheduleSharedArtifactLibrarySync();
