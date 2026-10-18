@@ -39,15 +39,14 @@ test("Source errors are explicit instead of fabricated progress",async()=>{
   assert.throws(()=>normalizeGmwwTasks({}),/TASK_SOURCE_INVALID/);
 });
 
-test("Worker exposes tracked requests on a read-only public GET endpoint",async()=>{
+test("Retired Workboard is no longer served or rendered",async()=>{
   const {readFileSync}=await import("node:fs");
   const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
   const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
-  assert.match(worker,/url\.pathname==="\/api\/operations\/tasks"&&request\.method==="GET"/);
-  assert.match(worker,/await fetchGmwwTasks\(\)/);
-  assert.match(app,/gmwwTasksRefresh/);
-  assert.match(app,/gmwwTasksOpenList/);
-  assert.match(app,/gmwwTasksDoneList/);
+  const html=readFileSync(new URL("../server-game/current/GMWW.html",import.meta.url),"utf8");
+  assert.doesNotMatch(worker,/\/api\/operations\/tasks/);
+  assert.doesNotMatch(app,/gmwwTasksRefresh|gmwwTasksOpenList|gmwwTaskReviewReturn/);
+  assert.doesNotMatch(html,/settingsGroupTasks|gmwwTasksDoneList/);
 });
 test("An explicit in-progress title reflects tracked ongoing work without requiring labels",()=>{
   const x=normalizeGmwwTasks([{number:61,title:"P1 — Đang thực hiện: nhân vật ngồi xếp bằng",state:"open",labels:[]}]);
@@ -99,19 +98,10 @@ test("GitHub review reasons distinguish approval and intentional skip",()=>{
   assert.equal(data.open.length,0);
 });
 
-test("Task review is owner-confirmed on GitHub, without a public write endpoint",async()=>{
+test("Retired task function cannot expose stale data or public mutations",async()=>{
   const {readFileSync}=await import("node:fs");
   const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
-  const html=readFileSync(new URL("../server-game/current/GMWW.html",import.meta.url),"utf8");
-  const css=readFileSync(new URL("../server-game/current/style.css",import.meta.url),"utf8");
   const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
-  assert.match(app,/function gmwwTaskReviewLink\(task,mode\)/);
-  assert.match(app,/XÁC NHẬN HOÀN THÀNH/);
-  assert.match(app,/BỎ QUA/);
-  assert.match(app,/Not planned \(Không thực hiện\)/);
-  assert.match(app,/gmwwTaskReviewReturn/);
-  assert.match(app,/data\.history\.filter\(x=>x\.state==='completed'\|\|x\.state==='closed'\|\|x\.state==='skipped'\)/);
-  assert.match(html,/gmww-task-review-help/);
-  assert.match(css,/\.gmww-task-review-link\.skipped/);
-  assert.doesNotMatch(worker,/url\.pathname==="\/api\/operations\/tasks"&&request\.method==="POST"/);
+  assert.doesNotMatch(app,/function gmwwTaskReviewLink\(|XÁC NHẬN HOÀN THÀNH|BỎ QUA công việc/);
+  assert.doesNotMatch(worker,/\/api\/operations\/tasks/);
 });
