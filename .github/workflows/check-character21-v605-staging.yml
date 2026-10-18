@@ -50,6 +50,11 @@ jobs:
           node -e 'const c=require("/tmp/charv605-catalog.json");if(c.totalApproved!==1||c.characters[0].id!=="character-21"||c.characters[0].productionEnabled!==false)process.exit(1)'
           curl -fsS http://127.0.0.1:8791/api/character-v605/character-21/avatar -o /tmp/charv605-avatar.webp
           curl -fsS http://127.0.0.1:8791/api/character-v605/character-21/skin -o /tmp/charv605-skin.glb
+          curl -fsS 'http://127.0.0.1:8791/api/character-v605/character-21/renderer?embed=1' -o /tmp/charv605-renderer.html
+          grep -q 'gmww-embed' /tmp/charv605-renderer.html
+          grep -q 'WebGL' /tmp/charv605-renderer.html
+          test "$(wc -c </tmp/charv605-renderer.html)" -gt 3000000
+          test "$(sha256sum /tmp/charv605-renderer.html | awk '{print $1}')" = "$(sha256sum assets/characters/overhaul-v600/character-21/renderer.html | awk '{print $1}')"
           echo 'b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801  /tmp/charv605-avatar.webp' | sha256sum -c -
           echo 'ec600c79925b4925eaae010f2067f9e584f9e0282da5ca1f76b173f87783f0e9  /tmp/charv605-skin.glb' | sha256sum -c -
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/api/character-v605/character-22/avatar)
