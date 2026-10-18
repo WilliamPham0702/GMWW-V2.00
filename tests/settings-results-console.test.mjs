@@ -17,7 +17,7 @@ test('The nine operational controls remain buttons or explicit interactive toggl
 });
 test('All health and diagnostic outputs share one non-interactive console',()=>{
   const begin=settings.indexOf('id="settingsOperationResults"');
-  const end=settings.indexOf('id="settingsGroupTasks"');
+  const end=settings.indexOf('id="settingsGroupAppearance"');
   assert.ok(begin>0&&end>begin);
   const panel=settings.slice(begin,end);
   for(const id of ['opsOverall','opsServerState','opsStorageState','opsRealtimeState','opsReleaseState','opsReport','opsAdvice','opsLastChecked','serverHealthDot','serverHealthPill','serverHealthText','healthLatency','healthCheckedAt','diagnosticDot','diagnosticStatus','diagnosticSummary','diagnosticHint','diagnosticList','diagnosticDetail'])
@@ -28,9 +28,8 @@ test('All health and diagnostic outputs share one non-interactive console',()=>{
 });
 test('Read-only outputs render as console rows rather than individual glass buttons',()=>{
   assert.match(settings,/class="settings-operation-console settings-update-console"/);
-  assert.match(settings,/class="settings-operation-console settings-task-console"/);
   assert.match(settings,/class="settings-operation-console settings-maintenance-console"/);
-  for(const sel of ['.ops-report>div','.ops-status-grid>div','.diagnostic-list>div','.gmww-task-item'])
+  for(const sel of ['.ops-report>div','.ops-status-grid>div','.diagnostic-list>div'])
     assert.ok(css.includes(sel));
   assert.match(css,/V3\.29 — read-only results belong to one operational log/);
   assert.match(css,/\.settings-operation-console \.ops-report>div,[\s\S]*?background:none!important/);
