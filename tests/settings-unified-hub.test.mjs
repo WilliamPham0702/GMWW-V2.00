@@ -49,10 +49,15 @@ test('Settings removes redundant explanatory notes while keeping live status and
   }
 });
 
-test('Cloudflare maintenance entry opens in the existing iOS WebView frame without extra text',()=>{
+test('Cloudflare management expands inside Server Settings without a separate admin page or unprotected delete API',()=>{
   assert.doesNotMatch(settings,/opsExportReport|opsReportFallback|XUẤT BÁO CÁO/);
   assert.match(settings,/id="gmwwCloudflareOpen"/);
-  assert.match(settings,/window\.location\.assign\('https:\/\/gmww-cloudflare-admin\.williampham0702\.workers\.dev\/'\)/);
+  for(const id of ['gmwwCloudflarePanel','gmwwCfNamespaces','gmwwCfPreviews','gmwwCfEligible','gmwwCfDeleted','gmwwCfRefresh','gmwwCfScan','gmwwCfCleanup'])
+    assert.ok(settings.includes('id="'+id+'"'),id+' missing from embedded panel');
+  assert.match(html,/window\.location\.assign\(actions\)/);
+  assert.match(html,/productionProtected!==true/);
+  assert.match(html,/actions\/workflows\/cloudflare-maintenance\.yml/);
+  assert.doesNotMatch(settings,/gmww-cloudflare-admin\.williampham0702/);
   assert.doesNotMatch(settings,/Namespaces, Preview, quét định kỳ|Trang quản trị riêng; GM\/Player/);
   const native=readFileSync(new URL('../server-game/GMWW-Server/GameView.swift',import.meta.url),'utf8');
   assert.match(native,/UIApplication\.shared\.open\(url\)/);
