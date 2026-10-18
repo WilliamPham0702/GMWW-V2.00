@@ -63,8 +63,8 @@ jobs:
         run: npx wrangler deploy --config wrangler.character21-v605-game-staging.jsonc --dry-run
       - name: Publish isolated game staging — not main, no Production routes
         env:
-          CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
@@ -105,7 +105,7 @@ jobs:
           node -e 'const c=require("/tmp/char21-legacy.json");if(c.count!==20||c.characters.length!==20)process.exit(1)'
           ROOM=$(curl -fsS -X POST "$BASE/api/rooms" -H 'Content-Type: application/json' --data '{"roomName":"CHARACTER21 STAGING TEST"}')
           echo "$ROOM" | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{let d=JSON.parse(s);if(!d.roomCode||!d.ok)process.exit(1);process.stdout.write('Staging Room created successfully')})"
-          NAME="char605\${GITHUB_RUN_ID}"
+          NAME="char605${GITHUB_RUN_ID}"
           curl -fsS -X POST "$BASE/api/members/register" -H 'Content-Type: application/json' --data "{\"loginId\":\"$NAME\",\"displayName\":\"Character21 Staging\",\"gameCharacterId\":\"character-21\"}" > /tmp/char21-register.json
           node -e 'const x=require("/tmp/char21-register.json");if(!x.ok)throw Error(JSON.stringify(x))'
           curl -fsS "https://gmww-v2-00.williampham0702.workers.dev/api/health" > /tmp/char21-production-health.json
