@@ -62,8 +62,8 @@ try{
  assert.equal(await page.locator('[data-battle-action]').count(),2);
  assert.equal(await page.locator('#battleCountdown').textContent(),'00:45');
  assert.equal(await page.locator('[data-battle-index="3"]').count(),1,'wake step is selectable exactly once');
- const artifact=page.locator('[data-battle-action]').filter({hasText:'Đá Đổi Vai Trò'});
- assert.match(await artifact.textContent(),/Đổi Vai Trò.*An/);
+ const artifact=page.locator('[data-battle-action][data-battle-kind="artifact"]');
+ assert.equal((await artifact.textContent()).trim(),'Đổi Vai Trò','Artifact button displays only the human-readable action name');
  // V3.99: actions are always visible in the scrollable tray, not in the wolf Info panel.
  assert.equal(await artifact.isVisible(),true);
  assert.equal(await page.locator('#battleTargetSheet').isVisible(),false);
