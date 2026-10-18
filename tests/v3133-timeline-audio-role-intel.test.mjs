@@ -89,6 +89,9 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  const list=ctx.GMWW_BATTLE_CONTROLS.timeline('night',night,4);
  assert.equal(list[0].label,'Bầy sói ơi dậy đi');
  assert.equal(list[1].label,'Ngày thứ 4');
+ const worker=read('src/index.js');
+ assert.match(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*recognitionIds:/);
+ assert.doesNotMatch(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*loginIds:/);
  const runtime=read('server-game/current/app.js'),parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(runtime,parts.map(p=>read('server-game/src/'+p)).join(''));
  assert.match(runtime,/battleBindConfirmDrag\(\)/);
