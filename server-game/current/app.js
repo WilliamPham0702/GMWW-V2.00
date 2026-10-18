@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.142';
+const VERSION='3.143';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2920,7 +2920,7 @@ async function playSyncRoom(force=false){
 }
 function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')return pos;const p=globalThis.GMWW_VILLAGE_LAYOUT.interpolate(m,now);return[p.x,p.y]}
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
-// GM wolf removed; firepit controls preserved.
+// GM wolf character removed. Firepit menu remains the sole GM action entry.
 function playMovementFrame(){
   // The online GM can be idle indefinitely; avoid full DOM/rig reads at 60 FPS.
   // Keep ~30 FPS motion while preserving CSS-only status orbits independently.
