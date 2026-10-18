@@ -46,7 +46,7 @@ test('V3.138: GM patrol uses adjacent perimeter waypoints and checks occupied to
  assert.match(source,/function gmwwGmNearPlayer\(/);
  assert.match(source,/function gmwwGmClearWalk\(/);
  assert.match(source,/function gmwwGmKeepClear\(/);
- const m=source.match(/GMWW_GM_AUTO_POINTS=(\\[[^;]+?\\]);/);
+ const m=source.match(/GMWW_GM_AUTO_POINTS=(\[[^;]+?\]);/);
  assert.ok(m,'Patrol points must be explicit and inspectable');
  const points=JSON.parse(m[1]);
  const ctx={};vm.runInNewContext(read('assets/village/village-layout.js'),ctx);
