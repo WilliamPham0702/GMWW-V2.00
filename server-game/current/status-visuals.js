@@ -16,7 +16,8 @@
     {id:'transform',name:'Biến Đổi',icon:'🥳',type:'instant',effect:'orbit',description:'🥳 quay quanh nhân vật',priority:30,stack:true,playerWeb:true},
     {id:'attack',name:'Tấn Công',icon:'⚔️',type:'instant',effect:'orbit',description:'⚔️ quay quanh nhân vật',priority:30,stack:true,playerWeb:true},
     {id:'inspect',name:'Soi Xét',icon:'💫',type:'instant',effect:'orbit',description:'💫 quay quanh nhân vật',priority:30,stack:true,playerWeb:false},
-    {id:'hunt',name:'Săn',icon:'🏹',type:'instant',effect:'orbit',description:'🏹 quay quanh nhân vật',priority:30,stack:true,playerWeb:true}
+    {id:'hunt',name:'Săn',icon:'🏹',type:'instant',effect:'orbit',description:'🏹 quay quanh nhân vật',priority:30,stack:true,playerWeb:true},
+    {id:'visited',name:'Thăm Nhà',icon:'💋',type:'persistent',effect:'orbit',description:'💋 quay quanh người được Thiếu Nữ Thăm Nhà',priority:50,stack:true,playerWeb:true}
   ];
   const byId=Object.fromEntries(entries.map(x=>[x.id,Object.freeze(x)]));
   const aliases={disabled_2n:'disabled_permanent',assassin_mark:'marked',revive:'recover',witch_save:'recover',thief_change_role:'transform',wolf_bite:'wolf_bitten',snow_wolf_freeze:'frozen'};
@@ -37,7 +38,7 @@
     const dominant=items.find(id=>byId[id].stack===false),shown=dominant?[dominant]:items.filter(id=>byId[id].stack!==false);
     return{items,shown};
   }
-  const orbitIcons=Object.freeze({frozen:['❄️'],protected:['🛡️'],wolf_bitten:['🐺'],marked:['👍','👎'],dead:['☠️'],expelled:['🌪️'],infected:['🦠'],mute:['😷'],disabled_permanent:['🚫'],linked:['✌️'],recover:['⭐'],transform:['🥳'],attack:['⚔️'],hunt:['🏹'],inspect:['💫']});
+  const orbitIcons=Object.freeze({frozen:['❄️'],protected:['🛡️'],wolf_bitten:['🐺'],marked:['👍','👎'],dead:['☠️'],expelled:['🌪️'],infected:['🦠'],mute:['😷'],disabled_permanent:['🚫'],linked:['✌️'],recover:['⭐'],transform:['🥳'],attack:['⚔️'],hunt:['🏹'],inspect:['💫'],visited:['💋']});
   // One compositor-driven orbit per player, sharing its slots between ALL
   // concurrent effects. Six symbols total for 1–6 states (not 6 per state).
   // Never suppress a newly confirmed Săn when Bảo Vệ is already active.

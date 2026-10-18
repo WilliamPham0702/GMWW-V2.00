@@ -5755,3 +5755,33 @@ body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battle
  body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battleBack b,
  body.play-immersive #start #playShell[data-step="battle"] #playBattleTop>#battleAdvance b{font-size:9px!important}
 }
+
+/* V3.138 — raised draggable Fairy direction tool and timeline-style bite result. */
+#start #playShell[data-step="battle"] #battleTransferPanel:not([hidden]){
+  position:fixed!important;left:50%;top:calc(env(safe-area-inset-top) + 160px);
+  right:auto!important;bottom:auto!important;transform:translateX(-50%);
+  width:max-content;max-width:calc(100vw - 18px)!important;z-index:124!important;
+  pointer-events:auto!important;margin:0!important;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel .gmww-transfer-card{
+  background:linear-gradient(160deg,#0b4056,#062a3e)!important;
+  border:1px solid #d7b56e!important;box-shadow:0 12px 30px #001525b8!important;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel [data-transfer-grip]{
+  cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;min-height:31px;
+  display:grid;place-items:center;
+}
+#start #playShell[data-step="battle"] #battleTransferPanel [data-transfer-grip]:active{cursor:grabbing}
+#start #playShell[data-step="battle"] #battleResultPopup.is-wolf-result{
+  border:1px solid #f1ce7a!important;border-radius:14px!important;
+  background:linear-gradient(165deg,#0b455d,#082b43)!important;
+  box-shadow:0 13px 35px #001626bd,inset 0 1px #b2ecff3a!important;
+}
+#start #playShell[data-step="battle"] #battleResultPopup.is-wolf-result #battleResultGrip{
+  background:rgba(16,84,105,.8);border-bottom:1px solid #d3ac6480;
+  border-radius:12px 12px 0 0;padding:8px!important;
+}
+#start #playShell[data-step="battle"] #battleResultPopup.is-wolf-result #battleResultTitle{color:#ffdf9d!important}
+#start #playShell[data-step="battle"] #battleResultPopup.is-wolf-result #battleResultMessage{
+  color:#e7faff!important;font-size:12px!important;font-weight:750!important;line-height:1.6!important;padding:9px 6px 2px;
+}
