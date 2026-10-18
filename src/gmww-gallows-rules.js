@@ -34,6 +34,6 @@ export function gallowsBan(ballot,voter,now=Date.now()){
   return {ok:true,value:{...ballot,blocked,votes,updatedAt:now}};
 }
 export function gallowsResolve(ballot,outcome,now=Date.now()){
-  if(!['dead','alive'].includes(outcome)||ballot.stage!=='voting'||now<ballot.deadlineAt)return {ok:false,error:'VOTING_NOT_FINISHED'};
+  if(!['dead','alive'].includes(outcome)||!['voting','closed'].includes(ballot.stage)||now<ballot.deadlineAt)return {ok:false,error:'VOTING_NOT_FINISHED'};
   return {ok:true,value:{...ballot,stage:'resolved',outcome,resolvedAt:now,updatedAt:now}};
 }
