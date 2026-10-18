@@ -113,7 +113,7 @@ jobs:
           ROOM=$(curl -fsS -X POST "$BASE/api/rooms" -H 'Content-Type: application/json' --data '{"roomName":"CHARACTER21 STAGING TEST"}')
           echo "$ROOM" | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{let d=JSON.parse(s);if(!d.roomCode||!d.ok)process.exit(1);process.stdout.write('Staging Room created successfully')})"
           NAME="char605${GITHUB_RUN_ID}"
-          curl -fsS -X POST "$BASE/api/members/register" -H 'Content-Type: application/json' --data "{\"loginId\":\"$NAME\",\"displayName\":\"Character21 Staging\",\"gameCharacterId\":\"character-21\"}" > /tmp/char21-register.json
+          curl -fsS -X POST "$BASE/api/members/register" -H 'Content-Type: application/json' --data "{\"loginId\":\"$NAME\",\"displayName\":\"$NAME\",\"gameCharacterId\":\"character-21\"}" > /tmp/char21-register.json
           node -e 'const x=require("/tmp/char21-register.json");if(!x.ok)throw Error(JSON.stringify(x))'
           curl -fsS "https://gmww-v2-00.williampham0702.workers.dev/api/health" > /tmp/char21-production-health.json
           node -e 'const h=require("/tmp/char21-production-health.json");if(h.project!=="GMWW-V2.00"||h.status!=="online")process.exit(1)'
