@@ -93,7 +93,7 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  assert.equal(runtime,parts.map(p=>read('server-game/src/'+p)).join(''));
  assert.match(runtime,/battleBindConfirmDrag\(\)/);
  assert.match(runtime,/battleShowResultPopup\('🔮 KẾT QUẢ SOI XÉT'/);
- assert.match(runtime,/data-transfer="none"/); // generated through 3-option list
+ assert.match(runtime,/\['none','⏺️','Không dịch'\]/); // three-way buttons generated dynamically
  const html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
  assert.match(html,/id="battleResultPopup"/);assert.match(html,/id="battleResultClose"/);
  assert.match(css,/grid-template-columns:none!important/);assert.match(css,/gmww-transfer-directions/);
