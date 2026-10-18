@@ -630,6 +630,23 @@ async function changePassword(){
   catch(e){toast(e.message)}
 }
 
+// V6.05 opt-in: actual skinned GLB scene embedded in Player profile / avatar library.
+function characterV605PlayerRenderer(rootSelector,characterId){
+ const host=$(rootSelector);
+ if(!host)return;
+ let panel=host.querySelector('[data-character-v605-webgl]');
+ const eligible=GMWW_CHARACTER_V605_STAGING&&String(characterId)==='character-21';
+ if(!eligible){if(panel)panel.remove();return}
+ if(panel)return;
+ panel=document.createElement('section');panel.dataset.characterV605Webgl='1';
+ panel.style.cssText='border:1px solid #43819c;background:#092537;border-radius:12px;margin:9px 0;padding:8px;max-width:100%';
+ const label=document.createElement('strong');label.textContent='Character 21 · 8 hướng · Đứng / Đi / Chạy / Ăn mừng';
+ const iframe=document.createElement('iframe');iframe.title='Character 21 V6.05 WebGL — Player Preview';
+ iframe.src='/api/character-v605/character-21/renderer?embed=1';
+ iframe.loading='lazy';iframe.style.cssText='display:block;border:0;width:100%;height:610px;max-width:100%;border-radius:10px;margin-top:7px;background:#081c2d';
+ panel.append(label,iframe);
+ host.append(panel);
+}
 function renderProfile(){
   const m=state.member;if(!m)return;ensureLobbyMotionToggle();
   const editing=!!$('#profileEditPanel')?.open,currentCharacter=String(m.gameCharacterId||state.gameCharacters[0]?.id||''),draftCharacter=String(state.profileDraftGameCharacterId||currentCharacter);
@@ -638,7 +655,7 @@ function renderProfile(){
   const pd=$('#profileDisplay'),pi=$('#profileId');if(pd)pd.textContent=m.displayName||m.loginId;if(pi)pi.textContent=m.loginId;const pdi=$('#profileDisplayInput');if(pdi&&!editing)pdi.value=m.displayName||m.loginId;
   const wins=Math.max(0,Number(m?.stats?.wins||0)),losses=Math.max(0,Number(m?.stats?.losses||0)),total=wins+losses,rate=total?Math.round(wins*100/total):0,statValues=[String(wins),String(losses),rate+'%'];$$('#profile .stats .stat strong').forEach((el,i)=>{if(statValues[i]!=null)el.textContent=statValues[i]});
   const historyBox=$('#profile .history');if(historyBox){historyBox.innerHTML='';const rows=Array.isArray(m.history)?m.history.slice(0,10):[];if(!rows.length){const empty=document.createElement('div');empty.className='history-item';empty.textContent='Chưa có lịch sử ván chơi.';historyBox.appendChild(empty)}else rows.forEach(row=>{const item=document.createElement('div');item.className='history-item';const info=document.createElement('div'),title=document.createElement('b'),small=document.createElement('small'),badge=document.createElement('span');title.textContent=String(row.gameName||row.roomName||'Ván GMWW');small.textContent=[row.roleName,row.playedAt?new Date(row.playedAt).toLocaleDateString('vi-VN'):''].filter(Boolean).join(' • ');info.append(title,small);badge.className='badge '+(row.result==='win'?'win':'lose');badge.textContent=row.result==='win'?'THẮNG':'THUA';item.append(info,badge);historyBox.appendChild(item)})}
-  const summary=$('#profileEditPanel>summary');if(summary)summary.textContent='✎ THAY ĐỔI AVATAR';const saveBtn=$('#profileSaveButton');if(saveBtn&&!saveBtn.disabled)saveBtn.textContent='LƯU AVATAR';updateVillageHud();ensureCharacterPreviewTicker();
+  const summary=$('#profileEditPanel>summary');if(summary)summary.textContent='✎ THAY ĐỔI AVATAR';const saveBtn=$('#profileSaveButton');if(saveBtn&&!saveBtn.disabled)saveBtn.textContent='LƯU AVATAR';updateVillageHud();ensureCharacterPreviewTicker();characterV605PlayerRenderer('#profile',editing?draftCharacter:currentCharacter);
 }
 
 function avatarAssetSrc(a){const id=String(a?.id||'');return id.startsWith('character-')?gameCharacterImageUrl(id):String(a?.imageData||a?.imageUrl||avatarUrl(id))}
@@ -667,7 +684,7 @@ function renderAvatarSuggestions(newSet=true){
   const box=$('#avatarSuggestions');if(!box)return;if(newSet||!suggestionIds.length){const a=[...state.gameCharacters];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}suggestionIds=a.slice(0,5).map(x=>x.id)}
   box.innerHTML='';suggestionIds.forEach(id=>{const a=state.gameCharacters.find(x=>x.id===id);if(a)box.appendChild(avatarButton(a))});
 }
-function renderAvatarLibrary(){const box=$('#avatarLibraryGrid');if(!box)return;box.innerHTML='';const catalog=state.gameCharacters;catalog.forEach(a=>box.appendChild(avatarButton(a)));$('#avatarLibraryCount').textContent=catalog.length+' Nhân vật 2D • 6 frame'}
+function renderAvatarLibrary(){const box=$('#avatarLibraryGrid');if(!box)return;box.innerHTML='';const catalog=state.gameCharacters;catalog.forEach(a=>box.appendChild(avatarButton(a)));$('#avatarLibraryCount').textContent=catalog.length+' Nhân vật 2D • 6 frame';characterV605PlayerRenderer('#avatarLibraryModal',state.avatarPickerDraftId||state.selectedAvatarId)}
 async function loadAvatars(){
   ensureOnline2DStyle();
   let avatarError=null;
