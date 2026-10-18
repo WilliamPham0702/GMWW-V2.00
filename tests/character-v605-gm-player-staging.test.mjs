@@ -74,7 +74,7 @@ test('GM and Player source only alter explicitly opted-in Character 21',async()=
  assert.match(web,/\/api\/character-v605\/catalog/);
  assert.match(web,/GMWW_CHARACTER_V605_MODEL/);
  assert.match(web,/portrait-catalog/);
- assert.match(gm,/character-21\/avatar/);
+ assert.ok(gm.includes("'/api/character-v605/'+raw+'/avatar'"));
  assert.match(gm,/gmwwCharacterV605SkinnedPreview/);
  assert.match(gm,/character-21\/renderer\?embed=1/);
  assert.match(web,/characterV605PlayerRenderer/);
