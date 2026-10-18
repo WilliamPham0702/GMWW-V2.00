@@ -370,10 +370,10 @@ test('G4.3 real DO morning: Fairy transfers guarded bite, then checks guard on f
     g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
   ]);
   await h.room.applyCycle(await h.meta(),'morning',1,'morning-1','lab');
-  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'),x=>x.loginId),['carol']);
+  assert.deepEqual(Array.from(h.data.get('interactions').filter(x=>x.type==='dead'),x=>x.loginId),['alice']);
   const guarded=g43seated(harness({artifact:false}));
   guarded.data.set('interactions',[
-    g43notice('action_wolf_bite','bob'),g43notice('action_protect','carol'),
+    g43notice('action_wolf_bite','bob'),g43notice('action_protect','alice'),
     g43notice('action_transfer_bite','carol',{actorId:'carol',direction:'right'})
   ]);
   await guarded.room.applyCycle(await guarded.meta(),'morning',1,'morning-1','lab');
