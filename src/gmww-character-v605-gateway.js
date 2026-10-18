@@ -5,7 +5,8 @@ const PREFIX='/api/character-v605/';
 const ASSET_ROOT='/characters/overhaul-v600/character-21/';
 const ASSETS=Object.freeze({
  avatar:{file:'avatar.webp',mime:'image/webp'},
- skin:{file:'skin.glb',mime:'model/gltf-binary'}
+ skin:{file:'skin.glb',mime:'model/gltf-binary'},
+ renderer:{file:'renderer.html',mime:'text/html; charset=utf-8'}
 });
 const ID='character-21';
 export function characterV605PreviewHost(hostname){
@@ -33,7 +34,7 @@ export async function characterV605PreviewRoute(request,env){
  if(url.pathname===PREFIX+'catalog'){
   return Response.json(characterV605PreviewCatalog(),{headers});
  }
- const match=url.pathname.match(/^\/api\/character-v605\/character-21\/(avatar|skin)$/);
+ const match=url.pathname.match(/^\/api\/character-v605\/character-21\/(avatar|skin|renderer)$/);
  if(!match)return new Response('Not found',{status:404,headers});
  if(!env?.ASSETS)return new Response('Preview asset binding unavailable',{status:503,headers});
  const kind=ASSETS[match[1]],assetUrl=new URL(request.url);
