@@ -5931,3 +5931,26 @@ body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{
 #start #playShell[data-step="battle"] #battleAssassinChoice>div{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 #start #playShell[data-step="battle"] #battleAssassinChoice button{min-height:43px;border:1px solid #81c8da;border-radius:11px;background:#144b60c7;color:#fff;font-size:14px;font-weight:800}
 #start #playShell[data-step="battle"] #battleAssassinChoice button.is-selected{background:#197a66;border-color:#ffdd83;box-shadow:0 0 0 1px #ffdd83}
+
+
+/* V3.148 gallows: compact movable GM desk, glass theme and thumb tally. */
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+ position:fixed!important;top:calc(env(safe-area-inset-top) + 120px);left:12px;right:auto;bottom:auto;
+ z-index:126;width:min(320px,calc(100vw - 24px));max-height:56dvh;overflow:auto;
+ padding:12px;border-radius:15px;background:var(--gmww-stage-glass-v330)!important;
+ border:1px solid var(--gmww-stage-glass-border-v330)!important;
+ box-shadow:var(--gmww-stage-glass-shadow-v330)!important;
+ backdrop-filter:blur(13px) saturate(145%)!important;color:#fff;
+}
+#start #playShell[data-step="battle"] #battleGallowsPanel[hidden]{display:none!important}
+#battleGallowsPanel header{display:flex;justify-content:space-between;align-items:center;touch-action:none;cursor:grab;min-height:36px;color:#ffdea7;font-size:13px}
+#battleGallowsPanel #battleGallowsClock{font-variant-numeric:tabular-nums;font-size:18px;font-weight:900}
+#battleGallowsPanel #battleGallowsStage{font-size:12px;line-height:1.5;margin:6px 0 10px}
+#battleGallowsPanel label{display:block;font-size:11px;opacity:.85}
+#battleGallowsPanel select{display:block;width:100%;min-height:34px;color:#fff;background:#174a62;border:1px solid #88c7d8;border-radius:8px;padding:6px;margin:4px 0 9px}
+#battleGallowsPanel .battle-gallows-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#battleGallowsPanel button{min-height:37px;border-radius:9px;border:1px solid #8bbecb;color:#fff;background:#13506e;font-weight:800;font-size:11px}
+#battleGallowsPanel button:disabled{opacity:.4;cursor:not-allowed}
+#battleGallowsVotes{max-height:28dvh;overflow:auto;margin-top:10px;font-size:12px;line-height:1.6}
+#battleGallowsVotes .battle-gallows-vote{display:flex;gap:8px;justify-content:space-between;align-items:center;border-top:1px solid #c7eefa30;padding:4px 0}
+#battleGallowsVotes .battle-gallows-vote button{min-height:27px;padding:4px 8px}
