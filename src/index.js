@@ -1563,7 +1563,10 @@ export class RoomDurableObject extends DurableObject {
       ...(type==="assassin_mark"?{gmChoice:String(body?.assassinChoice||"")}: {}),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
-    this.broadcast({type:"player_interaction",interaction});return j({ok:true,interaction});
+    // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
+    // The player receives a sanitized private interaction from playerState only in the morning.
+    if(type!=="assassin_mark")this.broadcast({type:"player_interaction",interaction});
+    return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
     const loginId=normalizeLoginId(body?.loginId),id=String(body?.interactionId||""),
