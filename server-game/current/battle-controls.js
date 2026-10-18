@@ -99,11 +99,17 @@
       return alreadyUsed(turn)?[]:build(turn,true);
     return [];
   }
-  function targetAllowed(action,member,effect){
+  function targetAllowed(action,member,effect,rows=[],night=0){
     if(!action||!member?.loginId||action.noTarget)return false;
     if(action.noSelf&&action.actorIds.includes(loginOf(member.loginId)))return false;
     if(action.type==="revive")return effect==="dead";
-    return action.allowDead||effect!=="dead"&&effect!=="expelled";
+    // A night victim is announced at dawn; the Seer may still scan them tonight.
+    // Historical deaths remain ineligible on subsequent nights.
+    const nightVictim=action.actionId==="action_seer"&&effect==="dead"&&
+      (Array.isArray(rows)?rows:[]).some(x=>
+        loginOf(x?.loginId)===loginOf(member.loginId)&&x?.type==="dead"&&
+        x?.effectActive!==false&&Number(x?.night)===Number(night)&&night>0);
+    return nightVictim||action.allowDead||effect!=="dead"&&effect!=="expelled";
   }
   const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
   root.GMWW_BATTLE_CONTROLS=api;
