@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "version": "v6.00-staging",
+  "approvedReference": "GMWW Character Skin V5.83",
+  "sourceRig": "V5.10 16 bones - unchanged",
+  "status": "ART_ASSETS_MISSING",
+  "readyForMain": false,
+  "total": 30,
+  "groups": {
+    "standard": 20,
+    "muscular": 10
+  },
+  "actions": [
+    "idle",
+    "walk",
+    "run",
+    "result"
+  ],
+  "directions": [
+    "front",
+    "front-right",
+    "right",
+    "back-right",
+    "back",
+    "back-left",
+    "left",
+    "front-left"
+  ],
+  "characters": [
+    {
+      "id": "character-01",
+      "name": "Chàng Biển",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "sóng biển",
+      "artDirection": "tóc xanh biển, áo xanh-trắng họa tiết sóng",
+      "avatarPath": "/characters/overhaul-v600/character-01/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-01/skin.glb"
+    },
+    {
+      "id": "character-02",
+      "name": "Nàng Biển",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "ngọc trai",
+      "artDirection": "tóc xanh ánh bạc, trang phục biển ngọc trai",
+      "avatarPath": "/characters/overhaul-v600/character-02/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-02/skin.glb"
+    },
+    {
+      "id": "character-03",
+      "name": "Người Gác Hải Đăng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "hải đăng",
+      "artDirection": "tóc nâu, áo trắng-xanh họa tiết đèn",
+      "avatarPath": "/characters/overhaul-v600/character-03/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-03/skin.glb"
+    },
+    {
+      "id": "character-04",
+      "name": "Pháp Sư Thủy",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "phép thuật nước",
+      "artDirection": "tóc lam, áo choàng thêu thủy văn",
+      "avatarPath": "/characters/overhaul-v600/character-04/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-04/skin.glb"
+    },
+    {
+      "id": "character-05",
+      "name": "Thợ Săn Sao",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "cung sao",
+      "artDirection": "tóc tím than, phụ kiện tinh tú",
+      "avatarPath": "/characters/overhaul-v600/character-05/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-05/skin.glb"
+    },
+    {
+      "id": "character-06",
+      "name": "Hộ Vệ Sóng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "khiên sóng",
+      "artDirection": "tóc bạc, giáp xanh bạc",
+      "avatarPath": "/characters/overhaul-v600/character-06/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-06/skin.glb"
+    },
+    {
+      "id": "character-07",
+      "name": "Nữ Hoàng San Hô",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "san hô",
+      "artDirection": "tóc hồng san hô, vương miện tinh thể",
+      "avatarPath": "/characters/overhaul-v600/character-07/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-07/skin.glb"
+    },
+    {
+      "id": "character-08",
+      "name": "Tiên Rừng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "lá xanh",
+      "artDirection": "tóc lục, váy/tunica dây leo",
+      "avatarPath": "/characters/overhaul-v600/character-08/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-08/skin.glb"
+    },
+    {
+      "id": "character-09",
+      "name": "Kỵ Sĩ Trăng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "trăng",
+      "artDirection": "tóc đen tím, giáp ánh bạc",
+      "avatarPath": "/characters/overhaul-v600/character-09/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-09/skin.glb"
+    },
+    {
+      "id": "character-10",
+      "name": "Nhà Thám Hiểm",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "la bàn",
+      "artDirection": "tóc hung, áo khoác biển và la bàn",
+      "avatarPath": "/characters/overhaul-v600/character-10/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-10/skin.glb"
+    },
+    {
+      "id": "character-11",
+      "name": "Thiếu Nữ Hoa",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "hoa biển",
+      "artDirection": "tóc hồng, váy đính hoa",
+      "avatarPath": "/characters/overhaul-v600/character-11/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-11/skin.glb"
+    },
+    {
+      "id": "character-12",
+      "name": "Nghệ Nhân Gió",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "gió",
+      "artDirection": "tóc trắng lam, áo choàng nhẹ",
+      "avatarPath": "/characters/overhaul-v600/character-12/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-12/skin.glb"
+    },
+    {
+      "id": "character-13",
+      "name": "Chiến Binh Lửa",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "ngọn lửa",
+      "artDirection": "tóc đỏ, giáp đỏ đồng",
+      "avatarPath": "/characters/overhaul-v600/character-13/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-13/skin.glb"
+    },
+    {
+      "id": "character-14",
+      "name": "Người Gác Rừng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "cây cổ thụ",
+      "artDirection": "tóc nâu, giáp lá xanh",
+      "avatarPath": "/characters/overhaul-v600/character-14/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-14/skin.glb"
+    },
+    {
+      "id": "character-15",
+      "name": "Sứ Giả Mây",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "mây",
+      "artDirection": "tóc bạc, áo xanh trắng viền mây",
+      "avatarPath": "/characters/overhaul-v600/character-15/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-15/skin.glb"
+    },
+    {
+      "id": "character-16",
+      "name": "Phù Thủy Băng",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "băng giá",
+      "artDirection": "tóc xanh nhạt, giáp thủy tinh băng",
+      "avatarPath": "/characters/overhaul-v600/character-16/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-16/skin.glb"
+    },
+    {
+      "id": "character-17",
+      "name": "Nhạc Công Biển",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "nốt nhạc",
+      "artDirection": "tóc tím, phụ kiện nhạc cụ",
+      "avatarPath": "/characters/overhaul-v600/character-17/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-17/skin.glb"
+    },
+    {
+      "id": "character-18",
+      "name": "Vệ Binh Bình Minh",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "mặt trời",
+      "artDirection": "tóc vàng, giáp trắng vàng",
+      "avatarPath": "/characters/overhaul-v600/character-18/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-18/skin.glb"
+    },
+    {
+      "id": "character-19",
+      "name": "Thợ Máy Biển",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "bánh răng",
+      "artDirection": "tóc cam, trang phục máy móc",
+      "avatarPath": "/characters/overhaul-v600/character-19/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-19/skin.glb"
+    },
+    {
+      "id": "character-20",
+      "name": "Kẻ Du Hành Sao",
+      "body": "standard",
+      "rigId": "rig-male-normal-v1",
+      "motif": "dải ngân hà",
+      "artDirection": "tóc xanh đêm, áo choàng sao",
+      "avatarPath": "/characters/overhaul-v600/character-20/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-20/skin.glb"
+    },
+    {
+      "id": "character-21",
+      "name": "Lực Sĩ Thủy Triều",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "sóng lớn",
+      "artDirection": "tóc xanh đậm, thân lực lưỡng, găng tay biển",
+      "avatarPath": "/characters/overhaul-v600/character-21/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-21/skin.glb"
+    },
+    {
+      "id": "character-22",
+      "name": "Chiến Tướng San Hô",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "san hô đỏ",
+      "artDirection": "tóc đỏ, thân lực lưỡng, giáp san hô",
+      "avatarPath": "/characters/overhaul-v600/character-22/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-22/skin.glb"
+    },
+    {
+      "id": "character-23",
+      "name": "Hộ Pháp Ngọc",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "ngọc lam",
+      "artDirection": "tóc đen, thân lực lưỡng, giáp ngọc",
+      "avatarPath": "/characters/overhaul-v600/character-23/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-23/skin.glb"
+    },
+    {
+      "id": "character-24",
+      "name": "Vệ Binh Sấm",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "tia chớp",
+      "artDirection": "tóc tím, thân lực lưỡng, giáp sấm",
+      "avatarPath": "/characters/overhaul-v600/character-24/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-24/skin.glb"
+    },
+    {
+      "id": "character-25",
+      "name": "Chiến Binh Dung Nham",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "dung nham",
+      "artDirection": "tóc hung, thân lực lưỡng, giáp nham",
+      "avatarPath": "/characters/overhaul-v600/character-25/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-25/skin.glb"
+    },
+    {
+      "id": "character-26",
+      "name": "Thợ Săn Đại Dương",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "đinh ba",
+      "artDirection": "tóc bạc, thân lực lưỡng, phụ kiện săn biển",
+      "avatarPath": "/characters/overhaul-v600/character-26/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-26/skin.glb"
+    },
+    {
+      "id": "character-27",
+      "name": "Kỵ Sĩ Thiết Giáp",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "sắt",
+      "artDirection": "tóc nâu, thân lực lưỡng, giáp thép",
+      "avatarPath": "/characters/overhaul-v600/character-27/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-27/skin.glb"
+    },
+    {
+      "id": "character-28",
+      "name": "Hộ Vệ Cổ Thụ",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "rễ cây",
+      "artDirection": "tóc xanh lục, thân lực lưỡng, giáp vỏ cây",
+      "avatarPath": "/characters/overhaul-v600/character-28/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-28/skin.glb"
+    },
+    {
+      "id": "character-29",
+      "name": "Đấu Sĩ Hỏa Diệm",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "lửa xanh",
+      "artDirection": "tóc đỏ đen, thân lực lưỡng, giáp chiến",
+      "avatarPath": "/characters/overhaul-v600/character-29/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-29/skin.glb"
+    },
+    {
+      "id": "character-30",
+      "name": "Vệ Thần Ánh Sáng",
+      "body": "muscular",
+      "rigId": "rig-male-muscular-v1",
+      "motif": "quầng sáng",
+      "artDirection": "tóc vàng, thân lực lưỡng, giáp trắng vàng",
+      "avatarPath": "/characters/overhaul-v600/character-30/avatar.webp",
+      "skinPath": "/characters/overhaul-v600/character-30/skin.glb"
+    }
+  ]
+}
