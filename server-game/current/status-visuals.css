@@ -153,3 +153,6 @@
  padding:3px 5px!important;font-size:10px!important;font-weight:850!important;
 }
 .gmww-sv-preview .gmww-sv-badges>span{background:#a52330;color:white;border-color:#f9bc83}
+/* Consistent red status labels on both GM and Player Web. */
+.gmww-sv-badges>span{background:#9e2330!important;color:#fff7ed!important;border:1px solid #ffca87!important;box-shadow:0 2px 9px rgba(108,8,19,.62)!important;border-radius:7px!important;font-weight:850!important}
+
