@@ -267,6 +267,19 @@
           </div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
         </section>
+        <section id="battleGallowsPanel" role="region" aria-label="Lên Giàn" hidden>
+          <header title="Giữ và kéo để di chuyển"><strong>⚖️ LÊN GIÀN</strong><output id="battleGallowsClock">00:10</output></header>
+          <div id="battleGallowsStage" role="status" aria-live="polite">Sẵn sàng đề cử</div>
+          <label for="battleGallowsCandidate">Người lên giàn</label>
+          <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
+          <div class="battle-gallows-actions" aria-label="Hành động">
+            <button type="button" data-gallows-command="begin">BỎ PHIẾU 10 GIÂY</button>
+            <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CỨU</button>
+            <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 GIẾT</button>
+            <button type="button" data-gallows-command="restore">↶ KHÔI PHỤC</button>
+          </div>
+          <div id="battleGallowsVotes" aria-label="Kết quả bỏ phiếu"></div>
+        </section>
         <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
           <header title="Giữ và kéo để di chuyển Thông báo Làng"><strong>📣 THÔNG BÁO LÀNG</strong><button type="button" id="battleMorningAudio" aria-label="Phát lại thông báo">🔊</button></header>
           <div id="battleMorningList" role="status" aria-live="polite"></div>
