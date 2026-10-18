@@ -1348,6 +1348,26 @@ export class RoomDurableObject extends DurableObject {
         await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
       }
     }
+    // Queue from a lynched Knight becomes a real death only on the next dawn.
+    if(p==="morning"&&n>0){
+      const pending=await this.ctx.storage.list({prefix:"knightPending:"+String(meta.matchId||"")+":"+n+":"});
+      for(const [storageKey,action] of pending.entries()){
+        const loginId=normalizeLoginId(action?.targetId);
+        if(!loginId||String(action?.matchId||"")!==String(meta.matchId||""))continue;
+        const id="knight-strike:"+String(meta.matchId)+":"+n+":"+loginId;
+        if(!rows.some(x=>String(x.id)===id)&&
+          !rows.some(x=>String(x.type)==="dead"&&x.effectActive!==false&&
+            normalizeLoginId(x.loginId)===loginId&&(!x.matchId||String(x.matchId)===String(meta.matchId)))){
+          const consequence={id,type:"dead",loginId,matchId:String(meta.matchId),
+            night:n,cycleKey:key,effectActive:true,source:"knight-day-action",
+            actionId:"action_knight_last_strike",message:"Hiệp Sĩ đã chọn người này từ ngày trước.",
+            createdAt:now};
+          rows.push(consequence);
+          await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,consequence);
+        }
+        await this.ctx.storage.delete(storageKey);
+      }
+    }
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
