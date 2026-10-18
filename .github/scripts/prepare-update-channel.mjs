@@ -178,7 +178,8 @@ const catalog=releaseType==='runtime'
   ? await buildReleaseCatalog(manifest,rel=>fs.readFileSync(path.join(outRoot,rel)))
   : null;
 fs.writeFileSync('src/gmww-release-catalog.js','// Generated from SHA-256 verified package bytes. Do not edit.\nexport const releaseCatalog='+JSON.stringify(catalog)+';\n');
-// CI-audited previous inventories for V3.139. Fail closed on any missing
+const releaseBases=[];
+// CI-audited previous inventories for V3.140. Fail closed on any missing
 // evidence: all file hashes were verified by their original SUCCESS Production
 // build-catalog pipeline and are pinned in version control. The IPA's native
 // updater independently SHA-256 checks every downloaded changed file.
@@ -213,7 +214,6 @@ if(version==='3.140'){
 }
 // Only complete historical packages whose bytes are still available locally can
 // become delta bases. Missing or damaged packages simply cannot enable a delta.
-const releaseBases=[];
 const packageRoot=path.dirname(outRoot);
 const historical=fs.readdirSync(packageRoot).filter(name=>/^V\d+(?:\.\d+)+$/.test(name)&&name!=='V'+version)
   .sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
