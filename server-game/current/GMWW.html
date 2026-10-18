@@ -261,6 +261,10 @@
           <header id="battleTargetGrip" title="Giữ và kéo để di chuyển box nhân vật bị tác động"><b id="battleTargetTitle">CHỌN MỤC TIÊU</b></header>
           <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
+          <div id="battleAssassinChoice" hidden role="group" aria-label="Sát Thủ chọn dấu bí mật">
+            <strong>SÁT THỦ CHỌN DẤU BÍ MẬT</strong>
+            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍 LIKE</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎 DISLIKE</button></div>
+          </div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
         </section>
         <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
