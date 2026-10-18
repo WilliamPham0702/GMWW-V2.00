@@ -11,6 +11,8 @@ on:
         options:
           - scan
           - cleanup
+  issue_comment:
+    types: [created]
   schedule:
     # Every morning at 09:00 Vietnam time (02:00 UTC).
     - cron: "0 2 * * *"
@@ -26,6 +28,13 @@ concurrency:
 
 jobs:
   maintenance:
+    # Only the owner may request manual runs via a command on the maintenance issue.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.number == 320 &&
+       github.event.comment.user.login == 'WilliamPham0702' &&
+       (github.event.comment.body == '/gmww-cloudflare scan' ||
+        github.event.comment.body == '/gmww-cloudflare cleanup'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,5 +54,5 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GMWW_MAINTENANCE_MODE: ${{ github.event_name == 'schedule' && 'cleanup' || inputs.mode || 'scan' }}
+          GMWW_MAINTENANCE_MODE: ${{ github.event_name == 'schedule' && 'cleanup' || (github.event_name == 'issue_comment' && github.event.comment.body == '/gmww-cloudflare cleanup' && 'cleanup') || inputs.mode || 'scan' }}
         run: node tools/cloudflare-namespace-maintenance.mjs
