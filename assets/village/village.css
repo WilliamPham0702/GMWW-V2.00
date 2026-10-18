@@ -461,3 +461,11 @@ html.embedded body.player-prep .hud{display:none!important}
 .player .player-over{bottom:calc(100% + 3px);z-index:12}
 .player .player-over .player-role{margin:0 auto;max-width:100%}
 .player .player-over .gmww-sv-badges{position:static!important;left:auto!important;bottom:auto!important;transform:none!important;display:flex;flex-wrap:wrap;justify-content:center;max-width:132px;width:max-content;white-space:normal;gap:2px;margin:0 auto}
+
+/* V3.141 — full role names when GM has already publicly exposed them; do not reveal faction. */
+.player .player-over .player-role{
+  max-width:min(128px,32vw)!important;width:max-content!important;
+  white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+  overflow-wrap:anywhere!important;line-height:1.18!important;text-align:center!important;
+  padding:3px 5px!important;font-size:9px!important;
+}
