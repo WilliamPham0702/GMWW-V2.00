@@ -42,7 +42,7 @@ export function auditAssets({assetsRoot=path.join(root,'assets'),records=manifes
  const missing=[],invalid=[],shaSeen=new Map(),accepted=[];
  for(const row of records){
   for(const [kind,key,parser] of [['artwork','artworkPath',inspectPng],['avatar','avatarPath',inspectWebp],['skin','skinPath',inspectGlb]]){
-   const relative=String(row[key]||'').replace(/^\\/+/,'');
+   const relative=String(row[key]||'').replace(/^[/]+/,'');
    if(!relative.startsWith('characters/overhaul-v600/'+row.id+'/')){invalid.push({id:row.id,kind,error:'UNTRUSTED_PATH'});continue}
    const file=path.join(assetsRoot,relative);
    if(!fs.existsSync(file)){missing.push({id:row.id,kind,file:relative});continue}
