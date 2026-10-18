@@ -12,6 +12,7 @@ on:
       - 'src/gmww-members-live.js'
       - 'scripts/build-character21-v605-game-staging.mjs'
       - 'scripts/build-character22-30-art-review.mjs'
+      - 'tests/character-v606-next-art-review.test.mjs'
       - '.github/workflows/deploy-character21-v605-game-staging.yml'
   workflow_dispatch:
 
