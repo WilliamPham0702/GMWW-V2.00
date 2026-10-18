@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.146';
+const VERSION='3.147';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3703,9 +3703,20 @@ function battleMarkPlayers(){
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
     el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
     const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
-    let mark=el.querySelector(':scope>.battle-turn-mark');
-    if(actorOn){if(!mark){mark=document.createElement('span');mark.className='battle-turn-mark';mark.setAttribute('aria-hidden','true');mark.textContent='★ ĐẾN LƯỢT';el.appendChild(mark)}}
-    else mark?.remove();
+    // Battle labels live at the very top of the existing status/name/role stack.
+    // Absolute-positioned labels obscured player names on smaller iPhones.
+    const labels=el.querySelector('.play-player-over');
+    let mark=labels?.querySelector(':scope>.battle-turn-mark')||el.querySelector(':scope>.battle-turn-mark');
+    if(actorOn&&labels){
+      if(!mark){mark=document.createElement('span');mark.className='battle-turn-mark';mark.setAttribute('aria-hidden','true');mark.textContent='★ ĐẾN LƯỢT'}
+      if(labels.firstElementChild!==mark)labels.prepend(mark);
+    }else mark?.remove();
+    let targetMark=labels?.querySelector(':scope>.battle-target-mark');
+    if(targetOn&&labels){
+      if(!targetMark){targetMark=document.createElement('span');targetMark.className='battle-target-mark';targetMark.setAttribute('aria-hidden','true');targetMark.textContent='MỤC TIÊU'}
+      if(actorOn&&mark?.parentElement===labels)mark.after(targetMark);
+      else if(labels.firstElementChild!==targetMark)labels.prepend(targetMark);
+    }else targetMark?.remove();
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
