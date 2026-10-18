@@ -72,3 +72,8 @@ jobs:
           curl --fail --retry 4 --retry-delay 2 --max-time 20 \
             https://gmww-cloudflare-admin.williampham0702.workers.dev/health \
             | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{const v=JSON.parse(s);if(v.service!=='GMWW Cloudflare Administration')process.exit(1)})"
+      - name: Verify public sanitized maintenance status
+        run: |
+          curl --fail --retry 5 --retry-delay 2 --max-time 20 \
+            https://gmww-cloudflare-admin.williampham0702.workers.dev/api/public-status \
+            | node -e "let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{const v=JSON.parse(s);if(!Number.isInteger(v.namespaceCount)||!Number.isInteger(v.previewCount)||v.productionProtected!==true)process.exit(1)})"
