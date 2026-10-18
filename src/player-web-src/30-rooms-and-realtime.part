@@ -108,22 +108,108 @@ async function pollRoomState(){
     const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/me',{headers:auth()});
     if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()!=='ended')maybeOpenGame()}if(d?.cardBackImage){state.cardBackImage=d.cardBackImage;applyRoleCardBack()}
     if(d?.player){const me=d.player;state.ready=!!me.ready}
-    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);
+    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);state.gallows=d?.gallows||null;renderGallowsWidget();syncVillageFrame();
     if(d?.role){state.role=d.role;renderRole();maybeOpenGame()}
     if(String(d?.room?.phase||'').toLowerCase()==='ended')showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');
   }catch(e){if(e?.status===403||e?.status===404||e?.status===423||e?.code==='ROOM_DISABLED')await handleRoomMembershipLost()}
 }
+
+function gallowsCurrentStage(){
+  const g=state.gallows||{},remaining=Math.max(0,Number(g.deadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0));
+  return g.stage==='voting'&&!remaining?'closed':g.stage;
+}
+function syncGallowsVoteTags(){
+  const ballot=state.gallows;
+  const active=ballot&&['voting','closed','resolved'].includes(gallowsCurrentStage());
+  for(const p of state.players||[]){
+    const id=String(p.loginId||p.participantId||'').replace(/^member:/,'');
+    const tags=(Array.isArray(p.statusTags)?p.statusTags:[]).filter(x=>x.statusId!=='gallows_vote');
+    const vote=active?ballot?.votes?.[id]:null;
+    if(vote==='👍'||vote==='👎')tags.push({statusId:'gallows_vote',icon:vote,label:vote==='👍'?'Đã bỏ phiếu cứu':'Đã bỏ phiếu giết'});
+    p.statusTags=tags;
+  }
+}
+function gallowsWidget(){
+  let el=document.getElementById('gmwwGallowsPlayer');if(el)return el;
+  const st=document.createElement('style');st.id='gmwwGallowsPlayerCss';
+  st.textContent='#gmwwGallowsPlayer{position:fixed;z-index:990;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,440px);max-height:58dvh;overflow:auto;padding:13px;border-radius:17px;border:1px solid #ace3e2;background:#103344ed;box-shadow:0 10px 40px #0007;color:#effcff;display:grid;gap:8px}#gmwwGallowsPlayer[hidden]{display:none!important}#gmwwGallowsPlayer h3{margin:0;font-size:17px;color:#ffda92}#gmwwGallowsPlayer button,#gmwwGallowsPlayer select{min-height:38px;border-radius:9px;border:1px solid #99cfda;background:#18516b;color:#fff;padding:7px;font-weight:800}#gmwwGallowsPlayer button:disabled{opacity:.38}#gmwwGallowsChoices{display:grid;grid-template-columns:1fr 1fr;gap:9px}#gmwwGallowsVotes{max-height:18dvh;overflow:auto;font-size:12px;line-height:1.7}#gmwwGallowsVotes div{display:flex;justify-content:space-between;border-bottom:1px solid #d7ffff33}';
+  document.head.append(st);
+  el=document.createElement('section');el.id='gmwwGallowsPlayer';el.hidden=true;
+  el.innerHTML='<h3>⚖️ LÊN GIÀN · <output id="gmwwGallowsRemaining">00:10</output></h3><p id="gmwwGallowsPrompt"></p><select id="gmwwGallowsNominee" aria-label="Chọn người đề cử"></select><div id="gmwwGallowsChoices"><button id="gmwwGallowsNominate">ĐỀ CỬ</button><button id="gmwwGallowsSave">👍 CỨU</button><button id="gmwwGallowsKill">👎 GIẾT</button></div><div id="gmwwGallowsVotes"></div>';
+  document.body.append(el);
+  el.querySelector('#gmwwGallowsNominate').onclick=()=>sendGallowsChoice('nominate',el.querySelector('#gmwwGallowsNominee').value);
+  el.querySelector('#gmwwGallowsSave').onclick=()=>sendGallowsChoice('vote','', '👍');
+  el.querySelector('#gmwwGallowsKill').onclick=()=>sendGallowsChoice('vote','', '👎');
+  setInterval(gallowsTick,500);
+  return el;
+}
+function gallowsTick(){
+  const g=state.gallows,el=document.getElementById('gmwwGallowsPlayer');if(!g||!el||el.hidden)return;
+  const remaining=g.stage==='voting'?Math.max(0,Math.ceil((Number(g.deadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0))/1000)):0;
+  el.querySelector('#gmwwGallowsRemaining').textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
+  const disabled=remaining<=0||g.stage!=='voting'||!!g.votes?.[state.member?.loginId]||(g.blocked||[]).includes(state.member?.loginId);
+  el.querySelector('#gmwwGallowsSave').disabled=disabled;
+  el.querySelector('#gmwwGallowsKill').disabled=disabled;
+}
+function renderGallowsWidget(){
+  syncGallowsVoteTags();
+  const g=state.gallows,cycle=String(state.room?.cyclePhase||'');
+  const el=gallowsWidget();
+  if(!state.roomCode||cycle!=='morning'||!g){el.hidden=true;return}
+  el.hidden=false;
+  const me=String(state.member?.loginId||''),blocked=(g.blocked||[]).includes(me),stage=gallowsCurrentStage();
+  const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
+  el.querySelector('#gmwwGallowsPrompt').textContent=stage==='nominating'?
+    'Chọn một người để đề cử lên giàn.':
+    stage==='voting'?'Bỏ phiếu cho '+n(g.candidateId)+' — chỉ có 10 giây.':
+    stage==='closed'?'Đã hết giờ. Chờ GM công bố kết quả.':
+    n(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' đã được cứu.');
+  const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
+  sel.replaceChildren();
+  for(const p of state.players||[]){if(p.kind&&p.kind!=='member')continue;
+    const id=String(p.loginId||p.participantId||'').replace(/^member:/,'');
+    if(!id)continue;
+    const option=document.createElement('option');option.value=id;option.textContent=p.displayName||id;sel.append(option);
+  }
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  sel.hidden=stage!=='nominating';sel.disabled=stage!=='nominating';
+  const nominationButton=el.querySelector('#gmwwGallowsNominate');
+  nominationButton.hidden=stage!=='nominating';nominationButton.disabled=blocked||!!g.nominations?.[me];
+  const choices=el.querySelector('#gmwwGallowsChoices');
+  el.querySelector('#gmwwGallowsSave').hidden=stage!=='voting';
+  el.querySelector('#gmwwGallowsKill').hidden=stage!=='voting';
+  choices.hidden=stage==='closed'||stage==='resolved';
+  const voteList=el.querySelector('#gmwwGallowsVotes');voteList.replaceChildren();
+  for(const [id,vote] of Object.entries(g.votes||{})){
+    const row=document.createElement('div'),name=document.createElement('strong'),mark=document.createElement('span');
+    name.textContent=n(id);mark.textContent=vote;row.append(name,mark);voteList.append(row);
+  }
+  if(blocked){const p=document.createElement('p');p.textContent='🚫 Bạn bị GM cấm bỏ phiếu.';voteList.prepend(p)}
+  gallowsTick();
+}
+async function sendGallowsChoice(command,targetId='',choice=''){
+  if(!state.token||!state.roomCode||!state.gallows)return;
+  const g=state.gallows;if((g.blocked||[]).includes(state.member?.loginId))return;
+  try{
+    const result=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/gallows',{
+      method:'POST',headers:auth(),body:JSON.stringify({command,targetId,choice})});
+    if(result?.ok!==true)throw Error(result?.error||'Phiếu không được chấp nhận.');
+    state.gallows=result.gallows;renderGallowsWidget();syncVillageFrame(true);
+    toast(command==='nominate'?'Đã gửi đề cử.':'Đã gửi phiếu '+choice+'.');
+  }catch(e){toast(e?.message||'Không gửi được phiếu.');pollRoomState().catch(()=>{})}
+}
+
 function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(state.member)refreshGmPresence();if(state.roomCode&&state.participantId)pollRoomState()}});
 
 function connectWS(){
   if(!state.roomCode||!state.participantId)return;try{state.ws?.close();const proto=location.protocol==='https:'?'wss:':'ws:';state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));
-  state.ws.onopen=()=>{if(state.wsPingTimer)clearInterval(state.wsPingTimer);sendRoomHeartbeat();try{state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{};state.wsPingTimer=setInterval(()=>{try{if(state.ws?.readyState===WebSocket.OPEN)state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{}},10000);startRoomStateWatch()};state.ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return};const movementEvent=d.type==='player_move'||d.type==='player_move_complete';if(Number.isFinite(Number(d.serverTime)))state.serverClockOffsetMs=Number(d.serverTime)-Date.now();if(d.type==='room_disbanded'){handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}if(d.type==='room_state'||movementEvent){if(d.room?.enabled===false){handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=d.room||state.room;
+  state.ws.onopen=()=>{if(state.wsPingTimer)clearInterval(state.wsPingTimer);sendRoomHeartbeat();try{state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{};state.wsPingTimer=setInterval(()=>{try{if(state.ws?.readyState===WebSocket.OPEN)state.ws.send(JSON.stringify({type:'ping',at:Date.now()}))}catch{}},10000);startRoomStateWatch()};state.ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return};const movementEvent=d.type==='player_move'||d.type==='player_move_complete';if(Number.isFinite(Number(d.serverTime)))state.serverClockOffsetMs=Number(d.serverTime)-Date.now();if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);return}if(d.type==='room_disbanded'){handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}if(d.type==='room_state'||movementEvent){if(d.room?.enabled===false){handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=d.room||state.room;
     const previousTags=new Map((state.players||[]).map(p=>[String(p?.participantId||''),Array.isArray(p?.statusTags)?p.statusTags:[]]));
     const config=state.room?.statusDisplay||{};
     state.players=(d.players||state.players||[]).map(p=>({ ...p,
       statusTags:(Array.isArray(p?.statusTags)?p.statusTags:previousTags.get(String(p?.participantId||''))||[]).filter(t=>
-        Object.prototype.hasOwnProperty.call(config,String(t?.statusId||''))?config[t.statusId]===true:['frozen','dead','expelled'].includes(String(t?.statusId||''))) }));const me=state.players.find(x=>x.participantId===state.participantId);if(!me&&state.participantId){handleRoomMembershipLost();return}if(me){state.ready=!!me.ready;if(me.gameCharacterId)state.selectedGameCharacterId=String(me.gameCharacterId);state.selectedSeatId=Number(me.seatId||me.moveTargetSeatId||0)||null;scheduleMovementCompletion(me)}if(!movementEvent){renderRooms();refreshPrivateRole(true)}if(d.room?.phase==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'')}else{if(!movementEvent){maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock()}syncVillageFrame()}}else if(d.type==='room_cycle'){state.room=d.room||state.room;state.villageCycle={phase:d.phase||state.room?.cyclePhase||'',night:Number(d.night||state.room?.cycleNight||0),day:Number(d.day||0)};syncVillageFrame();clearTemporaryRoleEffects(d.phase,d.night);refreshPrivateRole(true)}else if(d.type==='night_turn'||d.type==='auto_gm'){state.room=d.room||state.room;if(state.room)state.villageCycle={phase:state.room.cyclePhase||'',night:Number(state.room.cycleNight||0),day:0};syncVillageFrame()}else if(d.type==='role_ready'||d.type==='role_progress'||d.type==='artifact_progress'||d.type==='artifact_activation'){refreshPrivateRole(true)}else if(d.type==='player_status_changed'||d.type==='player_revived'||d.type==='player_state_cleared'){pollRoomState().catch(()=>{})}else if(d.type==='player_interaction'){showPlayerInteraction(d.interaction)}else if(d.type==='room_disabled'){handleRoomMembershipLost('Phòng đã được Quản Trò Tắt. Bạn đã được đưa về Phòng chờ.')}else if(d.type==='room_hard_reset'){handleRoomMembershipLost(d.forcedEnd?'Quản Trò đã kết thúc cưỡng ép ván chơi. Bạn đã trở về sảnh chờ.':'Quản Trò đã RESET Phòng. Hãy chọn Phòng để tham gia lại.')}else if(d.type==='room_reset'){state.room=d.room||state.room;state.players=d.players||state.players;const me=state.players.find(x=>x.participantId===state.participantId);state.ready=me?!!me.ready:true;state.role=null;state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.artifactFocus='';clearArtifactDraft();state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};renderRooms();if(!$('#resultOverlay')?.classList.contains('show'))enterVillage()}else if(d.type==='player_status'&&d.participantId===state.participantId){setDead(d.status==='dead')}else if(d.type==='player_kicked'&&d.participantId===state.participantId){handleRoomMembershipLost('GM đã Kick bạn khỏi Phòng.')}else if(d.type==='game_result'){showResult(d.winnerFaction||d.winnerLabel||'',d.matchId||d.room?.matchId||'')}};
+        Object.prototype.hasOwnProperty.call(config,String(t?.statusId||''))?config[t.statusId]===true:['frozen','dead','expelled'].includes(String(t?.statusId||''))) }));const me=state.players.find(x=>x.participantId===state.participantId);if(!me&&state.participantId){handleRoomMembershipLost();return}if(me){state.ready=!!me.ready;if(me.gameCharacterId)state.selectedGameCharacterId=String(me.gameCharacterId);state.selectedSeatId=Number(me.seatId||me.moveTargetSeatId||0)||null;scheduleMovementCompletion(me)}if(!movementEvent){renderRooms();refreshPrivateRole(true)}if(d.room?.phase==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'')}else{if(!movementEvent){maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock()}syncVillageFrame()}}else if(d.type==='room_cycle'){state.gallows=null;renderGallowsWidget();state.room=d.room||state.room;state.villageCycle={phase:d.phase||state.room?.cyclePhase||'',night:Number(d.night||state.room?.cycleNight||0),day:Number(d.day||0)};syncVillageFrame();clearTemporaryRoleEffects(d.phase,d.night);refreshPrivateRole(true)}else if(d.type==='night_turn'||d.type==='auto_gm'){state.room=d.room||state.room;if(state.room)state.villageCycle={phase:state.room.cyclePhase||'',night:Number(state.room.cycleNight||0),day:0};syncVillageFrame()}else if(d.type==='role_ready'||d.type==='role_progress'||d.type==='artifact_progress'||d.type==='artifact_activation'){refreshPrivateRole(true)}else if(d.type==='player_status_changed'||d.type==='player_revived'||d.type==='player_state_cleared'){pollRoomState().catch(()=>{})}else if(d.type==='player_interaction'){showPlayerInteraction(d.interaction)}else if(d.type==='room_disabled'){handleRoomMembershipLost('Phòng đã được Quản Trò Tắt. Bạn đã được đưa về Phòng chờ.')}else if(d.type==='room_hard_reset'){handleRoomMembershipLost(d.forcedEnd?'Quản Trò đã kết thúc cưỡng ép ván chơi. Bạn đã trở về sảnh chờ.':'Quản Trò đã RESET Phòng. Hãy chọn Phòng để tham gia lại.')}else if(d.type==='room_reset'){state.room=d.room||state.room;state.players=d.players||state.players;const me=state.players.find(x=>x.participantId===state.participantId);state.ready=me?!!me.ready:true;state.role=null;state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.artifactFocus='';clearArtifactDraft();state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};renderRooms();if(!$('#resultOverlay')?.classList.contains('show'))enterVillage()}else if(d.type==='player_status'&&d.participantId===state.participantId){setDead(d.status==='dead')}else if(d.type==='player_kicked'&&d.participantId===state.participantId){handleRoomMembershipLost('GM đã Kick bạn khỏi Phòng.')}else if(d.type==='game_result'){showResult(d.winnerFaction||d.winnerLabel||'',d.matchId||d.room?.matchId||'')}};
   state.ws.onclose=e=>{if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(e?.reason==='ROOM_DISABLED'){handleRoomMembershipLost('Phòng đã được Quản Trò Tắt. Bạn đã được đưa về Phòng chờ.');return}if(e?.reason==='PLAYER_KICKED'){handleRoomMembershipLost('GM đã Kick bạn khỏi Phòng.');return}if(e?.reason==='PLAYER_OFFLINE_KICKED'){handleRoomMembershipLost('Bạn đã rời Phòng vì mất kết nối quá lâu.');return}if(e?.reason==='ROOM_HARD_RESET'){handleRoomMembershipLost('Quản Trò đã RESET Phòng. Hãy chọn Phòng để tham gia lại.');return}if(state.participantId&&state.roomCode)setTimeout(connectWS,1800)};}catch{}
 }
 async function refreshPrivateRole(force=false){
