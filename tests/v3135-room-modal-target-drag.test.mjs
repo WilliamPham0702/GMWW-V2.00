@@ -34,7 +34,7 @@ test('V3.135: target box dragging stays bounded within a phone viewport',()=>{
   assert.ok(start>=0&&end>start);
   const ctx={};
   vm.runInNewContext(source.slice(start,end)+';globalThis.bound=battleTargetClampPosition;',ctx);
-  const pairs=[[80,25,6,6],[1000,1000,244,560],[150,220,6,6]];
+  const pairs=[[-80,-25,6,6],[1000,1000,244,658],[150,220,150,220]];
   for(const [x,y,left,top] of pairs){
     const p=ctx.bound(140,180,x,y,390,844);
     assert.equal(p.left,left);assert.equal(p.top,top);
