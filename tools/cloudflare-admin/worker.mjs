@@ -129,7 +129,7 @@ async function handler(request,env){
     const r=await fetch(u,{headers:{accept:"application/vnd.github+json","user-agent":"GMWW-Cloudflare-Admin/1.0"}});
     if(!r.ok)return failure("Không đọc được trạng thái bảo trì GitHub",503);
     const issue=await r.json();
-    const match=String(issue.body||"").match(/<!-- GMWW_CF_STATUS_START -->\\s*(\\{[^\\n]*\\})\\s*<!-- GMWW_CF_STATUS_END -->/);
+    const match=String(issue.body||"").match(/<!-- GMWW_CF_STATUS_START -->\s*(\{[^\n]*\})\s*<!-- GMWW_CF_STATUS_END -->/);
     if(!match)return failure("Chưa có báo cáo bảo trì được xác minh",503);
     const raw=JSON.parse(match[1]);
     const num=k=>Number.isSafeInteger(raw[k])&&raw[k]>=0?raw[k]:null;
