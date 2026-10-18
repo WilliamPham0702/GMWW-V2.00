@@ -277,6 +277,14 @@ const battleActions=()=>{
         (r.loginIds||[]).map(String).includes(String(actorId))&&
         (r.roleId===action.roleId||!(action.roleIds||[]).length||(action.roleIds||[]).includes(r.roleId))):turn;
       const roleId=String(owner?.roleId||action.roleId||''),card=(state.cards||[]).find(r=>String(r.id)===roleId);
+      if(action.actionId==='action_wolf_bite'&&roleId==='role_snow_wolf'){
+        const otherWolves=(playSceneRuntime.assignments||[]).filter(row=>{
+          if(String(row.loginId||'')===String(actorId)||playPlayerEffect(row.loginId)==='dead')return false;
+          const faction=String(row.faction||row.factionId||row.roleCard?.factionId||'').toLowerCase();
+          return String(row.roleId||'').includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+        });
+        if(otherWolves.length){unavailableReason='Sói Tuyết chỉ Cắn khi là Sói cuối cùng.';return false}
+      }
       if(!roleId||!card)return true; // Legacy catalog: server still validates.
       const own=ledger.filter(row=>String(row?.matchId)===matchId&&String(row?.actorId)===String(actorId)&&String(row?.roleId)===roleId);
       const onlyOne=card.flags?.allowMultipleActions===false||roleId==='role_old_witch';
@@ -555,12 +563,23 @@ function battleBindConfirmDrag(){
 }
 function battleClear(){battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
 function battlePickAction(id){if(battleState.busy||battleState.syncPending)return;const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
+function battleTargetAllowed(action,member,effect){
+  if(!action||!member)return false;
+  if(action.actionId==='action_seer'&&effect==='dead'&&!action.allowDead){
+    if(action.noSelf&&(action.actorIds||[]).includes(String(member.loginId)))return false;
+    const started=Date.parse(playSceneRuntime.room?.cycleStartedAt||''),night=Number(playSceneState.night||0);
+    return (playSceneRuntime.activeEffects||[]).some(x=>
+      String(x.loginId||'')===String(member.loginId)&&x.type==='dead'&&x.effectActive!==false&&
+      (Number(x.night)===night||(Number.isFinite(started)&&Date.parse(x.createdAt||'')>=started)));
+  }
+  return battleRules()?.targetAllowed(action,member,effect)===true;
+}
 function battlePickTarget(id,actionId){
   if(battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
   if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
   const m=battleMember(id);
-  if(!battleRules()?.targetAllowed(a,m,playPlayerEffect(id))){playFlashError('Mục tiêu không hợp lệ cho chức năng này.');return}
+  if(!battleTargetAllowed(a,m,playPlayerEffect(id))){playFlashError('Mục tiêu không hợp lệ cho chức năng này.');return}
   id=String(id);const i=battleState.targets.indexOf(id);
   if(i>=0)battleState.targets.splice(i,1);
   else if(battleState.targets.length<a.targetCount)battleState.targets.push(id);
@@ -653,7 +672,7 @@ function renderPlayBattle(){
     const list=document.getElementById('battleRosterList');
     if(list)list.innerHTML=playLiveMembers().filter(m=>m.loginId).map(m=>{
       const id=String(m.loginId),status=playPlayerEffect(id),selected=battleState.targets.includes(id);
-      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):!!action&&battleRules().targetAllowed(action,m,status);
+      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):!!action&&battleTargetAllowed(action,m,status);
       return '<button data-battle-member="'+playEsc(id)+'" '+(!allowed?'disabled ':'')+'class="'+(selected?'selected':'')+'"><span>'+(selected?'✓':'○')+'</span><b>'+playEsc(m.displayName||id)+'</b><span>'+(selected?'×':'')+'</span></button>';
     }).join('');
   }
@@ -667,7 +686,7 @@ function renderPlayBattle(){
     if(pickerText)pickerText.textContent=targetReady?'':battleState.dragAmbiguous?'Hai người đang quá gần nhau. Hãy chạm đúng TÊN mục tiêu để tránh thả nhầm.':battleState.targets.length?'':'Chọn '+(act?.targetCount||1)+' người chơi có thể nhận hành động';
     if(candidates){
       candidates.hidden=targetReady||(battleState.targetMode==='drag'&&act?.targetCount===1);
-      candidates.innerHTML=act?playLiveMembers().filter(m=>m.loginId&&battleRules().targetAllowed(act,m,playPlayerEffect(m.loginId))).map(m=>
+      candidates.innerHTML=act?playLiveMembers().filter(m=>m.loginId&&battleTargetAllowed(act,m,playPlayerEffect(m.loginId))).map(m=>
         '<button type="button" data-battle-candidate="'+playEsc(m.loginId)+'" class="'+(battleState.targets.includes(String(m.loginId))?'is-selected':'')+'">'+(battleState.targets.includes(String(m.loginId))?'✓ ':'○ ')+playEsc(m.displayName||m.loginId)+'</button>').join(''):'';
     }
     if(pickerOK)pickerOK.disabled=battleState.busy||battleState.syncPending||!targetReady;
@@ -946,7 +965,7 @@ function battleDropCandidates(actionId){
   const a=battleActions().find(x=>x.id===actionId),ring=document.getElementById('playPlayerRing');
   if(!a||!ring)return {nodes:[],allowed:()=>false};
   return {nodes:ring.querySelectorAll('[data-play-player-id]'),
-    allowed:id=>battleRules().targetAllowed(a,battleMember(id),playPlayerEffect(id))};
+    allowed:id=>battleTargetAllowed(a,battleMember(id),playPlayerEffect(id))};
 }
 function battleClearDropHighlights(){
   document.querySelectorAll('#playPlayerRing .is-drop-target,#playPlayerRing .is-drop-ambiguous').forEach(el=>el.classList.remove('is-drop-target','is-drop-ambiguous'));
