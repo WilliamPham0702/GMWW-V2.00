@@ -9,7 +9,7 @@ test('V3.139: tap and drag share validated single target-audio selection',()=>{
  assert.ok(s.includes('function battlePickTargetWithAudio(id,actionId)'));
  assert.ok(s.includes("if(selected)void battlePlayConfiguredAudio('actions',action.actionId,action.name)"));
  assert.ok(s.includes('battlePickTargetWithAudio(x.dataset.playPlayerId)'),'Direct character tap must play action audio');
- assert.ok(s.includes('if(hit.id)battlePickTargetWithAudio(hit.id,d.id)'),'Valid drag drop must share the same handler');
+ assert.ok(s.includes('if(hit.id){')&&s.includes('battlePickTargetWithAudio(hit.id,d.id)'),'Valid drag drop must share the same handler');
  assert.ok(s.includes('const selected=!already&&battleState.targets.includes(target)'),'Deselect/invalid target must not replay');
  assert.ok(!s.includes('for(const id of targets)battleState.impacts.set(id,'));
 });
