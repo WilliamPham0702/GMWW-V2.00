@@ -146,6 +146,26 @@ jobs:
           grep -q 'characterV605PlayerRenderer' /tmp/char21-player-app.js
           curl -fsS "$BASE/api/character-v605/catalog" > /tmp/char21-catalog.json
           node -e 'const c=require("/tmp/char21-catalog.json");if(c.totalApproved!==1||c.characters[0]?.id!=="character-21")process.exit(1)'
+          curl -fsS "$BASE/api/character-v605/portrait-catalog" > /tmp/char606-portraits.json
+          node - <<'NODE'
+          const f=require('fs'),c=JSON.parse(f.readFileSync('/tmp/char606-portraits.json'));
+          if(c.totalPortraitOnly!==9||c.characters.length!==9||c.characters.some(x=>x.rigApproved||x.modelUrl!==null||x.actions.length))throw Error('UNAPPROVED_GLBS_IN_STAGING_CATALOG');
+          NODE
+          for n in $(seq 22 30); do
+            ID="character-$n"
+            curl -fsS "$BASE/api/character-v605/$ID/avatar" > "/tmp/char606-$ID.webp"
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/character-v605/$ID/skin")
+            test "$STATUS" = '404'
+          done
+          node - <<'NODE'
+          const f=require('fs'),crypto=require('crypto'),m=JSON.parse(f.readFileSync('/tmp/char606-portraits.json'));
+          for(const c of m.characters){
+            const raw=f.readFileSync('/tmp/char606-'+c.id+'.webp');
+            const hash=crypto.createHash('sha256').update(raw).digest('hex');
+            if(hash!==c.sha256||raw.length!==c.bytes)throw Error('PORTRAIT_SHA_MISMATCH '+c.id);
+          }
+          console.log('Nine REAL 22–30 portraits verified. Unapproved skins explicitly blocked.');
+          NODE
           curl -fsS "$BASE/api/character-v605/character-21/avatar" > /tmp/char21-avatar.webp
           curl -fsS "$BASE/api/character-v605/character-21/skin" > /tmp/char21-skin.glb
           curl -fsS "$BASE/api/character-v605/character-21/renderer?embed=1" > /tmp/char21-renderer.html
