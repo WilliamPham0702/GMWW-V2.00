@@ -791,23 +791,44 @@ function initBattleFloatingUndo(){
    can be cancelled by browser panning or pointer capture on the village scene. */
 function initBattleTimelineScrollNavigation(){
   const timeline=document.getElementById('battleTimeline');if(!timeline||timeline.dataset.scrollNavReady)return;
-  timeline.dataset.scrollNavReady='1';let armed=false,startScroll=0,timer=null;
+  timeline.dataset.scrollNavReady='1';
+  let armed=false,moved=false,startScroll=0,startX=0,startY=0,gestureDx=0,timer=null;
+  const cancel=()=>{armed=false;moved=false;clearTimeout(timer)};
+  timeline.gmwwCancelScrollNavigation=cancel;
+  const begin=(x,y)=>{
+    battleUnlockAudioFromGesture();cancel();
+    if(playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    armed=true;startScroll=timeline.scrollLeft;startX=x;startY=y;gestureDx=0;
+  };
+  const move=(x,y)=>{
+    if(!armed)return;
+    const dx=x-startX,dy=y-startY;
+    if(Math.abs(dx)>=34&&Math.abs(dx)>Math.abs(dy)*1.1){moved=true;gestureDx=dx}
+  };
   const settle=()=>{
-    if(!armed||playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy)return;
-    if(Math.abs(timeline.scrollLeft-startScroll)<14){armed=false;return}
-    const delta=Math.sign(timeline.scrollLeft-startScroll);
-    armed=false;
-    // Same authoritative next/previous turn path as the top navigation buttons.
-    // Never silently scroll past the active turn without committing to Server.
+    if(!armed||!moved||playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+       battleState.busy||battleState.syncPending){cancel();return}
+    // Only a genuine finger/drag movement can navigate. scrollIntoView()
+    // following a button tap is programmatic and must never change the turn.
+    const delta=Math.sign(timeline.scrollLeft-startScroll)||Math.sign(-gestureDx);
+    cancel();
     if(delta)battleNavigateRelative(delta);
   };
-  const schedule=()=>{if(!armed)return;clearTimeout(timer);timer=setTimeout(settle,220)};
-  timeline.addEventListener('touchstart',()=>{battleUnlockAudioFromGesture();armed=true;startScroll=timeline.scrollLeft},{passive:true});
-  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){battleUnlockAudioFromGesture();armed=true;startScroll=timeline.scrollLeft}},{passive:true});
+  const schedule=()=>{if(!armed||!moved)return;clearTimeout(timer);timer=setTimeout(settle,220)};
+  timeline.addEventListener('touchstart',e=>{
+    const t=e.touches?.[0];if(t)begin(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchmove',e=>{
+    const t=e.touches?.[0];if(t)move(t.clientX,t.clientY);
+  },{passive:true});
+  timeline.addEventListener('touchend',e=>{
+    const t=e.changedTouches?.[0];if(t)move(t.clientX,t.clientY);if(moved)schedule();else cancel();
+  },{passive:true});
+  timeline.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')begin(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')move(e.clientX,e.clientY)},{passive:true});
+  timeline.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){move(e.clientX,e.clientY);if(moved)schedule();else cancel()}},{passive:true});
   timeline.addEventListener('scroll',schedule,{passive:true});
-  timeline.addEventListener('touchend',schedule,{passive:true});
-  timeline.addEventListener('pointerup',schedule,{passive:true});
-  timeline.addEventListener('touchcancel',()=>{armed=false;clearTimeout(timer)},{passive:true});
+  timeline.addEventListener('touchcancel',cancel,{passive:true});
 }
 function initBattleSwipeNavigation(){
   const root=document.getElementById('playShell');if(!root||root.dataset.battleSwipeReady)return;
@@ -923,7 +944,7 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
-  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
+  document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
