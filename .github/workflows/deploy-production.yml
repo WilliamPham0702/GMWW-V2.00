@@ -474,7 +474,8 @@ jobs:
           const checks={
             'JS version':app.includes("const VERSION='"+version+"';"),
             'Cloudflare maintenance button':html.includes('id="gmwwCloudflareOpen"'),
-            'iOS same-frame navigation':html.includes("window.location.assign('https://gmww-cloudflare-admin.williampham0702.workers.dev/')"),
+            'embedded Cloudflare panel':html.includes('id="gmwwCloudflarePanel"')&&html.includes('id="gmwwCfNamespaces"')&&html.includes('id="gmwwCfEligible"'),
+            'authenticated cleanup action':html.includes('actions/workflows/cloudflare-maintenance.yml')&&html.includes('window.location.assign(actions)'),
             'task console removed':!html.includes('id="settingsGroupTasks"')&&!html.includes('id="gmwwTasksOpenList"'),
             'background task refresh removed':!app.includes('function gmwwTasksRefresh(')&&!app.includes('gmwwTaskReviewReturn'),
             'Cloudflare paragraphs removed':!html.includes('Namespaces, Preview, quét định kỳ')&&!html.includes('Trang quản trị riêng; GM/Player'),
