@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Immutable Runtime inventories extracted from successful Cloudflare Production build+SHA-256 verification logs. Used ONLY for OTA V3.139 delta; untrusted or unknown bases fall back to full.",
+  "description": "Pinned complete immutable inventory for Runtime V3.140 OTA deltas from versions 3.137, 3.138, and 3.139; extracted only from successful SHA-256-verified Production deploy jobs.",
   "baselines": [
     {
       "version": "3.137",
@@ -1578,6 +1578,800 @@
             {
               "path": "village/seat-leaf.webp",
               "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.138/village/seat-leaf.webp",
+              "sha256": "5760035ed1c0619e494ec30c048404f7f8f433c3e3cd2fb1932791a251c84bba"
+            }
+          ]
+        },
+        "delete": [],
+        "ipa": {
+          "version": "3.110",
+          "fileName": "GMWW-V3.110.ipa",
+          "url": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.110/GMWW-V3.110.ipa"
+        }
+      }
+    },
+    {
+      "version": "3.139",
+      "sourceCommit": "4eff650a4dc55b3b222b0ab4f661cb05707d09ff",
+      "workflowRun": 39109032855,
+      "verifiedBy": "Deploy Production SUCCESS, buildReleaseCatalog SHA-256 integrity + post-deploy OTA verification",
+      "manifest": {
+        "schema": 1,
+        "releaseVersion": "3.139",
+        "releaseType": "runtime",
+        "shellVersion": "3.110",
+        "minimumShellVersion": "3.110",
+        "runtimeVersion": "3.139",
+        "webVersion": "3.139",
+        "serverVersion": "3.139",
+        "required": false,
+        "restartRequired": true,
+        "releaseNotes": [
+          "V3.133: Đêm/Ngày có số thứ tự, gọi đủ Bầy Sói; sửa liên kết Audio lượt/OK/Sói Cắn/Phù Thuỷ/Sói Tuyết; hộp Yêu Tinh dịch trái-không dịch-phải và xem kết quả thật; Phù Thủy thấy vết cắn kể cả đã bảo vệ; kết quả soi nổi có thể kéo, đóng; thu gọn ONLINE/OFFLINE và ON/OFF.",
+          "V3.132: Ghi nhận hành động ngay sau khi Server xác nhận, đồng bộ phòng ở nền; giảm xác thực lặp, ghi đo thời gian và thu hộp xác nhận chỉ còn nút OK; giữ nguyên dữ liệu, luật và Khôi phục.",
+          "V3.131: Thu nhỏ icon Trạng Thái, xếp trạng thái - tên - vai trò trên đầu nhân vật, phục hồi màu Sói Cắn và bỏ Nhật ký dư.",
+          "V3.130: Sửa CSS Trạng Thái ghi đè định vị Seat làm nhân vật dồn sang phải; giữ tọa độ tuyệt đối của GM và Player Web, bổ sung kiểm thử WebKit.",
+          "V3.129: Sửa triệt để Seat Mẫu không làm mới UI, ngăn chuyển động cũ đè vị trí đã gán trong các bước thiết lập; đồng bộ GM và Player Web, giữ nguyên dữ liệu và IPA.",
+          "V3.128: Viết lại vùng đi bộ trong làng và sơ đồ Seat 8–30 người lấy lửa làm tâm; chặn mái nhà, biển và sân cấm; loại bỏ vị trí ngẫu nhiên/di chuyển bù sai; giữ dữ liệu, Rule Engine và IPA.",
+          "V3.127: Khắc phục gốc lỗi Seat dồn cụm trong Vào Trận: tự hoàn tất seat chưa hợp lệ, hủy chuyển động cũ, đồng bộ vị trí GM/Player Web; bảo toàn seat, Rule Engine và dữ liệu.",
+          "V3.126: Sửa seat 12 vị trí hiển thị sai theo 24 mẫu, cho phép tick trạng thái Offline đồng bộ Online, Bảo Vệ + Săn cùng lúc, giảm tải render và lưu đầy đủ nhật ký tác động phân trang; bảo toàn dữ liệu, IPA và Rule Engine.",
+          "V3.125: Khắc phục 7 lỗi: box Tạo Phòng, Seat và căn chỉnh 4 hướng, vùng cấm, 🐺 Sói Cắn, hiệu ứng Đóng Băng trùng, giảm lag; đồng bộ GM Server/Player Web và giữ nguyên dữ liệu.",
+          "V3.124: Sửa hiển thị Bảo Vệ và Sói Cắn từ hành động xác nhận, đồng bộ hiệu ứng GM/Player Web đúng mẫu, giảm lag trên iPhone; giữ nguyên Rule, dữ liệu và IPA.",
+          "V3.123: Tích hợp 15 hiệu ứng Trạng Thái được duyệt lên nhân vật GM, Player Web và box Hành Động; bảo toàn dữ liệu và hỗ trợ Runtime OTA.",
+          "V3.122: Bổ sung phục hồi khi Runtime OTA không khởi động trên shell hiện có; giữ dữ liệu và không cần cài lại IPA. Chưa nghiệm thu trên iPhone.",
+          "V3.121: Thu gọn màn hình Tạo Phòng; bỏ lá dưới nhân vật đã vào Seat; đưa tên gần đầu; Công cụ GM một hàng vuốt ngang, giữ dữ liệu và IPA. Điều chỉnh giao diện và kiểm thử.",
+          "V3.120: Phát hành giao diện Tạo Phòng thu gọn từ PR #264 và phục hồi luồng OTA trên iPhone bằng phiên bản Runtime mới; giữ nguyên dữ liệu và IPA đang cài.",
+          "V3.119: Yêu Tinh: GM chọn Dịch chuyển vết cắn, chọn Trái hoặc Phải rồi OK; không chọn thì Yêu Tinh không thực hiện. Giữ nguyên dữ liệu, không cần cài lại IPA.",
+          "V3.118: Trạng thái người chơi hiện đúng trên nút hành động bị khóa (Đóng băng, Đuổi, Đã chết, Trạng thái); Tiên Tri nhận kết quả Sói / Không phải Sói riêng; giữ nguyên dữ liệu, không cần cài lại IPA.",
+          "V3.117: Xuất dữ liệu chưa đồng bộ hiển thị ngay trong app với nút Chia sẻ và Sao chép, không tải file (tránh màn hình đen trên iPhone); giữ nguyên dữ liệu, không cần cài lại IPA.",
+          "V3.116: Sửa phát hành OTA: bản Runtime 3.116 vượt phiên bản 3.115 đã quảng bá nhưng chưa tải được, để máy GM tải lại đầy đủ; giữ nguyên dữ liệu, không cần cài lại IPA.",
+          "V3.113: Thanh Đồng hồ và Hành động: người đến lượt có sao vàng lơ lửng; mục tiêu có vòng ngắm mint quay chậm và nhãn MỤC TIÊU; dấu hiệu được giữ khi realtime cập nhật; giữ nguyên dữ liệu.",
+          "V3.107: Khắc phục phát hành OTA: đồng bộ phiên bản Runtime và manifest, kiểm tra SHA-256 trước khi quảng bá bản cập nhật; bảo toàn dữ liệu và không cần cài lại IPA.",
+          "V3.106: Thêm trang Trạng Thái riêng và hiệu ứng Đóng Băng phủ nhân vật trên GM Server/Player Web; trạng thái lấy từ máy chủ, tự hết hạn, không lộ hiệu ứng riêng tư; giữ nguyên dữ liệu, không cần cài lại IPA.",
+          "V3.105: Box Hành Động bỏ tiêu đề trùng, căn giữa các nút và giữ cuộn ngang; khóa trạng thái đóng băng/đuổi hiển thị tức thời; Bầy Sói chỉ mở ở đêm đầu; sửa điều kiện đêm dùng giá trị đã chuẩn hóa; giữ dữ liệu và OTA không xóa.",
+          "V3.104: Nâng độ nhạy vuốt lượt; kéo thả mục tiêu có kiểm tra va chạm và xác nhận tên; bố cục trận giãn đều 8–30 người; thanh dưới Đồng hồ - Hành động - Khôi phục, các box Tập Hợp tự co theo chữ và Công cụ GM sắp hàng đẹp; không xóa dữ liệu.",
+          "V3.103: Phát Audio Vai Trò/Hành Động đã nạp khi vào lượt hoặc GM chọn chức năng, có nút nghe lại cho iPhone; áp dụng giới hạn một chức năng mỗi đêm và số lượt dùng từng chức năng, cập nhật mờ nút ngay, server chặn dùng sai và khôi phục được bằng Undo; bảo toàn dữ liệu.",
+          "V3.102: Box Hành Động dưới màn hình thu gọn theo nội dung, bỏ hướng dẫn, cuộn ngang khi nhiều chức năng; vuốt màn hình sang trái hoặc phải để chuyển lượt vai trò; giữ nguyên dữ liệu và Seat Mẫu 8–30.",
+          "V3.101: Seat Mẫu một vòng duy nhất quanh đống lửa, tự chọn tròn / elip / chữ nhật theo số lượng 8–30; không xếp vòng trong/vòng ngoài, giữ dữ liệu GM/Player.",
+          "V3.100: Seat Mẫu tự chọn hình 8–30 người, đống lửa làm tâm cố định, đồng bộ GM IPA và Player Web, giữ nguyên dữ liệu.",
+          "V3.99: Vai cùng thứ tự sẽ thức dậy một lần, gom hành động trùng; box hành động cuộn ngang dưới màn hình, kéo thả hoặc nhấn đúp chọn mục tiêu, khôi phục thao tác vừa xác nhận; bảo toàn dữ liệu.",
+          "V3.98: Đồng hồ đếm ngược dạng box nổi có thể kéo thả, bỏ thanh menu trận đấu dưới; Chọn Ván thiết lập Sói nhận diện 30 giây và Artifact đầu game 60 giây; Audio và Auto GM trong Sói GM; giữ nguyên dữ liệu.",
+          "V3.97: Seat Mẫu 8–24 người với hình tròn, thoi, chữ nhật; vuốt ngang menu Gọi Người và chọn sơ đồ dấu chấm, đồng bộ GM và Player Web, giữ nguyên dữ liệu.",
+          "V3.96: Khắc phục 42 chibi bị thay bằng chữ cái khi tài khoản GM offline hoặc ngồi; giữ nguyên nhân vật, phiên chơi và dữ liệu.",
+          "V3.95: Thư Viện có Box Lab đầu tiên, mô phỏng chuỗi hiệu ứng nhiều đêm trong môi trường cách ly; không thay đổi dữ liệu trận thật.",
+          "V3.94: Đồng hồ đếm ngược nhỏ gọn, chạy giảm thời gian ổn định; mũi tên trên chuyển về lượt trước, không thoát game; giữ nguyên dữ liệu.",
+          "V3.93: Nhấn nhân vật sói GM đang đi trong làng để mở Hồi Sinh, Giết người, Thoát game và Kết thúc Ván. Thanh dưới là đồng hồ số, Thông Tin, icon Auto GM xoay khi bật; dữ liệu không đổi.",
+          "V3.92: Thanh dưới chỉ icon Đồng hồ và Auto GM, chó sói GM mở Thông Tin / Thoát / Kết thúc Ván / Audio / Hồi Sinh / Giết người; bảo toàn dữ liệu.",
+          "V3.91: Xây dựng lại menu Trận Đấu gọn trên/dưới, bỏ box che làng, thêm Hồi Sinh / Giết người thủ công; dữ liệu được giữ nguyên.",
+          "V3.90: Cập nhật Timeline Bầy Sói / Artifact đầu ván / Vai Trò / Làng ơi dậy đi, sửa đồng bộ hành động và Auto GM, gom quản lý Artwork, giữ nguyên dữ liệu.",
+          "V3.89: Xóa khung Khám Phá Trang Chủ, giữ ba ô hình và toàn bộ dữ liệu.",
+          "V3.88: Một ô soạn thảo ChatGPT có prompt chuẩn, nút chẩn đoán điền báo cáo và nút Gửi riêng; không mất dữ liệu.",
+          "V3.87: Bỏ nền hai box cuối Trang Chủ, giữ dữ liệu và thiết kế thẻ.",
+          "V3.86: Thêm ô nhập yêu cầu bổ sung khi Báo lỗi tự động qua ChatGPT; giữ nguyên dữ liệu, Vai Trò, Artifact và cập nhật giao diện an toàn.",
+          "V3.85: Bỏ chat AI nổi, bổ sung báo lỗi tự động ở Cài Đặt mở ChatGPT với nội dung chẩn đoán đã điền sẵn; không cần OpenAI API key.",
+          "V3.84: Nạp 44 artwork Artifact Biển từ ZIP trong đúng phiên GM, không mất dữ liệu và đồng bộ kho server.",
+          "V3.82: Biểu tượng AI Support nổi, kéo thả; Chat hỏi đáp và Báo lỗi tự động, AI chỉ hoạt động sau khi kết nối OpenAI API.",
+          "V3.81: Đồng bộ đèn Online/Offline trên Server cạnh tên nhân vật và GM, bỏ box trạng thái phụ.",
+          "V3.80: Vuốt dài màn hình/chọn Timeline để điều hướng lượt, đồng hồ đếm ngược từ Ván Mẫu, Artifact theo thứ tự cấu hình và khoá Artifact đã dùng.",
+          "V3.79: Đổi chỗ menu trận: hành động ở trên, Timeline ở dưới, nút Quay về chỉ còn icon và rút gọn Bầy sói.",
+          "V3.78: Bỏ box OFFLINE · READY dưới nhân vật ở GM/Player; giữ trạng thái kết nối và game, giảm rối màn hình.",
+          "V3.77: Trang Chủ Top 3 người chơi có tỷ lệ thắng cao nhất, bục vàng bạc đồng và Nhật ký Hoạt Động Gần Đây thiết kế mới.",
+          "V3.76: Player Web tự khôi phục nhận vai sau khi GM Phát Vai, hiển thị trạng thái đang đồng bộ thay vì báo đã nhận khi chưa có dữ liệu.",
+          "V3.75: Thông báo Phát Vai và số đã xem ở box điều khiển dưới; bỏ thông báo nổi, giữ giao diện Vào Trận của V3.74.",
+          "V3.74: Giao diện Vào Trận riêng, timeline theo server, thao tác kéo thả hoặc chọn thủ công, xác nhận mục tiêu và hiệu ứng thị giác.",
+          "V3.73: Phát Vai hiển thị xác nhận Server và số Người Chơi đã xem Vai Trò; ẩn Artifact khi không sử dụng, bảo toàn dữ liệu.",
+          "V3.72: Sửa lỗi role_guard Load failed khi LƯU Ván Mẫu; đóng gói ảnh Vai Trò trên Server và giới hạn đồng bộ Artifact nền để tránh lag.",
+          "V3.71: Chọn Ván Mẫu liên kết artwork đã lưu trên Server, không truyền lại từng ảnh; Player nhận ảnh khi Phát Vai, Artifact dùng kho chung.",
+          "V3.70: Ván Mẫu chỉ đóng gói Vai Trò; Server lưu bộ Artifact dùng chung để tái sử dụng, không đóng gói lại theo từng ván.",
+          "V3.69: Khắc phục Load failed trên iPhone khi lưu Ván Mẫu; đọc Artwork chuẩn qua Server có CORS và cho phép LƯU lại không mất dữ liệu.",
+          "V3.68: Khắc phục triệt để lưu và chọn Ván Mẫu, Artwork tải theo từng lá có retry, tôn trọng Artifact đã lưu và bảo toàn dữ liệu.",
+          "V3.67: Sửa nút Chọn Ván Mẫu, Artifact không ★ vẫn được lấy theo ván, thông báo rõ lỗi và tiến độ nạp trên iPhone.",
+          "V3.65: Lá Vai Trò/Artifact Player hiển thị artwork chuẩn GM, chạm đóng và tự đóng sau 30 giây; Ván Mẫu đóng gói ảnh và nạp trước Phát Vai; đồng bộ đơn vị giây.",
+          "V3.64: Trang Phân Vai hoàn chỉnh, chia ngẫu nhiên/theo thứ tự, hoán đổi Vai Trò, điều chỉnh Artifact, chốt trước Phát Vai.",
+          "V3.63: Bổ sung lọc Tất cả / Online / Offline khi chọn Thành Viên, giữ lựa chọn khi chuyển bộ lọc và đồng bộ trạng thái",
+          "V3.62: Cho phép giữ và kéo thanh Tập hợp dân làng tới vị trí mong muốn, nhớ vị trí và tránh che timeline hoặc thanh điều khiển",
+          "V3.61: Khôi phục chỉnh thời gian sử dụng riêng từng lá Vai Trò; thời gian chung (giây) áp dụng mặc định",
+          "Chọn Ván Mẫu: hiện 3 cài đặt thời gian chung – thảo luận 300 giây, Vai Trò 30 giây, Artifact 30 giây; bỏ thời gian riêng từng lá",
+          "Chọn Ván: mặc định thảo luận 300 giây; cấu hình hạn mức Artifact theo Ngày/Đêm",
+          "Artifact ★ được chọn mặc định và vuốt ngang trên một hàng; làm gọn nhãn nhân vật trong Làng",
+          "Hiển thị đầy đủ 14 công cụ tối ưu dưới dạng lưới 3 cột và cuộn dọc; bỏ mũi tên, bộ đếm và thanh cuộn ngang",
+          "Bổ sung nút mũi tên trái/phải và thanh tiến độ để xem 14 công cụ tối ưu hệ thống theo chiều ngang; giữ nguyên chức năng và dữ liệu",
+          "Công cụ Chủ Đề: chỉ hiển thị các vị trí ảnh được kết nối với giao diện thực tế",
+          "Thay đổi hình Banner Làng Biển, Vào Làng, ba ô Khám Phá và thanh điều hướng ngay từ mục Chủ Đề",
+          "Ảnh mặc định được hiển thị trong preview; khôi phục về mặc định không làm mất dữ liệu đã lưu",
+          "Cập nhật Runtime V3.56: Player Web tự theo dõi bước chơi GM thời gian thực"
+        ],
+        "message": "Có GMWW V3.139. Có thể cập nhật trực tiếp.",
+        "runtime": {
+          "files": [
+            {
+              "path": "GMWW.html",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/GMWW.html",
+              "sha256": "33a3fe0eec28bb38997b2b9c16bc89ee4337cebaac369ceac4ef6c172994a971"
+            },
+            {
+              "path": "app.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/app.js",
+              "sha256": "4c54834125a4b2585c6f34eaab04f19e480c2dfef280f23e00afcb9114730344"
+            },
+            {
+              "path": "artifact-sea-import.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/artifact-sea-import.js",
+              "sha256": "a1ac7bae83442af69b820afbffbed0206ddb7c7d61153a9d4ccc08f2ccd51840"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_alpha_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_alpha_wolf.webp",
+              "sha256": "0a5cfe7ba16943196a86f74acb0bd9fecc46e5665865a51bbacc40c39c8eaf4c"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_apprentice_seer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_apprentice_seer.webp",
+              "sha256": "779ddb8f7288238dc5222c8ea23da5df1083d257ebee87a109b0758e17c28126"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_assassin.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_assassin.webp",
+              "sha256": "89a66753aaa33cb8167796f8df51f9f7b2fc13395fe803a0020370cd5dda24dd"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_aura_seer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_aura_seer.webp",
+              "sha256": "d433a262031224be9dc94b8454d6e6171c44a5eb9b3937110487fcd3dbc54de3"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_avenger.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_avenger.webp",
+              "sha256": "b6ef77ee1faf859c25c07f631ecb64fb4cf19b81b716b07ee1cb5660a3270ee3"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_bear_god.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_bear_god.webp",
+              "sha256": "afa5109dae880385dead2e7cebf7a78978108726bf40d7a20297405dc449e6e4"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_bigfoot.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_bigfoot.webp",
+              "sha256": "414ab751f9f9a1dcc3de8e94d1e0afbdfb703d05215e5cf80b5a751b2372ca17"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_black_woman.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_black_woman.webp",
+              "sha256": "90ce3e1a8b44f82df18f1d5842db9a9089e76d1397ce14c0d6e8b014000c2901"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_cavalier.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_cavalier.webp",
+              "sha256": "60aea6c57e1ea882abcf7480e52e686d0031746031cb4d361204a697c4d93d7e"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_clone.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_clone.webp",
+              "sha256": "ba62d9b1b699a735942a7b8bf113f86f8ad4fe1e8a98b89056ca75eaad03f9ae"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_crow.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_crow.webp",
+              "sha256": "a2afdee3e5b3195cc70fd1ec1f343875cd59647988521616949b6f2f9194aef3"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_cult.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_cult.webp",
+              "sha256": "6d90a476da11d1a1a863503ded9efa8638b451da11512a0ae91ce218cc9a42d8"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_cupid.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_cupid.webp",
+              "sha256": "6d520b6beb74c2b51265cd743b8b00ac9ab2a6c34e1441779db307d603993d27"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_cursed.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_cursed.webp",
+              "sha256": "1683f082d2a89769223c21917e4704a1a8625c1bcafed846661cba932cb51c4f"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_demon_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_demon_wolf.webp",
+              "sha256": "4073a39b6960c23b9779d91fee6f4cf91614bf9041a38654e24d56b9ecbad004"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_destroyer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_destroyer.webp",
+              "sha256": "fc7160c5181beccd2160f6b470e3d8f39ed83262b09b3fb0e9890cea3c13dea1"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_digan_girl.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_digan_girl.webp",
+              "sha256": "a6436b8599e29cdf42e1f25ef33fe1d888ac3fdcf667f9a41edfaeb9a0acc64f"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_diseased.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_diseased.webp",
+              "sha256": "eb71ecd16da0c32fe77b070de33db5bd16bcb2e96f17243cb7223bd0f30753dc"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_drunk.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_drunk.webp",
+              "sha256": "e83e39cc795dfaa73485dc480441db1c44e9aed3d7add2828814c54f25c1c329"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_elder.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_elder.webp",
+              "sha256": "ca7d963426aeecadf0d47634c08457c276f9c057773959090903843c3f6502f8"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_fairy.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_fairy.webp",
+              "sha256": "8346114f2cfd9f6afcafaf5b1dcbe3dc2c4b2cfd14457e9d07630111f8ce5291"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_fire_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_fire_wolf.webp",
+              "sha256": "37bee8f195d15a4b3d251d298ee23dfc09ad7a0c591c1f5af6633e3c60154ed3"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_fool.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_fool.webp",
+              "sha256": "0782a972dd3284077d153f8173a28f79b2a16219365182ec2ca962926ae9901d"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_fox.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_fox.webp",
+              "sha256": "26b0e97ac039f111443a3aaac3e749174be80756c0db23a8a9c2a8e6f7c5c2aa"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_ghost.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_ghost.webp",
+              "sha256": "111ef1fab134c9dc357f5b90ea62ad202da9e58045c80674c4352db85a05f090"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_grudge_victim.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_grudge_victim.webp",
+              "sha256": "0f3d4a5ff3d003e92d0a3b8bea5ad9ef5ecdd03e2f8072f2334c7bbbfe8f465d"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_guard.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_guard.webp",
+              "sha256": "cf7bc95279016f15c82dab1141ebb9e1246574b0b1d69b236b77b662b47852cc"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_human_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_human_wolf.webp",
+              "sha256": "dac1dce9f7aa7b02b0e58cbbab341a6c4e17d62f2c9681f63494633dcaf88ca7"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_hunter.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_hunter.webp",
+              "sha256": "16141943849f3666ed6b0f1c71b68fef637a807cac4f3f74c9b2ab6e10403335"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_hybrid_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_hybrid_wolf.webp",
+              "sha256": "2bac2ccc8b7edd6ffb88fdce4e391ed3d0fdab757f8bff7f5a95a241f7885784"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_judge.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_judge.webp",
+              "sha256": "076bf1db1b10afef9d10908595fcaf07d44528e88451a19768afc32c6456bdb3"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_knight.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_knight.webp",
+              "sha256": "e3030fc2e235c33ac400c0177d9d266a7f071cdb83a640ccea0f1d3115738cbf"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_lone_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_lone_wolf.webp",
+              "sha256": "ea6b3e1929494b1dafe14249f93b66d3958bf3a21bafa78212dd2db80a552e13"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_lycan.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_lycan.webp",
+              "sha256": "0c5dea628e2bd55ab4263f1673ce92417e261c21dcf6642039d30d43194a5da7"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_mad_doctor.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_mad_doctor.webp",
+              "sha256": "de2b813e0e19273c86ef752a4e52c3409ea6cbf9552fea571aca552f8bbf198b"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_maid.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_maid.webp",
+              "sha256": "979a119496fe4a8f0cceb3e77b0e49c926eac5a8ad588c92281ededb0515c9f6"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_maiden.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_maiden.webp",
+              "sha256": "adfd377190709f56de372e149e55ee08d58f508e639613acadbbb83a6d3aea90"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_news_bearer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_news_bearer.webp",
+              "sha256": "df954b18b56599ff7de49bd3ac409e26783ea58ba04047c1f6e6612d65670901"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_old_man.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_old_man.webp",
+              "sha256": "a2a8fbdaa57880296b20f5a4ce5fc67c4e78e429bdcacd7135e233bb1650c873"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_old_witch.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_old_witch.webp",
+              "sha256": "3805669b116e5321b29dc6ea5b4d10ad588b2a935c55098a8edce7b9bea73d8f"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_peace_lover.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_peace_lover.webp",
+              "sha256": "5e337f30707010c643d801446aeacdd09c64c697932c58d12d6ed27f23477eea"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_peeking_girl.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_peeking_girl.webp",
+              "sha256": "d470f835935f87fe6ca2455a5a1f100b47c75413b96e4b6548de187936b6a6f2"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_piper.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_piper.webp",
+              "sha256": "04e9f6dbaa3129ea7806d9cac9135a9570cf17b08067d3d5feda60ca554f22fc"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_prince.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_prince.webp",
+              "sha256": "cb478a58712784550ce85828c9a42fc9704049bb1e4d4650a1f508dc6a2ab9ac"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_rotten_seer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_rotten_seer.webp",
+              "sha256": "6ab344eaa5394eaee6fd1e75fb94ef02695a9d2815fc1c7de5650a562a24750f"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_sect_leader.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_sect_leader.webp",
+              "sha256": "c8e8ab2ca6a3159fb77f05d264375d07f478b7bd894268a7573bcdbfceb6603f"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_seer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_seer.webp",
+              "sha256": "27cb917e458592cb3fef62dfb5492a1a2ef24613be2b9016344fc8ec770e8639"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_snow_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_snow_wolf.webp",
+              "sha256": "1e7cde7d272220a63ab5ed517f93b4ee74711e8f2c3ff4a5e9edaeaf04dc43f9"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_spiritualist.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_spiritualist.webp",
+              "sha256": "07f5f59d6542c3ea02689301a5a28970c4126ac8feeaf42745ee2c611c3d51de"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_stone_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_stone_wolf.webp",
+              "sha256": "26ed329ec2c9e48d8f9dd3b57272bddbd3eed1d50a5378554386579ad9c6bdec"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_strongman.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_strongman.webp",
+              "sha256": "ad9d8a2a4aff011bc1e4fc77a61526e72a334503a6a78c431109eda2b726392c"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_thief.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_thief.webp",
+              "sha256": "d26b0b98c837e76d7a47b8d037c2266010773b8519ac9cdd91f45f020a9d30cf"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_three_brothers.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_three_brothers.webp",
+              "sha256": "3cad2abbb4c174dae0f3501f86f3b3dcced45f6159aa5460dd09d411ad7a3615"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_thug.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_thug.webp",
+              "sha256": "ce71284789f21c2877615f76a46e953aec851f90e4214b61f69fdb196dc1b1c1"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_vampire.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_vampire.webp",
+              "sha256": "f64b913fc5d81e69f0b0a9d5250fdb97b9d2f6a39d91bf275d591d8044af24d7"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_villager.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_villager.webp",
+              "sha256": "a5379a6de8ac1f2dc15fa5b9ef874294a340cbcdd477b907a0e3e6e25353d4c2"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wild_child.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wild_child.webp",
+              "sha256": "070902db112bb54fd2e8ab7e05a149e8c967a75e785bdc02ab6641d269a0a6f9"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_witch.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_witch.webp",
+              "sha256": "f0b95445d721a94d0b3fe47660b4b775fe328d7cafc7b107b887776e478ca3df"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wolf.webp",
+              "sha256": "34f6d875d9398474de5e0032bf8d4ad6fabf741fc2129039ff83e6143205ba02"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wolf_brother.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wolf_brother.webp",
+              "sha256": "18d12a7afe0cc74b0162a23542624a7cc5159709333db05dc341448513f10ebb"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wolf_cub.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wolf_cub.webp",
+              "sha256": "ae48407cc413c7579797c10f9d724de0cef138bba458942348bee7d546847e31"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wolf_hunter.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wolf_hunter.webp",
+              "sha256": "b46d1ae7d1059b6afa3cc5cfe3f75699ce9ee33459f9e085dbb23802c2dae4a8"
+            },
+            {
+              "path": "assets/role-artwork-v251/original/role_wolf_seer.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/assets/role-artwork-v251/original/role_wolf_seer.webp",
+              "sha256": "2954f96103025e7b6fe659ac8193967b160188e95b02dfe6967c034cbeaa6416"
+            },
+            {
+              "path": "battle-controls.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/battle-controls.js",
+              "sha256": "160004bba6a8e91853c96350a57342327c0a123f69421c2b3d0f52cac753171b"
+            },
+            {
+              "path": "character-renderer.css",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/character-renderer.css",
+              "sha256": "43e21e8a0dac6e0633dcd2a4b419ba44253870b6537af7097d04a083f0179592"
+            },
+            {
+              "path": "character-renderer.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/character-renderer.js",
+              "sha256": "c723cc30258b407976d493e2853adc88b1ad4f691e91a1a5de68cf2e0fb3521b"
+            },
+            {
+              "path": "default-artwork.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/default-artwork.webp",
+              "sha256": "36e9daefc13244104cb533488feac5ac07da0057775b07534dbeb7f45e114d8c"
+            },
+            {
+              "path": "game-characters/chibi-01.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-01.webp",
+              "sha256": "0c6eb1b5ae052197f12a5599334c77056cc093a41e62f0f49b33b03b49038951"
+            },
+            {
+              "path": "game-characters/chibi-02.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-02.webp",
+              "sha256": "ef4a808000fd98d76831a5038350eca7f3f9b78af76c8b90384570ba49072ea7"
+            },
+            {
+              "path": "game-characters/chibi-03.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-03.webp",
+              "sha256": "57adf9d3b615cd7f8852995bc2c6a6c4dfe43400d0ae3e853182ce802e233473"
+            },
+            {
+              "path": "game-characters/chibi-04.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-04.webp",
+              "sha256": "59366b39d95a7ea7f81de458bd82fa425dfbd9e4f46172a118b3d9b930ba9c8e"
+            },
+            {
+              "path": "game-characters/chibi-05.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-05.webp",
+              "sha256": "88f33791ce623f1dbed7a6a965d7281e4ecb1e1c8f439165cc9eb810388ea303"
+            },
+            {
+              "path": "game-characters/chibi-06.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-06.webp",
+              "sha256": "7140041d7e362a748748c3632b5c11517d955d7a218ddaefc233d520ea437fa5"
+            },
+            {
+              "path": "game-characters/chibi-07.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-07.webp",
+              "sha256": "f41a6442701aac6a02d4dfa401e583ee9de5205867949ebc3ba26d263959192c"
+            },
+            {
+              "path": "game-characters/chibi-08.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-08.webp",
+              "sha256": "e8e57da56125675a4998cdf66d15ee8e0235f68409bc3e8482488b4c98456d33"
+            },
+            {
+              "path": "game-characters/chibi-09.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-09.webp",
+              "sha256": "1c20d6037558bf85c64bd9fddb00d1d7879035b0d6ba4151861366134d0a39e6"
+            },
+            {
+              "path": "game-characters/chibi-10.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-10.webp",
+              "sha256": "18091d9ba49eeeb52f2da1cd11b2eece83990ec574cc217311b06a202ea42fa3"
+            },
+            {
+              "path": "game-characters/chibi-11.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-11.webp",
+              "sha256": "737f6def3e417b49d557be3117888484f35dc64b0e90b017d30d28a867ae8bdd"
+            },
+            {
+              "path": "game-characters/chibi-12.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-12.webp",
+              "sha256": "3bf52d02daeeac03b1c50f28917675dd2414c44782eafcf90f67242b4c0ad121"
+            },
+            {
+              "path": "game-characters/chibi-13.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-13.webp",
+              "sha256": "9c8c4052ef185c174ca7bdaa770ce1281d6f4f6eec1ab39738506aa1bf4e0699"
+            },
+            {
+              "path": "game-characters/chibi-14.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-14.webp",
+              "sha256": "a53225c475c669db6d5ad792dbda70bd895af301f5a01b0b7919f3b73988f069"
+            },
+            {
+              "path": "game-characters/chibi-15.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-15.webp",
+              "sha256": "68c7c49456e90765f1a2d6d73a941c043147b2dba14f95723bf2596ac015b35d"
+            },
+            {
+              "path": "game-characters/chibi-16.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-16.webp",
+              "sha256": "e86e2e548265252a9c45fd11e8950b890152bc071759fab1dc135b6983fea841"
+            },
+            {
+              "path": "game-characters/chibi-17.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-17.webp",
+              "sha256": "c0d861cad4e3cb159329d068611f07e1842ecf54c2fb702475ee1e7b0d2a02d8"
+            },
+            {
+              "path": "game-characters/chibi-18.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-18.webp",
+              "sha256": "44ff33f485f2b0c6ea4859ad13ae206ee5206280173985b2a8ac23e159ca0f58"
+            },
+            {
+              "path": "game-characters/chibi-19.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-19.webp",
+              "sha256": "7c6174e98e307d0ff1c3e3fbdd4c4cea60a06a74f9b5a7a2763b43f351fe0f1c"
+            },
+            {
+              "path": "game-characters/chibi-20.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-20.webp",
+              "sha256": "5263ecd0b28bc08dbe42cd2ca7f7605bd1f92c6f875b4f3572909352d26f4ad3"
+            },
+            {
+              "path": "game-characters/chibi-21.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-21.webp",
+              "sha256": "d4363397c1150eb16e9b671ffa92eecafcb8709dd0f50280183ab6c22c391677"
+            },
+            {
+              "path": "game-characters/chibi-22.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-22.webp",
+              "sha256": "cfda41f7068cbde270cecd00a2cbbf229c9105a3bfa799ec41f9e36dc5176c99"
+            },
+            {
+              "path": "game-characters/chibi-23.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-23.webp",
+              "sha256": "751286b67bf34d792ec850c2b7a5f3ebc341bf554d84ad86e222bc78037bc4f2"
+            },
+            {
+              "path": "game-characters/chibi-24.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-24.webp",
+              "sha256": "f7355a2f2d25bb612d23a828e90ce16f4796877bd7ab67667bf515cfbf369830"
+            },
+            {
+              "path": "game-characters/chibi-25.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-25.webp",
+              "sha256": "59c8bf8325034ac5683819c28047489ba40d5b8005a4678c7a9b43947ed2a935"
+            },
+            {
+              "path": "game-characters/chibi-26.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-26.webp",
+              "sha256": "2bb387d4c4f800045b3292500b7d85b78132fe4e00a1db84e0b8d52309363624"
+            },
+            {
+              "path": "game-characters/chibi-27.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-27.webp",
+              "sha256": "cc4418c7a581d91e47a0a9bddfeb00ec6671a5ab9157a43b8e880b3928de33cb"
+            },
+            {
+              "path": "game-characters/chibi-28.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-28.webp",
+              "sha256": "1a581d30414505b34a711244c3d4fa75cd452da8dc6eb685f0e1e0c9a8b304d2"
+            },
+            {
+              "path": "game-characters/chibi-29.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-29.webp",
+              "sha256": "456694ece177199ea780832c70aaf107bab32c69e1fbf18f2742431529f6444d"
+            },
+            {
+              "path": "game-characters/chibi-30.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-30.webp",
+              "sha256": "22d553e44376cd8a9a640ec064189ae1cdcb62c984fd11c7610ed187ef5b33aa"
+            },
+            {
+              "path": "game-characters/chibi-31.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-31.webp",
+              "sha256": "adae0448a2fad186f5280b8ac20ff4e4b631dc5b9d4f4b9fc2a725c3d2e36f14"
+            },
+            {
+              "path": "game-characters/chibi-32.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-32.webp",
+              "sha256": "13755726e649e303c1233278691f7b3734a3f47c68585153d35443ef8e0c8a00"
+            },
+            {
+              "path": "game-characters/chibi-33.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-33.webp",
+              "sha256": "61f80ce8ebc0be393e5dddbd1ac435b08ee62a33b7e7ae5dbadf7d2643a7de86"
+            },
+            {
+              "path": "game-characters/chibi-34.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-34.webp",
+              "sha256": "715ca1207af19e423966ca6941ba2f0bd7321b0dd359420abd8ba59c528226f6"
+            },
+            {
+              "path": "game-characters/chibi-35.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-35.webp",
+              "sha256": "fb947b5c79d3354cb6f418a769ab133e8d65906195067520b1a864545ff3f6aa"
+            },
+            {
+              "path": "game-characters/chibi-36.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-36.webp",
+              "sha256": "5bd0831b52783f70bb972fe8b7fc19f6e92bc070da8d77325dea855cb78a6f91"
+            },
+            {
+              "path": "game-characters/chibi-37.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-37.webp",
+              "sha256": "8e254e822398fdf3816215745214147aee3a6a65432a0a593e162f53a2cbb358"
+            },
+            {
+              "path": "game-characters/chibi-38.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-38.webp",
+              "sha256": "69164440a876cd77d7d9d262b02b33bb750bf7bbd774c025541ff465de26c70a"
+            },
+            {
+              "path": "game-characters/chibi-39.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-39.webp",
+              "sha256": "ba1f540f399b4ccd71f36f8cef12f36f6c27e8d8a68312c80e5d5f8e837a4e50"
+            },
+            {
+              "path": "game-characters/chibi-40.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-40.webp",
+              "sha256": "74ee554c42ed379c214b7b7dd7289ded22c58d89a4b6104e1717483b54e9af1a"
+            },
+            {
+              "path": "game-characters/chibi-41.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-41.webp",
+              "sha256": "010a524b0e5c9d8d88cb7cf85fae2822c5185416ebc26fff3d136e7bb7b29992"
+            },
+            {
+              "path": "game-characters/chibi-42.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/chibi-42.webp",
+              "sha256": "b361596de18c74c055cdd74f3075d5da8fc2053ad2d0c3e18fe12f8334de8115"
+            },
+            {
+              "path": "game-characters/manifest.json",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/game-characters/manifest.json",
+              "sha256": "90a68b52c3b6ed623a022618796f231f82bfeea24a985c3a9cac381ec5ccb672"
+            },
+            {
+              "path": "gm/gm-white-wolf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/gm/gm-white-wolf.webp",
+              "sha256": "c468cc7c946a8ea0ce1e651f2823a1ce9ceccebe6ebd57adc91333b865976e1f"
+            },
+            {
+              "path": "gmww-local-export.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/gmww-local-export.js",
+              "sha256": "59fc4e0d22851ffea10ad8f971ea17b8caa5e388ab72c5321d213fdb6bcb6f01"
+            },
+            {
+              "path": "gmww-village-coast.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/gmww-village-coast.svg",
+              "sha256": "dcdba978e510e1f2ec6f0b12106e24180c4e9291b63b18a28f4b72b5cf11a07a"
+            },
+            {
+              "path": "gmww-village-day-v260.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/gmww-village-day-v260.webp",
+              "sha256": "2a7efade1a7a1a8731f23d1a92eddcda64de013d0291c028a2a597ed8bd447f6"
+            },
+            {
+              "path": "gmww-village-night-v260.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/gmww-village-night-v260.webp",
+              "sha256": "d696fe86f49bc1fa95f7553e8d2f4b6adcf8766dd374fedac6db00a66f4f4dfe"
+            },
+            {
+              "path": "home-art/home-fantasy-hero-v337.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-fantasy-hero-v337.webp",
+              "sha256": "88c2fcffbcc0a29f2dbd2c1109ce306d059bf702923bf341f61795cc43b1c4b7"
+            },
+            {
+              "path": "home-art/home-sea-cards-v348.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-cards-v348.svg",
+              "sha256": "c652901875f5c723c1d2998d905bc8d8ac41232ec845f66f78505b950258b6c3"
+            },
+            {
+              "path": "home-art/home-sea-cards-v354.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-cards-v354.svg",
+              "sha256": "b891eb36df30f6de459c34de2bf314a62bd19a8246aa90ada1c161597b32259d"
+            },
+            {
+              "path": "home-art/home-sea-members-v348.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-members-v348.svg",
+              "sha256": "46cd2a81f4410560fb16bc0d00f1eb7553ac9629fcb6c4afe9cab0e5c2642ac5"
+            },
+            {
+              "path": "home-art/home-sea-members-v354.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-members-v354.svg",
+              "sha256": "0acc0d1b5daceb88204b3bfcaed56a5b39def08342645a8f5481fae873ec5623"
+            },
+            {
+              "path": "home-art/home-sea-portal-v352.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-portal-v352.svg",
+              "sha256": "b8ec38a0782105637934e4e3caf83261edba6c9755e271cf78ec2ee33bd78f97"
+            },
+            {
+              "path": "home-art/home-sea-portal-v354.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-portal-v354.svg",
+              "sha256": "00df55d038f9a38945b902262a830978a554435349c0fe8f2f8e2eac10bbf6bb"
+            },
+            {
+              "path": "home-art/home-sea-templates-v348.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-templates-v348.svg",
+              "sha256": "2024d86159b01389a54b7c6c95fddfeb6a91dc4a160185d4dac0dd9969301076"
+            },
+            {
+              "path": "home-art/home-sea-templates-v354.svg",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-sea-templates-v354.svg",
+              "sha256": "3f11446445b61a469e50f9cfea0862821030a3b363e28e6dbfb28536bd1171f6"
+            },
+            {
+              "path": "home-art/home-v1-action.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-v1-action.webp",
+              "sha256": "12716d115b94db013f0756c985bc5525fdb02c1b902d333560d451f197184428"
+            },
+            {
+              "path": "home-art/home-v1-book.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-v1-book.webp",
+              "sha256": "9b7adda136c3ce41168356ebf4b7faa8631826cf70203845079f13f0de320e2b"
+            },
+            {
+              "path": "home-art/home-v1-members.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/home-art/home-v1-members.webp",
+              "sha256": "810666355e069c6c0688ae0741f3d0f7a914bdf4bfca347073f52ce76d1341fb"
+            },
+            {
+              "path": "role-artwork-v251.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/role-artwork-v251.js",
+              "sha256": "200f4209a85b6e51c47b228c4a8512b178ffb347d4dd70075d9c25e2515b5001"
+            },
+            {
+              "path": "runtime-recovery.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/runtime-recovery.js",
+              "sha256": "810359fdeaec8129ce46a3eacb7a3aaa6633e5e5dfe209d9161667d0d2ef80b2"
+            },
+            {
+              "path": "seat-leaf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/seat-leaf.webp",
+              "sha256": "5760035ed1c0619e494ec30c048404f7f8f433c3e3cd2fb1932791a251c84bba"
+            },
+            {
+              "path": "status-visuals.css",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/status-visuals.css",
+              "sha256": "ff75c76bd13682409b330f9b19310d88867120cb04adf7e07cb4c09e6fc52f08"
+            },
+            {
+              "path": "status-visuals.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/status-visuals.js",
+              "sha256": "4f967d78684bef17f9de633a13c43b855e84df9975d272e83449500a74188be3"
+            },
+            {
+              "path": "style.css",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/style.css",
+              "sha256": "d3dc1d85305e9a8837741499c0ab7cbf4be9ccd2a6619f396e8a3d9e05e412e4"
+            },
+            {
+              "path": "village-layout.js",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/village-layout.js",
+              "sha256": "bb192782ad2b911d6e2085806852c2db60eec7acdc304d1324912a9ff4eb64ca"
+            },
+            {
+              "path": "village/seat-leaf.webp",
+              "url": "https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.139/village/seat-leaf.webp",
               "sha256": "5760035ed1c0619e494ec30c048404f7f8f433c3e3cd2fb1932791a251c84bba"
             }
           ]

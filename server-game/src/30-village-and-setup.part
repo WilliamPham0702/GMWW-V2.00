@@ -202,6 +202,31 @@ function battleSpeakCue(message,showError=false){
   try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;speech.speak(cue);return true}
   catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');return false}
 }
+let battleUnlockedAudioContext=null;
+function battleUnlockAudioFromGesture(){
+  if(playAudioMuted())return;
+  try{
+    const Ctx=globalThis.AudioContext||globalThis.webkitAudioContext;
+    if(!Ctx)return;
+    if(!battleUnlockedAudioContext)battleUnlockedAudioContext=new Ctx();
+    const context=battleUnlockedAudioContext;
+    if(context.state!=='running')void context.resume().catch(()=>{});
+    const silent=context.createBufferSource();
+    silent.buffer=context.createBuffer(1,1,context.sampleRate);
+    silent.connect(context.destination);silent.start();
+  }catch(_){}
+}
+async function battlePlayWebAudioFallback(src){
+  const ctx=battleUnlockedAudioContext;
+  if(!ctx||ctx.state!=='running')return false;
+  try{
+    const response=await fetch(src);if(!response.ok)return false;
+    const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
+    const source=ctx.createBufferSource();source.buffer=buffer;
+    source.connect(ctx.destination);source.start();
+    return true;
+  }catch(_){return false}
+}
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');return false}
   const row=battleFindAudio(kind,targetId,name);
@@ -219,6 +244,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false){
   battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null};
   try{await player.play();return true}
   catch(err){
+    // WebAudio was unlocked synchronously during the original finger gesture;
+    // it can start the confirmed turn cue even after the Durable Object round trip.
+    if(await battlePlayWebAudioFallback(src))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     return false
   }

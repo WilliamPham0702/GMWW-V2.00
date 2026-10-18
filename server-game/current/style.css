@@ -4316,25 +4316,13 @@ body.play-immersive #start #playShell[data-step="battle"] .play-exit-village{dis
 
 
 @media(prefers-reduced-motion:reduce){#start .play-player-token .battle-orbit,#start .play-player-token .battle-turn-mark{animation:none}}
-#start .play-player-token.battle-impact-frozen .play-player-avatar:after{content:"❄️";background:#69dff58a}
-#start .play-player-token.battle-impact-dead .play-player-avatar:after{content:"☠️";background:#482b38ac}
-#start .play-player-token.battle-impact-expelled .play-player-avatar:after{content:"🌪️";background:#bf9e7473}
-#start .play-player-token.battle-impact-effect_notice .play-player-avatar:after{content:"✦";background:#3ec6b071}
-#start .play-player-token[class*="battle-impact-"] .play-player-avatar:after{position:absolute;inset:-4px;z-index:3;display:grid;place-items:center;border-radius:50%;font-size:30px;animation:gmwwBattleImpact 1.2s ease-in-out infinite alternate}
-@keyframes gmwwBattleImpact{from{transform:scale(.8);opacity:.75}to{transform:scale(1.27);opacity:1}}
 .play-battle-gm-tools{display:flex;gap:8px;margin:8px 0}
 .play-battle-gm-tools button{flex:1;min-height:42px;border-radius:9px;border:1px solid #7fe0dc;color:#fff;font-size:12px;font-weight:850;background:#10667b}
 .play-battle-gm-tools button.is-off{background:#555e69}
 @media(max-width:390px){#start #playBattleTop{grid-template-columns:44px minmax(0,1fr) 38px}#start #playBattleTop #battleBack span{display:none}#start .play-battle-step{max-width:135px}#start .play-battle-step b{max-width:103px}}
-@media(prefers-reduced-motion:reduce){#start .play-player-token[class*="battle-impact-"] .play-player-avatar:after{animation:none}}
 
 /* V3.74: projected GM action token and non-destructive visual hit cues */
 #battleDragGhost{position:fixed;z-index:99999;pointer-events:none;transform:translate(-50%,-50%);border:1px solid #f8df91;border-radius:12px;padding:8px 12px;background:#073e54ee;color:#fff;font:900 12px system-ui;box-shadow:0 8px 24px #001a30;max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#start .play-player-token.battle-impact-wolf-bite .play-player-avatar:after{content:"🐺";background:#73384696}
-#start .play-player-token.battle-impact-shield .play-player-avatar:after{content:"🛡️";background:#199d9a88}
-#start .play-player-token.battle-impact-seer .play-player-avatar:after{content:"👁️";background:#4350aa8c}
-#start .play-player-token.battle-impact-swap .play-player-avatar:after{content:"⇄";font-size:37px;color:#fff3c5;background:#8b6dbb91}
-#start .play-player-token.battle-impact-revive .play-player-avatar:after{content:"✨";background:#35b77d8a}
 
 /* V3.77 — Win-rate podium and seaside recent-history logbook. No fake data. */
 #home .gmww-home-top3-skin-v377 .gmww-home-top3-panel-v377{

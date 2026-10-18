@@ -6,19 +6,19 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {selectBuildVerifiedManifest,selectCatalogDelta} from '../src/gmww-release-catalog-policy.js';
-import {validateV3139Delta} from '../.github/scripts/verify-ota-v3139-production.mjs';
+import {validateV3140Delta} from '../.github/scripts/verify-ota-v3140-production.mjs';
 
-const baseFile='update-system/verified-ota-baselines-v3139.json';
+const baseFile='update-system/verified-ota-baselines-v3140.json';
 const pinned=JSON.parse(fs.readFileSync(baseFile,'utf8'));
 const baselines=new Map(pinned.baselines.map(row=>[row.version,row]));
 const catalog=manifest=>({schema:1,manifest,sha256:createHash('sha256').update(JSON.stringify(manifest)).digest('hex')});
 const sha=letter=>letter.repeat(64);
 
-function target139(){
-  const src=baselines.get('3.138').manifest;
+function target140(){
+  const src=baselines.get('3.139').manifest;
   const m=structuredClone(src);
-  m.releaseVersion='3.139';m.runtimeVersion='3.139';m.serverVersion='3.139';m.webVersion='3.139';
-  m.runtime.files=m.runtime.files.map(file=>({...file,url:file.url.replace('/V3.138/','/V3.139/')}));
+  m.releaseVersion='3.140';m.runtimeVersion='3.140';m.serverVersion='3.140';m.webVersion='3.140';
+  m.runtime.files=m.runtime.files.map(file=>({...file,url:file.url.replace('/V3.139/','/V3.140/')}));
   m.runtime.files.find(file=>file.path==='GMWW.html').sha256=sha('a');
   m.runtime.files.find(file=>file.path==='app.js').sha256=sha('b');
   return m;
@@ -26,9 +26,10 @@ function target139(){
 
 test('V3.137 / V3.138 source manifests have audited Production provenance and complete immutable inventories',async()=>{
   assert.equal(pinned.schema,1);
-  assert.equal(pinned.baselines.length,2);
+  assert.equal(pinned.baselines.length,3);
   const evidence=[['3.137',39096250345,'38eb1446082f105c71e84fa7dc76b286da34f6c5'],
-                  ['3.138',39104239730,'212bb552ef577cba424e8177f916ec9a38c967a0']];
+                  ['3.138',39104239730,'212bb552ef577cba424e8177f916ec9a38c967a0'],
+                  ['3.139',39109032855,'4eff650a4dc55b3b222b0ab4f661cb05707d09ff']];
   for(const [version,run,commit] of evidence){
     const row=baselines.get(version);
     assert.equal(row.workflowRun,run);
@@ -46,22 +47,22 @@ test('V3.137 / V3.138 source manifests have audited Production provenance and co
   assert.deepEqual(changed,['GMWW.html','app.js','status-visuals.css','status-visuals.js','style.css']);
 });
 
-test('iPhone IPA V3.110 V3.137 -> V3.139 gets only verified SHA-256 changed files',()=>{
-  const target=target139();
-  for(const version of ['3.137','3.138']){
+test('iPhone IPA V3.110 V3.137 -> V3.140 gets only verified SHA-256 changed files',()=>{
+  const target=target140();
+  for(const version of ['3.137','3.138','3.139']){
     const source=baselines.get(version).manifest;
     const delta=selectCatalogDelta(target,source,version);
     const expected=target.runtime.files.filter(f=>source.runtime.files.find(b=>b.path===f.path)?.sha256!==f.sha256);
     assert.equal(delta.deltaFrom,version);
     assert.deepEqual(delta.runtime.files,expected);
     assert.equal(delta.delete.length,0);
-    assert.equal(validateV3139Delta({ok:true,...delta},target,source,version),true);
+    assert.equal(validateV3140Delta({ok:true,...delta},target,source,version),true);
     assert.ok(delta.runtime.files.length<10,'never return 138-file package for audited base');
   }
 });
 
 test('unknown / tampered inventories safely return full Runtime',async()=>{
-  const target=target139();
+  const target=target140();
   assert.equal(selectCatalogDelta(target,null,'3.137'),target);
   assert.equal(selectCatalogDelta(target,baselines.get('3.137').manifest,'3.136'),target);
   const tampered=structuredClone(baselines.get('3.137').manifest);
@@ -88,26 +89,26 @@ test('legacy iPhone V3.110 native SHA-256 staging and rollback remain unchanged;
   assert.match(app,/if\(gmwwUpdateSlowTimer\)clearTimeout\(gmwwUpdateSlowTimer\)/);
   assert.match(app,/Đã giữ nguyên phiên bản hiện tại/);
   assert.doesNotMatch(app,/gmwwSetUpdateProgress\('running',0,'Đang tải Runtime/);
-  assert.equal(JSON.parse(fs.readFileSync('package.json','utf8')).version,'3.139.0');
+  assert.equal(JSON.parse(fs.readFileSync('package.json','utf8')).version,'3.140.0');
 });
 
-test('real V3.139 package builder embeds only the two audited iPhone OTA base catalogs',async()=>{
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'gmww-ota-v3139-'));
+test('real V3.140 package builder embeds only the two audited iPhone OTA base catalogs',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'gmww-ota-v3140-'));
   const put=(name,bytes)=>{
     const target=path.join(root,name);
     fs.mkdirSync(path.dirname(target),{recursive:true});
     fs.writeFileSync(target,bytes);
   };
   try{
-    put('server-game/current/app.js',"const VERSION='3.139';");
-    put('server-game/current/GMWW.html','<title>GMWW V3.139</title><script src="app.js"></script>');
+    put('server-game/current/app.js',"const VERSION='3.140';");
+    put('server-game/current/GMWW.html','<title>GMWW V3.140</title><script src="app.js"></script>');
     for(const file of ['style.css','character-renderer.js','character-renderer.css'])
       put('server-game/current/'+file,'fixture '+file);
     for(const file of ['home-fantasy-hero-v337.webp','home-v1-book.webp','home-v1-members.webp','home-v1-action.webp'])
       put('server-game/current/home-art/'+file,'fixture artwork');
     put('assets/gm/gm-white-wolf.webp','fixture GM');
     put('server-game/shared/artwork.js','// fixture artwork');
-    put('src/index.js','const NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3139";');
+    put('src/index.js','const NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3140";');
     put('server-game/GMWW-Server.xcodeproj/project.pbxproj','MARKETING_VERSION = 3.110;');
     put(baseFile,fs.readFileSync(baseFile));
     const roles={};
@@ -122,7 +123,7 @@ test('real V3.139 package builder embeds only the two audited iPhone OTA base ca
     assert.equal(build.status,0,build.stderr||build.stdout.slice(-2000));
     const generated=fs.readFileSync(path.join(root,'src/gmww-release-bases.js'),'utf8');
     const {releaseBases}=await import('data:text/javascript;base64,'+Buffer.from(generated).toString('base64'));
-    assert.deepEqual(releaseBases.map(x=>x.manifest.releaseVersion),['3.138','3.137']);
+    assert.deepEqual(releaseBases.map(x=>x.manifest.releaseVersion),['3.139','3.138','3.137']);
     for(const row of releaseBases){
       assert.ok(await selectBuildVerifiedManifest(row,row.manifest.releaseVersion,'3.110'));
       assert.equal(row.manifest.runtime.files.length,138);
