@@ -47,7 +47,7 @@ test('V3.142: Maiden dies visiting a wolf or dying host, but survives a bite whi
 test('V3.142: auto-next, multiple drop count, audio prewarm, tap-outside and returned player opacity are wired',()=>{
  const b=read('server-game/src/40-battle-and-timeline.part'),audio=read('server-game/src/30-village-and-setup.part'),css=read('server-game/current/style.css');
  assert.ok(b.includes("void advancePlayPhase();"));
- assert.ok(b.includes("if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime?.currentId===t.id)"));
+ assert.ok(b.includes('const confirmedTurnId=t.id'));
  assert.ok(b.includes('battle-multi-counter'));
  assert.ok(b.includes('battleState.targetSheet=false;renderPlayBattle()'));
  assert.ok(b.includes("if(!popup.contains(event.target))battleCloseResultPopup()"));
