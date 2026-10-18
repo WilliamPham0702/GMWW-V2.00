@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<title>GMWW Character 22 · Prototype 3D · Staging</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#061b2b,#0c4256);color:#eafffc;font:14px system-ui,-apple-system,sans-serif}
+header,main{max-width:1080px;margin:auto;padding:16px}h1{font-size:22px;margin:0 0 8px}.warning{border:1px solid #e7b569;border-radius:12px;padding:12px;background:#4a3219;color:#ffe5b1;line-height:1.5}
+.scene{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:14px;margin:16px 0}.pane{border:1px solid #4aabb8;border-radius:14px;padding:12px;background:#0a2e41;min-width:0}.pane h2{margin:0 0 8px;font-size:15px}
+model-viewer{width:100%;height:430px;background:radial-gradient(ellipse,#267588,#082c40 75%);border-radius:10px}
+img{display:block;width:100%;height:430px;object-fit:contain;background:#10394a;border-radius:10px}
+.controls{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.controls button{padding:9px 10px;background:#12647a;color:white;border:1px solid #6bbbc8;border-radius:8px;cursor:pointer;font:inherit}.controls button[aria-pressed=true]{background:#e5bf71;color:#1c303a;border-color:#ffe59c}
+.note{color:#a0cfd6;font-size:12px;line-height:1.55}.pass{color:#c5eecf}.pending{color:#ffd096}a{color:#90f2f2}
+@media(max-width:650px){.scene{grid-template-columns:1fr}model-viewer,img{height:330px}}
+</style></head>
+<body><header><h1>Character 22 — Kiểm tra khung 3D độc lập</h1><p class="warning"><strong>CHỈ LÀ PROTOTYPE KỸ THUẬT.</strong> Mô hình có thể xoay 8 góc và chạy 4 chuyển động; đây là khối 3D tự dựng, <strong>KHÔNG PHẢI</strong> skin/trang phục chính thức của Character 22. Chỉ ảnh chính diện bên phải là artwork đã duyệt. Chưa có 7 ảnh tham chiếu hướng còn lại.</p></header>
+<main><div class="scene">
+<section class="pane"><h2>Khung 3D có xương — bản thử kỹ thuật</h2>
+<model-viewer id="viewer" src="/characters/overhaul-v600/character-22/technical-prototype.glb" alt="Mô hình 3D thử nghiệm Character 22 không phải trang phục đã duyệt" camera-controls auto-rotate animation-name="Idle" autoplay environment-image="neutral" shadow-intensity=".5" exposure="1.1" camera-target="0m 1.25m 0m" camera-orbit="0deg 80deg 4m" interaction-prompt="none">
+<div slot="poster" class="note">Đang tải mô hình GLB thật từ Staging…</div></model-viewer>
+<p id="loadstatus" role="status" class="note">Đang chờ kiểm tra model 3D…</p>
+<h2>8 góc quay camera 3D</h2><div class="controls" id="directions"></div>
+<h2>4 chuyển động từ file GLB</h2><div class="controls" id="actions"></div>
+</section><section class="pane"><h2>Artwork đã duyệt (chính diện)</h2>
+<img src="/characters/overhaul-v600/character-22/avatar.webp" alt="Trang phục Character 22 chính diện đã được chủ dự án duyệt">
+<p class="note">Ảnh này là nguồn trang phục đúng. Mô hình bên trái hiện đang kiểm tra khung 16 xương + hoạt ảnh, chưa được mặc skin theo ảnh này.</p>
+<p class="pass">✓ Khung 3D thực có chiều sâu, không sử dụng GLB Character 21.</p><p class="pass">✓ 16 xương, 4 clip thử nghiệm.</p><p class="pending">● Chưa đạt: độ giống trang phục đã duyệt.</p><p class="pending">● Chưa đạt: 8 hướng skin mỹ thuật và nghiệm thu iPhone.</p>
+</section></div>
+<p><a href="/character-v605-review/index.html">← Danh sách Character 22–30</a> · <a href="/character-v605-gm/GMWW.html?characterV605=1">Full Game Staging</a></p>
+<p class="note">Cô lập Staging; không bật nhân vật này trong GM hoặc Player, không ghi Production, không tạo OTA hoặc IPA. Model-viewer cần kết nối mạng để tải thư viện hiển thị WebGL.</p></main>
+<script type="module">
+const viewer=document.getElementById('viewer'),status=document.getElementById('loadstatus');
+const names=['Trước','Trước phải','Phải','Sau phải','Sau','Sau trái','Trái','Trước trái'];
+const directions=document.getElementById('directions'),actions=document.getElementById('actions');
+function addButton(parent,label,cb,i){const btn=document.createElement('button');btn.type='button';btn.textContent=label;btn.setAttribute('aria-pressed',i===0?'true':'false');btn.addEventListener('click',()=>{parent.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===btn)));cb()});parent.append(btn)}
+names.forEach((n,i)=>addButton(directions,n,()=>{viewer.autoRotate=false;viewer.cameraOrbit=(i*45)+'deg 80deg 4m';},i));
+['Idle','Walk','Run','Result'].forEach((n,i)=>addButton(actions,n,()=>{viewer.animationName=n;viewer.play()},i));
+viewer.addEventListener('load',()=>{status.textContent='Đã tải file GLB thử nghiệm. Xoay camera để kiểm tra hình khối và chọn hoạt ảnh.'});
+viewer.addEventListener('error',()=>{status.textContent='Không tải được mô hình. Kiểm tra kết nối WebGL và lại thử mở Staging.'});
+setTimeout(()=>{if(!customElements.get('model-viewer'))status.textContent='Không tải được thư viện xem 3D. Hãy kiểm tra kết nối mạng của iPhone.'},8000);
+</script></body></html>
