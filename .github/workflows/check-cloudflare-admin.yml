@@ -1,0 +1,44 @@
+name: Check Cloudflare Admin Isolation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/cloudflare-admin/**"
+      - "wrangler.cloudflare-admin.jsonc"
+      - "tests/cloudflare-admin.test.mjs"
+      - ".github/workflows/check-cloudflare-admin.yml"
+      - ".github/workflows/deploy-cloudflare-admin.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/cloudflare-admin/**"
+      - "wrangler.cloudflare-admin.jsonc"
+      - "tests/cloudflare-admin.test.mjs"
+      - ".github/workflows/check-cloudflare-admin.yml"
+      - ".github/workflows/deploy-cloudflare-admin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  admin-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate all admin modules
+        run: |
+          node --check tools/cloudflare-admin/worker.mjs
+          node --check tools/cloudflare-admin/page.mjs
+          node --check tools/cloudflare-admin/policy.mjs
+      - name: Test security and production isolation
+        run: node --test tests/cloudflare-admin.test.mjs
+      - name: Verify admin Worker bundle without deploying
+        run: npx wrangler deploy --dry-run --config wrangler.cloudflare-admin.jsonc
