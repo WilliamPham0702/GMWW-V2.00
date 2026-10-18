@@ -4,6 +4,20 @@ import { defaultPriorityFirst } from "./gmww-game-scene-rules.js";
 
 export function sanitizePlayerArtifactCard(v){
   const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{}),...(a?.phase!=null?{phase:['day','night','any'].includes(String(a.phase))?String(a.phase):'night'}:{}),...(a?.actorMayBeDead!=null?{actorMayBeDead:a.actorMayBeDead===true}:{})})):[];
+  const functions=Array.isArray(x.functions)?x.functions.slice(0,40).map(fn=>({
+    id:String(fn?.id||fn?.actionId||"").slice(0,120),
+    actionId:String(fn?.actionId||fn?.id||"").slice(0,120),
+    ...(fn?.phase!=null?{phase:["day","night","any"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
+    usageMode:["eachNight","onceGame","nGame","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
+    usageCount:Math.max(1,Math.min(100,Math.trunc(Number(fn?.usageCount)||1))),
+    targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn?.targetCount??1)||0))),
+    noSelf:fn?.noSelf!==false,allowDead:fn?.allowDead===true,
+    actorMayBeDead:fn?.actorMayBeDead===true,noTarget:fn?.noTarget===true,
+    passive:fn?.passive===true,
+    effectIds:Array.isArray(fn?.effectIds)?fn.effectIds.map(String).slice(0,8):[],
+    ...(fn?.fromNight!=null?{fromNight:Math.max(1,Math.trunc(Number(fn.fromNight)||1))}:{}),
+    ...(fn?.toNight!==undefined?{toNight:fn.toNight==null?null:Math.max(1,Math.trunc(Number(fn.toNight)||1))}:{})
+  })):null;
   const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
   return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
 }
