@@ -10,6 +10,7 @@ const mocked={
   const p=new URL(request.url).pathname;
   if(p.endsWith('/avatar.webp'))return new Response('avatar-binary');
   if(p.endsWith('/skin.glb'))return new Response('skinned-glb');
+  if(p.endsWith('/renderer.html'))return new Response('<html>WebGL real renderer</html>');
   return new Response('not found',{status:404});
  }}
 };
@@ -39,7 +40,7 @@ test('Staging catalog admits Character 21 alone; no member mutations',async()=>{
  assert.equal(j.characters[0].directions,8);
 });
 test('Staging Worker serves correct avatar and GLB content-types and rejects writes',async()=>{
- for(const [route,type,body] of [['avatar','image/webp','avatar-binary'],['skin','model/gltf-binary','skinned-glb']]){
+ for(const [route,type,body] of [['avatar','image/webp','avatar-binary'],['skin','model/gltf-binary','skinned-glb'],['renderer','text/html; charset=utf-8','<html>WebGL real renderer</html>']]){
   const r=await characterV605PreviewRoute(new Request(stage+'/api/character-v605/character-21/'+route),{...enabled,...mocked});
   assert.equal(r.status,200);
   assert.equal(r.headers.get('content-type'),type);
@@ -62,6 +63,10 @@ test('GM and Player source only alter explicitly opted-in Character 21',async()=
  assert.match(web,/characterV605ImageUrl/);
  assert.match(web,/\/api\/character-v605\/catalog/);
  assert.match(web,/GMWW_CHARACTER_V605_MODEL/);
+ assert.match(gm,/gmwwCharacterV605SkinnedPreview/);
+ assert.match(gm,/character-21\/renderer\?embed=1/);
+ assert.match(web,/characterV605PlayerRenderer/);
+ assert.match(web,/character-21\/renderer\?embed=1/);
  assert.ok(gm.includes("character-21")&&web.includes("character-21"));
  assert.equal(characterV605PreviewCatalog().characters.length,1);
 });
