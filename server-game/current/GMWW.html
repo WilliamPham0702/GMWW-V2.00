@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.132</title>
-<link rel="stylesheet" href="style.css?v=3.132-confirm-fast&status=2">
+<title>GMWW V3.133</title>
+<link rel="stylesheet" href="style.css?v=3.133-timeline-audio&status=3">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v7">
 <style>
@@ -252,7 +252,14 @@
           <header><b id="battleTargetTitle">CHỌN MỤC TIÊU</b><button id="battleTargetClose" type="button" aria-label="Đóng chọn mục tiêu">×</button></header>
           <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
-          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Ghi nhận hành động lên Server">OK</button></footer>
+          <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
+        </section>
+        <section id="battleResultPopup" class="gmww-battle-result-popup" role="status" aria-live="polite" hidden>
+          <header id="battleResultGrip" title="Giữ và kéo để di chuyển hộp kết quả">
+            <strong id="battleResultTitle">KẾT QUẢ</strong>
+            <button id="battleResultClose" type="button" aria-label="Đóng kết quả">×</button>
+          </header>
+          <p id="battleResultMessage"></p>
         </section>
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
@@ -850,10 +857,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="character-renderer.js?v=ce2"></script>
-<script src="battle-controls.js?v=battle-391&night225"></script>
+<script src="battle-controls.js?v=3.133-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v7"></script>
-<script src="app.js?v=3.132-confirm-fast&status=2"></script>
+<script src="app.js?v=3.133-timeline-audio&status=3"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
