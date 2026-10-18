@@ -1,0 +1,57 @@
+name: Stage V6.06 approved Character 22-30 portraits only
+
+on:
+  push:
+    branches: [feature/character-overhaul-v600-staging]
+    paths:
+      - 'scripts/vendor-character22-30-v606-avatars.mjs'
+      - 'assets/characters/overhaul-v600/portraits-22-30-v606-staging.json'
+      - '.github/workflows/vendor-character22-30-v606.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gmww-character-v606-art-vendor
+  cancel-in-progress: false
+
+jobs:
+  vendor-reviewed-portraits:
+    if: github.repository == 'WilliamPham0702/GMWW-V2.00' && github.ref == 'refs/heads/feature/character-overhaul-v600-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/character-overhaul-v600-staging
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract 9 real approved portraits from original art preview with SHA-256 pinning
+        run: node scripts/vendor-character22-30-v606-avatars.mjs
+      - name: Reject fake or incomplete artwork
+        run: |
+          node --test tests/character-v606-next-art-review.test.mjs
+          node --input-type=module - <<'NODE'
+          import {readFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import roster from './assets/characters/overhaul-v600/portraits-22-30-v606-staging.json' with {type:'json'};
+          for(const c of roster.characters){
+            const b=readFileSync('assets'+c.avatar);
+            if(b.length!==c.bytes||createHash('sha256').update(b).digest('hex')!==c.sha256)throw Error('INVALID_CHARACTER_ARTWORK_'+c.id);
+            if(c.availableGLB||c.availableActions.length||c.validArtworkViews!==1)throw Error('WRONG_8VIEW_ACCEPTANCE_'+c.id);
+          }
+          console.log('9 authentic approved costume avatars SHA256 PASS. GLBs intentionally blocked.');
+          NODE
+      - name: Stage binary portraits in PR #306 only
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "feature/character-overhaul-v600-staging"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- assets/characters/overhaul-v600/character-{22,23,24,25,26,27,28,29,30}/avatar.webp
+          if git diff --cached --quiet; then echo "Already staged"; exit 0; fi
+          git commit -m "asset(character): stage approved front portraits 22–30 only; GLBs remain blocked"
+          git push origin HEAD:feature/character-overhaul-v600-staging
