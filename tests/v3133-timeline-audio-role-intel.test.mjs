@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {resolveWolfNight,resolveNightReveal} from '../src/gmww-wolf-night-resolution.js';
 const read=p=>fs.readFileSync(p,'utf8');
+const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
 const wolf=(id,actionId='action_wolf_bite',direction='')=>({loginId:id,actionId,direction,matchId:'match1',night:2,type:'effect_notice'});
 const players=Object.fromEntries(['anna','bao','chi','duy'].map((id,i)=>['member:'+id,{loginId:id,seatId:i+1}]));
 const resolve=rows=>resolveWolfNight({interactions:rows,players,matchId:'match1',night:2});
@@ -101,6 +102,6 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  assert.match(html,/id="battleResultPopup"/);assert.match(html,/id="battleResultClose"/);
  assert.match(css,/grid-template-columns:none!important/);assert.match(css,/gmww-transfer-directions/);
  assert.match(css,/battleTargetConfirm\{\s*touch-action:none/);
- assert.match(runtime,/const VERSION='3\.133'/);
- assert.match(read('src/index.js'),/VERSION="V3\.133"/);
+ assert.ok(runtime.includes("const VERSION='"+runtimeVersion+"'"));
+ assert.ok(read('src/index.js').includes('VERSION="V'+runtimeVersion+'"'));
 });
