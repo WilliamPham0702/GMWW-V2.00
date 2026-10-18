@@ -1506,6 +1506,7 @@ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementByI
 
 
 /* GMWW Settings: one continuous scrolling screen with consistent health status. */
+// V6.06: GM source bundle synchronization checkpoint; Production picker and storage preserved.
 function gmwwSettingsHubHealth(kind,message){
   const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
   if(box)box.dataset.status=kind||'idle';
