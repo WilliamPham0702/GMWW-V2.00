@@ -756,6 +756,9 @@ function renderPlayPlayers(){
       const id=String(member.loginId||member.participantId||'');
       const token=ring.querySelector('[data-play-player-id="'+CSS.escape(id)+'"]');
       if(!token)continue;
+      // Keep gameplay opacity in sync even when the rig DOM signature is unchanged.
+      const effect=playPlayerEffect(member.loginId);
+      for(const kind of ['dead','frozen','expelled'])token.classList.toggle('is-'+kind,effect===kind);
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
       token.dataset.gmwwStatuses=sig;
