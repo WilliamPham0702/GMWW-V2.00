@@ -50,7 +50,7 @@ test('V3.133: server-verified Seer recognizes regular wolf but Alpha appears non
 test('V3.133: other divination can show role abilities or group wolf status without revealing to Player Web',()=>{
  const aura=resolveNightReveal({actionId:'action_aura_read',targetIds:['chi'],assignments:assigned});
  assert.match(aura.message,/Tiên Tri/);assert.deepEqual(aura.targets[0].functions,['action_seer']);
- assert.equal(resolveNightReveal({actionId:'action_fox_scan',targetIds:['anna','chi'],assignments:assigned}).wolf,true);
+ assert.equal(resolveNightReveal({actionId:'action_fox_scan',targetIds:['anna','chi','bao'],assignments:assigned}).wolf,true);
  assert.equal(resolveNightReveal({actionId:'action_witch_kill',targetIds:['anna'],assignments:assigned}),null);
  const worker=read('src/index.js');
  assert.match(worker,/const nightIntel=String\(meta\.cyclePhase/);
@@ -96,7 +96,7 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  const runtime=read('server-game/current/app.js'),parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(runtime,parts.map(p=>read('server-game/src/'+p)).join(''));
  assert.match(runtime,/battleBindConfirmDrag\(\)/);
- assert.match(runtime,/battleShowResultPopup\('🔮 KẾT QUẢ SOI XÉT'/);
+ assert.ok(runtime.includes("battleShowResultPopup('',String(revelation.message||''),true)"));
  assert.match(runtime,/\['none','⏺️','Không dịch'\]/); // three-way buttons generated dynamically
  const html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
  assert.match(html,/id="battleResultPopup"/);assert.match(html,/id="battleResultClose"/);
