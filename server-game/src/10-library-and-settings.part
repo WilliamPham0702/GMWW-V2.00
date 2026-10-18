@@ -288,19 +288,31 @@ let gmwwGmLastSafePoint=null;
 function gmwwGmKeepClear(actor){
   if(!actor)return actor;
   const p={x:actor.x,y:actor.y},layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  const safe=layout?.inside?.(p.x,p.y)&&!gmwwGmNearPlayer(p.x,p.y)&&
-    (!gmwwGmLastSafePoint||gmwwGmClearWalk(gmwwGmLastSafePoint,p));
-  if(safe){gmwwGmLastSafePoint=p;return actor}
-  // Pause smoothly at the last rendered safe position; never teleport across the village.
-  if(gmwwGmLastSafePoint&&layout?.inside?.(gmwwGmLastSafePoint.x,gmwwGmLastSafePoint.y))
-    return {...actor,moving:false,gait:'idle',x:gmwwGmLastSafePoint.x,y:gmwwGmLastSafePoint.y,status:'GM CHỜ ĐƯỜNG TRỐNG'};
-  // A new session may spawn on an occupied seat. Choose a nearby safe entry once.
-  const nearest=GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y}))
-    .filter(x=>layout?.inside?.(x.x,x.y)&&!gmwwGmNearPlayer(x.x,x.y))
+  const walkable=point=>layout?.inside?.(point.x,point.y)&&!gmwwGmNearPlayer(point.x,point.y);
+  if(walkable(p)&&(!gmwwGmLastSafePoint||gmwwGmClearWalk(gmwwGmLastSafePoint,p))){
+    gmwwGmLastSafePoint=p;return actor;
+  }
+  // Never freeze forever when an occupied seat blocks the planned patrol route:
+  // take short, locally walkable detours without jumping over characters.
+  if(gmwwGmLastSafePoint&&walkable(gmwwGmLastSafePoint)){
+    const here=gmwwGmLastSafePoint,step=.55;
+    const choices=[];
+    for(let k=0;k<12;k++){
+      const angle=k*Math.PI/6,point={x:here.x+step*Math.cos(angle),y:here.y+step*Math.sin(angle)};
+      if(!walkable(point)||!gmwwGmClearWalk(here,point))continue;
+      const distance=Math.hypot(point.x-p.x,(point.y-p.y)*1.5);
+      choices.push({point,distance});
+    }
+    choices.sort((a,b)=>a.distance-b.distance);
+    const next=choices[0]?.point;
+    if(next){gmwwGmLastSafePoint=next;return {...actor,x:next.x,y:next.y,moving:true,gait:'walk',status:'GM ĐANG TUẦN TRA'}}
+    return {...actor,moving:false,gait:'idle',x:here.x,y:here.y,status:'GM CHỜ ĐƯỜNG TRỐNG'};
+  }
+  const nearest=GMWW_GM_AUTO_POINTS.map(([x,y])=>({x,y})).filter(walkable)
     .sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
   if(!nearest)return {...actor,moving:false,gait:'idle',x:-100,y:-100};
   gmwwGmLastSafePoint=nearest;
-  return {...actor,moving:false,gait:'idle',...nearest,status:'GM CHỜ ĐƯỜNG TRỐNG'};
+  return {...actor,moving:false,gait:'idle',...nearest,status:'GM ONLINE'};
 }
 function gmwwGmActorAt(now=Date.now()){
   const p=gmwwGmPresenceState;if(!p?.online)return null;const manualUntil=Math.max(0,Number(p.manualUntil||0)),ms=Math.max(0,Number(p.moveStartedAt||0)),md=Math.max(0,Number(p.moveDurationMs||0));
