@@ -21,20 +21,12 @@ test('V3.17 runtime is bundled in the V3.17 native shell',()=>{
   assertCurrentRelease();
 });
 
-test('GM has one runtime actor with articulated white-wolf segments in both views',()=>{
+test('V3.143: no GM wolf actor is mounted in either view',()=>{
   assert.doesNotMatch(html,/id="gmWolfCharacter"/);
-  assert.doesNotMatch(app,/function gmWolfSetMotion/);
-  assert.match(app,/data-gm-wolf-runtime="1"/);
-  assert.match(village,/gmActionFor/);
-  for(const part of ['gm-wolf-body','gm-wolf-rear-legs','gm-wolf-front-legs','gm-wolf-head']){
-    assert.match(app,new RegExp(part));
-    assert.match(village,new RegExp(part));
-  }
-  for(const action of ['idle','walk','run','shake','howl']){
-    assert.match(app,new RegExp('gm-action-'+action));
-    assert.match(gmCss,new RegExp('gm-action-'+action));
-    assert.match(villageCss,new RegExp('gm-action-'+action));
-  }
+  assert.doesNotMatch(app,/data-gm-wolf-runtime="1"/);
+  assert.doesNotMatch(app,/function renderPlayGmToken/);
+  assert.match(server,/\/api\/gm-presence/);
+  assert.match(app,/battleToggleWolfMenu/);
 });
 
 test('GM wolf legs and head have independent runtime motion',()=>{

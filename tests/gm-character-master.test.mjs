@@ -3,31 +3,22 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const css=fs.readFileSync('server-game/current/style.css','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const playerWeb=fs.readFileSync('src/gmww-members-live.js','utf8');
 
-test('GM mounts one wolf runtime with segmented master layers',()=>{
-  const start=app.indexOf('function renderPlayGmToken');
-  const end=app.indexOf('function updatePlayGmToken',start);
-  const block=app.slice(start,end);
-  assert.match(block,/data-gm-wolf-runtime="1"/);
-  assert.equal((block.match(/gm\/gm-white-wolf\.webp/g)||[]).length,4);
-  for(const part of ['gm-wolf-body','gm-wolf-rear-legs','gm-wolf-front-legs','gm-wolf-head'])assert.match(block,new RegExp(part));
-});
-
-test('GM runtime exposes all five approved behavior states and articulated motion',()=>{
-  for(const state of ['idle','walk','run','shake','howl']){
-    assert.match(app,new RegExp("gm-action-"+state));
-    assert.match(css,new RegExp("gm-action-"+state));
-  }
-  assert.match(app,/gait:moving\?'run':'idle'/);
-  assert.match(app,/gait:moving\?'walk':'idle'/);
-  for(const motion of ['gmWolfRuntimeWalkRear','gmWolfRuntimeWalkFront','gmWolfRuntimeRunRear','gmWolfRuntimeRunFront','gmWolfRuntimeShakeHead','gmWolfRuntimeHowlHead'])assert.match(css,new RegExp(motion));
-});
-
-
-test('GM scene contains no retired second wolf actor or controller',()=>{
+test('V3.143: GM wolf actor, patrol and animation are retired',()=>{
+  for(const retired of [/function renderPlayGmToken/,/function updatePlayGmToken/,/gmwwGmActorAt\(/,
+    /data-gm-wolf-runtime="1"/,/function gmwwMoveGmCharacter/,/GMWW_GM_AUTO_MOVE_MS/])
+    assert.doesNotMatch(app,retired);
   assert.doesNotMatch(html,/id="gmWolfCharacter"/);
-  assert.doesNotMatch(app,/function gmWolfSetMotion/);
-  assert.equal((html.match(/gm\/gm-white-wolf\.webp/g)||[]).length,0, 'Only the live walking GM actor may show a wolf; footer must not render a duplicate');
+  assert.doesNotMatch(playerWeb,/function gmVillagePlayer\(/);
+  assert.doesNotMatch(playerWeb,/gmMotionTimer/);
+});
+test('V3.143: firepit GM menu, GM presence and battle actions remain',()=>{
+  assert.match(app,/function openPlayGMSheet\(\)/);
+  assert.match(app,/battleToggleWolfMenu\(\)/);
+  assert.match(app,/gmwwSendGmPresence/);
+  assert.match(html,/id="battleWolfMenu"/);
+  for(const id of ['battleGMAudio','battleGMAuto','battleQuickRevive','battleQuickKill','battleExit','battleForceEnd'])
+    assert.match(html,new RegExp('id="'+id+'"'));
 });

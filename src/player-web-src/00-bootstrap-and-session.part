@@ -3,7 +3,7 @@
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const state={
   token:localStorage.getItem('gmww_token')||'',member:null,avatars:[],selectedAvatarId:null,
-  rooms:[],roomCode:'',room:null,participantId:null,players:[],ready:false,ws:null,lobbyPlayers:[],lobbyPoll:null,gmPresence:null,gmPresencePoll:null,gmMotionTimer:null,swapShown:new Set(),gameCharacters:[],selectedGameCharacterId:'',selectedSeatId:null,roomSetupOpen:false,movementCompleteTimer:null,lobbyMotionTimer:null,lobbyMotionWaypoints:[],lobbyMotionIndex:0,lobbyMotionPhase:'roam',lobbyMotionHoldUntil:0,lobbyMotionPaused:false,lobbySeatWalkPending:null,
+  rooms:[],roomCode:'',room:null,participantId:null,players:[],ready:false,ws:null,lobbyPlayers:[],lobbyPoll:null,gmPresence:null,gmPresencePoll:null,swapShown:new Set(),gameCharacters:[],selectedGameCharacterId:'',selectedSeatId:null,roomSetupOpen:false,movementCompleteTimer:null,lobbyMotionTimer:null,lobbyMotionWaypoints:[],lobbyMotionIndex:0,lobbyMotionPhase:'roam',lobbyMotionHoldUntil:0,lobbyMotionPaused:false,lobbySeatWalkPending:null,
   role:null,roles:[],roleIndex:0,roleOpen:false,rolePoll:null,artifact:null,artifactOpen:false,artifactCycle:{cycleKey:'',count:0,max:3},artifactFocus:'',artifactBusy:false,presenceTimer:null,gameStateTimer:null,wsPingTimer:null,serverClockOffsetMs:0,lastResultKey:'',dead:false,roomNavigationAuthorized:false,avatarPickerMode:'register',avatarPickerDraftId:null,profileDraftAvatarId:null,profileDraftGameCharacterId:null,characterPreviewTimer:null,roleEffects:{},activeScreenId:'',historyReady:false,characterScale:100,uiSettingsLoadedAt:0
 };
 const GMWW_CHARACTER_SCALES=[75,100,125,150,175,200];
