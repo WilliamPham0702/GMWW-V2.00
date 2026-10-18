@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 export const APPROVED_PREVIEW_URL='https://gmww-character21-v605-preview.williampham0702.workers.dev/?v=605';
 export const APPROVED_SOURCE_SHA256='0afe6ec92d6f3aa483234a148cca33603b97702fd528a0cd4dd81a087219b378';
 export const ACCEPTED_CHARACTER_ID='character-21';
+export const APPROVED_AVATAR_SHA256='b195b8f6090b8ca6e059f756ae604939ba3887ade7d6691d9b4b075a5658c801';
 export const DEST='assets/characters/overhaul-v600/character-21/skin.glb';
 export const JOINTS=Object.freeze(['root','hips','chest','head','shoulderL','elbowL','handL','shoulderR','elbowR','handR','thighL','kneeL','footL','thighR','kneeR','footR']);
 export const CLIPS=Object.freeze(['Idle','Walk','Run','Result']);
@@ -18,6 +19,14 @@ export function extractGlbFromReviewHtml(html){
  const buf=Buffer.from(m[1],'base64');
  if(sha256(buf)!==APPROVED_SOURCE_SHA256)throw Error('APPROVED_GLB_SHA256_MISMATCH');
  return buf;
+}
+export function extractAvatarFromReviewHtml(html){
+ const m=/const FALLBACK=\["data:image\/webp;base64,([A-Za-z0-9+/=]+)"/.exec(html);
+ if(!m)throw Error('MISSING_APPROVED_FRONT_VIEW_AVATAR');
+ const data=Buffer.from(m[1],'base64');
+ if(sha256(data)!==APPROVED_AVATAR_SHA256)throw Error('APPROVED_AVATAR_SHA256_MISMATCH');
+ if(data.toString('ascii',0,4)!=='RIFF'||data.toString('ascii',8,12)!=='WEBP')throw Error('INVALID_AVATAR_WEBP');
+ return data;
 }
 export function parseGlb(glb){
  if(glb.length<28||glb.toString('ascii',0,4)!=='glTF'||glb.readUInt32LE(4)!==2||glb.readUInt32LE(8)!==glb.length)throw Error('INVALID_GLTF2_CONTAINER');
@@ -77,10 +86,13 @@ export function retargetCharacter21(source){
 async function main(){
  const res=await fetch(APPROVED_PREVIEW_URL,{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(30000)});
  if(!res.ok)throw Error('SOURCE_HTTP_'+res.status);
- const source=extractGlbFromReviewHtml(await res.text());
+ const html=await res.text();
+ const source=extractGlbFromReviewHtml(html), avatar=extractAvatarFromReviewHtml(html);
  const result=retargetCharacter21(source);
  const dest=resolve(process.cwd(),DEST);
  await mkdir(dirname(dest),{recursive:true});await writeFile(dest,result.output);
- console.log(JSON.stringify({file:DEST,bytes:result.output.length,...result.validation,sourceSHA256:APPROVED_SOURCE_SHA256,outputSHA256:result.outputSHA256,binarySHA256:result.binarySHA256,productionChanged:false},null,2));
+ const avatarPath=resolve(process.cwd(),'assets/characters/overhaul-v600/character-21/avatar.webp');
+ await writeFile(avatarPath,avatar);
+ console.log(JSON.stringify({file:DEST,bytes:result.output.length,...result.validation,sourceSHA256:APPROVED_SOURCE_SHA256,outputSHA256:result.outputSHA256,binarySHA256:result.binarySHA256,avatarBytes:avatar.length,avatarSHA256:APPROVED_AVATAR_SHA256,productionChanged:false},null,2));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){main().catch(e=>{console.error(e);process.exitCode=1})}
