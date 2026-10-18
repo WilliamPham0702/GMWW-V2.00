@@ -506,6 +506,12 @@ jobs:
           console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
           NODE
           fi
+          # A successful Worker deployment is not sufficient: prove that the
+          # installed iPhone IPA V3.110 obtains the small verified OTA from
+          # both previously deployed Runtime versions, including actual SHA.
+          if [ "$EXPECTED" = "3.139" ]; then
+            node .github/scripts/verify-ota-v3139-production.mjs "$URL"
+          fi
           node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
