@@ -281,10 +281,12 @@ const GMWW_CHARACTER_V605_STAGING=/^(?:localhost|127\.0\.0\.1|gmww-character[0-9
 const GMWW_CHARACTER_V605_AVATAR='/api/character-v605/character-21/avatar';
 const GMWW_CHARACTER_V605_MODEL='/api/character-v605/character-21/skin';
 function characterV605ImageUrl(id){
- return GMWW_CHARACTER_V605_STAGING&&String(id)==='character-21'?GMWW_CHARACTER_V605_AVATAR:'';
+ const raw=String(id||'');
+ return GMWW_CHARACTER_V605_STAGING&&/^character-(?:2[1-9]|30)$/.test(raw)
+   ?'/api/character-v605/'+raw+'/avatar':'';
 }
 async function loadGameCharacters(){
-  if(state.gameCharacters.length>=(GMWW_CHARACTER_V605_STAGING?21:20))return state.gameCharacters;state.gameCharacters=[];
+  if(state.gameCharacters.length>=(GMWW_CHARACTER_V605_STAGING?30:20))return state.gameCharacters;state.gameCharacters=[];
   try{
     const d=await api('/api/game-characters');
     state.gameCharacters=Array.isArray(d?.characters)?d.characters.map(c=>({...c,imageUrl:c.imageUrl||gameCharacterImageUrl(c.id)})):[];
@@ -295,6 +297,15 @@ async function loadGameCharacters(){
         const row={...ch,imageUrl:GMWW_CHARACTER_V605_AVATAR,modelUrl:GMWW_CHARACTER_V605_MODEL,previewOnly:true};
         const i=state.gameCharacters.findIndex(c=>c.id===row.id);
         if(i<0)state.gameCharacters.push(row);else state.gameCharacters[i]=row;
+      }
+      const portraits=await api('/api/character-v605/portrait-catalog').catch(()=>null);
+      if(portraits?.totalPortraitOnly===9&&Array.isArray(portraits.characters)){
+        for(const c of portraits.characters){
+          if(!/^character-(?:2[2-9]|30)$/.test(String(c.id||''))||c.animationType!=='none'||c.modelUrl!==null)continue;
+          const row={...c,previewOnly:true,frameCount:1,imageUrl:characterV605ImageUrl(c.id)};
+          const idx=state.gameCharacters.findIndex(x=>x.id===c.id);
+          if(idx<0)state.gameCharacters.push(row);else state.gameCharacters[idx]=row;
+        }
       }
     }
   }catch(e){state.gameCharacters=[];console.warn('[GMWW characters]',e)}
@@ -640,6 +651,13 @@ function characterV605PlayerRenderer(rootSelector,characterId){
   link.style.cssText='display:block;margin:10px 0;border-radius:10px;background:#17485a;padding:9px;color:#b9f8ed';host.append(link);
  }
  let panel=host.querySelector('[data-character-v605-webgl]');
+ const portraitOnly=GMWW_CHARACTER_V605_STAGING&&/^character-(?:2[2-9]|30)$/.test(String(characterId||''));
+ let note=host.querySelector('[data-character-v606-portrait-status]');
+ if(!portraitOnly){note?.remove()}else{
+   if(!note){note=document.createElement('p');note.dataset.characterV606PortraitStatus='1';
+      note.style.cssText='margin:8px 0;padding:8px;border:1px solid #ba8e54;border-radius:8px;color:#ffe0b7';host.append(note)}
+   note.textContent='Character '+String(characterId).slice(-2)+': avatar mặt trước đã duyệt. Chưa có skin 8 hướng/4 chuyển động; chưa áp dụng trong trận.';
+ }
  const eligible=GMWW_CHARACTER_V605_STAGING&&String(characterId)==='character-21';
  if(!eligible){if(panel)panel.remove();return}
  if(panel)return;
@@ -666,7 +684,12 @@ function renderProfile(){
 function avatarAssetSrc(a){const id=String(a?.id||'');return id.startsWith('character-')?gameCharacterImageUrl(id):String(a?.imageData||a?.imageUrl||avatarUrl(id))}
 function avatarButton(a){
   const b=document.createElement('button');b.type='button';b.dataset.gmwwAvatar=a.id;
-  const i=document.createElement('img');i.alt=a.name||'Nhân vật GMWW';i.loading='eager';i.decoding='async';i.src=gameCharacterImageUrl(a.id);i.dataset.gmwwWalkCharacter=a.id;b.appendChild(i);ensureCharacterPreviewTicker();
+  const i=document.createElement('img');i.alt=a.name||'Nhân vật GMWW';i.loading='eager';i.decoding='async';i.src=gameCharacterImageUrl(a.id);if(!characterV605ImageUrl(a.id))i.dataset.gmwwWalkCharacter=a.id;b.appendChild(i);
+  if(GMWW_CHARACTER_V605_STAGING&&/^character-(?:2[2-9]|30)$/.test(a.id)){
+    const label=document.createElement('small');label.textContent='ẢNH TRƯỚC · CHƯA CÓ CHUYỂN ĐỘNG';
+    label.style.cssText='display:block;font-size:8px;line-height:1.3;color:#ffdf9e';b.append(label);
+  }
+  ensureCharacterPreviewTicker();
   const modalOpen=$('#avatarLibraryModal')?.classList.contains('open');
   const selectedId=modalOpen&&state.avatarPickerDraftId?state.avatarPickerDraftId:(state.avatarPickerMode==='profile'?(state.profileDraftGameCharacterId||state.member?.gameCharacterId):state.selectedAvatarId);b.classList.toggle('selected',a.id===selectedId);
   return b;
@@ -689,17 +712,17 @@ function renderAvatarSuggestions(newSet=true){
   const box=$('#avatarSuggestions');if(!box)return;if(newSet||!suggestionIds.length){const a=[...state.gameCharacters];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}suggestionIds=a.slice(0,5).map(x=>x.id)}
   box.innerHTML='';suggestionIds.forEach(id=>{const a=state.gameCharacters.find(x=>x.id===id);if(a)box.appendChild(avatarButton(a))});
 }
-function renderAvatarLibrary(){const box=$('#avatarLibraryGrid');if(!box)return;box.innerHTML='';const catalog=state.gameCharacters;catalog.forEach(a=>box.appendChild(avatarButton(a)));$('#avatarLibraryCount').textContent=catalog.length+' Nhân vật 2D • 6 frame';characterV605PlayerRenderer('#avatarLibraryModal',state.avatarPickerDraftId||state.selectedAvatarId)}
+function renderAvatarLibrary(){const box=$('#avatarLibraryGrid');if(!box)return;box.innerHTML='';const catalog=state.gameCharacters;catalog.forEach(a=>box.appendChild(avatarButton(a)));$('#avatarLibraryCount').textContent=GMWW_CHARACTER_V605_STAGING?'30 nhân vật · 21 có 4 chuyển động, 22–30 chỉ ảnh trước':catalog.length+' Nhân vật 2D • 6 frame';characterV605PlayerRenderer('#avatarLibraryModal',state.avatarPickerDraftId||state.selectedAvatarId)}
 async function loadAvatars(){
   ensureOnline2DStyle();
   let avatarError=null;
   try{const d=await api('/api/avatars?v=0413');state.avatars=(d.avatars||[]).map(a=>({...a,imageUrl:a.imageUrl||avatarUrl(a.id)}))}catch(e){state.avatars=[];avatarError=e}
   await loadGameCharacters();
   if(!state.selectedAvatarId&&state.gameCharacters[0])state.selectedAvatarId=state.gameCharacters[0].id;
-  const source=$('#avatarSourceState');if(source)source.textContent=state.gameCharacters.length+' Nhân vật động GMWW';
+  const source=$('#avatarSourceState');if(source)source.textContent=GMWW_CHARACTER_V605_STAGING?'30 nhân vật Preview (22–30 chỉ ảnh trước)':state.gameCharacters.length+' Nhân vật động GMWW';
   const err=$('#avatarLoadError');if(err){if(state.gameCharacters.length){err.style.display='none';err.textContent=''}else{err.textContent=avatarError?.message||'Không tải được 20 Nhân Vật động.';err.style.display='block'}}
-  const sourceLabel=$('.avatar-source span');if(sourceLabel)sourceLabel.textContent='20 Nhân Vật Động';
-  const libraryBtn=$('.avatar-source .secondary');if(libraryBtn)libraryBtn.textContent='XEM ĐỦ 20 NHÂN VẬT';
+  const sourceLabel=$('.avatar-source span');if(sourceLabel)sourceLabel.textContent=GMWW_CHARACTER_V605_STAGING?'30 Nhân Vật Staging':'20 Nhân Vật Động';
+  const libraryBtn=$('.avatar-source .secondary');if(libraryBtn)libraryBtn.textContent=GMWW_CHARACTER_V605_STAGING?'XEM 30 NHÂN VẬT':'XEM ĐỦ 20 NHÂN VẬT';
   renderAvatarSuggestions(true);renderAvatarLibrary();ensureCharacterPreviewTicker();
 }
 
@@ -727,7 +750,7 @@ async function saveProfile(){
   try{await api('/api/members/profile',{method:'POST',headers:auth(),body:JSON.stringify({displayName,gameCharacterId})});const verified=await api('/api/members/me',{headers:auth()}),vm=verified?.member;if(!vm)throw new Error('Không xác minh được hồ sơ sau khi lưu.');if(String(vm.displayName||'').trim()!==displayName||String(vm.gameCharacterId||'')!==gameCharacterId)throw new Error('Máy chủ chưa lưu đúng Tên hiển thị hoặc Nhân Vật.');state.member=vm;state.profileDraftGameCharacterId=vm.gameCharacterId;localStorage.setItem('gmww_member',JSON.stringify(vm));renderProfile();try{await sendPresence();if(state.roomCode)await refreshPrivateRole(true)}catch{}$('#profileEditPanel')?.removeAttribute('open');renderProfile();go('profile');toast('Đã cập nhật thông tin.')}catch(e){state.member=previous;state.profileDraftGameCharacterId=previous?.gameCharacterId||'';renderProfile();toast(e.message||'Không cập nhật được thông tin.')}finally{if(btn){btn.disabled=false;btn.textContent=oldLabel}}
 }
 window.saveProfile=saveProfile;
-async function openProfileAvatarLibrary(){state.avatarPickerMode='profile';if(!GMWW_CHARACTER_V605_STAGING){if(state.gameCharacters.length!==20){state.gameCharacters=[];await loadGameCharacters()}if(state.gameCharacters.length!==20){toast('Chưa tải được 20 Avatar động. Vui lòng thử lại.');return}}else{if(state.gameCharacters.length<21){state.gameCharacters=[];await loadGameCharacters()}if(state.gameCharacters.length<21){toast('Chưa tải được Character 21 V6.05 trên Preview. Vui lòng thử lại.');return}}state.profileDraftGameCharacterId=state.profileDraftGameCharacterId||state.member?.gameCharacterId||state.gameCharacters[0]?.id||'';state.avatarPickerDraftId=state.profileDraftGameCharacterId;const modal=$('#avatarLibraryModal');if(!modal)return;modal.classList.add('open');renderAvatarLibrary();ensureCharacterPreviewTicker()}
+async function openProfileAvatarLibrary(){state.avatarPickerMode='profile';if(!GMWW_CHARACTER_V605_STAGING){if(state.gameCharacters.length!==20){state.gameCharacters=[];await loadGameCharacters()}if(state.gameCharacters.length!==20){toast('Chưa tải được 20 Avatar động. Vui lòng thử lại.');return}}else{if(state.gameCharacters.length<30){state.gameCharacters=[];await loadGameCharacters()}if(state.gameCharacters.length<30){toast('Chưa tải đủ 30 Nhân Vật Preview. Vui lòng thử lại.');return}}state.profileDraftGameCharacterId=state.profileDraftGameCharacterId||state.member?.gameCharacterId||state.gameCharacters[0]?.id||'';state.avatarPickerDraftId=state.profileDraftGameCharacterId;const modal=$('#avatarLibraryModal');if(!modal)return;modal.classList.add('open');renderAvatarLibrary();ensureCharacterPreviewTicker()}
 window.openProfileAvatarLibrary=openProfileAvatarLibrary;
 
 async function openRooms(){
