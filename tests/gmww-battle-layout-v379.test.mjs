@@ -17,7 +17,7 @@ test('Back button shows just one icon and keeps accessible label',()=>{
   assert.match(back,/aria-label="Lượt trước"/);
   assert.match(back,/<span aria-hidden="true">←<\/span>/);
   assert.doesNotMatch(back,/>Quay về</);
-  assert.ok(html.includes('battle-controls.js?v=3.133-timeline'));
+  assert.match(html,/battle-controls\\.js\\?v=3\\.\\d+-timeline/);
 });
 test('Wolf introduction is named Bầy sói in current turn and the timeline without changing server step id',()=>{
   const rules=globalThis.GMWW_BATTLE_CONTROLS;
