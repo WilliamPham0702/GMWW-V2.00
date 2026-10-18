@@ -27,6 +27,7 @@ import { seatClaimConflict, movementArrivalReady, movementRemainingMs } from "./
 import { villageAutoLife, villageAutoPoint, VILLAGE_AUTO_SIT_MS } from "./gmww-village-autolife.js";
 import { CHARACTER_ENGINE_VERSION, CHARACTER_MASTER, createCharacterManifest, characterStateFromPlayer } from "./gmww-character-engine.js";
 import { characterV4Status } from "./gmww-character-v4.js";
+import { characterV605PreviewRoute } from "./gmww-character-v605-gateway.js";
 import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from "./gmww-security-admission.js";
 import { fetchGmwwTasks,normalizeGmwwTasks } from "./gmww-task-board.js";
 import { GMWW_TASK_SNAPSHOT,GMWW_TASK_SNAPSHOT_GENERATED_AT } from "./gmww-task-snapshot.js";
@@ -1852,6 +1853,7 @@ export default {async fetch(request,env){
       return j({ok:true,project:PROJECT,status:"ready",version:VERSION,checks:{memberStorage:"ready"}});
     }catch{return j({ok:false,project:PROJECT,status:"degraded",checks:{memberStorage:"unavailable"}},503)}
   }
+  if(url.pathname.startsWith("/api/character-v605/"))return characterV605PreviewRoute(request,env);
   if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     const onlyNewNotes=m=>gmwwManifestNotesForInstalled(m,url.searchParams.get("current"));
