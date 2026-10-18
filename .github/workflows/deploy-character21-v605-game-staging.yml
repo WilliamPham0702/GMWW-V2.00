@@ -20,6 +20,9 @@ on:
       - 'tests/character-v606-next-art-review.test.mjs'
       - 'tests/character22-v607-asset-gate.test.mjs'
       - 'scripts/verify-character22-rig-candidate.mjs'
+      - 'scripts/build-character22-v607-technical-rig.mjs'
+      - 'assets/character-v605-review/character22-technical.html'
+      - 'tests/character22-v607-technical-prototype.test.mjs'
       - 'assets/characters/overhaul-v600/character-22/skin.glb'
       - 'assets/characters/overhaul-v600/character-22/rig-staging-review.json'
       - 'assets/characters/overhaul-v600/character-22/direction-art/**'
@@ -64,6 +67,8 @@ jobs:
           node scripts/build-character22-30-art-review.mjs
           node --test tests/character-v606-next-art-review.test.mjs tests/character22-v607-asset-gate.test.mjs
           node scripts/verify-character22-rig-candidate.mjs
+          node scripts/build-character22-v607-technical-rig.mjs
+          node --test tests/character22-v607-technical-prototype.test.mjs
       - name: Ensure production configuration and artifacts are never modified
         shell: bash
         run: |
@@ -115,6 +120,22 @@ jobs:
           curl -fsS "$BASE/character-v605-gm/app.js" > /tmp/char21-gm-app.js
           grep -q 'const GMWW_SERVER_BASE=location.origin;' /tmp/char21-gm-app.js
           grep -q 'gmwwCharacterV605SkinnedPreview' /tmp/char21-gm-app.js
+          curl -fsS "$BASE/character-v605-review/character22-technical.html" > /tmp/character22-technical.html
+          grep -q 'CHỈ LÀ PROTOTYPE KỸ THUẬT' /tmp/character22-technical.html
+          grep -q 'technical-prototype.glb' /tmp/character22-technical.html
+          curl -fsS --retry 3 --retry-all-errors "$BASE/characters/overhaul-v600/character-22/technical-prototype.glb" > /tmp/character22-technical.glb
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          import {parseGlb} from './scripts/vendor-character21-v605.mjs';
+          const local=fs.readFileSync('assets/characters/overhaul-v600/character-22/technical-prototype.glb');
+          const live=fs.readFileSync('/tmp/character22-technical.glb');
+          const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
+          if(sha(local)!==sha(live))throw Error('CHAR22_LIVE_GLB_DIFFERS');
+          const doc=parseGlb(live).json;
+          if(doc.extras?.characterId!=='character-22'||doc.extras?.artDirectionsApproved!==1||doc.animations?.length!==4||doc.skins?.[0]?.joints?.length!==16)throw Error('CHAR22_TECHNICAL_RIG_INVALID');
+          console.log('Verified real distinct Character22 technical GLB live on isolated staging — artwork still NOT approved.');
+          NODE
           curl -fsS "$BASE/character-v605-review/index.html" > /tmp/char-v606-review.html
           grep -q 'Character 22' /tmp/char-v606-review.html
           grep -q 'character-30' /tmp/char-v606-review.html
