@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read=p=>fs.readFileSync(p,'utf8');
+const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
 const part=read('server-game/src/40-battle-and-timeline.part');
 const app=read('server-game/current/app.js');
 const html=read('server-game/current/GMWW.html');
@@ -74,7 +75,7 @@ test('V3.132: compact OK-only panel keeps cancellation while selecting and allow
   assert.match(css,/width:64px!important/);
   assert.match(part,/pending\.hidden=!action\|\|!battleState\.targets\.length\|\|battleState\.targetSheet/);
   assert.match(part,/battleConfirm\(true\)/);
-  assert.match(app,/const VERSION='3\.133'/);
+  assert.ok(app.includes("const VERSION='"+runtimeVersion+"'"));
 });
 test('V3.132: batch reuses only authenticated request; undo, receipt and action rules remain',()=>{
   assert.match(worker,/async gmBattleAction\(request,body\)\{\s*const actionStartedAt=Date\.now\(\);\s*const auth=await this\.gmAuthorized\(request\)/);
@@ -87,5 +88,5 @@ test('V3.132: batch reuses only authenticated request; undo, receipt and action 
   assert.match(worker,/isBattleActorBlocked/);
   assert.match(worker,/checkBattleRoleActionUsage/);
   assert.match(worker,/await restore\(before\)/);
-  assert.match(worker,/VERSION="V3\.133"/);
+  assert.ok(worker.includes('VERSION="V'+runtimeVersion+'"'));
 });

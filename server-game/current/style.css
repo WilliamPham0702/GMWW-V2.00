@@ -5661,3 +5661,43 @@ body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-
 body.play-immersive #start #playShell[data-step="battle"] #battleTargetSheet.is-confirm-only #battleTargetConfirm{
   touch-action:none!important;user-select:none!important;-webkit-user-select:none!important;
 }
+
+
+/* V3.134: keep mode, enable and next arrow together; no auto-push to right. */
+#playCreateRoomSheet .play-room-control-row{
+  display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
+  justify-content:flex-start!important;gap:6px!important;
+  width:max-content!important;max-width:100%!important;margin:0!important;
+  grid-template-columns:none!important;
+}
+#playCreateRoomSheet .play-room-control-row #playRoomModeToggle,
+#playCreateRoomSheet .play-room-control-row #playCreateRoomEnabled{
+  flex:0 0 auto!important;width:max-content!important;min-width:0!important;
+  padding-inline:11px!important;height:42px!important;min-height:42px!important;
+}
+#playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+  flex:0 0 42px!important;margin:0!important;width:42px!important;min-width:42px!important;
+  max-width:42px!important;height:42px!important;min-height:42px!important;
+}
+/* Only the room tiles scroll sideways. Never stretch the modal when rooms accumulate. */
+#playCreateRoomSheet .play-room-picker-card{min-width:0!important;overflow:hidden!important}
+#playCreateRoomSheet .play-room-strip{
+  display:flex!important;align-items:stretch!important;gap:8px!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+  padding-bottom:5px!important;
+}
+#playCreateRoomSheet .play-room-add-tile{flex:0 0 auto!important;scroll-snap-align:start}
+#playCreateRoomSheet .play-room-created-list{
+  display:flex!important;flex:0 0 max-content!important;width:max-content!important;
+  min-width:max-content!important;max-width:none!important;overflow:visible!important;
+  gap:8px!important;align-items:stretch!important;
+}
+#playCreateRoomSheet .play-room-created-list>*{flex:0 0 auto!important;scroll-snap-align:start}
+@media(max-width:390px){
+  #playCreateRoomSheet .play-room-control-row{gap:5px!important;grid-template-columns:none!important}
+  #playCreateRoomSheet .play-room-control-row>.play-room-step-next{
+    flex-basis:42px!important;width:42px!important;min-width:42px!important
+  }
+}

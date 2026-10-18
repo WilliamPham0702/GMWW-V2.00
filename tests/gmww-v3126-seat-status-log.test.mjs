@@ -12,6 +12,7 @@ const source=file('server-game/src/30-village-and-setup.part');
 const runtime=file('server-game/current/app.js');
 const village=file('assets/village/village.mjs');
 const worker=file('src/index.js');
+const runtimeVersion=JSON.parse(file('package.json')).version.replace(/\.0$/,'');
 test('V3.126: twelve occupied seats use exactly 12 perimeter anchors around the campfire',()=>{
   assert.match(source,/seatCount=Math.min\(30,Math.max\(1,configured,players.length,highestSeat\)\)/);
   assert.doesNotMatch(source,/seatCount=Math.max\(playSceneRuntime.room\?\.seatLayout\?1:24/);
@@ -67,8 +68,8 @@ test('V3.126: actor status changes are local DOM patches, not expensive characte
   assert.match(source,/playPlayerRenderSignature\(members\)\.split\(':status:'\)\[0\]/);
   assert.match(source,/dataset\.gmwwStatuses===sig/);
   assert.match(source,/token\.insertAdjacentHTML\('beforeend',visual\.overlay\(ids\)\)/);
-  assert.match(runtime,/const VERSION='3\.133'/);
-  assert.match(worker,/VERSION="V3\.133"/);
+  assert.ok(runtime.includes("const VERSION='"+runtimeVersion+"'"));
+  assert.ok(worker.includes('VERSION="V'+runtimeVersion+'"'));
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(runtime,parts.map(p=>file('server-game/src/'+p)).join(''));

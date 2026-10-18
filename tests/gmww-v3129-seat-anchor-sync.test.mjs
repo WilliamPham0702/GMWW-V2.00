@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read=file=>fs.readFileSync(file,'utf8');
+const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
 const gm=read('server-game/src/30-village-and-setup.part');
 const bundled=read('server-game/current/app.js');
 const player=read('assets/village/village.mjs');
@@ -19,7 +20,7 @@ test('V3.129: GM renderer invalidates stale DOM when Seat Mẫu shape changes',(
     assert.match(signature,/seatCount,previewNew,seating/);
     assert.match(source,/positions=playSeatPositions\(seatCount\)/);
   }
-  assert.match(read('server-game/current/GMWW.html'),/app\.js\?v=3\.133-timeline-audio/);
+  assert.ok(read('server-game/current/GMWW.html').includes('app.js?v='+runtimeVersion+'-'));
 });
 
 test('V3.129: stale motion cannot displace assigned Seats after Tập Hợp',()=>{
