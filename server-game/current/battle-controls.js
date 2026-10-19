@@ -42,6 +42,7 @@
   }
   function resolvedType(action){
     const x=folded([action?.actionId,action?.name,...(action?.effectIds||[])].join(" "));
+    if(/(assassin_mark|danh dau)/.test(x))return "assassin_mark";
     if(/(freeze|dong_bang|dong bang|frozen)/.test(x))return "frozen";
     if(/(exile|expel|duoi|banish)/.test(x))return "expelled";
     if(/(revive|hoi_sinh|resurrect)/.test(x))return "revive";
@@ -65,7 +66,11 @@
       return fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))).map((fn,i)=>{
         const actionCatalog=Array.isArray(definitions)?definitions:(isArt?definitions.artifacts:definitions.role)||[];
         const definition=actionCatalog.find(a=>String(a?.id||"")===String(fn?.actionId||"")),
-          name=labelOf(definition,labelOf(fn,fn?.actionId||"Hành động "+(i+1)));
+          label=labelOf(definition,labelOf(fn,"")),
+          technical=/^action[-_][a-z0-9_-]+$/i.test(label)||!label,
+          description=String(fn?.description||definition?.description||"").trim(),
+          knownName={"action-lone-wolf-join":"Gia nhập Bầy Sói"}[String(fn?.actionId||"")],
+          name=technical?(knownName||(/^.{3,52}$/.test(description)&&!/^action[-_]/i.test(description)?description:"Hành động "+(i+1))):label;
         return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
           actionId:String(fn.actionId||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
           allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,

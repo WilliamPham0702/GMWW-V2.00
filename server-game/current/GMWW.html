@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.147</title>
-<link rel="stylesheet" href="style.css?v=3.147-compact-room">
+<title>GMWW V3.148</title>
+<link rel="stylesheet" href="style.css?v=3.148-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -261,7 +261,28 @@
           <header id="battleTargetGrip" title="Giữ và kéo để di chuyển box nhân vật bị tác động"><b id="battleTargetTitle">CHỌN MỤC TIÊU</b></header>
           <p id="battleTargetPrompt" role="status" aria-live="polite">Chọn Người Chơi</p>
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
+          <div id="battleAssassinChoice" hidden role="group" aria-label="Sát Thủ chọn dấu bí mật">
+            <strong>SÁT THỦ CHỌN DẤU BÍ MẬT</strong>
+            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍 LIKE</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎 DISLIKE</button></div>
+          </div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
+        </section>
+        <section id="battleGallowsPanel" role="region" aria-label="Lên Giàn" hidden>
+          <header title="Giữ và kéo để di chuyển"><strong>⚖️ LÊN GIÀN</strong><output id="battleGallowsClock">00:10</output></header>
+          <div id="battleGallowsStage" role="status" aria-live="polite">Sẵn sàng đề cử</div>
+          <label for="battleGallowsCandidate">Người lên giàn</label>
+          <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
+          <div class="battle-gallows-actions" aria-label="Hành động">
+            <button type="button" data-gallows-command="begin">BỎ PHIẾU 10 GIÂY</button>
+            <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CỨU</button>
+            <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 GIẾT</button>
+            <button type="button" data-gallows-command="restore">↶ KHÔI PHỤC</button>
+          </div>
+          <div id="battleGallowsVotes" aria-label="Kết quả bỏ phiếu"></div>
+        </section>
+        <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
+          <header title="Giữ và kéo để di chuyển Thông báo Làng"><strong>📣 THÔNG BÁO LÀNG</strong><button type="button" id="battleMorningAudio" aria-label="Phát lại thông báo">🔊</button></header>
+          <div id="battleMorningList" role="status" aria-live="polite"></div>
         </section>
         <section id="battleResultPopup" class="gmww-battle-result-popup" role="status" aria-live="polite" aria-label="Kết quả tác động — chạm ngoài để đóng, giữ và kéo để di chuyển" hidden>
           <header id="battleResultGrip" title="Giữ và kéo để di chuyển hộp kết quả">
@@ -876,7 +897,7 @@
 <script src="battle-controls.js?v=3.136-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.147-compact-room&status=4"></script>
+<script src="app.js?v=3.148-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
