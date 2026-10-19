@@ -23,7 +23,9 @@ for i,index in enumerate(mapping,1):
     source=workspace/'restored-atlases'/order[index]['name']
     for folder,path in [('originals',original),('atlases',source)]:
         dest=out/folder/f'{ident}.webp';dest.parent.mkdir(parents=True,exist_ok=True)
-        Image.open(path).save(dest,'WEBP',quality=90,method=1)
+        temporary=dest.with_suffix('.tmp')
+        Image.open(path).save(temporary,'WEBP',quality=90,method=1)
+        temporary.replace(dest)
     im=Image.open(source).convert('RGBA');a=np.array(im)[:,:,3]
     ys=cuts(a,6,1);frames=[]
     for r in range(6):
