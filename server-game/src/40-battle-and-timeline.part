@@ -1006,6 +1006,7 @@ function renderPlayBattle(){
   }
   const wolfMenu=document.getElementById('battleWolfMenu');
   if(wolfMenu)wolfMenu.hidden=!battleState.wolfOpen;
+  battleSyncLabelVisibility();
   
   const clockMenu=document.getElementById('battleClockPopover'),clockToggle=document.getElementById('battleClockButton');
   if(clockMenu)clockMenu.hidden=!battleState.clockOpen;
@@ -1129,6 +1130,30 @@ function battleToggleDetails(force){
   if(battleState.details){battleState.wolfOpen=false;battleState.clockOpen=false}
   if(!battleState.details){battleState.roster=false;battleState.quickType=''}
   renderPlayBattle();
+}
+const GMWW_GM_LABEL_KEY='gmww_gm_label_visibility_v1';
+const gmLabelVisibility=(()=>{
+  try{const saved=JSON.parse(localStorage.getItem(GMWW_GM_LABEL_KEY)||'{}');
+    return {artifact:saved.artifact!==false,role:saved.role!==false,player:saved.player!==false};
+  }catch{return {artifact:true,role:true,player:true}}
+})();
+function battleSyncLabelVisibility(){
+  const shell=document.getElementById('playShell');
+  if(shell)for(const kind of ['artifact','role','player'])shell.classList.toggle('gmww-hide-'+kind+'-label',!gmLabelVisibility[kind]);
+  for(const [kind,id,label] of [['artifact','battleLabelArtifact','Artifact'],['role','battleLabelRole','Vai Trò'],['player','battleLabelPlayer','Người Chơi']]){
+    const button=document.getElementById(id);if(!button)continue;
+    const enabled=gmLabelVisibility[kind];
+    button.setAttribute('aria-pressed',String(enabled));
+    button.setAttribute('aria-label','Hiển thị tên '+label+': '+(enabled?'Bật':'Tắt'));
+    button.classList.toggle('is-off',!enabled);
+    button.textContent=(enabled?'● ':'○ ')+label+' '+(enabled?'ON':'OFF');
+  }
+}
+function battleToggleLabelVisibility(kind){
+  if(!Object.prototype.hasOwnProperty.call(gmLabelVisibility,kind))return;
+  gmLabelVisibility[kind]=!gmLabelVisibility[kind];
+  try{localStorage.setItem(GMWW_GM_LABEL_KEY,JSON.stringify(gmLabelVisibility))}catch{}
+  battleSyncLabelVisibility();
 }
 function battleToggleWolfMenu(){
   if(playSceneState.step!=='battle')return;
@@ -1401,6 +1426,9 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
+  for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player']])
+    document.getElementById(id)?.addEventListener('click',()=>battleToggleLabelVisibility(kind));
+  battleSyncLabelVisibility();
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
