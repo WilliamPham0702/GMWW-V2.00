@@ -4125,11 +4125,14 @@ async function battleConfirm(confirmed=false){
     else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     // The confirmation cue is tied to the real OK gesture, not the Artifact opening turn.
     battleConfirmAudioGate=true;
-    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,()=>{
+    const finishConfirmAudio=()=>{
+      if(!battleConfirmAudioGate)return;
       battleConfirmAudioGate=false;
       renderPlayBattle();
       battleAdvanceConfirmedTurn();
-    });
+    };
+    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,finishConfirmAudio))
+      .then(started=>{if(started===false)finishConfirmAudio()},finishConfirmAudio);
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);

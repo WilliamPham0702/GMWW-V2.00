@@ -68,7 +68,8 @@ test('V3.151 audio confirmation gate does not change a night turn or trigger nex
   const end=gm.indexOf('function battleToggleDetails(',start);
   const body=gm.slice(start,end);
   assert.match(body,/battleConfirmAudioGate=true/);
-  assert.match(body,/battlePlayConfiguredAudio\('system','audio_system_confirm','Xác nhận',false,\(\)=>\{/);
+  assert.match(body,/battlePlayConfiguredAudio\('system','audio_system_confirm','Xác nhận',false,finishConfirmAudio\)/);
+  assert.match(body,/if\(started===false\)finishConfirmAudio\(\)/);
   assert.match(body,/battleConfirmAudioGate=false/);
   assert.match(gm,/if\(!id\|\|battleState\.syncPending\|\|battleState\.busy\|\|battleConfirmAudioGate/);
   assert.match(gm,/if\(battleState\.lastAudioTurnKey!==key&&!battleConfirmAudioGate\)/);
