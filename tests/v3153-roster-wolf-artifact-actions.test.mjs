@@ -50,3 +50,30 @@ test('generated GM runtime retains exact source assembly',()=>{
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(app,parts.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join(''));
 });
+
+
+test('Artifact foot label is compact and swipeable while preserving full name access',()=>{
+  const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  assert.match(setup,/play-player-artifact-text/);
+  assert.match(setup,/title=".*playEsc\\(assignment\\.artifactName/);
+  assert.match(css,/\\.play-player-artifact \\.play-player-artifact-text\\{/);
+  assert.match(css,/width:2em!important/);
+  assert.match(css,/overflow-x:auto!important/);
+  assert.match(css,/touch-action:pan-x!important/);
+});
+
+test('GM action tray remains one row, arrows expose overflow, buttons retain drag',()=>{
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  assert.match(html,/id="battleActionRail"/);
+  assert.match(html,/id="battleActionPrevious"/);
+  assert.match(html,/id="battleActionNext"/);
+  assert.match(src,/function battleUpdateActionNavigation\\(/);
+  assert.match(src,/function battleNavigateActions\\(direction\\)/);
+  assert.match(src,/bar\\.scrollBy\\(\\{left:direction\\*amount/);
+  assert.match(src,/scroll',battleUpdateActionNavigation/);
+  assert.match(css,/#battleActionRail\\.battle-action-rail/);
+  assert.match(css,/flex-direction:row!important;flex-wrap:nowrap!important/);
+  assert.match(css,/scrollbar-width:none!important/);
+  assert.match(src,/battleState\\.drag=\\{id:x\\.dataset\\.battleAction/);
+});
