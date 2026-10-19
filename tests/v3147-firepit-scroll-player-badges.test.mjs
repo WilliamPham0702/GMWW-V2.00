@@ -48,7 +48,7 @@ test('V3.157: exactly assembled GM runtime and Worker version agree for OTA',()=
   assert.ok(app.includes("const VERSION='3.157';"));
   assert.ok(worker.includes('VERSION="V3.157",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3157"'));
   assert.match(html,/<title>GMWW V3\.157<\/title>/);
-  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.156\.0"/);
+  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.157\.0"/);
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(app,parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''));
