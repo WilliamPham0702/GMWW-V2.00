@@ -74,8 +74,15 @@
         const dayOnly=fns.some(fn=>fn?.phase==="day"),
           reason=!chosen?"Chưa đồng bộ lá Artifact.":dayOnly?"Chức năng Artifact chỉ dùng vào ban ngày.":
             fns.length?"Artifact không có chức năng sử dụng trong đêm này.":"Artifact chưa được thiết lập chức năng.";
+        const storedAction=Array.isArray(chosen?.actions)?chosen.actions:[],
+          actionCatalog=Array.isArray(definitions)?definitions:(definitions?.artifacts||[]),
+          configured=fns[0],actionId=String(configured?.actionId||configured?.id||""),
+          ownedAction=storedAction.find(a=>String(a?.id||a?.actionId||"")===actionId),
+          catalogAction=actionCatalog.find(a=>String(a?.id||"")===actionId),
+          validName=value=>{const name=String(value||"").trim();return name&&!/^(?:artifact\s*)?(?:nội tại|dùng ban ngày|chưa có chức năng)$/i.test(name)&&!/^action[-_][a-z0-9_-]+$/i.test(name)&&!/^hành động(?:\s*\d+)?$/i.test(name)},
+          actionName=[ownedAction?.name,catalogAction?.name,configured?.name,storedAction[0]?.name].map(value=>String(value||"").trim()).find(validName)||"Chưa cấu hình tên hành động";
         return [{id:"artifact:"+id+":"+loginOf(owner.loginId)+":info",
-          actionId:"",name:dayOnly?"Artifact dùng ban ngày":fns.length?"Artifact nội tại":"Artifact chưa có chức năng",
+          actionId:"",name:actionName,
           actorIds,noTarget:true,targetCount:0,artifactId:String(id),artifactName:String(owner.artifactName||chosen?.name||"Artifact"),
           unavailable:true,unavailableReason:reason}];
       }

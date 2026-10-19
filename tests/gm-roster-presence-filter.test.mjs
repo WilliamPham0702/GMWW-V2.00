@@ -116,9 +116,23 @@ test('live presence refresh re-applies active filter while preserving selections
   assert.deepEqual(rows.map(row=>row.classList.contains('hidden')),[false,false,false]);
 });
 
-test('ONLINE room validation and existing save remain intact',()=>{
-  assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\./);
-  assert.match(app,/async function savePlayRoster\(\)\{return savePlayRosterIds\(playRosterSelectedIds\(\)\)\}/);
+test('ONLINE room validation and Select All saves on the FIRST confirmation',async()=>{
+  assert.ok(app.includes('Chế độ ONLINE chỉ chọn Người Chơi đang Online.'));
+  assert.ok(!app.includes('playRosterBulkConfirmClicks'));
+  assert.ok(!app.includes('playRosterBulkSelection'));
+  const {selectAll,context}=setup();
+  selectAll.click();
+  let calls=0,submitted=null;
+  context.savePlayRosterIds=async ids=>{calls++;submitted=Array.from(ids);return true};
+  const begin=app.indexOf('async function savePlayRoster(){');
+  const finish=app.indexOf('function playApplyLobbyStage(',begin);
+  assert.ok(begin>=0&&finish>begin);
+  vm.runInNewContext(app.slice(begin,finish),context);
+  await context.savePlayRoster();
+  assert.equal(calls,1);
+  assert.deepEqual(submitted,['chrome','edge','safari']);
+  assert.ok(app.includes('async function savePlayRosterIds(ids)'));
+  assert.ok(app.includes('await playRoomApi('));
 });
 
 test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
