@@ -504,8 +504,15 @@ function battleUpdateActionNavigation(){
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
-  const amount=Math.max(88,Math.floor(bar.clientWidth*.8));
-  bar.scrollBy({left:direction*amount,behavior:'smooth'});
+  // Move to the next complete action button rather than a hard-to-select page.
+  const buttons=[...bar.querySelectorAll('button[data-battle-action]')];
+  if(!buttons.length)return;
+  const left=bar.scrollLeft;
+  const offsets=buttons.map(button=>button.offsetLeft-buttons[0].offsetLeft);
+  const destination=direction>0
+    ?offsets.find(offset=>offset>left+5)
+    :offsets.slice().reverse().find(offset=>offset<left-5);
+  bar.scrollTo({left:destination??(direction>0?bar.scrollWidth:0),behavior:'smooth'});
 }
 let battleConfirmAudioGate=false;
 function battleAdvanceConfirmedTurn(){
@@ -1770,7 +1777,7 @@ async function openPlayGameSheet(){
 async function openLibraryGameTemplate(id=''){
   playGameStatus('');
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
-  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
+  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=10;
     if(voteInput)voteInput.value=10;

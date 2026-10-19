@@ -35,7 +35,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.154",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3154",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.155",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3155",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1216,7 +1216,7 @@ export class RoomDurableObject extends DurableObject {
     return runtime||null
   }
   async buildNightRuntime(meta,night){
-    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??60)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
+    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??30)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
     if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:[...new Set(assignments.filter(a=>{const faction=String(a?.roleCard?.factionId||a?.factionId||a?.faction||'').toLowerCase();return faction==='wolf'||faction.includes('sói')||faction.includes('soi')||String(a?.roleId||'').includes('wolf')}).map(a=>normalizeLoginId(a?.loginId)).filter(Boolean))],
       durationSec:wolfDiscussionSec,status:"pending"});
@@ -1649,7 +1649,7 @@ export class RoomDurableObject extends DurableObject {
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
-      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
+      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
@@ -1710,9 +1710,21 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }};
     const before=await snapshot(),results=[];
+    // Expelled players can act/be targeted for the rest of the night, but these
+    // actions are acknowledged without modifying gameplay effects.
+    const isExpelled=id=>interactions.some(row=>
+      normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
+      row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===matchId)&&
+      (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
+    const inertActor=isExpelled(actorId);
+    const effectiveTargets=targets.filter(id=>!inertActor&&!isExpelled(id));
     for(const id of targets){
+      if(!effectiveTargets.includes(id)){
+        results.push({ok:true,loginId:id,noEffect:true,reason:"EXPELLED"});
+        continue;
+      }
       const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
-        actionNonce:token,targetIds:targets};
+        actionNonce:token,targetIds:effectiveTargets};
       const response=await this.executeGmInteraction(request,action,auth);
       const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
       if(!response.ok||data.ok!==true){
@@ -1730,9 +1742,9 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds,
-      assignments:(await this.ctx.storage.get("assignments"))||[]});
-    const wolfOutcome=['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
+    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>effectiveTargets.includes(id)),
+      assignments:(await this.ctx.storage.get("assignments"))||[]}):null;
+    const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({interactions:(await this.ctx.storage.get("interactions"))||[],players,
         matchId,night:Number(meta.cycleNight||0)}):null;
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,

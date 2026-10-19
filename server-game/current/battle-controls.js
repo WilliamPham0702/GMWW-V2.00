@@ -141,7 +141,7 @@
       (Array.isArray(rows)?rows:[]).some(x=>
         loginOf(x?.loginId)===loginOf(member.loginId)&&x?.type==="dead"&&
         x?.effectActive!==false&&Number(x?.night)===Number(night)&&night>0);
-    return nightVictim||action.allowDead||effect!=="dead"&&effect!=="expelled";
+    return nightVictim||action.allowDead||effect!=="dead";
   }
   const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
   root.GMWW_BATTLE_CONTROLS=api;

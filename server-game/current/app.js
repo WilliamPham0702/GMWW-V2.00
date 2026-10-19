@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.154';
+const VERSION='3.155';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2150,7 +2150,7 @@ const PLAY_STEP_COPY={
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
 };
 let playSceneState=(()=>{
-  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
+  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.roomEnabled=saved.roomEnabled===true;saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(saved.step==='members')saved.step='seats';saved.lobbyGeneration=Math.max(0,Number(saved.lobbyGeneration||0));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.roomEnabled=false;saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='lobby';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))&&!['lobby','room'].includes(saved.step))saved.step='lobby';if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))){saved.roomCode='—';saved.gmToken='';saved.selectedMemberIds=[];saved.activePlayerId=''}return saved}catch{return base}
 })();
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
@@ -2201,7 +2201,7 @@ function playPlayerStatuses(loginId){
   }
   return out;
 }
-function playPlayerBlocked(loginId){return ['dead','frozen','expelled'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
+function playPlayerBlocked(loginId){return ['dead','frozen'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
 function playBlockReason(loginId){const e=playPlayerEffect(loginId);if(e==='dead')return'Người thực hiện đã chết.';if(e==='frozen')return'Người thực hiện đang bị Đóng băng.';if(e==='expelled')return'Người thực hiện đã bị Đuổi khỏi làng.';const st=playPlayerStatuses(loginId).find(x=>x.blocks);return st?'Người thực hiện đang: '+st.label+'.':'Người thực hiện không thể hành động.'}
 function playPlayerEffect(loginId){
   const now=playNow(),rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now)),types=new Set(rows.map(x=>String(x?.type||'')));
@@ -2943,10 +2943,9 @@ function renderPlayPlayers(){
       artifactText=artifactTag?.querySelector('.play-player-artifact-text');
     if(artifactTag&&artifactText){
       const full=artifactText.textContent||'';
-      const chars=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?
-        Array.from(new Intl.Segmenter('vi',{granularity:'grapheme'}).segment(full),x=>x.segment):Array.from(full.normalize('NFC'));
+      const words=full.trim().split(/\s+/u).filter(Boolean);
       let position=0,gesture=null;
-      const show=()=>{artifactText.textContent=chars.slice(position,position+2).join('')};
+      const show=()=>{artifactText.textContent=words.slice(position,position+2).join(' ')};
       show();
       artifactTag.addEventListener('pointerdown',event=>{
         if(event.pointerType==='mouse'&&event.button!==0)return;
@@ -2956,8 +2955,8 @@ function renderPlayPlayers(){
       });
       artifactTag.addEventListener('pointermove',event=>{
         if(!gesture||gesture.id!==event.pointerId)return;
-        const delta=Math.trunc((gesture.x-event.clientX)/12);
-        position=Math.max(0,Math.min(chars.length-2,gesture.position+delta));
+        const delta=Math.trunc((gesture.x-event.clientX)/24);
+        position=Math.max(0,Math.min(Math.max(0,words.length-2),gesture.position+delta));
         show();event.stopPropagation();
       });
       const end=event=>{
@@ -3603,8 +3602,15 @@ function battleUpdateActionNavigation(){
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
-  const amount=Math.max(88,Math.floor(bar.clientWidth*.8));
-  bar.scrollBy({left:direction*amount,behavior:'smooth'});
+  // Move to the next complete action button rather than a hard-to-select page.
+  const buttons=[...bar.querySelectorAll('button[data-battle-action]')];
+  if(!buttons.length)return;
+  const left=bar.scrollLeft;
+  const offsets=buttons.map(button=>button.offsetLeft-buttons[0].offsetLeft);
+  const destination=direction>0
+    ?offsets.find(offset=>offset>left+5)
+    :offsets.slice().reverse().find(offset=>offset<left-5);
+  bar.scrollTo({left:destination??(direction>0?bar.scrollWidth:0),behavior:'smooth'});
 }
 let battleConfirmAudioGate=false;
 function battleAdvanceConfirmedTurn(){
@@ -4869,7 +4875,7 @@ async function openPlayGameSheet(){
 async function openLibraryGameTemplate(id=''){
   playGameStatus('');
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
-  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
+  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=10;
     if(voteInput)voteInput.value=10;

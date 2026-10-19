@@ -7,7 +7,7 @@ export function isBattleActorBlocked(rows,{actorId,matchId,statusDefs={}}={}){
   return (Array.isArray(rows)?rows:[]).some(row=>
     loginId(row?.loginId)===actor&&row?.effectActive!==false&&
     (!row?.matchId||String(row.matchId)===match)&&
-    (['frozen','dead','expelled'].includes(String(row?.type||''))||
+    (['frozen','dead'].includes(String(row?.type||''))||
       (row?.type==='status'&&statusDefs[row?.statusId]?.blocks===true))
   );
 }

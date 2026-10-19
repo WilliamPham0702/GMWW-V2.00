@@ -13,9 +13,9 @@ const statusDefs={
 const effect=(type,props={})=>({type,loginId:actor,matchId:match,effectActive:true,...props});
 const blocked=rows=>isBattleActorBlocked(rows,{actorId:actor,matchId:match,statusDefs});
 
-test('frozen, expelled and dead actors cannot act in the live game',()=>{
-  for(const type of ['frozen','expelled','dead'])
-    assert.equal(blocked([effect(type)]),true,type);
+test('frozen and dead actors cannot act, expelled actors remain selectable with inert effects',()=>{
+  for(const type of ['frozen','dead'])assert.equal(blocked([effect(type)]),true,type);
+  assert.equal(blocked([effect('expelled')]),false);
 });
 test('active disabling status blocks, nonblocking statuses do not',()=>{
   assert.equal(blocked([effect('status',{statusId:'disabled_permanent'})]),true);

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.154</title>
-<link rel="stylesheet" href="style.css?v=3.154-compact-room">
+<title>GMWW V3.155</title>
+<link rel="stylesheet" href="style.css?v=3.155-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -768,7 +768,7 @@
           <label>Thời gian bỏ phiếu Lên Giàn (giây): <span class="play-timing-value"><input id="playGallowsVoteSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian bỏ phiếu Lên Giàn"></span></label>
           <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
           <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
-          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="60" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
+          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
           <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
         <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
@@ -803,11 +803,12 @@
 <div class="sheet hidden" id="playRosterSheet">
   <div class="sheet-card play-roster-sheet-card">
     <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
-    <div class="play-roster-toolbar"><span id="playRosterCount">0 đã chọn</span><button id="playRosterSelectAll" type="button">Chọn tất cả</button></div>
-    <div class="button-row play-roster-actions">
+    <div class="play-roster-toolbar play-roster-toolbar-v3155" role="group" aria-label="Chọn thành viên">
       <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
-      <button class="primary" id="playRosterSave" type="button">XÁC NHẬN THÀNH VIÊN</button>
+      <button class="primary" id="playRosterSave" type="button">Xác nhận thành viên</button>
+      <button id="playRosterSelectAll" type="button">Chọn tất cả</button>
     </div>
+    <small id="playRosterCount" class="play-roster-selected-count">0 đã chọn</small>
     <div class="play-roster-filters" id="playRosterFilters" role="group" aria-label="Lọc thành viên theo trạng thái">
       <button type="button" class="active" data-play-roster-filter="all" aria-pressed="true">Tất cả</button>
       <button type="button" data-play-roster-filter="online" aria-pressed="false">Online</button>
@@ -901,10 +902,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1"></script>
-<script src="battle-controls.js?v=3.154-timeline"></script>
+<script src="battle-controls.js?v=3.155-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.154-compact-room&status=4"></script>
+<script src="app.js?v=3.155-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
