@@ -12,14 +12,28 @@ function playAssignmentSignature(){
   return JSON.stringify({roomCode:playSceneState.roomCode||'',matchId:playSceneState.matchId||'',
     rows:(playSceneState.assignmentsPreview||[]).map(r=>[r.loginId,r.roleId,r.artifactId||''])});
 }
-function playSaveAssignments(){
+async function playSaveAssignments(){
   const status=playAssignmentDraftStatus();
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
-  // Step 5 stores only the GM's private local draft. Player Web receives no cards.
-  playSceneState.assignmentSavedSignature=playAssignmentSignature();
-  playSceneRuntime.assignmentPanelDismissed=true;
-  savePlayScene();renderPlayRoleAssignmentPanel();
-  return true;
+  if(playSceneRuntime.busy)return false;
+  // Save only GM-private assignments. Publishing the deal stage must NOT
+  // send cards; /assignments is still executed solely by the Phát Vai step.
+  const formerStep=playSceneState.step;
+  playSceneRuntime.busy=true;renderPlayRoleAssignmentPanel();
+  try{
+    const ack=await playPublishStage('deal');
+    if(!ack)throw Error('Server chưa xác nhận chuyển sang Phát Vai.');
+    playSceneState.assignmentSavedSignature=playAssignmentSignature();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    playSceneState.step='deal';playSceneState.phase='lobby';
+    savePlayScene();renderPlayScene();
+    return true;
+  }catch(err){
+    playSceneState.step=formerStep;
+    playSceneRuntime.assignmentPanelDismissed=false;
+    playFlashError('Không thể lưu Phân Vai: '+String(err?.message||err));
+    renderPlayRoleAssignmentPanel();return false;
+  }finally{playSceneRuntime.busy=false;renderPlayRoleAssignmentPanel()}
 }
 function playConfirmAssignments(){
   const status=playAssignmentDraftStatus();

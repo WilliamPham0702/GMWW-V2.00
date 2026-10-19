@@ -60,19 +60,39 @@
     const build=(owner,isArt)=>{
       const pool=isArt?artifacts:roles;
       const id=isArt?owner.artifactId:owner.roleId;
-      const chosen=pool.find(row=>String(row?.id||"")===String(id))||pool.find(row=>folded(row?.name)===folded(isArt?owner.artifactName:owner.label));
-      const fns=Array.isArray(chosen?.functions)?chosen.functions:Array.isArray(chosen?.actions)?chosen.actions:[];
+      const chosen=pool.find(row=>String(row?.id||row?.artifactId||"")===String(id))
+        ||pool.find(row=>folded(row?.name||row?.artifactName)===folded(isArt?owner.artifactName:owner.label));
+      const fns=Array.isArray(chosen?.functions)&&chosen.functions.length?chosen.functions:
+        Array.isArray(chosen?.actions)&&chosen.actions.length?chosen.actions:
+        Array.isArray(chosen?.artifact?.functions)&&chosen.artifact.functions.length?chosen.artifact.functions:
+        Array.isArray(chosen?.artifact?.actions)?chosen.artifact.actions:[];
       const actorIds=isArt?[loginOf(owner.loginId)]:(owner.loginIds||[owner.loginId]).filter(Boolean).map(loginOf);
-      return fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))).map((fn,i)=>{
+      const eligible=fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night)));
+      // Never silently hide an assigned Artifact. Non-night/passive cards
+      // are informational and MUST remain disabled to protect server rules.
+      if(isArt&&!eligible.length){
+        const dayOnly=fns.some(fn=>fn?.phase==="day"),
+          reason=!chosen?"Chưa đồng bộ lá Artifact.":dayOnly?"Chức năng Artifact chỉ dùng vào ban ngày.":
+            fns.length?"Artifact không có chức năng sử dụng trong đêm này.":"Artifact chưa được thiết lập chức năng.";
+        return [{id:"artifact:"+id+":"+loginOf(owner.loginId)+":info",
+          actionId:"",name:dayOnly?"Artifact dùng ban ngày":fns.length?"Artifact nội tại":"Artifact chưa có chức năng",
+          actorIds,noTarget:true,targetCount:0,artifactId:String(id),artifactName:String(owner.artifactName||chosen?.name||"Artifact"),
+          unavailable:true,unavailableReason:reason}];
+      }
+      return eligible.map((fn,i)=>{
         const actionCatalog=Array.isArray(definitions)?definitions:(isArt?definitions.artifacts:definitions.role)||[];
-        const definition=actionCatalog.find(a=>String(a?.id||"")===String(fn?.actionId||"")),
-          label=labelOf(definition,labelOf(fn,"")),
-          technical=/^action[-_][a-z0-9_-]+$/i.test(label)||!label,
-          description=String(fn?.description||definition?.description||"").trim(),
-          knownName={"action-lone-wolf-join":"Gia nhập Bầy Sói"}[String(fn?.actionId||"")],
-          name=technical?(knownName||(/^.{3,52}$/.test(description)&&!/^action[-_]/i.test(description)?description:"Hành động "+(i+1))):label;
+        const actionId=String(fn?.actionId||fn?.id||""),
+          definition=actionCatalog.find(a=>String(a?.id||"")===actionId),
+          ownedAction=(Array.isArray(chosen?.actions)?chosen.actions:[]).find(a=>String(a?.id||a?.actionId||"")===actionId),
+          isPlaceholder=value=>!value||/^action[-_][a-z0-9_-]+$/i.test(value)||/^hành động(?:\s*\d+)?$/i.test(value),
+          candidates=[ownedAction?.name,definition?.name,fn?.name].map(x=>String(x||"").trim()),
+          exactName=candidates.find(x=>!isPlaceholder(x)),
+          description=String(ownedAction?.description||fn?.description||definition?.description||"").trim(),
+          knownName={"action-lone-wolf-join":"Gia nhập Bầy Sói"}[actionId],
+          descName=description.replace(/[.。;:].*$/s,"").trim().slice(0,70),
+          name=exactName||knownName||(descName.length>=3&&!isPlaceholder(descName)?descName:"Chưa đặt tên hành động");
         return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
-          actionId:String(fn.actionId||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
+          actionId:String(fn.actionId||fn.id||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
           allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,
           targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),
           effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds,
