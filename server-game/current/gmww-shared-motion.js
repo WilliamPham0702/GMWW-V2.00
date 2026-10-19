@@ -71,7 +71,7 @@ function loop(now){
  if(roots.size)raf=requestAnimationFrame(loop);else last=0;
 }
 // Pausing matters more than FPS throttling when Safari is backgrounded.
-document.addEventListener('visibilitychange',()=>{
+if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{
  if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;last=0;}
  else if(roots.size&&!raf){last=0;raf=requestAnimationFrame(loop);}
 });
