@@ -6039,18 +6039,18 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
   white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
   touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
 }
-/* GM-only Artifact name: show only approximately two glyph widths, horizontal
-   scrolling inside the tiny label reveals the rest without overlapping seats. */
+/* GM-only Artifact name: exactly two graphemes; swipe the label to cycle through
+   the full text without overlapping neighboring seats or moving the player. */
 #start .play-player-token .play-player-artifact{
   width:calc(2em + 6px)!important;max-width:calc(2em + 6px)!important;min-width:0!important;
   box-sizing:border-box!important;padding:3px 2px!important;height:auto!important;
   white-space:nowrap!important;overflow:hidden!important;pointer-events:auto!important;
-  font-size:10px!important;touch-action:pan-x!important;
+  font-size:10px!important;touch-action:none!important;
 }
 #start .play-player-token .play-player-artifact .play-player-artifact-text{
   display:block!important;width:2em!important;max-width:2em!important;min-width:0!important;
-  white-space:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
-  overflow-wrap:normal!important;scrollbar-width:none!important;touch-action:pan-x!important;
-  overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch;
+  white-space:nowrap!important;overflow-x:hidden!important;overflow-y:hidden!important;
+  overflow-wrap:normal!important;scrollbar-width:none!important;touch-action:none!important;
+  overscroll-behavior-x:contain!important;
 }
 #start .play-player-token .play-player-artifact .play-player-artifact-text::-webkit-scrollbar{display:none!important}
