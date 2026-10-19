@@ -6056,3 +6056,15 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
   overscroll-behavior-x:contain!important;
 }
 #start .play-player-token .play-player-artifact .play-player-artifact-text::-webkit-scrollbar{display:none!important}
+
+/* V3.155: all three roster controls on one line, selected count below. */
+#start .play-roster-toolbar-v3155{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:5px!important;align-items:center!important}
+#start .play-roster-toolbar-v3155 button{min-width:0!important;white-space:nowrap!important;padding:9px 6px!important;font-size:clamp(9px,2.4vw,12px)!important;line-height:1.15!important}
+#start .play-roster-toolbar-v3155 #playRosterSave{font-weight:900!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#start .play-roster-selected-count{display:block;padding:3px 2px 5px;font-size:10px;color:#9deeff}
+/* Two Vietnamese words (not characters), swipe to reveal the remaining words. */
+#start .play-player-token .play-player-artifact{width:max-content!important;max-width:112px!important;min-width:0!important;padding:3px 5px!important;white-space:nowrap!important}
+#start .play-player-token .play-player-artifact .play-player-artifact-text{display:block!important;width:max-content!important;max-width:100px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+/* Navigation advances a complete action chip, with larger, persistent hit targets. */
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow:not([hidden]){flex:0 0 38px!important;width:38px!important;min-width:38px!important;height:46px!important;font-size:30px!important;border-radius:12px!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{scroll-snap-align:start!important}

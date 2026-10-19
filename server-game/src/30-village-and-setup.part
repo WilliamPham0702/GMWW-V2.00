@@ -37,7 +37,7 @@ function playPlayerStatuses(loginId){
   }
   return out;
 }
-function playPlayerBlocked(loginId){return ['dead','frozen','expelled'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
+function playPlayerBlocked(loginId){return ['dead','frozen'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
 function playBlockReason(loginId){const e=playPlayerEffect(loginId);if(e==='dead')return'Người thực hiện đã chết.';if(e==='frozen')return'Người thực hiện đang bị Đóng băng.';if(e==='expelled')return'Người thực hiện đã bị Đuổi khỏi làng.';const st=playPlayerStatuses(loginId).find(x=>x.blocks);return st?'Người thực hiện đang: '+st.label+'.':'Người thực hiện không thể hành động.'}
 function playPlayerEffect(loginId){
   const now=playNow(),rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now)),types=new Set(rows.map(x=>String(x?.type||'')));
@@ -779,10 +779,9 @@ function renderPlayPlayers(){
       artifactText=artifactTag?.querySelector('.play-player-artifact-text');
     if(artifactTag&&artifactText){
       const full=artifactText.textContent||'';
-      const chars=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?
-        Array.from(new Intl.Segmenter('vi',{granularity:'grapheme'}).segment(full),x=>x.segment):Array.from(full.normalize('NFC'));
+      const words=full.trim().split(/\s+/u).filter(Boolean);
       let position=0,gesture=null;
-      const show=()=>{artifactText.textContent=chars.slice(position,position+2).join('')};
+      const show=()=>{artifactText.textContent=words.slice(position,position+2).join(' ')};
       show();
       artifactTag.addEventListener('pointerdown',event=>{
         if(event.pointerType==='mouse'&&event.button!==0)return;
@@ -792,8 +791,8 @@ function renderPlayPlayers(){
       });
       artifactTag.addEventListener('pointermove',event=>{
         if(!gesture||gesture.id!==event.pointerId)return;
-        const delta=Math.trunc((gesture.x-event.clientX)/12);
-        position=Math.max(0,Math.min(chars.length-2,gesture.position+delta));
+        const delta=Math.trunc((gesture.x-event.clientX)/24);
+        position=Math.max(0,Math.min(Math.max(0,words.length-2),gesture.position+delta));
         show();event.stopPropagation();
       });
       const end=event=>{

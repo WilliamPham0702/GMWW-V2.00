@@ -1216,7 +1216,7 @@ export class RoomDurableObject extends DurableObject {
     return runtime||null
   }
   async buildNightRuntime(meta,night){
-    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??60)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
+    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??30)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
     if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:[...new Set(assignments.filter(a=>{const faction=String(a?.roleCard?.factionId||a?.factionId||a?.faction||'').toLowerCase();return faction==='wolf'||faction.includes('sói')||faction.includes('soi')||String(a?.roleId||'').includes('wolf')}).map(a=>normalizeLoginId(a?.loginId)).filter(Boolean))],
       durationSec:wolfDiscussionSec,status:"pending"});
@@ -1649,7 +1649,7 @@ export class RoomDurableObject extends DurableObject {
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
-      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
+      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
@@ -1710,9 +1710,21 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }};
     const before=await snapshot(),results=[];
+    // Expelled players can act/be targeted for the rest of the night, but these
+    // actions are acknowledged without modifying gameplay effects.
+    const isExpelled=id=>interactions.some(row=>
+      normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
+      row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===matchId)&&
+      (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
+    const inertActor=isExpelled(actorId);
+    const effectiveTargets=targets.filter(id=>!inertActor&&!isExpelled(id));
     for(const id of targets){
+      if(!effectiveTargets.includes(id)){
+        results.push({ok:true,loginId:id,noEffect:true,reason:"EXPELLED"});
+        continue;
+      }
       const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
-        actionNonce:token,targetIds:targets};
+        actionNonce:token,targetIds:effectiveTargets};
       const response=await this.executeGmInteraction(request,action,auth);
       const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
       if(!response.ok||data.ok!==true){
@@ -1730,9 +1742,9 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds,
-      assignments:(await this.ctx.storage.get("assignments"))||[]});
-    const wolfOutcome=['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
+    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>effectiveTargets.includes(id)),
+      assignments:(await this.ctx.storage.get("assignments"))||[]}):null;
+    const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({interactions:(await this.ctx.storage.get("interactions"))||[],players,
         matchId,night:Number(meta.cycleNight||0)}):null;
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,

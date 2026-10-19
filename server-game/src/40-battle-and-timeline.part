@@ -504,8 +504,15 @@ function battleUpdateActionNavigation(){
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
-  const amount=Math.max(88,Math.floor(bar.clientWidth*.8));
-  bar.scrollBy({left:direction*amount,behavior:'smooth'});
+  // Move to the next complete action button rather than a hard-to-select page.
+  const buttons=[...bar.querySelectorAll('button[data-battle-action]')];
+  if(!buttons.length)return;
+  const left=bar.scrollLeft;
+  const offsets=buttons.map(button=>button.offsetLeft-buttons[0].offsetLeft);
+  const destination=direction>0
+    ?offsets.find(offset=>offset>left+5)
+    :offsets.slice().reverse().find(offset=>offset<left-5);
+  bar.scrollTo({left:destination??(direction>0?bar.scrollWidth:0),behavior:'smooth'});
 }
 let battleConfirmAudioGate=false;
 function battleAdvanceConfirmedTurn(){
