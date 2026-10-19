@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.149';
+const VERSION='3.150';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2150,7 +2150,7 @@ const PLAY_STEP_COPY={
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
 };
 let playSceneState=(()=>{
-  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
+  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.roomEnabled=saved.roomEnabled===true;saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(saved.step==='members')saved.step='seats';saved.lobbyGeneration=Math.max(0,Number(saved.lobbyGeneration||0));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.roomEnabled=false;saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='lobby';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))&&!['lobby','room'].includes(saved.step))saved.step='lobby';if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))){saved.roomCode='—';saved.gmToken='';saved.selectedMemberIds=[];saved.activePlayerId=''}return saved}catch{return base}
 })();
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
@@ -3881,9 +3881,11 @@ function battleMarkPlayers(){
 function battleGallowsTick(){
   const clock=document.getElementById('battleGallowsClock'),g=playSceneRuntime.gallows;
   if(!clock||playSceneState.phase!=='day')return;
-  const remaining=g?.stage==='voting'?Math.max(0,Math.ceil((Number(g.deadlineAt||0)-Date.now()-Number(playSceneRuntime.serverClockOffsetMs||0))/1000)):0;
+  const serverNow=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
+  const deadline=g?.stage==='nominating'?g.nominationDeadlineAt:g?.stage==='voting'?g.deadlineAt:null;
+  const remaining=deadline?Math.max(0,Math.ceil((Number(deadline)-serverNow)/1000)):g?.stage==='ready'?Math.max(1,Number(g.nominationDurationSec)||10):0;
   clock.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
-  if(g?.stage==='voting'&&remaining===0&&!battleState.gallowsClosedShown){
+  if(g&&remaining===0&&['nominating','voting'].includes(g.stage)&&!battleState.gallowsClosedShown){
     battleState.gallowsClosedShown=true;battleGallowsRender('day');
   }
 }
@@ -3891,9 +3893,10 @@ function battleGallowsRender(phase){
   const panel=document.getElementById('battleGallowsPanel');if(!panel)return;
   panel.hidden=phase!=='day';
   if(panel.hidden)return;
-  const g=playSceneRuntime.gallows||{stage:'nominating',nominations:{},votes:{},blocked:[]};
+  const g=playSceneRuntime.gallows||{stage:'ready',nominationDurationSec:10,voteDurationSec:10,nominations:{},votes:{},blocked:[]};
   const remaining=Math.max(0,Number(g.deadlineAt||0)-Date.now()-Number(playSceneRuntime.serverClockOffsetMs||0));
-  const stage=g.stage==='voting'&&remaining<=0?'closed':g.stage;
+  const selectionExpired=g.stage==='nominating'&&g.nominationDeadlineAt&&Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)>=Number(g.nominationDeadlineAt);
+  const stage=g.stage==='voting'&&remaining<=0?'closed':selectionExpired?'selecting':g.stage;
   const members=playLiveMembers().filter(p=>p?.loginId&&playPlayerEffect(p.loginId)!=='dead'&&playPlayerEffect(p.loginId)!=='expelled');
   const select=document.getElementById('battleGallowsCandidate'),old=select?.value||'';
   if(select){
@@ -3901,14 +3904,16 @@ function battleGallowsRender(phase){
     if(select.innerHTML!==options)select.innerHTML=options;
     if(members.some(m=>m.loginId===old))select.value=old;
     else if(g.candidateId&&members.some(m=>m.loginId===g.candidateId))select.value=g.candidateId;
-    select.disabled=stage!=='nominating';
+    select.disabled=!['selecting','nominating'].includes(stage);
   }
   const text=document.getElementById('battleGallowsStage');
   if(text){
     const name=id=>battleMember(id)?.displayName||id||'';
-    text.textContent=stage==='nominating'?'Chọn người lên giàn hoặc chờ đề cử từ Player Web.':
+    text.textContent=stage==='ready'?'Nhấn MỞ ĐỀ CỬ để bắt đầu '+(g.nominationDurationSec||10)+' giây chọn người lên giàn.':
+      stage==='nominating'?'ĐANG ĐỀ CỬ: '+(g.nominationDurationSec||10)+' giây để chọn người lên giàn.':
+      stage==='selecting'?'HẾT GIỜ ĐỀ CỬ — GM chọn người lên giàn rồi mở bỏ phiếu.':
       stage==='voting'?'ĐANG BỎ PHIẾU: '+name(g.candidateId):
-      stage==='closed'?'ĐÃ HẾT 10 GIÂY — GM quyết định CỨU hoặc GIẾT':
+      stage==='closed'?'HẾT GIỜ BỎ PHIẾU — GM quyết định CỨU hoặc GIẾT':
       'ĐÃ CHỐT: '+name(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' được cứu.');
   }
   const votes=document.getElementById('battleGallowsVotes');
@@ -3918,15 +3923,16 @@ function battleGallowsRender(phase){
       (nominations.length?'<p>Đề cử: '+nominations.map(([id,t])=>playEsc(battleMember(id)?.displayName||id)+' → '+playEsc(battleMember(t)?.displayName||t)).join(' · ')+'</p>':'')+
       selected.map(([id,v])=>'<div class="battle-gallows-vote"><strong>'+playEsc(battleMember(id)?.displayName||id)+'</strong> '+playEsc(v)+
         (stage==='voting'?'<button type="button" data-gallows-ban="'+playEsc(id)+'" aria-label="Cấm '+playEsc(id)+' bỏ phiếu">CẤM</button>':'')+'</div>').join('')+
-      (stage==='nominating'||stage==='voting'?members.filter(m=>!Object.hasOwn(g.votes||{},m.loginId)).map(m=>
+      (['nominating','voting'].includes(stage)?members.filter(m=>!Object.hasOwn(g.votes||{},m.loginId)).map(m=>
         '<div class="battle-gallows-vote"><strong>'+playEsc(m.displayName||m.loginId)+'</strong> '+
         ((g.blocked||[]).includes(m.loginId)?'🚫 Đã cấm':stage==='voting'?'Chưa bỏ phiếu':'Chưa bỏ phiếu')+
         (!(g.blocked||[]).includes(m.loginId)?'<button type="button" data-gallows-ban="'+playEsc(m.loginId)+'">CẤM</button>':'')+'</div>').join(''):'');
   }
   for(const b of panel.querySelectorAll('[data-gallows-command]')){
     const cmd=b.dataset.gallowsCommand;
-    b.disabled=battleState.gallowsBusy||(cmd==='begin'&&stage!=='nominating')||
-      (cmd==='resolve'&&stage!=='closed')||(cmd==='restore'&&stage==='nominating');
+    b.disabled=battleState.gallowsBusy||(cmd==='open'&&stage!=='ready')||
+      (cmd==='begin'&&stage!=='selecting')||
+      (cmd==='resolve'&&stage!=='closed')||(cmd==='restore'&&stage==='ready');
   }
   battleGallowsTick();
 }
@@ -4778,8 +4784,12 @@ async function applyPlayGameTemplate(id){
     playSceneState.artifactsEnabled=cfg.artifactsEnabled===true
       ||(cfg.artifactsEnabled!==false&&templateArtifactIds.length>0);
     playSceneState.artifactIds=templateArtifactIds;
-    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
-    const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=playSceneState.gameTiming.earlyArtifactSec;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
+    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
+    const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;
+    const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
+    if(nominationInput)nominationInput.value=playSceneState.gameTiming.gallowsNominationSec;
+    if(voteInput)voteInput.value=playSceneState.gameTiming.gallowsVoteSec;
+    if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=playSceneState.gameTiming.earlyArtifactSec;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
     updatePlayArtifactToggle();await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(err){playFlashError(err.message)}
 }
@@ -4798,7 +4808,11 @@ async function openPlayGameSheet(){
 async function openLibraryGameTemplate(id=''){
   playGameStatus('');
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
-  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=60;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
+  if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
+    const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
+    if(nominationInput)nominationInput.value=10;
+    if(voteInput)voteInput.value=10;
+    if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=60;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
   sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
   updatePlayArtifactToggle();
 }
@@ -4817,6 +4831,8 @@ async function savePlayGame(){
     if(total!==need){playFlashError('Ván Mẫu có '+total+' lá, nhưng phòng có '+need+' người. Hãy chọn Ván Mẫu phù hợp.');return}
     const timing={
       villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value),
+      gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),
+      gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),
       wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value),
       earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),
       defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value),
@@ -4893,7 +4909,7 @@ async function savePlayGame(){
   const gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),
     templateId=playSceneState.gameTemplateId||('template-'+Date.now().toString(36));
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
-  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
+  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
   if(playSceneState.artifactsEnabled&&!selectedArtifacts.length){
@@ -5834,10 +5850,10 @@ function initPlayScene(){
     finally{if(button)button.disabled=false}
   });
   for(const id of ['playTemplateRoleSearch','playTemplateRoleFaction','playTemplateOnlyStarred'])document.getElementById(id)?.addEventListener(id==='playTemplateRoleSearch'?'input':'change',playTemplateRenderCatalog);
-  for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playEarlyArtifactSec','playDefaultActionSec','playArtifactActionSec','playAutoAdvance'])document.getElementById(id)?.addEventListener('change',e=>{
+  for(const id of ['playVillageDiscussionSec','playGallowsNominationSec','playGallowsVoteSec','playWolfDiscussionSec','playEarlyArtifactSec','playDefaultActionSec','playArtifactActionSec','playAutoAdvance'])document.getElementById(id)?.addEventListener('change',e=>{
     playSceneState.gameTiming=playSceneState.gameTiming||{};
-    const key={playVillageDiscussionSec:'villageDiscussionSec',playWolfDiscussionSec:'wolfDiscussionSec',playEarlyArtifactSec:'earlyArtifactSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
-    playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
+    const key={playVillageDiscussionSec:'villageDiscussionSec',playGallowsNominationSec:'gallowsNominationSec',playGallowsVoteSec:'gallowsVoteSec',playWolfDiscussionSec:'wolfDiscussionSec',playEarlyArtifactSec:'earlyArtifactSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
+    playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:id==='playGallowsNominationSec'||id==='playGallowsVoteSec'?Math.max(1,Math.min(3600,Math.trunc(Number(e.currentTarget.value)||10))):Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
     savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
   document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{

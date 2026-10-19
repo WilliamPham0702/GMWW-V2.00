@@ -116,6 +116,8 @@ async function pollRoomState(){
 
 function gallowsCurrentStage(){
   const g=state.gallows||{},remaining=Math.max(0,Number(g.deadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0));
+  const nominationRemaining=Math.max(0,Number(g.nominationDeadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0));
+  if(g.stage==='nominating'&&g.nominationDeadlineAt&&!nominationRemaining)return 'selecting';
   return g.stage==='voting'&&!remaining?'closed':g.stage;
 }
 function syncGallowsVoteTags(){
@@ -145,11 +147,14 @@ function gallowsWidget(){
 }
 function gallowsTick(){
   const g=state.gallows,el=document.getElementById('gmwwGallowsPlayer');if(!g||!el||el.hidden)return;
-  const remaining=g.stage==='voting'?Math.max(0,Math.ceil((Number(g.deadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0))/1000)):0;
+  const deadline=g.stage==='nominating'?g.nominationDeadlineAt:g.stage==='voting'?g.deadlineAt:null;
+  const remaining=deadline?Math.max(0,Math.ceil((Number(deadline)-Date.now()-Number(state.serverClockOffsetMs||0))/1000)):g.stage==='ready'?Math.max(1,Number(g.nominationDurationSec)||10):0;
   el.querySelector('#gmwwGallowsRemaining').textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
   const disabled=remaining<=0||g.stage!=='voting'||!!g.votes?.[state.member?.loginId]||(g.blocked||[]).includes(state.member?.loginId);
   el.querySelector('#gmwwGallowsSave').disabled=disabled;
   el.querySelector('#gmwwGallowsKill').disabled=disabled;
+  const nominate=el.querySelector('#gmwwGallowsNominate');
+  if(nominate)nominate.disabled=gallowsCurrentStage()!=='nominating'||remaining<=0||!!g.nominations?.[state.member?.loginId]||(g.blocked||[]).includes(state.member?.loginId);
 }
 function renderGallowsWidget(){
   syncGallowsVoteTags();
@@ -159,9 +164,10 @@ function renderGallowsWidget(){
   el.hidden=false;
   const me=String(state.member?.loginId||''),blocked=(g.blocked||[]).includes(me),stage=gallowsCurrentStage();
   const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
-  el.querySelector('#gmwwGallowsPrompt').textContent=stage==='nominating'?
-    'Chọn một người để đề cử lên giàn.':
-    stage==='voting'?'Bỏ phiếu cho '+n(g.candidateId)+' — chỉ có 10 giây.':
+  el.querySelector('#gmwwGallowsPrompt').textContent=stage==='ready'?'Chờ GM mở đề cử lên giàn ('+(g.nominationDurationSec||10)+' giây).':
+    stage==='nominating'?'Chọn một người lên giàn trong '+(g.nominationDurationSec||10)+' giây.':
+    stage==='selecting'?'Đã hết giờ đề cử. GM đang chọn người lên giàn.':
+    stage==='voting'?'Bỏ phiếu cho '+n(g.candidateId)+' — '+(g.voteDurationSec||10)+' giây.':
     stage==='closed'?'Đã hết giờ. Chờ GM công bố kết quả.':
     n(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' đã được cứu.');
   const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
@@ -178,7 +184,7 @@ function renderGallowsWidget(){
   const choices=el.querySelector('#gmwwGallowsChoices');
   el.querySelector('#gmwwGallowsSave').hidden=stage!=='voting';
   el.querySelector('#gmwwGallowsKill').hidden=stage!=='voting';
-  choices.hidden=stage==='closed'||stage==='resolved';
+  choices.hidden=!['nominating','voting'].includes(stage);
   const voteList=el.querySelector('#gmwwGallowsVotes');voteList.replaceChildren();
   for(const [id,vote] of Object.entries(g.votes||{})){
     const row=document.createElement('div'),name=document.createElement('strong'),mark=document.createElement('span');

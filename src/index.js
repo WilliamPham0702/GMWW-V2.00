@@ -1,5 +1,5 @@
 import { pruneInteractions } from "./gmww-interaction-retention.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -34,7 +34,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.149",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3149",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.150",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3150",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -681,9 +681,13 @@ export class RoomDurableObject extends DurableObject {
   async gallowsState(meta){
     const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||"");
     const stored=await this.ctx.storage.get(key);
+    const cfg=(await this.ctx.storage.get("gameConfig"))||{};
+    const nominationDurationSec=gallowsDurationSec(cfg?.timing?.gallowsNominationSec),
+      voteDurationSec=gallowsDurationSec(cfg?.timing?.gallowsVoteSec);
     const ballot=stored&&stored.matchId===String(meta.matchId||"")&&stored.cycleKey===String(meta.cycleKey||"")?stored:{
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
-      day:Number(meta.cycleNight||0),stage:"nominating",candidateId:null,
+      day:Number(meta.cycleNight||0),stage:"ready",candidateId:null,
+      nominationDurationSec,voteDurationSec,
       nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
@@ -692,7 +696,7 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
-    return {key,ballot:{...ballot,eligible},eligible};
+    return {key,ballot:{...ballot,eligible,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
   }
   async gmGallows(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -703,7 +707,9 @@ export class RoomDurableObject extends DurableObject {
     const target=normalizeLoginId(body?.targetId||body?.loginId);
     const now=Date.now();
     let result;
-    if(command==="begin"){
+    if(command==="open"){
+      result=gallowsOpen(ballot,now);
+    }else if(command==="begin"){
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
       result=gallowsBegin(ballot,target,now);
     }else if(command==="ban"){
@@ -732,7 +738,8 @@ export class RoomDurableObject extends DurableObject {
       for(const row of owned){row.effectActive=false;row.expiredAt=new Date(now).toISOString();row.expiredReason="GM_GALLOWS_RESTORE"}
       if(owned.length){await this.ctx.storage.put("interactions",pruneInteractions(rows));
         this.broadcast({type:"player_revived",loginId:ballot.candidateId,serverTime:now})}
-      result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),stage:"nominating",
+      result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),stage:"ready",
+        nominationDeadlineAt:null,nominationStartedAt:null,
         candidateId:null,deadlineAt:null,startedAt:null,nominations:{},votes:{},
         outcome:null,resolvedAt:null,updatedAt:now}};
     }else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
