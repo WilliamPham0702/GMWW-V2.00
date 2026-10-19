@@ -118,7 +118,9 @@ test('live presence refresh re-applies active filter while preserving selections
 
 test('ONLINE room validation and existing save remain intact',()=>{
   assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\./);
-  assert.match(app,/async function savePlayRoster\(\)\{return savePlayRosterIds\(playRosterSelectedIds\(\)\)\}/);
+  assert.match(app,/async function savePlayRoster\(\)/);
+  assert.match(app,/return savePlayRosterIds\(ids\)/);
+  assert.match(app,/playRosterBulkConfirmClicks<3/);
 });
 
 test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
