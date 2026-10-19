@@ -5019,7 +5019,7 @@ async function playSaveAssignments(){
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
   if(playSceneRuntime.busy)return false;
   // Save only GM-private assignments. Publishing the deal stage must NOT
-  // send cards; /assignments is still executed solely by the Phát Vai step.
+  // send cards; private delivery is still triggered solely by the Phát Vai step.
   const formerStep=playSceneState.step;
   playSceneRuntime.busy=true;renderPlayRoleAssignmentPanel();
   try{

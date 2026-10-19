@@ -12,12 +12,12 @@ const block=(start,end)=>{
   return app.slice(a,b);
 };
 
-test('Assignment LƯU is GM-local; bottom navigation alone moves to Phát Vai',()=>{
+test('Assignment LƯU is GM-private and automatically moves to Phát Vai after Server ack',()=>{
   const logic=block('function playAssignmentSignature(){','function renderPlayRoleAssignmentPanel(){');
   const saver=logic.slice(0,logic.indexOf('function playConfirmAssignments(){'));
   assert.match(saver,/function playSaveAssignments\(\)/);
   assert.match(saver,/savePlayScene\(\)/);
-  assert.doesNotMatch(saver,/playPublishStage|playRoomApi|step='deal'/);
+  assert.match(saver,/await playPublishStage\('deal'\)/);\n  assert.match(saver,/playSceneState.step='deal'/);\n  assert.doesNotMatch(saver,/playRoomApi\('\\/assignments'/);
   assert.match(html,/id="playAssignmentConfirm"[^>]*>✓ LƯU<\/button>/);
   assert.match(app,/if\(playSceneState\.step==='roles'\)\{playConfirmAssignments\(\);return\}/);
   assert.match(app,/getElementById\('playAssignmentConfirm'\)\?\.addEventListener\('click',playSaveAssignments\)/);
