@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.148';
+const VERSION='3.149';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -421,6 +421,9 @@ function applyV210Rules(s){
     // Morning announcement segments: uploaded clips are preserved during subsequent OTAs.
     {id:'audio_system_morning_expelled',name:'Đêm qua người chơi này đã bị đuổi khỏi làng',targetId:'audio_system_morning_expelled',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_marked',name:'Đêm qua người chơi này đã bị đánh dấu',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_frozen',name:'Người chơi bị đóng băng',targetId:'audio_system_morning_frozen',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_silenced',name:'Người chơi bị câm',targetId:'audio_system_morning_silenced',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
     ...Array.from({length:5},(_,i)=>({id:'audio_system_morning_number_'+(i+1),name:String(i+1),targetId:'audio_system_morning_number_'+(i+1),fileName:'',verifiedBinary:false})),
@@ -3610,8 +3613,9 @@ function battleMorningPlayAudio(){
   }
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
-    if(row.kind==='assassin_mark'||row.kind==='marked')
+    else if(row.kind==='assassin_mark'||row.kind==='marked')
       queue.push(['audio_system_morning_marked',row.name+' đã bị đánh dấu']);
+    else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
   }
   let index=0;
   const next=()=>{
@@ -3625,9 +3629,9 @@ function battleMorningShow(){
   const panel=document.getElementById('battleMorningReport'),body=document.getElementById('battleMorningList');
   if(!panel||!body||playSceneState.phase!=='day')return;
   const key=String(playSceneRuntime.room?.matchId||'')+':'+Math.max(1,Number(playSceneState.night)||1);
-  if(battleState.morningShownKey===key)return;
-  battleState.morningShownKey=key;
-  const rows=battleMorningRows(),deaths=rows.filter(x=>x.kind==='dead').length;
+  const rows=battleMorningRows(),signature=key+':'+JSON.stringify(rows),deaths=rows.filter(x=>x.kind==='dead').length;
+  if(battleState.morningShownKey===signature)return;
+  battleState.morningShownKey=signature;
   body.replaceChildren();
   const summary=document.createElement('p');
   summary.textContent=deaths?'Đêm qua làng chúng ta có '+deaths+' người chết.':
@@ -3858,6 +3862,14 @@ function battleMarkPlayers(){
       if(actorOn&&mark?.parentElement===labels)mark.after(targetMark);
       else if(labels.firstElementChild!==targetMark)labels.prepend(targetMark);
     }else targetMark?.remove();
+    // GM sees the same public vote above the character as every Player Web client.
+    const vote=playSceneState.phase==='day'?playSceneRuntime.gallows?.votes?.[id]:null;
+    let voteMark=labels?.querySelector(':scope>.battle-gallows-vote-mark');
+    if((vote==='👍'||vote==='👎')&&labels){
+      if(!voteMark){voteMark=document.createElement('span');voteMark.className='battle-gallows-vote-mark';voteMark.setAttribute('aria-label','Phiếu Lên Giàn')}
+      if(voteMark.textContent!==vote)voteMark.textContent=vote;
+      if(labels.firstElementChild!==voteMark)labels.prepend(voteMark);
+    }else voteMark?.remove();
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
@@ -3954,7 +3966,7 @@ function renderPlayBattle(){
     timeline.innerHTML=steps.map((s,i)=>s.kind==='day'?'<span role="listitem" title="'+playEsc(s.label)+'" class="play-battle-step is-'+playEsc(s.status)+'"><b>'+playEsc(s.label)+'</b></span>':'<button type="button" role="listitem" data-battle-index="'+i+'" '+(s.status==='used'?'disabled ':'')+'title="'+playEsc(s.label)+(s.status==='used'?' (đã sử dụng)':'')+'" aria-current="'+(s.active?'step':'false')+'" class="play-battle-step is-'+playEsc(s.status)+(s.active?' is-active':'')+'"><span class="battle-step-num">'+(s.status==='completed'?'✓':(s.displayNumber??i+1))+'</span><b>'+playEsc(s.label)+'</b></button>').join('');
     const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
   }
-  const actions=t&&phase==='night'?battleActions():[],bar=document.getElementById('battleActionBar');
+  const actions=(phase==='day'||(t&&phase==='night'))?battleActions():[],bar=document.getElementById('battleActionBar');
   // Dead actors are informational, not actionable. The GM chooses when to continue.
   const actorIds=[...(t?.loginIds||[]),...(t?.roles||[]).flatMap(r=>r.loginIds||[])];
   const deadActors=actorIds.filter(id=>playPlayerEffect(id)==='dead');
@@ -4046,7 +4058,40 @@ function renderPlayBattle(){
   }
   battleMarkPlayers();battleTickCountdown();
 }
+async function battleConfirmDay(confirmed=false){
+  const a=battleAction();
+  if(playSceneState.phase!=='day'||playSceneState.step!=='battle'||!isLivePlayRoom()||
+     battleState.busy||battleState.syncPending||!a||a.unavailable||
+     battleState.targets.length!==a.targetCount)return;
+  const matchId=String(playSceneRuntime.room?.matchId||''),cycleKey=String(playSceneRuntime.room?.cycleKey||''),
+    expected=[matchId,'day',Math.max(1,Number(playSceneState.night)||1),battleTurn()?.id||playSceneRuntime.nightRuntime?.completed||''].join(':');
+  if(battleState.key!==expected){battleClear();renderPlayBattle();playFlashError('Ngày đã thay đổi. Hãy chọn lại hành động.');return}
+  if(!confirmed&&!confirm('Xác nhận '+a.name+' lên '+(battleState.targets.map(id=>battleMember(id)?.displayName||id).join(', ')||'không mục tiêu')+'?'))return;
+  battleState.busy=true;
+  if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());
+  const payload={matchId,cycleKey,actorId:a.actorIds[0]||'',roleId:a.roleId||'',
+    artifactId:a.artifactId||'',actionId:a.actionId,targetIds:[...battleState.targets],
+    clientEventId:battleState.nonce};
+  try{
+    const response=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify(payload)});
+    if(response?.ok!==true)throw Error(response?.message||response?.error||'Server chưa xác nhận hành động ban ngày.');
+    battleState.syncPending=true;
+    battleClear();
+    const refreshed=await playSyncRoom(true);
+    if(!refreshed)throw Error('Đã lưu trên Server nhưng chưa đồng bộ, vui lòng tải lại Phòng.');
+    battleState.syncPending=false;
+    renderPlayBattle();
+    // Day actions do not advance the completed night turn.
+    const message=String(response.result?.message||'').trim();
+    if(message)battleShowResultPopup('',message,true);
+    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
+  }catch(err){
+    playFlashError('Hành động ban ngày: '+String(err?.message||err));
+    battleState.syncPending=false;
+  }finally{battleState.busy=false;renderPlayBattle()}
+}
 async function battleConfirm(confirmed=false){
+  if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
   const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
   const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');

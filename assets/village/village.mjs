@@ -206,12 +206,24 @@ if(game){
   function statusVisualSignature(data){
     return JSON.stringify((Array.isArray(data?.statusTags)?data.statusTags:[]).map(x=>String(x?.statusId||"")).sort());
   }
+  // Public Lên Giàn votes are transient UI labels, not gameplay status effects.
+  // Reconcile on every frame so 👍/👎 changes never recreate the Character rig.
+  function syncGallowsVoteBadge(button,data){
+    const host=button.querySelector('.player-over');if(!host)return;
+    const vote=(Array.isArray(data?.statusTags)?data.statusTags:[]).find(x=>x?.statusId==='gallows_vote')?.icon;
+    let badge=host.querySelector(':scope>.gmww-gallows-vote');
+    if(vote!=='👍'&&vote!=='👎'){badge?.remove();return}
+    if(!badge){badge=document.createElement('span');badge.className='gmww-gallows-vote';badge.setAttribute('aria-label','Phiếu cứu hoặc giết')}
+    if(badge.textContent!==vote)badge.textContent=vote;
+    if(host.firstElementChild!==badge)host.prepend(badge);
+  }
   function stablePlayerNode(data,pos,seatId,index){
     const id=String(data?.id||""),gm=data?.isGM===true||data?.kind==="gm";
     const appearance=JSON.stringify([gm,data?.gameCharacterId||"",data?.avatarId||"",data?.avatarUrl||""]);
     let button=mountedPlayerNodes.get(id);
     if(!button||button.dataset.gmwwAppearance!==appearance){
       button=makePlayerButton(data,pos,seatId,index);
+      syncGallowsVoteBadge(button,data);
       button.dataset.gmwwAppearance=appearance;
       button.dataset.gmwwStatusSig=statusVisualSignature(data);
       mountedPlayerNodes.set(id,button);villageRenderMetrics.created++;
@@ -230,6 +242,7 @@ if(game){
       button.classList.toggle("gmww-sv-dead",active.includes("dead"));
       if(active.length){button.insertAdjacentHTML("beforeend",visuals.overlay(ids));const badge=button.querySelector(":scope > .gmww-sv-badges");if(badge)button.querySelector(".player-over")?.prepend(badge);}
     }
+    syncGallowsVoteBadge(button,data);
     const actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi");
     button._gmwwLive={data,actualSeat,playerName,isGM:gm};
     button.classList.toggle("selected",selectedId===data.id);

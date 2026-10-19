@@ -5954,3 +5954,6 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsVotes{max-height:28dvh;overflow:auto;margin-top:10px;font-size:12px;line-height:1.6}
 #battleGallowsVotes .battle-gallows-vote{display:flex;gap:8px;justify-content:space-between;align-items:center;border-top:1px solid #c7eefa30;padding:4px 0}
 #battleGallowsVotes .battle-gallows-vote button{min-height:27px;padding:4px 8px}
+
+/* V3.149: live public Lên Giàn vote above GM scene character. */
+.play-player-over>.battle-gallows-vote-mark{position:static!important;display:block!important;flex:none;font-size:21px;line-height:1.1;background:rgba(8,37,56,.94);border:1px solid rgba(248,238,207,.9);border-radius:12px;padding:2px 7px;box-shadow:0 2px 8px #0007;z-index:5;margin:0 auto}
