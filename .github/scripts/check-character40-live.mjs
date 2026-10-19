@@ -1,7 +1,7 @@
 import {chromium,webkit} from 'playwright';
 import assert from 'node:assert/strict';
 const base='http://127.0.0.1:8787';
-for(const [name,browserType] of [['chromium',chromium],['webkit',webkit]]){
+for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
  const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'/village/?embed=1');
  const results=await page.evaluate(async()=>{
@@ -16,7 +16,7 @@ for(const [name,browserType] of [['chromium',chromium],['webkit',webkit]]){
    for(const [state,motion] of [['idle','idle'],['walking','walk'],['running','run'],['idle','turn']]){
     if(!renderer.updateCharacterRenderer(host,{characterId:id,state,motion,facing:'left'}))throw Error('Update failed '+id);
     const pictures=new Set();for(let k=0;k<6;k++){pictures.add(root.firstElementChild.toDataURL());await pause(100);}
-    if(pictures.size<2)throw Error('No real motion '+id+' '+motion);rows.push(id+':'+motion);
+    if(pictures.size<2)throw Error('No real motion '+id+' '+motion+' '+JSON.stringify({dataset:root.dataset,state:root._gmwwMotion,hidden:document.hidden,connected:root.isConnected,pending:root._gmwwPending}));rows.push(id+':'+motion);
    }
    renderer.updateCharacterRenderer(host,{characterId:id,state:'walking',motion:'walk',facing:'right'});
    await pause(650);

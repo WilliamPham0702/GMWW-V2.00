@@ -40,12 +40,12 @@ function apply(root,command={}){
  else if((root._gmwwWantedFacing!==undefined&&s.facing!==facing)||action==='turn'){root._gmwwPending={action:action==='turn'?'idle':action,facing:action==='turn'&&s.facing===facing?(facing==='left'?'right':'left'):facing};setAction(s,'turn');}
  else {if(s.action!==action)setAction(s,action);s.facing=facing;}
  root._gmwwWantedFacing=facing;
- root.dataset.state=command.state||'idle';root.dataset.motion=action;root.dataset.facing=facing;return true;
+ root._gmwwPaused=command.paused===true||command.state==='dead';root.dataset.state=action==='walk'?'walking':action==='run'?'running':'idle';root.dataset.motion=action;root.dataset.facing=facing;return true;
 }
 function paint(root,dt){
  const canvas=root.firstElementChild,ctx=canvas.getContext('2d'),c=root._gmwwCharacter,s=root._gmwwMotion;
  if(!ctx)return;
- const frozen=root.dataset.state==='dead'||root.closest?.('.frozen,.is-frozen,[data-frozen="true"]');
+ const frozen=root._gmwwPaused||root.closest?.('.frozen,.is-frozen,[data-frozen="true"]');
  if(!frozen){const turning=s.action==='turn';advance(s,dt);if(turning&&s.action!=='turn'&&root._gmwwPending){const pending=root._gmwwPending;root._gmwwPending=null;s.facing=pending.facing;setAction(s,pending.action);}}
  const index=sampleFrame(s),[x,y,w,h]=c.frames[index],im=imageFor(root._gmwwAssetBase+'/characters/gmww40/'+c.atlas);
  ctx.clearRect(0,0,256,320);

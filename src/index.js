@@ -2214,7 +2214,7 @@ export default {async fetch(request,env){
       return j({ok:true,project:PROJECT,status:"ready",version:VERSION,checks:{memberStorage:"ready"}});
     }catch{return j({ok:false,project:PROJECT,status:"degraded",checks:{memberStorage:"unavailable"}},503)}
   }
-  if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:CHARACTER_MASTER,characters:createCharacterManifest()});
+  if(url.pathname==="/api/character-engine/manifest"&&request.method==="GET")return j({ok:true,engineVersion:CHARACTER_ENGINE_VERSION,master:{...CHARACTER_MASTER,motionSet:["idle","walk","run","turn"]},characters:createCharacterManifest().map(c=>({...c,motions:["idle","walk","run","turn"]}))});
   if(url.pathname==="/api/update/manifest"&&request.method==="GET"){
     const onlyNewNotes=m=>gmwwManifestNotesForInstalled(m,url.searchParams.get("current"));
     // Packaging verifies all bytes before embedding the catalog in this bundle.

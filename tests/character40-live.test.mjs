@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
-import {character40Catalog,character40VisualId,character40Image} from '../src/gmww-character40-catalog.js';
+import {character40Catalog,character40VisualId,character40Image,character40StateFromPlayer} from '../src/gmww-character40-catalog.js';
 import {normalizeGameCharacterId,activeGameCharacterId} from '../src/gmww-player-identity-rules.js';
 const read=p=>fs.readFileSync(p);
 test('active catalog replaces all forty IDs including 15; aliases preserve existing account identity',()=>{
@@ -10,6 +10,10 @@ test('active catalog replaces all forty IDs including 15; aliases preserve exist
  assert.equal(rows[14].id,'character-15');assert.ok(rows.every(c=>c.motionVersion==='c40-1'&&c.actions.length===4));
  assert.equal(normalizeGameCharacterId('character-41'),'character-41');assert.equal(activeGameCharacterId('character-42'),'character-42');
  assert.equal(character40VisualId('character-41'),'character-39');assert.equal(character40VisualId('character-42'),'character-40');assert.equal(character40VisualId('character-43'),null);
+});
+test('public live animation projects readiness and sitting onto Idle, exposing only four actions',()=>{
+ for(const p of [{ready:true},{villageActivity:'sitting',sitUntil:Date.now()+10000},{villageActivity:'cheer'},{villageActivity:'stretch'}]){const c=character40StateFromPlayer({gameCharacterId:'character-15',...p});assert.equal(c.motion,'idle');assert.equal(c.state,'idle');}
+ const source=read('src/index.js').toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
 });
 test('all portrait routes serve the accepted art with revalidation and CORS, never old character15',async()=>{
  const env={ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{headers:{'content-type':'image/webp'}})}};

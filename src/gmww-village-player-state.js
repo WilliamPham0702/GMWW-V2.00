@@ -4,7 +4,7 @@ import "../assets/village/village-layout.js";
 import {normalizeSeatCount} from "./gmww-room-config-rules.js";
 import {activeGameCharacterId,normalizeLoginId} from "./gmww-player-identity-rules.js";
 import {villageAutoLife,VILLAGE_AUTO_SIT_MS} from "./gmww-village-autolife.js";
-import {characterStateFromPlayer} from "./gmww-character-engine.js";
+import {character40StateFromPlayer as characterStateFromPlayer} from "./gmww-character40-catalog.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 export const ROOM_PLAYER_TTL=70*1000;
 export function normalizeVillageCoord(v,fallback=50){const n=Number(v);return Number.isFinite(n)?Math.max(4,Math.min(96,Math.round(n*100)/100)):Math.max(4,Math.min(96,Number(fallback)||50))}
