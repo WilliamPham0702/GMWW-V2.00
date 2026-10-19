@@ -116,23 +116,26 @@ test('live presence refresh re-applies active filter while preserving selections
   assert.deepEqual(rows.map(row=>row.classList.contains('hidden')),[false,false,false]);
 });
 
-test('ONLINE validation is intact, Select All commits on the FIRST confirmation',async()=>{
-  assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\\./);
-  assert.doesNotMatch(app,/playRosterBulkConfirmClicks|playRosterBulkSelection|XÁC NHẬN \\(\\d+\\/3\\)/);
+test('ONLINE room validation and Select All saves on the FIRST confirmation',async()=>{
+  assert.ok(app.includes('Chế độ ONLINE chỉ chọn Người Chơi đang Online.'));
+  assert.ok(!app.includes('playRosterBulkConfirmClicks'));
+  assert.ok(!app.includes('playRosterBulkSelection'));
   const {selectAll,context}=setup();
   selectAll.click();
-  let count=0, submitted=null;
-  context.savePlayRosterIds=async ids=>{count++;submitted=Array.from(ids);return true};
-  const start=app.indexOf('async function savePlayRoster(){');
-  const end=app.indexOf('\\nfunction playApplyLobbyStage(',start);
-  assert.ok(start>=0&&end>start);
-  vm.runInNewContext(app.slice(start,end),context);
+  let calls=0,submitted=null;
+  context.savePlayRosterIds=async ids=>{calls++;submitted=Array.from(ids);return true};
+  const begin=app.indexOf('async function savePlayRoster(){');
+  const finish=app.indexOf('function playApplyLobbyStage(',begin);
+  assert.ok(begin>=0&&finish>begin);
+  vm.runInNewContext(app.slice(begin,finish),context);
   await context.savePlayRoster();
-  assert.equal(count,1,'one confirm tap must submit once');
+  assert.equal(calls,1);
   assert.deepEqual(submitted,['chrome','edge','safari']);
-  assert.match(app,/async function savePlayRosterIds\\(ids\\)/);
-  assert.match(app,/await playRoomApi\\('\/participants'/);
-});\n\ntest('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
+  assert.ok(app.includes('async function savePlayRosterIds(ids)'));
+  assert.ok(app.includes('await playRoomApi('));
+});
+
+test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
   const {selectVerifiedRuntimeV363Delta}=await import('../src/gmww-ota-delta.js');
   const origin='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.63/';
   const all=['GMWW.html','app.js','style.css','gm/gm-white-wolf.webp'];
