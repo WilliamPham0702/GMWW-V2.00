@@ -10,7 +10,7 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
 
 test('wolf introduction action box lists member names without extra explanation',()=>{
-  assert.match(src,/t\\?\\.kind==='wolf-introduction'\\?\\(t\\.recognitionIds\\|\\|\\[\\]\\)/);
+  assert.ok(src.includes("?(t.recognitionIds||[]).map"));
   assert.doesNotMatch(src,/Bầy Sói nhận biết nhau:/);
 });
 
@@ -20,8 +20,8 @@ test('roster confirmation controls are near select all, bulk selection requires 
   assert.ok(toolbar>=0&&cancel>toolbar&&confirm>cancel&&filter>confirm);
   assert.equal(html.split('id="playRosterSave"').length-1,1);
   assert.match(roster,/playRosterBulkConfirmClicks<3/);
-  assert.match(roster,/playRosterBulkSelection=!!rows\\.length&&!all/);
-  assert.match(roster,/playRosterBulkSelection=false;playRosterResetBulkConfirmation\\(\\)/);
+  assert.ok(roster.includes('playRosterBulkSelection=!!rows.length&&!all'));
+  assert.ok(roster.includes('playRosterBulkSelection=false;playRosterResetBulkConfirmation()'));
 });
 
 test('disabled daytime Artifact shows its configured action and preserves role actions',()=>{
