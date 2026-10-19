@@ -2936,7 +2936,37 @@ function renderPlayPlayers(){
       if(statusVisuals.length){el.insertAdjacentHTML('beforeend',globalThis.GMWW_STATUS_VISUALS.overlay(statusVisuals));const badge=el.querySelector(':scope > .gmww-sv-badges');if(badge)el.querySelector('.play-player-over')?.prepend(badge);}
     }
     el.setAttribute('aria-label',name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'')+(m&&playPlayerStatuses(m.loginId).length?' • '+playPlayerStatuses(m.loginId).map(x=>x.label).join(', '):''));el.title=name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'');
-    el.querySelector('.play-player-artifact')?.addEventListener('click',event=>event.stopPropagation());
+    // The foot tag displays exactly two graphemes; horizontal dragging steps through
+    // the full Artifact name without moving the parent character or navigating turns.
+    const artifactTag=el.querySelector('.play-player-artifact'),
+      artifactText=artifactTag?.querySelector('.play-player-artifact-text');
+    if(artifactTag&&artifactText){
+      const full=artifactText.textContent||'';
+      const chars=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?
+        Array.from(new Intl.Segmenter('vi',{granularity:'grapheme'}).segment(full),x=>x.segment):Array.from(full.normalize('NFC'));
+      let position=0,gesture=null;
+      const show=()=>{artifactText.textContent=chars.slice(position,position+2).join('')};
+      show();
+      artifactTag.addEventListener('pointerdown',event=>{
+        if(event.pointerType==='mouse'&&event.button!==0)return;
+        gesture={id:event.pointerId,x:event.clientX,position};
+        artifactTag.setPointerCapture?.(event.pointerId);
+        event.stopPropagation();
+      });
+      artifactTag.addEventListener('pointermove',event=>{
+        if(!gesture||gesture.id!==event.pointerId)return;
+        const delta=Math.trunc((gesture.x-event.clientX)/12);
+        position=Math.max(0,Math.min(chars.length-2,gesture.position+delta));
+        show();event.stopPropagation();
+      });
+      const end=event=>{
+        if(!gesture||gesture.id!==event.pointerId)return;
+        gesture=null;event.stopPropagation();
+      };
+      artifactTag.addEventListener('pointerup',end);
+      artifactTag.addEventListener('pointercancel',end);
+      artifactTag.addEventListener('click',event=>event.stopPropagation());
+    }
     if(m){
       const host=el.querySelector('.play-player-avatar'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterVisualUrl(m,frame,direction),rigMounted=playMountCharacterRig(host,m,{moving,sitting,effect});el.dataset.walkDir=direction;
       if(!rigMounted){const im=host?.querySelector('img');if(im){im.src=characterSrc;im.dataset.walkKey=direction+':'+frame;im.decoding='async';im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))}}}
