@@ -462,7 +462,7 @@ function battleIsTransfer(a){return !!a&&!a.artifactId&&String(a.actionId||'')==
 function battleRenderTransferPanel(){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   let panel=document.getElementById('battleTransferPanel');
-  if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';bar.insertAdjacentElement('afterend',panel)}
+  if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';(bar.closest('.battle-action-rail')||bar).insertAdjacentElement('afterend',panel)}
   const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable;
   const dir=battleState.transferDir,sig=show+':'+dir+':'+battleState.busy+':'+battleState.syncPending;
   if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;
@@ -492,6 +492,20 @@ function battleRenderTransferPanel(){
     panel.style.left=left+'px';panel.style.top=top+'px';
   });
   grip?.addEventListener('pointerup',()=>{drag=null});grip?.addEventListener('pointercancel',()=>{drag=null});
+}
+function battleUpdateActionNavigation(){
+  const bar=document.getElementById('battleActionBar'),previous=document.getElementById('battleActionPrevious'),next=document.getElementById('battleActionNext');
+  if(!bar||!previous||!next)return;
+  const maximum=Math.max(0,bar.scrollWidth-bar.clientWidth),hasMore=maximum>3;
+  previous.hidden=!hasMore;next.hidden=!hasMore;
+  previous.disabled=!hasMore||bar.scrollLeft<=3;
+  next.disabled=!hasMore||bar.scrollLeft>=maximum-3;
+}
+function battleNavigateActions(direction){
+  const bar=document.getElementById('battleActionBar');if(!bar)return;
+  // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
+  const amount=Math.max(88,Math.floor(bar.clientWidth*.8));
+  bar.scrollBy({left:direction*amount,behavior:'smooth'});
 }
 let battleConfirmAudioGate=false;
 function battleAdvanceConfirmedTurn(){
@@ -895,7 +909,7 @@ function renderPlayBattle(){
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
-  if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
+  if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(battleState.lastAudioTurnKey!==key&&!battleConfirmAudioGate){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
@@ -934,6 +948,7 @@ function renderPlayBattle(){
     bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+((a.noTarget&&!battleIsTransfer(a))||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.name)+(!a.artifactId&&a.targetCount>1?'<small class="battle-target-quota"> '+(battleState.actionId===a.id?battleState.targets.length:0)+'/'+a.targetCount+'</small>':'')+(visualApi?(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).length?'<span class="gmww-sv-action-preview gmww-sv-stage" aria-hidden="true"><span class="gmww-sv-action-avatar">✦</span>'+visualApi.overlay((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]))+'</span><span class="gmww-sv-action-tags">'+(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).map(id=>visualApi.byId[id]?.icon+' '+playEsc(visualApi.byId[id]?.name||id)).join(' · ')+'</span>':'':'')+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?(t.recognitionIds||[]).map(id=>battleMember(id)?.displayName||id).join(' · '):phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   bar?.querySelectorAll('[data-battle-action]').forEach(x=>x.classList.toggle('is-selected',x.dataset.battleAction===battleState.actionId));
+  if(bar&&sig!==bar.dataset.navigationSig){bar.dataset.navigationSig=sig;requestAnimationFrame(battleUpdateActionNavigation)}
   battleRenderTransferPanel();
   set('battleActionTrayTitle','');
   set('battleTurnType',phase==='day'?'BAN NGÀY':phase==='night'?'ĐÊM '+night+' · '+((t?.kind==='early-artifact'||t?.kind==='early-artifact-window')?'ARTIFACT ĐẦU VÁN':['role','role-group'].includes(t?.kind)?'VAI TRÒ':'LƯỢT CHƠI'):'CHUẨN BỊ TRẬN');
@@ -1239,7 +1254,7 @@ function initBattleSwipeNavigation(){
     if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleState.busy||playSceneRuntime.busy||
        battleState.drag||battleState.targetSheet||battleState.roster||battleState.details||
        battleState.wolfOpen||battleState.clockOpen)return false;
-    if(!target||!root.contains(target)||target.closest?.(overlays))return false;
+    if(!target||!root.contains(target)||target.closest?.(overlays)||target.closest?.('.play-player-artifact'))return false;
     // Player tokens are safe swipe starting points during a battle; their taps
     // still select targets, and native horizontal action scrolling is excluded.
     return !target.closest?.(interactive)||!!target.closest?.('#playPlayerRing [data-play-player-id]');
@@ -1383,6 +1398,10 @@ function initBattleControls(){
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
+  document.getElementById('battleActionPrevious')?.addEventListener('click',()=>battleNavigateActions(-1));
+  document.getElementById('battleActionNext')?.addEventListener('click',()=>battleNavigateActions(1));
+  document.getElementById('battleActionBar')?.addEventListener('scroll',battleUpdateActionNavigation,{passive:true});
+  window.addEventListener('resize',battleUpdateActionNavigation);
   document.getElementById('battleActionBar')?.addEventListener('click',e=>{
     if(Date.now()<battleState.ignoreClick)return;
     const x=e.target.closest('[data-battle-action]');if(!x||x.disabled)return;
@@ -1398,7 +1417,7 @@ function initBattleControls(){
     const x=e.target.closest('[data-battle-action]');if(x&&!x.disabled&&!battleState.targetSheet)battleOpenTargetSheet(x.dataset.battleAction,'list');
   });
   document.getElementById('battleRosterList')?.addEventListener('click',e=>{const x=e.target.closest('[data-battle-member]');if(x&&!x.disabled){if(battleState.quickType)void battleQuickApply(x.dataset.battleMember);else battlePickTarget(x.dataset.battleMember)}});
-  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTargetWithAudio(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag')}},true);
+  document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||e.target.closest?.('.play-player-artifact')||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTargetWithAudio(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag')}},true);
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
     const x=e.target.closest('[data-battle-action]');
     if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
