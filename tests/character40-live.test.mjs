@@ -20,6 +20,7 @@ test('accepted atlas/original bytes packaged for GM and Web are hash identical t
  const catalog=JSON.parse(read('prototype/character40/catalog.json'));
  for(const c of catalog.characters){for(const [file,key] of [[c.original,'originalSHA256'],[c.atlas,'atlasSHA256']])assert.equal(createHash('sha256').update(read('assets/characters/gmww40/'+file)).digest('hex'),c[key]);}
  assert.deepEqual(read('server-game/current/gmww-shared-motion.js'),read('assets/characters/gmww40/runtime.js'));
+ for(const c of catalog.characters){const scale=Math.min(250/Math.max(...c.frames.map(f=>f[2])),310/Math.max(...c.frames.map(f=>f[3])));for(const [, ,w,h] of c.frames){assert.ok(w*scale<=250.000001);assert.ok(h*scale<=310.000001);}}
 });
 test('old source rig, artwork and animations remain restorable byte for byte',()=>{
  const inventory=JSON.parse(read('docs/character-migration/2026-10-19-backup-and-compatibility-audit.json'));

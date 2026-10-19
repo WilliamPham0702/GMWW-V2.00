@@ -2417,7 +2417,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/village/move"&&request.method==="POST")return memberStore(env).fetch(new Request('https://member.internal/village/move',{method:'POST',headers:request.headers,body:JSON.stringify(await safeJson(request)||{})}));
   const seatSwapRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/seat-swap$/);if(seatSwapRoute&&request.method==='POST')return playerSeatSwapApi(env,seatSwapRoute[1],request);
   if(url.pathname==="/api/game-characters/v4"&&request.method==="GET")return j(characterV4Status());
-  if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,frameCount:8,motionVersion:"c40-1",characters:gameCharacterCatalog()});
+  if(url.pathname==="/api/game-characters"&&request.method==="GET")return j({ok:true,count:GAME_CHARACTER_COUNT,frameCount:1,motionFrameCount:48,actionFrameCount:8,motionVersion:"c40-1",characters:gameCharacterCatalog()});
   const gameCharacterFrameRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/frame\/([1-6])$/);if(gameCharacterFrameRoute&&request.method==="GET")return character40Image(env,gameCharacterFrameRoute[1],request);
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return character40Image(env,gameCharacterImageRoute[1],request);
   if(url.pathname==="/api/rooms"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/directory/rooms/list");
