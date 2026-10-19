@@ -79,7 +79,7 @@
           configured=fns[0],actionId=String(configured?.actionId||configured?.id||""),
           ownedAction=storedAction.find(a=>String(a?.id||a?.actionId||"")===actionId),
           catalogAction=actionCatalog.find(a=>String(a?.id||"")===actionId),
-          validName=value=>{const name=String(value||"").trim();return name&&!/^(?:artifact\\s*)?(?:nội tại|dùng ban ngày|chưa có chức năng)$/i.test(name)&&!/^action[-_][a-z0-9_-]+$/i.test(name)&&!/^hành động(?:\\s*\\d+)?$/i.test(name)},
+          validName=value=>{const name=String(value||"").trim();return name&&!/^(?:artifact\s*)?(?:nội tại|dùng ban ngày|chưa có chức năng)$/i.test(name)&&!/^action[-_][a-z0-9_-]+$/i.test(name)&&!/^hành động(?:\s*\d+)?$/i.test(name)},
           actionName=[ownedAction?.name,catalogAction?.name,configured?.name,storedAction[0]?.name].map(value=>String(value||"").trim()).find(validName)||"Chưa cấu hình tên hành động";
         return [{id:"artifact:"+id+":"+loginOf(owner.loginId)+":info",
           actionId:"",name:actionName,
