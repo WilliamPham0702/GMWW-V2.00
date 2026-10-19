@@ -18,7 +18,12 @@ function playSaveAssignments(){
   // Step 5 stores only the GM's private local draft. Player Web receives no cards.
   playSceneState.assignmentSavedSignature=playAssignmentSignature();
   playSceneRuntime.assignmentPanelDismissed=true;
-  savePlayScene();renderPlayRoleAssignmentPanel();
+  playSceneState.step='deal';playSceneState.phase='lobby';
+  savePlayScene();
+  // Saving finalized assignments advances to Phát Vai; it does not send private cards.
+  // Only the explicit Phát Vai confirmation sends roles to Player Web.
+  void playPublishStage('deal').catch(err=>playFlashError('Chuyển sang Phát Vai: '+String(err?.message||err)));
+  renderPlayScene();
   return true;
 }
 function playConfirmAssignments(){
