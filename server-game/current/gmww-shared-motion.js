@@ -51,7 +51,7 @@ function paint(root,dt){
  if(!frozen){const turning=s.action==='turn';advance(s,dt);if(turning&&s.action!=='turn'&&root._gmwwPending){const pending=root._gmwwPending;root._gmwwPending=null;s.facing=pending.facing;setAction(s,pending.action);}}
  const index=sampleFrame(s),im=imageFor(root._gmwwAssetBase+'/characters/gmww40/'+c.atlas);
  if(!im.complete||!im.naturalWidth)return; // Retry when the atlas has decoded.
- const drawKey=c.id+':'+index;
+ const drawKey=c.atlas+':'+index;
  if(root._gmwwDrawKey===drawKey)return; // No pixels changed: never repaint an idle frame.
  const ctx=root._gmwwContext||(root._gmwwContext=canvas.getContext('2d'));
  if(!ctx)return;
