@@ -45,33 +45,11 @@ echo "Verify Production: checking real Character 01/02 four-direction artwork."
 curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/characters/v4/approved-two-characters.avif?verify=$(date +%s)" > /tmp/v4-two-characters.avif
 test "$(wc -c </tmp/v4-two-characters.avif)" -gt 10000
 test "$(shasum -a 256 assets/characters/v4/approved-two-characters.avif | awk '{print $1}')" = "$(shasum -a 256 /tmp/v4-two-characters.avif | awk '{print $1}')"
-for VIEW in front left right back; do
-  curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-01/image?dir=$VIEW" > "/tmp/char01-$VIEW.svg"
-  grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char01-$VIEW.svg"
-  grep -Fq 'data:image/avif;base64,' "/tmp/char01-$VIEW.svg"
-  curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/character-02/image?dir=$VIEW" > "/tmp/char02-$VIEW.svg"
-  grep -Fq '<svg xmlns="http://www.w3.org/2000/svg"' "/tmp/char02-$VIEW.svg"
-  grep -Fq 'data:image/avif;base64,' "/tmp/char02-$VIEW.svg"
-done
-grep -Fq 'x="-200" y="-145"' /tmp/char02-back.svg
-grep -Fq 'x="0" y="0"' /tmp/char01-front.svg
+# The accepted live forty-character catalog now owns /api/game-characters.
+# Its original/atlas bytes and four-action contract are independently verified
+# by verify-character40-production.mjs. Lab checks use only isolated lab assets.
 grep -Fq 'id="labCharacter"' /tmp/character-v4-web.html
-echo "Verify Production: Character 01 + 02, four directions each, new real artwork PASS."
-echo "Verify Production: validating Player Web animated Character 01/02 frames."
-for CHARACTER in character-01 character-02; do
-  for VIEW in front left; do
-    SUFFIX=""
-    if [ "$VIEW" = "left" ]; then SUFFIX="?dir=left"; fi
-    for FRAME in 1 2; do
-      curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/game-characters/$CHARACTER/frame/$FRAME$SUFFIX" > "/tmp/$CHARACTER-$VIEW-$FRAME.webp"
-      test "$(file -b --mime-type "/tmp/$CHARACTER-$VIEW-$FRAME.webp")" = "image/webp" || { echo "::error::$CHARACTER $VIEW frame $FRAME did not return WebP"; exit 1; }
-    done
-    if cmp -s "/tmp/$CHARACTER-$VIEW-1.webp" "/tmp/$CHARACTER-$VIEW-2.webp"; then
-      echo "::error::$CHARACTER $VIEW reused identical animation frames"; exit 1
-    fi
-  done
-done
-echo "Verify Production: Player Web Character 01/02 distinct walking frames in front and left directions PASS."
+echo "Verify Production: isolated V4 source artwork exact SHA PASS; active roster uses Character40 audit."
 echo "Verify Production: checking V4 articulated two-character action module."
 grep -Fq '<canvas id="labCharacter"' /tmp/character-v4-web.html
 grep -Fq 'animated-sprite.mjs' /tmp/character-v4-web.html

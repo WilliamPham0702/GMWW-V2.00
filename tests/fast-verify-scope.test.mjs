@@ -11,7 +11,7 @@ test('UI-only Runtime fixes skip unrelated Character V4/V5 3D laboratories',()=>
 test('asset, routing, or deploy changes require complete laboratory checks',()=>{
   for(const path of ['assets/characters/v4/skin.html','assets/characters/v5/index.html',
     'src/index.js','src/gmww-character-v4.js','wrangler.jsonc','.github/workflows/deploy-production.yml',
-    '.github/scripts/fast-verify-scope.mjs']){
+    '.github/scripts/fast-verify-scope.mjs','.github/scripts/verify-isolated-character-labs.sh']){
     assert.equal(requireLab([path]),true,path);
   }
 });
@@ -41,4 +41,11 @@ test('isolated Character Lab script preserves complete verified checks',()=>{
   assert.match(workflow,/bash \.github\/scripts\/verify-isolated-character-labs\.sh/);
   assert.match(workflow,/verify-incremental-ota\.mjs/);
   assert.match(workflow,/Block GMWW version rollback/);
+});
+
+test('isolated labs do not require retired active Character01/02 SVG or portrait-frame animation',()=>{
+  const script=fs.readFileSync('.github/scripts/verify-isolated-character-labs.sh','utf8');
+  assert.doesNotMatch(script,/api\/game-characters\/(?:character-0[12]|\$CHARACTER)\/(?:image|frame)/);
+  assert.match(script,/assets\/characters\/v4\/approved-two-characters\.avif/);
+  assert.match(fs.readFileSync('.github/workflows/deploy-production.yml','utf8'),/node \.github\/scripts\/verify-character40-production\.mjs/);
 });
