@@ -861,10 +861,10 @@ function initPlayScene(){
     finally{if(button)button.disabled=false}
   });
   for(const id of ['playTemplateRoleSearch','playTemplateRoleFaction','playTemplateOnlyStarred'])document.getElementById(id)?.addEventListener(id==='playTemplateRoleSearch'?'input':'change',playTemplateRenderCatalog);
-  for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playEarlyArtifactSec','playDefaultActionSec','playArtifactActionSec','playAutoAdvance'])document.getElementById(id)?.addEventListener('change',e=>{
+  for(const id of ['playVillageDiscussionSec','playGallowsNominationSec','playGallowsVoteSec','playWolfDiscussionSec','playEarlyArtifactSec','playDefaultActionSec','playArtifactActionSec','playAutoAdvance'])document.getElementById(id)?.addEventListener('change',e=>{
     playSceneState.gameTiming=playSceneState.gameTiming||{};
-    const key={playVillageDiscussionSec:'villageDiscussionSec',playWolfDiscussionSec:'wolfDiscussionSec',playEarlyArtifactSec:'earlyArtifactSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
-    playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
+    const key={playVillageDiscussionSec:'villageDiscussionSec',playGallowsNominationSec:'gallowsNominationSec',playGallowsVoteSec:'gallowsVoteSec',playWolfDiscussionSec:'wolfDiscussionSec',playEarlyArtifactSec:'earlyArtifactSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
+    playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:id==='playGallowsNominationSec'||id==='playGallowsVoteSec'?Math.max(1,Math.min(3600,Math.trunc(Number(e.currentTarget.value)||10))):Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
     savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
   document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{

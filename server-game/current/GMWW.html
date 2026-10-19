@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.149</title>
-<link rel="stylesheet" href="style.css?v=3.149-compact-room">
+<title>GMWW V3.150</title>
+<link rel="stylesheet" href="style.css?v=3.150-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -273,7 +273,8 @@
           <label for="battleGallowsCandidate">Người lên giàn</label>
           <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
           <div class="battle-gallows-actions" aria-label="Hành động">
-            <button type="button" data-gallows-command="begin">BỎ PHIẾU 10 GIÂY</button>
+            <button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button>
+            <button type="button" data-gallows-command="begin">BẮT ĐẦU BỎ PHIẾU</button>
             <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CỨU</button>
             <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 GIẾT</button>
             <button type="button" data-gallows-command="restore">↶ KHÔI PHỤC</button>
@@ -759,6 +760,8 @@
         <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
         <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
           <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
+          <label>Thời gian chọn người lên giàn (giây): <span class="play-timing-value"><input id="playGallowsNominationSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian đề cử người lên giàn"></span></label>
+          <label>Thời gian bỏ phiếu Lên Giàn (giây): <span class="play-timing-value"><input id="playGallowsVoteSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian bỏ phiếu Lên Giàn"></span></label>
           <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
           <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
           <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="60" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
@@ -897,7 +900,7 @@
 <script src="battle-controls.js?v=3.136-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.149-compact-room&status=4"></script>
+<script src="app.js?v=3.150-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
