@@ -8,7 +8,7 @@ const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
-test('V3.156: tapping the firepit opens an untitled menu with a usable drag grip',()=>{
+test('V3.157: tapping the firepit opens an untitled menu with a usable drag grip',()=>{
   assert.match(html,/<div id="battleWolfMenu"[^>]*aria-label="Menu đống lửa"/);
   assert.match(html,/<header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip"/);
   assert.doesNotMatch(html,/<strong>🐺 CÔNG CỤ GM<\/strong>/);
@@ -18,7 +18,7 @@ test('V3.156: tapping the firepit opens an untitled menu with a usable drag grip
     assert.match(html,new RegExp('id="'+control+'"'));
 });
 
-test('V3.156: horizontal firepit menu stays within the mobile viewport and reaches final action',()=>{
+test('V3.157: horizontal firepit menu stays within the mobile viewport and reaches final action',()=>{
   assert.match(css,/width:min\(94vw,520px\)!important/);
   assert.match(css,/max-width:calc\(100vw - 12px\)!important/);
   assert.match(css,/box-sizing:border-box!important;min-width:0!important;width:100%!important/);
@@ -27,7 +27,7 @@ test('V3.156: horizontal firepit menu stays within the mobile viewport and reach
   assert.match(css,/flex-shrink:0!important;touch-action:pan-x!important/);
 });
 
-test('V3.156: actor/target markers are first inside each player info stack, before status and name',()=>{
+test('V3.157: actor/target markers are first inside each player info stack, before status and name',()=>{
   const begin=source.indexOf('function battleMarkPlayers(){');
   const end=source.indexOf('\nfunction renderPlayBattle()',begin);
   assert.ok(begin>=0&&end>begin);
@@ -44,11 +44,11 @@ test('V3.156: actor/target markers are first inside each player info stack, befo
   assert.match(css,/\.play-player-token\.is-battle-target::after\{\s*content:none!important/);
 });
 
-test('V3.156: exactly assembled GM runtime and Worker version agree for OTA',()=>{
-  assert.ok(app.includes("const VERSION='3.156';"));
-  assert.ok(worker.includes('VERSION="V3.156",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3156"'));
-  assert.match(html,/<title>GMWW V3\.156<\/title>/);
-  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.156\.0"/);
+test('V3.157: exactly assembled GM runtime and Worker version agree for OTA',()=>{
+  assert.ok(app.includes("const VERSION='3.157';"));
+  assert.ok(worker.includes('VERSION="V3.157",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3157"'));
+  assert.match(html,/<title>GMWW V3\.157<\/title>/);
+  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.157\.0"/);
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(app,parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''));

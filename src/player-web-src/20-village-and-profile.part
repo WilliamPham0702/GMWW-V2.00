@@ -178,7 +178,7 @@ async function followGmRoomCall(){
 
 async function enterVillage(){if(!state.member)return go('login');ensureVillageHud();go('game');setGameViewPane('village',{persist:false});syncPlayerPresentation();ensureVillageReadyDock();await loadUiSettings();await refreshGmPresence();startGmPresencePoll();if(!state.roomCode)await loadVillageLobby();syncVillageFrame();scheduleLobbyMotion(400);if(!state.lobbyPoll)state.lobbyPoll=setInterval(()=>{if(state.member&&!state.roomCode&&!document.hidden)loadVillageLobby()},1600);void followGmRoomCall()}
 async function loadVillageLobby(){try{await loadUiSettings();const data=await api('/api/village');if(Number.isFinite(Number(data?.serverTime)))state.serverClockOffsetMs=Number(data.serverTime)-Date.now();state.lobbyPlayers=data.players||[];syncVillageFrame();if(!state.lobbyMotionTimer)scheduleLobbyMotion(450)}catch{}finally{void followGmRoomCall()}}
-async function walkInVillage(x,y){try{const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x,y})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return d}catch(e){toast(e.message);return null}}
+async function walkInVillage(x,y){holdLobbyMotionForManualWalk();try{const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x,y})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return d}catch(e){toast(e.message);return null}}
 function villageChoice(message,actions){$('#gmwwVillageChoice')?.remove();const shell=document.createElement('div');shell.id='gmwwVillageChoice';const card=document.createElement('div'),text=document.createElement('p'),buttons=document.createElement('div');text.textContent=message;buttons.className='choices';card.append(text,buttons);shell.appendChild(card);for(const [label,action]of actions){const b=document.createElement('button');b.textContent=label;b.onclick=async()=>{shell.remove();await action?.()};buttons.appendChild(b)}shell.addEventListener('click',e=>{if(e.target===shell)shell.remove()});document.body.appendChild(shell)}
 function showSeatChoice(){toast('Vị trí do GM xếp. Vui lòng chờ Quản Trò.')}
 async function releaseMySeat(){
@@ -288,7 +288,7 @@ function lobbyMotionEnabled(){return state.member?.lobbyMotionEnabled!==false}
 function currentVillageLobbyPlayer(){const id='member:'+String(state.member?.loginId||'');return state.lobbyPlayers.find(p=>String(p?.participantId||'')===id)||null}
 function currentLobbyMotionPlayer(){return state.roomCode?currentRoomPlayer():currentVillageLobbyPlayer()}
 function lobbyMotionEligible(){
-  if(!state.member||!lobbyMotionEnabled()||document.hidden||state.lobbyMotionPaused)return false;
+  if(!state.member||!lobbyMotionEnabled()||document.hidden||state.lobbyMotionPaused||Date.now()<Number(state.lobbyManualUntil||0))return false;
   const p=currentLobbyMotionPlayer();if(!p||p.movementStatus==='moving'&&p.moveTargetSeatId)return false;
   if(state.roomCode){const phase=String(state.room?.phase||'lobby').toLowerCase();return ['lobby','waiting','role_delivery'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)}
   return true
@@ -302,6 +302,9 @@ function buildLobbyMotionRoute(){return[lobbyRandomPoint()]}
 function clearLobbyMotionTimer(){if(state.lobbyMotionTimer){clearTimeout(state.lobbyMotionTimer);state.lobbyMotionTimer=null}}
 function resetLobbyMotionPlan(){state.lobbyMotionWaypoints=[];state.lobbyMotionIndex=0;state.lobbyMotionPhase='roam';state.lobbyMotionHoldUntil=0}
 function scheduleLobbyMotion(delay=500){clearLobbyMotionTimer();if(!state.member||!lobbyMotionEnabled())return;state.lobbyMotionTimer=setTimeout(runLobbyMotionStep,Math.max(120,Number(delay)||500))}
+function holdLobbyMotionForManualWalk(){
+  state.lobbyManualUntil=Date.now()+30000;clearLobbyMotionTimer();resetLobbyMotionPlan();scheduleLobbyMotion(30000);
+}
 function pauseLobbyMotionForSeat(){state.lobbyMotionPaused=true;clearLobbyMotionTimer();resetLobbyMotionPlan()}
 function resumeLobbyMotion(){state.lobbyMotionPaused=false;resetLobbyMotionPlan();scheduleLobbyMotion(350)}
 async function performLobbyAutoMove(point){
@@ -384,7 +387,7 @@ function movementViewerPosition(){
 }
 async function startVillageMove({x,y,seatId=null,fromX=null,fromY=null}={}){
   if(!state.roomCode||state.room?.seatsLocked)return;
-  const me=currentRoomPlayer();if(!me||me.movementStatus==='moving')return;
+  const me=currentRoomPlayer();if(!me)return;
   const origin=movementViewerPosition(),validCoord=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)),payload={x:Number(x),y:Number(y),fromX:validCoord(fromX)?Number(fromX):origin.x,fromY:validCoord(fromY)?Number(fromY):origin.y};if(seatId)payload.seatId=Number(seatId);
   try{const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/move',{method:'POST',headers:auth(),body:JSON.stringify(payload)});if(d?.room)state.room=d.room;if(Array.isArray(d?.players))state.players=d.players;state.selectedSeatId=seatId?Number(seatId):null;renderRoomSetup();syncVillageFrame();scheduleMovementCompletion(currentRoomPlayer())}
   catch(e){if(String(e?.data?.error||'')==='SEAT_TAKEN')state.selectedSeatId=null;toast(e.message);renderRoomSetup();syncVillageFrame()}
@@ -395,7 +398,7 @@ async function startSeatWalk(seatId,x=null,y=null){
   pauseLobbyMotionForSeat();const me=currentRoomPlayer();if(me?.movementStatus==='moving'){state.lobbySeatWalkPending={seatId:n,x:Number(x),y:Number(y)};return}
   state.lobbySeatWalkPending=null;await startVillageMove({x,y,seatId:n})
 }
-async function startFreeWalk(x,y){const me=currentRoomPlayer();if(me?.seatId)return;await startVillageMove({x,y})}
+async function startFreeWalk(x,y){const me=currentRoomPlayer();if(me?.seatId||state.room?.seatsLocked)return;holdLobbyMotionForManualWalk();await startVillageMove({x,y})}
 function clearMovementCompletionTimer(){if(state.movementCompleteTimer){clearTimeout(state.movementCompleteTimer);state.movementCompleteTimer=null}}
 function scheduleMovementCompletion(player=currentRoomPlayer()){
   clearMovementCompletionTimer();if(!player||player.movementStatus!=='moving'||!player.moveId)return;
