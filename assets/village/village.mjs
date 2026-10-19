@@ -279,7 +279,7 @@ if(game){
       const avatar=button.querySelector(".portrait.game-character");
       const renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId;
       const command=animationCommandFor({...data,gameCharacterId:renderedId},pos);
-      const commandKey=[command.characterId,command.state,command.motion,command.rigId,command.facing,command.activity].join("|");
+      const commandKey=[command.characterId,command.state,command.motion,command.rigId,command.facing,command.activity,command.paused].join("|");
       if(avatar&&button.dataset.gmwwMotion!==commandKey){updateCharacterRenderer(avatar,command);button.dataset.gmwwMotion=commandKey}
     }
     return button;
@@ -338,7 +338,7 @@ if(game){
       const avatar=el.querySelector(".portrait.game-character"),renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId,
       semantic=animationCommandFor({...data,gameCharacterId:renderedId},pos);
       const rigUpdated=!!avatar?.querySelector('[data-character-renderer]');
-      const signature=[semantic.characterId,semantic.state,semantic.motion,semantic.rigId,semantic.facing,semantic.activity].join("|");
+      const signature=[semantic.characterId,semantic.state,semantic.motion,semantic.rigId,semantic.facing,semantic.activity,semantic.paused].join("|");
       if(rigUpdated&&el.dataset.gmwwMotion!==signature){updateCharacterRenderer(avatar,semantic);el.dataset.gmwwMotion=signature}const img=rigUpdated?null:el.querySelector("img[data-walk-character]");if(img){const characterId=img.dataset.walkCharacter,frame=pos.moving?walkFrameFor(data,nowMs):1,direction=pos.moving?walkDirection(data):"right",src=pos.sitting&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):walkFrameUrl(characterId,frame,direction),key=(pos.sitting?"sit":direction)+":"+frame;if(img.dataset.walkFrame!==key){img.dataset.walkFrame=key;img.dataset.walkDir=direction;img.src=src}}
       el.dataset.walkDir=pos.moving?walkDirection(data):"right";el.classList.toggle("moving",!!pos.moving);el.classList.toggle("sitting",!!pos.sitting);if(data?.isGM===true||data?.kind==="gm"){el.classList.remove("gm-action-idle","gm-action-walk","gm-action-run","gm-action-shake","gm-action-howl");el.classList.add("gm-action-"+gmActionFor(data,pos,nowMs));const dx=Number(data?.moveToX??pos.x??0)-Number(data?.moveFromX??pos.x??0);el.style.setProperty("--gm-run-dir",String(dx<0?-1:1))}
       if(!pos.moving&&data?.movementStatus==="moving"&&!String(data.moveId||"").startsWith("visual:")&&embedded&&String(data.id)===String(setupState.viewerParticipantId||"")&&!arrivalNotified.has(String(data.moveId))){arrivalNotified.add(String(data.moveId));try{window.parent.postMessage({type:"gmww:move-arrived",participantId:String(data.id),moveId:String(data.moveId)},window.location.origin)}catch{}}

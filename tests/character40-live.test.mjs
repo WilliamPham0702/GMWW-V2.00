@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {character40Catalog,character40VisualId,character40Image,character40StateFromPlayer} from '../src/gmww-character40-catalog.js';
 import {normalizeGameCharacterId,activeGameCharacterId} from '../src/gmww-player-identity-rules.js';
+import {normalizeRendererCommand} from '../assets/village/character40-renderer.mjs';
 const read=p=>fs.readFileSync(p);
 test('active catalog replaces all forty IDs including 15; aliases preserve existing account identity',()=>{
  const rows=character40Catalog();assert.equal(rows.length,40);assert.equal(new Set(rows.map(x=>x.id)).size,40);
@@ -14,6 +15,12 @@ test('active catalog replaces all forty IDs including 15; aliases preserve exist
 test('public live animation projects readiness and sitting onto Idle, exposing only four actions',()=>{
  for(const p of [{ready:true},{villageActivity:'sitting',sitUntil:Date.now()+10000},{villageActivity:'cheer'},{villageActivity:'stretch'}]){const c=character40StateFromPlayer({gameCharacterId:'character-15',...p});assert.equal(c.motion,'idle');assert.equal(c.state,'idle');}
  const source=read('src/index.js').toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
+});
+test('stationary death and revival change both production Player command keys without recreating the actor',()=>{
+ const scene=read('assets/village/village.mjs').toString();
+ const alive=normalizeRendererCommand({characterId:'character-15',state:'idle'}),dead=normalizeRendererCommand({characterId:'character-15',state:'dead'});
+ assert.equal(alive.motion,'idle');assert.equal(dead.motion,'idle');assert.equal(dead.paused,true);
+ for(const [label,name] of [['commandKey','command'],['signature','semantic']]){const expression=scene.match(new RegExp('const '+label+'=([^;]+);'))?.[1];assert.ok(expression);const key=new Function(name,'return '+expression);assert.notEqual(key(alive),key(dead));assert.equal(key(alive),key(normalizeRendererCommand({characterId:'character-15',state:'idle'})));}
 });
 test('all portrait routes serve the accepted art with revalidation and CORS, never old character15',async()=>{
  const env={ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{headers:{'content-type':'image/webp'}})}};

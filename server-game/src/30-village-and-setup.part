@@ -744,6 +744,7 @@ function renderPlayPlayers(){
       for(const status of ['alive','dead','frozen','expelled'])
         token.classList.toggle('is-'+status,status===effect&&status!=='alive');
       token.dataset.gmwwCurrentEffect=effect;
+      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect});
       if(!visual)continue;
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
