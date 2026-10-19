@@ -47,8 +47,8 @@ test('V3.155: actor/target markers are first inside each player info stack, befo
 test('V3.155: exactly assembled GM runtime and Worker version agree for OTA',()=>{
   assert.ok(app.includes("const VERSION='3.155';"));
   assert.ok(worker.includes('VERSION="V3.155",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3155"'));
-  assert.match(html,/<title>GMWW V3\.154<\/title>/);
-  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.154\.0"/);
+  assert.match(html,/<title>GMWW V3\.155<\/title>/);
+  assert.match(fs.readFileSync('package.json','utf8'),/"version": "3\.155\.0"/);
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(app,parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''));
