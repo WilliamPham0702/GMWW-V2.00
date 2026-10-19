@@ -29,9 +29,9 @@ await Promise.all(Array.from({length:4},async()=>{
   }
  }
 }));
-for(const [path,local] of [['gmww-shared-motion.js','server-game/current/gmww-shared-motion.js'],['GMWW.html','server-game/current/GMWW.html'],['app.js','server-game/current/app.js']]){
+for(const path of ['gmww-shared-motion.js','GMWW.html','app.js']){
  const f=ota.runtime.files.find(f=>f.path===path);assert.ok(f,path+' OTA entry');
- const expected=sha(await readFile(local));assert.equal(f.sha256,expected,path+' manifest');assert.equal(sha(await bytes(f.url)),expected,path+' actual OTA bytes');
+ const expected=sha(await readFile('assets/updates/runtime/V'+version+'/'+path));assert.equal(f.sha256,expected,path+' manifest');assert.equal(sha(await bytes(f.url)),expected,path+' actual OTA bytes');
 }
 const player=(await bytes('/village/character40-renderer.mjs?v=c40-1')).toString();assert.ok(player.includes('characters/gmww40/runtime.js'));assert.ok(!player.includes('character-renderer.mjs'));
 assert.equal(sha(await bytes('/characters/gmww40/runtime.js?v=c40-1')),sha(await readFile('server-game/current/gmww-shared-motion.js')));
