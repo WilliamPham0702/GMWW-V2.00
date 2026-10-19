@@ -1,0 +1,36 @@
+{
+  "previewUrl": "https://gmww-character40-motion-preview.williampham0702.workers.dev/",
+  "deployedCommit": "10634bf3c43be0b38a9627f7b13292f904dc2fd4",
+  "workerVersion": "84fbfdd8-c25f-4bcf-9afa-8b6a7f31fd44",
+  "ciRun": "https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/39213033051",
+  "tests": {
+    "passed": 1174,
+    "failed": 0,
+    "chromium": "40 characters × 4 actions passed",
+    "webkit": "40 characters × 4 actions passed"
+  },
+  "assets": {
+    "approvedOriginals": 40,
+    "individualMotionAtlases": 40,
+    "framesPerAtlas": 48,
+    "packagedAssetSHA256Verified": true,
+    "legacyFilesByteIdentical": 335,
+    "cloudflareUploadedAssets": 86
+  },
+  "health": {
+    "ok": true,
+    "mode": "preview-only",
+    "catalogCount": 40,
+    "liveGameModified": false
+  },
+  "browserVerification": "Live preview opened successfully; character-01 Walk observed with distinct directional frames",
+  "mainChanged": false,
+  "productionChanged": false,
+  "userAcceptance": "pending",
+  "remaining": [
+    "User visual acceptance: identity, proportions, gait, foot contact and turn direction",
+    "Integrate GM and Player Web preserving all player/account character associations including legacy 41/42",
+    "Verify live-data backup/restore, main baseline, Runtime OTA manifests and SHA-256, real iPhone regression",
+    "PR/CI and explicit approval before merge or Production"
+  ]
+}
