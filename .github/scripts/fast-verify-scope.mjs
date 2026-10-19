@@ -9,7 +9,8 @@ const relevant=[
   /^src\/gmww-character-v4\.js$/,
   /^wrangler\.jsonc$/,
   /^\.github\/workflows\/deploy-production\.yml$/,
-  /^\.github\/scripts\/fast-verify-scope\.mjs$/
+  /^\.github\/scripts\/fast-verify-scope\.mjs$/,
+  /^\.github\/scripts\/verify-isolated-character-labs\.sh$/
 ];
 
 export function requiresIsolatedCharacterLabVerification(paths,{manual=false}={}){
