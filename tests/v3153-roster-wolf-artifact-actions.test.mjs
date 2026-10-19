@@ -17,7 +17,7 @@ test('wolf introduction action box lists member names without extra explanation'
 test('roster confirmation controls are near Select All; first click commits selection',()=>{
   const toolbar=html.indexOf('id="playRosterSelectAll"'),cancel=html.indexOf('id="playRosterCancel"'),
     confirm=html.indexOf('id="playRosterSave"'),filter=html.indexOf('id="playRosterFilters"');
-  assert.ok(toolbar>=0&&cancel>toolbar&&confirm>cancel&&filter>confirm);
+  assert.ok(cancel>=0&&confirm>cancel&&toolbar>confirm&&filter>toolbar);
   assert.equal(html.split('id="playRosterSave"').length-1,1);
   assert.match(roster,/return savePlayRosterIds\(playRosterSelectedIds\(\)\)/);
   assert.doesNotMatch(roster,/playRosterBulkConfirmClicks|playRosterBulkSelection|playRosterResetBulkConfirmation/);
@@ -57,10 +57,10 @@ test('Artifact foot label is compact and swipeable while preserving full name ac
   assert.match(setup,/play-player-artifact-text/);
   assert.match(setup,/title=".*playEsc\(assignment\.artifactName/);
   assert.match(css,/\.play-player-artifact \.play-player-artifact-text\{/);
-  assert.match(css,/width:2em!important/);
-  assert.match(setup,/chars\.slice\(position,position\+2\)\.join\(''\)/);
+  assert.match(css,/max-width:100px!important/);
+  assert.match(setup,/words\.slice\(position,position\+2\)\.join\(' '\)/);
   assert.match(setup,/artifactTag\.addEventListener\('pointermove'/);
-  assert.match(setup,/Intl\.Segmenter/);
+  assert.match(setup,/full\.trim\(\)\.split/);
   assert.match(css,/overflow-x:hidden!important/);
   assert.match(css,/touch-action:none!important/);
 });
@@ -72,7 +72,7 @@ test('GM action tray remains one row, arrows expose overflow, buttons retain dra
   assert.match(html,/id="battleActionNext"/);
   assert.match(src,/function battleUpdateActionNavigation\(/);
   assert.match(src,/function battleNavigateActions\(direction\)/);
-  assert.match(src,/bar\.scrollBy\(\{left:direction\*amount/);
+  assert.match(src,/bar\.scrollTo\(\{left:destination/);
   assert.match(src,/scroll',battleUpdateActionNavigation/);
   assert.match(css,/#battleActionRail\.battle-action-rail/);
   assert.match(css,/flex-direction:row!important;flex-wrap:nowrap!important/);
