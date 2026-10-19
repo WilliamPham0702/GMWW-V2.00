@@ -495,7 +495,7 @@ function battleRenderTransferPanel(){
 }
 function battleAdvanceConfirmedTurn(){
   const id=battleState.pendingNextTurnId;
-  if(!id||battleState.syncPending||battleState.busy)return;
+  if(!id||battleState.syncPending||battleState.busy||battleState.confirmAudioReady===false)return;
   battleState.pendingNextTurnId='';
   if(playSceneState.phase==='night'&&battleTurn()?.id===id)battleNavigateRelative(1);
 }
@@ -1050,7 +1050,12 @@ async function battleConfirm(confirmed=false){
     else if(seerReveal)payload.message='GM thực hiện soi xét; kết quả được xác minh trên Server.';
     else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     // The confirmation cue is tied to the real OK gesture, not the Artifact opening turn.
-    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
+    battleState.confirmAudioReady=false;
+    // Do not transition into the next role cue until the entire confirmation clip ends.
+    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,()=>{
+      battleState.confirmAudioReady=true;
+      battleAdvanceConfirmedTurn();
+    });
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
@@ -1090,8 +1095,8 @@ async function battleConfirm(confirmed=false){
       renderPlayBattle();
       if(document.getElementById('battleResultPopup')?.hidden!==false)battleAdvanceConfirmedTurn();
     }).catch(err=>{playFlashError('Đã ghi nhận trên Server nhưng đồng bộ bị lỗi: '+String(err?.message||err));});
-  }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
-  finally{battleState.busy=false;renderPlayBattle()}
+  }catch(err){battleState.confirmAudioReady=true;playFlashError('Không thể xác nhận: '+String(err?.message||err))}
+  finally{battleState.busy=false;renderPlayBattle();battleAdvanceConfirmedTurn()}
 }
 function battleToggleDetails(force){
   battleState.details=typeof force==='boolean'?force:!battleState.details;
