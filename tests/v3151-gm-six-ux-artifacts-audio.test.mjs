@@ -21,7 +21,7 @@ test('V3.151 LƯU Phân Vai commits GM deal stage before closing draft and never
   assert.match(body,/renderPlayScene\(\)/);
 });
 
-test('V3.151 GM artifact is a thumbnail under its own character, not leaked to Player Web',()=>{
+test('V3.152 GM artifact is a text label under its own character, not leaked to Player Web',()=>{
   assert.match(setup,/play-player-artifact/);
   assert.match(setup,/assignment\?\.artifactId&&playSceneState\.artifactsEnabled/);
   assert.match(setup,/resolveArtwork\('artifacts',id,'thumb'\)/);
@@ -82,4 +82,10 @@ test('V3.151 GM packaged Runtime and prior IPA shell remain stable',()=>{
  assert.equal(parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''),fs.readFileSync('server-game/current/app.js','utf8'));
  const worker=fs.readFileSync('src/index.js','utf8');
  assert.match(worker,/VERSION="V3.151",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3151"/);
+});
+
+test('V3.152 artifact action count and drag touch behavior are bounded',()=>{
+  assert.match(controls,/isArt\?eligible\.slice\(0,1\):eligible/);
+  assert.match(css,/#battleActionBar>button\[data-battle-action\]\{[\s\S]*?touch-action:none!important/);
+  assert.match(setup,/class=\\"play-player-artifact\\"/);
 });
