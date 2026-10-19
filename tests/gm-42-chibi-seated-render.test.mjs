@@ -27,9 +27,7 @@ test('GM renders a nonempty image for all 42 selected chibi when seated/offline'
     assert.equal(typeof image, 'string', 'missing seated image for ' + id);
     assert.ok(image.length > 0, 'empty seated image for ' + id);
     assert.doesNotMatch(image, /undefined|null|^\s*$/i, id);
-    if (i <= 4) assert.equal(image, seatedArtwork[id], id + ' retains approved seated artwork');
-    else if (i <= 20) assert.match(image, new RegExp('walk-v263/' + id + '/frame-01\\.webp$'));
-    else assert.equal(image, 'https://mock.gmww.test/api/game-characters/' + id + '/image');
+    assert.equal(image,'https://mock.gmww.test/api/game-characters/'+id+'/image?rev=c40-1');
   }
 });
 
@@ -40,8 +38,7 @@ test('GM selects a valid walk/idle picture for all 42 chibi without a seat', () 
     assert.equal(typeof pic,'string', id);
     assert.ok(pic.length > 0, id);
     assert.doesNotMatch(pic, /undefined|null/i, id);
-    if (i <= 20) assert.match(pic, new RegExp('walk-v266-left/' + id + '/frame-01\\.webp$'));
-    else assert.match(pic, new RegExp('/api/game-characters/' + id + '/image$'));
+    assert.equal(pic,'https://mock.gmww.test/api/game-characters/'+id+'/image?rev=c40-1');
   }
 });
 

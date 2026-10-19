@@ -280,9 +280,9 @@ async function loadGameCharacters(){
   try{const d=await api('/api/game-characters');state.gameCharacters=Array.isArray(d?.characters)?d.characters.map(c=>({...c,imageUrl:c.imageUrl||gameCharacterImageUrl(c.id)})):[]}catch(e){state.gameCharacters=[];console.warn('[GMWW characters]',e)}
   return state.gameCharacters
 }
-function gameCharacterFrameUrl(id,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return '/api/game-characters/'+encodeURIComponent(id)+'/frame/'+f}
+function gameCharacterFrameUrl(id,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return '/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-1'}
 function gameCharacterImageUrl(id){return gameCharacterFrameUrl(id,1)}
-function ensureCharacterPreviewTicker(){if(state.characterPreviewTimer)return;state.characterPreviewTimer=setInterval(()=>{const frame=(Math.floor(performance.now()/115)%6)+1;$$('img[data-gmww-walk-character]').forEach(img=>{const id=img.dataset.gmwwWalkCharacter;if(!id)return;const key=id+':'+frame;if(img.dataset.gmwwWalkFrame===key)return;img.dataset.gmwwWalkFrame=key;img.src=gameCharacterFrameUrl(id,frame)})},90)}
+function ensureCharacterPreviewTicker(){if(state.characterPreviewTimer)return;state.characterPreviewTimer=setInterval(()=>{const frame=(Math.floor(performance.now()/115)%6)+1;$$('img[data-gmww-walk-character]').forEach(img=>{const id=img.dataset.gmwwWalkCharacter;if(!id)return;const key=id+':c40-1';if(img.dataset.gmwwWalkFrame===key)return;img.dataset.gmwwWalkFrame=key;img.src=gameCharacterFrameUrl(id,frame)})},90)}
 const LOBBY_MOTION_HOLD_MS=30000;
 function lobbyMotionEnabled(){return state.member?.lobbyMotionEnabled!==false}
 function currentVillageLobbyPlayer(){const id='member:'+String(state.member?.loginId||'');return state.lobbyPlayers.find(p=>String(p?.participantId||'')===id)||null}

@@ -215,13 +215,13 @@ async function gmApi(path,opts={}){
     throw err;
   }finally{clearTimeout(timer)}
 }
-const MEMBER_CHARACTER_COUNT=42;
-const MEMBER_ANIMATED_CHARACTER_COUNT=20;
+const MEMBER_CHARACTER_COUNT=40;
+const MEMBER_ANIMATED_CHARACTER_COUNT=0;
 function memberCharacterCatalog(serverRows=[]){
   const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
   return Array.from({length:MEMBER_CHARACTER_COUNT},(_,i)=>{
     const n=String(i+1).padStart(2,'0'),id='character-'+n,remote=source.get(id)||{};
-    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
+    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-1',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
   });
 }
 function memberCharacterFrameUrl(id,frame=1){
@@ -229,13 +229,13 @@ function memberCharacterFrameUrl(id,frame=1){
   if(!m)return memberAvatarUrl(raw);
   return Number(m[1])<=MEMBER_ANIMATED_CHARACTER_COUNT
     ?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/frame/'+f
-    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image';
+    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-1';
 }
 function memberSelectedCharacterId(m){
   const direct=String(m?.gameCharacterId||m?.avatarId||'');
   if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(direct))return direct;
   const legacy=String(m?.avatarId||'').match(/^avatar-cut-(\d{3})$/i),n=legacy?Number(legacy[1]):0;
-  if(n>=1&&n<=MEMBER_CHARACTER_COUNT)return 'character-'+String(n).padStart(2,'0');
+  if(n>=1&&n<=42)return 'character-'+String(n).padStart(2,'0');
   return memberAdminState.avatars[0]?.id||'character-01';
 }
 function ensureMemberCharacterPreviewStyle(){
@@ -250,14 +250,14 @@ function ensureMemberCharacterPreviewTicker(){
     const frame=(Math.floor(performance.now()/120)%6)+1;
     document.querySelectorAll('#memberAvatarGrid img[data-member-character]').forEach(img=>{
       const id=String(img.dataset.memberCharacter||'');if(!id)return;
-      const key=id+':'+frame;if(img.dataset.memberFrame===key)return;
+      const key=id+':c40-1';if(img.dataset.memberFrame===key)return;
       img.dataset.memberFrame=key;img.src=memberCharacterFrameUrl(id,frame);
     });
   },95);
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
-function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image'}
+function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-1':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image?rev=c40-1'}
 function memberDate(v,withTime=false){
   if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
   return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -402,7 +402,7 @@ function openMemberSheet(mode,m=null){
       '<label>Tên đăng nhập<input id="memberLoginId" '+(editing?'disabled':'')+' value="'+memberEsc(m?.loginId||'')+'" maxlength="20" placeholder="Vui lòng nhập tên đăng nhập" autocomplete="username"></label>'+
       '<label>Tên Hiển Thị<input id="memberDisplayName" value="'+memberEsc(m?.displayName||'')+'" maxlength="24" placeholder="Bạn mong muốn người chơi khác thấy tên gì?" autocomplete="name"></label>'+
       (editing?'':'<div class="member-password-optional"><button class="member-password-toggle" id="memberPasswordToggle" type="button" aria-expanded="false">＋ Đặt mật khẩu cho tài khoản nếu muốn</button><label class="hidden" id="memberPasswordWrap">Mật khẩu<input id="memberPassword" type="password" minlength="4" autocomplete="new-password" placeholder="Tối thiểu 4 ký tự"></label></div>')+
-      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ 42 Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
+      '<div class="member-avatar-picker"><div class="member-form-label">Nhân Vật</div><div class="member-avatar-library-head"><b>🎭 Bộ 40 Nhân Vật</b><span id="memberAvatarLibraryCount"></span><button type="button" id="memberAvatarRefresh">↻ Đồng bộ Nhân vật</button></div><div class="member-avatar-grid" id="memberAvatarGrid"></div></div></div>';
     renderMemberAvatarPicker();
     if(!editing){const toggle=document.getElementById('memberPasswordToggle'),wrap=document.getElementById('memberPasswordWrap');if(toggle&&wrap)toggle.onclick=()=>{const open=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!open);toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';if(open)setTimeout(()=>document.getElementById('memberPassword')?.focus(),30)}}
     document.getElementById('memberDisplayName')?.addEventListener('blur',e=>{e.target.value=memberTitleCase(e.target.value)});

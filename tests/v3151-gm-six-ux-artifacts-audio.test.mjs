@@ -9,7 +9,7 @@ const roles=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8'
 const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 
-test('V3.151 LƯU Phân Vai commits GM deal stage before closing draft and never deals card content',()=>{
+test('V3.152 LƯU Phân Vai commits GM deal stage before closing draft and never deals card content',()=>{
   const start=roles.indexOf('async function playSaveAssignments(){');
   const end=roles.indexOf('function playConfirmAssignments(){',start);
   assert.ok(start>=0&&end>start);
@@ -29,7 +29,7 @@ test('V3.152 GM artifact is a text label under its own character, not leaked to 
   assert.match(css,/top:calc\(100% \+ 2px\)/);
 });
 
-test('V3.151 turn/target pulse persists for GM and respects reduced motion',()=>{
+test('V3.152 turn/target pulse persists for GM and respects reduced motion',()=>{
   assert.match(css,/@keyframes gmwwBattleBadgePulse/);
   assert.match(css,/\.battle-turn-mark,[\s\S]*\.battle-target-mark\{/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
@@ -37,7 +37,7 @@ test('V3.151 turn/target pulse persists for GM and respects reduced motion',()=>
   assert.match(gm,/className='battle-target-mark'/);
 });
 
-test('V3.151 real Artifact action names are resolved from owned Artifact actions, never numbered placeholders',()=>{
+test('V3.152 real Artifact action names are resolved from owned Artifact actions, never numbered placeholders',()=>{
   const context=vm.createContext({});
   vm.runInContext(controls,context);
   const engine=context.GMWW_BATTLE_CONTROLS;
@@ -63,7 +63,7 @@ test('V3.151 real Artifact action names are resolved from owned Artifact actions
   assert.match(gm,/unavailable:!!action\.unavailable\|\|!actorIds\.length/);
 });
 
-test('V3.151 audio confirmation gate does not change a night turn or trigger next role cue before onended',()=>{
+test('V3.152 audio confirmation gate does not change a night turn or trigger next role cue before onended',()=>{
   const start=gm.indexOf('async function battleConfirm(confirmed=false){');
   const end=gm.indexOf('function battleToggleDetails(',start);
   const body=gm.slice(start,end);
@@ -76,12 +76,12 @@ test('V3.151 audio confirmation gate does not change a night turn or trigger nex
   assert.ok(body.indexOf('battleConfirmAudioGate=true')<body.indexOf("await playRoomApi('/battle-action'"));
 });
 
-test('V3.151 GM packaged Runtime and prior IPA shell remain stable',()=>{
+test('V3.152 GM packaged Runtime and prior IPA shell remain stable',()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
  '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''),fs.readFileSync('server-game/current/app.js','utf8'));
  const worker=fs.readFileSync('src/index.js','utf8');
- assert.match(worker,/VERSION="V3.153",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3153"/);
+ assert.match(worker,/VERSION="V3.154",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3154"/);
 });
 
 test('V3.152 artifact action count and drag touch behavior are bounded',()=>{

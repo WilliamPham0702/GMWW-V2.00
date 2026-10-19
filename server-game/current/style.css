@@ -5995,6 +5995,8 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
  }
 }
 
+.play-player-avatar:has(.gmww40-character){animation:none!important;transform:none!important}
+
 /* V3.152: GM-only Artifact name under the character, never a card thumbnail. */
 #start .play-player-token .play-player-artifact{
   position:absolute!important;left:50%!important;top:calc(100% + 2px)!important;

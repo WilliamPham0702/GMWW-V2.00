@@ -1,0 +1,26 @@
+name: Check Character40 Live Integration
+on:
+  pull_request:
+    branches: [main]
+    paths: ['assets/characters/gmww40/**','assets/village/character40-renderer.mjs','server-game/shared/character40-adapter.js','tests/character40-live.test.mjs','.github/scripts/check-character40-live.mjs','.github/workflows/check-character40-live.yml']
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verify actual Worker APIs and live renderer adapters
+        run: |
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/character40-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID"; cat /tmp/character40-worker.log' EXIT
+          for n in $(seq 1 30); do curl -fsS http://127.0.0.1:8787/api/health > /dev/null && break; sleep 1; done
+          xvfb-run -a node .github/scripts/check-character40-live.mjs
