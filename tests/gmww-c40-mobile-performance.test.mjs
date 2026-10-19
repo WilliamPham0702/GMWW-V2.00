@@ -73,3 +73,16 @@ test('idle Canvas frames do not repaint repeatedly, and hidden pages suspend ani
   step(210);
   assert.ok(draws.length>=2,'walking should render a new frame');
 });
+
+test('Player Web roaming avoids 30-second seated pauses and packaged source drift',()=>{
+  const parts=[
+    '00-bootstrap-and-session.part','10-role-card-artwork.part',
+    '20-village-and-profile.part','30-rooms-and-realtime.part',
+    '40-cards-and-game.part','50-privacy-and-runtime.part'
+  ].map(name=>read('src/player-web-src/'+name)).join('');
+  const bundled=read('src/gmww-members-live.js');
+  assert.equal(bundled,'export const gmwwMembersLiveScript = '+JSON.stringify(parts)+';\\n');
+  assert.match(parts,/const LOBBY_MOTION_HOLD_MS=1400;/);
+  assert.doesNotMatch(parts,/ngồi 30 giây/);
+  assert.doesNotMatch(parts,/autoMotionPhase:state\.lobbyMotionPhase==='gather'\?'gather':'roam'/);
+});
