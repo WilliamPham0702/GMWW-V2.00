@@ -5996,3 +5996,63 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 }
 
 .play-player-avatar:has(.gmww40-character){animation:none!important;transform:none!important}
+
+/* V3.152: GM-only Artifact name under the character, never a card thumbnail. */
+#start .play-player-token .play-player-artifact{
+  position:absolute!important;left:50%!important;top:calc(100% + 2px)!important;
+  transform:translateX(-50%)!important;width:max-content!important;height:auto!important;
+  min-width:0!important;max-width:138px!important;padding:3px 6px!important;
+  border:1px solid #f8d892!important;border-radius:6px!important;
+  background:#142935!important;color:#ffe4a1!important;font-size:10px!important;
+  font-weight:800!important;line-height:1.2!important;text-align:center!important;
+  white-space:normal!important;overflow-wrap:anywhere!important;overflow:visible!important;
+  text-shadow:0 1px 2px #000!important;pointer-events:none!important;
+}
+#start .play-player-token .play-player-artifact::before{content:none!important}
+/* Action buttons capture drag gestures; unoccupied tray can still scroll horizontally. */
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{
+  touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
+}
+
+/* V3.153 candidate: exactly one horizontal action row. Arrows scroll the tray;
+   drag starts on the action buttons, so touch drag never steals tray navigation. */
+#start #playShell[data-step="battle"] #battleActionRail.battle-action-rail{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;gap:3px!important;min-width:0!important;width:100%!important;
+}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow{
+  flex:0 0 24px!important;min-width:24px!important;width:24px!important;height:40px!important;
+  padding:0!important;margin:0!important;border-radius:8px!important;
+  color:#c5f7ff!important;background:#14526a!important;border:1px solid #7ac6db!important;
+  font-size:26px!important;line-height:1!important;touch-action:manipulation!important;
+}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow:disabled{opacity:.32!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll{
+  flex:1 1 auto!important;min-width:0!important;width:100%!important;max-width:100%!important;
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  overflow-x:auto!important;overflow-y:hidden!important;touch-action:none!important;
+  scroll-snap-type:x proximity!important;scrollbar-width:none!important;
+  align-self:center!important;align-items:center!important;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll::-webkit-scrollbar{display:none!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{
+  flex:0 0 auto!important;min-height:40px!important;max-width:230px!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
+}
+/* GM-only Artifact name: exactly two graphemes; swipe the label to cycle through
+   the full text without overlapping neighboring seats or moving the player. */
+#start .play-player-token .play-player-artifact{
+  width:calc(2em + 6px)!important;max-width:calc(2em + 6px)!important;min-width:0!important;
+  box-sizing:border-box!important;padding:3px 2px!important;height:auto!important;
+  white-space:nowrap!important;overflow:hidden!important;pointer-events:auto!important;
+  font-size:10px!important;touch-action:none!important;
+}
+#start .play-player-token .play-player-artifact .play-player-artifact-text{
+  display:block!important;width:2em!important;max-width:2em!important;min-width:0!important;
+  white-space:nowrap!important;overflow-x:hidden!important;overflow-y:hidden!important;
+  overflow-wrap:normal!important;scrollbar-width:none!important;touch-action:none!important;
+  overscroll-behavior-x:contain!important;
+}
+#start .play-player-token .play-player-artifact .play-player-artifact-text::-webkit-scrollbar{display:none!important}

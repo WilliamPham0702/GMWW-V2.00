@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.152</title>
-<link rel="stylesheet" href="style.css?v=3.152-compact-room">
+<title>GMWW V3.154</title>
+<link rel="stylesheet" href="style.css?v=3.154-compact-room">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -251,7 +251,11 @@
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
-          <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, cuộn ngang"></div>
+          <div id="battleActionRail" class="battle-action-rail" role="group" aria-label="Hành động một hàng, điều hướng bằng mũi tên">
+            <button id="battleActionPrevious" class="battle-action-arrow" type="button" aria-label="Xem hành động phía trước" hidden>‹</button>
+            <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, kéo nút lên người chơi"></div>
+            <button id="battleActionNext" class="battle-action-arrow" type="button" aria-label="Xem hành động phía sau" hidden>›</button>
+          </div>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
@@ -800,16 +804,16 @@
   <div class="sheet-card play-roster-sheet-card">
     <div class="sheet-head"><div><h3>Chọn Thành Viên</h3><small id="playRosterRoomLabel">Phòng —</small></div><button id="playRosterClose" type="button">×</button></div>
     <div class="play-roster-toolbar"><span id="playRosterCount">0 đã chọn</span><button id="playRosterSelectAll" type="button">Chọn tất cả</button></div>
+    <div class="button-row play-roster-actions">
+      <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
+      <button class="primary" id="playRosterSave" type="button">XÁC NHẬN THÀNH VIÊN</button>
+    </div>
     <div class="play-roster-filters" id="playRosterFilters" role="group" aria-label="Lọc thành viên theo trạng thái">
       <button type="button" class="active" data-play-roster-filter="all" aria-pressed="true">Tất cả</button>
       <button type="button" data-play-roster-filter="online" aria-pressed="false">Online</button>
       <button type="button" data-play-roster-filter="offline" aria-pressed="false">Offline</button>
     </div>
     <div class="play-roster-list" id="playRosterList"></div>
-    <div class="button-row play-roster-actions">
-      <button class="secondary" id="playRosterCancel" type="button">Hủy</button>
-      <button class="primary" id="playRosterSave" type="button">XÁC NHẬN THÀNH VIÊN</button>
-    </div>
   </div>
 </div>
 
@@ -897,10 +901,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1"></script>
-<script src="battle-controls.js?v=3.152-timeline"></script>
+<script src="battle-controls.js?v=3.154-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.152-compact-room&status=4"></script>
+<script src="app.js?v=3.154-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

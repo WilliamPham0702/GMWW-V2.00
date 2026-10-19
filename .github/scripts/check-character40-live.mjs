@@ -2,8 +2,14 @@ import {chromium,webkit} from 'playwright';
 import assert from 'node:assert/strict';
 const base='http://127.0.0.1:8787';
 for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
- const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
- page.on('pageerror',e=>{errors.push(e.message);console.error(name+' pageerror: '+e.stack)});await page.goto(base+'/village/?embed=1');
+ const browser=await browserType.launch({headless:false}),page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
+ page.on('pageerror',e=>{errors.push(e.message);console.error(name+' pageerror: '+e.stack)});
+ await page.setContent('<!doctype html><p>Native frame scheduling control</p>');
+ await page.evaluate(()=>{window.__nativeFrames=0;const frame=()=>{window.__nativeFrames++;requestAnimationFrame(frame)};requestAnimationFrame(frame)});
+ await page.waitForTimeout(1000);
+ const nativeFrames=await page.evaluate(()=>window.__nativeFrames);console.log(name+' blank page native frames: '+nativeFrames);
+ assert.ok(nativeFrames>1,name+' browser environment must deliver native animation frames before testing product');
+ await page.goto(base+'/village/?embed=1');
  await page.evaluate(async()=>{
   const renderer=await import('/village/character40-renderer.mjs?v=c40-1');
   const catalog=await (await fetch('/api/game-characters')).json();if(catalog.count!==40)throw Error('Live API must expose 40 characters');

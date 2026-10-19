@@ -611,7 +611,11 @@ async function savePlayRosterIds(ids){
   }catch(err){playFlashError(err.message)}
   finally{playSetBusy(false);if(save)save.disabled=false}
 }
-async function savePlayRoster(){return savePlayRosterIds(playRosterSelectedIds())}
+async function savePlayRoster(){
+  // A single tap submits the current selection, including Select All.
+  // savePlayRosterIds owns busy/validation and only commits after Server ACK.
+  return savePlayRosterIds(playRosterSelectedIds());
+}
 
 function playApplyLobbyStage(generation){
   playSceneRuntime.syncSerial++;
