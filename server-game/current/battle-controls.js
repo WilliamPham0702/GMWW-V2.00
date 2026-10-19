@@ -79,7 +79,7 @@
           actorIds,noTarget:true,targetCount:0,artifactId:String(id),artifactName:String(owner.artifactName||chosen?.name||"Artifact"),
           unavailable:true,unavailableReason:reason}];
       }
-      return eligible.map((fn,i)=>{
+      return (isArt?eligible.slice(0,1):eligible).map((fn,i)=>{
         const actionCatalog=Array.isArray(definitions)?definitions:(isArt?definitions.artifacts:definitions.role)||[];
         const actionId=String(fn?.actionId||fn?.id||""),
           definition=actionCatalog.find(a=>String(a?.id||"")===actionId),
