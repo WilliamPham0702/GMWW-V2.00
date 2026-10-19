@@ -24,7 +24,7 @@ test('V3.151 LƯU Phân Vai commits GM deal stage before closing draft and never
 test('V3.152 GM artifact is a text label under its own character, not leaked to Player Web',()=>{
   assert.match(setup,/play-player-artifact/);
   assert.match(setup,/assignment\?\.artifactId&&playSceneState\.artifactsEnabled/);
-  assert.match(setup,/resolveArtwork\('artifacts',id,'thumb'\)/);
+  assert.doesNotMatch(setup,/resolveArtwork\('artifacts',id,'thumb'\)/);
   assert.match(css,/\.play-player-token \.play-player-artifact\{/);
   assert.match(css,/top:calc\(100% \+ 2px\)/);
 });
