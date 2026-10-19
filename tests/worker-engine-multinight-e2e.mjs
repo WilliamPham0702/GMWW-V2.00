@@ -89,7 +89,8 @@ try{
  await jump('wolf');ok(await action('wolf','effect_notice','action_wolf_bite',['witch']));
  await jump('fairy');ok(await action('fairy','effect_notice','action_transfer_bite',['witch'],{direction:'left'}));
  await manual('seer','expelled');await jump('seer');
- assert.equal((await action('seer','effect_notice','inspect',['guard'])).error,'ACTOR_CANNOT_ACT');
+ // Expulsion does not bypass the action's normal nightly usage limit.
+ assert.equal((await action('seer','effect_notice','inspect',['guard'])).error,'ACTION_NIGHT_LIMIT_REACHED');
  const dawn=await cycle('morning',1);
  // Seat 5 (witch) -> seat 6 (alpha) via visual LEFT, after inverted arrow correction; Guard on old target does not prevent death.
  s=await state();assert.equal(active(s,'alpha','dead').length,1);assert.equal(active(s,'witch','dead').length,0);
@@ -99,7 +100,7 @@ try{
  await observed(gmEvents,x=>x.type==='room_cycle'&&x.night===1&&x.phase==='morning');
  await observed(playerEvents,x=>x.type==='room_cycle'&&x.night===1&&x.phase==='morning');
  assert.equal((await me('alpha')).effects.filter(x=>x.type==='dead').length,1);
- checks.push('freeze/expel block; Guard-Wolf-Fairy precedence; dawn idempotency; GM/Player realtime');
+ checks.push('freeze blocks, expulsion retains quotas; Guard-Wolf-Fairy precedence; dawn idempotency; GM/Player realtime');
  await cycle('night',2);s=await state();
  assert.equal(s.nightRuntime.queue.some(x=>x.kind==='wolf-introduction'),false);
  assert.equal(s.nightRuntime.queue.find(x=>x.kind==='early-artifact-window').actions.length,0,'single-use Artifact removed next night');
