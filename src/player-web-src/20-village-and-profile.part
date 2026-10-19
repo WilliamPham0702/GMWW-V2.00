@@ -282,8 +282,8 @@ async function loadGameCharacters(){
 }
 function gameCharacterFrameUrl(id,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return '/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-2'}
 function gameCharacterImageUrl(id){return gameCharacterFrameUrl(id,1)}
-function ensureCharacterPreviewTicker(){if(state.characterPreviewTimer)return;state.characterPreviewTimer=setInterval(()=>{const frame=(Math.floor(performance.now()/115)%6)+1;$$('img[data-gmww-walk-character]').forEach(img=>{const id=img.dataset.gmwwWalkCharacter;if(!id)return;const key=id+':c40-1';if(img.dataset.gmwwWalkFrame===key)return;img.dataset.gmwwWalkFrame=key;img.src=gameCharacterFrameUrl(id,frame)})},90)}
-const LOBBY_MOTION_HOLD_MS=30000;
+function ensureCharacterPreviewTicker(){if(state.characterPreviewTimer)return;state.characterPreviewTimer=setInterval(()=>{const frame=(Math.floor(performance.now()/115)%6)+1;$$('img[data-gmww-walk-character]').forEach(img=>{const id=img.dataset.gmwwWalkCharacter;if(!id)return;const key=id+':c40-1';if(img.dataset.gmwwWalkFrame===key)return;img.dataset.gmwwWalkFrame=key;img.src=gameCharacterFrameUrl(id,frame)})},1200)}
+const LOBBY_MOTION_HOLD_MS=1400;
 function lobbyMotionEnabled(){return state.member?.lobbyMotionEnabled!==false}
 function currentVillageLobbyPlayer(){const id='member:'+String(state.member?.loginId||'');return state.lobbyPlayers.find(p=>String(p?.participantId||'')===id)||null}
 function currentLobbyMotionPlayer(){return state.roomCode?currentRoomPlayer():currentVillageLobbyPlayer()}
@@ -309,10 +309,10 @@ async function performLobbyAutoMove(point){
   try{
     if(state.roomCode){
       const p=currentRoomPlayer();if(!p||p.movementStatus==='moving'||p.seatId)return false;
-      const origin=movementViewerPosition(),d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),fromX:origin.x,fromY:origin.y,autoMotionPhase:state.lobbyMotionPhase==='gather'?'gather':'roam'})});
+      const origin=movementViewerPosition(),d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),fromX:origin.x,fromY:origin.y,autoMotionPhase:'roam'})});
       if(d?.room)state.room=d.room;if(Array.isArray(d?.players))state.players=d.players;syncVillageFrame();scheduleMovementCompletion(currentRoomPlayer());return true
     }
-    const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),autoMotionPhase:state.lobbyMotionPhase==='gather'?'gather':'roam'})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return true
+    const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),autoMotionPhase:'roam'})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return true
   }catch(e){console.warn('[GMWW lobby motion]',e);return false}
 }
 async function runLobbyMotionStep(){
@@ -333,7 +333,7 @@ async function runLobbyMotionStep(){
 }
 function ensureLobbyMotionToggle(){
   const profile=$('#profile');if(!profile||!state.member)return null;let row=$('#profileLobbyMotionRow');
-  if(!row){row=document.createElement('div');row.id='profileLobbyMotionRow';row.innerHTML='<div class="motion-copy"><b>Di chuyển trong sảnh</b><small>Tự đi ngẫu nhiên trong Làng, dừng lại, ngồi 30 giây rồi đứng dậy đi tới điểm khác.</small></div><button id="profileLobbyMotionToggle" type="button" role="switch" aria-label="Di chuyển trong sảnh"></button>';const anchor=profile.querySelector('.section-title')||profile.querySelector('.history-fold');if(anchor)anchor.parentNode.insertBefore(row,anchor);else profile.appendChild(row);row.querySelector('button').onclick=()=>setLobbyMotionEnabled(!lobbyMotionEnabled())}
+  if(!row){row=document.createElement('div');row.id='profileLobbyMotionRow';row.innerHTML='<div class="motion-copy"><b>Di chuyển trong sảnh</b><small>Tự đi ngẫu nhiên trong Làng, dừng một lát rồi tiếp tục di chuyển. Không ngồi.</small></div><button id="profileLobbyMotionToggle" type="button" role="switch" aria-label="Di chuyển trong sảnh"></button>';const anchor=profile.querySelector('.section-title')||profile.querySelector('.history-fold');if(anchor)anchor.parentNode.insertBefore(row,anchor);else profile.appendChild(row);row.querySelector('button').onclick=()=>setLobbyMotionEnabled(!lobbyMotionEnabled())}
   const toggle=row.querySelector('button'),enabled=lobbyMotionEnabled();if(toggle){toggle.setAttribute('aria-checked',enabled?'true':'false');toggle.title=enabled?'Đang bật':'Đang tắt'}return row
 }
 async function setLobbyMotionEnabled(enabled){

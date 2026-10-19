@@ -4,7 +4,7 @@ const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
 import {startVillagePerformanceReporter} from "./village-performance.mjs";
-import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character40-renderer.mjs?v=c40-1";
+import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character40-renderer.mjs?v=c40-1-mobile2";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count,shape="",offset=null,spacing=100){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count,shape,offset,spacing)}
