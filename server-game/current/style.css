@@ -5994,3 +5994,5 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
    animation:none!important;box-shadow:0 0 0 2px #061b2c,0 0 12px #fff!important;
  }
 }
+
+.play-player-avatar:has(.gmww40-character){animation:none!important;transform:none!important}

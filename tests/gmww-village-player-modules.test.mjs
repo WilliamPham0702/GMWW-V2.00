@@ -5,7 +5,7 @@ import {normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normaliz
 import {normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer,ROOM_PLAYER_TTL} from '../src/gmww-village-player-state.js';
 
 test('G3.6: preserve 42-game-character aliases, seeded legacy choice and body scale',()=>{
-  assert.equal(GAME_CHARACTER_COUNT,20);
+  assert.equal(GAME_CHARACTER_COUNT,40);
   assert.equal(normalizeGameCharacterId(' character-42 '),'character-42');
   assert.equal(normalizeGameCharacterId('character-43'),'');
   assert.equal(normalizeGameCharacterId('wolf'),'');

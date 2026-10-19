@@ -21,10 +21,11 @@ test('left walking uses raster assets and never runtime scaleX paper flipping',(
   const worker=read('src/index.js'),village=read('assets/village/village.mjs'),css=read('assets/village/village.css'),app=read('server-game/current/app.js');
   assert.ok(worker.includes('walk-v266-left'));
   assert.ok(worker.includes('u.searchParams.get("dir")==="left"'));
-  assert.ok(village.includes('?dir=left'));
+  assert.ok(village.includes('dir=left'));
   assert.ok(village.includes('function walkDirection(data)'));
   assert.doesNotMatch(css,/scaleX\(-1\)/);
-  assert.ok(app.includes("folder=direction==='left'?'walk-v266-left':'walk-v263'"));
+  assert.ok(app.includes('window.GMWW_SHARED_MOTION'));
+  assert.match(read('assets/characters/gmww40/runtime.js'),/row=\(run\?4:2\)\+\(s.facing==='left'\?1:0\)/);
 });
 
 test('wide desktop fits the entire village and camera moves artwork with actors',()=>{

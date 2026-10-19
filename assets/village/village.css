@@ -472,3 +472,6 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* V3.149: ballot labels sit above status/name/role without moving character rigs. */
 .player .player-over .gmww-gallows-vote{display:block;position:static!important;flex:none;font-size:21px;line-height:1.15;padding:2px 6px;border-radius:12px;background:rgba(5,39,55,.94);border:1px solid rgba(234,244,255,.9);box-shadow:0 2px 8px #0008;white-space:nowrap;pointer-events:none}
+
+/* Accepted full-frame motion owns the artwork; scene coordinates and effect overlays stay independent. */
+.player .portrait:has(.gmww40-character){animation:none!important;transform:none!important}

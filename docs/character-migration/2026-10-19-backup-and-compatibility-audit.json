@@ -1,0 +1,2073 @@
+{
+  "schemaVersion": 1,
+  "status": "backup-and-audit-only",
+  "baseline": {
+    "commit": "049373d4ba94c4efab61822de67766096808765e",
+    "version": "3.150",
+    "gitTree": "049373d4ba94c4efab61822de67766096808765e",
+    "backupBranch": "backup/characters-before-40-replacement-20261019-049373d4",
+    "scope": "Tracked repository files only; no live Durable Object or account data export performed",
+    "restoreTested": false
+  },
+  "sourceCharacter": "character-15",
+  "allowedActions": [
+    "idle",
+    "walk",
+    "run",
+    "turn"
+  ],
+  "approvedArtwork": [
+    {
+      "characterId": "character-01",
+      "artworkFile": "GMWW-CHAR-001.png",
+      "libraryFileId": "libfile_e234c418e7c88191b5a5d978ede9e57e",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-001.png",
+      "sizeBytes": 307716,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-02",
+      "artworkFile": "GMWW-CHAR-002.png",
+      "libraryFileId": "libfile_5d5e443a96688191a6066b0c62c11865",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-002.png",
+      "sizeBytes": 428898,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-03",
+      "artworkFile": "GMWW-CHAR-003.png",
+      "libraryFileId": "libfile_d230dd8a33dc81919106794272d696c5",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-003.png",
+      "sizeBytes": 373906,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-04",
+      "artworkFile": "GMWW-CHAR-004.png",
+      "libraryFileId": "libfile_29c22615a6748191aec0499685a8d944",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-004.png",
+      "sizeBytes": 422869,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-05",
+      "artworkFile": "GMWW-CHAR-005.png",
+      "libraryFileId": "libfile_a29d6cdd80f881918e62fdf0e748b3b7",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-005.png",
+      "sizeBytes": 335118,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-06",
+      "artworkFile": "GMWW-CHAR-006.png",
+      "libraryFileId": "libfile_454c072801f48191aa9382489e198ce7",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-006.png",
+      "sizeBytes": 388846,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-07",
+      "artworkFile": "GMWW-CHAR-007.png",
+      "libraryFileId": "libfile_f3136d12ad8c8191849cdeec23527e73",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-007.png",
+      "sizeBytes": 297632,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-08",
+      "artworkFile": "GMWW-CHAR-008.png",
+      "libraryFileId": "libfile_9a1d972162fc8191bb6d692c1ceb0434",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-008.png",
+      "sizeBytes": 369783,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-09",
+      "artworkFile": "GMWW-CHAR-009.png",
+      "libraryFileId": "libfile_15ce24547d908191bb5b0569a31db83e",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-009.png",
+      "sizeBytes": 347882,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-10",
+      "artworkFile": "GMWW-CHAR-010.png",
+      "libraryFileId": "libfile_bfb97bfb05b8819184ac76fa51cb9ea3",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-010.png",
+      "sizeBytes": 442017,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-11",
+      "artworkFile": "GMWW-CHAR-011.png",
+      "libraryFileId": "libfile_4debf71f607c81918f06e77ccb8d7dec",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-011.png",
+      "sizeBytes": 1983630,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-12",
+      "artworkFile": "GMWW-CHAR-012.png",
+      "libraryFileId": "libfile_caa644d06cec8191aa93358192c9d434",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-012.png",
+      "sizeBytes": 2068999,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-13",
+      "artworkFile": "GMWW-CHAR-013.png",
+      "libraryFileId": "libfile_965d711a6e0c8191afd3420865d7a3bd",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-013.png",
+      "sizeBytes": 2214614,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-14",
+      "artworkFile": "GMWW-CHAR-014.png",
+      "libraryFileId": "libfile_1cffc3cf619c8191867dd30ac97825f5",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-014.png",
+      "sizeBytes": 2244251,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-15",
+      "artworkFile": "GMWW-CHAR-015.png",
+      "libraryFileId": "libfile_f8af990ca0988191b1bb99af743f2ee5",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-015.png",
+      "sizeBytes": 2084604,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-16",
+      "artworkFile": "GMWW-CHAR-016.png",
+      "libraryFileId": "libfile_c6f558c29c308191954995a5f956e336",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-016.png",
+      "sizeBytes": 2252516,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-17",
+      "artworkFile": "GMWW-CHAR-017.png",
+      "libraryFileId": "libfile_d8c6e1ae0c5c81918573def9afc4a83a",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-017.png",
+      "sizeBytes": 2054037,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-18",
+      "artworkFile": "GMWW-CHAR-018.png",
+      "libraryFileId": "libfile_5e7d7754bddc819188fd57ae5a973bdd",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-018.png",
+      "sizeBytes": 1984766,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-19",
+      "artworkFile": "GMWW-CHAR-019.png",
+      "libraryFileId": "libfile_b97e6335125c81918be5b383bfe216f2",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-019.png",
+      "sizeBytes": 1819458,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-20",
+      "artworkFile": "GMWW-CHAR-020.png",
+      "libraryFileId": "libfile_026942e169d88191842072eec136ccfa",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-020.png",
+      "sizeBytes": 2122947,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-21",
+      "artworkFile": "GMWW-CHAR-021.png",
+      "libraryFileId": "libfile_5c499490b67c8191b1875ae32e13df2e",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-021.png",
+      "sizeBytes": 2182112,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-22",
+      "artworkFile": "GMWW-CHAR-022.png",
+      "libraryFileId": "libfile_2cd54ca5bca08191af8e7055a647007e",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-022.png",
+      "sizeBytes": 1923773,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-23",
+      "artworkFile": "GMWW-CHAR-023.png",
+      "libraryFileId": "libfile_e4645c9c93d8819192dbed86ff2ddafc",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-023.png",
+      "sizeBytes": 1766118,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-24",
+      "artworkFile": "GMWW-CHAR-024.png",
+      "libraryFileId": "libfile_13dbfa71bc90819194632ead2769fb1e",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-024.png",
+      "sizeBytes": 2049855,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-25",
+      "artworkFile": "GMWW-CHAR-025.png",
+      "libraryFileId": "libfile_4c03d01bacc48191b97017ab879861e2",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-025.png",
+      "sizeBytes": 1849389,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-26",
+      "artworkFile": "GMWW-CHAR-026.png",
+      "libraryFileId": "libfile_7e266dbe93c88191a23757f98062d755",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-026.png",
+      "sizeBytes": 2023226,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-27",
+      "artworkFile": "GMWW-CHAR-027.png",
+      "libraryFileId": "libfile_3bd9ca18af108191a5c63dc6e476f70d",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-027.png",
+      "sizeBytes": 1922212,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-28",
+      "artworkFile": "GMWW-CHAR-028.png",
+      "libraryFileId": "libfile_fbeffbbeec408191a1c19aff702f13c7",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-028.png",
+      "sizeBytes": 2095012,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-29",
+      "artworkFile": "GMWW-CHAR-029.png",
+      "libraryFileId": "libfile_2f2ebe7fff6c8191ac99543662e60e9a",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-029.png",
+      "sizeBytes": 2560455,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-30",
+      "artworkFile": "GMWW-CHAR-030.png",
+      "libraryFileId": "libfile_f51294a5d3148191aa414c107f33225d",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-030.png",
+      "sizeBytes": 2157625,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-31",
+      "artworkFile": "GMWW-CHAR-031.png",
+      "libraryFileId": "libfile_8a1477a0ebf4819196e0cd3dd8a192b1",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-031.png",
+      "sizeBytes": 2041440,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-32",
+      "artworkFile": "GMWW-CHAR-032.png",
+      "libraryFileId": "libfile_29a1c392bb3081919583c3c3525eb6bb",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-032.png",
+      "sizeBytes": 2182323,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-33",
+      "artworkFile": "GMWW-CHAR-033.png",
+      "libraryFileId": "libfile_b1cd1601df608191a2c04f65c406207f",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-033.png",
+      "sizeBytes": 2229128,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-34",
+      "artworkFile": "GMWW-CHAR-034.png",
+      "libraryFileId": "libfile_3642cd5b6958819195941f66645db2ba",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-034.png",
+      "sizeBytes": 2279505,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-35",
+      "artworkFile": "GMWW-CHAR-035.png",
+      "libraryFileId": "libfile_b3f07c3467288191ac3ac2adfb29f5fb",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-035.png",
+      "sizeBytes": 1800567,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-36",
+      "artworkFile": "GMWW-CHAR-036.png",
+      "libraryFileId": "libfile_cde820bff094819180a2715adf73e47b",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-036.png",
+      "sizeBytes": 2005507,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-37",
+      "artworkFile": "GMWW-CHAR-037.png",
+      "libraryFileId": "libfile_6ed08ff539408191bef49ed274419221",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-037.png",
+      "sizeBytes": 1936508,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-38",
+      "artworkFile": "GMWW-CHAR-038.png",
+      "libraryFileId": "libfile_3cc6a475bad081918ad18fc4171e1900",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-038.png",
+      "sizeBytes": 2157295,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-39",
+      "artworkFile": "GMWW-CHAR-039.png",
+      "libraryFileId": "libfile_57d6e32c30808191a9db97c074c28d42",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-039.png",
+      "sizeBytes": 2196859,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    },
+    {
+      "characterId": "character-40",
+      "artworkFile": "GMWW-CHAR-040.png",
+      "libraryFileId": "libfile_8897528642488191bf3cd950e3d77bfa",
+      "libraryPath": "/GMWW-V2-ASSETS/CHARACTER/GMWW-CHAR-040.png",
+      "sizeBytes": 2242124,
+      "motionReadiness": "requires-character-specific-rig-or-directional-frames",
+      "releaseEnabled": false
+    }
+  ],
+  "preservedAssets": [
+    {
+      "path": "assets/characters/seated-v295/character-02/front.webp",
+      "gitBlobSha": "861f87a7624436c9dc18e15e423ed2834946a35e",
+      "sizeBytes": 7500
+    },
+    {
+      "path": "assets/characters/seated-v296/character-02/front.webp",
+      "gitBlobSha": "1eb7386407300b45bc1a3c8156ee9dcb46a02d94",
+      "sizeBytes": 13840
+    },
+    {
+      "path": "assets/characters/seated-v296/character-03/front.webp",
+      "gitBlobSha": "23eff4630f833d39292e93c4dc34132bde35206d",
+      "sizeBytes": 7506
+    },
+    {
+      "path": "assets/characters/seated-v297/character-03/front.webp",
+      "gitBlobSha": "43e4b30c5af77549f6d049e7406ce34aeda99daf",
+      "sizeBytes": 6742
+    },
+    {
+      "path": "assets/characters/seated-v298/character-04/front.svg",
+      "gitBlobSha": "cd43a12ed93012b128d499caddfa3d10ef67e63d",
+      "sizeBytes": 1074
+    },
+    {
+      "path": "assets/characters/seated-v299/character-04/front.svg",
+      "gitBlobSha": "cac295cc9e20b23de7a3937dbe06d0a5c37aab76",
+      "sizeBytes": 36382
+    },
+    {
+      "path": "assets/characters/seated-v300/character-04/front.webp",
+      "gitBlobSha": "01e82259f46c6c6e95ea268d38acb43e91cdd954",
+      "sizeBytes": 12780
+    },
+    {
+      "path": "assets/characters/v253/chibi-01.webp",
+      "gitBlobSha": "996ca6c6a7e37c00eaa130246569fc16b43d59a1",
+      "sizeBytes": 24284
+    },
+    {
+      "path": "assets/characters/v253/chibi-02.webp",
+      "gitBlobSha": "e1e7ed33719c02f5d63ebdc79a080ed40f297228",
+      "sizeBytes": 23190
+    },
+    {
+      "path": "assets/characters/v253/chibi-03.webp",
+      "gitBlobSha": "09731c71329c7a1181ae8ca37178a24b9d6dbc21",
+      "sizeBytes": 29210
+    },
+    {
+      "path": "assets/characters/v253/chibi-04.webp",
+      "gitBlobSha": "c541b5881f70fa4cf6c437b4b2610db53ae2d7a3",
+      "sizeBytes": 22472
+    },
+    {
+      "path": "assets/characters/v253/chibi-05.webp",
+      "gitBlobSha": "542141b0bdf8d4b0e184ec6806e058d2cbfbdfcb",
+      "sizeBytes": 24428
+    },
+    {
+      "path": "assets/characters/v253/chibi-06.webp",
+      "gitBlobSha": "9b6d0affe294bdcd1a6a721287a309b9638ce1c4",
+      "sizeBytes": 26588
+    },
+    {
+      "path": "assets/characters/v253/chibi-07.webp",
+      "gitBlobSha": "513b28a85f7fc87a75b751c8978c3a300f27e89b",
+      "sizeBytes": 20260
+    },
+    {
+      "path": "assets/characters/v253/chibi-08.webp",
+      "gitBlobSha": "eb4ca5ea39e5f0781e8eef7c6d99d5bd50266e49",
+      "sizeBytes": 25100
+    },
+    {
+      "path": "assets/characters/v253/chibi-09.webp",
+      "gitBlobSha": "d13d80a9b697ec58e57fc7869197d8627c72438b",
+      "sizeBytes": 20430
+    },
+    {
+      "path": "assets/characters/v253/chibi-10.webp",
+      "gitBlobSha": "cf699b4ec0dcac1fb8bdba577cfee08cfe968bd1",
+      "sizeBytes": 24696
+    },
+    {
+      "path": "assets/characters/v253/chibi-11.webp",
+      "gitBlobSha": "66410a2a0b7266e2d73ea996d4d26350fd3d409b",
+      "sizeBytes": 28322
+    },
+    {
+      "path": "assets/characters/v253/chibi-12.webp",
+      "gitBlobSha": "73838092011b9dfcd38c0414817536d28b4489bb",
+      "sizeBytes": 22584
+    },
+    {
+      "path": "assets/characters/v253/chibi-13.webp",
+      "gitBlobSha": "c590f549920f19504b424a8584a396aa2a0ac9fc",
+      "sizeBytes": 41060
+    },
+    {
+      "path": "assets/characters/v253/chibi-14.webp",
+      "gitBlobSha": "ea256460f917c25e858bf654f2fb9c93a787be8e",
+      "sizeBytes": 29568
+    },
+    {
+      "path": "assets/characters/v253/chibi-15.webp",
+      "gitBlobSha": "ff8a97ad4382588addf7bd1bb38552b1888bf43a",
+      "sizeBytes": 46034
+    },
+    {
+      "path": "assets/characters/v253/chibi-16.webp",
+      "gitBlobSha": "68d9bf04c230aeac0698ccfb71d92b8cd1dfdc2e",
+      "sizeBytes": 41738
+    },
+    {
+      "path": "assets/characters/v253/chibi-17.webp",
+      "gitBlobSha": "2041c412c3d808c23da43fdcdcfbb047443b5238",
+      "sizeBytes": 39590
+    },
+    {
+      "path": "assets/characters/v253/chibi-18.webp",
+      "gitBlobSha": "badf014d6cef5bd822a2f6b224335e32d19de510",
+      "sizeBytes": 45030
+    },
+    {
+      "path": "assets/characters/v253/chibi-19.webp",
+      "gitBlobSha": "1ee5cf5d873c9b9fbe832dbd643c12b83f3d557d",
+      "sizeBytes": 41596
+    },
+    {
+      "path": "assets/characters/v253/chibi-20.webp",
+      "gitBlobSha": "1d8c93e4df815982b2bac825b9a3089f96212ef1",
+      "sizeBytes": 31810
+    },
+    {
+      "path": "assets/characters/v253/chibi-21.webp",
+      "gitBlobSha": "1319708e2cda9bcd39b18f320838bd7568fda08a",
+      "sizeBytes": 39632
+    },
+    {
+      "path": "assets/characters/v253/chibi-22.webp",
+      "gitBlobSha": "04ffa93a3d512c574151ff0e5f2f8606403710f1",
+      "sizeBytes": 43468
+    },
+    {
+      "path": "assets/characters/v253/chibi-23.webp",
+      "gitBlobSha": "55aae8381acd1faa3fe87c3a9e2768460e987cbf",
+      "sizeBytes": 41610
+    },
+    {
+      "path": "assets/characters/v253/chibi-24.webp",
+      "gitBlobSha": "967fea963d8eb5747b16347181266b4310789224",
+      "sizeBytes": 48576
+    },
+    {
+      "path": "assets/characters/v253/chibi-25.webp",
+      "gitBlobSha": "3d2db1c99728df615a911b1509b257269d44b884",
+      "sizeBytes": 39290
+    },
+    {
+      "path": "assets/characters/v253/chibi-26.webp",
+      "gitBlobSha": "3661083f0465ee14ca794916150b324cef147f46",
+      "sizeBytes": 44364
+    },
+    {
+      "path": "assets/characters/v253/chibi-27.webp",
+      "gitBlobSha": "e23a55983161be2fe392894d45a4c23d17a9332b",
+      "sizeBytes": 43138
+    },
+    {
+      "path": "assets/characters/v253/chibi-28.webp",
+      "gitBlobSha": "129fdc17ce9b16d1cc6f0781d1df93a7ce639ddf",
+      "sizeBytes": 43154
+    },
+    {
+      "path": "assets/characters/v253/chibi-29.webp",
+      "gitBlobSha": "1724d3dc52bbd5eb3b660d73c430142139517454",
+      "sizeBytes": 46762
+    },
+    {
+      "path": "assets/characters/v253/chibi-30.webp",
+      "gitBlobSha": "5fa974e87bc3bb2c76e20363b3ad1e9928b61ff6",
+      "sizeBytes": 46210
+    },
+    {
+      "path": "assets/characters/v253/chibi-31.webp",
+      "gitBlobSha": "5a51715f8c582bb2f493d59badf0e3bd73816791",
+      "sizeBytes": 31832
+    },
+    {
+      "path": "assets/characters/v253/chibi-32.webp",
+      "gitBlobSha": "1452d89105a69cd7e3ce58541c1ba8148c6569a2",
+      "sizeBytes": 30548
+    },
+    {
+      "path": "assets/characters/v253/chibi-33.webp",
+      "gitBlobSha": "a8a9220d7d04a25d5aa7c54d20f8d17039f65bd4",
+      "sizeBytes": 38440
+    },
+    {
+      "path": "assets/characters/v253/chibi-34.webp",
+      "gitBlobSha": "bba41867231e7fad4db66c7ac662874fdf48f5dc",
+      "sizeBytes": 27922
+    },
+    {
+      "path": "assets/characters/v253/chibi-35.webp",
+      "gitBlobSha": "21c90acc1becddddb7bc4ef375b7a9e3fb503bff",
+      "sizeBytes": 30304
+    },
+    {
+      "path": "assets/characters/v253/chibi-36.webp",
+      "gitBlobSha": "bf03e9ea925361c09a78ddc70a142c2dedebd899",
+      "sizeBytes": 34552
+    },
+    {
+      "path": "assets/characters/v253/chibi-37.webp",
+      "gitBlobSha": "d2f2a2eb3c7bb4ac4c35a525ac3e9529d0e0d2b0",
+      "sizeBytes": 25446
+    },
+    {
+      "path": "assets/characters/v253/chibi-38.webp",
+      "gitBlobSha": "62a473d3acc7b1a63fe608d9320db688b87e0950",
+      "sizeBytes": 31372
+    },
+    {
+      "path": "assets/characters/v253/chibi-39.webp",
+      "gitBlobSha": "11e28fe4e39daa51297532a790b8cf82b3f0231a",
+      "sizeBytes": 25804
+    },
+    {
+      "path": "assets/characters/v253/chibi-40.webp",
+      "gitBlobSha": "02192c08e9045d86a7da6dd17e330fa187899b75",
+      "sizeBytes": 31280
+    },
+    {
+      "path": "assets/characters/v253/chibi-41.webp",
+      "gitBlobSha": "45960e9d5cee076d0e919eeff9472def0adb49c8",
+      "sizeBytes": 34838
+    },
+    {
+      "path": "assets/characters/v253/chibi-42.webp",
+      "gitBlobSha": "888fe6456849e388a0622f6dcd15d765d092751f",
+      "sizeBytes": 29784
+    },
+    {
+      "path": "assets/characters/v253/manifest.json",
+      "gitBlobSha": "02823a96b5da141925d63f19648c69bc9e2846a2",
+      "sizeBytes": 317
+    },
+    {
+      "path": "assets/characters/v4/action-lab.mjs",
+      "gitBlobSha": "355a418ddcc22d67f29d5be44b4e5c2a8af300ea",
+      "sizeBytes": 4375
+    },
+    {
+      "path": "assets/characters/v4/animated-sprite.mjs",
+      "gitBlobSha": "c17942ab5aafff65487cdd9cafff3932b97bd8f8",
+      "sizeBytes": 5407
+    },
+    {
+      "path": "assets/characters/v4/approved-two-characters.avif",
+      "gitBlobSha": "076efa8d4bcbf1aedf6c471e380eb8aa887c3ef1",
+      "sizeBytes": 15464
+    },
+    {
+      "path": "assets/characters/v4/artwork-intake-v416.html",
+      "gitBlobSha": "bb9fd776ac6a0da5496f48f39bdbc0f379f8198c",
+      "sizeBytes": 10214
+    },
+    {
+      "path": "assets/characters/v4/artwork-intake-v416.mjs",
+      "gitBlobSha": "ee1185a5e9ed0584a0c1a71fbb95552d6ede7bf8",
+      "sizeBytes": 7209
+    },
+    {
+      "path": "assets/characters/v4/artwork-review-v418.mjs",
+      "gitBlobSha": "d6cea799e0e8b1f385a601cc457ecd07d9fa6163",
+      "sizeBytes": 1013
+    },
+    {
+      "path": "assets/characters/v4/artwork-v416-manifest.json",
+      "gitBlobSha": "a0b9f64df7dee56c941448456b1a3902fd62e5b8",
+      "sizeBytes": 2401
+    },
+    {
+      "path": "assets/characters/v4/artwork-v416.html",
+      "gitBlobSha": "585139dc8cc09bec27d9e58935fdd7f1ef3d06af",
+      "sizeBytes": 10443
+    },
+    {
+      "path": "assets/characters/v4/artwork-v416.mjs",
+      "gitBlobSha": "9d699aeb5f6784e5ddcf4b5718b6761706c38d12",
+      "sizeBytes": 4985
+    },
+    {
+      "path": "assets/characters/v4/index.html",
+      "gitBlobSha": "4eb33737e9c883fef0480e52b1f54768f4f8aa35",
+      "sizeBytes": 18352
+    },
+    {
+      "path": "assets/characters/v4/layered-skin-v417.mjs",
+      "gitBlobSha": "51643232703d1c8de44260b2c56efcfdfeab243c",
+      "sizeBytes": 7646
+    },
+    {
+      "path": "assets/characters/v4/manifest.json",
+      "gitBlobSha": "2a07a4832823e695fc686251fcf665e864f02931",
+      "sizeBytes": 6905
+    },
+    {
+      "path": "assets/characters/v4/rig-integrity-v419.mjs",
+      "gitBlobSha": "d50aff46cdc12fc246b458fe73e7c76afca98b7e",
+      "sizeBytes": 1757
+    },
+    {
+      "path": "assets/characters/v4/skeleton-rig.mjs",
+      "gitBlobSha": "9b0857c1cc4e4608ea650db52667ca79e7145fc8",
+      "sizeBytes": 6506
+    },
+    {
+      "path": "assets/characters/v4/skeleton.html",
+      "gitBlobSha": "47c867330752f7a99e8a33cec29a4d406b3fa808",
+      "sizeBytes": 5858
+    },
+    {
+      "path": "assets/characters/v4/skin-art-spec.json",
+      "gitBlobSha": "6b6ef0d15bc73c9983f659e9b8327561bf6127d2",
+      "sizeBytes": 3437
+    },
+    {
+      "path": "assets/characters/v4/skin-master-v415.html",
+      "gitBlobSha": "0c71e266faa3a768fd444c2f947d72c8c75e9c8e",
+      "sizeBytes": 6827
+    },
+    {
+      "path": "assets/characters/v4/skin-master-v415.mjs",
+      "gitBlobSha": "12571b71c92613173f0206018db5bb5767714c16",
+      "sizeBytes": 5031
+    },
+    {
+      "path": "assets/characters/v4/skin-motion-v417.html",
+      "gitBlobSha": "5637697f6354a0e192c66256b31bf52f9f5bfeba",
+      "sizeBytes": 11211
+    },
+    {
+      "path": "assets/characters/v4/skin-preview-v414.html",
+      "gitBlobSha": "429b0eb31299dd18f6cdb5639a17b44a9361f9f0",
+      "sizeBytes": 8052
+    },
+    {
+      "path": "assets/characters/v4/skin-v414.mjs",
+      "gitBlobSha": "2b87ff4e5c3ff14f3059158e5012dbe8cd227b49",
+      "sizeBytes": 16647
+    },
+    {
+      "path": "assets/characters/v4/skin.html",
+      "gitBlobSha": "6264d57080535e9a40f652fc1418f5179087b28e",
+      "sizeBytes": 5983
+    },
+    {
+      "path": "assets/characters/v5/character-master-v500.mjs",
+      "gitBlobSha": "fbc8b994ed693f1ff6592ebdc480d3e2d3a56e18",
+      "sizeBytes": 11450
+    },
+    {
+      "path": "assets/characters/v5/character-motion-v500.mjs",
+      "gitBlobSha": "65bb7b3fcdc196c0be9b52a9737704bc56cc1fad",
+      "sizeBytes": 6157
+    },
+    {
+      "path": "assets/characters/v5/character-rig-v510.mjs",
+      "gitBlobSha": "23d08bb43c4e0c8f691704a631918ba5bf1aeeb2",
+      "sizeBytes": 11424
+    },
+    {
+      "path": "assets/characters/v5/index.html",
+      "gitBlobSha": "6baa58ccf0f5b6f82ab44835a7a75b87d07b9249",
+      "sizeBytes": 10632
+    },
+    {
+      "path": "assets/characters/v5/skin-v560-weighted-surface.mjs",
+      "gitBlobSha": "c5f78a3974725d0c6a0ad9da3542cc48bc39e985",
+      "sizeBytes": 5497
+    },
+    {
+      "path": "assets/characters/v5/skin-v561-original-art-uv.mjs",
+      "gitBlobSha": "c13fe8f5d4463c456fe13dff292e02a933e4c778",
+      "sizeBytes": 1741
+    },
+    {
+      "path": "assets/characters/v5/skin-v561-original-swatch.mjs",
+      "gitBlobSha": "0ce00551f69991aa0a3de746f514a99de45ff14a",
+      "sizeBytes": 6558
+    },
+    {
+      "path": "assets/characters/v5/skin-v562-original-sleeves.mjs",
+      "gitBlobSha": "652f7f98cbbd5a14ec53d72d68d293b7732468eb",
+      "sizeBytes": 13876
+    },
+    {
+      "path": "assets/characters/v5/test-board-v520.html",
+      "gitBlobSha": "71b0523f35120300f3bb5f419a5bf5019b1e0e1a",
+      "sizeBytes": 7717
+    },
+    {
+      "path": "assets/characters/v5/test-board-v520.mjs",
+      "gitBlobSha": "335db1c54c372388dcda13822fefd857fa4a3b00",
+      "sizeBytes": 11150
+    },
+    {
+      "path": "assets/characters/v5/test-gates-v520.mjs",
+      "gitBlobSha": "5fd6281cfd7c70147daa143861093e9ec1c46f10",
+      "sizeBytes": 4193
+    },
+    {
+      "path": "assets/characters/v5/test-skin-v560.html",
+      "gitBlobSha": "ec70c924b3c0e5216a5568a01154126ee0e23978",
+      "sizeBytes": 7503
+    },
+    {
+      "path": "assets/characters/v5/test-skin-v561.html",
+      "gitBlobSha": "0d7e5b3a4dc1d05546d7c38816188225be34ff65",
+      "sizeBytes": 8534
+    },
+    {
+      "path": "assets/characters/v5/test-skin-v562.html",
+      "gitBlobSha": "5eb735cf3ffb40e6432239a6048a3cdea1e95141",
+      "sizeBytes": 14315
+    },
+    {
+      "path": "assets/characters/v5/vendor/LICENSE",
+      "gitBlobSha": "cf781430404b0ae0ba7d8dea3457a3515dd7c9b9",
+      "sizeBytes": 1081
+    },
+    {
+      "path": "assets/characters/v5/vendor/three.core.min.js",
+      "gitBlobSha": "70c40977daa0f6e1e312c6b58e9bfe49cb5a87a4",
+      "sizeBytes": 381124
+    },
+    {
+      "path": "assets/characters/v5/vendor/three.module.min.js",
+      "gitBlobSha": "20d3c112761a519c7780a5ccc9f72a40937fa83b",
+      "sizeBytes": 338908
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-01.webp",
+      "gitBlobSha": "78330e8544fb6e029c60f3273c23309ce7c8fef2",
+      "sizeBytes": 28578
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-02.webp",
+      "gitBlobSha": "a3caed883f0d307ddd951ba4cf1c89997b020955",
+      "sizeBytes": 29876
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-03.webp",
+      "gitBlobSha": "e22dd927c0279c2bb32a6b83efc39ee64ccaae50",
+      "sizeBytes": 30044
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-04.webp",
+      "gitBlobSha": "66c3027a7f750f0273a903fc5960b6e9a8b9d488",
+      "sizeBytes": 28560
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-05.webp",
+      "gitBlobSha": "c16efa107a882eaa60f8869648c6cdea7faff10d",
+      "sizeBytes": 30274
+    },
+    {
+      "path": "assets/characters/walk-v263/character-01/frame-06.webp",
+      "gitBlobSha": "ad33438b06a846ac7987709188c3da0d6d053633",
+      "sizeBytes": 30426
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-01.webp",
+      "gitBlobSha": "734d75a4258f7445beeb808a4c263d87663dbac1",
+      "sizeBytes": 27384
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-02.webp",
+      "gitBlobSha": "11c67fae31de2ca54478947aa3821a48770c6f51",
+      "sizeBytes": 27958
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-03.webp",
+      "gitBlobSha": "1adfc83d8bda399a2ed62adff08cfa9984284e1e",
+      "sizeBytes": 28368
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-04.webp",
+      "gitBlobSha": "981b3623eefc1839d5867dfd87f6f1f9fbf62daf",
+      "sizeBytes": 27420
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-05.webp",
+      "gitBlobSha": "7b723f1ba06e9a9c61e473a8c9fd40116ea9691e",
+      "sizeBytes": 28910
+    },
+    {
+      "path": "assets/characters/walk-v263/character-02/frame-06.webp",
+      "gitBlobSha": "5193ad9b7f2adff6906057473dde47b417510108",
+      "sizeBytes": 28984
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-01.webp",
+      "gitBlobSha": "4d9e77bd4ee5656b8989db29a5b25c91b1c409b7",
+      "sizeBytes": 34170
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-02.webp",
+      "gitBlobSha": "f1449e6d389896ab514563b824c03a95fbd023e9",
+      "sizeBytes": 34930
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-03.webp",
+      "gitBlobSha": "96e5c81b79c164f750b6d32df7e35ba076d96b84",
+      "sizeBytes": 35344
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-04.webp",
+      "gitBlobSha": "f81a965c00cad132f368d1b1109de89e324147a1",
+      "sizeBytes": 34128
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-05.webp",
+      "gitBlobSha": "061eaa544981295b632d1a3562e43298ee1ede60",
+      "sizeBytes": 35974
+    },
+    {
+      "path": "assets/characters/walk-v263/character-03/frame-06.webp",
+      "gitBlobSha": "cbfa416d43f86f722a466f23ab4e9148d1717205",
+      "sizeBytes": 36148
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-01.webp",
+      "gitBlobSha": "70d0a4627bf252988570965a3a7f8389762cd0e2",
+      "sizeBytes": 26684
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-02.webp",
+      "gitBlobSha": "2be50df379c52e9e1dd7b00be467506f2a32200c",
+      "sizeBytes": 27704
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-03.webp",
+      "gitBlobSha": "40dc77c85a2a089365977edb5f80c016141a5336",
+      "sizeBytes": 27856
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-04.webp",
+      "gitBlobSha": "3fae61dee206e91ba6f6b3649ea18e8ba0e9362b",
+      "sizeBytes": 26594
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-05.webp",
+      "gitBlobSha": "3809821ad7dbe5060716dcd6f5e3bdf637ecde56",
+      "sizeBytes": 28144
+    },
+    {
+      "path": "assets/characters/walk-v263/character-04/frame-06.webp",
+      "gitBlobSha": "298b887366097226852cc2eff5cc1c713c1a3d6b",
+      "sizeBytes": 28260
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-01.webp",
+      "gitBlobSha": "70a7ab622bbd4001ab09c42a9e58c46d8faf04a2",
+      "sizeBytes": 28986
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-02.webp",
+      "gitBlobSha": "f42470837e0b47c5fd1b2e4c8d0dd4920126ecfb",
+      "sizeBytes": 30044
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-03.webp",
+      "gitBlobSha": "a244d2880fa6b42f267122cb098ce3844c300710",
+      "sizeBytes": 30578
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-04.webp",
+      "gitBlobSha": "44b2a2f41434a85bdfe1dad728cc73ff5162e610",
+      "sizeBytes": 28956
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-05.webp",
+      "gitBlobSha": "fb4b942bfd5a598ac0d5f949939e44e1d4a52fb2",
+      "sizeBytes": 30942
+    },
+    {
+      "path": "assets/characters/walk-v263/character-05/frame-06.webp",
+      "gitBlobSha": "0c48a80a86f1b6efddfaa0f78f39cb4464ce5a7c",
+      "sizeBytes": 31186
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-01.webp",
+      "gitBlobSha": "1540e3b7b7005b61e77aa6d4f8e0d29fd40cf43c",
+      "sizeBytes": 31434
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-02.webp",
+      "gitBlobSha": "a88d0ff65c4f6fc70d8eec8362e56713a7d3e724",
+      "sizeBytes": 32402
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-03.webp",
+      "gitBlobSha": "635914f690d11deef1ee50c13447314d76a64004",
+      "sizeBytes": 32508
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-04.webp",
+      "gitBlobSha": "118b3ec1afb6593799d5af09a3fbfe63595f2075",
+      "sizeBytes": 31304
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-05.webp",
+      "gitBlobSha": "6724ee926e7fbdf45d03adfb377b3ddf26506b85",
+      "sizeBytes": 32946
+    },
+    {
+      "path": "assets/characters/walk-v263/character-06/frame-06.webp",
+      "gitBlobSha": "98440194b335b9e9f746bbc01deb3f74001abe07",
+      "sizeBytes": 33048
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-01.webp",
+      "gitBlobSha": "6d194962810a7d96eb7e681928cc51433dbfc834",
+      "sizeBytes": 24052
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-02.webp",
+      "gitBlobSha": "a64bbdff65f16f1af9c3e486bc5e3cad37c8fe3c",
+      "sizeBytes": 25588
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-03.webp",
+      "gitBlobSha": "b09d9781a9483d19791ff2d9d515400af8bd60ca",
+      "sizeBytes": 25404
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-04.webp",
+      "gitBlobSha": "5bd8f0b00d51aea1d08936e99061d88f22e12ce8",
+      "sizeBytes": 23968
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-05.webp",
+      "gitBlobSha": "1ec0be456d07952e79689eefa9f13ec0d2d85668",
+      "sizeBytes": 25864
+    },
+    {
+      "path": "assets/characters/walk-v263/character-07/frame-06.webp",
+      "gitBlobSha": "ba314f86cd3e8bceac241151416513a2431aa13b",
+      "sizeBytes": 26130
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-01.webp",
+      "gitBlobSha": "e15be40e995e3b9add56745185805aeea9d250a8",
+      "sizeBytes": 29420
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-02.webp",
+      "gitBlobSha": "e5d3d8bcbda43a0c4e9784fa40153e7478dc2a0a",
+      "sizeBytes": 30528
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-03.webp",
+      "gitBlobSha": "49315ba91e32f7257620c0e0565eac2851a96516",
+      "sizeBytes": 30620
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-04.webp",
+      "gitBlobSha": "aeb7a6792be4b90789959ba8c82ecdd9bfd83cba",
+      "sizeBytes": 29438
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-05.webp",
+      "gitBlobSha": "ee0d6690d08c9ac382ad313232e138938bbf64b0",
+      "sizeBytes": 30830
+    },
+    {
+      "path": "assets/characters/walk-v263/character-08/frame-06.webp",
+      "gitBlobSha": "1a2a136ea9f5201beb6acd6d6a335d008266e3cc",
+      "sizeBytes": 31284
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-01.webp",
+      "gitBlobSha": "eec1ec308df752e1fcebe3a9dfed66621064576a",
+      "sizeBytes": 23818
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-02.webp",
+      "gitBlobSha": "e81631f0964095a8c55754eca2e1cea53766b9e5",
+      "sizeBytes": 25222
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-03.webp",
+      "gitBlobSha": "a89380fb38334d97c72147c9c5c88b717f196b5b",
+      "sizeBytes": 25076
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-04.webp",
+      "gitBlobSha": "a9cd0f385542c4c53e1eb4fca9a90f69d4fbc247",
+      "sizeBytes": 23922
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-05.webp",
+      "gitBlobSha": "e3b4c37ca6e7f0e05505ca863267e957e8fa0bc4",
+      "sizeBytes": 25900
+    },
+    {
+      "path": "assets/characters/walk-v263/character-09/frame-06.webp",
+      "gitBlobSha": "85b9ee99107cf3fe81895c7dedacafcd7d11bf42",
+      "sizeBytes": 25482
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-01.webp",
+      "gitBlobSha": "bc45e6495cc45f47c6223db4474b702b6ccbd45c",
+      "sizeBytes": 28708
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-02.webp",
+      "gitBlobSha": "586aead26b6098e5a6fe125597630ab21adc2292",
+      "sizeBytes": 29790
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-03.webp",
+      "gitBlobSha": "125779bd2e7d24666ed740d80dd2bc6df1d2169f",
+      "sizeBytes": 29920
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-04.webp",
+      "gitBlobSha": "e90d4e46085f4372e93b1442f1a1d6327166c52b",
+      "sizeBytes": 28720
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-05.webp",
+      "gitBlobSha": "4b6c3c94fa2005e6103bd7781df4d3168d4900d2",
+      "sizeBytes": 30254
+    },
+    {
+      "path": "assets/characters/walk-v263/character-10/frame-06.webp",
+      "gitBlobSha": "f3001cfa5b36da7fe05c3e2f025959a13790f548",
+      "sizeBytes": 30452
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-01.webp",
+      "gitBlobSha": "def77356b67e9f62c42bbb4e3d7a7afe872701b5",
+      "sizeBytes": 33452
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-02.webp",
+      "gitBlobSha": "9339da96dd178e31a9e2f6dac7aaa0b808d5fe66",
+      "sizeBytes": 34878
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-03.webp",
+      "gitBlobSha": "f8797eba4e65140d6cb79656b347f8916907dcb7",
+      "sizeBytes": 34956
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-04.webp",
+      "gitBlobSha": "d1ecf42c7312a80c22e12735bc1a9a40e36225f6",
+      "sizeBytes": 33856
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-05.webp",
+      "gitBlobSha": "28b4af77942fc6948533d763fd710780cdfdc4cb",
+      "sizeBytes": 35320
+    },
+    {
+      "path": "assets/characters/walk-v263/character-11/frame-06.webp",
+      "gitBlobSha": "b25d9f3d04cbcc6061dbf98487ab44330ef7f86b",
+      "sizeBytes": 35428
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-01.webp",
+      "gitBlobSha": "13ffd93ede6437d3f32b87bed22930122b80de12",
+      "sizeBytes": 26152
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-02.webp",
+      "gitBlobSha": "a9a4286aef15c0c329539d40303763622127c448",
+      "sizeBytes": 27574
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-03.webp",
+      "gitBlobSha": "f81caebf3136b45e097fc63343d441eb55080249",
+      "sizeBytes": 27692
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-04.webp",
+      "gitBlobSha": "826f849326b34de85df719555a83612a6ed48cd8",
+      "sizeBytes": 26542
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-05.webp",
+      "gitBlobSha": "1a8dcd0cda41e5cadf167e3472c1ab9ab4fb1b41",
+      "sizeBytes": 28196
+    },
+    {
+      "path": "assets/characters/walk-v263/character-12/frame-06.webp",
+      "gitBlobSha": "189b91e7911e0288175f8e0238fa4e760c2a990a",
+      "sizeBytes": 28318
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-01.webp",
+      "gitBlobSha": "d0e2b0b141403f3987a63fc32a237acd392a73a3",
+      "sizeBytes": 55288
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-02.webp",
+      "gitBlobSha": "e8d43d01275b4c4f2a9474d897c243bd6df4eb3b",
+      "sizeBytes": 60744
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-03.webp",
+      "gitBlobSha": "5ae384b7044a3860c66d86d7d0fdeca05071519a",
+      "sizeBytes": 61198
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-04.webp",
+      "gitBlobSha": "6ea33237b3af36e3b548b95829824743977e4156",
+      "sizeBytes": 55308
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-05.webp",
+      "gitBlobSha": "6414b4b9a3c244ba2f1aa51245c0e0511dedd794",
+      "sizeBytes": 62042
+    },
+    {
+      "path": "assets/characters/walk-v263/character-13/frame-06.webp",
+      "gitBlobSha": "78f2631d991291cdafc3880d76fb65396ea65593",
+      "sizeBytes": 62362
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-01.webp",
+      "gitBlobSha": "ff8083d444ae9071c5ae381f7bfb7aefefb634b0",
+      "sizeBytes": 39386
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-02.webp",
+      "gitBlobSha": "f1817e5ebf9fd054066096ddcd825195a1d3bcc9",
+      "sizeBytes": 44228
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-03.webp",
+      "gitBlobSha": "993f972498251c4d2fcee1c21020fcd315d60534",
+      "sizeBytes": 44556
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-04.webp",
+      "gitBlobSha": "bac1f1e90734d23dcb4b2b02d0b5a4afc3473d61",
+      "sizeBytes": 39286
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-05.webp",
+      "gitBlobSha": "ffc58b285f9e7d16332c06a5f6bedd2d53bc8641",
+      "sizeBytes": 45662
+    },
+    {
+      "path": "assets/characters/walk-v263/character-14/frame-06.webp",
+      "gitBlobSha": "2d3039f86c272bf0e5222c605dc1af7512d37945",
+      "sizeBytes": 45836
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-01.webp",
+      "gitBlobSha": "d831b6e354f726693d96332c5d04744002591069",
+      "sizeBytes": 62324
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-02.webp",
+      "gitBlobSha": "a1d9a08b29166b707443b3e89bf1547f00db8b17",
+      "sizeBytes": 69278
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-03.webp",
+      "gitBlobSha": "35619428e722b7a1daae46a64a382371d94faf37",
+      "sizeBytes": 69672
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-04.webp",
+      "gitBlobSha": "8ecd442e4dea5486e41dce559e24a8ee13cde53f",
+      "sizeBytes": 61674
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-05.webp",
+      "gitBlobSha": "58020b69708463e4cb16aca1b0b11824ad8f7341",
+      "sizeBytes": 69790
+    },
+    {
+      "path": "assets/characters/walk-v263/character-15/frame-06.webp",
+      "gitBlobSha": "891a3d28ff3898a1abc0c7520a9faba0bcc3e61e",
+      "sizeBytes": 69530
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-01.webp",
+      "gitBlobSha": "b5ab66b146c57d2d78b3fb68f3955851ccc26e00",
+      "sizeBytes": 55604
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-02.webp",
+      "gitBlobSha": "23fa56f3d8d820d28e4648372082905defec062f",
+      "sizeBytes": 62982
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-03.webp",
+      "gitBlobSha": "3f2163c1c41bf5cb0c848c811216712163254f0f",
+      "sizeBytes": 63164
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-04.webp",
+      "gitBlobSha": "9dca6e2fa1e77ed57236896a99a09b9aced45e28",
+      "sizeBytes": 55940
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-05.webp",
+      "gitBlobSha": "8d1d786f3955ef5bc10eb0652752341a4681cbfd",
+      "sizeBytes": 63222
+    },
+    {
+      "path": "assets/characters/walk-v263/character-16/frame-06.webp",
+      "gitBlobSha": "ccd224e1904d6fe43be70e843c19842129160e1a",
+      "sizeBytes": 63598
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-01.webp",
+      "gitBlobSha": "e5e91ca16c8f40a706afa2d6835f04c75853aaec",
+      "sizeBytes": 51840
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-02.webp",
+      "gitBlobSha": "6e95102b206848d9d2fe744d52548b624e82d844",
+      "sizeBytes": 58504
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-03.webp",
+      "gitBlobSha": "a1b71966da7430de836c16dee7d5752b946568fa",
+      "sizeBytes": 58914
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-04.webp",
+      "gitBlobSha": "dd934d781956259ef5b77b049a942d59b0c729fb",
+      "sizeBytes": 51722
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-05.webp",
+      "gitBlobSha": "45d33cfaf00ef2b707750db6712b35e7a0d44dab",
+      "sizeBytes": 59484
+    },
+    {
+      "path": "assets/characters/walk-v263/character-17/frame-06.webp",
+      "gitBlobSha": "5f8b931e3cd47f5bc5febd856da377715f4f75ff",
+      "sizeBytes": 59640
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-01.webp",
+      "gitBlobSha": "cb36487042a73d075881c1c1c91c12f1286c1a08",
+      "sizeBytes": 62022
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-02.webp",
+      "gitBlobSha": "413d7cc5eda5efb99f5152f467945ab4a10dcac6",
+      "sizeBytes": 67854
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-03.webp",
+      "gitBlobSha": "319022e42752953a930b942662869352cad73fbd",
+      "sizeBytes": 68744
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-04.webp",
+      "gitBlobSha": "836a205a9162e5d4174102936bb65dd759a3df57",
+      "sizeBytes": 61820
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-05.webp",
+      "gitBlobSha": "bf9445d0677ec0f4614f41cc0d12cf3610cb97ca",
+      "sizeBytes": 68460
+    },
+    {
+      "path": "assets/characters/walk-v263/character-18/frame-06.webp",
+      "gitBlobSha": "a0f42e2a145064ebdb19def89f9d2d3795665e67",
+      "sizeBytes": 69964
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-01.webp",
+      "gitBlobSha": "3cd807221fbc954d651fd9c228a5541e9334455c",
+      "sizeBytes": 55426
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-02.webp",
+      "gitBlobSha": "89d662a716ffafb45529f3fcbb5789f7e363ab0f",
+      "sizeBytes": 64126
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-03.webp",
+      "gitBlobSha": "d938d5abea6da527e90a72f13be082b158f3815e",
+      "sizeBytes": 63622
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-04.webp",
+      "gitBlobSha": "d42164b29488e31650bb47fa5552d7e581caa1d2",
+      "sizeBytes": 55522
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-05.webp",
+      "gitBlobSha": "6a3a0cec1ebbe880d0db127d4afef1b2ca81785b",
+      "sizeBytes": 64570
+    },
+    {
+      "path": "assets/characters/walk-v263/character-19/frame-06.webp",
+      "gitBlobSha": "bae1658054f3c825e989ce7b38d481814e9cffbb",
+      "sizeBytes": 64970
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-01.webp",
+      "gitBlobSha": "4adecac626d4f672856662f94f0992ace31ce9f7",
+      "sizeBytes": 41844
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-02.webp",
+      "gitBlobSha": "b1622d342c8288caf18e0b33e2f22d93cb4d2138",
+      "sizeBytes": 48268
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-03.webp",
+      "gitBlobSha": "5ead6618e7c7746d78f3e2a8bdc098d860ed8551",
+      "sizeBytes": 48522
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-04.webp",
+      "gitBlobSha": "342bf3a6f6027d439b45ea4a40e42cbbe0d37dd3",
+      "sizeBytes": 41598
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-05.webp",
+      "gitBlobSha": "15f2ba698173d8c88799f493ebb2c4a2a9c04216",
+      "sizeBytes": 48864
+    },
+    {
+      "path": "assets/characters/walk-v263/character-20/frame-06.webp",
+      "gitBlobSha": "b41b76aa7cc965b11f1bbac74c4afce39d15856b",
+      "sizeBytes": 49114
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-01.webp",
+      "gitBlobSha": "4122f7a2e5ecc0c0d65d6711f129fdae73d494fc",
+      "sizeBytes": 29910
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-02.webp",
+      "gitBlobSha": "2560d97b38ef2aeeaa7b3ec15d171130036afef5",
+      "sizeBytes": 30312
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-03.webp",
+      "gitBlobSha": "b81a82569b865f12b827803a458948aaa4a9caaf",
+      "sizeBytes": 30428
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-04.webp",
+      "gitBlobSha": "a18eda97b293c6f8ec2104112e343f458628fd14",
+      "sizeBytes": 29958
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-05.webp",
+      "gitBlobSha": "3879c9c821e6a36cccc057909a25c23a2c3caecc",
+      "sizeBytes": 30706
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-01/frame-06.webp",
+      "gitBlobSha": "1a9b4f01ee261acf3c1c1e17b72a5e73fa8cb581",
+      "sizeBytes": 30818
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-01.webp",
+      "gitBlobSha": "aac5e1d02e20dcdd91aa618be422321996b51d8a",
+      "sizeBytes": 28366
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-02.webp",
+      "gitBlobSha": "7c3f321dd3f54f4f4a4fcd4aa17301cf8e8c950d",
+      "sizeBytes": 28222
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-03.webp",
+      "gitBlobSha": "c83010365898b61e51e0e64c74129d1cc1ca730b",
+      "sizeBytes": 28864
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-04.webp",
+      "gitBlobSha": "ab658070614e269f1cfd9f1aa8299aa2ed0eb7f0",
+      "sizeBytes": 28462
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-05.webp",
+      "gitBlobSha": "66f7af58f96117b8bddc1ea9e9a5e239ad9a20e4",
+      "sizeBytes": 29184
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-02/frame-06.webp",
+      "gitBlobSha": "d08acfad42343b74dcbf3ae78f022671dce1e685",
+      "sizeBytes": 29460
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-01.webp",
+      "gitBlobSha": "0f079cab66e4d4f618d1506540cf6d7c6d8314e7",
+      "sizeBytes": 36670
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-02.webp",
+      "gitBlobSha": "103f438a925dbe1375c5130d5748ac93be672979",
+      "sizeBytes": 36090
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-03.webp",
+      "gitBlobSha": "8bf9aa5f918223582583028d565edda66b2a470c",
+      "sizeBytes": 36142
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-04.webp",
+      "gitBlobSha": "6bbe4b67cca08a7973edac1bd9fb7993049b801b",
+      "sizeBytes": 36598
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-05.webp",
+      "gitBlobSha": "94bbc522b05c0a64b89276d8fb3f65933e278da9",
+      "sizeBytes": 36706
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-03/frame-06.webp",
+      "gitBlobSha": "98368a90634335ccd538928753098d058da646b1",
+      "sizeBytes": 36902
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-01.webp",
+      "gitBlobSha": "29ff48ec1c255120997f5913d6447565229c1c64",
+      "sizeBytes": 27392
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-02.webp",
+      "gitBlobSha": "49371a244c0be467f072d112979aed75cbf092b9",
+      "sizeBytes": 27800
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-03.webp",
+      "gitBlobSha": "a75ecfd4b55e89051d754e41e355e513135a2d4c",
+      "sizeBytes": 27974
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-04.webp",
+      "gitBlobSha": "325600d7eb6a788d3f2941642920ec28dbd031f0",
+      "sizeBytes": 27346
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-05.webp",
+      "gitBlobSha": "298643d2691dd3cabaddba6cd3396405d2807066",
+      "sizeBytes": 28432
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-04/frame-06.webp",
+      "gitBlobSha": "3b40f00d22b2374bf80f65b8c594cfadd2ad5b5f",
+      "sizeBytes": 28546
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-01.webp",
+      "gitBlobSha": "7dfec99f9e9bf98405b557c8ec44e855d3e1f5ea",
+      "sizeBytes": 32336
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-02.webp",
+      "gitBlobSha": "9d2696d9ccdbff576690b4a8bd3068a403525160",
+      "sizeBytes": 31150
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-03.webp",
+      "gitBlobSha": "59f5bf1f54075d7b6359ee599852e712062d5e1b",
+      "sizeBytes": 31664
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-04.webp",
+      "gitBlobSha": "b1ab50bff3efd88aa6e825615e989b8471051fda",
+      "sizeBytes": 32406
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-05.webp",
+      "gitBlobSha": "d429d8932a2c3c530860d41ab26c8ca7bedb3560",
+      "sizeBytes": 31644
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-05/frame-06.webp",
+      "gitBlobSha": "3cfdd2dad39cca9aa0a92cce72b00aa95db79219",
+      "sizeBytes": 32134
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-01.webp",
+      "gitBlobSha": "c77377ce81051ca56d24eaef789d0b570f586c6a",
+      "sizeBytes": 33828
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-02.webp",
+      "gitBlobSha": "113b7b53d946c0d5ccf022b71fde87934659e232",
+      "sizeBytes": 32846
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-03.webp",
+      "gitBlobSha": "2bd1027cabae50fb99faaafce07fb393b175177b",
+      "sizeBytes": 33074
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-04.webp",
+      "gitBlobSha": "5cb0ccc5baa9fad731673c126f1f32930006b8e9",
+      "sizeBytes": 33548
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-05.webp",
+      "gitBlobSha": "b0b7bfacd4ccbf558424ff8f840f87f593c06d06",
+      "sizeBytes": 33418
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-06/frame-06.webp",
+      "gitBlobSha": "f07536a460b9427b99106200477d5a65aa1491ef",
+      "sizeBytes": 33572
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-01.webp",
+      "gitBlobSha": "07a4a40cbfe3859244849cbeaf593ca5c58183ed",
+      "sizeBytes": 27190
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-02.webp",
+      "gitBlobSha": "359cc7f47a5c7f0fc4a723bd306c1773b1fa9de4",
+      "sizeBytes": 26652
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-03.webp",
+      "gitBlobSha": "d0960b5224e9b923f58725275ed32e013147c897",
+      "sizeBytes": 26772
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-04.webp",
+      "gitBlobSha": "a9797f4ff9ae3866081b57cd04f8eeddae613527",
+      "sizeBytes": 27112
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-05.webp",
+      "gitBlobSha": "b107809b2d030ef244b9d546c22ad0442d5ab133",
+      "sizeBytes": 26972
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-07/frame-06.webp",
+      "gitBlobSha": "3887592aa3d70cdce0794172b38614fda57a9c04",
+      "sizeBytes": 27202
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-01.webp",
+      "gitBlobSha": "0a3350c54782a2618b3863835a49cea622dbf246",
+      "sizeBytes": 30788
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-02.webp",
+      "gitBlobSha": "90d530e1b39855328c8ff16370a899dc3f86a065",
+      "sizeBytes": 30882
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-03.webp",
+      "gitBlobSha": "88bc9f155ebb9097979506f38b8fd29aeaaa5e6f",
+      "sizeBytes": 30982
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-04.webp",
+      "gitBlobSha": "1c1069ac9c15b54bd6b3b843da6f0fe133aea85a",
+      "sizeBytes": 30868
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-05.webp",
+      "gitBlobSha": "3894f12bc29455c943e8ca25f8b1339304b2bde1",
+      "sizeBytes": 31258
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-08/frame-06.webp",
+      "gitBlobSha": "0aa44ca0f7945d8638d78204e1aa4801546cd70d",
+      "sizeBytes": 31688
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-01.webp",
+      "gitBlobSha": "e293481b00364e34c1a9befc3585cef331263ffe",
+      "sizeBytes": 26000
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-02.webp",
+      "gitBlobSha": "26a457a4890deddc657e31cd89c1baeb4ab8dbcb",
+      "sizeBytes": 25950
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-03.webp",
+      "gitBlobSha": "eda0ba3ec8afe5ac84e88c388ba81120d54d9509",
+      "sizeBytes": 26056
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-04.webp",
+      "gitBlobSha": "877ad5660ec9aa11db2856991145b22ede452798",
+      "sizeBytes": 25958
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-05.webp",
+      "gitBlobSha": "1065dc47d517202be3c1a87d53ca37ee204071c1",
+      "sizeBytes": 26520
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-09/frame-06.webp",
+      "gitBlobSha": "309ee7fa6e34622539759c13dd09dd7f970526ca",
+      "sizeBytes": 26578
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-01.webp",
+      "gitBlobSha": "29a8fab36c90df1ed71f3466e9d09d685804fd98",
+      "sizeBytes": 29870
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-02.webp",
+      "gitBlobSha": "7751e2bb1d6906c639740c1e5ab57f02e3ed8daa",
+      "sizeBytes": 30084
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-03.webp",
+      "gitBlobSha": "85f02d568c0702b3bc72935b43012ff456b9b4a7",
+      "sizeBytes": 30502
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-04.webp",
+      "gitBlobSha": "d17b0dddedec385fc105ef2305395ae23eb159e3",
+      "sizeBytes": 30028
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-05.webp",
+      "gitBlobSha": "adbc2c473f929313f8758b6f43079fbbe601abe7",
+      "sizeBytes": 30536
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-10/frame-06.webp",
+      "gitBlobSha": "da14c6e333bdf3169f36cfd1479541b250d52272",
+      "sizeBytes": 30742
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-01.webp",
+      "gitBlobSha": "8669cbd030bb4efa3c45a055db6ba4b6d2883a93",
+      "sizeBytes": 36338
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-02.webp",
+      "gitBlobSha": "8a2ce3d59494f30b079198585cb98e1b9c373088",
+      "sizeBytes": 35684
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-03.webp",
+      "gitBlobSha": "29c7214bf0d547547417744176ab856e2787f270",
+      "sizeBytes": 35830
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-04.webp",
+      "gitBlobSha": "71ea2dc2bfa4146af6ae85b1ee5d9c025446d5de",
+      "sizeBytes": 36236
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-05.webp",
+      "gitBlobSha": "361fc557c241d1f7fe07e6e3bda753b9f6275627",
+      "sizeBytes": 36012
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-11/frame-06.webp",
+      "gitBlobSha": "2f56dfbda422f4180440b3c9595bea637b363a28",
+      "sizeBytes": 36220
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-01.webp",
+      "gitBlobSha": "f7b8e568df99c0ed339c5056b80f45bc38b988d1",
+      "sizeBytes": 27520
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-02.webp",
+      "gitBlobSha": "013c9f83530acdda6a62c24622128b4b5746c55d",
+      "sizeBytes": 27854
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-03.webp",
+      "gitBlobSha": "68f640d2ac6f8ce1b8edb9e8f6dd8b2204c12559",
+      "sizeBytes": 28036
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-04.webp",
+      "gitBlobSha": "c76aa42ca74b478ee832f16a6de461fba47ab8cf",
+      "sizeBytes": 27668
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-05.webp",
+      "gitBlobSha": "439150c08191ee4c3978ca2ad8397ee6afa861b7",
+      "sizeBytes": 28322
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-12/frame-06.webp",
+      "gitBlobSha": "7b2edb738cb091213aa157e73bff539293e8f1b5",
+      "sizeBytes": 28596
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-01.webp",
+      "gitBlobSha": "8e24cf268d572234cef591cded32930ae0515a3c",
+      "sizeBytes": 59794
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-02.webp",
+      "gitBlobSha": "cc5835ff62beee3209eb7f381e79d52db33c08ff",
+      "sizeBytes": 63478
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-03.webp",
+      "gitBlobSha": "bf3741f71d3a8babe589d409402d79af0f458a38",
+      "sizeBytes": 63906
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-04.webp",
+      "gitBlobSha": "4b9c46357dfe0b5c17796d1c7408bdcdc138546c",
+      "sizeBytes": 59848
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-05.webp",
+      "gitBlobSha": "7e0b902dc7faf852e044506f2fa7d0144a18bc4e",
+      "sizeBytes": 64432
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-13/frame-06.webp",
+      "gitBlobSha": "7a5d1da18efccb2315febb85d8afdee493ec0b59",
+      "sizeBytes": 64832
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-01.webp",
+      "gitBlobSha": "d2918def43f7b26ba13b865ce2988516511f4ccf",
+      "sizeBytes": 43162
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-02.webp",
+      "gitBlobSha": "2cdc1cd8ebb8b751b536e6fa182331cddb44954d",
+      "sizeBytes": 46348
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-03.webp",
+      "gitBlobSha": "cf9ae6b873806602e88b6a5e118588ebf0d3ddb9",
+      "sizeBytes": 46678
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-04.webp",
+      "gitBlobSha": "b45a42ef34fefa56d026418437491e763d2bbd11",
+      "sizeBytes": 43094
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-05.webp",
+      "gitBlobSha": "47e79bb10e72f0247857dd8c85033cab4dff01d8",
+      "sizeBytes": 47504
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-14/frame-06.webp",
+      "gitBlobSha": "fb6b100d2110dc79b016fcb119c16a07c6ffd7fa",
+      "sizeBytes": 47602
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-01.webp",
+      "gitBlobSha": "4c821327c04567457a90f10b0952eb01549d9550",
+      "sizeBytes": 68064
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-02.webp",
+      "gitBlobSha": "bb328ff8c1031a6eec316ea10899d00738274662",
+      "sizeBytes": 72244
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-03.webp",
+      "gitBlobSha": "1c26b8d8fb4a63f5771a97ecd80bd9825d8a1171",
+      "sizeBytes": 72636
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-04.webp",
+      "gitBlobSha": "92df2efe9d8175b611c935f935e53fc078362601",
+      "sizeBytes": 67488
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-05.webp",
+      "gitBlobSha": "5041d71507f1ea4b02407e2548d24132124ecd43",
+      "sizeBytes": 73320
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-15/frame-06.webp",
+      "gitBlobSha": "88b4fe2b0c43e505843e21ab9f4f88306ab6c9a1",
+      "sizeBytes": 73342
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-01.webp",
+      "gitBlobSha": "eee5d0f88e0015055159f1db34d7539a40f04941",
+      "sizeBytes": 61664
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-02.webp",
+      "gitBlobSha": "b1dc9958edcb0be0cb52968aab1dbbc555fedccd",
+      "sizeBytes": 65672
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-03.webp",
+      "gitBlobSha": "2dba9563e374e7527f456c41950393a9c4fb6dcb",
+      "sizeBytes": 65868
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-04.webp",
+      "gitBlobSha": "6b936cabdedf7b8ef0c8e189d3cd01228842d4ba",
+      "sizeBytes": 61394
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-05.webp",
+      "gitBlobSha": "fa4d5ffd38a3ed3edcd3757270836e83e94c115a",
+      "sizeBytes": 65988
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-16/frame-06.webp",
+      "gitBlobSha": "1d50bf2ddfed1ec31b614c5cf91aa71c98faade7",
+      "sizeBytes": 66546
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-01.webp",
+      "gitBlobSha": "989134258921073147aca9c3c25a4715f409f8db",
+      "sizeBytes": 55982
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-02.webp",
+      "gitBlobSha": "b48c70778602b31ac505c828bec18556df53f253",
+      "sizeBytes": 60386
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-03.webp",
+      "gitBlobSha": "35caf0bd77ddf2650d57a350a4906091ab42eae8",
+      "sizeBytes": 60502
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-04.webp",
+      "gitBlobSha": "c704e843d9c1f58921182d5512afe3b3cc6f07c5",
+      "sizeBytes": 55940
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-05.webp",
+      "gitBlobSha": "c3a494b9b1f260f43c4cef477ebf383a273db98b",
+      "sizeBytes": 61256
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-17/frame-06.webp",
+      "gitBlobSha": "b77862c626ac65ffb2722a74a101ba19a50f8a1e",
+      "sizeBytes": 61520
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-01.webp",
+      "gitBlobSha": "9c814f28a22657b8626dc452b97c9fc606393e79",
+      "sizeBytes": 66798
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-02.webp",
+      "gitBlobSha": "a359ff0fe741873394ffb048f5503302191bec95",
+      "sizeBytes": 70022
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-03.webp",
+      "gitBlobSha": "836812a5ce0526b50fdc86717e56ee616562059b",
+      "sizeBytes": 70682
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-04.webp",
+      "gitBlobSha": "7895529a029c9784d5e3a4c784c2170bcd503067",
+      "sizeBytes": 66440
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-05.webp",
+      "gitBlobSha": "c2c55f0f98c811c05e27bc799bd272004502f16a",
+      "sizeBytes": 70688
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-18/frame-06.webp",
+      "gitBlobSha": "6201cad80bf8af3c22f7492e021742be52132b1e",
+      "sizeBytes": 72162
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-01.webp",
+      "gitBlobSha": "e3277404f32f2168f4f6a9f75d15458f220e8d6b",
+      "sizeBytes": 61492
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-02.webp",
+      "gitBlobSha": "01b6dcf506b5401ccb385b775b5102d52fb223a9",
+      "sizeBytes": 66600
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-03.webp",
+      "gitBlobSha": "fc1f6049ec1300451fcaf4c4211eb7a85aa907c0",
+      "sizeBytes": 66488
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-04.webp",
+      "gitBlobSha": "247adcf80bd0f6dda5a06d2e7a559d58f8ba11d1",
+      "sizeBytes": 60558
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-05.webp",
+      "gitBlobSha": "0e9af412f5f7a68f8c5318295ed309186f2049f2",
+      "sizeBytes": 66958
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-19/frame-06.webp",
+      "gitBlobSha": "28a9452b0844050dc6d6b9b0f769da1e5590456e",
+      "sizeBytes": 67526
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-01.webp",
+      "gitBlobSha": "22b141adbd995f4f39b54649b56172a0b4946a35",
+      "sizeBytes": 46276
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-02.webp",
+      "gitBlobSha": "169f84f077fc13e922f4b801c3730b42cd81a3f0",
+      "sizeBytes": 49832
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-03.webp",
+      "gitBlobSha": "42974d31cb375a1eff4f6ace948dcdc9ccbd05a4",
+      "sizeBytes": 49916
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-04.webp",
+      "gitBlobSha": "8668217c53916abe2a031674d19930a75955b2bd",
+      "sizeBytes": 46328
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-05.webp",
+      "gitBlobSha": "77cf32fba18e82fd07a632927b045ad57e0dcb0c",
+      "sizeBytes": 50420
+    },
+    {
+      "path": "assets/characters/walk-v266-left/character-20/frame-06.webp",
+      "gitBlobSha": "3220afc8998f1a8e65a212debbe8d556d9b1a129",
+      "sizeBytes": 50760
+    },
+    {
+      "path": "assets/village/character-renderer.css",
+      "gitBlobSha": "abae857b384b50dabe0ff03945743049180de553",
+      "sizeBytes": 19138
+    },
+    {
+      "path": "assets/village/character-renderer.mjs",
+      "gitBlobSha": "b7737829ecdaa1bb19dcadce2c015fd529186769",
+      "sizeBytes": 8959
+    },
+    {
+      "path": "server-game/current/character-renderer.css",
+      "gitBlobSha": "06df54a95d6030d507134efb720d00383ffb07cc",
+      "sizeBytes": 16267
+    },
+    {
+      "path": "server-game/current/character-renderer.js",
+      "gitBlobSha": "78197a99e9fe5dad6365c849f07c601655c35c00",
+      "sizeBytes": 7116
+    },
+    {
+      "path": "src/gmww-character-engine.js",
+      "gitBlobSha": "7c8bb654a552db3a7bddc9a363d1b8adb15f33f4",
+      "sizeBytes": 9701
+    },
+    {
+      "path": "src/gmww-character-v4.js",
+      "gitBlobSha": "95e7447d43ad67b332c31a620f9b8b1fb7d7f999",
+      "sizeBytes": 1572
+    }
+  ],
+  "compatibilityFindings": [
+    "Production segmented renderers share clipped regions of a flat artwork for character-01 through character-20.",
+    "Walk and run timings can be extracted from the character-15 male-normal motion profile; new images still require correct per-character anatomy and occluded artwork.",
+    "Existing turn animation is not evidence of a real directional image set.",
+    "New character-15 must be a distinct catalog version; original character-15 artwork and motions remain pinned in the backup.",
+    "Legacy character-41 and character-42 account bindings require compatibility aliases, not silent remapping or deletion."
+  ],
+  "remaining": [
+    "Restore verification in a working execution environment",
+    "Build character-specific rig or directional animation assets for all 40 approved artworks",
+    "Implement shared four-action controller and all 40 mappings behind preview-only catalog version",
+    "Test motion, original source hashes, foot contact, GM, Player Web and WebKit",
+    "Obtain preview acceptance and production authorization"
+  ],
+  "executionBlocker": "Execution runtime unavailable: exec-server cannot start process; no product implementation, tests, preview deployment, PR, merge or production deployment performed"
+}

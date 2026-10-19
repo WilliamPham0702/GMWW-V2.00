@@ -6,9 +6,9 @@ const app=readFileSync(new URL('../server-game/current/app.js',import.meta.url),
 const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const identity=readFileSync(new URL('../src/gmww-player-identity-rules.js',import.meta.url),'utf8');
 
-test('Server member picker uses 42 game characters instead of artwork thumbnails',()=>{
-  assert.match(app,/MEMBER_CHARACTER_COUNT=42/);
-  assert.match(app,/🎭 Bộ 42 Nhân Vật/);
+test('Server member picker uses 40 game characters instead of artwork thumbnails',()=>{
+  assert.match(app,/MEMBER_CHARACTER_COUNT=40/);
+  assert.match(app,/🎭 Bộ 40 Nhân Vật/);
   assert.match(app,/\/api\/game-characters\?gm=/);
   assert.doesNotMatch(app,/Đồng bộ Artwork/);
   assert.doesNotMatch(app,/syncArtworkAvatars\(\)/);
