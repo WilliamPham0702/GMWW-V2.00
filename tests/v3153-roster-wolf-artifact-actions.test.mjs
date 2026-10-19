@@ -14,14 +14,13 @@ test('wolf introduction action box lists member names without extra explanation'
   assert.doesNotMatch(src,/Bầy Sói nhận biết nhau:/);
 });
 
-test('roster confirmation controls are near select all, bulk selection requires three clicks',()=>{
+test('roster confirmation controls are near Select All; first click commits selection',()=>{
   const toolbar=html.indexOf('id="playRosterSelectAll"'),cancel=html.indexOf('id="playRosterCancel"'),
     confirm=html.indexOf('id="playRosterSave"'),filter=html.indexOf('id="playRosterFilters"');
   assert.ok(toolbar>=0&&cancel>toolbar&&confirm>cancel&&filter>confirm);
   assert.equal(html.split('id="playRosterSave"').length-1,1);
-  assert.match(roster,/playRosterBulkConfirmClicks<3/);
-  assert.ok(roster.includes('playRosterBulkSelection=!!rows.length&&!all'));
-  assert.ok(roster.includes('playRosterBulkSelection=false;playRosterResetBulkConfirmation()'));
+  assert.match(roster,/return savePlayRosterIds\(playRosterSelectedIds\(\)\)/);
+  assert.doesNotMatch(roster,/playRosterBulkConfirmClicks|playRosterBulkSelection|playRosterResetBulkConfirmation/);
 });
 
 test('disabled daytime Artifact shows its configured action and preserves role actions',()=>{
