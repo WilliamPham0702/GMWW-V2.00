@@ -19,6 +19,23 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
  // Run rendering between inspector calls instead of holding the suite inside one evaluation.
  await page.waitForTimeout(1000);
  console.log(name+' external rAF probe: '+await page.evaluate(()=>JSON.stringify({probe:window.__c40Test.probe,hidden:document.hidden})));
+ // Decode the real portrait responses: an alpha flag alone does not prove the white background is gone.
+ const portraits=await page.evaluate(async()=>{
+  const {characters}=await (await fetch('/api/game-characters')).json();let checked=0;
+  for(const c of characters){
+   const img=new Image();img.src=c.imageUrl;await img.decode();
+   const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+   const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);const {data}=ctx.getImageData(0,0,canvas.width,canvas.height);
+   let clear=0,solid=0;for(let i=3;i<data.length;i+=4){if(data[i]===0)clear++;if(data[i]>=240)solid++;}
+   if(clear<data.length/4*.08||solid<data.length/4*.08)throw Error(c.id+' requires transparent background and visible character');
+   for(const [x,y] of [[0,0],[canvas.width-1,0],[0,canvas.height-1],[canvas.width-1,canvas.height-1]]){
+    if(data[(y*canvas.width+x)*4+3]>1)throw Error(c.id+' has opaque portrait corner');
+   }
+   checked++;
+  }
+  return checked;
+ });
+ assert.equal(portraits,40);console.log(name+': 40 live portraits decoded; transparent backgrounds and visible characters verified');
  const command=async c=>page.evaluate(c=>{const t=window.__c40Test;if(!t.renderer.updateCharacterRenderer(t.host,c))throw Error('Update failed');},c);
  const picture=async()=>page.evaluate(()=>window.__c40Test.root.firstElementChild.toDataURL());
  const diagnostic=async()=>page.evaluate(()=>{const r=window.__c40Test.root;return JSON.stringify({dataset:r.dataset,state:r._gmwwMotion,hidden:document.hidden,connected:r.isConnected});});
