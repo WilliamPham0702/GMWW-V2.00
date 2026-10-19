@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const src=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const roster=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const app=fs.readFileSync('server-game/current/app.js','utf8');
+const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
+
+test('wolf introduction action box lists member names without extra explanation',()=>{
+  assert.match(src,/t\\?\\.kind==='wolf-introduction'\\?\\(t\\.recognitionIds\\|\\|\\[\\]\\)/);
+  assert.doesNotMatch(src,/Bầy Sói nhận biết nhau:/);
+});
+
+test('roster confirmation controls are near select all, bulk selection requires three clicks',()=>{
+  const toolbar=html.indexOf('id="playRosterSelectAll"'),cancel=html.indexOf('id="playRosterCancel"'),
+    confirm=html.indexOf('id="playRosterSave"'),filter=html.indexOf('id="playRosterFilters"');
+  assert.ok(toolbar>=0&&cancel>toolbar&&confirm>cancel&&filter>confirm);
+  assert.equal(html.split('id="playRosterSave"').length-1,1);
+  assert.match(roster,/playRosterBulkConfirmClicks<3/);
+  assert.match(roster,/playRosterBulkSelection=!!rows\\.length&&!all/);
+  assert.match(roster,/playRosterBulkSelection=false;playRosterResetBulkConfirmation\\(\\)/);
+});
+
+test('disabled daytime Artifact shows its configured action and preserves role actions',()=>{
+  const sandbox=vm.createContext({});vm.runInContext(controls,sandbox);
+  const engine=sandbox.GMWW_BATTLE_CONTROLS;
+  const catalog={
+    cards:[{id:'witch',name:'Phù Thuỷ Già',functions:[
+      {actionId:'save',name:'Cứu',phase:'night',targetCount:1},
+      {actionId:'kill',name:'Giết',phase:'night',targetCount:1}]}],
+    artifacts:[{id:'stone',name:'Đá Hoán Đổi',functions:[
+      {actionId:'swap',phase:'day',targetCount:2}],actions:[
+      {id:'swap',name:'Hoán Đổi Vai Trò'}]}],
+    actions:[]
+  };
+  const turn={kind:'role',roleId:'witch',loginIds:['dung'],
+    artifacts:[{artifactId:'stone',loginId:'dung',artifactName:'Đá Hoán Đổi'}]};
+  const result=engine.actionsForTurn(turn,1,catalog);
+  assert.deepEqual(Array.from(result,x=>x.name),['Cứu','Giết','Hoán Đổi Vai Trò']);
+  assert.equal(result[2].unavailable,true);
+  assert.match(result[2].unavailableReason,/ban ngày/);
+  assert.equal(result.filter(x=>x.artifactId).length,1);
+});
+
+test('generated GM runtime retains exact source assembly',()=>{
+  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
+    '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+  assert.equal(app,parts.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join(''));
+});
