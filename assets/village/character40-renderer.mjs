@@ -1,4 +1,4 @@
-import '../characters/gmww40/runtime.js?v=c40-1';
+import '../characters/gmww40/runtime.js?v=c40-mobile-perf-2';
 export function normalizeRendererCommand(command={},fallback='character-01'){
  const api=globalThis.GMWW_SHARED_MOTION,characterId=api.supports(command.characterId)?command.characterId:fallback;
  const motion=command.motion==='turn'?'turn':command.state==='walking'?'walk':command.state==='running'?'run':'idle';
