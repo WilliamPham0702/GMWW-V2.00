@@ -49,16 +49,17 @@ test('Save prepares the reusable Artifact catalog; choose only references stored
   assert.doesNotMatch(play,/playArtifactArtworkData\(/);
   assert.match(app,/await playEnsureSharedArtifactReferencesReady\(cfg\)/);
 });
-test('LƯU on Step 5 is GM-private, while the bottom timeline can advance separately',()=>{
+test('LƯU on Step 5 sends only stage transition, never private cards before Phát Vai',()=>{
   const save=section(app,'function playAssignmentSignature(){','function renderPlayRoleAssignmentPanel(){');
-  assert.match(save,/function playSaveAssignments\(\)/);
+  assert.match(save,/async function playSaveAssignments\(\)/);
   assert.match(save,/assignmentSavedSignature=playAssignmentSignature\(\)/);
-  const onlySave=section(save,'function playSaveAssignments(){','function playConfirmAssignments(){');
-  assert.doesNotMatch(onlySave,/playPublishStage|playRoomApi|\/assignments/);
+  const onlySave=section(save,'async function playSaveAssignments(){','function playConfirmAssignments(){');
+  assert.match(onlySave,/await playPublishStage\('deal'\)/);
+  assert.doesNotMatch(onlySave,/playRoomApi\('\/assignments'/);
   assert.match(app,/addEventListener\('click',playSaveAssignments\)/);
-  assert.match(app,/if\(playSceneState\.step==='roles'\)\{playConfirmAssignments\(\);return\}/);
   assert.match(html,/id="playAssignmentConfirm"[^>]*>✓ LƯU<\/button>/);
 });
+
 test('V3.83 OTA is integrity-verified and never deletes existing files',()=>{
   const files=['GMWW.html','app.js'],root='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.83/';
   const manifest={releaseVersion:'3.83',runtimeVersion:'3.83',shellVersion:'3.17',releaseType:'runtime',
