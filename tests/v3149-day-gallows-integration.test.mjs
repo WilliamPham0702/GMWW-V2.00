@@ -60,11 +60,12 @@ function dayHarness(){
   room.ctx={storage};room.broadcast=x=>events.push(x);
   room.gmAuthorized=async()=>({ok:true,meta:await storage.get('meta')});
   data.set('meta',{phase:'running',cyclePhase:'morning',matchId:'m1',cycleKey:'morning-2',cycleNight:2});
-  data.set('players',{ 'member:alice':{loginId:'alice'},'member:bob':{loginId:'bob'} });
+  data.set('players',{ 'member:alice':{loginId:'alice'},'member:bob':{loginId:'bob'},'member:carol':{loginId:'carol'} });
   data.set('gameConfig',{artifactLimitPerCycle:2});
   data.set('assignments',[
     {loginId:'alice',roleId:'role_thug',faction:'village'},
-    {loginId:'bob',roleId:'role_wolf',faction:'wolf'}
+    {loginId:'bob',roleId:'role_wolf',faction:'wolf'},
+    {loginId:'carol',roleId:'role_villager',faction:'village'}
   ]);
   return {data,room,events};
 }
@@ -82,7 +83,7 @@ test('V3.149 actual Durable Object: day Du Côn one use per game, idempotent ret
   assert.equal((data.get('interactions')||[]).filter(x=>x.type==='dead'&&x.loginId==='bob').length,1);
   assert.equal((await result(await room.gmDayAction(null,payload))).idempotent,true);
   assert.equal((data.get('dayRoleUsage:m1')||[]).length,1);
-  assert.equal((await result(await room.gmDayAction(null,{...payload,clientEventId:'two'}))).error,'DAY_ROLE_QUOTA_REACHED');
+  assert.equal((await result(await room.gmDayAction(null,{...payload,targetIds:['carol'],clientEventId:'two'}))).error,'DAY_ROLE_QUOTA_REACHED');
   assert.equal((await result(await room.gmDayAction(null,{...payload,clientEventId:'one',targetIds:['alice']}))).error,'REQUEST_ID_CONFLICT');
 });
 
