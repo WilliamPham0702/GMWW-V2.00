@@ -59,8 +59,11 @@ test('Artifact foot label is compact and swipeable while preserving full name ac
   assert.match(setup,/title=".*playEsc\\(assignment\\.artifactName/);
   assert.match(css,/\\.play-player-artifact \\.play-player-artifact-text\\{/);
   assert.match(css,/width:2em!important/);
-  assert.match(css,/overflow-x:auto!important/);
-  assert.match(css,/touch-action:pan-x!important/);
+  assert.match(setup,/chars\\.slice\\(position,position\\+2\\)\\.join\\(''\\)/);
+  assert.match(setup,/artifactTag\\.addEventListener\\('pointermove'/);
+  assert.match(setup,/Intl\\.Segmenter/);
+  assert.match(css,/overflow-x:hidden!important/);
+  assert.match(css,/touch-action:none!important/);
 });
 
 test('GM action tray remains one row, arrows expose overflow, buttons retain drag',()=>{
