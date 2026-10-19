@@ -6068,3 +6068,15 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 /* Navigation advances a complete action chip, with larger, persistent hit targets. */
 #start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow:not([hidden]){flex:0 0 38px!important;width:38px!important;min-width:38px!important;height:46px!important;font-size:30px!important;border-radius:12px!important}
 #start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{scroll-snap-align:start!important}
+
+
+/* C40 mobile repair: the legacy initials-only "avatar span" rule also matched
+   the new full-frame canvas host. It painted the unwanted cyan oval behind
+   every occupied character in GM Ván Mẫu and game steps. */
+#start #playPlayerRing .play-player-token .play-player-avatar > span.gmww40-character{
+  display:block!important;
+  width:100%!important;height:100%!important;
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;filter:none!important;
+  overflow:visible!important;
+}
