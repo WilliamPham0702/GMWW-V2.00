@@ -6011,3 +6011,46 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{
   touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
 }
+
+/* V3.153 candidate: exactly one horizontal action row. Arrows scroll the tray;
+   drag starts on the action buttons, so touch drag never steals tray navigation. */
+#start #playShell[data-step="battle"] #battleActionRail.battle-action-rail{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;gap:3px!important;min-width:0!important;width:100%!important;
+}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow{
+  flex:0 0 24px!important;min-width:24px!important;width:24px!important;height:40px!important;
+  padding:0!important;margin:0!important;border-radius:8px!important;
+  color:#c5f7ff!important;background:#14526a!important;border:1px solid #7ac6db!important;
+  font-size:26px!important;line-height:1!important;touch-action:manipulation!important;
+}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleActionRail .battle-action-arrow:disabled{opacity:.32!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll{
+  flex:1 1 auto!important;min-width:0!important;width:100%!important;max-width:100%!important;
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  overflow-x:auto!important;overflow-y:hidden!important;touch-action:none!important;
+  scroll-snap-type:x proximity!important;scrollbar-width:none!important;
+  align-self:center!important;align-items:center!important;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll::-webkit-scrollbar{display:none!important}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{
+  flex:0 0 auto!important;min-height:40px!important;max-width:230px!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
+}
+/* GM-only Artifact name: show only approximately two glyph widths, horizontal
+   scrolling inside the tiny label reveals the rest without overlapping seats. */
+#start .play-player-token .play-player-artifact{
+  width:calc(2em + 6px)!important;max-width:calc(2em + 6px)!important;min-width:0!important;
+  box-sizing:border-box!important;padding:3px 2px!important;height:auto!important;
+  white-space:nowrap!important;overflow:hidden!important;pointer-events:auto!important;
+  font-size:10px!important;touch-action:pan-x!important;
+}
+#start .play-player-token .play-player-artifact .play-player-artifact-text{
+  display:block!important;width:2em!important;max-width:2em!important;min-width:0!important;
+  white-space:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
+  overflow-wrap:normal!important;scrollbar-width:none!important;touch-action:pan-x!important;
+  overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch;
+}
+#start .play-player-token .play-player-artifact .play-player-artifact-text::-webkit-scrollbar{display:none!important}
