@@ -515,6 +515,7 @@ jobs:
             node .github/scripts/verify-ota-v3140-production.mjs "$URL"
           fi
           node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
+          node .github/scripts/verify-character40-production.mjs
           curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
           grep -q '"ok":true' /tmp/web-sync.json
           curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
