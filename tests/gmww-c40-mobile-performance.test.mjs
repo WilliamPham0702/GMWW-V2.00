@@ -81,7 +81,7 @@ test('Player Web roaming avoids 30-second seated pauses and packaged source drif
     '40-cards-and-game.part','50-privacy-and-runtime.part'
   ].map(name=>read('src/player-web-src/'+name)).join('');
   const bundled=read('src/gmww-members-live.js');
-  assert.equal(bundled,'export const gmwwMembersLiveScript = '+JSON.stringify(parts)+';\\n');
+  assert.equal(bundled,'export const gmwwMembersLiveScript = '+JSON.stringify(parts)+';\n');
   assert.match(parts,/const LOBBY_MOTION_HOLD_MS=1400;/);
   assert.doesNotMatch(parts,/ngồi 30 giây/);
   assert.doesNotMatch(parts,/autoMotionPhase:state\.lobbyMotionPhase==='gather'\?'gather':'roam'/);
