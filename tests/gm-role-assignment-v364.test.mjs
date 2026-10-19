@@ -31,7 +31,7 @@ function harness(){
   playTemplateSelectedArtifacts:()=>[],playFlashError:msg=>logs.push('error:'+msg),
   savePlayScene:()=>logs.push('saved'),renderPlayScene:()=>logs.push('render'),
   renderPlayRoleAssignmentPanel:()=>logs.push('panel'),
-  playPublishStage:step=>{logs.push('published:'+step);return Promise.resolve()},
+  playPublishStage:step=>{logs.push('published:'+step);return Promise.resolve({ok:true})},
   state:{cards:[{id:'seer',name:'Tiên Tri',information:'Soi'},{id:'wolf',name:'Sói',information:'Cắn'}]},
   playFactionLabel:r=>r.id==='wolf'?'Phe Sói':'Phe Dân',
   playShuffle:arr=>arr.slice().reverse(),
@@ -89,15 +89,17 @@ test('Validation prevents missing, duplicated, or mismatched roles and rejects u
  h.members.push({kind:'member',loginId:'c',displayName:'C',seatId:3});
  assert.equal(h.api.status().ok,false);
 });
-test('LƯU retains private assignments on step 5; lower navigation advances separately',()=>{
+test('LƯU commits only the GM draft and moves to Phát Vai after Server acknowledgment',async()=>{
  const h=harness();
- assert.equal(h.api.save(),true);
- assert.equal(h.state.step,'roles');
+ assert.equal(await h.api.save(),true);
+ assert.equal(h.state.step,'deal');
+ assert.equal(h.state.phase,'lobby');
  assert.ok(h.logs.includes('saved'));
  assert.ok(h.state.assignmentSavedSignature);
- assert.ok(!h.logs.some(x=>x.startsWith('published:')));
+ assert.equal(h.logs.filter(x=>x==='published:deal').length,1);
  assert.match(app,/addEventListener\('click',playSaveAssignments\)/);
 });
+
 test('Only lower GM navigation advances to step 6; release requires separate step-6 action',()=>{
  const h=harness();
  assert.equal(h.api.confirm(),true);

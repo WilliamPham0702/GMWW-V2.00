@@ -5957,3 +5957,40 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 
 /* V3.149: live public Lên Giàn vote above GM scene character. */
 .play-player-over>.battle-gallows-vote-mark{position:static!important;display:block!important;flex:none;font-size:21px;line-height:1.1;background:rgba(8,37,56,.94);border:1px solid rgba(248,238,207,.9);border-radius:12px;padding:2px 7px;box-shadow:0 2px 8px #0007;z-index:5;margin:0 auto}
+
+/* V3.151: visible GM-only Artifact cards live below the character's feet. */
+#start .play-player-token .play-player-artifact{
+  position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);
+  width:29px;height:39px;display:flex;align-items:center;justify-content:center;
+  border:2px solid #f8d892;border-radius:5px;background:linear-gradient(#283947,#102027);
+  box-shadow:0 2px 9px #000b,0 0 8px #ecd57e88;z-index:10;
+  overflow:hidden;pointer-events:none;
+}
+#start .play-player-token .play-player-artifact::before{
+  content:"✦";position:absolute;color:#f8d892;font-size:19px;
+}
+#start .play-player-token .play-player-artifact img{
+  display:block;position:relative;z-index:1;width:100%;height:100%;object-fit:cover;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-turn-mark,
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-target-mark{
+  font-size:10px!important;font-weight:1000!important;
+  border:1.5px solid #fff!important;
+  box-shadow:0 0 0 2px #061b2c,0 0 13px 4px var(--gmww-battle-glow,#59f7a2)!important;
+  animation:gmwwBattleBadgePulse 1.05s ease-in-out infinite alternate!important;
+  will-change:filter;
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-target-mark{
+  --gmww-battle-glow:#ff604d;
+  animation-delay:-.52s!important;
+}
+@keyframes gmwwBattleBadgePulse{
+  from{filter:brightness(1);outline:1px solid transparent;}
+  to{filter:brightness(1.75);outline:2px solid #fff;}
+}
+@media(prefers-reduced-motion:reduce){
+ #start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-turn-mark,
+ #start #playShell[data-step="battle"] #playPlayerRing .play-player-token .play-player-over>.battle-target-mark{
+   animation:none!important;box-shadow:0 0 0 2px #061b2c,0 0 12px #fff!important;
+ }
+}

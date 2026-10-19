@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.150';
+const VERSION='3.151';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2928,7 +2928,8 @@ function renderPlayPlayers(){
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
     const name=m?.displayName||(seatId?('Vị trí '+seatId):'Trong Làng'),initial=(name.trim().charAt(0)||'•').toUpperCase(),effectLabel=effect==='dead'?'ĐÃ CHẾT':effect==='frozen'?'ĐÓNG BĂNG':effect==='expelled'?'BỊ ĐUỔI':null,presenceLabel=m?.online===false?'Offline':'Online';
     const gmAssignments=(playSceneRuntime.assignments||[]).length?playSceneRuntime.assignments:(playSceneState.assignmentsPreview||[]);
-    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');const factionRaw=String(assignment?.faction||assignment?.roleCard?.factionId||(state.cards||[]).find(c=>String(c.id)===String(assignment?.roleId))?.factionId||'').toLowerCase(),roleFaction=factionRaw.includes('wolf')||factionRaw.includes('sói')?'wolf':factionRaw.includes('third')||factionRaw.includes('phe ba')?'third':'village';el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role" data-faction="'+roleFaction+'">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(!m?'<b>Vị trí '+seatId+'</b>':'');
+    const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');const factionRaw=String(assignment?.faction||assignment?.roleCard?.factionId||(state.cards||[]).find(c=>String(c.id)===String(assignment?.roleId))?.factionId||'').toLowerCase(),roleFaction=factionRaw.includes('wolf')||factionRaw.includes('sói')?'wolf':factionRaw.includes('third')||factionRaw.includes('phe ba')?'third':'village';el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role" data-faction="'+roleFaction+'">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(m&&assignment?.artifactId&&playSceneState.artifactsEnabled?
+      '<span class="play-player-artifact" title="'+playEsc(assignment.artifactName||(state.artifacts||[]).find(a=>String(a.id)===String(assignment.artifactId))?.name||'Artifact')+'" aria-label="Artifact của nhân vật"><img alt="Lá Artifact"></span>':'')+(!m?'<b>Vị trí '+seatId+'</b>':'');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
       el.dataset.gmwwStatuses=statusVisuals.join('|');
@@ -2936,6 +2937,12 @@ function renderPlayPlayers(){
     }
     el.setAttribute('aria-label',name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'')+(m&&playPlayerStatuses(m.loginId).length?' • '+playPlayerStatuses(m.loginId).map(x=>x.label).join(', '):''));el.title=name+(m?' • '+presenceLabel:'')+(effectLabel?' • '+effectLabel:'');
     if(m){
+      if(assignment?.artifactId&&playSceneState.artifactsEnabled){
+        const artifactThumb=el.querySelector('.play-player-artifact img'),id=String(assignment.artifactId);
+        if(artifactThumb)void resolveArtwork('artifacts',id,'thumb').then(url=>{
+          if(artifactThumb.isConnected&&url)artifactThumb.src=url;
+        }).catch(()=>{});
+      }
       const host=el.querySelector('.play-player-avatar'),direction=moving?playWalkDirection(m):'right',frame=moving?playWalkFrame(m,playNow()):1,characterSrc=playCharacterVisualUrl(m,frame,direction),rigMounted=playMountCharacterRig(host,m,{moving,sitting,effect});el.dataset.walkDir=direction;
       if(!rigMounted){const im=host?.querySelector('img');if(im){im.src=characterSrc;im.dataset.walkKey=direction+':'+frame;im.decoding='async';im.onerror=()=>{im.onerror=null;im.replaceWith(Object.assign(document.createElement('span'),{textContent:initial}))}}}
       // A neutral preview does not assign/change the account's fixed character.
@@ -3439,7 +3446,7 @@ const battleActions=()=>{
     const rawName=String(action.name||'').trim();
     const name=action.artifactId&&/^action[-_][a-z0-9_-]+$/i.test(rawName)
       ?'Hành động':rawName;
-    return {...action,name,actorIds,unavailable:!actorIds.length,unavailableReason};
+    return {...action,name,actorIds,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
   });
 };
 const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
@@ -3559,9 +3566,10 @@ function battleRenderTransferPanel(){
   });
   grip?.addEventListener('pointerup',()=>{drag=null});grip?.addEventListener('pointercancel',()=>{drag=null});
 }
+let battleConfirmAudioGate=false;
 function battleAdvanceConfirmedTurn(){
   const id=battleState.pendingNextTurnId;
-  if(!id||battleState.syncPending||battleState.busy)return;
+  if(!id||battleState.syncPending||battleState.busy||battleConfirmAudioGate||document.getElementById('battleResultPopup')?.hidden===false)return;
   battleState.pendingNextTurnId='';
   if(playSceneState.phase==='night'&&battleTurn()?.id===id)battleNavigateRelative(1);
 }
@@ -3963,7 +3971,7 @@ function renderPlayBattle(){
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig=''}
   battleGallowsRender(phase);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
-  if(battleState.lastAudioTurnKey!==key){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
+  if(battleState.lastAudioTurnKey!==key&&!battleConfirmAudioGate){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
   const previous=document.getElementById('battleBack');
@@ -4116,7 +4124,15 @@ async function battleConfirm(confirmed=false){
     else if(seerReveal)payload.message='GM thực hiện soi xét; kết quả được xác minh trên Server.';
     else if(a.type==='effect_notice')payload.message='GM đã ghi nhận hành động '+a.name+'.';
     // The confirmation cue is tied to the real OK gesture, not the Artifact opening turn.
-    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
+    battleConfirmAudioGate=true;
+    const finishConfirmAudio=()=>{
+      if(!battleConfirmAudioGate)return;
+      battleConfirmAudioGate=false;
+      renderPlayBattle();
+      battleAdvanceConfirmedTurn();
+    };
+    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,finishConfirmAudio))
+      .then(started=>{if(started===false)finishConfirmAudio()},finishConfirmAudio);
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     const ackMs=Math.round((globalThis.performance?.now?.()??Date.now())-startedAt);
@@ -5001,14 +5017,28 @@ function playAssignmentSignature(){
   return JSON.stringify({roomCode:playSceneState.roomCode||'',matchId:playSceneState.matchId||'',
     rows:(playSceneState.assignmentsPreview||[]).map(r=>[r.loginId,r.roleId,r.artifactId||''])});
 }
-function playSaveAssignments(){
+async function playSaveAssignments(){
   const status=playAssignmentDraftStatus();
   if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
-  // Step 5 stores only the GM's private local draft. Player Web receives no cards.
-  playSceneState.assignmentSavedSignature=playAssignmentSignature();
-  playSceneRuntime.assignmentPanelDismissed=true;
-  savePlayScene();renderPlayRoleAssignmentPanel();
-  return true;
+  if(playSceneRuntime.busy)return false;
+  // Save only GM-private assignments. Publishing the deal stage must NOT
+  // send cards; private delivery is still triggered solely by the Phát Vai step.
+  const formerStep=playSceneState.step;
+  playSceneRuntime.busy=true;renderPlayRoleAssignmentPanel();
+  try{
+    const ack=await playPublishStage('deal');
+    if(!ack)throw Error('Server chưa xác nhận chuyển sang Phát Vai.');
+    playSceneState.assignmentSavedSignature=playAssignmentSignature();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    playSceneState.step='deal';playSceneState.phase='lobby';
+    savePlayScene();renderPlayScene();
+    return true;
+  }catch(err){
+    playSceneState.step=formerStep;
+    playSceneRuntime.assignmentPanelDismissed=false;
+    playFlashError('Không thể lưu Phân Vai: '+String(err?.message||err));
+    renderPlayRoleAssignmentPanel();return false;
+  }finally{playSceneRuntime.busy=false;renderPlayRoleAssignmentPanel()}
 }
 function playConfirmAssignments(){
   const status=playAssignmentDraftStatus();
