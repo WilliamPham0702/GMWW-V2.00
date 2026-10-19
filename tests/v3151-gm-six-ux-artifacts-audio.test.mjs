@@ -87,5 +87,5 @@ test('V3.151 GM packaged Runtime and prior IPA shell remain stable',()=>{
 test('V3.152 artifact action count and drag touch behavior are bounded',()=>{
   assert.match(controls,/isArt\?eligible\.slice\(0,1\):eligible/);
   assert.match(css,/#battleActionBar>button\[data-battle-action\]\{[\s\S]*?touch-action:none!important/);
-  assert.match(setup,/class=\\"play-player-artifact\\"/);
+  assert.match(setup,/playEsc\(assignment\.artifactName/);
 });
