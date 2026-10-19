@@ -47,7 +47,7 @@ test('Chọn Ván configures separate wolf introduction 30s and opening Artifact
     assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);
   assert.match(html,/id="playWolfDiscussionSec"[^>]*value="30"/);
   assert.match(html,/id="playEarlyArtifactSec"[^>]*value="60"/);
-  assert.match(app,/gameTiming:\{villageDiscussionSec:300,wolfDiscussionSec:30,earlyArtifactSec:60/);
+  assert.match(app,/gameTiming:\{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60/);
   assert.match(app,/playEarlyArtifactSec:'earlyArtifactSec'/);
   assert.match(app,/earlyArtifactSec:clamp\(document\.getElementById\('playEarlyArtifactSec'\)/);
   const timing=sanitizeGameConfig({}).timing;
