@@ -116,14 +116,23 @@ test('live presence refresh re-applies active filter while preserving selections
   assert.deepEqual(rows.map(row=>row.classList.contains('hidden')),[false,false,false]);
 });
 
-test('ONLINE room validation and existing save remain intact',()=>{
-  assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\./);
-  assert.match(app,/async function savePlayRoster\(\)/);
-  assert.match(app,/return savePlayRosterIds\(ids\)/);
-  assert.match(app,/playRosterBulkConfirmClicks<3/);
-});
-
-test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
+test('ONLINE validation is intact, Select All commits on the FIRST confirmation',async()=>{
+  assert.match(app,/Chế độ ONLINE chỉ chọn Người Chơi đang Online\\./);
+  assert.doesNotMatch(app,/playRosterBulkConfirmClicks|playRosterBulkSelection|XÁC NHẬN \\(\\d+\\/3\\)/);
+  const {selectAll,context}=setup();
+  selectAll.click();
+  let count=0, submitted=null;
+  context.savePlayRosterIds=async ids=>{count++;submitted=Array.from(ids);return true};
+  const start=app.indexOf('async function savePlayRoster(){');
+  const end=app.indexOf('\\nfunction playApplyLobbyStage(',start);
+  assert.ok(start>=0&&end>start);
+  vm.runInNewContext(app.slice(start,end),context);
+  await context.savePlayRoster();
+  assert.equal(count,1,'one confirm tap must submit once');
+  assert.deepEqual(submitted,['chrome','edge','safari']);
+  assert.match(app,/async function savePlayRosterIds\\(ids\\)/);
+  assert.match(app,/await playRoomApi\\('\/participants'/);
+});\n\ntest('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.62',async()=>{
   const {selectVerifiedRuntimeV363Delta}=await import('../src/gmww-ota-delta.js');
   const origin='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.63/';
   const all=['GMWW.html','app.js','style.css','gm/gm-white-wolf.webp'];
