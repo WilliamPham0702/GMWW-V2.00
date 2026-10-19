@@ -33,7 +33,10 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+methods+activate+' })',{
 const clone=x=>x===undefined?undefined:structuredClone(x);
 function harness({artifact=true,auto=false,singleUse=false}={}){
   const data=new Map(),room=new Room(),events=[];
-  const storage={get:async key=>clone(data.get(key)),put:async(key,value)=>data.set(key,clone(value)),delete:async key=>data.delete(key),setAlarm:async()=>{},transaction:async fn=>{
+  const storage={get:async key=>clone(data.get(key)),put:async(key,value)=>data.set(key,clone(value)),delete:async key=>data.delete(key),
+    // Model Durable Object prefix reads; return independent values as the real storage does.
+    list:async({prefix='' }={})=>new Map([...data].filter(([key])=>String(key).startsWith(prefix)).map(([key,value])=>[key,clone(value)])),
+    setAlarm:async()=>{},transaction:async fn=>{
     const before=new Map([...data].map(([k,v])=>[k,clone(v)]));
     try{return await fn(storage)}catch(e){data.clear();for(const [k,v] of before)data.set(k,v);throw e}
   }};
@@ -146,6 +149,19 @@ test('single-use exact retry is idempotent; reuse in a later night stays rejecte
   assert.equal((await result(await h.room.playerArtifactActivate(request))).idempotent,true);
   h.data.get('meta').cycleNight=2;
   assert.equal((await result(await h.room.playerArtifactActivate(request))).error,'ARTIFACT_ALREADY_USED');
+});
+test('Knight last strike queued on previous day resolves once at next dawn, preserving unrelated records',async()=>{
+  const h=harness({artifact:false}),now=new Date().toISOString();
+  h.data.set('knightPending:test-match:2:bob',{matchId:'test-match',actorId:'alice',targetId:'bob',resolveDay:2,createdAt:now});
+  h.data.set('interactions',[{id:'unrelated',loginId:'carol',type:'dead',effectActive:true,matchId:'test-match',createdAt:now}]);
+  const result=await h.room.applyCycle(await h.meta(),'morning',2,'morning-2');
+  assert.equal(result.ok,true);
+  const rows=h.data.get('interactions');
+  assert.equal(rows.filter(x=>x.id==='knight-strike:test-match:2:bob').length,1);
+  assert.equal(rows.find(x=>x.id==='unrelated').effectActive,true);
+  assert.equal(h.data.has('knightPending:test-match:2:bob'),false);
+  await h.room.applyCycle(await h.meta(),'morning',2,'morning-2');
+  assert.equal(h.data.get('interactions').filter(x=>x.id==='knight-strike:test-match:2:bob').length,1);
 });
 test('Manual GM completes morning once, expires freeze and preserves deaths and stored game data',async()=>{
   const h=harness();h.data.set('interactions',[{id:'f',loginId:'bob',type:'frozen',effectActive:true,night:1},{id:'d',loginId:'carol',type:'dead',effectActive:true,night:1}]);
