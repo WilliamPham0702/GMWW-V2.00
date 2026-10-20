@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.162';
+const VERSION='3.163';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -3651,6 +3651,9 @@ function battleUpdateActionNavigation(){
   if(previous){previous.hidden=true;previous.disabled=true}
   if(next){next.hidden=true;next.disabled=true}
 }
+function battleActionGestureMode(dx,dy){
+  return Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+}
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
@@ -4618,7 +4621,7 @@ function initBattleControls(){
       d.moved=true;
       // Horizontal swipe browses actions; movement toward the village starts a
       // real target drag. Both gestures start directly on a readable action.
-      d.mode=Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+      d.mode=battleActionGestureMode(dx,dy);
     }
     if(!d.moved)return;
     if(d.mode==='scroll'){
