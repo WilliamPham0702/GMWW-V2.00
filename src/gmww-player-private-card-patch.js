@@ -70,7 +70,7 @@ const GMWW_OFFLINE_DECK_CSS=String.raw`
 `;
 
 
-const GMWW_APPROVED_CARD_BACK_CSS=String.raw\`
+const GMWW_APPROVED_CARD_BACK_CSS=String.raw`
 /* Approved GMWW original art, not a repainted Role card on Artifact. */
 #game #gmwwPlayerPrivateDock button[data-private-card]{background:transparent!important;border:0!important}
 #game #gmwwPlayerPrivateDock .mini-card{background:transparent!important}
@@ -79,7 +79,7 @@ const GMWW_APPROVED_CARD_BACK_CSS=String.raw\`
 #game #roleCard .role-back .gmww-card-back-img{object-fit:contain!important;background:transparent!important}
 #game #artifactCard .gmww-art-back{background:#2e130d url('/card-backs/artifact-card-back-v1.png') center / 100% 100% no-repeat!important}
 #game #artifactCard .gmww-art-back > *{visibility:hidden!important}
-\`;
+`;
 
 export function patchPrivatePlayerCards(source){
  if(typeof source!=='string')throw new TypeError('Player Web source missing');
