@@ -60,7 +60,19 @@ try{
  initBattleControls();renderPlayBattle();
  `});
  assert.equal(await page.locator('[data-battle-action]').count(),2);
- assert.equal(await page.locator('#battleCountdown').textContent(),'00:45');
+ const clockActual=await page.locator('#battleCountdown').textContent();
+ if(clockActual!=='00:45'){
+  const detail=await page.evaluate(()=>({
+   rootHidden:document.getElementById('playBattleDock')?.hidden,
+   clockHidden:document.getElementById('playBattleClockFloat')?.hidden,
+   phase:playSceneState.phase,step:playSceneState.step,now:Date.now(),
+   duration:playSceneRuntime.nightRuntime.queue[playSceneRuntime.nightRuntime.cursor]?.durationSec,
+   rulesRemaining:globalThis.GMWW_BATTLE_CONTROLS?.remainingSeconds(playSceneRuntime.nightRuntime,Date.now()),
+   pageErrors:typeof errors!=='undefined'?errors:undefined
+  }));
+  console.error('NIGHT_TIMELINE_CLOCK_DIAGNOSTIC',JSON.stringify(detail),'page errors',JSON.stringify(errors));
+ }
+ assert.equal(clockActual,'00:45','iPhone clock or handler error: '+JSON.stringify(errors));
  assert.equal(await page.locator('[data-battle-index="3"]').count(),1,'wake step is selectable exactly once');
  const artifact=page.locator('[data-battle-action][data-battle-kind="artifact"]');
  assert.equal((await artifact.textContent()).trim(),'Đổi Vai Trò','Artifact button displays only the human-readable action name');
