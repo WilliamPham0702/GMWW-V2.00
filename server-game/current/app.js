@@ -3552,7 +3552,10 @@ function battleTickCountdown(){
     battleState.countdownBase=Number.isFinite(seconds)?seconds:null;
     battleState.countdownAt=now;
   }else{
-    if(Number.isFinite(battleState.countdownBase)){
+    if(phase==='day'&&playSceneRuntime.room?.autoGM===false){
+      // Pausing Auto GM must freeze the day clock, not merely disable the server alarm.
+      battleState.countdownBase=seconds;battleState.countdownAt=now;
+    }else if(Number.isFinite(battleState.countdownBase)){
       const local=Math.max(0,Math.ceil(battleState.countdownBase-(now-battleState.countdownAt)/1000));
       seconds=Number.isFinite(seconds)?Math.min(seconds,local):local;
     }else if(Number.isFinite(seconds)){
@@ -3716,7 +3719,7 @@ function battleMorningRows(){
     const member=battleMember(loginId);
     byType.set(signature,{kind:key,name:String(member?.displayName||member?.name||loginId),label:labels[key]});
   }
-  const priority={expelled:0,dead:1,assassin_mark:2,marked:2,frozen:3,silenced:4,infected:5};
+  const priority={dead:0,expelled:1,assassin_mark:2,marked:2,frozen:3,silenced:4,infected:5};
   return [...byType.values()].sort((a,b)=>(priority[a.kind]??9)-(priority[b.kind]??9));
 }
 function battleMorningPlayAudio(){
@@ -4101,7 +4104,7 @@ function renderPlayBattle(){
     const active=timeline.querySelector('.is-active');if(active)requestAnimationFrame(()=>{try{active.scrollIntoView({block:'nearest',inline:'center'})}catch{}})
   }
   const allActions=(phase==='day'||(t&&phase==='night'))?battleActions():[];
-  const actions=phase==='day'?allActions.filter(a=>!a.unavailable&&!a.noTarget):allActions,
+  const actions=phase==='day'?allActions.filter(a=>!a.unavailable):allActions,
     bar=document.getElementById('battleActionBar');
   const actionTray=document.getElementById('battleActionTray');
   if(actionTray)actionTray.hidden=phase==='day'?!actions.length:false;
@@ -4129,7 +4132,7 @@ function renderPlayBattle(){
   });
   const sig=(t?.id||phase)+':'+String(battleUsed(t))+':'+JSON.stringify(actions.map(a=>[a.id,a.name,a.targetCount,a.unavailable,a.actorIds,a.unavailableReason]))+':'+JSON.stringify(battleActorEffects);
   if(bar&&!deadOnly&&sig!==battleState.actionSig){battleState.actionSig=sig;
-    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+((a.noTarget&&!battleIsTransfer(a))||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.name)+(!a.artifactId&&a.targetCount>1?'<small class="battle-target-quota"> '+(battleState.actionId===a.id?battleState.targets.length:0)+'/'+a.targetCount+'</small>':'')+(visualApi?(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).length?'<span class="gmww-sv-action-preview gmww-sv-stage" aria-hidden="true"><span class="gmww-sv-action-avatar">✦</span>'+visualApi.overlay((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]))+'</span><span class="gmww-sv-action-tags">'+(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).map(id=>visualApi.byId[id]?.icon+' '+playEsc(visualApi.byId[id]?.name||id)).join(' · ')+'</span>':'':'')+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?(t.recognitionIds||[]).map(id=>battleMember(id)?.displayName||id).join(' · '):phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
+    bar.innerHTML=actions.length?actions.map(a=>'<button type="button" role="listitem" data-battle-kind="'+(a.artifactId?'artifact':'role')+'" data-battle-action="'+playEsc(a.id)+'" '+((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).includes('frozen')?'class="is-actor-frozen" ':'')+((phase!=='day'&&a.noTarget&&!battleIsTransfer(a))||a.unavailable?'disabled ':'')+'title="'+playEsc(a.unavailableReason||a.name)+'">'+(a.unavailable&&/Người thực hiện/.test(a.unavailableReason||'')?'<span class="battle-effect-tag">⛔ '+playEsc(a.unavailableReason.replace(/^Người thực hiện /,'').replace(/\.$/,''))+'</span> ':'')+playEsc(a.name)+(!a.artifactId&&a.targetCount>1?'<small class="battle-target-quota"> '+(battleState.actionId===a.id?battleState.targets.length:0)+'/'+a.targetCount+'</small>':'')+(visualApi?(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).length?'<span class="gmww-sv-action-preview gmww-sv-stage" aria-hidden="true"><span class="gmww-sv-action-avatar">✦</span>'+visualApi.overlay((battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]))+'</span><span class="gmww-sv-action-tags">'+(battleActorEffects.find(row=>row[0]===a.id)?.[1]||[]).map(id=>visualApi.byId[id]?.icon+' '+playEsc(visualApi.byId[id]?.name||id)).join(' · ')+'</span>':'':'')+'</button>').join(''):'<span class="battle-empty">'+(t?.kind==='wolf-introduction'?(t.recognitionIds||[]).map(id=>battleMember(id)?.displayName||id).join(' · '):phase==='day'?'Làng thảo luận và bỏ phiếu.':battleUsed(t)?'Artifact đã sử dụng trong đêm — không còn hành động.':t?'Không có hành động cấu hình cho lượt này.':'Chạm Tiếp theo để chuyển giai đoạn.')+'</span>';
   }
   const dayMenu=document.getElementById('battleDayActionMenu'),dayList=document.getElementById('battleDayActionList');
   if(dayMenu)dayMenu.hidden=phase!=='day'||!actions.length||!battleState.dayActionsOpen;
@@ -4600,7 +4603,12 @@ function initBattleControls(){
     const btn=e.target.closest('[data-day-action]');if(!btn||playSceneState.phase!=='day')return;
     const id=btn.dataset.dayAction;
     battleState.dayActionsOpen=false;
-    battleOpenTargetSheet(id,'list');
+    const action=battleActions().find(a=>a.id===id&&!a.unavailable);
+    if(!action)return;
+    if(action.noTarget){
+      if(!confirm('Xác nhận thực hiện '+action.name+'?'))return;
+      battleClear();battleState.actionId=id;void battleConfirmDay(true);
+    }else battleOpenTargetSheet(id,'list');
   });
   document.getElementById('battleActionTray')?.addEventListener('click',e=>{
     if(playSceneState.phase!=='day'||e.target.closest('[data-battle-action],#battleAudioReplay,.battle-action-arrow'))return;
