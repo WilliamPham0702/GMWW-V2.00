@@ -49,7 +49,7 @@ def build_and_verify():
             raise RuntimeError(f"Avatar crop empty for {ident}")
 
         target = output / (ident + ".webp")
-        exact_frame.save(target, "WEBP", lossless=True, method=5)
+        exact_frame.save(target, "WEBP", lossless=True, method=5, exact=True)
         with Image.open(target) as saved:
             saved_rgba = saved.convert("RGBA")
         if saved_rgba.size != exact_frame.size or saved_rgba.tobytes() != exact_frame.tobytes():
