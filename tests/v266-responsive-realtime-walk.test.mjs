@@ -66,12 +66,12 @@ test('server movement broadcasts include server time for shared interpolation cl
   assert.ok(server.includes('type:"player_move_complete",room,player:publicPlayer(p),players:publicPlayers,seatUpdated:targetSeatId?id:null,serverTime:Date.now()'));
 });
 
-test('profile is compact, keeps stats and exposes the 20-character picker',()=>{
+test('profile is compact, keeps stats and exposes the server-provided avatar picker',()=>{
   const live=read('src/gmww-members-live.js');
   assert.ok(live.includes("#profile .change-pass,#profile .profile-enter-room{display:none!important}"));
   assert.ok(live.includes("#profile .history-fold{display:block!important"));
   assert.ok(live.includes("const wins=Math.max(0,Number(m?.stats?.wins||0))"));
-  assert.ok(live.includes("if(state.gameCharacters.length!==20){state.gameCharacters=[];await loadGameCharacters()}"));
+  assert.ok(live.includes("if(!state.gameCharacters.length)await loadGameCharacters()"));
   assert.ok(live.includes('#avatarLibraryModal.open{display:flex!important;pointer-events:auto!important}'));
   assert.ok(live.includes("summary.textContent='✎ THAY ĐỔI AVATAR'"));
   assert.ok(live.includes("$('#profile .profile-exit-btn,#profile .linkline button').forEach"));
