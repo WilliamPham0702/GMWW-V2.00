@@ -1,5 +1,6 @@
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
+import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
 import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
@@ -61,7 +62,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -155,6 +156,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
     if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
     if(url.pathname==="/gm/day-action"&&request.method==="POST")return this.gmDayAction(request,await safeJson(request));
+    if(url.pathname==="/gm/day-clock"&&request.method==="POST")return this.gmDayClock(request,await safeJson(request));
     if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
     if(url.pathname==="/gm/gallows"&&request.method==="POST")return this.gmGallows(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
@@ -970,6 +972,23 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmConfig(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,cfg=sanitizeGameConfig(body?.gameConfig);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG",message:"Ván Mẫu không hợp lệ."},400);await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(body?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(body.cardBackImage));if(body?.matchId)meta.matchId=String(body.matchId);meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.gameName=cfg.name||meta.gameName||"";meta.playerCount=Number(cfg.playerCount||0);meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),gameConfig:cfg})}
 
+  async gmDayClock(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,phase=String(meta.cyclePhase||'').toLowerCase();
+    if(String(meta.phase||'').toLowerCase()!=='running'||!['day','morning'].includes(phase))
+      return j({ok:false,error:'DAY_PHASE_REQUIRED'},409);
+    if(String(body?.matchId||'')!==String(meta.matchId||'')||String(body?.cycleKey||'')!==String(meta.cycleKey||''))
+      return j({ok:false,error:'STALE_DAY_CLOCK'},409);
+    const cfg=(await this.ctx.storage.get('gameConfig'))||{},updated=shiftDayClock(meta,cfg,body?.deltaMinutes,Date.now());
+    if(!updated)return j({ok:false,error:'INVALID_DELTA'},400);
+    meta.dayDeadlineAt=updated.dayDeadlineAt;meta.autoPausedRemainingMs=updated.autoPausedRemainingMs;
+    meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
+    await this.ctx.storage.put('meta',meta);
+    const room=publicRoom(meta);
+    this.broadcast({type:'room_state',room,serverTime:Date.now()});
+    await this.scheduleRoomAlarm(meta);
+    return j({ok:true,room,remainingSeconds:Math.ceil(updated.remainingMs/1000),serverTime:Date.now()});
+  }
   async gmAuto(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,enabled=body?.enabled!==false,wasEnabled=meta.autoGM!==false,nowMs=Date.now(),now=new Date(nowMs).toISOString(),phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(0,Number(meta.cycleNight||0)),runtimeKey=night>0?this.nightRuntimeKey(meta,night):"",runtime=phase==="night"&&night>0?await this.getNightRuntime(meta,night,false):null;
@@ -978,16 +997,16 @@ export class RoomDurableObject extends DurableObject {
         const deadline=Date.parse(runtime.deadlineAt||""),active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0;
         runtime.autoPausedRemainingMs=Number.isFinite(deadline)?Math.max(0,deadline-nowMs):fallback;runtime.deadlineAt=null;runtime.autoAdvance=false;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
       }else if(phase==="morning"||phase==="day"){
-        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,started=Date.parse(meta.cycleStartedAt||""),due=Number.isFinite(started)?started+totalMs:NaN;
-        meta.autoPausedRemainingMs=totalMs>0?(Number.isFinite(due)?Math.max(0,due-nowMs):totalMs):0
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{};
+        meta.autoPausedRemainingMs=dayClockRemainingMs(meta,cfg,nowMs)
       }
     }else if(!wasEnabled&&enabled){
       if(runtime&&!runtime.completed){
         const active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0,stored=Number(runtime.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,stored):fallback;
         runtime.deadlineAt=remaining>0?new Date(nowMs+Math.max(100,remaining)).toISOString():null;runtime.autoPausedRemainingMs=0;runtime.autoAdvance=true;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
       }else if(phase==="morning"||phase==="day"){
-        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,stored=Number(meta.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,Math.min(totalMs,stored)):totalMs;
-        if(totalMs>0)meta.cycleStartedAt=new Date(nowMs-Math.max(0,totalMs-remaining)).toISOString();meta.autoPausedRemainingMs=null
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{},remaining=dayClockRemainingMs(meta,cfg,nowMs);
+        meta.dayDeadlineAt=new Date(nowMs+remaining).toISOString();meta.autoPausedRemainingMs=null
       }
     }
     meta.autoGM=enabled;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
@@ -1325,7 +1344,9 @@ export class RoomDurableObject extends DurableObject {
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
-    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
+    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.dayDeadlineAt=null;
+    if(p==='morning'){const cfg=(await this.ctx.storage.get('gameConfig'))||{},ms=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000;meta.dayDeadlineAt=ms>0?new Date(Date.parse(now)+ms).toISOString():null;if(meta.autoGM===false)meta.autoPausedRemainingMs=ms}
+    meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
@@ -1390,7 +1411,7 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
-    if(cyclePhase==="morning"||cyclePhase==="day"){const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
+    if(cyclePhase==="morning"||cyclePhase==="day"){const deadline=Date.parse(meta.dayDeadlineAt||'');if(Number.isFinite(deadline))return deadline;const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
     return 0
   }
   async scheduleRoomAlarm(meta=null){
@@ -2471,6 +2492,7 @@ export default {async fetch(request,env){
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
   const gmBattleAction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-action$/);if(gmBattleAction&&request.method==="POST")return roomProxy(env,gmBattleAction[1],"/gm/battle-action",request);
   const gmDayActionRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/day-action$/);if(gmDayActionRoute&&request.method==="POST")return roomProxy(env,gmDayActionRoute[1],"/gm/day-action",request);
+  const gmDayClockRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/day-clock$/);if(gmDayClockRoute&&request.method==="POST")return roomProxy(env,gmDayClockRoute[1],"/gm/day-clock",request);
   const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
   const gmGallowsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(gmGallowsRoute&&request.method==="POST")return roomProxy(env,gmGallowsRoute[1],"/gm/gallows",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
