@@ -8,7 +8,7 @@ test('wolf introductions appear only on first night',()=>{
  assert.match(worker,/if\(n===1\)queue\.push\(\{id:"wolf-introduction"/);
 });
 test('battle dock hides redundant turn title and centers the action strip',()=>{
- assert.match(app,/set\('battleActionTrayTitle',''\)/);
+ assert.match(app,/set\('battleActionTrayTitle',phase==='day'\?'HÀNH ĐỘNG':''\)/);
  assert.match(css,/#battleBottomControls \.battle-action-tray-head\{\s*display:none!important/);
  assert.match(css,/justify-content:center!important;align-items:center!important/);
 });
