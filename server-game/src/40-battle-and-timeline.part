@@ -261,7 +261,7 @@ async function advancePlayPhase(){
 
 /* Isolated Demo playback. All decisions are sampled from currently legal GM
  * choices and submitted through the same server action/turn endpoints. */
-const demoRunner={running:false,owner:'',speed:2,timer:0,epoch:0,steps:0,roomCode:'',
+const demoRunner={running:false,paused:false,owner:'',speed:2,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
   completed:new Set(),pending:new Set(),dayDone:new Set()};
 const demoPick=rows=>rows[Math.floor(Math.random()*rows.length)];
 const demoDelay=()=>Math.max(220,Math.round(1800/Math.max(1,demoRunner.speed)));
@@ -269,6 +269,7 @@ const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:d
 function demoStopTimer(){if(demoRunner.timer){clearTimeout(demoRunner.timer);demoRunner.timer=0}}
 async function demoStop(reason='manual'){
   const active=demoRunner.running,code=demoRunner.roomCode;
+  demoRunner.paused=reason==='manual'&&active;
   demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
   if(!active)return;
   try{
@@ -281,7 +282,7 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ DỪNG DEMO':'▶ CHẠY DEMO';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ TẠM DỪNG':demoRunner.paused?'▶ TIẾP TỤC':'▶ CHẠY DEMO';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
   if(wrap)wrap.hidden=!enabled;
   if(auto)auto.hidden=enabled;
   if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
@@ -290,13 +291,17 @@ async function demoToggle(){
   if(playSceneRuntime.room?.demo!==true)return;
   if(demoRunner.running){await demoStop();return}
   if(playSceneState.step!=='battle'){playFlashError('Hãy setup và vào trận trước khi chạy Demo.');return}
+  const sameMatch=demoRunner.paused&&demoRunner.roomCode===String(playSceneState.roomCode)&&
+    demoRunner.matchId===String(playSceneRuntime.room?.matchId||'');
+  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0}
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
+  demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
   demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||2;
   try{
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('start'))});
     if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
-    demoRunner.running=true;demoRunner.steps=0;demoRunner.epoch++;
+    demoRunner.running=true;demoRunner.paused=false;demoRunner.epoch++;
     renderPlayBattle();demoSchedule(0);
   }catch(err){playFlashError('Demo: '+String(err?.message||err));renderPlayBattle()}
 }
@@ -316,7 +321,7 @@ async function demoActionNight(t,epoch){
     const action=options.length&&Math.random()<0.85?demoPick(options):null;
     if(action){
       const actorId=demoPick(action.actorIds);
-      const available=playLiveMembers().filter(m=>m?.loginId&&battleRules()?.targetAllowed(
+      const available=playLiveMembers().filter(m=>m?.loginId&&(!action.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
         action,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night));
       const count=Math.max(0,Number(action.targetCount)||0),chosen=[];
       while(chosen.length<count&&available.length){
@@ -361,8 +366,9 @@ async function demoActionDay(epoch){
   const room=playSceneRuntime.room,cycle=String(room.matchId||'')+':'+String(room.cycleKey||'');
   const available=battleActions().filter(a=>!a.unavailable&&!demoRunner.dayDone.has(cycle+':'+a.id)&&a.actorIds?.length);
   if(available.length){
-    const a=demoPick(available),memberIds=playLiveMembers().filter(m=>m?.loginId&&battleRules()?.targetAllowed(
-      a,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night)).map(m=>m.loginId);
+    const a=demoPick(available),actorId=demoPick(a.actorIds),memberIds=playLiveMembers().filter(m=>
+      m?.loginId&&(!a.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
+        a,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night)).map(m=>m.loginId);
     const chosen=[];
     while(chosen.length<a.targetCount&&memberIds.length){
       const id=demoPick(memberIds);chosen.push(id);memberIds.splice(memberIds.indexOf(id),1);
@@ -370,7 +376,7 @@ async function demoActionDay(epoch){
     demoRunner.dayDone.add(cycle+':'+a.id);
     if(chosen.length===a.targetCount&&Math.random()<0.85){
       const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
-        matchId:room.matchId,cycleKey:room.cycleKey,actorId:demoPick(a.actorIds),
+        matchId:room.matchId,cycleKey:room.cycleKey,actorId,
         roleId:a.roleId||'',artifactId:a.artifactId||'',actionId:a.actionId,targetIds:chosen,
         clientEventId:'demo-'+(globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2))
       })});
@@ -380,7 +386,7 @@ async function demoActionDay(epoch){
   }
   const g=playSceneRuntime.gallows||{},stage=String(g.stage||'ready'),
     now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0),
-    eligible=(Array.isArray(g.eligible)?g.eligible:playLiveMembers().map(x=>x.loginId)).filter(Boolean);
+    eligible=(Array.isArray(g.eligible)?g.eligible:playLiveMembers().map(x=>x.loginId)).filter(id=>id&&playPlayerEffect(id)!=='dead'&&playPlayerEffect(id)!=='expelled');
   const post=async(command,extra={})=>{
     const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,...extra})});
     if(result?.ok!==true)throw Error(result?.message||result?.error||'Lên Giàn không hợp lệ.');
