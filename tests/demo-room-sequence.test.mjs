@@ -87,7 +87,7 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
     playSceneState:{night:1},
     playRoomApi:async(path,opt)=>{calls.push({path,body:JSON.parse(opt.body)});return{ok:true}},
     battleShowResultPopup:()=>{},document:{getElementById:()=>({setAttribute:()=>{}})},
-    Math:{...Math,random:()=>0.2,floor:Math.floor},
+    Math:{random:()=>0.2,floor:Math.floor,max:Math.max,min:Math.min,round:Math.round},
     String,Number,Set,Array,Error
   };
   const src=between(battle,'async function demoActionNight(t,epoch){','async function demoActionDay(epoch){');
