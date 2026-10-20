@@ -45,7 +45,7 @@ test('V3.127 preserves every valid manual seat even in partially occupied 30-sea
   assert.equal(new Set(Object.values(ids)).size,5);
   assert.equal(Object.keys(ids).length,5);
 });
-test('V3.127 stale pre-battle movement is ignored only after match starts',()=>{
+test('V3.163 battle freezes all motion; old seat changes remain available in setup',()=>{
   const functionText=gmSource.match(/function playSeatMovementActive\(member\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(functionText);
   const started=Date.parse('2026-10-17T09:00:00Z'),now=started+5000;
@@ -54,7 +54,7 @@ test('V3.127 stale pre-battle movement is ignored only after match starts',()=>{
   const projection=Function('playSceneRuntime','playSceneState','playNow',
     functionText+';return playSeatMovementActive;')(scene,state,()=>now);
   assert.equal(projection({movementStatus:'moving',moveStartedAt:started-1000,moveDurationMs:30000}),false);
-  assert.equal(projection({movementStatus:'moving',moveStartedAt:started+1000,moveDurationMs:30000}),true);
+  assert.equal(projection({movementStatus:'moving',moveStartedAt:started+1000,moveDurationMs:30000}),false,'even new battle movement must not animate');
   assert.equal(projection({movementStatus:'moving',moveStartedAt:started+1000,moveDurationMs:1000}),false);
   state.step='seats';
   assert.equal(projection({movementStatus:'moving',moveStartedAt:started-1000,moveDurationMs:30000}),true);
