@@ -10,7 +10,7 @@ test('V3.158 uses V3.110 IPA shell and reproducible GM Runtime',()=>{
   assert.equal(read('server-game/current/app.js'),
     ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part']
       .map(n=>read('server-game/src/'+n)).join(''));
-  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.159/);
+  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.160/);
 });
 
 test('GM fire menu offers 3 independently persisted one-tap label toggles',()=>{
@@ -44,8 +44,8 @@ test('Opening Artifact countdown is 30 seconds and absent without an assigned Ar
   const worker=read('src/index.js'),gm=read('server-game/current/app.js');
   assert.match(worker,/earlyArtifactSec=30/);
   assert.match(worker,/if\(artifactRows\.length>0\)/);
-  assert.match(gm,/earlyArtifactSec:60/);
-  assert.match(gm,/if\(earlySec\)earlySec\.value=60/);
+  assert.match(gm,/earlyArtifactSec:30/);
+  assert.match(gm,/if\(earlySec\)earlySec\.value=30/);
   assert.ok(!timelineDisplaySteps([{kind:'wolf-introduction',label:'Sói'}]).some(x=>x.kind==='early-artifact-window'));
   assert.ok(timelineDisplaySteps([{kind:'early-artifact-window',label:'Artifact đầu ván',actions:[]}]).some(x=>x.kind==='early-artifact-window'));
 });

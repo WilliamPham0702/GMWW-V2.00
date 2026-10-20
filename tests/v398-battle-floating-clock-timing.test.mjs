@@ -42,12 +42,12 @@ test('V3.104 clock is anchored by the lower control row without clearing earlier
   assert.match(css,/flex:0 0 68px!important/);
 });
 
-test('Chọn Ván displays 60s while the authoritative opening Artifact countdown remains 30s',()=>{
+test('Chọn Ván displays 30s and the authoritative opening Artifact countdown remains 30s',()=>{
   for(const id of ['playWolfDiscussionSec','playEarlyArtifactSec'])
     assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);
   assert.match(html,/id="playWolfDiscussionSec"[^>]*value="30"/);
-  assert.match(html,/id="playEarlyArtifactSec"[^>]*value="60"/);
-  assert.match(app,/gameTiming:\{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60/);
+  assert.match(html,/id="playEarlyArtifactSec"[^>]*value="30"/);
+  assert.match(app,/gameTiming:\{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30/);
   assert.match(app,/playEarlyArtifactSec:'earlyArtifactSec'/);
   assert.match(app,/earlyArtifactSec:clamp\(document\.getElementById\('playEarlyArtifactSec'\)/);
   const timing=sanitizeGameConfig({}).timing;

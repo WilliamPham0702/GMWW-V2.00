@@ -134,7 +134,7 @@
   function targetAllowed(action,member,effect,rows=[],night=0){
     if(!action||!member?.loginId||action.noTarget)return false;
     if(action.noSelf&&action.actorIds.includes(loginOf(member.loginId)))return false;
-    if(action.type==="revive")return effect==="dead";
+    if(action.type==="revive")return effect==="dead"||effect==="expelled";
     // A night victim is announced at dawn; the Seer may still scan them tonight.
     // Historical deaths remain ineligible on subsequent nights.
     const nightVictim=action.actionId==="action_seer"&&effect==="dead"&&
