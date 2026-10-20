@@ -37,7 +37,7 @@ function playPlayerStatuses(loginId){
   }
   return out;
 }
-function playPlayerBlocked(loginId){return ['dead','frozen'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
+function playPlayerBlocked(loginId){return ['dead','frozen','expelled'].includes(playPlayerEffect(loginId))||playPlayerStatuses(loginId).some(x=>x.blocks)}
 function playBlockReason(loginId){const e=playPlayerEffect(loginId);if(e==='dead')return'Người thực hiện đã chết.';if(e==='frozen')return'Người thực hiện đang bị Đóng băng.';if(e==='expelled')return'Người thực hiện đã bị Đuổi khỏi làng.';const st=playPlayerStatuses(loginId).find(x=>x.blocks);return st?'Người thực hiện đang: '+st.label+'.':'Người thực hiện không thể hành động.'}
 function playPlayerEffect(loginId){
   const now=playNow(),rows=(playSceneRuntime.activeEffects||[]).filter(x=>String(x?.loginId||'')===String(loginId||'')&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>now)),types=new Set(rows.map(x=>String(x?.type||'')));
@@ -286,7 +286,16 @@ function battleAudioForTurn(turn,auto=false){
       if(nextAudio)void battleWarmAudio(nextCue.kind,nextAudio);
     }
   }
-  if(auto)void battlePlayConfiguredAudio(kind,targetId,name,false)
+  if(auto){
+    // Wait for IndexedDB-backed audio to be ready before first arrival.
+    // This avoids a first-swipe race (Bầy Sói -> Artifact) on iOS Safari.
+    const expectedKey=battleState.key;
+    void (async()=>{
+      if(audio)await battleWarmAudio(kind,audio);
+      if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+      await battlePlayConfiguredAudio(kind,targetId,name,false);
+    })().catch(error=>console.warn('GMWW first-turn audio:',error));
+  }
 }
 function battleReplayAudio(){
   const selected=battleAction();
