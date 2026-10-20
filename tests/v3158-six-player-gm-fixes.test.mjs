@@ -43,7 +43,7 @@ test('Player Web supports smooth fallback position interpolation on every snapsh
 test('Opening Artifact countdown is 30 seconds and absent without an assigned Artifact',()=>{
   const worker=read('src/index.js'),gm=read('server-game/current/app.js');
   assert.match(worker,/earlyArtifactSec=Math\.max\(0,Number\(timing\.earlyArtifactSec\?\?30\)/);
-  assert.match(worker,/if\(cfg\.artifactsEnabled!==false&&artifactRows\.length>0\)/);
+  assert.match(worker,/if\(artifactRows\.length>0\)/);
   assert.doesNotMatch(gm,/earlyArtifactSec\?\?60/);
   assert.match(gm,/if\(earlySec\)earlySec\.value=30/);
   assert.ok(!timelineDisplaySteps([{kind:'wolf-introduction',label:'Sói'}]).some(x=>x.kind==='early-artifact-window'));
