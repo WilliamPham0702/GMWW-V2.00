@@ -25,7 +25,7 @@ test('all forty shipped portraits contain real alpha transparency, including cha
 test('active catalog replaces all forty IDs including 15; aliases preserve existing account identity',()=>{
  const rows=character40Catalog();assert.equal(rows.length,40);assert.equal(new Set(rows.map(x=>x.id)).size,40);
  assert.equal(rows[14].id,'character-15');assert.ok(rows.every(c=>c.motionVersion==='c40-1'&&c.actions.length===4));
- assert.ok(rows.every(c=>c.imageUrl.endsWith('/image?rev=c40-3')),'portrait cache revision must advance independently of the unchanged motion version');
+ assert.ok(rows.every(c=>c.imageUrl.endsWith('/image?rev=c40-4')),'portrait cache revision must advance independently of the unchanged motion version');
  assert.equal(normalizeGameCharacterId('character-41'),'character-41');assert.equal(activeGameCharacterId('character-42'),'character-42');
  assert.equal(character40VisualId('character-41'),'character-39');assert.equal(character40VisualId('character-42'),'character-40');assert.equal(character40VisualId('character-43'),null);
 });
