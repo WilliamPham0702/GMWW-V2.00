@@ -818,6 +818,7 @@ function renderPlayPlayers(){
       // A neutral preview does not assign/change the account's fixed character.
       if(!characterSrc)el.classList.add('is-character-preview');
       el.onclick=async()=>{
+        if(Date.now()<Number(playSceneRuntime.ignoreSeatClickUntil||0))return;
         if(playSceneState.step==='battle'&&Date.now()<Number(battleState.ignoreSwipeClick||0))return;
         const lid=String(m.loginId||'');
         if(isOnlinePick){
@@ -830,6 +831,40 @@ function renderPlayPlayers(){
       }
     }else if(seating){
       el.onclick=async()=>openPlaySeatAssignSheet(seatId)
+    }
+    // GM may drag an occupied Seat onto another before locking the layout.
+    // Pointer Events support iPhone touch as well as desktop mouse/pen.
+    if(seating&&m&&seatId&&!playSceneRuntime.room?.seatsLocked){
+      let drag=null;
+      el.style.touchAction='none';
+      el.addEventListener('pointerdown',event=>{
+        if(event.pointerType==='mouse'&&event.button!==0)return;
+        if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked)return;
+        drag={id:event.pointerId,x:event.clientX,y:event.clientY,sourceSeat:seatId,sourceId:String(m.loginId||''),moved:false};
+        el.setPointerCapture?.(event.pointerId);
+      });
+      el.addEventListener('pointermove',event=>{
+        if(!drag||event.pointerId!==drag.id)return;
+        if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>12){
+          drag.moved=true;el.classList.add('is-seat-dragging');
+        }
+      });
+      el.addEventListener('pointerup',async event=>{
+        if(!drag||event.pointerId!==drag.id)return;
+        const gesture=drag;drag=null;el.classList.remove('is-seat-dragging');
+        if(!gesture.moved)return;
+        event.preventDefault();event.stopPropagation();
+        playSceneRuntime.ignoreSeatClickUntil=Date.now()+500;
+        if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked||playSceneState.step!=='seats')return;
+        const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest?.('[data-seat-id][data-play-player-id]');
+        const targetSeat=Number(hit?.dataset.seatId||0);
+        if(!hit||!targetSeat||targetSeat===gesture.sourceSeat||!hit.dataset.playPlayerId)return;
+        const source=playLiveMembers().find(p=>String(p.loginId)===gesture.sourceId);
+        if(!source||Number(source.seatId)!==gesture.sourceSeat)return;
+        playSceneState.activePlayerId=gesture.sourceId;
+        await updateSelectedPlayerSeat({seatId:targetSeat,swap:true});
+      });
+      el.addEventListener('pointercancel',()=>{drag=null;el.classList.remove('is-seat-dragging')});
     }
     ring.appendChild(el)
   };
