@@ -227,6 +227,7 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
+  if(demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
@@ -625,6 +626,7 @@ function battleTickCountdown(){
   clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
 }
 async function battleNavigateIndex(index){
+  if(demoRunner.running)return;
   if(battleState.busy||battleState.syncPending||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
   const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
   if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
@@ -645,6 +647,7 @@ async function battleNavigateIndex(index){
   finally{battleState.busy=false;renderPlayBattle()}
 }
 function battleNavigateRelative(delta){
+  if(demoRunner.running)return;
   const rt=playSceneRuntime.nightRuntime;
   if(playSceneState.phase!=='night'||!rt?.queue?.length)return;
   let index=rt.cursor+delta;
