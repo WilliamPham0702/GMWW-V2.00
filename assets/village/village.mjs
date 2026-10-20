@@ -77,6 +77,9 @@ if(game){
   let matchStartedAt=0;
   let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
+  // Last actually painted world position; never infer an expired move's start
+  // from a newer heartbeat (which would make avatars teleport to the endpoint).
+  const visualLastPaintedPositions=new Map();
   const mountedPlayerNodes=new Map(),mountedEmptySeatNodes=new Map();
   let sitWakeTimer=0;
   const villageRenderMetrics={renders:0,created:0,reused:0,movementFrames:0,mounted:0};
@@ -143,12 +146,14 @@ if(game){
         visualFallbackMoves.delete(id)
       }
       const prev=previous.get(id);if(!prev)return p;
-      const from=visualPlayerPoint(prev,count,now),distance=Math.hypot(target.x-from.x,(target.y-from.y)*2);
+      const painted=visualLastPaintedPositions.get(id);
+      const from=painted||movementPosition(prev,null,now),distance=Math.hypot(target.x-from.x,(target.y-from.y)*2);
       if(!Number.isFinite(distance)||distance<.65)return p;
       const duration=Math.max(720,Math.min(1900,Math.round(distance*42))),move={moveFromX:from.x,moveFromY:from.y,moveToX:target.x,moveToY:target.y,moveStartedAt:now,moveDurationMs:duration,moveId:'visual:'+id+':'+now};
       visualFallbackMoves.set(id,move);return{...p,...move,movementStatus:'moving'}
     });
     for(const id of visualFallbackMoves.keys())if(!seen.has(id))visualFallbackMoves.delete(id);
+    for(const id of visualLastPaintedPositions.keys())if(!seen.has(id))visualLastPaintedPositions.delete(id);
     return out
   }
   function screenPoint(p,width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536){return layout.toScreen(p,width,height)}
@@ -256,6 +261,7 @@ if(game){
     else if(button.dataset.seatId)delete button.dataset.seatId;
     if(data.moveId){if(button.dataset.moveId!==String(data.moveId))button.dataset.moveId=String(data.moveId)}
     else if(button.dataset.moveId)delete button.dataset.moveId;
+    if(id)visualLastPaintedPositions.set(id,{x:pos.x,y:pos.y});
     const point=screenPoint(pos),left=point.x+"%",top=point.y+"%",depth=String(10+Math.round(pos.y));
     if(button.style.left!==left)button.style.left=left;
     if(button.style.top!==top)button.style.top=top;
@@ -334,7 +340,7 @@ if(game){
     for(const data of all){
       if(data?.movementStatus!=="moving")continue;
       const el=mountedPlayerNodes.get(String(data.id));if(!el||!el.isConnected)continue;if(visuallyDeceased(data))continue; // Display-only: deceased chibi does not visually walk.
-      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
+      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);visualLastPaintedPositions.set(String(data.id),{x:pos.x,y:pos.y});el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
       const avatar=el.querySelector(".portrait.game-character"),renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId,
       semantic=animationCommandFor({...data,gameCharacterId:renderedId},pos);
       const rigUpdated=!!avatar?.querySelector('[data-character-renderer]');
