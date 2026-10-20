@@ -4104,6 +4104,7 @@ function renderPlayBattle(){
   }
   const wolfMenu=document.getElementById('battleWolfMenu');
   if(wolfMenu)wolfMenu.hidden=!battleState.wolfOpen;
+  battleSyncLabelVisibility();
   
   const clockMenu=document.getElementById('battleClockPopover'),clockToggle=document.getElementById('battleClockButton');
   if(clockMenu)clockMenu.hidden=!battleState.clockOpen;
@@ -4227,6 +4228,30 @@ function battleToggleDetails(force){
   if(battleState.details){battleState.wolfOpen=false;battleState.clockOpen=false}
   if(!battleState.details){battleState.roster=false;battleState.quickType=''}
   renderPlayBattle();
+}
+const GMWW_GM_LABEL_KEY='gmww_gm_label_visibility_v1';
+const gmLabelVisibility=(()=>{
+  try{const saved=JSON.parse(localStorage.getItem(GMWW_GM_LABEL_KEY)||'{}');
+    return {artifact:saved.artifact!==false,role:saved.role!==false,player:saved.player!==false};
+  }catch{return {artifact:true,role:true,player:true}}
+})();
+function battleSyncLabelVisibility(){
+  const shell=document.getElementById('playShell');
+  if(shell)for(const kind of ['artifact','role','player'])shell.classList.toggle('gmww-hide-'+kind+'-label',!gmLabelVisibility[kind]);
+  for(const [kind,id,label] of [['artifact','battleLabelArtifact','Artifact'],['role','battleLabelRole','Vai Trò'],['player','battleLabelPlayer','Người Chơi']]){
+    const button=document.getElementById(id);if(!button)continue;
+    const enabled=gmLabelVisibility[kind];
+    button.setAttribute('aria-pressed',String(enabled));
+    button.setAttribute('aria-label','Hiển thị tên '+label+': '+(enabled?'Bật':'Tắt'));
+    button.classList.toggle('is-off',!enabled);
+    button.textContent=(enabled?'● ':'○ ')+label+' '+(enabled?'ON':'OFF');
+  }
+}
+function battleToggleLabelVisibility(kind){
+  if(!Object.prototype.hasOwnProperty.call(gmLabelVisibility,kind))return;
+  gmLabelVisibility[kind]=!gmLabelVisibility[kind];
+  try{localStorage.setItem(GMWW_GM_LABEL_KEY,JSON.stringify(gmLabelVisibility))}catch{}
+  battleSyncLabelVisibility();
 }
 function battleToggleWolfMenu(){
   if(playSceneState.step!=='battle')return;
@@ -4499,6 +4524,9 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
+  for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player']])
+    document.getElementById(id)?.addEventListener('click',()=>battleToggleLabelVisibility(kind));
+  battleSyncLabelVisibility();
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
   window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
@@ -4851,7 +4879,7 @@ async function applyPlayGameTemplate(id){
     playSceneState.artifactsEnabled=cfg.artifactsEnabled===true
       ||(cfg.artifactsEnabled!==false&&templateArtifactIds.length>0);
     playSceneState.artifactIds=templateArtifactIds;
-    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
+    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??30)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
     const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=playSceneState.gameTiming.gallowsNominationSec;
@@ -4879,7 +4907,7 @@ async function openLibraryGameTemplate(id=''){
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=10;
     if(voteInput)voteInput.value=10;
-    if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=60;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
+    if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=30;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
   sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
   updatePlayArtifactToggle();
 }
@@ -4901,7 +4929,7 @@ async function savePlayGame(){
       gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),
       gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),
       wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value),
-      earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),
+      earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),
       defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value),
       artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value),
       autoAdvance:!!document.getElementById('playAutoAdvance')?.checked
@@ -4976,7 +5004,7 @@ async function savePlayGame(){
   const gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),
     templateId=playSceneState.gameTemplateId||('template-'+Date.now().toString(36));
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
-  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
+  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
   if(playSceneState.artifactsEnabled&&!selectedArtifacts.length){
