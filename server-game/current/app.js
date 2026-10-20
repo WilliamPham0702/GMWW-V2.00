@@ -4187,7 +4187,8 @@ let gmwwDemoRunnerCode='';
 const gmwwIsDemoRoom=()=>isLivePlayRoom()&&playSceneRuntime.room?.isDemoRoom===true;
 function gmwwDemoTargetIds(action){
   const count=Math.max(0,Math.trunc(Number(action?.targetCount)||0));
-  if(count>30||action?.noTarget)return null;
+  if(count>30)return null;
+  if(action?.noTarget)return [];
   if(!count)return [];
   const rules=battleRules();
   if(!rules?.targetAllowed)return null;
@@ -4203,6 +4204,49 @@ function gmwwDemoTargetIds(action){
     [candidates[i],candidates[j]]=[candidates[j],candidates[i]];
   }
   return candidates.slice(0,count);
+}
+function gmwwDemoGallowsAction(snapshot){
+  if(snapshot.phase!=='day')return null;
+  const ballot=playSceneRuntime.gallows||{};
+  const stage=String(ballot.stage||'ready');
+  const alive=playLiveMembers().filter(p=>!['dead','expelled'].includes(playPlayerEffect(p.loginId)));
+  if(!alive.length)return null;
+  const random=rows=>rows[Math.floor(Math.random()*rows.length)];
+  const stageAction=(command,payload={})=>({kind:'demo-gallows',command,...payload});
+  if(stage==='ready')return stageAction('open');
+  if(stage==='nominating'){
+    const chosen=new Set(Object.keys(ballot.nominations||{}));
+    const pending=alive.filter(p=>!chosen.has(p.loginId));
+    // Record at least one authentic player nomination, then begin a ballot.
+    if(!chosen.size&&pending.length){
+      return stageAction('nominate',{loginId:random(pending).loginId,
+        targetId:random(alive).loginId});
+    }
+    const nominations=Object.values(ballot.nominations||{}).filter(Boolean);
+    return stageAction('begin',{targetId:random(nominations.length?
+      alive.filter(p=>nominations.includes(p.loginId)):alive)?.loginId||random(alive).loginId});
+  }
+  if(stage==='selecting'){
+    return stageAction('begin',{targetId:random(alive).loginId});
+  }
+  if(stage==='voting'){
+    const cast=new Set(Object.keys(ballot.votes||{})),blocked=new Set(ballot.blocked||[]);
+    const eligible=alive.filter(p=>!cast.has(p.loginId)&&!blocked.has(p.loginId));
+    const ends=Number(ballot.deadlineAt)||0;
+    if(eligible.length&&Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)<ends){
+      return stageAction('vote',{loginId:random(eligible).loginId,
+        choice:Math.random()<0.5?'👍':'👎'});
+    }
+    if(Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)<ends)
+      return {kind:'demo-wait'};
+    return stageAction('resolve',{outcome:
+      Object.values(ballot.votes||{}).filter(v=>v==='👍').length>
+      Object.values(ballot.votes||{}).filter(v=>v==='👎').length?'alive':'dead'});
+  }
+  if(stage==='closed')return stageAction('resolve',{outcome:
+    Object.values(ballot.votes||{}).filter(v=>v==='👍').length>
+    Object.values(ballot.votes||{}).filter(v=>v==='👎').length?'alive':'dead'});
+  return null;
 }
 function gmwwDemoStatusRender(){
   const button=document.getElementById('battleDemoControl');if(!button)return;
@@ -4254,13 +4298,28 @@ async function gmwwDemoToggle(){
           if(!['night','day'].includes(snapshot.phase))return [];
           const stamp=[roomCode,playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,
             snapshot.phase,snapshot.turnId].join(':');
-          return battleActions().filter(action=>!action.unavailable&&action.actorIds?.length&&
+          const choices=battleActions().filter(action=>!action.unavailable&&action.actorIds?.length&&
             !attempted.has(stamp+':'+action.id)).map(action=>({
               action,stamp,targets:gmwwDemoTargetIds(action)
             })).filter(entry=>entry.targets!==null);
+          if(choices.length)return choices;
+          const ballot=gmwwDemoGallowsAction(snapshot);
+          return ballot?[ballot]:[];
         },
         async apply(entry,snapshot){
           if(!gmwwIsDemoRoom()||String(playSceneState.roomCode)!==roomCode)throw Error('Demo isolation failed.');
+          if(entry.kind==='demo-wait')return;
+          if(entry.kind==='demo-gallows'){
+            const {kind,command,loginId,targetId,choice,outcome}=entry;
+            const payload=['nominate','vote'].includes(command)?
+              {loginId,command,targetId,choice}:
+              {command,targetId,outcome};
+            const endpoint=['nominate','vote'].includes(command)?'/demo/gallows-vote':'/gallows';
+            const result=await playRoomApi(endpoint,{method:'POST',body:JSON.stringify(payload)});
+            if(result?.ok!==true)throw Error(result?.message||result?.error||'Demo Lên giàn bị từ chối.');
+            if(!(await playSyncRoom(true)))throw Error('Không đồng bộ Lên giàn Demo.');
+            return;
+          }
           const {action:a,targets,stamp}=entry;
           const matchId=String(playSceneRuntime.room?.matchId||''),
             cycleKey=String(playSceneRuntime.room?.cycleKey||'');
