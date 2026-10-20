@@ -260,6 +260,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
  // Refresh both card faces promptly when GM releases a new delivery.
  replaceReceipt("  renderPlayerPrivateDock();\n  bar.hidden=true;",
    "  renderPlayerPrivateDock();\n  gmwwEnsureLiveDeliveryWatch();\n  bar.hidden=true;");
+ replaceReceipt("if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;renderArtifactStack();",
+   "if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;playPageFlipSound(state.artifactOpen);renderArtifactStack();");
  // Keep server's versioned private delivery contract authoritative.
  const previousArtifactExpected="state.artifactExpected=d?.artifactExpected===true;state.artifactCycle=";
  const expectedFromManifest="state.artifactExpected=d?.deliveryManifest?.artifactExpected===true||d?.artifactExpected===true;state.artifactCycle=";
