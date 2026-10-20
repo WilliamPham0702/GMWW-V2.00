@@ -2615,12 +2615,23 @@ async function gmRoomParticipants(env,raw,request){
     return false
   };
   const failures=[];
-  for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true,null,true))failures.push(p.loginId);
+  // Each member's presence record is independent; bounded concurrency avoids
+  // a 30-person room waiting for 30 sequential Durable Object round trips.
+  const syncBatch=async(rows,roomCode,ready,expectedRoomCode=null,calledByGM=false)=>{
+    for(let offset=0;offset<rows.length;offset+=6){
+      const results=await Promise.all(rows.slice(offset,offset+6).map(async loginId=>({
+        loginId,ok:await syncPresence(loginId,roomCode,ready,expectedRoomCode,calledByGM)
+      })));
+      for(const result of results)if(!result.ok)failures.push(result.loginId);
+    }
+  };
+  const admitted=[...new Set((Array.isArray(data?.players)?data.players:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean))];
+  await syncBatch(admitted,code,true,null,true);
   // Retry both newly removed accounts and incomplete releases from an earlier disband.
   // The storage guard preserves anyone who has already joined a different room.
   const releaseLogins=new Set((Array.isArray(data?.removedPlayers)?data.removedPlayers:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean));
   if(data?.disbanded)for(const loginId of (Array.isArray(data?.reconcileLogins)?data.reconcileLogins:[]))if(normalizeLoginId(loginId))releaseLogins.add(normalizeLoginId(loginId));
-  for(const loginId of releaseLogins)if(!await syncPresence(loginId,null,false,code))failures.push(loginId);
+  await syncBatch([...releaseLogins],null,false,code);
   await syncRoomDirectory(env,code);
   if(failures.length)return j({ok:false,error:"ROSTER_PRESENCE_PENDING",message:"Phòng đã giải tán, nhưng có tài khoản chưa xác nhận trở về Sảnh chờ.",pendingCount:failures.length,removedCount:Number(data.removedCount||0)},502);
   return res
