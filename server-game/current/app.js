@@ -3391,6 +3391,7 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
+  if(demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
@@ -3471,6 +3472,8 @@ function demoSchedule(ms=demoDelay()){
 }
 async function demoActionNight(t,epoch){
   const room=playSceneRuntime.room,signature=[room.matchId,room.cycleKey,t.id].join(':');
+  // A fresh GM tab can recover an already-committed action from the server receipt.
+  if(String(playSceneRuntime.battleUndo?.turnId||'')===String(t.id))demoRunner.completed.add(signature);
   if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
   if(!demoRunner.completed.has(signature)){
     const options=battleActions().filter(a=>!a.unavailable&&Array.isArray(a.actorIds)&&a.actorIds.length);
@@ -3787,6 +3790,7 @@ function battleTickCountdown(){
   clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
 }
 async function battleNavigateIndex(index){
+  if(demoRunner.running)return;
   if(battleState.busy||battleState.syncPending||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
   const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
   if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
@@ -3807,6 +3811,7 @@ async function battleNavigateIndex(index){
   finally{battleState.busy=false;renderPlayBattle()}
 }
 function battleNavigateRelative(delta){
+  if(demoRunner.running)return;
   const rt=playSceneRuntime.nightRuntime;
   if(playSceneState.phase!=='night'||!rt?.queue?.length)return;
   let index=rt.cursor+delta;
@@ -6059,6 +6064,7 @@ function playApplyLobbyStage(generation){
 async function playReturnToLobby(){
   if(playSceneRuntime.busy||playSceneState.step==='lobby')return false;
   if(!confirm('Trở về SẢNH CHỜ?\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
+  await demoStop('lobby_reset');
   playSetBusy(true);
   try{
     const data=await gmApi('/api/gm/lobby/reset',{method:'POST',body:JSON.stringify({source:'GM_BACK'})});
@@ -6070,6 +6076,7 @@ async function playReturnToLobby(){
   finally{playSetBusy(false)}
 }
 async function backPlayPhase(){
+  if(demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime&&Number(playSceneRuntime.nightRuntime.cursor||0)>0){
     playSetBusy(true);try{const d=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'back'})});playSceneRuntime.nightRuntime=d?.runtime||playSceneRuntime.nightRuntime;await playSyncRoom(true)}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}return
