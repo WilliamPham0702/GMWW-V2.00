@@ -194,7 +194,7 @@ jobs:
           for TRY in $(seq 1 40); do
             if curl --fail --location --silent --show-error --max-time 20 \
               -H 'Cache-Control: no-cache' \
-              "$URL/api/game-characters/character-01/image?rev=c40-3&edge-propagation=$TRY-$(date +%s)" \
+              "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
               > /tmp/gmww-live-avatar.webp; then
               if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
                 AVATAR_READY=1
@@ -218,7 +218,7 @@ jobs:
             for TRY in $(seq 1 5); do
               if curl --fail --location --silent --show-error --max-time 20 \
                 -H 'Cache-Control: no-cache' \
-                "$URL/api/game-characters/$ID/image?rev=c40-3&verify-avatar=$N-$TRY-$(date +%s)" \
+                "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
                 > /tmp/gmww-live-avatar.webp && \
                 cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
                 MATCHED=1
