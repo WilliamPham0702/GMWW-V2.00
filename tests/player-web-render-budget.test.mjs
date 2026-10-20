@@ -41,7 +41,7 @@ test('Player Web reuses character rigs and measures real rendering work',()=>{
  assert.match(scene,/mountedPlayerNodes=new Map\(\)/);
  assert.match(scene,/const desiredPlayers=\[\];roster\.replaceChildren\(\)/);
  assert.match(scene,/reconcileVillageChildren\(players,desiredPlayers\)/);
- assert.match(scene,/if\(villageMotionNeedsFrame\(all\)&&!document\.hidden\)moveFrame=requestAnimationFrame\(animateMovementFrame\)/);
+ assert.match(scene,/if\(!battleStatic&&villageMotionNeedsFrame\(all\)&&!document\.hidden\)moveFrame=requestAnimationFrame\(animateMovementFrame\)/);
  assert.match(scene,/if\(sitWakeTimer\)\{clearTimeout\(sitWakeTimer\);sitWakeTimer=0\}/);
  assert.match(scene,/const el=mountedPlayerNodes\.get\(String\(data\.id\)\)/);
  assert.match(rig,/if\(root\.dataset\.gaitKey!==gaitKey\)/);
