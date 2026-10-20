@@ -10,7 +10,7 @@ test('GM Character-40 canvas is never painted with the legacy cyan avatar span b
   const css=read('server-game/current/style.css');
   assert.match(css, /\.play-player-avatar > span\.gmww40-character\s*\{[^}]*background:transparent!important/s);
   const gmHtml=read('server-game/current/GMWW.html');
-  assert.match(gmHtml, /style\.css\?v=3\.157-compact-room-mobile2/);
+  assert.match(gmHtml, new RegExp('style\\.css\\?v='+JSON.parse(read('package.json')).version.replace(/\\.0$/,'')+'-compact-room-mobile2'));
 });
 
 test('GM and Player Web share the same mobile-optimized four-motion renderer',()=>{
