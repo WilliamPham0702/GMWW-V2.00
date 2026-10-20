@@ -348,7 +348,7 @@ const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARA
 function playCharacterSitting(member,now=playNow()){return Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now)}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId),seatedUrl='';return playCharacterSitting(member,now)&&seatedUrl?seatedUrl:playCharacterFrameUrl(id,frame,direction)}
 function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive'}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const state=moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'}}
+function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive'}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const battleStatic=playSceneState.step==='battle',state=!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'||battleStatic}}
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
 function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const id=playActiveCharacterId(member?.gameCharacterId),api=window.GMWW_SHARED_MOTION;if(!api?.supports(id))return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,sitting,effect}),assetBase:location.protocol==='file:'?new URL('.',document.baseURI).href:GMWW_SERVER_BASE});return true}
 function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect}))||false}
@@ -673,6 +673,7 @@ function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}
 // GM wolf character removed. Firepit menu remains the sole GM action entry.
 function playMovementFrame(){
+  if(playSceneState.step==='battle'){stopPlayMovementTicker();return}
   // The online GM can be idle indefinitely; avoid full DOM/rig reads at 60 FPS.
   // Keep ~30 FPS motion while preserving CSS-only status orbits independently.
   if(document.visibilityState==='hidden'){playSceneRuntime.moveTicker=0;return}
@@ -696,11 +697,14 @@ function playMovementFrame(){
   if(active)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);else playSceneRuntime.moveTicker=0
 }
 function syncPlayMovementTicker(){
+  if(playSceneState.step==='battle'){stopPlayMovementTicker();return}
   const active=playVillageMembers().some(p=>playPlayerEffect(p.loginId)!=='dead'&&(playSeatMovementActive(p)||p?.villageActivity==='sitting'));
   if(active&&!playSceneRuntime.moveTicker)playSceneRuntime.moveTicker=requestAnimationFrame(playMovementFrame);
   else if(!active)stopPlayMovementTicker()
 }
 function playSeatMovementActive(member){
+  // Battle characters are stationary, including stale server movement records.
+  if(playSceneState.step==='battle')return false;
   if(member?.movementStatus!=='moving')return false;
   const started=Number(member?.moveStartedAt),duration=Number(member?.moveDurationMs);
   if(!(started>0&&duration>0)||playNow()>=started+duration)return false;
@@ -768,7 +772,7 @@ function renderPlayPlayers(){
   ring.dataset.gmwwPlayerDomSig=domSig;
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
-    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=effect!=='dead'&&playSeatMovementActive(m),sitting=effect!=='dead'&&!!m&&playCharacterSitting(m),isOnlinePick=false;
+    const el=document.createElement('button'),effect=m?playPlayerEffect(m.loginId):'alive',moving=effect!=='dead'&&playSeatMovementActive(m),sitting=playSceneState.step!=='battle'&&effect!=='dead'&&!!m&&playCharacterSitting(m),isOnlinePick=false;
     el.type='button';if(seatId)el.dataset.seatId=String(seatId);if(m)el.dataset.playPlayerId=String(m.loginId||m.participantId||'');
     el.className='play-player-token gmww-sv-stage'+(m&&String(m.loginId)===String(playSceneState.activePlayerId)?' is-active':'')+(m&&selectedIds.has(String(m.loginId))?' is-roster-selected':'')+(effect!=='alive'?' is-'+effect:'')+(!m?' is-empty is-position':'')+(moving?' is-moving':'')+(sitting?' is-sitting':'')+(m&&seatId?' is-seat-occupied':'');
     const mapPoint=moving?playMovementPoint(m,pos,playNow()):pos,pt=playMapDisplay(mapPoint[0],mapPoint[1]);el.style.left=pt[0]+'%';el.style.top=pt[1]+'%';el.style.zIndex=String(10+Math.round(pt[1]));
