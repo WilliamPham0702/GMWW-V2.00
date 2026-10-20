@@ -43,8 +43,9 @@ jobs:
       - name: Generate and verify Character40 avatar portrait assets
         shell: bash
         run: |
-          python3 -m pip install --user --disable-pip-version-check Pillow==11.3.0
-          python3 tools/generate-character40-portraits.py --verify
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Smoke-test Player Web locally
         shell: bash
         run: |
