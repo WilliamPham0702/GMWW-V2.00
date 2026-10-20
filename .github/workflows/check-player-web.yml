@@ -65,7 +65,7 @@ jobs:
           # Each returned portrait is the exact corresponding atlas Idle frame.
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
-            curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-3" > /tmp/gmww-avatar-preview.webp
+            curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-4" > /tmp/gmww-avatar-preview.webp
             cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/portraits/$ID.webp" || {
               echo "::error::Profile avatar and village atlas mismatch: $ID"
               exit 1
