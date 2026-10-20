@@ -103,7 +103,7 @@ try{
  checks.push('freeze blocks, expulsion retains quotas; Guard-Wolf-Fairy precedence; dawn idempotency; GM/Player realtime');
  await cycle('night',2);s=await state();
  assert.equal(s.nightRuntime.queue.some(x=>x.kind==='wolf-introduction'),false);
- assert.equal(s.nightRuntime.queue.find(x=>x.kind==='early-artifact-window').actions.length,0,'single-use Artifact removed next night');
+ assert.equal(s.nightRuntime.queue.some(x=>x.kind==='early-artifact-window'),false,'consumed single-use Artifact removes the empty opening window next night');
  assert.equal(active(s,'seer','expelled').length,0);assert.equal(active(s,'alpha','dead').length,1);
  await jump('alpha');assert.equal((await action('alpha','effect_notice','inspect',['guard'])).error,'ACTOR_CANNOT_ACT');
  await jump('guard');assert.equal((await action('guard','effect_notice','inspect',['seer'])).error,'ACTOR_CANNOT_ACT');
