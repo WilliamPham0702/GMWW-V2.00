@@ -677,8 +677,8 @@ function playApplyLobbyStage(generation){
 }
 async function playReturnToLobby(){
   if(playSceneRuntime.busy||playSceneState.step==='lobby')return false;
-  await demoStop('lobby_reset');
   if(!confirm('Trở về SẢNH CHỜ?\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
+  await demoStop('lobby_reset');
   playSetBusy(true);
   try{
     const data=await gmApi('/api/gm/lobby/reset',{method:'POST',body:JSON.stringify({source:'GM_BACK'})});
