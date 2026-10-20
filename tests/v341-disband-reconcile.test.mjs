@@ -27,6 +27,7 @@ test('V3.41 re-disband does not overwrite a player who already joined another ro
 });
 test('V3.41 Worker reconciles saved disband logins and reports failures',()=>{
   assert.match(worker,/if\(data\?\.disbanded\)for\(const loginId/);
-  assert.match(worker,/syncPresence\(loginId,null,false,code\)/);
+  assert.match(worker,/await syncBatch\(\[\.\.\.releaseLogins\],null,false,code\)/);
+  assert.match(worker,/loginId,ok:await syncPresence\(loginId,roomCode,ready,expectedRoomCode,calledByGM\)/);
   assert.match(worker,/ROSTER_PRESENCE_PENDING/);
 });
