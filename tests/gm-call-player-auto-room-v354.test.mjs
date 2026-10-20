@@ -49,7 +49,8 @@ test('Late disband cannot clear someone who was reassigned to a different room',
 test('GM wrapper explicitly records a call for all roster members',()=>{
   assert.match(server,/preserveGmCall:true/);
   assert.match(server,/calledByGM=false/);
-  assert.match(server,/syncPresence\(p\.loginId,code,true,null,true\)/);
+  assert.match(server,/await syncBatch\(admitted,code,true,null,true\)/);
+  assert.match(server,/loginId,ok:await syncPresence\(loginId,roomCode,ready,expectedRoomCode,calledByGM\)/);
 });
 
 function webHarness({assigned='ABCDEF',players=[{loginId:'chrome',reservedByGM:true}],enabled=true,hidden=false}={}){
