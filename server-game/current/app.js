@@ -2786,7 +2786,7 @@ async function playCreateRoom(isDemo=false){
   if(typeof demoStop==='function')await demoStop('room_change');
   playSetBusy(true);
   try{
-    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:isDemo?'Demo':document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi',demo:isDemo,roomMode:isDemo?'offline':playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
+    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:isDemo?'Demo':document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi',demo:isDemo,roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.roomCode)throw new Error(data?.message||data?.error||'Không tạo được Phòng.');
     playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.seatMoveMode='instant';playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();gmwwSendGmPresence(true);
@@ -3391,7 +3391,7 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
@@ -4286,7 +4286,7 @@ function battleGallowsRender(phase){
   battleGallowsTick();
 }
 async function battleGallowsCommand(command,targetId='',outcome=''){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(battleState.gallowsBusy||playSceneState.phase!=='day'||!isLivePlayRoom())return;
   if(command==='resolve'&&outcome==='dead'&&!confirm('Xác nhận giết người chơi bị lên giàn?'))return;
   battleState.gallowsBusy=true;battleGallowsRender('day');
@@ -4439,7 +4439,7 @@ function renderPlayBattle(){
   battleMarkPlayers();battleTickCountdown();
 }
 async function battleConfirmDay(confirmed=false){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   const a=battleAction();
   if(playSceneState.phase!=='day'||playSceneState.step!=='battle'||!isLivePlayRoom()||
      battleState.busy||battleState.syncPending||!a||a.unavailable||
@@ -4472,7 +4472,7 @@ async function battleConfirmDay(confirmed=false){
   }finally{battleState.busy=false;renderPlayBattle()}
 }
 async function battleConfirm(confirmed=false){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
   const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
@@ -6184,7 +6184,7 @@ function playApplyLobbyStage(generation){
 async function playReturnToLobby(){
   if(playSceneRuntime.busy||playSceneState.step==='lobby')return false;
   if(!confirm('Trở về SẢNH CHỜ?\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
-  await demoStop('lobby_reset');
+  if(typeof demoStop==='function')await demoStop('lobby_reset');
   playSetBusy(true);
   try{
     const data=await gmApi('/api/gm/lobby/reset',{method:'POST',body:JSON.stringify({source:'GM_BACK'})});
@@ -6245,7 +6245,7 @@ async function enterPlayImmersive(){
 function exitPlayImmersive(){
   if(playSceneRuntime.busy)return;
   if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
-  void demoStop('exit_play');
+  if(typeof demoStop==='function')void demoStop('exit_play');
   document.body.classList.remove('play-immersive');
   if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
