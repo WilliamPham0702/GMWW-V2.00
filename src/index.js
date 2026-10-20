@@ -1499,9 +1499,9 @@ export class RoomDurableObject extends DurableObject {
     if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
       affected(actorId,"expelled")||affected(actorId,"frozen"))
       return j({ok:false,error:"DAY_ACTOR_BLOCKED"},409);
-    if(targets.some(x=>fn.allowDead!==true&&affected(x,"dead")&&
-      !String(actionId).toLowerCase().includes("revive")||
-      affected(x,"expelled")))
+    // Expelled players remain targetable, but every effect on them is inert.
+    if(targets.some(x=>!affected(x,"expelled")&&fn.allowDead!==true&&affected(x,"dead")&&
+      !String(actionId).toLowerCase().includes("revive")))
       return j({ok:false,error:"DAY_TARGET_NOT_ELIGIBLE"},409);
     const usageKey="dayRoleUsage:"+matchId,
       priorUsage=await this.ctx.storage.get(usageKey)||[],
@@ -1530,35 +1530,39 @@ export class RoomDurableObject extends DurableObject {
         artifactId,cycleKey:artifactCycleKey,eligible:true,limit});
       if(!artifactReservation.ok)return j({ok:false,error:artifactReservation.error},409);
     }
-    const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role";
+    const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role",
+      effectiveTargets=targets.filter(id=>!affected(id,"expelled"));
     let message="",deadVictims=[],result=null;
     const isWolf=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("soi")||f==="wolf"||f==="wolves"};
     const isThird=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("phe ba")||f.includes("phe thu")||f==="third"};
-    if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
-      const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===targets[0]);
+    if(targets.length&&effectiveTargets.length===0){
+      message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
+      result={message,noEffect:true};
+    }else if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
+      const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
       const correctlyStabbed=chosen.some(x=>isWolf(x)||isThird(x));
-      deadVictims=[correctlyStabbed?targets[0]:actorId];
+      deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
       message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
       result={message,correctlyStabbed};
     }else if(!artifactId&&actionId==="action_bear_scan"&&roleId==="role_bear"){
-      const hasWolf=targets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
+      const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
       result={message,hasWolf};
     }else if(roleKnight){
-      const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+targets[0];
+      const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+effectiveTargets[0];
       if(await this.ctx.storage.get(pendingKey))
         return j({ok:false,error:"KNIGHT_TARGET_ALREADY_QUEUED"},409);
       changes.push({kind:"knight_pending",key:pendingKey,value:{matchId,actorId,
-        targetId:targets[0],createdAt:time,resolveDay:day+1}});
+        targetId:effectiveTargets[0],createdAt:time,resolveDay:day+1}});
       message="Hiệp Sĩ đã chọn mục tiêu. Hiệu lực vào sáng ngày tiếp theo.";
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
       const terms=[actionId,...effects].join(" ").toLowerCase();
       if(/revive|hoi_sinh/.test(terms)){
-        for(const id of targets){
+        for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
           for(const x of changed){x.effectActive=false;x.expiredAt=time;x.expiredReason="DAY_ARTIFACT_REVIVE"}
@@ -1566,15 +1570,15 @@ export class RoomDurableObject extends DurableObject {
         }
         message="Artifact hồi sinh đã được ghi nhận.";
       }else if(/kill|dead|giet|chet|poison/.test(terms)){
-        deadVictims=targets;message="Artifact đã gây tác động Chết.";
+        deadVictims=effectiveTargets;message="Artifact đã gây tác động Chết.";
       }else if(/expel|exile|duoi/.test(terms)){
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"expelled"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
       }else if(/freeze|frozen|dong_bang/.test(terms)){
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"frozen"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"frozen"});
         message="Artifact đã thực hiện Đóng Băng.";
       }else{
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
         message="Artifact đã ghi nhận hành động. Hiệu ứng đặc biệt chờ GM xử lý theo luật đã cấu hình.";
       }
       result={message};
@@ -1650,6 +1654,12 @@ export class RoomDurableObject extends DurableObject {
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
+    const isExpelled=id=>interactions.some(row=>
+      normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
+      row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===matchId)&&
+      (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
+    if(isExpelled(actorId))
+      return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
@@ -1712,14 +1722,9 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }};
     const before=await snapshot(),results=[];
-    // Expelled players can act/be targeted for the rest of the night, but these
-    // actions are acknowledged without modifying gameplay effects.
-    const isExpelled=id=>interactions.some(row=>
-      normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
-      row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===matchId)&&
-      (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
-    const inertActor=isExpelled(actorId);
-    const effectiveTargets=targets.filter(id=>!inertActor&&!isExpelled(id));
+    // Other players may select expelled targets. The selection consumes the
+    // actor's normal action, but never applies gameplay effects to those targets.
+    const effectiveTargets=targets.filter(id=>!isExpelled(id));
     for(const id of targets){
       if(!effectiveTargets.includes(id)){
         results.push({ok:true,loginId:id,noEffect:true,reason:"EXPELLED"});
