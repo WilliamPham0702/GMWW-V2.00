@@ -59,10 +59,10 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
 }
 async function result(response){return {status:response.status,...await response.json()}}
 
-test('empty Artifact window remains once; configured roles group owners and do not add redundant Artifact turns',async()=>{
+test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-introduction','early-artifact-window','role','role','village-wakeup']);
-  assert.equal(rt.queue[1].actions.length,0);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-introduction','role','role','village-wakeup']);
+  assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
   assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
@@ -222,7 +222,8 @@ test('roles with identical wake order share a single server turn and keep both o
   assert.deepEqual(group.roles.map(r=>r.label),['Sói Thường','Sói Trùm']);
   assert.equal(rt.queue.filter(x=>x.kind==='role').length,0);
   assert.equal(rt.queue[0].durationSec,30);
-  assert.equal(rt.queue[1].durationSec,60);
+  assert.equal(rt.queue[1].durationSec,35);
+  assert.ok(!rt.queue.some(x=>x.kind==='early-artifact-window'));
 });
 
 test('batched GM action reverses both targets and one Artifact use on server',async()=>{
