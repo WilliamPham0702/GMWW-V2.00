@@ -62,7 +62,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/gm/demo/roster','/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/gm/demo/roster','/gm/demo/gallows-vote','/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -160,6 +160,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/gallows"&&request.method==="POST")return this.gmGallows(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
     if(url.pathname==="/gm/demo/roster"&&request.method==="POST")return this.gmDemoRoster(request,await safeJson(request));
+    if(url.pathname==="/gm/demo/gallows-vote"&&request.method==="POST")return this.gmDemoGallowsVote(request,await safeJson(request));
     if(url.pathname==="/gm/room-settings"&&request.method==="POST")return this.gmRoomSettings(request,await safeJson(request));
     if(url.pathname==="/gm/stage"&&request.method==="POST")return this.gmStage(request,await safeJson(request));
     if(url.pathname==="/gm/seat"&&request.method==="POST")return this.gmSeat(request,await safeJson(request));
@@ -1029,6 +1030,21 @@ export class RoomDurableObject extends DurableObject {
     for(const ws of this.ctx.getWebSockets())try{if(ws.deserializeAttachment()?.participantId===id){ws.send(JSON.stringify({type:"player_kicked",participantId:id,reason:"GM_KICK"}));ws.close(1000,"PLAYER_KICKED")}}catch{}
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
     return j({ok:true,kicked:true,player:publicPlayer(p),room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
+  }
+  async gmDemoGallowsVote(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,loginId=normalizeLoginId(body?.loginId);
+    if(meta.isDemoRoom!==true)return j({ok:false,error:"NOT_DEMO_ROOM"},403);
+    if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
+      return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
+    const players=(await this.ctx.storage.get("players"))||{},bot=players["member:"+loginId];
+    if(!bot||bot.demoBot!==true)return j({ok:false,error:"NOT_DEMO_BOT"},403);
+    const command=String(body?.command||"");
+    if(!["nominate","vote"].includes(command))return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
+    return this.playerGallows({
+      loginId,command,targetId:body?.targetId,
+      choice:body?.choice
+    });
   }
   async gmDemoRoster(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -2500,7 +2516,9 @@ export default {async fetch(request,env){
   const gmDayActionRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/day-action$/);if(gmDayActionRoute&&request.method==="POST")return roomProxy(env,gmDayActionRoute[1],"/gm/day-action",request);
   const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
   const gmGallowsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(gmGallowsRoute&&request.method==="POST")return roomProxy(env,gmGallowsRoute[1],"/gm/gallows",request);
-  const gmDemoRoster=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/demo\/roster$/);
+  const gmDemoGallows=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/demo\/gallows-vote$/);
+   if(gmDemoGallows&&request.method==="POST")return roomProxy(env,gmDemoGallows[1],"/gm/demo/gallows-vote",request);
+   const gmDemoRoster=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/demo\/roster$/);
    if(gmDemoRoster&&request.method==="POST")return roomProxy(env,gmDemoRoster[1],"/gm/demo/roster",request);
    const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
