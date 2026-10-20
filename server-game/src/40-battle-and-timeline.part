@@ -307,6 +307,8 @@ function demoSchedule(ms=demoDelay()){
 }
 async function demoActionNight(t,epoch){
   const room=playSceneRuntime.room,signature=[room.matchId,room.cycleKey,t.id].join(':');
+  // A fresh GM tab can recover an already-committed action from the server receipt.
+  if(String(playSceneRuntime.battleUndo?.turnId||'')===String(t.id))demoRunner.completed.add(signature);
   if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
   if(!demoRunner.completed.has(signature)){
     const options=battleActions().filter(a=>!a.unavailable&&Array.isArray(a.actorIds)&&a.actorIds.length);
