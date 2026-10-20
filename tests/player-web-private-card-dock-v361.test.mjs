@@ -7,7 +7,8 @@ import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js'
 
 const result=patchPrivatePlayerCards(gmwwMembersLiveScript);
 test('Patched Player Web script parses cleanly and is safe to apply once',()=>{
- assert.ok(result.length>gmwwMembersLiveScript.length);
+ assert.ok(result.length>5000,'patched Player script is not empty');
+ assert.match(result,/card-backs\/role-card-back-v1\.png/,'legacy embedded back replaced with approved asset');
  assert.doesNotThrow(()=>new vm.Script(result,{filename:'gmww-members-live-patched.js'}));
  assert.equal(patchPrivatePlayerCards(result),result);
 });
