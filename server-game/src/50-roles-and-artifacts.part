@@ -737,6 +737,7 @@ async function enterPlayImmersive(){
 function exitPlayImmersive(){
   if(playSceneRuntime.busy)return;
   if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
+  void demoStop('exit_play');
   document.body.classList.remove('play-immersive');
   if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
@@ -942,7 +943,8 @@ function initPlayScene(){
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
   document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});
-  document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
+  document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));
+  document.getElementById('playDemoRoomChoice')?.addEventListener('click',()=>{void playOpenDemoRoom()});document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
   document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});
   document.getElementById('playCreateRoomEnabled')?.addEventListener('click',playToggleRoomEnabled);document.getElementById('playRoomNextStep')?.addEventListener('click',playCreateRoomNext);
   document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
