@@ -156,6 +156,12 @@ jobs:
           echo "::error::Deployment blocked: candidate is older than Production, versions are inconsistent or Production health is unavailable."
           exit 1
 
+      - name: Generate and verify Character40 avatar portrait assets
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Deploy Worker to Production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -180,6 +186,17 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
+          # Verify the bytes visible to iPhone Safari, not just Cloudflare upload success.
+          for N in $(seq 1 40); do
+            ID=$(printf 'character-%02d' "$N")
+            curl --fail --location --silent --show-error --retry 3 --retry-delay 1 --max-time 20               "$URL/api/game-characters/$ID/image?rev=c40-3&verify-avatar=$N" > /tmp/gmww-live-avatar.webp
+            cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp" || {
+              echo "::error::Production avatar/atlas bytes differ for $ID"
+              exit 1
+            }
+          done
+          echo "Verify Production: all 40 portrait/animation identities and bytes PASS."
+
           # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
           curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
           grep -q '<main class="game day"' /tmp/gmww-production-village.html

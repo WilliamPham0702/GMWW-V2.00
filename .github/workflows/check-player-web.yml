@@ -40,6 +40,12 @@ jobs:
       - run: node --check .github/scripts/prepare-update-channel.mjs
       - run: node --check assets/village/village.mjs
       - run: npm test
+      - name: Generate and verify Character40 avatar portrait assets
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Smoke-test Player Web locally
         shell: bash
         run: |
@@ -56,6 +62,16 @@ jobs:
           grep -q '"memberStorage":"ready"' /tmp/health-deep.json
           curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
+          # Each returned portrait is the exact corresponding atlas Idle frame.
+          for N in $(seq 1 40); do
+            ID=$(printf 'character-%02d' "$N")
+            curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-3" > /tmp/gmww-avatar-preview.webp
+            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/portraits/$ID.webp" || {
+              echo "::error::Profile avatar and village atlas mismatch: $ID"
+              exit 1
+            }
+          done
+          echo "PASS: all 40 Player Web portraits match generated atlas frames."
           curl -fsS http://127.0.0.1:8787/gmww-members-live.js > /tmp/player-live.js
           test -s /tmp/player-live.js
           # Regression: Cloudflare html_handling=none must not serve 404 inside Player iframe.
