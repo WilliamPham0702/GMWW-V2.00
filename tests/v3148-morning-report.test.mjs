@@ -37,7 +37,7 @@ test('Village morning report is draggable, dismissible outside, displays bold na
   assert.ok(html.includes('id="battleMorningReport"'));
   assert.ok(html.includes('id="battleMorningAudio"'));
   assert.ok(gm.includes("battleBindAuxiliaryDrag('battleMorningReport','header')"));
-  assert.ok(gm.includes("if(morning&&!morning.hidden&&!morning.contains(target))morning.hidden=true;"));
+  assert.ok(gm.includes("if(morning&&!morning.hidden&&!morning.contains(target)&&!inside('#battleDayNoticeToggle'))"));
   assert.ok(gm.includes("document.createElement('strong')"));
   assert.ok(css.includes('#battleMorningReport'));
   assert.ok(css.includes('var(--gmww-stage-glass-v330)'));

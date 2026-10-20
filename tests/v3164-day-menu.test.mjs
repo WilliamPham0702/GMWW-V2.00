@@ -34,7 +34,7 @@ test('day dock has distinct icons, full action sheet, and synchronized API',()=>
   const html=read('../server-game/current/GMWW.html');
   const app=read('../server-game/current/app.js');
   const worker=read('../src/index.js');
-  const css=read('../server-game/current/day-menu.css');
+  const css=read('../server-game/current/style.css');
   for(const id of ['battleDayNoticeToggle','battleDayGallowsToggle','battleDayActionMenu','battleDayActionList'])
     assert.match(html,new RegExp('id="'+id+'"'));
   assert.match(html,/📖/);assert.match(html,/🤯/);
