@@ -61,12 +61,24 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
    await command({characterId:id,state:'idle',motion:'idle',facing:'left',paused:false});const living=new Set();for(let k=0;k<6;k++){living.add(await picture());await page.waitForTimeout(150);}assert.ok(living.size>1,'revived actor must resume');
   }
  }
- // End-to-end: the actual embedded Village renderer must mount the EXACT
- // profile-selected ID, not wrap the second half of the catalog to 01–20.
+ // End-to-end: test through the REAL parent→iframe postMessage bridge.
+ // Opening /village/?embed=1 at top level is intentionally not embedded:
+ // window.parent===window, so it cannot receive trusted parent state.
+ await page.evaluate(()=>{
+  const iframe=document.createElement('iframe');
+  iframe.id='gmwwAvatarIdentityE2E';
+  iframe.src='/village/?embed=1';
+  iframe.style.cssText='position:fixed;left:0;top:0;width:390px;height:844px;z-index:-1';
+  document.body.append(iframe);
+ });
+ await page.waitForFunction(()=>{
+  const iframe=document.getElementById('gmwwAvatarIdentityE2E');
+  return iframe?.contentDocument?.readyState==='complete'&&!!iframe.contentDocument.querySelector('.stage');
+ },null,{timeout:15000});
  for(let n=1;n<=40;n++){
   const selected='character-'+String(n).padStart(2,'0');
   await page.evaluate(characterId=>{
-   window.postMessage({
+   document.getElementById('gmwwAvatarIdentityE2E').contentWindow.postMessage({
     type:'gmww:village-state',
     players:[{participantId:'member:avatar-regression',displayName:'Avatar regression',gameCharacterId:characterId,positionX:48,positionY:48,online:true,movementStatus:'idle'}],
     room:{seatCount:8,playerSceneMode:'lobby',roomMode:'online'},
@@ -74,10 +86,19 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
     cycle:{phase:'lobby'}
    },location.origin);
   },selected);
-  await page.waitForFunction(expected=>{
-   const node=document.querySelector('.player[data-player-id="member:avatar-regression"] [data-character-renderer]');
-   return node?.dataset.characterId===expected;
-  },selected,{timeout:5000});
+  try{
+   await page.waitForFunction(expected=>{
+    const doc=document.getElementById('gmwwAvatarIdentityE2E')?.contentDocument;
+    const node=doc?.querySelector('.player[data-player-id="member:avatar-regression"] [data-character-renderer]');
+    return node?.dataset.characterId===expected;
+   },selected,{timeout:6500});
+  }catch(error){
+   const observed=await page.evaluate(()=>{
+    const doc=document.getElementById('gmwwAvatarIdentityE2E')?.contentDocument;
+    return [...(doc?.querySelectorAll('.player')||[])].map(p=>({id:p.dataset.playerId,characterId:p.querySelector('[data-character-renderer]')?.dataset.characterId}));
+   });
+   throw new Error(name+': Village actor mismatched selected '+selected+': '+JSON.stringify(observed)+'; '+error.message);
+  }
  }
  console.log(name+': 40/40 embedded Village actors preserve exact profile-selected IDs');
  assert.equal(checked,168);assert.deepEqual(errors,[]);await browser.close();console.log(name+': live adapter passed 42 identities × 4 actions');
