@@ -40,6 +40,9 @@ test('Worker isolates Demo rooms from real members, result history and public jo
   assert.match(worker,/meta\.isDemoRoom===true\)continue/);
   assert.match(worker,/if\(d\?\.room\?\.isDemoRoom===true\)return/);
   assert.match(worker,/\/gm\/demo\/roster/);
+  assert.match(worker,/\/gm\/demo\/gallows-vote/);
+  assert.match(worker,/NOT_DEMO_BOT/);
+  assert.match(worker,/DEMO_ROSTER_LOCKED/);
 });
 test('Demo is selectable in room picker and its running controls use the real GM APIs',()=>{
   const html=readFileSync('server-game/current/GMWW.html','utf8');
@@ -52,6 +55,8 @@ test('Demo is selectable in room picker and its running controls use the real GM
   assert.match(app,/\/demo\/roster/);
   assert.match(app,/\/battle-action/);
   assert.match(app,/\/day-action/);
+  assert.match(app,/gmwwDemoGallowsAction/);
+  assert.match(app,/\/demo\/gallows-vote/);
   assert.match(app,/\/auto/);
   assert.ok(app.includes(reference),'GM bundle and tested Demo runner have identical logic');
 });
