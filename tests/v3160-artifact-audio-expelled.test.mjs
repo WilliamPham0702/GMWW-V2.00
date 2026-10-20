@@ -52,6 +52,7 @@ test('Expelled actors cannot act; expelled people remain targetable with no appl
   assert.match(worker,/effectiveTargets=targets\.filter\(id=>!isExpelled\(id\)\)/);
   assert.match(worker,/noEffect:true,reason:"EXPELLED"/);
   assert.match(rules,/return nightVictim\|\|action\.allowDead\|\|effect!=="dead"/);
+  assert.match(rules,/return effect==="dead"\|\|effect==="expelled"/);
 });
 
 test('Expelled day target is permitted but has no action effect',()=>{
