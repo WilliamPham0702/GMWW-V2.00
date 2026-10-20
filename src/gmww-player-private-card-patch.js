@@ -75,9 +75,13 @@ const GMWW_APPROVED_CARD_BACK_CSS=String.raw`
 #game #gmwwPlayerPrivateDock button[data-private-card]{background:transparent!important;border:0!important}
 #game #gmwwPlayerPrivateDock .mini-card{background:transparent!important}
 #game #gmwwPlayerPrivateDock .mini-card img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
-#game #gmwwPlayerPrivateDock .mini-card{overflow:hidden!important;border-radius:inherit!important;position:relative!important}\n#game #gmwwPlayerPrivateDock .mini-card img{position:absolute!important;inset:-2%!important;width:104%!important;height:104%!important;max-width:none!important;object-fit:fill!important}\n#game #gmwwPlayerPrivateDock .mini-card i{display:none!important}\n#game #gmwwPlayerPrivateDock .mini-label{display:none!important}
-#game #roleCard .role-back{overflow:hidden!important}\n#game #roleCard .role-back .gmww-card-back-img{width:104%!important;height:104%!important;max-width:none!important;object-fit:fill!important;object-position:center!important;background:transparent!important;transform:translate(-2%,-2%)!important}
-#game #artifactCard .gmww-art-back{background:#2e130d url('/card-backs/artifact-card-back-v1.png') center / cover no-repeat!important}
+#game #gmwwPlayerPrivateDock .mini-card{overflow:hidden!important;border-radius:inherit!important;position:relative!important}
+#game #gmwwPlayerPrivateDock .mini-card img{position:absolute!important;inset:-5%!important;width:110%!important;height:110%!important;max-width:none!important;object-fit:cover!important}
+#game #gmwwPlayerPrivateDock .mini-card i{display:none!important}
+#game #gmwwPlayerPrivateDock .mini-label{display:none!important}
+#game #roleCard .role-back{overflow:hidden!important}
+#game #roleCard .role-back .gmww-card-back-img{width:110%!important;height:110%!important;max-width:none!important;object-fit:cover!important;object-position:center!important;background:transparent!important;transform:translate(-5%,-5%)!important}
+#game #artifactCard .gmww-art-back{background:#2e130d url('/card-backs/artifact-card-back-v1.png') center / 110% 110% no-repeat!important}
 #game #artifactCard .gmww-art-back > *{visibility:hidden!important}
 `;
 
