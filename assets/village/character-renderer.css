@@ -254,3 +254,16 @@
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-head{z-index:7}
 .gmww-segmented-rig[data-state="sitting"] .gmww-rig-shadow{transform:translateY(9%) scale(.78,.58)!important;opacity:.26}
 
+
+/* V3.163: once GM starts the match, freeze only character artwork.
+   Status icons, vote badges and user controls must continue working. */
+body.player-battle .player .portrait.game-character,
+body.player-battle .player .portrait.game-character .gmww-character-renderer,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *,
+body.player-battle .player .portrait.game-character img[data-walk-character]{
+  animation:none!important;transition:none!important;will-change:auto!important;
+}
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
+  transform:none!important;
+}
