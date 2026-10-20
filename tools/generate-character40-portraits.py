@@ -8,7 +8,7 @@ import argparse
 import json
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets" / "characters" / "gmww40"
@@ -52,9 +52,7 @@ def build_and_verify():
         exact_frame.save(target, "WEBP", lossless=True, method=5)
         with Image.open(target) as saved:
             saved_rgba = saved.convert("RGBA")
-        if saved_rgba.size != exact_frame.size or ImageChops.difference(
-            saved_rgba, exact_frame
-        ).getbbox() is not None:
+        if saved_rgba.size != exact_frame.size or saved_rgba.tobytes() != exact_frame.tobytes():
             raise RuntimeError(f"Avatar pixels differ from Idle frame for {ident}")
         total_bytes += target.stat().st_size
 
