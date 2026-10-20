@@ -251,10 +251,10 @@
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
-          <div id="battleActionRail" class="battle-action-rail" role="group" aria-label="Hành động một hàng, điều hướng bằng mũi tên">
-            <button id="battleActionPrevious" class="battle-action-arrow" type="button" aria-label="Xem hành động phía trước" hidden>‹</button>
+          <div id="battleActionRail" class="battle-action-rail" role="group" aria-label="Hành động một hàng: vuốt ngang để xem, kéo lên người chơi để tác động">
+            <button id="battleActionPrevious" class="battle-action-arrow" type="button" aria-label="Xem hành động phía trước" hidden aria-hidden="true" tabindex="-1">‹</button>
             <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, kéo nút lên người chơi"></div>
-            <button id="battleActionNext" class="battle-action-arrow" type="button" aria-label="Xem hành động phía sau" hidden>›</button>
+            <button id="battleActionNext" class="battle-action-arrow" type="button" aria-label="Xem hành động phía sau" hidden aria-hidden="true" tabindex="-1">›</button>
           </div>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
@@ -730,7 +730,7 @@
 
 <div class="sheet hidden" id="playGameSheet">
   <div class="sheet-card play-game-sheet-card" data-mode="play">
-    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameClose" type="button">×</button></div>
+    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div></div>
     <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
       <label class="play-game-name-label">Ván Mẫu đã lưu
@@ -750,7 +750,7 @@
         <div class="play-game-role-list" id="playGameRoleList"></div>
         <p class="play-template-help">Chọn một lần để thêm 1 lá, chạm lại để bỏ chọn. Số lượng và thứ tự của vai đã chọn được điều chỉnh trong danh sách.</p>
         <div class="play-template-section-title"><b>ARTIFACT CỦA VÁN MẪU</b><span>Thiết lập một lần khi tạo Ván Mẫu</span></div>
-        <label class="play-template-artifact"><input type="checkbox" id="playArtifactsEnabled"> Có sử dụng Artifact trong Ván Mẫu</label>
+        
         <label class="play-template-artifact-time">Thời gian sử dụng Artifact (giây): <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"></span></label>
         <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
           <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
@@ -758,13 +758,14 @@
         </label>
         <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
         <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
-        <p class="play-template-help">Artifact được lưu theo Ván Mẫu. Khi chọn Ván để chơi sẽ sử dụng đúng thiết lập này, không phải chọn lại.</p>
+        <p class="play-template-help">Chọn trước những Artifact mà Ván Mẫu có thể sử dụng. Bật hoặc tắt Artifact cho mỗi trận ở màn Chọn Ván Mẫu.</p>
       </div>
       <div class="play-template-play-review">
         <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
         <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
-        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo cấu hình Ván Mẫu</p>
-        <div class="play-template-section-title"><b>THỜI GIAN THỰC HIỆN</b><span>Đơn vị: giây</span></div>
+        <label class="play-template-artifact play-match-artifact-toggle"><input type="checkbox" id="playArtifactsEnabled"> <span><b>CÓ SỬ DỤNG ARTIFACT</b><small>Bật hoặc tắt riêng cho trận này, không thay đổi Ván Mẫu đã lưu</small></span></label>
+        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo lựa chọn trận này</p>
+        <details class="play-template-collapsible" id="playGameTimingDetails"><summary>THỜI GIAN THỰC HIỆN <small>Chạm để tùy chỉnh (giây)</small></summary>
         <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
           <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
           <label>Thời gian chọn người lên giàn (giây): <span class="play-timing-value"><input id="playGallowsNominationSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian đề cử người lên giàn"></span></label>
@@ -774,10 +775,11 @@
           <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
           <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
-        <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
+        </details>
+        <details class="play-template-collapsible" id="playRoleTimingDetails"><summary>THỜI GIAN RIÊNG TỪNG VAI <small>Chạm để tùy chỉnh (giây)</small></summary>
         <p class="play-template-help play-role-time-help">Mỗi vai mặc định theo thời gian chung ở trên; có thể điều chỉnh riêng cho từng lá.</p>
         <div class="play-template-role-timings" id="playGameRoleTimingList" role="group" aria-label="Thời gian sử dụng riêng từng vai"></div>
-
+        </details>
       </div>
     </div>
     <div class="button-row play-roster-actions">
