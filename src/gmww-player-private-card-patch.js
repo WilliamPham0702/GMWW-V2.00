@@ -260,8 +260,6 @@ async function gmwwVerifyMemberBeforeRemoval(){
  // Refresh both card faces promptly when GM releases a new delivery.
  replaceReceipt("  renderPlayerPrivateDock();\n  bar.hidden=true;",
    "  renderPlayerPrivateDock();\n  gmwwEnsureLiveDeliveryWatch();\n  bar.hidden=true;");
- replaceReceipt("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
-   "function closePrivateCardViewer(){\n  if(state.roleOpen||state.artifactOpen)playPageFlipSound(false);\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
  // Keep server's versioned private delivery contract authoritative.
  const previousArtifactExpected="state.artifactExpected=d?.artifactExpected===true;state.artifactCycle=";
  const expectedFromManifest="state.artifactExpected=d?.deliveryManifest?.artifactExpected===true||d?.artifactExpected===true;state.artifactCycle=";
@@ -311,7 +309,7 @@ async function gmwwVerifyMemberBeforeRemoval(){
  offlineReplace("      gmwwPendingPrivateCardTap='';openPrivateCardViewer(kind);",
    "      // Match the GM fan: first tap on rear card only shuffles it to the front.\n      // Tap the already-front card to open its full private viewer.\n      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
  offlineReplace("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
-   "function closePrivateCardViewer(){\n  if($('#game')?.dataset.privateCardView==='open'&&$('#game')?.dataset.privateCardFocus==='role'&&state.role){gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());gmwwDeckPreferredTop='artifact'}\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
+   "function closePrivateCardViewer(){\n  if(state.roleOpen||state.artifactOpen)playPageFlipSound(false);\n  if($('#game')?.dataset.privateCardView==='open'&&$('#game')?.dataset.privateCardFocus==='role'&&state.role){gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());gmwwDeckPreferredTop='artifact'}\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
  offlineReplace("  setGameViewPane('village',{persist:false});\n}\nfunction openPrivateCardViewer(kind){",
    "  setGameViewPane('village',{persist:false});\n  if(typeof document!=='undefined')renderPlayerPrivateDock();\n}\nfunction openPrivateCardViewer(kind){");
  offlineReplace("  dock.classList.toggle('is-solo',!state.artifact&&!waitingArtifact);",
