@@ -61,5 +61,24 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
    await command({characterId:id,state:'idle',motion:'idle',facing:'left',paused:false});const living=new Set();for(let k=0;k<6;k++){living.add(await picture());await page.waitForTimeout(150);}assert.ok(living.size>1,'revived actor must resume');
   }
  }
+ // End-to-end: the actual embedded Village renderer must mount the EXACT
+ // profile-selected ID, not wrap the second half of the catalog to 01–20.
+ for(let n=1;n<=40;n++){
+  const selected='character-'+String(n).padStart(2,'0');
+  await page.evaluate(characterId=>{
+   window.postMessage({
+    type:'gmww:village-state',
+    players:[{participantId:'member:avatar-regression',displayName:'Avatar regression',gameCharacterId:characterId,positionX:48,positionY:48,online:true,movementStatus:'idle'}],
+    room:{seatCount:8,playerSceneMode:'lobby',roomMode:'online'},
+    setup:{viewerParticipantId:'member:avatar-regression',showSeats:false,walkEnabled:false,characterScale:100},
+    cycle:{phase:'lobby'}
+   },location.origin);
+  },selected);
+  await page.waitForFunction(expected=>{
+   const node=document.querySelector('.player[data-player-id="member:avatar-regression"] [data-character-renderer]');
+   return node?.dataset.characterId===expected;
+  },selected,{timeout:5000});
+ }
+ console.log(name+': 40/40 embedded Village actors preserve exact profile-selected IDs');
  assert.equal(checked,168);assert.deepEqual(errors,[]);await browser.close();console.log(name+': live adapter passed 42 identities × 4 actions');
 }
