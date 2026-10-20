@@ -215,13 +215,53 @@ async function gmwwVerifyMemberBeforeRemoval(){
   }finally{gmwwMembershipRecheckBusy=false}
 }
 `;
- replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\n"+GMWW_MEMBERSHIP_RECHECK_CODE+"\nasync function refreshPrivateRole(force=false){");
+ 
+ // The public room exposes deliveryVersion, not private role/artifact data.
+ // Retry one authenticated /me receipt while delivery is incomplete, even
+ // when the WebSocket room_state event precedes the private snapshot.
+ const GMWW_LIVE_DELIVERY_WATCH=String.raw`
+ let gmwwLiveDeliveryTimer=null,gmwwLiveDeliveryKey='',gmwwLiveDeliveryAttempts=0;
+ function gmwwLiveDeliveryComplete(){
+   const room=state.room||{},manifest=state.privateDeliveryManifest;
+   if(!state.role||!manifest||manifest.schemaVersion!==1||manifest.complete!==true)return false;
+   if(String(manifest.matchId||'')!==String(room.matchId||''))return false;
+   if(Number(manifest.deliveryVersion||0)!==Number(room.deliveryVersion||0))return false;
+   if(!Array.isArray(state.roles)||state.roles.length<Number(manifest.roleCount||0))return false;
+   if(manifest.artifactExpected===true&&!state.artifact)return false;
+   return true;
+ }
+ function gmwwStopLiveDeliveryWatch(){
+   if(gmwwLiveDeliveryTimer){clearInterval(gmwwLiveDeliveryTimer);gmwwLiveDeliveryTimer=null}
+ }
+ function gmwwEnsureLiveDeliveryWatch(){
+   const room=state.room||{},released=playerScenePolicy(room).rolesReleased;
+   if(!state.roomCode||!state.participantId||!state.token||!released){gmwwStopLiveDeliveryWatch();gmwwLiveDeliveryKey='';return}
+   const key=[state.roomCode,state.participantId,room.matchId||'',room.deliveryVersion||0].join('|');
+   if(key!==gmwwLiveDeliveryKey){gmwwStopLiveDeliveryWatch();gmwwLiveDeliveryKey=key;gmwwLiveDeliveryAttempts=0}
+   if(gmwwLiveDeliveryComplete()){gmwwStopLiveDeliveryWatch();return}
+   if(gmwwLiveDeliveryTimer)return;
+   gmwwLiveDeliveryTimer=setInterval(()=>{
+     if(document.hidden||!state.token)return;
+     if(!state.roomCode||!state.participantId||!playerScenePolicy(state.room).rolesReleased){gmwwStopLiveDeliveryWatch();return}
+     if(gmwwLiveDeliveryComplete()){gmwwStopLiveDeliveryWatch();return}
+     if(++gmwwLiveDeliveryAttempts>30){gmwwStopLiveDeliveryWatch();return}
+     Promise.resolve(refreshPrivateRole(true)).catch(()=>{});
+   },1200);
+ }
+ `;
+
+ replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\n"+GMWW_MEMBERSHIP_RECHECK_CODE+"\n"+GMWW_LIVE_DELIVERY_WATCH+"\nasync function refreshPrivateRole(force=false){");
  replaceReceipt("if(state.role){rememberActiveRole(state.role);",
    "if(state.role){gmwwAcknowledgePrivateDelivery(d);rememberActiveRole(state.role);");
  replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
    "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");
  replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
    "if(d?.deliveryManifest){const manifest=d.deliveryManifest;const sameMatch=!manifest.matchId||String(manifest.matchId)===String(d.room?.matchId||state.room?.matchId||'');if(sameMatch){state.privateDeliveryManifest=manifest;state.artifactExpected=manifest.artifactExpected===true}}if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
+ // Refresh both card faces promptly when GM releases a new delivery.
+ replaceReceipt("  renderPlayerPrivateDock();\n  bar.hidden=true;",
+   "  renderPlayerPrivateDock();\n  gmwwEnsureLiveDeliveryWatch();\n  bar.hidden=true;");
+ replaceReceipt("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
+   "function closePrivateCardViewer(){\n  if(state.roleOpen||state.artifactOpen)playPageFlipSound(false);\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
  // Keep server's versioned private delivery contract authoritative.
  const previousArtifactExpected="state.artifactExpected=d?.artifactExpected===true;state.artifactCycle=";
  const expectedFromManifest="state.artifactExpected=d?.deliveryManifest?.artifactExpected===true||d?.artifactExpected===true;state.artifactCycle=";
