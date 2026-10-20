@@ -6085,6 +6085,17 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #start #playShell.gmww-hide-artifact-label #playPlayerRing .play-player-token .play-player-artifact{display:none!important}
 #start #playShell.gmww-hide-role-label #playPlayerRing .play-player-token .play-player-role{display:none!important}
 #start #playShell.gmww-hide-player-label #playPlayerRing .play-player-token .play-name-with-presence{display:none!important}
-#start #playShell #battleWolfMenu .battle-wolf-actions > button[aria-pressed="false"]{
+#start #playShell #battleWolfMenu .battle-gm-label-toggles{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:5px!important;width:100%!important;min-width:0!important;margin-top:7px!important;
+}
+#start #playShell #battleWolfMenu .battle-gm-label-toggles>button{
+  min-width:0!important;min-height:42px!important;max-width:none!important;
+  padding:5px 2px!important;font-size:10px!important;font-weight:900!important;
+  border:1px solid rgba(121,223,206,.7)!important;border-radius:9px!important;
+  color:#fff!important;background:rgba(18,97,95,.88)!important;
+  touch-action:manipulation!important;white-space:nowrap!important;
+}
+#start #playShell #battleWolfMenu .battle-gm-label-toggles>button[aria-pressed="false"]{
   opacity:.72;border-color:rgba(139,160,171,.35)!important;background:rgba(24,40,51,.78)!important
 }
