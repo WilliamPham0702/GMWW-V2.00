@@ -6154,3 +6154,83 @@ body.play-immersive #start #playPlayerRing .play-player-avatar>span.gmww40-chara
   #playRosterSheet .play-roster-toolbar-v3155{gap:4px!important;grid-template-columns:minmax(0,.7fr) minmax(0,1.05fr) minmax(0,1.25fr)!important}
   #playRosterSheet .play-roster-toolbar-v3155>button{padding:9px 2px!important;font-size:10px!important;letter-spacing:0!important}
 }
+
+
+/* V3.163 · Match-only Artifact; small disclosure panels protect iPhone space. */
+#playGameSheet .play-match-artifact-toggle{
+  display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 14px;
+  border:1px solid #83d8e9;border-radius:14px;
+  background:linear-gradient(120deg,#12455b,#092e46);
+  color:#f5e7af;cursor:pointer;margin:11px 0 6px;
+}
+#playGameSheet .play-match-artifact-toggle>input{
+  appearance:none;-webkit-appearance:none;position:relative;flex:none;
+  width:48px;height:28px;margin:0;border-radius:30px;
+  border:1px solid #80c7d6;background:#344f61;transition:background .16s ease;
+}
+#playGameSheet .play-match-artifact-toggle>input::after{
+  content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+  background:#e2eaf1;border-radius:50%;transition:transform .16s ease;
+}
+#playGameSheet .play-match-artifact-toggle>input:checked{background:#21b49f}
+#playGameSheet .play-match-artifact-toggle>input:checked::after{transform:translateX(20px);background:#fdf9da}
+#playGameSheet .play-match-artifact-toggle>input:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#playGameSheet .play-match-artifact-toggle>input:disabled{opacity:.5}
+#playGameSheet .play-match-artifact-toggle span{display:grid;gap:3px;min-width:0}
+#playGameSheet .play-match-artifact-toggle b{font-size:14px;letter-spacing:.02em}
+#playGameSheet .play-match-artifact-toggle small{color:#acd9e3;font-size:10px;line-height:1.35}
+#playGameSheet .play-template-collapsible{
+  border:1px solid #5ba0b4;border-radius:13px;margin:10px 0;overflow:hidden;
+  background:rgba(4,33,49,.65);
+}
+#playGameSheet .play-template-collapsible>summary{
+  display:flex;justify-content:space-between;align-items:center;gap:6px;
+  padding:15px 13px;color:#ffdda0;font-weight:900;font-size:12px;
+  list-style:none;cursor:pointer;touch-action:manipulation;
+}
+#playGameSheet .play-template-collapsible>summary::-webkit-details-marker{display:none}
+#playGameSheet .play-template-collapsible>summary::after{content:'⌄';font-size:20px;line-height:1;color:#92e1ee}
+#playGameSheet .play-template-collapsible[open]>summary::after{content:'⌃'}
+#playGameSheet .play-template-collapsible>summary small{
+  margin-left:auto;color:#9dced7;font-weight:500;font-size:10px;text-align:right;
+}
+#playGameSheet .play-template-collapsible .play-timing-grid,
+#playGameSheet .play-template-collapsible .play-template-role-timings{
+  padding:8px 8px 12px;
+}
+#playGameSheet .play-template-collapsible .play-role-time-help{padding:0 12px}
+
+/* V3.163 · Battle actions: all width goes to chips. Swipe horizontally on
+   any chip; drag toward the village selects targets, without pagination arrows. */
+#start #playShell[data-step="battle"] #battleActionPrevious,
+#start #playShell[data-step="battle"] #battleActionNext{
+  display:none!important;width:0!important;min-width:0!important;
+  pointer-events:none!important;
+}
+#start #playShell[data-step="battle"] #battleActionRail.battle-action-rail{
+  width:100%!important;gap:0!important;min-width:0!important;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar.battle-action-scroll{
+  flex:1 1 100%!important;min-width:0!important;width:100%!important;
+  max-width:100%!important;gap:5px!important;padding:2px 4px!important;
+  scroll-snap-type:none!important;scrollbar-width:none!important;
+  touch-action:none!important;overscroll-behavior-x:contain!important;
+  -webkit-overflow-scrolling:touch;
+}
+#start #playShell[data-step="battle"] #battleBottomControls #battleActionBar>button[data-battle-action]{
+  flex:0 0 auto!important;min-width:82px!important;
+  max-width:min(52vw,205px)!important;min-height:44px!important;
+  padding:8px 11px!important;border-radius:10px!important;
+  font-size:clamp(11px,3vw,13px)!important;font-weight:800!important;
+  touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
+}
+
+
+/* Native horizontal scroll remains available over DISABLED actions; enabled
+   chips handle their own pointer swipe-versus-drop logic above. */
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll{
+  touch-action:pan-x!important;
+}
+#start #playShell[data-step="battle"] #battleActionBar>button[data-battle-action]:disabled{
+  touch-action:pan-x!important;
+}

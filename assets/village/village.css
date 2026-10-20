@@ -475,3 +475,17 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* Accepted full-frame motion owns the artwork; scene coordinates and effect overlays stay independent. */
 .player .portrait:has(.gmww40-character){animation:none!important;transform:none!important}
+
+
+/* V3.163 battle-only low-power presentation. The approved Character40 renderer
+   and its rollback bytes are untouched; this applies only inside live battle. */
+body.player-battle .player .portrait.game-character,
+body.player-battle .player .portrait.game-character .gmww-character-renderer,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *,
+body.player-battle .player .portrait.game-character img[data-walk-character]{
+  animation:none!important;transition:none!important;will-change:auto!important;
+}
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
+  transform:none!important;
+}

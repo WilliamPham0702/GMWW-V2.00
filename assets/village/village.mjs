@@ -83,7 +83,7 @@ if(game){
     }catch{return "";}
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
-  let matchStartedAt=0;
+  let matchStartedAt=0,battleStatic=false;
   let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
   // Last actually painted world position; never infer an expired move's start
@@ -138,6 +138,7 @@ if(game){
     return spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
+    if(battleStatic){visualFallbackMoves.clear();visualLastPaintedPositions.clear();return incoming}
     const clock=Number(nextSetup?.clockOffsetMs||setupState.clockOffsetMs||0),now=Date.now()+clock,previous=new Map(previousRows.map(p=>[String(p?.id||''),p])),seen=new Set();
     const out=incoming.map(p=>{
       const id=String(p?.id||'');if(!id)return p;seen.add(id);
@@ -170,7 +171,7 @@ if(game){
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!dead&&!!position?.moving,sitting=!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
@@ -337,10 +338,10 @@ if(game){
     const clock=Date.now()+Number(setupState.clockOffsetMs||0);
     const expirations=all.filter(p=>p?.villageActivity==="sitting"&&Number(p.sitUntil||0)>clock).map(p=>Number(p.sitUntil));
     if(expirations.length)sitWakeTimer=setTimeout(()=>{sitWakeTimer=0;render()},Math.max(40,Math.min(2147483647,Math.min(...expirations)-clock+30)));
-    if(villageMotionNeedsFrame(all)&&!document.hidden)moveFrame=requestAnimationFrame(animateMovementFrame)
+    if(!battleStatic&&villageMotionNeedsFrame(all)&&!document.hidden)moveFrame=requestAnimationFrame(animateMovementFrame)
   }
   function animateMovementFrame(now){
-    moveFrame=0;if(document.hidden)return;
+    moveFrame=0;if(document.hidden||battleStatic)return;
     villageRenderMetrics.movementFrames++;
     let active=false;
     const nowMs=Date.now()+Number(setupState.clockOffsetMs||0),width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536;
@@ -393,7 +394,9 @@ if(game){
     // Old running rooms with missing IDs no longer spawn players in a clump.
     const visualSeats=layout.projectedSeatIds(incoming.filter(p=>!p.isGM),nextCount);
     matchStartedAt=Date.parse(room.startedAt||"")||0;
+    battleStatic=room.playerSceneMode==='battle'||['running','started','game','playing'].includes(String(room.phase||'').toLowerCase());
     for(const p of incoming){
+      if(battleStatic){p.movementStatus='idle';p.villageActivity='idle';}
       if(p.isGM)continue;
       p.displaySeatId=liveDisplaySeatId(p,visualSeats);
       if(matchStartedAt&&p.movementStatus==="moving"&&Number(p.moveStartedAt)>0&&
@@ -401,7 +404,7 @@ if(game){
     }
     const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
-    document.body.classList.toggle("player-battle",room.playerSceneMode==="battle");
+    document.body.classList.toggle("player-battle",battleStatic);
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);

@@ -928,10 +928,8 @@ function initPlayScene(){
     savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
   });
   document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{
-    if(document.querySelector('.play-game-sheet-card')?.dataset.mode!=='library')return;
-    playSceneState.artifactsEnabled=!!e.currentTarget.checked;
-    if(playSceneState.artifactsEnabled&&!playTemplateSelectedArtifacts().length)
-      playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));
+    if(document.querySelector('.play-game-sheet-card')?.dataset.mode!=='play')return;
+    playSceneState.artifactsEnabled=!!e.currentTarget.checked&&playTemplateSelectedArtifacts().length>0;
     savePlayScene();updatePlayArtifactToggle();
   });
   document.getElementById('playArtifactLimitPerCycle')?.addEventListener('change',e=>{const n=Math.max(0,Math.min(30,Math.trunc(Number(e.currentTarget.value)||0)));e.currentTarget.value=String(n);playSceneState.artifactLimitPerCycle=n;savePlayScene()});
