@@ -505,6 +505,9 @@ function battleUpdateActionNavigation(){
   if(previous){previous.hidden=true;previous.disabled=true}
   if(next){next.hidden=true;next.disabled=true}
 }
+function battleActionGestureMode(dx,dy){
+  return Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+}
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
   // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
@@ -1472,7 +1475,7 @@ function initBattleControls(){
       d.moved=true;
       // Horizontal swipe browses actions; movement toward the village starts a
       // real target drag. Both gestures start directly on a readable action.
-      d.mode=Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+      d.mode=battleActionGestureMode(dx,dy);
     }
     if(!d.moved)return;
     if(d.mode==='scroll'){
