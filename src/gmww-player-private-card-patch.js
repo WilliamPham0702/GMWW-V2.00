@@ -94,7 +94,7 @@ export function patchPrivatePlayerCards(source){
  result=result.replace('<span class="mini-label"><b>VAI TRÒ</b><small>CHẠM ĐỂ XEM</small></span>','<span class="mini-label"><b>VAI TRÒ</b></span>')
    .replace('<span class="mini-label"><b>ARTIFACT</b><small>CHẠM ĐỂ XEM</small></span>','<span class="mini-label"><b>ARTIFACT</b></span>');
  result=result.replace('<span class="mini-card"><i>✧</i></span>','<span class="mini-card"><img alt="" hidden><i>✧</i></span>');
- result=result.replace("  artifact.querySelector('small').textContent=state.artifact?'CHẠM ĐỂ XEM':'Không có Artifact';",
+ result=result.replace("  const artifactHint=artifact.querySelector('small');if(artifactHint)artifactHint.textContent=state.artifact?'CHẠM ĐỂ XEM':'Không có Artifact';",
  "  const artifactBack=artifact.querySelector('.mini-card img');if(artifactBack){artifactBack.hidden=!back;if(back&&artifactBack.src!==back)artifactBack.src=back}");
  result=result.replace("  if(roleReturn)roleReturn.hidden=!showing;","  if(roleReturn)roleReturn.hidden=true;");
  result=result.replace("state.artifact=d?.artifact||null;state.artifactCycle=","state.artifact=d?.artifact||null;state.artifactExpected=d?.artifactExpected===true;state.artifactCycle=");
