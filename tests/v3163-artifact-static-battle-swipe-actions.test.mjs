@@ -8,7 +8,7 @@ const authored=readFileSync('server-game/src/40-battle-and-timeline.part','utf8'
 const gmMotion=readFileSync('server-game/src/30-village-and-setup.part','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
 const village=readFileSync('assets/village/village.mjs','utf8');
-const playerCss=readFileSync('assets/village/character-renderer.css','utf8');
+const playerCss=readFileSync('assets/village/village.css','utf8');
 const shared=readFileSync('server-game/current/gmww-shared-motion.js','utf8');
 const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 
@@ -41,7 +41,7 @@ test('GM battle characters use paused idle, never walk, run, sit, or schedule mo
  assert.match(gmMotion,/paused:effect==='dead'\|\|battleStatic/);
  assert.match(gmMotion,/function playSeatMovementActive\(member\)\{[\s\S]*?if\(playSceneState\.step==='battle'\)return false/);
  assert.match(gmMotion,/function syncPlayMovementTicker\(\)\{[\s\S]*?if\(playSceneState\.step==='battle'\)\{stopPlayMovementTicker\(\);return\}/);
- assert.match(shared,/if\(\[\.\.\.roots\]\.some\(root=>root\.isConnected&&!root\._gmwwPaused\)\)raf=requestAnimationFrame\(loop\)/);
+ assert.match(shared,/root\._gmwwPaused=command\.paused===true\|\|command\.state==='dead'/);
 });
 
 test('Player Web battle state cancels walking and rig animation while preserving gameplay FX',()=>{
