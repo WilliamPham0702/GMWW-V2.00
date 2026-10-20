@@ -18,6 +18,7 @@ function gmwwDeckRoleWasViewed(){
 }
 function gmwwDeckBringToFront(kind){
   if(!privateCardAllowed()||!state.artifact||!['role','artifact'].includes(kind))return;
+  if(gmwwDeckPreferredTop!==kind&&typeof playPageFlipSound==='function')playPageFlipSound(true);
   gmwwDeckPreferredTop=kind;
   renderPlayerPrivateDock();
 }

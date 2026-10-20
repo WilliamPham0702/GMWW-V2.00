@@ -53,3 +53,17 @@ test('30 seconds of no activity closes viewer; Player restores private cards bef
  assert.match(player,/void loadAvatars\(\)\.catch\(\(\)=>\{\}\);await restore\(\)/);
  assert.match(player,/const resumed=await autoResumeActiveRoom\(\{stayInVillage:false\}\);if\(!resumed\)await enterVillage\(\)/);
 });
+
+test('Flipping the rear Role/Artifact card plays page audio once, not for an unchanged front card',()=>{
+ const start=player.indexOf('const gmwwViewedRoleDeck=new Set();');
+ const end=player.indexOf('function renderPlayerPrivateDock(){',start);
+ assert.ok(start>=0&&end>start);
+ let flips=0;
+ const state={roomCode:'ABC123',participantId:'member:ios',room:{matchId:'m1'},role:{roleId:'seer'},artifact:{artifactId:'mirror'}};
+ const ctx={state,Set,privateCardAllowed:()=>true,renderPlayerPrivateDock:()=>{},playPageFlipSound:opening=>{assert.equal(opening,true);flips++;}};
+ vm.runInNewContext(player.slice(start,end)+';this.raise=gmwwDeckBringToFront;',ctx);
+ ctx.raise('role');assert.equal(flips,0,'the already-front Role card does not play a shuffle');
+ ctx.raise('artifact');assert.equal(flips,1,'rear Artifact card has one flip sound');
+ ctx.raise('artifact');assert.equal(flips,1,'tapping same front card does not double the flip');
+ ctx.raise('role');assert.equal(flips,2,'bringing Role to the front has one flip sound');
+});
