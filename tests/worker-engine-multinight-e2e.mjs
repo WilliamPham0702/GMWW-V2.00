@@ -89,8 +89,13 @@ try{
  await jump('wolf');ok(await action('wolf','effect_notice','action_wolf_bite',['witch']));
  await jump('fairy');ok(await action('fairy','effect_notice','action_transfer_bite',['witch'],{direction:'left'}));
  await manual('seer','expelled');await jump('seer');
- // Expulsion does not bypass the action's normal nightly usage limit.
- assert.equal((await action('seer','effect_notice','inspect',['guard'])).error,'ACTION_NIGHT_LIMIT_REACHED');
+ // Expelled actors cannot execute their turn, even if they had an otherwise valid action.
+ assert.equal((await action('seer','effect_notice','inspect',['guard'])).error,'ACTOR_EXPELLED');
+ // Other roles may select an expelled target; the attempt is acknowledged but inert.
+ await jump('witch');
+ const inert=ok(await action('witch','dead','action_witch_kill',['seer']));
+ assert.equal(inert.results[0]?.noEffect,true);
+ assert.equal(active(await state(),'seer','dead').length,0);
  const dawn=await cycle('morning',1);
  // Seat 5 (witch) -> seat 6 (alpha) via visual LEFT, after inverted arrow correction; Guard on old target does not prevent death.
  s=await state();assert.equal(active(s,'alpha','dead').length,1);assert.equal(active(s,'witch','dead').length,0);
@@ -100,7 +105,7 @@ try{
  await observed(gmEvents,x=>x.type==='room_cycle'&&x.night===1&&x.phase==='morning');
  await observed(playerEvents,x=>x.type==='room_cycle'&&x.night===1&&x.phase==='morning');
  assert.equal((await me('alpha')).effects.filter(x=>x.type==='dead').length,1);
- checks.push('freeze blocks, expulsion retains quotas; Guard-Wolf-Fairy precedence; dawn idempotency; GM/Player realtime');
+ checks.push('freeze and expulsion block actors, expelled targets are inert; Guard-Wolf-Fairy precedence; dawn idempotency; GM/Player realtime');
  await cycle('night',2);s=await state();
  assert.equal(s.nightRuntime.queue.some(x=>x.kind==='wolf-introduction'),false);
  assert.equal(s.nightRuntime.queue.some(x=>x.kind==='early-artifact-window'),false,'consumed single-use Artifact removes the empty opening window next night');
