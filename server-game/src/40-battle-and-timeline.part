@@ -621,11 +621,11 @@ function battleTickCountdown(){
   }
   if(phase==='day'&&Number.isFinite(seconds)){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
-    if(playSceneRuntime.room?.autoGM!==false&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
+    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
-    if(playSceneRuntime.room?.autoGM!==false&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
+    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
