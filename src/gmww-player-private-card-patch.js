@@ -18,6 +18,7 @@ function gmwwDeckRoleWasViewed(){
 }
 function gmwwDeckBringToFront(kind){
   if(!privateCardAllowed()||!state.artifact||!['role','artifact'].includes(kind))return;
+  if(gmwwDeckPreferredTop!==kind&&typeof playPageFlipSound==='function')playPageFlipSound(true);
   gmwwDeckPreferredTop=kind;
   renderPlayerPrivateDock();
 }
@@ -268,7 +269,7 @@ async function gmwwVerifyMemberBeforeRemoval(){
 
 
  offlineReplace("      gmwwPendingPrivateCardTap='';openPrivateCardViewer(kind);",
-   "      // Match the GM fan: first tap on rear card only shuffles it to the front.\n      // Tap the already-front card to open its full private viewer.\n      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';playPageFlipSound(true);gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
+   "      // Match the GM fan: first tap on rear card only shuffles it to the front.\n      // Tap the already-front card to open its full private viewer.\n      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
  offlineReplace("function closePrivateCardViewer(){\n  clearPrivateCardIdle();clearRolePrivacyTimer();",
    "function closePrivateCardViewer(){\n  if($('#game')?.dataset.privateCardView==='open'&&$('#game')?.dataset.privateCardFocus==='role'&&state.role){gmwwViewedRoleDeck.add(gmwwDeckRoleIdentity());gmwwDeckPreferredTop='artifact'}\n  clearPrivateCardIdle();clearRolePrivacyTimer();");
  offlineReplace("  setGameViewPane('village',{persist:false});\n}\nfunction openPrivateCardViewer(kind){",
