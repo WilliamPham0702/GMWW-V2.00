@@ -7,7 +7,7 @@ import {assertCurrentRelease} from './release-metadata-helper.mjs';
 
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('V3.159 release metadata is aligned and native shell stays V3.110',()=>{
+test('V3.160 release metadata is aligned and native shell stays V3.110',()=>{
   assertCurrentRelease();
   const worker=read('src/index.js');
   assert.match(worker,/NATIVE_SHELL_VERSION="3\.110"/);
@@ -42,11 +42,11 @@ test('fire menu has three concise pressed-state switches in SAME actions row',()
   assert.doesNotMatch(gm,/button\.textContent=\(enabled\?'● ':'○ '\)\+label\+' '\+\(enabled\?'ON':'OFF'\)/);
 });
 
-test('Artifact first window is real 30 seconds, but Ván Mẫu field stays at 60',()=>{
+test('Artifact first window and Ván Mẫu default are both 30 seconds',()=>{
   const html=read('server-game/current/GMWW.html'),gm=read('server-game/current/app.js'),worker=read('src/index.js');
-  assert.match(html,/id="playEarlyArtifactSec"[^>]*value="60"/);
-  assert.match(gm,/earlyArtifactSec:60/);
-  assert.match(gm,/if\(earlySec\)earlySec\.value=60/);
+  assert.match(html,/id="playEarlyArtifactSec"[^>]*value="30"/);
+  assert.match(gm,/earlyArtifactSec:30/);
+  assert.match(gm,/if\(earlySec\)earlySec\.value=30/);
   assert.match(worker,/earlyArtifactSec=30/);
   assert.match(worker,/kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec/);
   assert.match(worker,/if\(artifactRows\.length>0\)/);
