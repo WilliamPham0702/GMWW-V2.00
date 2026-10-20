@@ -4270,7 +4270,7 @@ function battleToggleLabelVisibility(kind){
 function battleToggleWolfMenu(){
   if(playSceneState.step!=='battle')return;
   battleState.wolfOpen=!battleState.wolfOpen;
-  if(battleState.wolfOpen){battleState.details=false;battleState.roster=false;battleState.quickType='';battleState.clockOpen=false}
+  if(battleState.wolfOpen){battleState.details=false;battleState.roster=false;battleState.quickType='';battleState.clockOpen=false;const menuRow=document.querySelector('#battleWolfMenu .battle-wolf-actions');if(menuRow)menuRow.scrollLeft=0}
   renderPlayBattle();
 }
 function battleToggleClockPopover(){
