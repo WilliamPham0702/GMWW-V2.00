@@ -913,9 +913,151 @@ async function battleGallowsCommand(command,targetId='',outcome=''){
   finally{battleState.gallowsBusy=false;battleGallowsRender('day')}
 }
 
+/* Demo controller: GM-only, uses the same server endpoints and target rules as live play.
+ * No synthetic effects or direct mutations of the real member directory are allowed. */
+let gmwwDemoRunner=null;
+let gmwwDemoRunnerCode='';
+const gmwwIsDemoRoom=()=>isLivePlayRoom()&&playSceneRuntime.room?.isDemoRoom===true;
+function gmwwDemoTargetIds(action){
+  const count=Math.max(0,Math.trunc(Number(action?.targetCount)||0));
+  if(count>30||action?.noTarget)return null;
+  if(!count)return [];
+  const rules=battleRules();
+  if(!rules?.targetAllowed)return null;
+  const candidates=playLiveMembers().filter(member=>{
+    const id=String(member?.loginId||'');
+    return !!id&&rules.targetAllowed(action,member,playPlayerEffect(id),
+      playSceneRuntime.activeEffects,Math.max(1,Number(playSceneState.night)||1));
+  }).map(member=>String(member.loginId));
+  if(candidates.length<count)return null;
+  // Fisher-Yates on a copy avoids bias from the UI roster order.
+  for(let i=candidates.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [candidates[i],candidates[j]]=[candidates[j],candidates[i]];
+  }
+  return candidates.slice(0,count);
+}
+function gmwwDemoStatusRender(){
+  const button=document.getElementById('battleDemoControl');if(!button)return;
+  button.hidden=!gmwwIsDemoRoom();
+  if(button.hidden)return;
+  const status=gmwwDemoRunnerCode===String(playSceneState.roomCode)?
+    gmwwDemoRunner?.info().status:'paused';
+  const running=status==='running',paused=status==='paused';
+  button.textContent=running?'⏸ Demo: Tạm dừng':paused&&gmwwDemoRunner?'▶ Demo: Tiếp tục':'▶ Demo: Chạy';
+  button.setAttribute('aria-pressed',String(running));
+  button.title=status==='error'?('Đã dừng: '+String(gmwwDemoRunner?.info().lastError||'lỗi không xác định')):
+    status==='finished'?'Ván Demo đã kết thúc':running?'Tạm dừng người chơi ảo':'Chạy tự động';
+  button.disabled=status==='finished';
+}
+async function gmwwDemoToggle(){
+  if(!gmwwIsDemoRoom()||playSceneState.step!=='battle')return;
+  if(gmwwDemoRunner&&gmwwDemoRunnerCode===String(playSceneState.roomCode)&&
+     gmwwDemoRunner.info().status==='running'){
+    gmwwDemoRunner.pause();gmwwDemoStatusRender();return;
+  }
+  if(gmwwDemoRunnerCode!==String(playSceneState.roomCode)||
+     !gmwwDemoRunner||['error','finished','stopped'].includes(gmwwDemoRunner.info().status)){
+    try{
+      // Disable the normal countdown automation while the demo driver owns turns.
+      const disabled=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});
+      if(disabled?.autoGM!==false)throw Error('Không tắt được Auto GM trước khi chạy Demo.');
+      await playSyncRoom(true);
+      if(!gmwwIsDemoRoom())throw Error('Phòng không còn là Demo.');
+      const {createDemoRunner}=await import('./gmww-demo-runner.js?v=3.163-demo');
+      const roomCode=String(playSceneState.roomCode);
+      const attempted=new Set();
+      const adapter={
+        async snapshot(){
+          if(String(playSceneState.roomCode)!==roomCode)throw Error('Đã chuyển sang phòng khác.');
+          const data=await playSyncRoom(true);
+          if(!data?.room||data.room.isDemoRoom!==true)throw Error('Không đọc được phòng Demo.');
+          if(playSceneRuntime.winProposal?.winnerFaction&&String(data.room.phase)==='running'){
+            const faction=String(playSceneRuntime.winProposal.winnerFaction);
+            await playRoomApi('/end',{method:'POST',
+              body:JSON.stringify({matchId:data.room.matchId,winnerFaction:faction,winnerLabel:faction})});
+            await playSyncRoom(true);
+            return {roomCode,isDemoRoom:true,finished:true};
+          }
+          return {roomCode,isDemoRoom:true,
+            finished:playSceneState.step!=='battle'||!['running','started','game','playing'].includes(String(data.room.phase||'')),
+            phase:playSceneState.phase,night:playSceneState.night,turnId:battleTurn()?.id||''};
+        },
+        async legalActions(snapshot){
+          if(!['night','day'].includes(snapshot.phase))return [];
+          const stamp=[roomCode,playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,
+            snapshot.phase,snapshot.turnId].join(':');
+          return battleActions().filter(action=>!action.unavailable&&action.actorIds?.length&&
+            !attempted.has(stamp+':'+action.id)).map(action=>({
+              action,stamp,targets:gmwwDemoTargetIds(action)
+            })).filter(entry=>entry.targets!==null);
+        },
+        async apply(entry,snapshot){
+          if(!gmwwIsDemoRoom()||String(playSceneState.roomCode)!==roomCode)throw Error('Demo isolation failed.');
+          const {action:a,targets,stamp}=entry;
+          const matchId=String(playSceneRuntime.room?.matchId||''),
+            cycleKey=String(playSceneRuntime.room?.cycleKey||'');
+          if(!matchId||!cycleKey)throw Error('Ván chưa bắt đầu.');
+          const actorId=String(a.actorIds?.[0]||'');
+          const clientEventId=globalThis.crypto?.randomUUID?.()||('demo-'+Date.now());
+          if(snapshot.phase==='day'){
+            const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
+              matchId,cycleKey,actorId,roleId:a.roleId||'',artifactId:a.artifactId||'',
+              actionId:a.actionId,targetIds:targets,clientEventId
+            })});
+            if(result?.ok!==true)throw Error(result?.message||result?.error||'Hành động ngày không hợp lệ.');
+          }else{
+            const t=battleTurn();
+            if(!t||String(t.id)!==String(snapshot.turnId))throw Error('Lượt đêm đã thay đổi.');
+            const transfer=battleIsTransfer(a),
+              seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan',
+                'action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction',
+                'action_wolf_seer','action_rotten_seer'].includes(a.actionId)&&!a.artifactId;
+            const payload={targetIds:seerReveal?[actorId]:targets,type:a.type,turnId:t.id,
+              actionId:a.actionId,actorId,matchId,cycleKey,night:Number(snapshot.night||1),
+              effectId:a.effectIds?.[0]||'',effectName:a.name,clientEventId,
+              ...(a.artifactId?{artifactId:a.artifactId}:{}),
+              ...(seerReveal?{revealTargetIds:targets}:{}),
+              ...(a.actionId==='action_assassin_mark'?{assassinChoice:Math.random()<.5?'👍':'👎'}:{})};
+            if(transfer){
+              const direction=['left','right','none'][Math.floor(Math.random()*3)];
+              payload.type='effect_notice';payload.direction=direction;
+              payload.message='Demo chuyển vết cắn: '+direction;
+            }else if(seerReveal)payload.message='Demo soi xét: kết quả do Server xác minh.';
+            else if(a.type==='effect_notice')payload.message='Demo thực hiện '+a.name+'.';
+            const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
+            if(result?.ok!==true)throw Error(result?.message||result?.error||'Hành động đêm không hợp lệ.');
+          }
+          attempted.add(stamp+':'+a.id);
+          const synced=await playSyncRoom(true);
+          if(!synced)throw Error('Mất đồng bộ Demo sau hành động.');
+        },
+        async advance(snapshot){
+          if(!gmwwIsDemoRoom()||String(playSceneState.roomCode)!==roomCode)throw Error('Demo isolation failed.');
+          const before=[playSceneState.phase,playSceneState.night,battleTurn()?.id||''].join(':');
+          await advancePlayPhase();
+          const synced=await playSyncRoom(true);
+          if(!synced)throw Error('Không đồng bộ được lượt tiếp theo.');
+          const after=[playSceneState.phase,playSceneState.night,battleTurn()?.id||''].join(':');
+          if(before===after&&String(playSceneRuntime.room?.phase)==='running')
+            throw Error('Server không chuyển lượt. Demo đã tạm dừng an toàn.');
+        }
+      };
+      gmwwDemoRunner=createDemoRunner(adapter,{roomCode,isDemoRoom:true,delayMs:1800,
+        onChange(info){
+          gmwwDemoStatusRender();
+          if(info.status==='error')playFlashError('Demo tạm dừng: '+info.lastError);
+        }});
+      gmwwDemoRunnerCode=roomCode;
+    }catch(err){playFlashError('Không khởi động được Demo: '+String(err?.message||err));return}
+  }
+  gmwwDemoRunner.resume();gmwwDemoStatusRender();
+}
+
 function renderPlayBattle(){
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
+  gmwwDemoStatusRender();
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
   if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
@@ -1416,6 +1558,7 @@ function initBattleControls(){
       document.querySelector('.play-core-pearl')?.focus();
     }
   });
+  document.getElementById('battleDemoControl')?.addEventListener('click',()=>{void gmwwDemoToggle()});
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
