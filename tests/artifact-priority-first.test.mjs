@@ -35,7 +35,7 @@ test('early priority schedules before normal roles but does not consume an unuse
   assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['early-artifact-window','role','artifact-main','village-wakeup']);
 });
 
-test('empty early window stays visible with no actions',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['early-artifact-window','village-wakeup']);assert.deepEqual(queue[0].actions,[])});
+test('no Artifact assigned means no opening Artifact turn in any night',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['village-wakeup'])});
 
 test('usage ledger refuses duplicate activation and maintains retry idempotency',()=>{
   const cycleKey='game:night:1',base={cycleKey,accepted:[]};
