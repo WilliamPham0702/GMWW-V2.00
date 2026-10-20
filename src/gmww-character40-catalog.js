@@ -1,6 +1,6 @@
 import {characterStateFromPlayer as legacyCharacterStateFromPlayer} from "./gmww-character-engine.js";
 export const CHARACTER40_REV='c40-1';
-export const CHARACTER40_PORTRAIT_REV='c40-3';
+export const CHARACTER40_PORTRAIT_REV='c40-4';
 export function character40VisualId(id){if(id==='character-41')return 'character-39';if(id==='character-42')return 'character-40';return /^character-(?:0[1-9]|[1-3][0-9]|40)$/.test(String(id))?id:null;}
 export function character40Catalog(){return Array.from({length:40},(_,i)=>{const id='character-'+String(i+1).padStart(2,'0');return {id,name:'Nhân vật '+String(i+1).padStart(2,'0'),frameCount:1,motionFrameCount:48,actionFrameCount:8,imageUrl:'/api/game-characters/'+id+'/image?rev='+CHARACTER40_PORTRAIT_REV,motionAtlas:'/characters/gmww40/atlases/'+id+'.webp',motionVersion:CHARACTER40_REV,actions:['idle','walk','run','turn']};});}
 export async function character40Image(env,id,request){

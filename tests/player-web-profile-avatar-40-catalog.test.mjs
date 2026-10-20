@@ -60,12 +60,12 @@ test('All avatar library labels use actual response count, never hardcode the ob
 
 test('The browser and API use the same new portrait revision for avatar selection, profile and village actor',()=>{
   assert.match(source,/function gameCharacterFrameUrl\(id,frame=1\)/);
-  assert.match(source,/\/image\?rev=c40-3/);
+  assert.match(source,/\/image\?rev=c40-4/);
   assert.match(source,/function avatarButton\(a\)/);
   assert.match(source,/i\.src=gameCharacterImageUrl\(a\.id\)/);
   assert.match(source,/const main=\$\('#profileAvatar'\)/);
   const catalog=readFileSync(new URL('../src/gmww-character40-catalog.js',import.meta.url),'utf8');
-  assert.match(catalog,/CHARACTER40_PORTRAIT_REV='c40-3'/);
+  assert.match(catalog,/CHARACTER40_PORTRAIT_REV='c40-4'/);
   assert.match(catalog,/u\.pathname='\/characters\/gmww40\/portraits\/'\+visual/);
   const generator=readFileSync(new URL('../tools/generate-character40-portraits.py',import.meta.url),'utf8');
   assert.match(generator,/FRAME_INDEX = 8/);

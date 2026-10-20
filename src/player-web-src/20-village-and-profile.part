@@ -104,7 +104,7 @@ function ensureVillageHud(){
     #gmwwVillageHud .status{display:none;position:absolute;left:8px;top:max(6px,env(safe-area-inset-top));padding:5px 8px;border:1px solid #d7b775;border-radius:11px;background:#05283ad9;max-width:48vw}
     #gmwwVillageHud.has-room .status{display:block}#gmwwVillageHud .status b,#gmwwVillageHud .status small{display:block}#gmwwVillageHud .status b{font-size:10px}#gmwwVillageHud .status small{font-size:8px;color:#c3e6e4}
     #gmwwVillageProfileButton{pointer-events:auto;position:absolute;right:10px;top:max(8px,env(safe-area-inset-top));width:44px;height:44px;padding:0;overflow:hidden;border:1px solid #e4c982;border-radius:50%;background:#0b3144;color:#fff4da;display:grid;place-items:center;box-shadow:0 4px 14px #00131f66}
-    #gmwwVillageProfileAvatar{width:100%;height:100%;display:block;object-fit:contain;object-position:center bottom;background:linear-gradient(180deg,#174f65,#0b293a)}
+    #gmwwVillageProfileAvatar{width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:linear-gradient(180deg,#174f65,#0b293a)}
     #game:after,#game:before{display:none!important}
     #game.screen.active>.page-head,#game.screen.active>.page-title{display:none!important}
     #gmwwGameViewTabs{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;right:10px!important;width:190px!important;background:#05283aeb!important;backdrop-filter:none!important}
@@ -280,7 +280,7 @@ async function loadGameCharacters(){
   try{const d=await api('/api/game-characters');state.gameCharacters=Array.isArray(d?.characters)?d.characters.map(c=>({...c,imageUrl:c.imageUrl||gameCharacterImageUrl(c.id)})):[]}catch(e){state.gameCharacters=[];console.warn('[GMWW characters]',e)}
   return state.gameCharacters
 }
-function gameCharacterFrameUrl(id,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return '/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-3'}
+function gameCharacterFrameUrl(id,frame=1){const f=Math.max(1,Math.min(6,Number(frame)||1));return '/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-4'}
 function gameCharacterImageUrl(id){return gameCharacterFrameUrl(id,1)}
 function ensureCharacterPreviewTicker(){if(state.characterPreviewTimer)return;state.characterPreviewTimer=setInterval(()=>{const frame=(Math.floor(performance.now()/115)%6)+1;$$('img[data-gmww-walk-character]').forEach(img=>{const id=img.dataset.gmwwWalkCharacter;if(!id)return;const key=id+':c40-1';if(img.dataset.gmwwWalkFrame===key)return;img.dataset.gmwwWalkFrame=key;img.src=gameCharacterFrameUrl(id,frame)})},1200)}
 const LOBBY_MOTION_HOLD_MS=1400;
