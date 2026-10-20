@@ -882,6 +882,7 @@
         <div class="play-room-section-title"><b>PHÒNG</b></div>
         <div class="play-room-strip">
           <button class="play-room-add-tile" id="playCreateRoomAdd" type="button" aria-label="Thêm phòng mới"><span>＋</span><small>MỚI</small></button>
+          <button class="play-room-add-tile play-demo-tile" id="playCreateRoomDemo" type="button" aria-label="Tạo phòng Demo với người chơi ảo"><span>▶</span><small>DEMO</small></button>
           <div class="play-room-created-list" id="playCreatedRoomList"></div>
         </div>
       </section>
@@ -896,6 +897,7 @@
 
       <section class="play-room-editor hidden" id="playRoomEditor">
         <label class="play-room-name-field"><span>TÊN PHÒNG</span><input id="playCreateRoomName" type="text" maxlength="32" placeholder="Ví dụ: Làng Sói đẹp" autocomplete="off"></label>
+        <label id="playDemoCountWrap" class="play-room-name-field hidden"><span>SỐ NGƯỜI CHƠI ẢO (8–30)</span><input id="playDemoCount" type="number" min="8" max="30" step="1" value="12" inputmode="numeric"></label>
         <div class="play-room-edit-actions">
           <button class="primary" id="playCreateRoomSave" type="button">LƯU</button>
           <button id="playCreateRoomReset" type="button">↻ RESET</button>
@@ -911,7 +913,7 @@
 <script src="battle-controls.js?v=3.163-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.163-compact-room&status=4"></script>
+<script src="app.js?v=3.163-demo-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
