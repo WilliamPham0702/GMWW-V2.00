@@ -10,7 +10,7 @@ test('V3.158 uses V3.110 IPA shell and reproducible GM Runtime',()=>{
   assert.equal(read('server-game/current/app.js'),
     ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part']
       .map(n=>read('server-game/src/'+n)).join(''));
-  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.160/);
+  // Current HTML version is verified by assertCurrentRelease.
 });
 
 test('GM fire menu offers 3 independently persisted one-tap label toggles',()=>{
