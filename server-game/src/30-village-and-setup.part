@@ -512,11 +512,16 @@ async function selectPlayExistingRoom(r){
   renderPlayCreateRoomSheet()
 }
 function renderPlayCreatedRooms(){
-  const list=document.getElementById('playCreatedRoomList');if(!list)return;const rows=playRoomRegistry().filter(r=>r.demo!==true);
-  const demoButton=document.getElementById('playDemoRoomChoice');const savedDemo=playRoomRegistry().find(r=>r.demo===true);
-  if(demoButton){demoButton.classList.toggle('active',!!savedDemo&&savedDemo.roomCode===playSceneState.roomCode);demoButton.title=savedDemo?'Mở Phòng Demo đã tạo':'Tạo Phòng Demo mới'}
-  list.innerHTML='';
-  if(!rows.length){list.innerHTML='<div class="play-room-empty">Chưa có phòng</div>';return}
+  const list=document.getElementById('playCreatedRoomList');if(!list)return;
+  const rows=playRoomRegistry().filter(r=>r.demo!==true),savedDemo=playRoomRegistry().find(r=>r.demo===true);
+  const demoButton=document.getElementById('playDemoRoomChoice');
+  // Keep the one real DEMO card as the first member of the ROOM LIST.
+  if(demoButton){
+    demoButton.classList.toggle('active',!!savedDemo&&savedDemo.roomCode===playSceneState.roomCode);
+    demoButton.title=savedDemo?'Mở Phòng Demo đã có':'Tạo Phòng Demo cách ly';
+    const status=demoButton.querySelector('i');if(status)status.textContent=savedDemo?'ON':'MỚI';
+    list.replaceChildren(demoButton);
+  }else list.replaceChildren();
   rows.forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
     b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc((r.roomMode||'online').toUpperCase())+'</small></span><i class="'+(r.enabled!==false?'on':'')+'">'+(r.enabled!==false?'ON':'OFF')+'</i>';
@@ -532,13 +537,66 @@ function renderPlayCreatedRooms(){
 async function playOpenDemoRoom(){
   if(playSceneRuntime.busy)return;
   const saved=playRoomRegistry().find(row=>row.demo===true);
-  if(saved){await selectPlayExistingRoom(saved);return}
-  if(typeof demoStop==='function')await demoStop('room_change');
-  playSceneState.roomMode='offline';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
-  if(!await playCreateRoom(true))return;
+  if(saved)await selectPlayExistingRoom(saved);
+  else{
+    if(typeof demoStop==='function')await demoStop('room_change');
+    playSceneState.roomMode='offline';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
+    if(!await playCreateRoom(true))return;
+  }
+  if(playSceneRuntime.room?.demo!==true){playFlashError('Không thể xác nhận đây là Phòng DEMO cách ly.');return}
   playRoomUiState.selectedCode=String(playSceneState.roomCode||'');
   playRoomUiState.editorMode='';playRoomUiState.stage='mode';
-  renderPlayCreateRoomSheet();renderPlayScene();
+  document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
+  renderPlayScene();
+  // Demo selects the template FIRST; membership comes from the existing directory.
+  if(!['running','started','game','playing'].includes(String(playSceneRuntime.room.phase||'')))
+    await openPlayGameSheet();
+}
+async function demoPopulateExistingMembers(count){
+  if(playSceneRuntime.room?.demo!==true)throw Error('Không được nạp danh sách thử vào phòng thật.');
+  if(!Number.isInteger(count)||count<1||count>30)throw Error('Ván Mẫu phải có từ 1 đến 30 người chơi.');
+  if(['running','started','game','playing'].includes(String(playSceneRuntime.room.phase||'')))
+    throw Error('Không được thay danh sách khi Demo đang chơi.');
+  // READ the existing accounts as snapshots. Never create accounts, join them
+  // to an actual room, modify their currentRoomCode, statistics or passwords.
+  const directory=await gmApi('/api/gm/members');
+  const source=Array.isArray(directory?.members)?directory.members:[];
+  const unique=new Map();
+  for(const m of source){
+    const loginId=String(m?.loginId||'').trim().toLowerCase();
+    if(loginId&&!unique.has(loginId))unique.set(loginId,m);
+  }
+  if(unique.size<count)throw Error('Ván Mẫu cần '+count+' người, nhưng danh sách có sẵn chỉ có '+unique.size+'. Không tạo tài khoản mới.');
+  const chosen=playShuffle([...unique.values()]).slice(0,count).map((m,i)=>({
+    loginId:String(m.loginId).trim().toLowerCase(),displayName:String(m.displayName||m.loginId),
+    avatarId:m.avatarId||'',gameCharacterId:m.gameCharacterId||null,seatId:i+1
+  }));
+  if(playSceneRuntime.room.seatsLocked){
+    const opened=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:false})});
+    if(opened?.ok!==true)throw Error('Không mở được Seat DEMO để nạp danh sách.');
+  }
+  const roomSize=Math.max(8,count);
+  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
+  const settings=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify({
+    seatCount:Math.max(roomSize,Number(playSceneRuntime.room?.seatCount)||roomSize),
+    seatLayout:layout.recommendedSeatShape(Math.max(roomSize,Number(playSceneRuntime.room?.seatCount)||roomSize))
+  })});
+  if(settings?.ok!==true)throw Error('Không điều chỉnh được Seat DEMO.');
+  const selected=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
+  if(selected?.ok!==true||Number(selected.selectedCount)!==count)throw Error('Server chưa nạp đủ danh sách DEMO.');
+  const seated=(selected.players||[]).filter(x=>x.kind==='member');
+  if(seated.length!==count||new Set(seated.map(x=>Number(x.seatId))).size!==count||seated.some(x=>!Number(x.seatId)))
+    throw Error('Số người hoặc vị trí Seat DEMO không đúng Ván Mẫu.');
+  const locked=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:true})});
+  if(locked?.seatsLocked!==true)throw Error('Chưa chốt được vị trí DEMO.');
+  playSceneRuntime.room=locked.room||selected.room||playSceneRuntime.room;
+  playSceneRuntime.players=seated;playSceneState.selectedMemberIds=seated.map(x=>x.loginId);
+  savePlayScene();
+  // The normal room still needs to publish the GAME stage before ROLE setup.
+  const published=await playRoomApi('/stage',{method:'POST',body:JSON.stringify({step:'game'})});
+  if(published?.ok!==true)throw Error('Không chuyển được DEMO sang bước chọn Ván.');
+  playSceneRuntime.room=published.room||playSceneRuntime.room;
+  return seated;
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
