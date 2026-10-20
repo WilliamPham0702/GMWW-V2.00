@@ -6224,3 +6224,13 @@ body.play-immersive #start #playPlayerRing .play-player-avatar>span.gmww40-chara
   font-size:clamp(11px,3vw,13px)!important;font-weight:800!important;
   touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;
 }
+
+
+/* Native horizontal scroll remains available over DISABLED actions; enabled
+   chips handle their own pointer swipe-versus-drop logic above. */
+#start #playShell[data-step="battle"] #battleActionBar.battle-action-scroll{
+  touch-action:pan-x!important;
+}
+#start #playShell[data-step="battle"] #battleActionBar>button[data-battle-action]:disabled{
+  touch-action:pan-x!important;
+}
