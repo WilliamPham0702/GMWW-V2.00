@@ -48,12 +48,20 @@ def build_and_verify():
         if exact_frame.getchannel("A").getbbox() is None:
             raise RuntimeError(f"Avatar crop empty for {ident}")
 
+        # Match the live canvas dimensions and give every actor transparent
+        # corners, including sprites whose atlas cell is tightly cropped.
+        # Paste without a transparency mask to preserve every source pixel.
+        icon = Image.new("RGBA", (256, 320), (0, 0, 0, 0))
+        icon.paste(exact_frame, ((256 - width) // 2, 320 - height))
+        if icon.getpixel((0, 0))[3] != 0 or icon.getpixel((255, 319))[3] != 0:
+            raise RuntimeError(f"Transparent portrait corners required for {ident}")
+
         target = output / (ident + ".webp")
-        exact_frame.save(target, "WEBP", lossless=True, method=5, exact=True)
+        icon.save(target, "WEBP", lossless=True, method=5, exact=True)
         with Image.open(target) as saved:
             saved_rgba = saved.convert("RGBA")
-        if saved_rgba.size != exact_frame.size or saved_rgba.tobytes() != exact_frame.tobytes():
-            raise RuntimeError(f"Avatar pixels differ from Idle frame for {ident}")
+        if saved_rgba.size != icon.size or saved_rgba.tobytes() != icon.tobytes():
+            raise RuntimeError(f"Avatar pixels differ from atlas-derived Idle frame for {ident}")
         total_bytes += target.stat().st_size
 
     generated = {item.name for item in output.glob("character-*.webp")}
