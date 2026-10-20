@@ -499,12 +499,11 @@ function battleRenderTransferPanel(){
   grip?.addEventListener('pointerup',()=>{drag=null});grip?.addEventListener('pointercancel',()=>{drag=null});
 }
 function battleUpdateActionNavigation(){
-  const bar=document.getElementById('battleActionBar'),previous=document.getElementById('battleActionPrevious'),next=document.getElementById('battleActionNext');
-  if(!bar||!previous||!next)return;
-  const maximum=Math.max(0,bar.scrollWidth-bar.clientWidth),hasMore=maximum>3;
-  previous.hidden=!hasMore;next.hidden=!hasMore;
-  previous.disabled=!hasMore||bar.scrollLeft<=3;
-  next.disabled=!hasMore||bar.scrollLeft>=maximum-3;
+  // GMWW mobile: the full-width action rail uses direct swipe; arrows take
+  // no space and never appear after render or resize.
+  const previous=document.getElementById('battleActionPrevious'),next=document.getElementById('battleActionNext');
+  if(previous){previous.hidden=true;previous.disabled=true}
+  if(next){next.hidden=true;next.disabled=true}
 }
 function battleNavigateActions(direction){
   const bar=document.getElementById('battleActionBar');if(!bar)return;
@@ -1460,12 +1459,27 @@ function initBattleControls(){
   document.getElementById('playPlayerRing')?.addEventListener('click',e=>{if(playSceneState.step!=='battle'||!battleAction()||e.target.closest?.('.play-player-artifact')||Date.now()<Number(battleState.ignoreSwipeClick||0))return;const x=e.target.closest('[data-play-player-id]');if(x){e.preventDefault();e.stopPropagation();battlePickTargetWithAudio(x.dataset.playPlayerId);const action=battleAction();if(action&&battleState.targets.length===action.targetCount)battleOpenTargetSheet(battleState.actionId,'drag')}},true);
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',e=>{
     const x=e.target.closest('[data-battle-action]');
-    if(x&&!x.disabled){battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false};x.setPointerCapture?.(e.pointerId)}
+    if(x&&!x.disabled){
+      const bar=document.getElementById('battleActionBar');
+      battleState.drag={id:x.dataset.battleAction,x:e.clientX,y:e.clientY,pointerId:e.pointerId,moved:false,mode:'pending',scrollStart:bar?.scrollLeft||0};
+      x.setPointerCapture?.(e.pointerId)
+    }
   });
   document.addEventListener('pointermove',e=>{
     const d=battleState.drag;if(!d||d.pointerId!==e.pointerId)return;
-    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>9)d.moved=true;
+    const dx=e.clientX-d.x,dy=e.clientY-d.y;
+    if(!d.moved&&Math.hypot(dx,dy)>9){
+      d.moved=true;
+      // Horizontal swipe browses actions; movement toward the village starts a
+      // real target drag. Both gestures start directly on a readable action.
+      d.mode=Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+    }
     if(!d.moved)return;
+    if(d.mode==='scroll'){
+      const bar=document.getElementById('battleActionBar');
+      if(bar)bar.scrollLeft=d.scrollStart-dx;
+      return;
+    }
     let ghost=document.getElementById('battleDragGhost');
     if(!ghost){ghost=document.createElement('div');ghost.id='battleDragGhost';ghost.textContent=battleActions().find(a=>a.id===d.id)?.name||'Tác động';document.body.appendChild(ghost)}
     ghost.style.left=e.clientX+'px';ghost.style.top=(e.clientY-34)+'px';
@@ -1479,6 +1493,7 @@ function initBattleControls(){
     battleState.drag=null;document.getElementById('battleDragGhost')?.remove();battleClearDropHighlights();
     if(!d.moved)return;
     battleState.ignoreClick=Date.now()+450;
+    if(d.mode==='scroll')return;
     const {nodes,allowed}=battleDropCandidates(d.id),hit=battleResolveDropTarget(e.clientX,e.clientY,nodes,allowed);
     if(hit.id)battlePickTargetWithAudio(hit.id,d.id);
     const action=battleActions().find(a=>a.id===d.id);
