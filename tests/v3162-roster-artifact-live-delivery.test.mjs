@@ -40,7 +40,7 @@ test('Player Web Artifact open/close and deck swapping each use existing page-fl
  assert.doesNotThrow(()=>new vm.Script(player));
  assert.match(player,/function toggleArtifact\(\)\{[\s\S]*?state\.artifactOpen=!state\.artifactOpen;playPageFlipSound\(state\.artifactOpen\)/);
  assert.match(player,/function gmwwDeckBringToFront\(kind\)\{[\s\S]*?gmwwDeckPreferredTop!==kind&&typeof playPageFlipSound==='function'\)playPageFlipSound\(true\)/);
- assert.match(player,/function closePrivateCardViewer\(\)\{\s*if\(state\.roleOpen\|\|state\.artifactOpen\)playPageFlipSound\(false\)/);
+ assert.match(player,/function closePrivateCardViewer\(\)\{[\s\S]*?if\(state\.roleOpen\|\|state\.artifactOpen\)playPageFlipSound\(false\)/);
 });
 
 test('Player Web retries authenticated delivery until the current role and Artifact manifest is complete',async()=>{
