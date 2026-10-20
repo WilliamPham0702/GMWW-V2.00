@@ -387,8 +387,9 @@ async function demoActionDay(epoch){
   if(stage==='nominating'&&now<Number(g.nominationDeadlineAt||0)){
     const awaiting=eligible.filter(id=>!Object.hasOwn(g.nominations||{},id));
     if(awaiting.length){
-      await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('nominate',{
+      const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('nominate',{
         loginId:demoPick(awaiting),targetId:demoPick(eligible),matchId:room.matchId,cycleKey:room.cycleKey}))});
+      if(result?.ok!==true)throw Error(result?.message||result?.error||'Đề cử không thành công.');
     }
     return;
   }
@@ -424,7 +425,8 @@ async function demoStep(epoch){
     if(beat?.ok!==true)throw Error(beat?.message||beat?.error||'Mất quyền điều khiển Demo.');
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
     const latest=await playSyncRoom(true);
-    if(!latest||!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(!latest)throw Error('Mất đồng bộ với server; không thể tiếp tục tự chơi.');
+    if(!demoRunner.running||epoch!==demoRunner.epoch)return;
     const room=playSceneRuntime.room;
     if(room?.demo!==true||String(playSceneState.roomCode)!==demoRunner.roomCode||room?.phase!=='running'){
       await demoStop('room_or_match_changed');return;
