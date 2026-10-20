@@ -227,7 +227,7 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
@@ -1122,7 +1122,7 @@ function battleGallowsRender(phase){
   battleGallowsTick();
 }
 async function battleGallowsCommand(command,targetId='',outcome=''){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(battleState.gallowsBusy||playSceneState.phase!=='day'||!isLivePlayRoom())return;
   if(command==='resolve'&&outcome==='dead'&&!confirm('Xác nhận giết người chơi bị lên giàn?'))return;
   battleState.gallowsBusy=true;battleGallowsRender('day');
@@ -1275,7 +1275,7 @@ function renderPlayBattle(){
   battleMarkPlayers();battleTickCountdown();
 }
 async function battleConfirmDay(confirmed=false){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   const a=battleAction();
   if(playSceneState.phase!=='day'||playSceneState.step!=='battle'||!isLivePlayRoom()||
      battleState.busy||battleState.syncPending||!a||a.unavailable||
@@ -1308,7 +1308,7 @@ async function battleConfirmDay(confirmed=false){
   }finally{battleState.busy=false;renderPlayBattle()}
 }
 async function battleConfirm(confirmed=false){
-  if(demoRunner.running)return;
+  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
   const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
