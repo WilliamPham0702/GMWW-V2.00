@@ -74,10 +74,10 @@ const GMWW_APPROVED_CARD_BACK_CSS=String.raw`
 /* Approved GMWW original art, not a repainted Role card on Artifact. */
 #game #gmwwPlayerPrivateDock button[data-private-card]{background:transparent!important;border:0!important}
 #game #gmwwPlayerPrivateDock .mini-card{background:transparent!important}
-#game #gmwwPlayerPrivateDock .mini-card img{object-fit:contain!important;object-position:center!important}
-#game #gmwwPlayerPrivateDock .mini-label{display:none!important}
-#game #roleCard .role-back .gmww-card-back-img{object-fit:contain!important;background:transparent!important}
-#game #artifactCard .gmww-art-back{background:#2e130d url('/card-backs/artifact-card-back-v1.png') center / 100% 100% no-repeat!important}
+#game #gmwwPlayerPrivateDock .mini-card img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
+#game #gmwwPlayerPrivateDock .mini-card{overflow:hidden!important;border-radius:inherit!important}\n#game #gmwwPlayerPrivateDock .mini-label{display:none!important}
+#game #roleCard .role-back .gmww-card-back-img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;background:transparent!important}
+#game #artifactCard .gmww-art-back{background:#2e130d url('/card-backs/artifact-card-back-v1.png') center / cover no-repeat!important}
 #game #artifactCard .gmww-art-back > *{visibility:hidden!important}
 `;
 
