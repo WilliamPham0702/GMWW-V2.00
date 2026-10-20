@@ -6127,3 +6127,30 @@ body.play-immersive #start #playPlayerRing .play-player-avatar>span.gmww40-chara
   border:1px solid rgba(129,158,161,.3)!important;font-weight:650!important;
   box-shadow:none!important;text-shadow:none!important;opacity:.58!important;
 }
+
+
+/* V3.162 — Gọi Người: three high-contrast controls, always on one row.
+   The sheet is mounted outside #start, so do not scope these rules to #start. */
+#playRosterSheet .play-roster-toolbar-v3155{
+  display:grid!important;grid-template-columns:minmax(0,.75fr) minmax(0,1.1fr) minmax(0,1.25fr)!important;
+  gap:6px!important;align-items:stretch!important;width:100%!important;min-width:0!important;
+}
+#playRosterSheet .play-roster-toolbar-v3155>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  min-width:0!important;min-height:45px!important;padding:9px 5px!important;
+  white-space:nowrap!important;text-overflow:clip!important;overflow:visible!important;
+  font-size:clamp(10px,2.8vw,13px)!important;font-weight:900!important;line-height:1.15!important;
+  border:1.5px solid transparent!important;border-radius:11px!important;
+  text-align:center!important;letter-spacing:.015em!important;
+}
+#playRosterSheet #playRosterCancel{color:#fff0e9!important;background:linear-gradient(180deg,#8c4251,#632935)!important;border-color:#f4a7ad!important}
+#playRosterSheet #playRosterSave{color:#30210d!important;background:linear-gradient(180deg,#ffe79d,#eab74a)!important;border-color:#fff2c2!important;box-shadow:0 0 0 1px #fff1be66 inset,0 3px 13px #e6ae4380!important}
+#playRosterSheet #playRosterSelectAll{color:#062735!important;background:linear-gradient(180deg,#8cf1f4,#44c5d2)!important;border-color:#b9fdff!important}
+#playRosterSheet .play-roster-toolbar-v3155>button:focus-visible{outline:3px solid #fff!important;outline-offset:2px!important}
+#playRosterSheet .play-roster-toolbar-v3155>button:disabled{opacity:.7!important;cursor:wait!important}
+#playRosterSheet .play-roster-save-status{display:block;color:#ffe6a9;font-size:11px;font-weight:800;padding:3px 2px 6px}
+#playRosterSheet .play-roster-save-status[hidden]{display:none!important}
+@media(max-width:360px){
+  #playRosterSheet .play-roster-toolbar-v3155{gap:4px!important;grid-template-columns:minmax(0,.7fr) minmax(0,1.05fr) minmax(0,1.25fr)!important}
+  #playRosterSheet .play-roster-toolbar-v3155>button{padding:9px 2px!important;font-size:10px!important;letter-spacing:0!important}
+}
