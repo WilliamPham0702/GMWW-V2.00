@@ -112,8 +112,8 @@ test('Every new version can notify the GM with the required action',()=>{
 test('Official native IPA build is isolated to explicit dispatch or native-shell changes',()=>{
   const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   const workflow=fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
-  assert.match(script,/version:isNative\?version:shell/);
-  assert.match(script,/GMWW-V\$\{isNative\?version:shell\}\.ipa/);
+  assert.ok(script.includes("ipa:selectPublishedIpa(publishedIpa,version,isNative?version:shell)"));
+  assert.ok(script.includes("update-system/published-ipa.json"));
   assert.match(workflow,/workflow_dispatch:/);
   assert.doesNotMatch(workflow,/server-game\/BUILD_IPA_REQUEST/);
   // A clean official IPA may rebuild the tested Runtime into a standalone native

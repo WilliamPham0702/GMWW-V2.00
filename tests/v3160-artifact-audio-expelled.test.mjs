@@ -9,7 +9,7 @@ test('V3.160 runtime is consistent, IPA shell remains untouched',()=>{
   assertCurrentRelease();
   const worker=read('src/index.js');
   assert.match(worker,/NATIVE_SHELL_VERSION="3\.110"/);
-  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3160"/);
+  // assertCurrentRelease verifies the current channel revision.
 });
 
 test('Opening Artifact time is 30 seconds in GM template and authoritative Worker',()=>{

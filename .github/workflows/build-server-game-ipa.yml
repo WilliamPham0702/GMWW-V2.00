@@ -1,7 +1,6 @@
 name: Build Native GMWW IPA
 
-# Full Xcode build is reserved for true native-shell changes.
-# Runtime/server/UI changes must use the runtime channel or Fast Runtime Snapshot workflow.
+# Full Xcode build also supports owner-requested consolidated IPA releases.
 on:
   workflow_dispatch:
   push:
@@ -21,7 +20,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve and stage clean native V3.70 metadata
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify source before building official IPA
+        run: |
+          node .github/scripts/verify-gmww-versions.mjs
+          npm test
+
+      - name: Resolve and stage clean native release metadata
         id: meta
         shell: bash
         run: |
@@ -66,6 +74,14 @@ jobs:
           cp server-game/current/character-renderer.css "$APPDIR/Web/character-renderer.css"
           cp server-game/current/gmww-village-coast.svg "$APPDIR/Web/gmww-village-coast.svg"
           cp server-game/current/battle-controls.js "$APPDIR/Web/battle-controls.js"
+          cp server-game/current/status-visuals.css "$APPDIR/Web/status-visuals.css"
+          cp server-game/current/status-visuals.js "$APPDIR/Web/status-visuals.js"
+          cp server-game/current/runtime-recovery.js "$APPDIR/Web/runtime-recovery.js"
+          cp server-game/current/gmww-local-export.js "$APPDIR/Web/gmww-local-export.js"
+          cp server-game/current/artifact-sea-import.js "$APPDIR/Web/artifact-sea-import.js"
+          cp server-game/current/gmww-shared-motion.js "$APPDIR/Web/gmww-shared-motion.js"
+          mkdir -p "$APPDIR/Web/characters/gmww40"
+          cp -R assets/characters/gmww40/. "$APPDIR/Web/characters/gmww40/"
           # Homepage V3.70 references these 12 current visual assets. Bundle them
           # so a fresh IPA works offline instead of depending on an OTA patch.
           mkdir -p "$APPDIR/Web/home-art"
@@ -121,7 +137,7 @@ jobs:
 
           grep -q "GMWW V$VERSION" "$APPDIR/Web/GMWW.html"
           grep -q "const VERSION='$VERSION'" "$APPDIR/Web/app.js"
-          grep -q 'character-renderer.js' "$APPDIR/Web/GMWW.html"
+          node .github/scripts/verify-native-web.mjs "$APPDIR/Web"
           grep -q 'battle-controls.js' "$APPDIR/Web/GMWW.html"
           grep -q 'segmented-skeletal' "$APPDIR/Web/character-renderer.js"
           grep -q 'gmwwPlayRigLegA' "$APPDIR/Web/character-renderer.css"
@@ -383,6 +399,7 @@ jobs:
 
           cmp -s server-game/GMWW-Server/Web/GMWW.html "$APP/Web/GMWW.html"
           cmp -s assets/village/village-layout.js "$APP/Web/village-layout.js"
+          node .github/scripts/verify-native-web.mjs "$APP/Web"
           cmp -s server-game/current/app.js "$APP/Web/app.js"
           cmp -s server-game/current/style.css "$APP/Web/style.css"
           cmp -s server-game/current/gmww-village-coast.svg "$APP/Web/gmww-village-coast.svg"
@@ -402,7 +419,7 @@ jobs:
           IPA_BYTES=$(stat -f%z "$IPA")
           echo "IPA bytes: $IPA_BYTES"
           test "$IPA_BYTES" -gt 50000000
-          shasum -a 256 "$IPA"
+          shasum -a 256 "$IPA" | tee "$IPA.sha256"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
@@ -421,7 +438,7 @@ jobs:
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "Verified GMWW IPA V$VERSION / build $BUILD"
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "Verified GMWW IPA V$VERSION / build $BUILD"
           else
-            gh release upload "$TAG" "$IPA" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --clobber
           fi
