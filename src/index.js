@@ -757,8 +757,9 @@ export class RoomDurableObject extends DurableObject {
     this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
-  async playerGallows(body){
+  async playerGallows(body,authorizedDemo=false){
     const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
+    if(meta?.demo===true&&!authorizedDemo)return j({ok:false,error:"DEMO_ROOM_GM_ONLY"},403);
     if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
@@ -1002,7 +1003,7 @@ export class RoomDurableObject extends DurableObject {
       if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")return j({ok:false,error:"DEMO_DAY_ONLY"},409);
       if(String(body?.matchId||"")!==String(meta.matchId||"")||
          String(body?.cycleKey||"")!==String(meta.cycleKey||""))return j({ok:false,error:"STALE_DEMO_CYCLE"},409);
-      const response=await this.playerGallows({loginId:body.loginId,command,targetId:body.targetId,choice:body.choice});
+      const response=await this.playerGallows({loginId:body.loginId,command,targetId:body.targetId,choice:body.choice},true);
       if(response.ok){await this.ctx.storage.put("demoLease",{running:true,speed,until:now+15000,owner});}
       return response;
     }
