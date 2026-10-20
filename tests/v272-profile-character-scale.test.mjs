@@ -93,11 +93,11 @@ test('V3.17 runtime metadata is aligned with the V3.17 native shell',()=>{
 });
 
 
-test('Profile avatar button opens the 20 animated-character picker and saves immediately',()=>{
+test('Profile avatar button opens the available character catalog and saves immediately',()=>{
   const live=read('src/gmww-members-live.js');
   assert.ok(live.includes("#profileEditPanel>summary,[data-gmww-avatar]"));
   assert.ok(live.includes("t.matches?.('#profileEditPanel>summary')"));
-  assert.ok(live.includes("if(state.gameCharacters.length!==20){toast('Chưa tải được 20 Avatar động."));
+  assert.ok(live.includes("if(!state.gameCharacters.length){toast('Không tải được danh sách Avatar."));
   assert.ok(live.includes("closeAvatarLibrary();await saveProfile();return"));
   assert.ok(live.includes("catalog=state.gameCharacters"));
 });
