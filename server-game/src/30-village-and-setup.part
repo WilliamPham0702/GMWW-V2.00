@@ -485,11 +485,12 @@ function savePlayRoomRegistry(rows){try{localStorage.setItem(PLAY_ROOM_REGISTRY_
 function rememberPlayRoom(roomCode,gmToken,room={}){
   roomCode=String(roomCode||'');gmToken=String(gmToken||'');if(!roomCode||!gmToken)return;
   const rows=playRoomRegistry().filter(x=>String(x.roomCode)!==roomCode);
-  rows.unshift({roomCode,gmToken,roomName:playReadableRoomName(room.roomName||document.getElementById('playCreateRoomName')?.value),roomMode:room.roomMode==='offline'?'offline':'online',seatCount:Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12)),enabled:room.enabled!==false,updatedAt:Date.now()});savePlayRoomRegistry(rows)
+  rows.unshift({roomCode,gmToken,roomName:playReadableRoomName(room.roomName||document.getElementById('playCreateRoomName')?.value),roomMode:room.roomMode==='offline'?'offline':'online',seatCount:Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12)),demo:room.demo===true,enabled:room.enabled!==false,updatedAt:Date.now()});savePlayRoomRegistry(rows)
 }
 function forgetPlayRoom(roomCode){savePlayRoomRegistry(playRoomRegistry().filter(x=>String(x.roomCode)!==String(roomCode||'')))}
 function setPlayRoomUiStage(stage){playRoomUiState.stage=stage;renderPlayCreateRoomSheet()}
 async function selectPlayExistingRoom(r){
+  if(typeof demoStop==='function')await demoStop('room_change');
   playRoomUiState.selectedCode=String(r.roomCode||'');playRoomUiState.editorMode='';playRoomUiState.stage='mode';
   playSceneState.roomCode=String(r.roomCode);playSceneState.gmToken=String(r.gmToken);playSceneState.roomMode=r.roomMode==='offline'?'offline':'online';playSceneState.seatCount=Math.max(1,Math.min(30,Number(r.seatCount)||12));playSceneState.roomEnabled=r.enabled!==false;savePlayScene();gmwwSendGmPresence(true);renderPlayCreateRoomSheet();
   const data=await playSyncRoom(true);
@@ -508,7 +509,9 @@ async function selectPlayExistingRoom(r){
   renderPlayCreateRoomSheet()
 }
 function renderPlayCreatedRooms(){
-  const list=document.getElementById('playCreatedRoomList');if(!list)return;const rows=playRoomRegistry();
+  const list=document.getElementById('playCreatedRoomList');if(!list)return;const rows=playRoomRegistry().filter(r=>r.demo!==true);
+  const demoButton=document.getElementById('playDemoRoomChoice');const savedDemo=playRoomRegistry().find(r=>r.demo===true);
+  if(demoButton){demoButton.classList.toggle('active',!!savedDemo&&savedDemo.roomCode===playSceneState.roomCode);demoButton.title=savedDemo?'Mở Phòng Demo đã tạo':'Tạo Phòng Demo mới'}
   list.innerHTML='';
   if(!rows.length){list.innerHTML='<div class="play-room-empty">Chưa có phòng</div>';return}
   rows.forEach(r=>{
@@ -522,6 +525,17 @@ function renderPlayCreatedRooms(){
     };
     list.appendChild(b)
   })
+}
+async function playOpenDemoRoom(){
+  if(playSceneRuntime.busy)return;
+  const saved=playRoomRegistry().find(row=>row.demo===true);
+  if(saved){await selectPlayExistingRoom(saved);return}
+  if(typeof demoStop==='function')await demoStop('room_change');
+  playSceneState.roomMode='offline';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
+  if(!await playCreateRoom(true))return;
+  playRoomUiState.selectedCode=String(playSceneState.roomCode||'');
+  playRoomUiState.editorMode='';playRoomUiState.stage='mode';
+  renderPlayCreateRoomSheet();renderPlayScene();
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
@@ -600,11 +614,12 @@ async function playSaveRoomName(){
   try{const data=await playRoomApi('/rename',{method:'POST',body:JSON.stringify({roomName:name})});playSceneRuntime.room=data.room||playSceneRuntime.room;return true}
   catch(err){playFlashError(err.message);return false}
 }
-async function playCreateRoom(){
+async function playCreateRoom(isDemo=false){
   if(playSceneRuntime.busy)return false;
+  if(typeof demoStop==='function')await demoStop('room_change');
   playSetBusy(true);
   try{
-    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi',roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
+    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:isDemo?'Demo':document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi',demo:isDemo,roomMode:isDemo?'offline':playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.roomCode)throw new Error(data?.message||data?.error||'Không tạo được Phòng.');
     playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.seatMoveMode='instant';playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();gmwwSendGmPresence(true);
