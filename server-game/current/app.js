@@ -2649,7 +2649,7 @@ function savePlayRoomRegistry(rows){try{localStorage.setItem(PLAY_ROOM_REGISTRY_
 function rememberPlayRoom(roomCode,gmToken,room={}){
   roomCode=String(roomCode||'');gmToken=String(gmToken||'');if(!roomCode||!gmToken)return;
   const rows=playRoomRegistry().filter(x=>String(x.roomCode)!==roomCode);
-  rows.unshift({roomCode,gmToken,roomName:playReadableRoomName(room.roomName||document.getElementById('playCreateRoomName')?.value),roomMode:room.roomMode==='offline'?'offline':'online',seatCount:Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12)),enabled:room.enabled!==false,updatedAt:Date.now()});savePlayRoomRegistry(rows)
+  rows.unshift({roomCode,gmToken,roomName:playReadableRoomName(room.roomName||document.getElementById('playCreateRoomName')?.value),roomMode:room.roomMode==='offline'?'offline':'online',seatCount:Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12)),isDemoRoom:room.isDemoRoom===true,enabled:room.enabled!==false,updatedAt:Date.now()});savePlayRoomRegistry(rows)
 }
 function forgetPlayRoom(roomCode){savePlayRoomRegistry(playRoomRegistry().filter(x=>String(x.roomCode)!==String(roomCode||'')))}
 function setPlayRoomUiStage(stage){playRoomUiState.stage=stage;renderPlayCreateRoomSheet()}
@@ -2677,7 +2677,7 @@ function renderPlayCreatedRooms(){
   if(!rows.length){list.innerHTML='<div class="play-room-empty">Chưa có phòng</div>';return}
   rows.forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
-    b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc((r.roomMode||'online').toUpperCase())+'</small></span><i class="'+(r.enabled!==false?'on':'')+'">'+(r.enabled!==false?'ON':'OFF')+'</i>';
+    b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc(r.isDemoRoom?'DEMO':(r.roomMode||'online').toUpperCase())+'</small></span><i class="'+(r.enabled!==false?'on':'')+'">'+(r.enabled!==false?'ON':'OFF')+'</i>';
     b.onclick=async()=>{
       const now=Date.now(),code=String(r.roomCode),doubleTap=playRoomUiState.lastTapCode===code&&(now-playRoomUiState.lastTapAt)<480;
       playRoomUiState.lastTapCode=code;playRoomUiState.lastTapAt=now;
@@ -2686,6 +2686,13 @@ function renderPlayCreatedRooms(){
     };
     list.appendChild(b)
   })
+}
+function openPlayDemoRoomEditor(){
+  if(playSceneRuntime.busy)return;
+  playRoomUiState.editorMode='demo';playRoomUiState.stage='edit';playRoomUiState.selectedCode='';
+  const name=document.getElementById('playCreateRoomName');if(name)name.value='Demo';
+  const count=document.getElementById('playDemoCount');if(count)count.value='12';
+  renderPlayCreateRoomSheet();
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
@@ -2701,8 +2708,12 @@ function openPlayRoomEditor(isNew=false){
 }
 async function savePlayRoomEditor(){
   if(playSceneRuntime.busy)return;
-  if(playRoomUiState.editorMode==='new'){
-    playSceneState.roomMode='online';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
+  if(['new','demo'].includes(playRoomUiState.editorMode)){
+    const demo=playRoomUiState.editorMode==='demo';
+    playSceneState.roomMode=demo?'offline':'online';
+    playSceneState.seatCount=demo?Math.trunc(Number(document.getElementById('playDemoCount')?.value)):24;
+    if(demo&&(!Number.isInteger(playSceneState.seatCount)||playSceneState.seatCount<8||playSceneState.seatCount>30)){playFlashError('Phòng Demo cần từ 8 đến 30 người.');return}
+    playSceneState.roomEnabled=true;savePlayScene();
     const ok=await playCreateRoom();if(!ok)return;
     playRoomUiState.selectedCode=String(playSceneState.roomCode||'');playRoomUiState.editorMode='';playRoomUiState.stage='mode';
   }else{
@@ -2723,6 +2734,9 @@ function renderPlayCreateRoomSheet(){
   document.getElementById('playRoomModeStep')?.classList.toggle('hidden',!(['mode','settings'].includes(stage)&&!!playRoomUiState.selectedCode));
   document.getElementById('playRoomSettingsStep')?.classList.add('hidden');
   document.getElementById('playRoomEditor')?.classList.toggle('hidden',stage!=='edit');
+  const demoEditing=playRoomUiState.editorMode==='demo';
+  document.getElementById('playDemoCountWrap')?.classList.toggle('hidden',!demoEditing);
+  if(name){name.readOnly=demoEditing;if(demoEditing&&document.activeElement!==name)name.value='Demo'}
   if(reset)reset.disabled=false;if(del)del.disabled=false;renderPlayCreatedRooms();
 }
 async function playToggleRoomEnabled(){
@@ -2766,13 +2780,21 @@ async function playSaveRoomName(){
 }
 async function playCreateRoom(){
   if(playSceneRuntime.busy)return false;
+  const demo=playRoomUiState.editorMode==='demo';
   playSetBusy(true);
   try{
-    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi',roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
+    const response=await fetch(GMWW_SERVER_BASE+'/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomName:demo?'Demo':(document.getElementById('playCreateRoomName')?.value.trim()||'Làng Asahi'),isDemoRoom:demo,roomMode:playSceneState.roomMode,enabled:playSceneState.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState.seatCount})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.roomCode)throw new Error(data?.message||data?.error||'Không tạo được Phòng.');
     playSceneState.roomCode=String(data.roomCode);playSceneState.gmToken=String(data.gmToken||'');playSceneState.seatMoveMode='instant';playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.artifactCount=0;savePlayScene();gmwwSendGmPresence(true);
-    await playSyncRoom(true);rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||data||{});try{memberAdminState.loaded=false;await loadMembers(false)}catch{}renderPlayCreateRoomSheet();renderPlayScene();return true
+    if(demo){
+      // Only the authenticated room's Durable Object can create demo members.
+      const seeded=await playRoomApi('/demo/roster',{method:'POST',body:JSON.stringify({count:playSceneState.seatCount})});
+      if(seeded?.demoRoster!==true||!seeded?.room?.isDemoRoom)throw Error('Server chưa xác nhận danh sách người chơi Demo.');
+    }
+    await playSyncRoom(true);rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||data||{});
+    if(!demo)try{memberAdminState.loaded=false;await loadMembers(false)}catch{}
+    renderPlayCreateRoomSheet();renderPlayScene();return true
   }catch(err){playFlashError(err.message);return false}
   finally{playSetBusy(false)}
 }
@@ -6093,7 +6115,7 @@ function initPlayScene(){
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
   document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});
-  document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
+  document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));document.getElementById('playCreateRoomDemo')?.addEventListener('click',openPlayDemoRoomEditor);document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
   document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});
   document.getElementById('playCreateRoomEnabled')?.addEventListener('click',playToggleRoomEnabled);document.getElementById('playRoomNextStep')?.addEventListener('click',playCreateRoomNext);
   document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
