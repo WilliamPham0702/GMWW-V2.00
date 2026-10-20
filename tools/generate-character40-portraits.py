@@ -45,16 +45,24 @@ def build_and_verify():
             raise RuntimeError(f"Crop outside atlas for {ident}")
 
         exact_frame = atlas_rgba.crop((x, y, x + width, y + height))
-        if exact_frame.getchannel("A").getbbox() is None:
+        visible_bbox = exact_frame.getchannel("A").getbbox()
+        if visible_bbox is None:
             raise RuntimeError(f"Avatar crop empty for {ident}")
 
-        # Match the live canvas dimensions and give every actor transparent
-        # corners, including sprites whose atlas cell is tightly cropped.
-        # Paste without a transparency mask to preserve every source pixel.
-        icon = Image.new("RGBA", (256, 320), (0, 0, 0, 0))
-        icon.paste(exact_frame, ((256 - width) // 2, 320 - height))
-        if icon.getpixel((0, 0))[3] != 0 or icon.getpixel((255, 319))[3] != 0:
+        # The atlas frame has variable transparent margins and is drawn
+        # bottom-aligned in the live village. UI thumbnail needs the actual
+        # visible actor CENTERED, not its unequal atlas cell margins.
+        actor = exact_frame.crop(visible_bbox)
+        aw, ah = actor.size
+        if aw > 256 or ah > 256:
+            raise RuntimeError(f"Character exceeds safe centered thumbnail: {ident} {actor.size}")
+        icon = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+        icon.paste(actor, ((256 - aw) // 2, (256 - ah) // 2))
+        if icon.getpixel((0, 0))[3] != 0 or icon.getpixel((255, 255))[3] != 0:
             raise RuntimeError(f"Transparent portrait corners required for {ident}")
+        bounds = icon.getchannel("A").getbbox()
+        if bounds is None or abs(bounds[0] + bounds[2] - 256) > 1 or abs(bounds[1] + bounds[3] - 256) > 1:
+            raise RuntimeError(f"Avatar must be visually centered: {ident}")
 
         target = output / (ident + ".webp")
         icon.save(target, "WEBP", lossless=True, method=5, exact=True)
