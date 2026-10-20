@@ -186,12 +186,50 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
-          # Verify the bytes visible to iPhone Safari, not just Cloudflare upload success.
+          # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
+          # alone cannot prove the just-uploaded static assets have reached the edge.
+          # Wait for the new portrait bytes, then verify all 40 IDs. Fail closed if
+          # propagation never finishes; retain the previous deployment for rollback.
+          AVATAR_READY=0
+          for TRY in $(seq 1 40); do
+            if curl --fail --location --silent --show-error --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              "$URL/api/game-characters/character-01/image?rev=c40-3&edge-propagation=$TRY-$(date +%s)" \
+              > /tmp/gmww-live-avatar.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
+                AVATAR_READY=1
+                break
+              fi
+              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/portraits/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+            fi
+            sleep 2
+          done
+          test "$AVATAR_READY" = "1" || {
+            echo "::error::New Worker assets did not propagate; production verification blocked."
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/portraits/character-01.webp)"
+            echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+            exit 1
+          }
+          echo "Verify Production: fresh Character40 portrait revision is live."
+
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
-            curl --fail --location --silent --show-error --retry 3 --retry-delay 1 --max-time 20               "$URL/api/game-characters/$ID/image?rev=c40-3&verify-avatar=$N" > /tmp/gmww-live-avatar.webp
-            cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp" || {
+            MATCHED=0
+            for TRY in $(seq 1 5); do
+              if curl --fail --location --silent --show-error --max-time 20 \
+                -H 'Cache-Control: no-cache' \
+                "$URL/api/game-characters/$ID/image?rev=c40-3&verify-avatar=$N-$TRY-$(date +%s)" \
+                > /tmp/gmww-live-avatar.webp && \
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
+                MATCHED=1
+                break
+              fi
+              sleep 2
+            done
+            test "$MATCHED" = "1" || {
               echo "::error::Production avatar/atlas bytes differ for $ID"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/portraits/$ID.webp")"
+              echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
               exit 1
             }
           done
