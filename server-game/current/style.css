@@ -6234,3 +6234,13 @@ body.play-immersive #start #playPlayerRing .play-player-avatar>span.gmww40-chara
 #start #playShell[data-step="battle"] #battleActionBar>button[data-battle-action]:disabled{
   touch-action:pan-x!important;
 }
+
+/* Demo is a GM-only playback workspace; controls follow the current compact menu. */
+#playDemoRoomChoice{border-style:solid!important;border-color:rgba(252,209,119,.76)!important}
+#playDemoRoomChoice.active{box-shadow:0 0 0 1px #f7d486 inset!important}
+#battleWolfMenu #battleDemoToggle[hidden],
+#battleWolfMenu #battleDemoSpeedWrap[hidden],
+#battleWolfMenu #battleGMAuto[hidden]{display:none!important}
+#battleWolfMenu #battleDemoToggle[aria-pressed="true"]{border-color:#ffe49e;background:rgba(182,123,37,.22)}
+#battleWolfMenu .play-demo-speed{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;color:inherit}
+#battleWolfMenu .play-demo-speed select{background:rgba(8,33,53,.82);color:#fff;border:1px solid rgba(150,211,239,.4);border-radius:8px;padding:6px 3px;font-size:12px}
