@@ -22,6 +22,14 @@ export function reconcileVillageChildren(container,nodes){
   while(container.children.length>nodes.length)container.lastElementChild.remove();
 }
 export function villageMotionNeedsFrame(players){return players.some(p=>p?.movementStatus==="moving")}
+export function liveDisplaySeatId(player, projectedSeats={}) {
+  // Preview Seat IDs are only placeholders. Never anchor an unseated walker to
+  // one: that disables interpolation and makes click-to-move look like teleport.
+  const assigned=Number(player?.seatId||0);
+  if(!Number.isInteger(assigned)||assigned<=0)return null;
+  return Number(projectedSeats?.[String(player?.id||player?.participantId||'')])||assigned;
+}
+
 
 export function mapCharacterAnimation(p){
   const a=p?.characterAnimation;
@@ -99,7 +107,7 @@ if(game){
     if(data?.movementStatus!=="moving")return false;
     // Preserve previous interpolation for unseated visitors and the stored
     // per-person death anchor even after the movement duration elapses.
-    if(!Number(data?.displaySeatId||data?.seatId||0))return true;
+    if(!Number(data?.seatId||0))return true; // Only actual assigned Seats block free roaming.
     const started=Number(data?.moveStartedAt||0),duration=Number(data?.moveDurationMs||0);
     if(!(started>0&&duration>0&&now<started+duration))return false;
     // Assigned Seats remain on the fire-centred template in setup; only a
@@ -388,7 +396,7 @@ if(game){
     matchStartedAt=Date.parse(room.startedAt||"")||0;
     for(const p of incoming){
       if(p.isGM)continue;
-      p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
+      p.displaySeatId=liveDisplaySeatId(p,visualSeats);
       if(matchStartedAt&&p.movementStatus==="moving"&&Number(p.moveStartedAt)>0&&
         Number(p.moveStartedAt)<=matchStartedAt)p.movementStatus="idle";
     }
@@ -436,7 +444,7 @@ if(game){
         count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
         matchStartedAt=Date.parse(room.startedAt||"")||0;
         const visualSeats=layout.projectedSeatIds(all.filter(p=>!p.isGM),count);
-        for(const p of all)if(!p.isGM)p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
+        for(const p of all)if(!p.isGM)p.displaySeatId=liveDisplaySeatId(p,visualSeats);
         if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
         render();if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
       },
