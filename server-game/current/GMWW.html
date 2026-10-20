@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.159</title>
-<link rel="stylesheet" href="style.css?v=3.159-compact-room-mobile2">
+<title>GMWW V3.160</title>
+<link rel="stylesheet" href="style.css?v=3.160-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -301,15 +301,15 @@
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu đống lửa" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
+              <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
+              <button id="battleLabelRole" type="button" aria-pressed="true" title="Ẩn/hiện tên Vai Trò trên GM Server">Vai Trò</button>
+              <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
               <button id="battleForceEnd" type="button" title="Kết thúc Ván">⏻ Kết thúc Ván</button>
-              <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
-              <button id="battleLabelRole" type="button" aria-pressed="true" title="Ẩn/hiện tên Vai Trò trên GM Server">Vai Trò</button>
-              <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
             </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
@@ -771,7 +771,7 @@
           <label>Thời gian bỏ phiếu Lên Giàn (giây): <span class="play-timing-value"><input id="playGallowsVoteSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian bỏ phiếu Lên Giàn"></span></label>
           <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
           <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
-          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="60" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
+          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
           <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
         <div class="play-template-section-title play-role-time-section"><b>THỜI GIAN RIÊNG TỪNG VAI (giây)</b><span>Tùy chỉnh từng vai</span></div>
@@ -905,10 +905,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.159-timeline"></script>
+<script src="battle-controls.js?v=3.160-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.159-compact-room&status=4"></script>
+<script src="app.js?v=3.160-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
