@@ -309,7 +309,7 @@ function renderArtifactStack(){
   renderArtifactTargets()
 }
 function toggleArtifact(){
-  if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;renderArtifactStack();
+  if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;playPageFlipSound(state.artifactOpen);renderArtifactStack();
   if(state.artifactOpen&&!state.artifact.viewedAt)api('/api/rooms/'+state.roomCode+'/artifact/viewed',{method:'POST',headers:auth(),body:'{}'}).then(d=>{if(state.artifact){state.artifact.viewedAt=d.viewedAt;renderArtifactStack()}}).catch(()=>{})
 }
 async function activateArtifact(){
