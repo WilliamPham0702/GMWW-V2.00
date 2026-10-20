@@ -46,7 +46,7 @@ test('Demo forbids stale day votes and does not perform fake player authenticati
 });
 
 test('Demo moves completed night into the next day then advances resolved day into the next night',async()=>{
-  const fragment=extract(battle,'async function demoStep(epoch){','/* Dedicated battle mode:');
+  const fragment=extract(battle,'async function demoStep(epoch){','const battleState=');
   const runner={running:true,epoch:4,steps:0,speed:2,roomCode:'ABCDEF',owner:'demo-abcdefgh1234',timer:0},
     scene={roomCode:'ABCDEF',phase:'night',night:1},runtime={room:{demo:true,phase:'running',matchId:'match1',cycleKey:'night-1'},
       nightRuntime:{completed:true},winProposal:null},calls=[];
