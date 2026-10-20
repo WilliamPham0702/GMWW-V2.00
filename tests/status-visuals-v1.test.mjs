@@ -102,7 +102,7 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.match(gmCss,/\.play-player-token\.is-dead \.play-player-avatar\{filter:grayscale/);
   assert.match(gmCss,/\.play-player-token\.is-dead \.gmww-segmented-rig\[data-state="dead"\]/);
   assert.match(app,/moving=effect!=='dead'&&playSeatMovementActive\(m\)/);
-  assert.match(app,/sitting=effect!=='dead'/);
+  assert.match(app,/sitting=playSceneState\.step!=='battle'&&effect!=='dead'/);
   assert.match(webCss,/\.player\.gmww-sv-dead \.portrait\{filter:grayscale/);
   assert.match(village,/dead:"gray-smoke"/);
   assert.match(village,/function visuallyDeceased\(data\)/);
@@ -111,7 +111,7 @@ test('V1 revision: deceased player stands still surrounded by looping grey smoke
   assert.match(village,/deceasedDisplayPoints\.has\(id\)/);
   assert.match(village,/deceasedDisplayPoints\.set\(id,\{x:pos\.x,y:pos\.y\}\)/);
   assert.match(village,/deceasedDisplayPoints\.delete\(id\)/);
-  assert.match(village,/const dead=visuallyDeceased\(data\),moving=!dead/);
+  assert.match(village,/const dead=visuallyDeceased\(data\),moving=!battleStatic&&!dead/);
   assert.doesNotMatch(src,/effect:'fallen'/);
   assert.doesNotMatch(gmCss,/\.gmww-sv-fallen/);
   assert.doesNotMatch(webCss,/rotate\(76deg\)/);
