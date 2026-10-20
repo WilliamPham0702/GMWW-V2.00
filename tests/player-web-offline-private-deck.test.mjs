@@ -67,3 +67,51 @@ test('Flipping the rear Role/Artifact card plays page audio once, not for an unc
  ctx.raise('artifact');assert.equal(flips,1,'tapping same front card does not double the flip');
  ctx.raise('role');assert.equal(flips,2,'bringing Role to the front has one flip sound');
 });
+
+
+test('Artifact open and close play the same page flip sounds as Role',()=>{
+ const start=player.indexOf('function toggleArtifact(){');
+ const end=player.indexOf('async function activateArtifact(){',start);
+ assert.ok(start>=0&&end>start,'Artifact toggle must be present in compiled Player Web');
+ const sounds=[];
+ const state={artifact:{artifactId:'mirror',viewedAt:'2026-10-20'},artifactFocus:'',artifactOpen:false};
+ const ctx={state,playPageFlipSound:opening=>sounds.push(opening),renderArtifactStack:()=>{}};
+ vm.runInNewContext(player.slice(start,end)+';this.toggle=toggleArtifact;',ctx);
+ ctx.toggle();
+ assert.equal(state.artifactOpen,true);
+ assert.equal(state.artifactFocus,'artifact');
+ ctx.toggle();
+ assert.equal(state.artifactOpen,false);
+ assert.deepEqual(sounds,[true,false],'Artifact must use the existing open/close Role sounds');
+ state.artifact=null;
+ ctx.toggle();
+ assert.deepEqual(sounds,[true,false],'missing Artifact cannot produce stray sounds');
+});
+
+test('Leaving an open private card plays exactly one close sound; repeated close is silent',()=>{
+ const start=player.indexOf('function closePrivateCardViewer(){');
+ const end=player.indexOf('function openPrivateCardViewer(kind){',start);
+ assert.ok(start>=0&&end>start);
+ const sounds=[];
+ const game={dataset:{privateCardView:'open',privateCardFocus:'artifact'}};
+ const state={artifactOpen:true,roleOpen:false,artifactFocus:'artifact',role:{roleId:'witch'}};
+ const ctx={
+  state,document:{hidden:false},
+  $:s=>s==='#game'?game:null,
+  playPageFlipSound:opening=>sounds.push(opening),
+  gmwwViewedRoleDeck:new Set(),gmwwDeckRoleIdentity:()=> 'r1',gmwwDeckPreferredTop:'role',
+  clearPrivateCardIdle:()=>{},clearRolePrivacyTimer:()=>{},setGameViewPane:()=>{game.dataset.privateCardView='closed'},
+  renderPlayerPrivateDock:()=>{}
+ };
+ vm.runInNewContext(player.slice(start,end)+';this.close=closePrivateCardViewer;',ctx);
+ ctx.close();
+ assert.equal(state.artifactOpen,false);
+ assert.deepEqual(sounds,[false]);
+ ctx.close();
+ assert.deepEqual(sounds,[false],'already closed card does not play audio again');
+ game.dataset.privateCardView='open';game.dataset.privateCardFocus='role';
+ state.roleOpen=true;
+ ctx.close();
+ assert.deepEqual(sounds,[false,false]);
+ assert.equal(ctx.gmwwDeckPreferredTop,'artifact');
+});
