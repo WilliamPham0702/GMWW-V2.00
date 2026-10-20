@@ -1781,7 +1781,7 @@ async function applyPlayGameTemplate(id){
     playSceneState.artifactsEnabled=cfg.artifactsEnabled===true
       ||(cfg.artifactsEnabled!==false&&templateArtifactIds.length>0);
     playSceneState.artifactIds=templateArtifactIds;
-    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??60)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
+    playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:Math.max(0,Number(cfg?.timing?.earlyArtifactSec??30)||0),defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
     const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=playSceneState.gameTiming.gallowsNominationSec;
@@ -1809,7 +1809,7 @@ async function openLibraryGameTemplate(id=''){
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=10;
     if(voteInput)voteInput.value=10;
-    if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=60;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
+    if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=30;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
   sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
   updatePlayArtifactToggle();
 }
@@ -1831,7 +1831,7 @@ async function savePlayGame(){
       gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),
       gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),
       wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value),
-      earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),
+      earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),
       defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value),
       artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value),
       autoAdvance:!!document.getElementById('playAutoAdvance')?.checked
@@ -1906,7 +1906,7 @@ async function savePlayGame(){
   const gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),
     templateId=playSceneState.gameTemplateId||('template-'+Date.now().toString(36));
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
-  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??60),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
+  const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
   const selectedArtifacts=playSceneState.artifactsEnabled?playTemplateSelectedArtifacts():[];
   if(playSceneState.artifactsEnabled&&!selectedArtifacts.length){
