@@ -36,29 +36,25 @@ test('no legal action advances to the next stage', async () => {
   assert.equal(runner.info().status, 'finished');
 });
 test('pausing prevents subsequent steps; resume continues', async () => {
-  let ticks = 0;
-  let release;
-  const barrier = () => new Promise(resolve => { release = resolve; });
+  let ticks = 0, didPause = false, runner;
   const adapter = {
     snapshot: async () => ({ roomCode: 'DEMO3', isDemoRoom: true, finished: ticks >= 2 }),
     legalActions: async () => [],
     apply: async () => {},
     advance: async () => { ticks++; }
   };
-  const runner = createDemoRunner(adapter, { roomCode: 'DEMO3', isDemoRoom: true, wait: barrier });
+  runner = createDemoRunner(adapter, {
+    roomCode: 'DEMO3', isDemoRoom: true,
+    wait: async () => { if (!didPause) { didPause = true; runner.pause(); } }
+  });
   runner.resume();
-  for (let i = 0; i < 10 && !release; i++) await Promise.resolve();
-  assert.equal(ticks, 1);
-  runner.pause();
-  release();
   await runner.pending;
   assert.equal(ticks, 1);
+  assert.equal(runner.info().status, 'paused');
   runner.resume();
-  for (let i = 0; i < 10 && ticks < 2; i++) await Promise.resolve();
+  await runner.pending;
   assert.equal(ticks, 2);
-  runner.stop();
-  release();
-  await runner.pending;
+  assert.equal(runner.info().status, 'finished');
 });
 test('rejects a mismatched adapter snapshot before executing actions', async () => {
   let called = false;
