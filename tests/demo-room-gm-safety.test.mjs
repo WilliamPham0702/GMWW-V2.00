@@ -38,12 +38,13 @@ test('Playback uses one lease owner and existing server game action endpoints',(
   assert.match(battle,/demoRunner\.completed\.add\(signature\)/);
 });
 
-test('GM-only Demo appears as a room tile and only renders controls inside Demo game',()=>{
-  for(const id of ['playDemoRoomChoice','battleDemoToggle','battleDemoSpeed'])assert.match(html,new RegExp('id="'+id+'"'));
-  assert.match(setup,/async function playOpenDemoRoom/);
+test('Demo is selected as an immutable room type, with controls inside GM menu only',()=>{
+  for(const id of ['playRoomModeToggle','battleDemoToggle','battleDemoSpeed'])assert.match(html,new RegExp('id="'+id+'"'));
+  assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
   assert.match(setup,/demo:isDemo/);
+  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
+  assert.ok(html.indexOf('id="battleWolfMenu"')<html.indexOf('id="battleDemoPanel"'));
   assert.match(battle,/if\(auto\)auto\.hidden=false/);
-  assert.match(events,/playDemoRoomChoice/);
   assert.match(events,/demoStop\('exit_play'\)/);
 });
 

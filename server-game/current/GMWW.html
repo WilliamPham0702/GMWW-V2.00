@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.171</title>
-<link rel="stylesheet" href="style.css?v=3.171-compact-room-mobile2">
+<title>GMWW V3.172</title>
+<link rel="stylesheet" href="style.css?v=3.172-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -330,6 +330,9 @@
         </section>
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
+          <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="true"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><p id="battleDemoObserverError"></p></aside>
+          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
+            <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
           <section id="battleDemoPanel" class="battle-demo-panel" hidden aria-label="Điều khiển DEMO">
             <header aria-label="Giữ và kéo điều khiển Auto"><span class="battle-menu-grip" aria-hidden="true"></span></header>
             <button id="battleDemoExpand" type="button" aria-label="Mở điều khiển Auto" aria-expanded="true"><span class="demo-auto-orbit" aria-hidden="true">↻</span><span>Auto</span></button>
@@ -339,14 +342,12 @@
             </div>
             <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng — nhấn Chạy Demo</p>
           </section>
-          <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="true"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><p id="battleDemoObserverError"></p></aside>
-          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
-            <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
               <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
               <button id="battleLabelRole" type="button" aria-pressed="true" title="Ẩn/hiện tên Vai Trò trên GM Server">Vai Trò</button>
               <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
+               <button id="battleGMHaptic" type="button" aria-pressed="false" title="Bật / tắt rung khi xác nhận hành động">📳 Rung</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
@@ -938,14 +939,14 @@
         <div class="play-room-strip">
           <button class="play-room-add-tile" id="playCreateRoomAdd" type="button" aria-label="Thêm phòng mới"><span>＋</span><small>MỚI</small></button>
           <div class="play-room-created-list" id="playCreatedRoomList">
-            <button class="play-created-room play-demo-room" id="playDemoRoomChoice" type="button" aria-label="Mở phòng Demo sử dụng thành viên đã có"><span><b>🎮 DEMO</b><small>CHƠI THỬ · CÁCH LY</small></span><i class="on">MỞ</i></button>
+            
           </div>
         </div>
       </section>
 
       <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep" aria-label="Chế độ và trạng thái phòng">
         <div class="play-room-control-row">
-          <button id="playRoomModeToggle" type="button" aria-pressed="false" aria-label="Chuyển chế độ Online hoặc Offline"><span></span><b>OFFLINE</b></button>
+          <select id="playRoomModeToggle" aria-label="Chọn chế độ phòng"><option value="online">🌐 ONLINE</option><option value="offline">📴 OFFLINE</option><option value="demo">🎮 DEMO</option></select>
           <button id="playCreateRoomEnabled" type="button" aria-pressed="false" aria-label="Bật hoặc tắt phòng"><span></span><b>ON</b></button>
           <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
@@ -965,10 +966,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.171-timeline"></script>
+<script src="battle-controls.js?v=3.172-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.171-compact-room&status=4"></script>
+<script src="app.js?v=3.172-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
