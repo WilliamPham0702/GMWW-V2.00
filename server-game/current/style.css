@@ -6339,3 +6339,30 @@ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day
 #battleDayActionList button small{text-align:left;font-size:11px}
 .play-match-artifact-settings{display:grid;gap:12px;padding:12px;border:1px solid rgba(164,218,226,.25);border-radius:14px;background:rgba(10,42,55,.4)}
 .play-match-artifact-settings[hidden]{display:none!important}
+
+/* V3.166: GM day gallows roster and night/day history. */
+#battleGallowsPanel .battle-gallows-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 9px}
+#battleGallowsPanel .battle-gallows-mode button[aria-pressed="true"],
+#battleGallowsPanel .battle-gallows-member button[aria-pressed="true"],
+#battleGallowsPanel .battle-gallows-manual-choices button[aria-pressed="true"]{background:#087f6b;border-color:#f7d590;color:#fff}
+#battleGallowsMembers{max-height:205px;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:0;margin:7px 0}
+#battleGallowsMembers .battle-gallows-member{display:grid;grid-template-columns:minmax(76px,1fr) auto auto;gap:5px;align-items:center;min-height:39px;padding:4px 0;border-bottom:1px solid #d7ffff33}
+#battleGallowsMembers .battle-gallows-member strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#battleGallowsMembers .battle-gallows-member button{min-height:30px;font-size:9px;padding:4px 5px;white-space:nowrap}
+#battleGallowsManual:not([hidden]){display:grid;gap:6px;margin:10px 0;padding:9px;border-radius:11px;border:1px solid #a8d9dc77;background:#0b374477}
+#battleGallowsManual[hidden]{display:none!important}
+#battleGallowsManual .battle-gallows-manual-choices{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#battleGallowsManual .battle-gallows-manual-choices button{min-height:35px}
+#battleVillageHistory{margin-top:12px;padding-top:9px;border-top:1px solid #a0d9df66}
+#battleVillageHistory summary{cursor:pointer;color:#ffe2a4;font-weight:800;font-size:13px;padding:7px 0}
+#battleVillageHistoryList{max-height:32dvh;overflow:auto}
+#battleVillageHistoryList h4{color:#ffdaa5;margin:11px 0 5px;font-size:13px;border-bottom:1px solid #bcd5d755}
+#battleVillageHistoryList p{margin:5px 0;font-size:12px}
+#start #playShell[data-step="battle"] #battleMorningList p.is-critical,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.is-critical,
+#start #playShell[data-step="battle"] #battleMorningList p.is-critical strong,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.is-critical strong{color:#ff716b!important;font-weight:850}
+@media(max-width:390px){
+ #battleGallowsMembers .battle-gallows-member{grid-template-columns:minmax(64px,1fr) auto auto;gap:3px}
+ #battleGallowsMembers .battle-gallows-member button{font-size:8px;padding:3px}
+}

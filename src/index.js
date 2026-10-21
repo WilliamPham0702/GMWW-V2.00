@@ -1,7 +1,7 @@
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -691,7 +691,7 @@ export class RoomDurableObject extends DurableObject {
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
       day:Number(meta.cycleNight||0),stage:"ready",candidateId:null,
       nominationDurationSec,voteDurationSec,
-      nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
+      nominations:{},votes:{},blocked:[],blockedNomination:[],blockedVotes:[],mode:"auto",eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
     const eligible=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
@@ -699,7 +699,7 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
-    return {key,ballot:{...ballot,eligible,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
+    return {key,ballot:{...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
   }
   async gmGallows(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -716,9 +716,13 @@ export class RoomDurableObject extends DurableObject {
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
       result=gallowsBegin(ballot,target,now);
     }else if(command==="ban"){
-      if(!eligible.includes(target)||ballot.stage==="voting"&&now>=ballot.deadlineAt)
-        return j({ok:false,error:"GALLOWS_VOTING_CLOSED"},409);
       result=gallowsBan(ballot,target,now);
+    }else if(command==="restriction"){
+      result=gallowsSetRestriction(ballot,target,String(body?.kind||""),body?.banned===true,now);
+    }else if(command==="mode"){
+      result=gallowsSetMode(ballot,String(body?.mode||""),now);
+    }else if(command==="manual_vote"){
+      result=gallowsManualVote(ballot,target,body?.choice===null?null:String(body?.choice||""),now);
     }else if(command==="resolve"){
       result=gallowsResolve(ballot,String(body?.outcome||""),now);
       if(result.ok&&result.value.outcome==="dead"){
@@ -758,14 +762,18 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
     if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
-    if(ballot.blocked.includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+    if(gallowsMode(ballot)==="gm")return j({ok:false,error:"GM_MANUAL_MODE"},403);
     const command=String(body?.command||""),now=Date.now();
     let result;
     if(command==="nominate"){
       const target=normalizeLoginId(body?.targetId);
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      if(gallowsBlockedNomination(ballot).includes(loginId))return j({ok:false,error:"NOMINATION_BANNED"},403);
       result=gallowsNominate(ballot,loginId,target,now);
-    }else if(command==="vote")result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }else if(command==="vote"){
+      if(gallowsBlockedVotes(ballot).includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+      result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }
     else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
     if(!result.ok)return j({ok:false,error:result.error},409);
     await this.ctx.storage.put(key,result.value);
@@ -782,7 +790,10 @@ export class RoomDurableObject extends DurableObject {
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+      villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
+        Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
+      interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -2035,7 +2046,7 @@ export class RoomDurableObject extends DurableObject {
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
