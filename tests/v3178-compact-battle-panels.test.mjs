@@ -8,7 +8,7 @@ const html = read('server-game/current/GMWW.html');
 const battle = read('server-game/src/40-battle-and-timeline.part');
 const gm = read('server-game/current/app.js');
 const version = JSON.parse(read('package.json')).version.replace(/\.0$/,'');
-const region = css.slice(css.indexOf('/* V3.178 — compact battle chrome:'));
+const region = css.slice(css.indexOf('/* V3.178 — compact battle chrome:'), css.indexOf('/* V3.179 —'));
 
 test('V3.178: battle panel rules are scoped and preserve full-width rails',()=>{
  assert.ok(region.startsWith('/* V3.178 — compact battle chrome:'));
@@ -34,7 +34,7 @@ test('V3.178: independent draggable DEMO panel and action scrolling stay accessi
 });
 test('V3.178: shell, GM, Player Worker versions match without native IPA changes',()=>{
  assert.ok(read('src/index.js').includes('VERSION="V'+version+'"'));
- assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3178"'));
+ assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-'+version.replace('.','')+'"'));
  assert.ok(gm.includes("const VERSION='"+version+"'"));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+version+"'"));
  assert.ok(html.includes('<title>GMWW V'+version+'</title>'));
