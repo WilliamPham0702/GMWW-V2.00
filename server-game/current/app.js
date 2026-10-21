@@ -2545,7 +2545,7 @@ function playFlashError(message){
 async function playRoomApi(path='',opts={}){
   if(!isLivePlayRoom())throw new Error('Chưa có Phòng Online.');
   // While the Demo bot owns a lease, all its writes carry the same owner ID.
-  const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.running
+  const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.owner&&demoRunner.roomCode===String(playSceneState.roomCode)
     ?{...(opts.headers||{}),'x-gmww-demo-owner':demoRunner.owner}:opts.headers;
   return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers});
 }
