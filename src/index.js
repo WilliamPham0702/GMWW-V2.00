@@ -38,7 +38,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.174",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3174",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.175",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3175",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -64,6 +64,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
@@ -139,6 +140,8 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-assets/card-back"&&request.method==="GET")return this.globalAssetGet("globalAsset:cardBack","image/webp");
     if(url.pathname==="/global-assets/card-back"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:cardBack","image/webp",125000);
     if(url.pathname==="/global-settings/village-scene"&&request.method==="GET")return this.sceneSettingsGet();
+    const storedSceneImage=url.pathname.match(/^\/global-settings\/village-scene\/image\/(day|night)$/);
+    if(storedSceneImage&&request.method==="GET")return this.sceneSettingsImage(storedSceneImage[1],url.searchParams.get("revision"));
     if(url.pathname==="/global-settings/village-scene"&&request.method==="PUT")return this.sceneSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/village-scene/rollback"&&request.method==="POST")return this.sceneSettingsRollback(await safeJson(request));
     if(url.pathname==="/global-settings/ui"&&request.method==="GET")return this.globalUiSettingsGet();
@@ -530,28 +533,73 @@ export class RoomDurableObject extends DurableObject {
   }
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
+  async sceneNormalizeRecord(raw){
+    const record=raw&&typeof raw==="object"?raw:{revision:0};
+    const revision=Math.max(0,Math.trunc(Number(record.revision)||0));
+    const output={revision,dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
+    for(const key of ["day","night"]){
+      if(validImageDataUrl(record[key])&&revision>0){
+        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,record[key]);
+        output[key+"Revision"]=revision;
+      }
+    }
+    return output;
+  }
+  scenePublicRecord(rec){
+    const revision=Math.max(0,Number(rec?.revision)||0);
+    const imageRevision=key=>Math.max(0,Number(rec?.[key+"Revision"])||(validImageDataUrl(rec?.[key])?revision:0));
+    const day=imageRevision("day"),night=imageRevision("night");
+    return {revision,updatedAt:rec?.updatedAt||null,
+      day:day?"/api/village-scene/image/day?revision="+day:null,
+      night:night?"/api/village-scene/image/night?revision="+night:null};
+  }
   async sceneSettingsGet(){
     const current=await this.ctx.storage.get("globalSetting:villageScene");
-    return j({ok:true,scene:current||{revision:0,day:null,night:null},history:(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[]});
+    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    return j({ok:true,scene:this.scenePublicRecord(current),
+      history:history.map(row=>({revision:Number(row?.revision)||0,updatedAt:row?.updatedAt||null}))});
+  }
+  async sceneSettingsImage(key,rawRevision){
+    const revision=Number(rawRevision);
+    if(!["day","night"].includes(key)||!Number.isSafeInteger(revision)||revision<1)return new Response("Invalid scene reference",{status:400});
+    let image=await this.ctx.storage.get("globalSetting:villageSceneImage:"+revision+":"+key);
+    // Read old stored scenes without changing existing user data.
+    if(!image){
+      const current=await this.ctx.storage.get("globalSetting:villageScene");
+      const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+      const legacy=[current,...history].find(row=>Number(row?.revision)===revision&&validImageDataUrl(row?.[key]));
+      image=legacy?.[key];
+    }
+    return gmwwStoredArtworkResponse(image);
   }
   async sceneSettingsPut(body){
-    const isImage=v=>v===null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
+    const isImage=v=>v==null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
     if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
-    const previous=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0,day:null,night:null};
-    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
-    const next={revision:previous.revision+1,day:body.day??previous.day,night:body.night??previous.night,updatedAt:new Date().toISOString()};
+    const previousRaw=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
+    const historyRaw=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    const previous=await this.sceneNormalizeRecord(previousRaw);
+    const history=await Promise.all(historyRaw.map(row=>this.sceneNormalizeRecord(row)));
+    const revision=previous.revision+1;
+    const next={...previous,revision,updatedAt:new Date().toISOString()};
+    for(const key of ["day","night"]){
+      if(body[key]){
+        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,body[key]);
+        next[key+"Revision"]=revision;
+      }
+    }
     await this.ctx.storage.put("globalSetting:villageSceneHistory",[previous,...history].slice(0,5));
     await this.ctx.storage.put("globalSetting:villageScene",next);
-    return j({ok:true,scene:next});
+    return j({ok:true,scene:this.scenePublicRecord(next)});
   }
-  async sceneSettingsRollback(body){
-    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
-    if(!history.length)return j({ok:false,error:"NO_PREVIOUS_SCENE"},409);
-    const current=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
-    const previous=history[0],next={...previous,revision:current.revision+1,updatedAt:new Date().toISOString()};
+  async sceneSettingsRollback(){
+    const historyRaw=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    if(!historyRaw.length)return j({ok:false,error:"NO_PREVIOUS_SCENE"},409);
+    const current=await this.sceneNormalizeRecord((await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0});
+    const history=await Promise.all(historyRaw.map(row=>this.sceneNormalizeRecord(row)));
+    const next={...history[0],revision:current.revision+1,updatedAt:new Date().toISOString()};
     await this.ctx.storage.put("globalSetting:villageScene",next);
     await this.ctx.storage.put("globalSetting:villageSceneHistory",[current,...history.slice(1)].slice(0,5));
-    return j({ok:true,scene:next});
+    return j({ok:true,scene:this.scenePublicRecord(next)});
   }
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
@@ -2487,6 +2535,11 @@ export default {async fetch(request,env){
     try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true}'}))}catch(_){}
   }
   if(url.pathname==="/api/village-scene"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/village-scene");
+  const sceneImagePath=url.pathname.match(/^\/api\/village-scene\/image\/(day|night)$/);
+  if(sceneImagePath&&request.method==="GET"){
+    const revision=url.searchParams.get("revision")||"";
+    return memberStore(env).fetch("https://member.internal/global-settings/village-scene/image/"+sceneImagePath[1]+"?revision="+encodeURIComponent(revision));
+  }
   if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene",{method:"PUT",headers:{"content-type":"application/json"},body:request.body}));
