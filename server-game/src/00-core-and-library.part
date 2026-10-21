@@ -485,6 +485,9 @@ function applyV210Rules(s){
     {id:'audio_system_confirm',name:'Xác nhận',sourceKey:'SYSTEM:CONFIRM_TARGET',fileName:'gmww-confirm.m4a',verifiedBinary:true},
     {id:'audio_system_countdown',name:'Đếm ngược',sourceKey:'SYSTEM:DAY_COUNTDOWN_30',fileName:'gmww-countdown-30.m4a',verifiedBinary:true},
     {id:'audio_system_day_wakeup',name:'Làng ơi dậy đi',targetId:'audio_system_day_wakeup',fileName:'',verifiedBinary:false},
+    {id:'audio_system_gallows_vote_result',name:'Lên Giàn · Công bố số phiếu',targetId:'audio_system_gallows_vote_result',fileName:'',verifiedBinary:false},
+    {id:'audio_system_gallows_result_dead',name:'Lên Giàn · Kết quả Giết',targetId:'audio_system_gallows_result_dead',fileName:'',verifiedBinary:false},
+    {id:'audio_system_gallows_result_saved',name:'Lên Giàn · Kết quả Cứu',targetId:'audio_system_gallows_result_saved',fileName:'',verifiedBinary:false},
     // Morning announcement segments: uploaded clips are preserved during subsequent OTAs.
     {id:'audio_system_morning_expelled',name:'Đêm qua người chơi này đã bị đuổi khỏi làng',targetId:'audio_system_morning_expelled',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_marked',name:'Đêm qua người chơi này đã bị đánh dấu',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
