@@ -3701,7 +3701,9 @@ function battleShowResultPopup(title,message,scanOnly=false){
 }
 /* Morning notices are derived only from committed interactions for this match and night.
    They must never be synthesized from a selected target or a private role card. */
-function battleMorningRows(night=Math.max(1,Number(playSceneState.night)||1),timeOfDay='night'){
+function battleMorningRows(){
+  const night=arguments.length?Math.max(1,Number(arguments[0])||1):Math.max(1,Number(playSceneState.night)||1),
+    timeOfDay=arguments[1]||'night';
   const match=String(playSceneRuntime.room?.matchId||'');
   const entries=Array.isArray(playSceneRuntime.villageHistory)?playSceneRuntime.villageHistory:
     Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
@@ -3715,7 +3717,7 @@ function battleMorningRows(night=Math.max(1,Number(playSceneState.night)||1),tim
   for(const entry of entries){
     if(!entry||Number(entry.night)!==night||
        (entry.matchId&&String(entry.matchId)!==match)||
-       (entry.effectActive===false&&/UNDO|RESTORE|REVERT/i.test(String(entry.expiredReason||''))))continue;
+       (entry.effectActive===false&&(night===Math.max(1,Number(playSceneState.night)||1)||/UNDO|RESTORE|REVERT/i.test(String(entry.expiredReason||'')))))continue;
     const isDay=entry.source==='gallows'||['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
     if(isDay!==(timeOfDay==='day'))continue;
     const type=String(entry.type||''),key=type==='status'?String(entry.statusId||'status'):type;
@@ -3765,7 +3767,7 @@ function battleMorningShow(){
     historyRows=Array.from({length:currentNight},(_,i)=>({
       night:i+1,nightRows:battleMorningRows(i+1,'night'),dayRows:battleMorningRows(i+1,'day')
     })),
-    signature=key+':'+JSON.stringify(historyRows);
+    signature=key+':'+JSON.stringify(rows)+':'+JSON.stringify(historyRows);
   if(battleState.morningDayKey!==key){
     battleState.morningDayKey=key;battleState.morningOpen=true;battleState.morningSig='';
   }
