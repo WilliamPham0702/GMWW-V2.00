@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.169';
+const VERSION='3.170';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2731,6 +2731,28 @@ function initDemoPanel(){
   if(playSceneRuntime.room?.demo===true&&demoPanelState.roomCode!==String(playSceneState.roomCode)){demoPanelState.roomCode=String(playSceneState.roomCode);demoPanelTouch()}
 }
 
+function demoTurnDescription(){
+  const phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1),rt=playSceneRuntime.nightRuntime;
+  if(phase==='night')return 'Đêm '+night+' · '+(rt?.completed?'Hết lượt đêm':'Lượt '+(Math.max(0,Number(rt?.cursor)||0)+1)+'/'+(rt?.queue?.length||1)+' · '+String(battleTurn()?.label||'Đang đồng bộ'));
+  const stages={ready:'Thảo luận',nominating:'Đề cử',selecting:'Chọn người lên giàn',voting:'Bỏ phiếu',closed:'Chốt phiếu',resolved:'Kết quả Lên Giàn'};
+  return 'Ngày '+night+' · '+(stages[playSceneRuntime.gallows?.stage||'ready']||'Lên Giàn');
+}
+function demoObserve(action,actorId='',targetIds=[],status='accepted'){
+  const members=playLiveMembers(),name=id=>members.find(m=>m.loginId===id)?.displayName||id;
+  demoRunner.lastEvent={matchId:String(playSceneRuntime.room?.matchId||''),turn:demoTurnDescription(),action:String(action),actor:name(actorId),targets:targetIds.map(name),status};
+  demoRenderObserver();
+}
+function demoRenderObserver(){
+  const panel=document.getElementById('battleDemoObserver');if(!panel)return;
+  panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
+  if(panel.hidden)return;
+  const set=(id,text)=>{const node=document.getElementById(id);if(node)node.textContent=text},event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
+  set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
+  set('battleDemoEventTurn',event?'Hành động · '+event.turn:'');
+  const statuses={pending:'Đang gửi',accepted:'Đã thực hiện',skipped:'Bỏ qua',uncertain:'Chưa xác nhận'};
+  set('battleDemoEvent',event?(statuses[event.status]||'Đã thực hiện')+' · '+[event.actor,event.action].filter(Boolean).join(' · ')+(event.targets.length?' → '+event.targets.join(', '):''): 'Chưa có hành động trong ván này.');
+  set('battleDemoObserverError',demoRunner.error||'');
+}
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
   playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';
@@ -3472,7 +3494,7 @@ async function demoStop(reason='manual'){
   renderPlayBattle();
 }
 function demoRenderControls(){
-  initDemoPanel();
+  initDemoPanel();demoRenderObserver();
   const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
   if(panel)panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(status){status.textContent=demoRunner.error||demoRunner.status;status.classList.toggle('is-error',!!demoRunner.error)}
@@ -3490,7 +3512,7 @@ async function demoToggle(){
   if(playSceneState.step!=='battle'){playFlashError('Hãy setup và vào trận trước khi chạy Demo.');return}
   const sameMatch=demoRunner.paused&&demoRunner.roomCode===String(playSceneState.roomCode)&&
     demoRunner.matchId===String(playSceneRuntime.room?.matchId||'');
-  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0}
+  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0;demoRunner.lastEvent=null}
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
   demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
@@ -3541,11 +3563,13 @@ async function demoActionNight(t,epoch){
           ...(transfer?{direction,message:'Demo dịch vết cắn '+direction}:{}),
           ...(action.actionId==='action_assassin_mark'?{assassinChoice:demoPick(['👍','👎'])}:{})
         };
+        demoObserve(action.name,actorId,seer?chosen:transfer?[]:chosen,'pending');
         demoRunner.pending.add(signature);
         try{
           const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
           if(result?.ok!==true)throw Error(result?.message||result?.error||'Hành động không được server chấp nhận.');
           demoRunner.pending.delete(signature);demoRunner.completed.add(signature);
+          demoObserve(action.name+(transfer?' · '+({left:'Trái',right:'Phải',none:'Không dịch'}[direction]||''):''),actorId,seer?chosen:transfer?[]:chosen);
           if(result.revelation?.message&&demoRunner.running&&epoch===demoRunner.epoch)
             battleShowResultPopup('',String(result.revelation.message),true);
         }catch(err){throw Error('Xác nhận hành động không chắc chắn: '+String(err?.message||err))}
@@ -3553,6 +3577,7 @@ async function demoActionNight(t,epoch){
     }
   }
   if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+  if(!demoRunner.completed.has(signature))demoObserve('Không thực hiện hành động', '', [], 'skipped');
   // A successful receipt is never repeated; the standard turn endpoint advances.
   const response=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',expectedTurnId:t.id,source:'demo'})});
   if(response?.ok!==true)throw Error(response?.message||response?.error||'Không thể chuyển lượt.');
@@ -3572,12 +3597,14 @@ async function demoActionDay(epoch){
     }
     demoRunner.dayDone.add(cycle+':'+a.id);
     if(chosen.length===a.targetCount&&Math.random()<0.85){
+      demoObserve(a.name,actorId,chosen,'pending');
       const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
         matchId:room.matchId,cycleKey:room.cycleKey,actorId,
         roleId:a.roleId||'',artifactId:a.artifactId||'',actionId:a.actionId,targetIds:chosen,
         clientEventId:'demo-'+(globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2))
       })});
       if(result?.ok!==true)throw Error('Hành động ngày không hợp lệ: '+(result?.message||result?.error||'Server từ chối.'));
+      demoObserve(a.name,actorId,chosen);
     }
     return;
   }
@@ -3587,15 +3614,18 @@ async function demoActionDay(epoch){
   const post=async(command,extra={})=>{
     const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,source:'demo',...extra})});
     if(result?.ok!==true)throw Error(result?.message||result?.error||'Lên Giàn không hợp lệ.');
+    demoObserve(({open:'Mở đề cử',begin:'Lên Giàn',resolve:'Kết quả · '+(extra.outcome==='dead'?'Chết':'Sống')})[command]||command,'',extra.targetId?[extra.targetId]:command==='resolve'&&g.candidateId?[g.candidateId]:[]);
   };
   if(!eligible.length)throw Error('Không còn thành viên đủ điều kiện để bỏ phiếu; GM cần kiểm tra kết quả thắng.');
   if(stage==='ready'){await post('open');return}
   if(stage==='nominating'&&now<Number(g.nominationDeadlineAt||0)){
     const awaiting=eligible.filter(id=>!Object.hasOwn(g.nominations||{},id));
     if(awaiting.length){
+      const actor=demoPick(awaiting),target=demoPick(eligible);demoObserve('Đề cử',actor,[target],'pending');
       const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('nominate',{
-        loginId:demoPick(awaiting),targetId:demoPick(eligible),matchId:room.matchId,cycleKey:room.cycleKey}))});
+        loginId:actor,targetId:target,matchId:room.matchId,cycleKey:room.cycleKey}))});
       if(result?.ok!==true)throw Error(result?.message||result?.error||'Đề cử không thành công.');
+      demoObserve('Đề cử',actor,[target]);
     }
     return;
   }
@@ -3607,9 +3637,11 @@ async function demoActionDay(epoch){
   if(stage==='voting'&&now<Number(g.deadlineAt||0)){
     const awaiting=eligible.filter(id=>id!==g.candidateId&&!Object.hasOwn(g.votes||{},id)&&!(g.blocked||[]).includes(id));
     if(awaiting.length){
+      const actor=demoPick(awaiting),choice=demoPick(['👍','👎']);demoObserve('Bỏ phiếu '+choice,actor,[g.candidateId],'pending');
       const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('vote',{
-        loginId:demoPick(awaiting),choice:demoPick(['👍','👎']),matchId:room.matchId,cycleKey:room.cycleKey}))});
+        loginId:actor,choice,matchId:room.matchId,cycleKey:room.cycleKey}))});
       if(result?.ok!==true)throw Error(result?.message||result?.error||'Bỏ phiếu không thành công.');
+      demoObserve('Bỏ phiếu '+choice,actor,[g.candidateId]);
     }
     return;
   }
@@ -3659,6 +3691,7 @@ async function demoStep(epoch){
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
     const msg=String(error?.message||error);
     demoRunner.error='Đã dừng: '+msg;
+    if(demoRunner.lastEvent?.status==='pending')demoRunner.lastEvent.status='uncertain';
     demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
     // Keep an uncertain request blocked; do not blindly retry with a new receipt ID.
     if(!/DEMO_LEASE_OWNED|DEMO_LEASE_EXPIRED/.test(msg))
@@ -6155,13 +6188,13 @@ async function confirmPlayCompletion(){
 }
 async function playCompletionNext(choice){
   const s=playCompletionState;if(!s.completed||s.busy||s.roomCode!==String(playSceneState.roomCode))return;
-  if(!['replay','game','room'].includes(choice))return;
+  if(!['replay','game','room','exit'].includes(choice))return;
   s.busy=true;renderPlayCompletion();
   try{
-    if(choice==='room'){
+    if(choice==='room'||choice==='exit'){
       disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
-      closePlayCompletionSheet();savePlayScene();renderPlayScene();await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
+      closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
     }
     const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({postGame:true,preserveParticipants:true,expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),transactionId:'next-'+s.matchId})});
     if(data?.ok!==true||data.preserveParticipants!==true)throw Error('Server chưa xác nhận chuẩn bị ván tiếp theo.');
@@ -6450,9 +6483,9 @@ async function enterPlayImmersive(){
   try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
   if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
 }
-function exitPlayImmersive(){
+function exitPlayImmersive(options){
   if(playSceneRuntime.busy)return;
-  if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
+  if(options?.completed!==true&&!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
   if(typeof demoStop==='function')void demoStop('exit_play');
   document.body.classList.remove('play-immersive');
   if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}

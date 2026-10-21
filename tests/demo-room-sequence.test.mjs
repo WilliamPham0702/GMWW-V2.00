@@ -25,9 +25,9 @@ test('Demo is one room card inside the room list, never a separate fake member e
 test('Demo night reads authoritative turn, picks a legal other-player target, confirms then advances once',async()=>{
   const action={id:'role:wolf:bite',actionId:'action_wolf_bite',name:'Cắn',type:'effect_notice',
     effectIds:[],actorIds:['alice'],targetCount:1,noSelf:true};
-  const calls=[],runner={running:true,epoch:2,pending:new Set(),completed:new Set()};
+  const observed=[],calls=[],runner={running:true,epoch:2,pending:new Set(),completed:new Set()};
   const ctx={
-    demoRunner:runner,
+    demoRunner:runner,demoObserve:(...args)=>observed.push(args),
     demoPick:items=>items[0],
     battleActions:()=>[action],battleRules:()=>({targetAllowed:()=>true}),
     playLiveMembers:()=>[{loginId:'alice'},{loginId:'bob'}],
@@ -47,6 +47,7 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
   assert.equal(calls[0].body.turnId,'role:role_wolf');
   assert.equal(calls[1].body.expectedTurnId,'role:role_wolf');
   assert.equal(runner.pending.size,0);
+  assert.equal(observed[0][0],'Cắn');assert.equal(observed[0][1],calls[0].body.actorId);assert.deepEqual([...observed[0][2]],calls[0].body.targetIds);assert.equal(observed[0][3],'pending');assert.equal(observed[1][3],undefined);
 });
 
 test('Demo uses the actual server cycles, ordered role/Artifact queue, and day ballot commands',()=>{

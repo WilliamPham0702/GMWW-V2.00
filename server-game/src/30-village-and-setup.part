@@ -567,6 +567,28 @@ function initDemoPanel(){
   if(playSceneRuntime.room?.demo===true&&demoPanelState.roomCode!==String(playSceneState.roomCode)){demoPanelState.roomCode=String(playSceneState.roomCode);demoPanelTouch()}
 }
 
+function demoTurnDescription(){
+  const phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1),rt=playSceneRuntime.nightRuntime;
+  if(phase==='night')return 'Đêm '+night+' · '+(rt?.completed?'Hết lượt đêm':'Lượt '+(Math.max(0,Number(rt?.cursor)||0)+1)+'/'+(rt?.queue?.length||1)+' · '+String(battleTurn()?.label||'Đang đồng bộ'));
+  const stages={ready:'Thảo luận',nominating:'Đề cử',selecting:'Chọn người lên giàn',voting:'Bỏ phiếu',closed:'Chốt phiếu',resolved:'Kết quả Lên Giàn'};
+  return 'Ngày '+night+' · '+(stages[playSceneRuntime.gallows?.stage||'ready']||'Lên Giàn');
+}
+function demoObserve(action,actorId='',targetIds=[],status='accepted'){
+  const members=playLiveMembers(),name=id=>members.find(m=>m.loginId===id)?.displayName||id;
+  demoRunner.lastEvent={matchId:String(playSceneRuntime.room?.matchId||''),turn:demoTurnDescription(),action:String(action),actor:name(actorId),targets:targetIds.map(name),status};
+  demoRenderObserver();
+}
+function demoRenderObserver(){
+  const panel=document.getElementById('battleDemoObserver');if(!panel)return;
+  panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
+  if(panel.hidden)return;
+  const set=(id,text)=>{const node=document.getElementById(id);if(node)node.textContent=text},event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
+  set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
+  set('battleDemoEventTurn',event?'Hành động · '+event.turn:'');
+  const statuses={pending:'Đang gửi',accepted:'Đã thực hiện',skipped:'Bỏ qua',uncertain:'Chưa xác nhận'};
+  set('battleDemoEvent',event?(statuses[event.status]||'Đã thực hiện')+' · '+[event.actor,event.action].filter(Boolean).join(' · ')+(event.targets.length?' → '+event.targets.join(', '):''): 'Chưa có hành động trong ván này.');
+  set('battleDemoObserverError',demoRunner.error||'');
+}
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
   playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';

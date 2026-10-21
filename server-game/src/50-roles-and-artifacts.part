@@ -523,13 +523,13 @@ async function confirmPlayCompletion(){
 }
 async function playCompletionNext(choice){
   const s=playCompletionState;if(!s.completed||s.busy||s.roomCode!==String(playSceneState.roomCode))return;
-  if(!['replay','game','room'].includes(choice))return;
+  if(!['replay','game','room','exit'].includes(choice))return;
   s.busy=true;renderPlayCompletion();
   try{
-    if(choice==='room'){
+    if(choice==='room'||choice==='exit'){
       disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
-      closePlayCompletionSheet();savePlayScene();renderPlayScene();await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
+      closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
     }
     const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({postGame:true,preserveParticipants:true,expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),transactionId:'next-'+s.matchId})});
     if(data?.ok!==true||data.preserveParticipants!==true)throw Error('Server chưa xác nhận chuẩn bị ván tiếp theo.');
@@ -818,9 +818,9 @@ async function enterPlayImmersive(){
   try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
   if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
 }
-function exitPlayImmersive(){
+function exitPlayImmersive(options){
   if(playSceneRuntime.busy)return;
-  if(!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
+  if(options?.completed!==true&&!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
   if(typeof demoStop==='function')void demoStop('exit_play');
   document.body.classList.remove('play-immersive');
   if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}

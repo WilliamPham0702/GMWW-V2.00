@@ -6417,3 +6417,22 @@ body.play-immersive #start #playShell[data-step="battle"]
 .play-completion-primary,#playCompletionChoices button{width:100%;min-height:46px;border-radius:12px;margin:6px 0;font-weight:800}
 #playCompletionChoices[hidden]{display:none!important}
 #playCompletionConfirm[hidden],#playCompletionAbort[hidden]{display:none!important}
+
+/* Demo observation remains readable when the compact Auto control folds. */
+#battleDemoObserver{position:fixed;z-index:255;top:calc(env(safe-area-inset-top) + 132px);left:12px;width:min(390px,calc(100vw - 24px));padding:10px 12px;border-radius:14px;background:var(--gmww-stage-glass-v330);border:1px solid var(--gmww-stage-glass-border-v330);box-shadow:var(--gmww-stage-glass-shadow-v330);backdrop-filter:blur(13px) saturate(145%);-webkit-backdrop-filter:blur(13px) saturate(145%);color:#effcff;pointer-events:none;overflow-wrap:anywhere;text-align:left}
+#battleDemoObserver[hidden]{display:none!important}
+#battleDemoObserver strong{display:block;font-size:12px;line-height:1.5;color:#ffe0a0}
+#battleDemoObserver small{display:block;margin-top:5px;font-size:10px;color:#b7e7ed}
+#battleDemoObserver p{font-size:12px;line-height:1.5;margin:4px 0 0}
+#battleDemoObserver #battleDemoObserverError{color:#ffaca0}
+#battleDemoObserver p:empty,#battleDemoObserver small:empty{display:none}
+#playMatchCompletionSheet .play-completion-card{background:var(--gmww-stage-glass-v330)!important;border:1px solid var(--gmww-stage-glass-border-v330)!important;box-shadow:var(--gmww-stage-glass-shadow-v330)!important;backdrop-filter:blur(13px) saturate(145%);-webkit-backdrop-filter:blur(13px) saturate(145%);color:#effcff;padding:16px;text-align:left}
+#playMatchCompletionSheet .sheet-head h3{font-size:17px;color:#ffe0a0}
+#playCompletionMessage{font-size:13px;line-height:1.5;color:#d1edf0}
+#playMatchCompletionSheet .play-completion-winners button,#playMatchCompletionSheet #playCompletionChoices button,#playCompletionConfirm,#playCompletionAbort{min-height:44px;background:rgba(5,37,54,.65);color:#effcff;border:1px solid rgba(188,240,248,.43);border-radius:12px;padding:9px;font-size:12px;line-height:1.4;font-weight:800}
+#playMatchCompletionSheet .play-completion-winners button[aria-pressed="true"],#playCompletionConfirm{background:rgba(9,117,113,.75);border-color:#e5ce91;color:#fff1c3}
+#playCompletionChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 0}
+#playMatchCompletionSheet #playCompletionChoices button{margin:0;width:100%}
+#playMatchCompletionSheet [data-completion-next="exit"]{border-color:rgba(255,179,158,.65)!important;color:#ffd5c8!important}
+#playCompletionAbort{display:block;width:100%;margin-top:10px;font-size:11px;color:#ffd5c8}
+#playMatchCompletionSheet button:disabled{opacity:.5;cursor:wait}
