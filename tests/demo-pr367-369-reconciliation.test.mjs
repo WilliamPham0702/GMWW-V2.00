@@ -23,7 +23,7 @@ test('Reconciled room stays private and invisible to normal Player Web',()=>{
   assert.match(worker,/DEMO_ROOM_GM_ONLY/);
   assert.match(worker,/if\(data\?\.room\?\.demo===true\)\{await syncRoomDirectory/);
   assert.match(html,/id="playCreatedRoomList"/);
-  assert.match(html,/<option value="demo">/);
+  assert.match(html,/<button id="playRoomModeToggle"/);
   assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
 });
 
