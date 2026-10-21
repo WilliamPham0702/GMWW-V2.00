@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.176';
+const VERSION='3.177';
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
@@ -2715,7 +2715,7 @@ function renderPlayRealtimeHeader(){
 }
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}
 const PLAY_ROOM_REGISTRY_KEY='gmww_v306_room_registry';
-const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0,modeTouched:false};
+const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0,modeTouched:false,pendingMode:'',modeSaving:false};
 const PLAY_ROOM_MODE_CYCLE=['offline','online','demo'];
 function nextPlayRoomMode(current,hasSelected=true){
   if(!hasSelected)return 'offline'; // First touch explicitly selects Offline.
@@ -2846,7 +2846,7 @@ function demoRenderVisual(){
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
-  playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';playRoomUiState.modeTouched=!isNew;
+  playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';playRoomUiState.modeTouched=!isNew;playRoomUiState.pendingMode='';
   if(isNew){
     playRoomUiState.selectedCode='';playSceneState.seatCount=24;playSceneState.roomMode='offline';playSceneState.roomEnabled=true;savePlayScene();
     const n=document.getElementById('playCreateRoomName');if(n)n.value='';
@@ -2878,7 +2878,7 @@ function renderPlayCreateRoomSheet(){
   if(name&&live&&playRoomUiState.editorMode!=='new'&&document.activeElement!==name)name.value=String(room.roomName||name.value||'Làng Asahi');
   if(modeToggle){
     const roomReady=live&&!!playRoomUiState.selectedCode;
-    const mode=room.demo===true?'demo':playSceneState.roomMode;
+    const mode=playRoomUiState.pendingMode||(room.demo===true?'demo':playSceneState.roomMode);
     const selected=!roomReady||!playRoomUiState.modeTouched?'choose':mode;
     modeToggle.dataset.mode=selected;
     modeToggle.disabled=!roomReady||!!playSceneRuntime.busy||['running','started','game','playing'].includes(String(room.phase||'lobby').toLowerCase());
@@ -3239,16 +3239,45 @@ async function renderPlayCards(){
   if(!useArtifact){roleCard?.classList.add('is-front');artifactCard?.classList.remove('is-front')}
   if(artifactImg&&useArtifact){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
 }
+// Optimistic UI: taps update on the next paint, while a single sequential writer
+// reconciles the most recent selection with the authoritative room on the server.
+async function flushPlayRoomMode(){
+  if(playRoomUiState.modeSaving)return;
+  playRoomUiState.modeSaving=true;
+  try{
+    while(playRoomUiState.pendingMode){
+      if(!isLivePlayRoom()||!playRoomUiState.selectedCode)break;
+      const target=playRoomUiState.pendingMode,roomCode=String(playSceneState.roomCode);
+      const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};
+      const data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)});
+      if(roomCode!==String(playSceneState.roomCode))break;
+      playSceneRuntime.room=data.room||playSceneRuntime.room;
+      playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
+      playSceneState.roomMode=playSceneRuntime.room?.demo===true?'demo':playSceneRuntime.room?.roomMode==='offline'?'offline':'online';
+      savePlayScene();rememberPlayRoom(roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
+      if(playRoomUiState.pendingMode===target)playRoomUiState.pendingMode='';
+    }
+  }catch(err){
+    // Do not keep an optimistic DEMO badge if isolation checks reject the transition.
+    playRoomUiState.pendingMode='';
+    playFlashError(err?.message||'Server chưa xác nhận chế độ phòng.');
+  }finally{
+    playRoomUiState.modeSaving=false;
+    renderPlayCreateRoomSheet();
+    // A tap received while reconciling should never be discarded.
+    if(playRoomUiState.pendingMode)void flushPlayRoomMode();
+  }
+}
 function bindPlayRoomModeButtons(){
   const button=document.getElementById('playRoomModeToggle');if(!button||button.dataset.modeBound==='1')return;
   button.dataset.modeBound='1';
-  button.addEventListener('click',async()=>{
+  button.addEventListener('click',()=>{
     if(playSceneRuntime.busy||!isLivePlayRoom()||!playRoomUiState.selectedCode)return;
-    const current=playSceneRuntime.room?.demo===true?'demo':playSceneState.roomMode;
-    const next=nextPlayRoomMode(current,playRoomUiState.modeTouched);
-    const patch={demo:next==='demo',roomMode:next==='online'?'online':'offline'};
-    const saved=await playUpdateRoomSettings(patch);
-    if(saved){playRoomUiState.modeTouched=true;renderPlayCreateRoomSheet()}
+    const current=playRoomUiState.pendingMode||(playSceneRuntime.room?.demo===true?'demo':playSceneState.roomMode);
+    playRoomUiState.pendingMode=nextPlayRoomMode(current,playRoomUiState.modeTouched);
+    playRoomUiState.modeTouched=true;
+    renderPlayCreateRoomSheet(); // immediate local response, no network wait
+    void flushPlayRoomMode();
   });
 }
 function bindPlaySeatMoveButtons(){document.querySelectorAll('[data-play-seat-move]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playSeatMove==='walk'?'walk':'instant';playSceneState.seatMoveMode=mode;savePlayScene();if(isLivePlayRoom())await playUpdateRoomSettings({seatMoveMode:mode});else renderPlayScene()})}
@@ -3655,10 +3684,11 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ DEMO':demoRunner.paused?'▶ TIẾP TỤC':'▶ DEMO';button.title=demoRunner.error||demoRunner.status;button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  if(button){button.hidden=!enabled;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||'DEMO';button.setAttribute('aria-label',demoRunner.running?'Đang chạy DEMO, chạm để tạm dừng':'Đã tạm dừng DEMO, chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=demoRunner.running?'↻':'Ⅱ';
   if(wrap)wrap.hidden=!enabled;
   if(auto)auto.hidden=false;
-  if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
+  if(field){field.dataset.speed=String(demoRunner.speed);field.textContent='×'+String(demoRunner.speed);field.setAttribute('aria-label','Tốc độ DEMO: '+demoRunner.speed+' lần. Chạm để thay đổi.');}
   const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
   // Start once when a DEMO match enters battle; never override the GM's Pause.
   if(playSceneRuntime.demoControl?.engine!=='server'&&enabled&&playSceneState.step==='battle'&&playSceneRuntime.room?.phase==='running'&&
@@ -3678,7 +3708,7 @@ async function demoToggle(){
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
   demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
-  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||1;
+  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.dataset.speed)||1;
   try{
     if(playSceneRuntime.room?.autoGM!==false){const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.autoGM=false}
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'start',speed:demoRunner.speed})});
@@ -4363,6 +4393,30 @@ function battleBindResultPopup(){
     handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
   }
 }
+/* Magnetic docking: align a dragged panel with the visible top/bottom GM menu.
+   Pure geometry from current layout; release farther than 32px detaches again. */
+function gmwwMenuSnap(rect,threshold=32){
+  if(!rect||!Number.isFinite(rect.top))return null;
+  const anchors=['playSetupStrip','playBattleTop','gmTopMenu','battleBottomControls'];
+  let best=null;
+  for(const id of anchors){
+    const bar=document.getElementById(id);
+    if(!bar||bar.hidden||!bar.getClientRects?.().length)continue;
+    const menu=bar.getBoundingClientRect();
+    if(menu.width<90||menu.height<20||menu.bottom<=0||menu.top>=innerHeight)continue;
+    const centerDelta=Math.abs((rect.left+rect.right-menu.left-menu.right)/2);
+    if(centerDelta>Math.max(menu.width,rect.width)*.55)continue;
+    const above=(menu.top+menu.bottom)/2>innerHeight/2;
+    const gap=above?Math.abs(rect.bottom-(menu.top-5)):Math.abs(rect.top-(menu.bottom+5));
+    if(gap>threshold||best&&best.distance<=gap)continue;
+    const width=Math.min(menu.width,innerWidth-16);
+    const left=Math.max(8,Math.min(innerWidth-width-8,menu.left+(menu.width-width)/2));
+    const rawTop=above?menu.top-5-rect.height:menu.bottom+5;
+    const top=Math.max(8,Math.min(Math.max(8,innerHeight-rect.height-8),rawTop));
+    best={left,top,width,distance:gap,edge:above?'bottom':'top'};
+  }
+  return best;
+}
 /* Battle overlays share viewport-clamped title dragging, without interfering with action buttons. */
 function battleBindAuxiliaryDrag(panelId,handleSelector){
   const panel=document.getElementById(panelId),handle=panel?.querySelector(handleSelector);
@@ -4380,9 +4434,28 @@ function battleBindAuxiliaryDrag(panelId,handleSelector){
     if(!drag||e.pointerId!==drag.id)return;
     const p=battleTargetClampPosition(panel.offsetWidth,panel.offsetHeight,drag.left+e.clientX-drag.startX,drag.top+e.clientY-drag.startY);
     for(const [name,value] of Object.entries({left:p.left+'px',top:p.top+'px',right:'auto',bottom:'auto',transform:'none'}))panel.style.setProperty(name,value,'important');
+    const preview=gmwwMenuSnap(panel.getBoundingClientRect());
+    panel.classList.toggle('gmww-dock-near',!!preview);
+    if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>12)panel.classList.remove('gmww-dock-snapped');
     e.preventDefault();
   });
-  const stop=e=>{if(!drag||e.pointerId!==drag.id)return;drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}};
+  const stop=e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const snap=e.type==='pointerup'?gmwwMenuSnap(panel.getBoundingClientRect()):null;
+    panel.classList.remove('gmww-dock-near');
+    if(snap){
+      const p=battleTargetClampPosition(snap.width,panel.offsetHeight,snap.left,snap.top);
+      panel.style.setProperty('--gmww-dock-width',snap.width+'px');
+      panel.style.setProperty('left',p.left+'px','important');
+      panel.style.setProperty('top',p.top+'px','important');
+      panel.style.setProperty('right','auto','important');
+      panel.style.setProperty('bottom','auto','important');
+      panel.style.setProperty('transform','none','important');
+      panel.classList.add('gmww-dock-snapped');
+      panel.dataset.dockEdge=snap.edge;
+    }else{panel.classList.remove('gmww-dock-snapped');panel.style.removeProperty('--gmww-dock-width');delete panel.dataset.dockEdge}
+    drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}
+  };
   handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
   const keepVisible=()=>{
     if(panel.hidden||!panel.style.left)return;
@@ -5250,9 +5323,10 @@ function initBattleControls(){
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
   document.getElementById('playPlayerRing')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
   document.getElementById('battleDemoToggle')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();void demoToggle()});
-  document.getElementById('battleDemoSpeed')?.addEventListener('change',event=>{
-    const selected=Number(event.target.value);
-    if(![1,2,5,10].includes(selected))return;
+  document.getElementById('battleDemoSpeed')?.addEventListener('click',event=>{
+    const speeds=[1,2,5,10],current=Number(event.currentTarget.dataset.speed||demoRunner.speed||1);
+    const selected=speeds[(speeds.indexOf(current)+1)%speeds.length];
+    event.currentTarget.dataset.speed=String(selected);event.currentTarget.textContent='×'+selected;
     demoRunner.speed=selected;
     if(demoRunner.running)void playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'speed',speed:selected})})
       .then(data=>{playSceneRuntime.demoControl=data;demoApplyServerControl(data);renderPlayBattle()})
@@ -5676,6 +5750,7 @@ async function openPlayGameSheet(){
   if(!isLivePlayRoom()){await playCreateRoom();return}if(!playLiveMembers().length){setPlayStep('members');if(playSceneRuntime.room?.demo===true||playSceneState.roomMode==='offline')openPlayRosterSheet();return}
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='play';
   const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Chọn Ván Mẫu';const roomLabel=document.getElementById('playGameRoomLabel');if(roomLabel)roomLabel.textContent='Phòng '+playSceneState.roomCode+' • '+playLiveMembers().length+' Người Chơi';const save=document.getElementById('playGameSave');if(save)save.textContent='CHỌN VÁN';const del=document.getElementById('playGameDelete');if(del)del.hidden=true;
+  const back=document.getElementById('playGameTemplateBack');if(back)back.hidden=true;
   for(const detailId of ['playGameTimingDetails','playRoleTimingDetails']){const detail=document.getElementById(detailId);if(detail)detail.open=false}
   // Render the only template sheet AFTER hydration to avoid a flash of stale UI.
   sheet.classList.add('hidden');await loadPlayGameTemplates();
@@ -5690,10 +5765,12 @@ async function openPlayGameSheet(){
   sheet.classList.remove('hidden');
 }
 let playGameSheetOpenSeq=0;
+let playGameReturnToSelection=false;
 async function openLibraryGameTemplate(id=''){
   ++playGameSheetOpenSeq;
   playGameStatus('');
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
+  const back=document.getElementById('playGameTemplateBack');if(back)back.hidden=!playGameReturnToSelection;
   if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=10;
@@ -5806,7 +5883,10 @@ async function savePlayGame(){
     playSceneState.gameName=gameName;savePlayScene();
     playGameStatus('Đang đóng gói artwork Vai Trò; Artifact dùng kho chung của server…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
+    const resumeSelection=playGameReturnToSelection;
+    playGameReturnToSelection=false;
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
+    if(resumeSelection&&playSceneState.step==='game')await openPlayGameSheet();
   }catch(err){
     const raw=String(err?.message||'Không lưu được Ván Mẫu.');
     const stage=String(document.getElementById('playGameStatus')?.textContent||'Lưu Ván Mẫu');
@@ -6776,9 +6856,37 @@ function initDraggablePlaySheets(){
     const handle=card.querySelector('.sheet-head');if(!handle)return;
     handle.style.touchAction='none';handle.style.cursor='grab';
     let active=false,startX=0,startY=0,baseX=0,baseY=0,pid=null;
-    handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,select,textarea'))return;active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault()});
-    handle.addEventListener('pointermove',e=>{if(!active||e.pointerId!==pid)return;const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX)),y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';e.preventDefault()});
-    const end=e=>{if(!active||e.pointerId!==pid)return;active=false;handle.style.cursor='grab';try{handle.releasePointerCapture?.(pid)}catch{}};
+    handle.addEventListener('pointerdown',e=>{
+      if(e.target.closest('button,input,select,textarea')||(e.button!==0&&e.pointerType!=='touch'))return;
+      active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;
+      baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);
+      handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault();
+    });
+    handle.addEventListener('pointermove',e=>{
+      if(!active||e.pointerId!==pid)return;
+      const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);
+      const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX));
+      const y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));
+      card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';
+      card.classList.toggle('gmww-dock-near',!!gmwwMenuSnap(card.getBoundingClientRect()));
+      if(Math.hypot(e.clientX-startX,e.clientY-startY)>12)card.classList.remove('gmww-dock-snapped');
+      e.preventDefault();
+    });
+    const end=e=>{
+      if(!active||e.pointerId!==pid)return;
+      active=false;handle.style.cursor='grab';
+      const rect=card.getBoundingClientRect(),snap=e.type==='pointerup'?gmwwMenuSnap(rect):null;
+      card.classList.remove('gmww-dock-near');
+      if(snap){
+        const nx=Number(card.dataset.dragX||0)+snap.left-rect.left;
+        const ny=Number(card.dataset.dragY||0)+snap.top-rect.top;
+        card.dataset.dragX=nx;card.dataset.dragY=ny;
+        card.style.setProperty('--gmww-dock-width',snap.width+'px');
+        card.style.transform='translate('+nx+'px,'+ny+'px)';
+        card.classList.add('gmww-dock-snapped');card.dataset.dockEdge=snap.edge;
+      }else{card.classList.remove('gmww-dock-snapped');card.style.removeProperty('--gmww-dock-width');delete card.dataset.dockEdge}
+      try{handle.releasePointerCapture?.(pid)}catch{}
+    };
     handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
   });
 }
@@ -6855,6 +6963,8 @@ function initPlayScene(){
   document.getElementById('playSeatSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playSeatSheet'))closePlaySeatSheet()});
   document.getElementById('playGameClose')?.addEventListener('click',closePlayGameSheet);document.getElementById('playGameCancel')?.addEventListener('click',closePlayGameSheet);
   document.getElementById('playGameSave')?.addEventListener('click',savePlayGame);
+  document.getElementById('playGameTemplateAdd')?.addEventListener('click',()=>{playGameReturnToSelection=true;void openLibraryGameTemplate('')});
+  document.getElementById('playGameTemplateBack')?.addEventListener('click',()=>{playGameReturnToSelection=false;void openPlayGameSheet()});
   document.getElementById('playGameDelete')?.addEventListener('click',async()=>{
     const id=String(playSceneState.gameTemplateId||'');if(!id||document.querySelector('.play-game-sheet-card')?.dataset.mode!=='library')return;
     if(!confirm('Xóa Ván Mẫu đã lưu? Thao tác này không thể hoàn tác.'))return;
