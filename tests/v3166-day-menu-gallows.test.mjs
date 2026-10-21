@@ -61,12 +61,13 @@ test('GM all-impact daily notice, negative-first colors and hidden persistent ti
     {id:'positive',type:'protected',night:2,matchId:'match',loginId:'bob',effectActive:true},
     {id:'older',type:'saved',night:1,matchId:'match',loginId:'alice',effectActive:false,expiredReason:'CYCLE_FINISHED'},
     {id:'day',type:'dead',night:1,matchId:'match',loginId:'carol',source:'gallows',effectActive:true},
+    {id:'day-power',type:'frozen',night:1,matchId:'match',loginId:'bob',source:'day-action',effectActive:true},
     {id:'unrelated',type:'dead',night:2,matchId:'other',loginId:'bob'}
   ]},battleMember:id=>({displayName:id})};
   const f=vm.runInNewContext(app.slice(start,end)+';battleMorningRows',context);
   assert.deepEqual(Array.from(f(),x=>x.kind),['dead','protected']);
   assert.deepEqual(Array.from(f(1,'night'),x=>x.kind),['saved']);
-  assert.deepEqual(Array.from(f(1,'day'),x=>x.kind),['dead']);
+  assert.deepEqual(Array.from(f(1,'day'),x=>x.kind),['dead','frozen']);
   assert.match(html,/id="battleVillageHistory"/);
   assert.match(html,/<details id="battleVillageHistory">/);
   assert.match(css,/#battleMorningList p\.is-critical/);
