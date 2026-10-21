@@ -1009,7 +1009,8 @@ async function renderPlayCards(){
   if(artifactImg&&useArtifact){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
 }
 function bindPlayRoomModeButtons(){
-  const button=document.getElementById('playRoomModeToggle');if(!button)return;
+  const button=document.getElementById('playRoomModeToggle');if(!button||button.dataset.modeBound==='1')return;
+  button.dataset.modeBound='1';
   button.addEventListener('click',async()=>{
     if(playSceneRuntime.busy||!isLivePlayRoom()||!playRoomUiState.selectedCode)return;
     const current=playSceneRuntime.room?.demo===true?'demo':playSceneState.roomMode;
