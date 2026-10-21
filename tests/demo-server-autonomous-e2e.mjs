@@ -29,7 +29,7 @@ try{
   await wait(350);const s=await gm('');assert.equal(s.demoControl.error,'');
   for(const row of s.battleActionUsage||[])if(!actions.includes(row.actionId))actions.push(row.actionId);
   votes ||= Object.keys(s.gallows?.votes||{}).length>0;
-  if(s.winProposal){winner=true;assert.equal(s.room.phase,'running','GM still confirms completion');await wait(100);const stopped=await gm('');assert.equal(stopped.demoControl.running,false);break}
+  if(s.winProposal){winner=true;assert.equal(s.room.phase,'running','GM still confirms completion');let stopped=s,untilStop=Date.now()+5000;while(stopped.demoControl.running&&Date.now()<untilStop){await wait(150);stopped=await gm('')}assert.equal(stopped.demoControl.running,false,'server must stop DEMO within 5 seconds after confirmed winner');break}
  }
  assert.ok(actions.includes('action_wolf_bite'),'wolf bite via real handler');assert.ok(actions.includes('action_seer'),'mandatory seer');assert.ok(actions.includes('action_protect'),'mandatory guard');assert.ok(actions.includes('action_witch_kill'),'mandatory Witch kill');assert.ok(winner,'autonomous game reaches winner');
  const end=await gm('/end',{matchId,winnerFaction:(await gm('')).winProposal.winnerFaction});assert.equal(end.ok,true);

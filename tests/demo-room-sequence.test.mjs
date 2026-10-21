@@ -52,13 +52,13 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
 
 test('Demo uses the actual server cycles, ordered role/Artifact queue, and day ballot commands',()=>{
   assert.match(battle,/battleTurn\(\)/);
-  assert.match(battle,/await playSetServerCycle\('day',/);
-  assert.match(battle,/await playSetServerCycle\('night',/);
+  assert.match(worker,/runServerDemo/);
+  assert.match(worker,/nextServerDemoDue/);
   assert.match(battle,/demoActionNight\(t,epoch\)/);
   assert.match(battle,/demoActionDay\(epoch\)/);
   for(const phase of ['ready','nominating','selecting','voting','closed','resolved'])assert.ok(battle.includes("stage==='"+phase+"'"));
   for(const endpoint of ['/battle-action','/day-action','/gallows','/turn','/cycle'])assert.ok(battle.includes("'"+endpoint+"'"));
-  assert.match(battle,/TẠM DỪNG/);
+  assert.match(battle,/⏸ DEMO/);
   assert.match(battle,/TIẾP TỤC/);
   assert.match(battle,/reason==='manual'&&active/);
 });
