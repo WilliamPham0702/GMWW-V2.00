@@ -1148,10 +1148,17 @@ function battleGallowsTick(){
 }
 function battleGallowsRender(phase){
   const panel=document.getElementById('battleGallowsPanel');if(!panel)return;
-  panel.hidden=phase!=='day'||!battleState.gallowsOpen;
-  if(panel.hidden)return;
   const g=playSceneRuntime.gallows||{stage:'ready',mode:'auto',nominationDurationSec:10,
     voteDurationSec:10,nominations:{},votes:{},blockedNomination:[],blockedVotes:[]};
+  // Vote tally remains readable when the server closes the voting stage.
+  const finalStage=g.stage==='closed'||g.stage==='resolved';
+  const showKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,g.stage].join(':');
+  if(phase==='day'&&finalStage&&battleState.gallowsShowKey!==showKey){
+    battleState.gallowsShowKey=showKey;
+    battleState.gallowsOpen=true;
+  }
+  panel.hidden=phase!=='day'||!battleState.gallowsOpen;
+  if(panel.hidden)return;
   const now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
   const selectionExpired=g.stage==='nominating'&&g.nominationDeadlineAt&&now>=Number(g.nominationDeadlineAt);
   const stage=g.stage==='voting'&&now>=Number(g.deadlineAt||0)?'closed':selectionExpired?'selecting':g.stage;
@@ -1211,6 +1218,26 @@ function battleGallowsRender(phase){
       ' · 👎 '+selected.filter(([,v])=>v==='👎').length+'</b>'+
       (nominations.length?'<p>Đề cử: '+nominations.map(([id,t])=>playEsc(memberName(id))+' → '+playEsc(memberName(t))).join(' · ')+'</p>':'')+
       selected.map(([id,v])=>'<div class="battle-gallows-vote"><strong>'+playEsc(memberName(id))+'</strong> '+playEsc(v)+'</div>').join('');
+  }
+  const result=document.getElementById('battleGallowsResult');
+  if(result){
+    result.hidden=!['closed','resolved'].includes(stage);
+    if(!result.hidden){
+      const approved=Object.entries(g.votes||{}).filter(([id])=>!voteBans.has(id));
+      const yes=approved.filter(([,choice])=>choice==='👍').length,no=approved.filter(([,choice])=>choice==='👎').length;
+      result.textContent=stage==='resolved'?
+        memberName(g.candidateId)+(g.outcome==='dead'?' đã bị giết sau bỏ phiếu.':' đã được cứu sau bỏ phiếu.')+
+        ' Kết quả: '+yes+' phiếu CỨU, '+no+' phiếu GIẾT.':
+        'KẾT QUẢ BỎ PHIẾU: '+yes+' phiếu CỨU · '+no+' phiếu GIẾT. GM xác nhận kết quả.';
+      result.dataset.resultTone=stage==='resolved'?(g.outcome==='dead'?'negative':'positive'):'neutral';
+      const audioKey=showKey+':'+stage;
+      if(battleState.gallowsAudioKey!==audioKey){
+        battleState.gallowsAudioKey=audioKey;
+        const cue=stage==='closed'?'audio_system_gallows_vote_result':
+          g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
+        void battlePlayConfiguredAudio('system',cue,result.textContent);
+      }
+    }
   }
   for(const b of panel.querySelectorAll('[data-gallows-command]')){
     const cmd=b.dataset.gallowsCommand;
