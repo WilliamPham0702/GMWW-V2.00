@@ -33,8 +33,8 @@ test('Reconciled runner retains authoritative phases, resumable playback and lea
   assert.match(battle,/TIẾP TỤC/);
   assert.match(battle,/async function demoActionNight/);
   assert.match(battle,/async function demoActionDay/);
-  assert.match(battle,/await playSetServerCycle\('day'/);
-  assert.match(battle,/await playSetServerCycle\('night'/);
+  assert.match(worker,/runServerDemo/);
+  assert.match(worker,/nextServerDemoDue/);
   assert.match(worker,/DEMO_LEASE_OWNED/);
   assert.match(worker,/x-gmww-demo-owner/);
 });
