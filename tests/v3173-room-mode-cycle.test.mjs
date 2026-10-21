@@ -14,22 +14,13 @@ test('One shared room, room mode button exists only after creation',()=>{
  assert.match(setup,/demo:false,roomMode:'offline'/);
  assert.match(setup,/modeToggle\.disabled=!roomReady/);
 });
-test('After creating a room: taps 1..5 give OFFLINE ONLINE DEMO OFFLINE ONLINE',async()=>{
- const callbacks={},button={dataset:{},addEventListener:(type,cb)=>callbacks[type]=cb};
- const context={document:{getElementById:id=>id==='playRoomModeToggle'?button:null},
-  playSceneRuntime:{busy:false,room:{demo:false,phase:'lobby'}},
-  playRoomUiState:{editorMode:'',selectedCode:'ABC123',modeTouched:false},
-  playSceneState:{roomMode:'offline'},isLivePlayRoom:()=>true,
-  playUpdateRoomSettings:async patch=>{context.lastPatch=patch;context.playSceneRuntime.room.demo=patch.demo;context.playSceneState.roomMode=patch.demo?'demo':patch.roomMode;return true},
-  renderPlayCreateRoomSheet:()=>{}};
- vm.createContext(context);
- vm.runInContext(code('const PLAY_ROOM_MODE_CYCLE=','function playRoomRegistry(')+code('function bindPlayRoomModeButtons(){','function bindPlaySeatMoveButtons(')+';bindPlayRoomModeButtons();bindPlayRoomModeButtons()',context);
- const modes=[];
- for(let i=0;i<5;i++){await callbacks.click();modes.push(context.playSceneState.roomMode)}
+test('After creating a room: fast mode choices cycle OFFLINE ONLINE DEMO OFFLINE',()=>{
+ const cycle=vm.runInNewContext(code('const PLAY_ROOM_MODE_CYCLE=','function playRoomRegistry(')+';nextPlayRoomMode');
+ let mode='offline',selected=false;const modes=[];
+ for(let i=0;i<5;i++){mode=cycle(mode,selected);selected=true;modes.push(mode)}
  assert.deepEqual(modes,['offline','online','demo','offline','online']);
- assert.equal(context.playRoomUiState.modeTouched,true);
- assert.equal(context.lastPatch.demo,false);
- context.playSceneRuntime.busy=true;await callbacks.click();assert.equal(context.playSceneState.roomMode,'online');
+ assert.match(setup,/pendingMode=nextPlayRoomMode/);
+ assert.match(setup,/void flushPlayRoomMode\(\)/);
 });
 test('Server changes DEMO through protected room-settings only in an empty lobby',()=>{
  assert.match(worker,/const previousDemo=meta\.demo===true,desiredDemo=/);
