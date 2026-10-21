@@ -338,6 +338,8 @@
               <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
+              <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
+              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden>TỐC ĐỘ <select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1">1×</option><option value="2" selected>2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
@@ -914,7 +916,9 @@
         <div class="play-room-section-title"><b>PHÒNG</b></div>
         <div class="play-room-strip">
           <button class="play-room-add-tile" id="playCreateRoomAdd" type="button" aria-label="Thêm phòng mới"><span>＋</span><small>MỚI</small></button>
-          <div class="play-room-created-list" id="playCreatedRoomList"></div>
+          <div class="play-room-created-list" id="playCreatedRoomList">
+            <button class="play-created-room play-demo-room" id="playDemoRoomChoice" type="button" aria-label="Mở phòng Demo sử dụng thành viên đã có"><span><b>🎮 DEMO</b><small>CHƠI THỬ · CÁCH LY</small></span><i class="on">MỞ</i></button>
+          </div>
         </div>
       </section>
 
