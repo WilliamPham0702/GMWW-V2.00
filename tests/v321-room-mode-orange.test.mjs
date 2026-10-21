@@ -19,7 +19,7 @@ test('ONLINE and OFFLINE always use one warm amber treatment',()=>{
 
 test('Mode selection still changes label without changing room ON/OFF semantics',()=>{
   assert.match(app,/button\.addEventListener\('click'/);
-  assert.match(app,/nextPlayRoomMode\(playSceneState\.roomMode,playRoomUiState\.modeTouched\)/);
+  assert.match(app,/nextPlayRoomMode\(current,playRoomUiState\.modeTouched\)/);
   assert.doesNotMatch(html,/<select id="playRoomModeToggle"/);
   assert.match(html,/id="playRoomModeToggle"/);
   assert.match(html,/id="playCreateRoomEnabled"/);
