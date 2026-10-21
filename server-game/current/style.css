@@ -6513,3 +6513,126 @@ body.play-immersive #start #playShell[data-step="battle"]
 #start #playWorld.has-custom-scene{
  background-image:var(--gmww-gm-scene-image)!important;
 }
+
+/* V3.177 — one visual width system for top/bottom bars and full-width overlays. */
+body.play-immersive{--gmww-rail-width:min(680px,calc(100vw - 24px));--gmww-rail-left:max(12px,calc((100vw - 680px)/2))}
+body.play-immersive #start #playSetupStrip,
+body.play-immersive #start #playBattleTop,
+body.play-immersive #start #gmTopMenu,
+body.play-immersive #start #battleBottomControls{
+  left:var(--gmww-rail-left)!important;right:auto!important;
+  width:var(--gmww-rail-width)!important;max-width:var(--gmww-rail-width)!important;
+  box-sizing:border-box!important;
+}
+/* Preserve the seaside scene behind every immersive overlay, without blurring the world itself. */
+body.play-immersive .sheet:not(.hidden){
+  background:rgba(3,15,27,.18)!important;
+}
+body.play-immersive .sheet .sheet-card,
+body.play-immersive #start #playShell .battle-wolf-menu,
+body.play-immersive #start #playShell .battle-menu-details,
+body.play-immersive #start #playShell .play-gm-sheet,
+body.play-immersive #start #playShell #battleMorningReport,
+body.play-immersive #start #playShell #battleGallowsPanel,
+body.play-immersive #start #playShell #battleTargetSheet,
+body.play-immersive #start #playShell #battleDemoObserver{
+  background:rgba(7,34,52,.70)!important;
+  -webkit-backdrop-filter:blur(5px) saturate(112%)!important;
+  backdrop-filter:blur(5px) saturate(112%)!important;
+  border:1px solid rgba(127,223,232,.44)!important;
+  box-shadow:0 12px 30px rgba(0,15,31,.32),inset 0 1px rgba(255,255,255,.07)!important;
+}
+body.play-immersive .sheet .sheet-card{
+  width:var(--gmww-rail-width)!important;max-width:var(--gmww-rail-width)!important;
+  box-sizing:border-box!important;max-height:calc(100dvh - 96px)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu,
+body.play-immersive #start #playShell #battleDetails,
+body.play-immersive #start #playShell #battleMorningReport,
+body.play-immersive #start #playShell #battleGallowsPanel{
+  width:var(--gmww-rail-width)!important;max-width:var(--gmww-rail-width)!important;
+  box-sizing:border-box!important;
+}
+/* Connected panels glow gently; pull them away to detach. */
+body.play-immersive .gmww-dock-near{
+  outline:2px solid rgba(118,239,224,.68)!important;outline-offset:2px!important;
+  box-shadow:0 0 0 4px rgba(39,196,179,.11),0 12px 30px rgba(0,15,31,.38)!important;
+}
+body.play-immersive .gmww-dock-snapped{
+  width:var(--gmww-dock-width,var(--gmww-rail-width))!important;
+  max-width:calc(100vw - 16px)!important;
+  border-color:rgba(120,255,221,.76)!important;
+  box-shadow:0 0 0 1px rgba(120,255,221,.20),0 9px 18px rgba(1,36,45,.25)!important;
+  transition:box-shadow .18s ease,border-color .18s ease!important;
+}
+/* DEMO is one equal-size button in the GM grid; speed is its own tile. */
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoToggle{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:6px!important;grid-column:span 2!important;
+  color:#e3fff6!important;border-color:#a5e8d6!important;
+  background:linear-gradient(145deg,rgba(13,110,104,.78),rgba(11,59,82,.83))!important;
+  font-size:12px!important;font-weight:900!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoToggle[hidden]{
+  display:none!important;
+}
+#battleDemoToggle .demo-clockwise-orbit{
+  display:inline-block;transform-origin:center;line-height:1;font-size:25px;font-weight:400;
+}
+#battleDemoToggle[data-run-state="running"] .demo-clockwise-orbit{
+  animation:gmww-clockwise-run 1.35s linear infinite;
+}
+#battleDemoToggle[data-run-state="paused"] .demo-clockwise-orbit{
+  animation:none;transform:none;font-size:17px;
+}
+@keyframes gmww-clockwise-run{to{transform:rotate(360deg)}}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeedWrap{
+  grid-column:span 2!important;display:flex!important;margin:0!important;min-width:0!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeedWrap[hidden]{
+  display:none!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeed{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:100%!important;min-height:44px!important;min-width:0!important;
+  border:1px solid rgba(255,209,128,.71)!important;border-radius:12px!important;
+  background:linear-gradient(145deg,rgba(102,74,35,.86),rgba(51,68,75,.82))!important;
+  color:#ffedbd!important;font-size:15px!important;font-weight:900!important;
+  cursor:pointer!important;touch-action:manipulation!important;
+}
+.play-template-picker-row{display:flex;align-items:stretch;gap:8px;margin-top:6px}
+.play-template-picker-row select{min-width:0;flex:1;margin:0!important}
+.play-template-picker-row .play-template-add{flex:0 0 auto;min-height:42px;padding:8px 12px;border-radius:11px;background:rgba(28,104,102,.84);border:1px solid #94dfdb;color:#e9fff6;font-weight:900}
+.play-template-return{display:block;margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid #9ecde8;background:rgba(22,65,85,.8);color:#effaff;font-weight:800}
+.play-template-return[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){
+  #battleDemoToggle[data-run-state="running"] .demo-clockwise-orbit{animation:none}
+}
+
+/* Cover legacy opaque sheet shells with a consistent semi-transparent scrim. */
+body.play-immersive #playGameSheet:not(.hidden),
+body.play-immersive #playCreateRoomSheet:not(.hidden),
+body.play-immersive #playRosterSheet:not(.hidden),
+body.play-immersive #playSeatSheet:not(.hidden),
+body.play-immersive #playDisbandSheet:not(.hidden){background:rgba(2,16,30,.17)!important}
+
+/* Audit of remaining generated GM overlays: all retain legible glass and village visibility. */
+body.play-immersive #start #playShell #playSeatPresetPanel,
+body.play-immersive #start #playShell #playRoleAssignmentPanel,
+body.play-immersive #start #playShell #playGatherToolbar,
+body.play-immersive #start #playShell #battleClockPopover,
+body.play-immersive #start #playShell #battleDayActionMenu,
+body.play-immersive #start #playShell #battleUndoFloat,
+body.play-immersive #start #playShell #battleDemoPanel,
+body.play-immersive #start #playShell #playBattleDock #battleDetails,
+body.play-immersive #start #playShell .battle-result-popup{
+  background:rgba(7,34,52,.70)!important;
+  -webkit-backdrop-filter:blur(5px) saturate(112%)!important;
+  backdrop-filter:blur(5px) saturate(112%)!important;
+  border-color:rgba(127,223,232,.44)!important;
+}
+body.play-immersive #start #playShell #playGatherToolbar,
+body.play-immersive #start #playShell #playRoleAssignmentPanel,
+body.play-immersive #start #playShell #playSeatPresetPanel{
+  max-width:var(--gmww-rail-width)!important;box-sizing:border-box!important;
+}

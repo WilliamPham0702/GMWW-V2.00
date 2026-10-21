@@ -51,11 +51,12 @@ test('V3.146: title drag clamps the GM menu inside the iPhone viewport',()=>{
     hidden:false,offsetWidth:200,offsetHeight:120,
     querySelector:()=>handle,
     getBoundingClientRect:()=>({left:100,top:90,width:200,height:120}),
-    style:{left:'',setProperty:(name,value)=>{styles[name]=value}}
+    dataset:{},classList:{toggle:()=>{},remove:()=>{},add:()=>{}},
+    style:{left:'',setProperty:(name,value)=>{styles[name]=value},removeProperty:()=>{}}
   };
   const win={innerWidth:320,innerHeight:640,addEventListener:()=>{},visualViewport:null};
   const ctx={
-    document:{getElementById:()=>panel},window:win,
+    document:{getElementById:()=>panel},window:win,gmwwMenuSnap:()=>null,
     battleTargetClampPosition:(width,height,left,top)=>({
       left:Math.max(6,Math.min(320-width-6,left)),
       top:Math.max(6,Math.min(640-height-6,top))

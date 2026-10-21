@@ -13,7 +13,7 @@ test('Creating a room exposes Online, Offline and Demo choices without a dedicat
   assert.doesNotMatch(html,/<select id="playRoomModeToggle"/);
   assert.match(setup,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
   assert.doesNotMatch(html,/playDemoRoomChoice/);
-  assert.match(setup,/playUpdateRoomSettings\(patch\)/);
+  assert.match(setup,/flushPlayRoomMode\(\)/);
   assert.match(setup,/demo:false,roomMode:'offline'/);
   assert.match(setup,/room\.demo===true\?'demo'/);
 });
@@ -23,7 +23,7 @@ test('Demo auto-start is one-shot per match, respects pause and stays inside GM 
   assert.match(battle,/demoRunner\.autoStartedMatch!==matchKey/);
   assert.match(battle,/void demoToggle\(\)/);
   assert.match(battle,/!demoRunner\.paused/);
-  assert.match(battle,/demoRunner\.running\?'⏸ DEMO'/);
+  assert.match(battle,/demoRunner\.running\?'↻':'Ⅱ'/);
 });
 
 test('A Demo action is not scheduled in the first half of the clock',()=>{

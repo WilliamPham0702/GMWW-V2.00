@@ -919,9 +919,37 @@ function initDraggablePlaySheets(){
     const handle=card.querySelector('.sheet-head');if(!handle)return;
     handle.style.touchAction='none';handle.style.cursor='grab';
     let active=false,startX=0,startY=0,baseX=0,baseY=0,pid=null;
-    handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,select,textarea'))return;active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault()});
-    handle.addEventListener('pointermove',e=>{if(!active||e.pointerId!==pid)return;const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX)),y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';e.preventDefault()});
-    const end=e=>{if(!active||e.pointerId!==pid)return;active=false;handle.style.cursor='grab';try{handle.releasePointerCapture?.(pid)}catch{}};
+    handle.addEventListener('pointerdown',e=>{
+      if(e.target.closest('button,input,select,textarea')||(e.button!==0&&e.pointerType!=='touch'))return;
+      active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;
+      baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);
+      handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault();
+    });
+    handle.addEventListener('pointermove',e=>{
+      if(!active||e.pointerId!==pid)return;
+      const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);
+      const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX));
+      const y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));
+      card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';
+      card.classList.toggle('gmww-dock-near',!!gmwwMenuSnap(card.getBoundingClientRect()));
+      if(Math.hypot(e.clientX-startX,e.clientY-startY)>12)card.classList.remove('gmww-dock-snapped');
+      e.preventDefault();
+    });
+    const end=e=>{
+      if(!active||e.pointerId!==pid)return;
+      active=false;handle.style.cursor='grab';
+      const rect=card.getBoundingClientRect(),snap=e.type==='pointerup'?gmwwMenuSnap(rect):null;
+      card.classList.remove('gmww-dock-near');
+      if(snap){
+        const nx=Number(card.dataset.dragX||0)+snap.left-rect.left;
+        const ny=Number(card.dataset.dragY||0)+snap.top-rect.top;
+        card.dataset.dragX=nx;card.dataset.dragY=ny;
+        card.style.setProperty('--gmww-dock-width',snap.width+'px');
+        card.style.transform='translate('+nx+'px,'+ny+'px)';
+        card.classList.add('gmww-dock-snapped');card.dataset.dockEdge=snap.edge;
+      }else{card.classList.remove('gmww-dock-snapped');card.style.removeProperty('--gmww-dock-width');delete card.dataset.dockEdge}
+      try{handle.releasePointerCapture?.(pid)}catch{}
+    };
     handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
   });
 }
@@ -998,6 +1026,8 @@ function initPlayScene(){
   document.getElementById('playSeatSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playSeatSheet'))closePlaySeatSheet()});
   document.getElementById('playGameClose')?.addEventListener('click',closePlayGameSheet);document.getElementById('playGameCancel')?.addEventListener('click',closePlayGameSheet);
   document.getElementById('playGameSave')?.addEventListener('click',savePlayGame);
+  document.getElementById('playGameTemplateAdd')?.addEventListener('click',()=>{playGameReturnToSelection=true;void openLibraryGameTemplate('')});
+  document.getElementById('playGameTemplateBack')?.addEventListener('click',()=>{playGameReturnToSelection=false;void openPlayGameSheet()});
   document.getElementById('playGameDelete')?.addEventListener('click',async()=>{
     const id=String(playSceneState.gameTemplateId||'');if(!id||document.querySelector('.play-game-sheet-card')?.dataset.mode!=='library')return;
     if(!confirm('Xóa Ván Mẫu đã lưu? Thao tác này không thể hoàn tác.'))return;
