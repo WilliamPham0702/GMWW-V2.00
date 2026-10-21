@@ -9,7 +9,9 @@ const html=read('server-game/current/GMWW.html'),
   bundle=read('server-game/current/app.js');
 
 test('Creating a room exposes Online, Offline and Demo choices without a dedicated Demo tile',()=>{
-  for(const mode of ['online','offline','demo'])assert.match(html,new RegExp('option value="'+mode+'"'));
+  assert.match(html,/<button id="playRoomModeToggle"/);
+  assert.doesNotMatch(html,/<select id="playRoomModeToggle"/);
+  assert.match(setup,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
   assert.doesNotMatch(html,/playDemoRoomChoice/);
   assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
   assert.match(setup,/demo:isDemo/);
@@ -40,5 +42,5 @@ test('Confirmed Demo and GM actions have audio and an opt-in native haptic path'
   assert.match(swift,/message\.frameInfo\.isMainFrame/);
   assert.match(swift,/UIImpactFeedbackGenerator\(style: \.medium\)/);
   assert.match(bundle,/function demoConfirmedFeedback\(\)/);
-  assert.match(bundle,/const VERSION='3\.172'/);
+  assert.match(bundle,/const VERSION='3\.173'/);
 });
