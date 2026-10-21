@@ -5,7 +5,7 @@ const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),
 const auth=worker.match(/const GM_SYNC_TOKEN="([^"]+)"/)[1],serial=Date.now().toString(36);
 const between=(s,a,b)=>{const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert.ok(i>=0&&j>i,a);return s.slice(i,j)};
 const req=async(path,body,token=auth)=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+token,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert.equal(r.ok,true,path+': '+JSON.stringify(d));return d};
-const people=Array.from({length:8},(_,i)=>({loginId:'demo'+i+serial,displayName:'Demo Test '+i,seatId:i+1}));
+const people=Array.from({length:8},(_,i)=>({loginId:'demo'+i+serial,displayName:'Demo Test '+i+' '+serial,seatId:i+1}));
 for(const person of people)await req('/api/members/register',{...person,gameCharacterId:'character-01'});
 // Directory rendering projects clock-driven idle movement and online TTL. Compare
 // stored account fields, including presence timestamps/room/readiness and history.
@@ -16,10 +16,11 @@ const pageServer=http.createServer((_q,r)=>{r.writeHead(200,{'content-type':'tex
 const browser=await webkit.launch({headless:true});
 const fn={id:'bite',actionId:'action_wolf_bite',name:'Cắn',phase:'night',targetCount:1,noSelf:true,usageMode:'eachNight',usageCount:1};
 const cards=[{id:'role_werewolf',name:'Sói',faction:'Phe Sói',functions:[fn]},{id:'role_villager',name:'Dân',faction:'Phe Dân',functions:[]},...[["role_seer","Tiên Tri","action_seer","Soi"],["role_guard","Bảo Vệ","action_protect","Bảo Vệ"],["role_witch","Phù Thuỷ","action_witch_kill","Giết"]].map(([id,name,actionId,actionName])=>({id,name,faction:'Phe Dân',functions:[{...fn,id:actionId,actionId,name:actionName,usageMode:id==='role_witch'?'onceGame':'eachNight'}]}))];const rosterCards=people.map((_,i)=>cards[i===0?0:i<5?1:i-3]);
+for(const card of cards)card.actions=card.functions.map(fn=>({id:fn.actionId,name:fn.name}));
 let code;
 try{
  for(const mode of ['online','offline']){
-  const gameConfig={id:'demo-test',name:'Demo test',playerCount:8,roles:cards.map((r,i)=>({roleId:r.id,roleName:r.name,faction:r.faction,count:i===1?4:1,order:i+1,actionDurationSec:1})),artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:1,wolfDiscussionSec:1,gallowsNominationSec:10,gallowsVoteSec:10,defaultActionSec:1}};
+  const gameConfig={id:'demo-test',name:'Demo test',playerCount:8,roles:cards.map((r,i)=>({roleId:r.id,roleName:r.name,faction:r.faction,count:i===1?4:1,order:i+1,actionDurationSec:8})),artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:1,wolfDiscussionSec:1,gallowsNominationSec:10,gallowsVoteSec:10,defaultActionSec:1}};
   const created=await req('/api/rooms',{demo:true,roomName:'Demo browser '+mode,roomMode:mode,seatCount:8,gameConfig});code=created.roomCode;
   const gm=(path,body)=>req('/api/gm/rooms/'+code+path,body);
   await gm('/participants',{members:people,replace:true});await gm('/seat-lock',{locked:true});
@@ -45,25 +46,26 @@ const battleUsed=()=>false,battleUnlockAudioFromGesture=()=>{},battleTurnAudioCu
 ${between(battle,"  document.getElementById('battleDemoToggle')?.addEventListener", "  document.getElementById('battleGMAudio')?.addEventListener")}
 initPlayCompletion();battleBindAuxiliaryDrag('battleDemoObserver','header');globalThis.inspectDemo=()=>({running:demoRunner.running,steps:demoRunner.steps,error:demoRunner.error,phase:playSceneState.phase,room:playSceneRuntime.room,completion:playCompletionState,event:demoRunner.lastEvent,visuals,observed,calls});globalThis.readyDemo=playSyncRoom(true);`});
   await page.evaluate(()=>readyDemo);await page.evaluate(()=>{const el=document.getElementById('battleDemoSpeed');el.value='10';el.dispatchEvent(new Event('change',{bubbles:true}))});
-
-  // DEMO is now permanently nested at the beginning of the GM campfire menu,
-  // not a draggable separate overlay or a 30-second collapsing box.
-  assert.ok(await page.locator('#battleWolfMenu #battleDemoPanel').count()===1);
-  assert.ok(await page.locator('#battleDemoToggle').count()===1);
-  assert.equal(await page.locator('#battleDemoExpand').isVisible().catch(()=>false),false);
-  assert.equal(await page.locator('#battleDemoObserver').count(),1);
-  const info=await page.locator('#battleDemoObserver').boundingBox(),handle=await page.locator('#battleDemoObserver header').boundingBox();await page.mouse.move(handle.x+30,handle.y+10);await page.mouse.down();await page.mouse.move(handle.x+50,handle.y+75,{steps:5});await page.mouse.up();assert.ok(Math.abs((await page.locator('#battleDemoObserver').boundingBox()).y-info.y)>20,'Observation panel must drag');
+  await page.waitForFunction(()=>playSceneRuntime.demoControl?.speed===10);
+  assert.equal(await page.locator('#battleWolfMenu #battleDemoPanel').count(),1);
+  // V3.172 keeps the controls inside Menu GM. Only the observer floats/drags.
+  await page.evaluate(()=>{document.getElementById('battleWolfMenu').hidden=false});
+  assert.equal(await page.locator('#battleDemoToggle').isVisible(),true);
+  assert.match(await page.locator('#battleDemoTurn').innerText(),/Đêm 1.*Lượt/);
+  const info=await page.locator('#battleDemoObserver').boundingBox(),handle=await page.locator('#battleDemoObserver header').boundingBox();
+  await page.mouse.move(handle.x+30,handle.y+10);await page.mouse.down();await page.mouse.move(handle.x+50,handle.y+75,{steps:5});await page.mouse.up();
+  assert.ok(Math.abs((await page.locator('#battleDemoObserver').boundingBox()).y-info.y)>20,'Observation panel must drag');
   assert.equal(await page.locator('#battleGMAuto').getAttribute('hidden'),null);assert.equal(await page.locator('#battleGMAudio').getAttribute('hidden'),null);
-  await page.waitForFunction(()=>inspectDemo().running||inspectDemo().error,null,{timeout:15000});await page.waitForFunction(()=>inspectDemo().steps>=2||inspectDemo().error,null,{timeout:15000});assert.equal((await page.evaluate(()=>inspectDemo())).error,'');
-  assert.equal((await page.evaluate(()=>inspectDemo())).running,true);
-  await page.evaluate(()=>document.getElementById('battleDemoToggle').click());const paused=await page.evaluate(()=>inspectDemo());assert.equal(paused.running,false);await page.waitForTimeout(700);assert.equal((await page.evaluate(()=>inspectDemo())).steps,paused.steps);assert.match(await page.locator('#battleDemoToggle').innerText(),/TIẾP TỤC/);
-  await page.evaluate(()=>document.getElementById('battleDemoToggle').click());await page.waitForFunction(()=>inspectDemo().running||inspectDemo().error);await page.waitForFunction(()=>inspectDemo().calls.some(x=>x.url.endsWith('/battle-action')&&x.status===200)||inspectDemo().error,null,{timeout:20000});
-  let snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');assert.ok(snapshot.calls.some(x=>x.url.endsWith('/battle-action')&&x.status===200),'Real random legal night action must be accepted');
-  const intervention=await page.evaluate(async()=>{const rt=playSceneRuntime.nightRuntime,index=rt.cursor===0?1:0,targetId=rt.queue[index].id;await battleNavigateIndex(index);return{targetId,currentId:playSceneRuntime.nightRuntime.currentId}});assert.equal(intervention.currentId,intervention.targetId,'Actual GM navigation must reach requested turn while Demo runs');
-  await page.waitForFunction(()=>inspectDemo().observed.some(t=>t.includes('Đã thực hiện')&&t.includes('Cắn')&&t.includes('Demo Test')&&t.includes('→')),null,{timeout:5000});
+  // Server starts with the match. Button pauses; a fresh viewer must not restart it.
+  await page.waitForFunction(()=>inspectDemo().running);await page.evaluate(()=>document.getElementById('battleDemoToggle').click());
+  const paused=await page.evaluate(()=>inspectDemo());assert.equal(paused.running,false);await page.waitForTimeout(500);
+  assert.equal((await page.evaluate(()=>inspectDemo())).steps,paused.steps);assert.match(await page.locator('#battleDemoToggle').innerText(),/TIẾP TỤC/);
+  await page.evaluate(()=>document.getElementById('battleDemoToggle').click());await page.waitForFunction(()=>inspectDemo().running);
+  await page.waitForFunction(()=>inspectDemo().observed.some(t=>t.includes('Đã thực hiện')&&t.includes('Cắn')&&t.includes('Demo Test')&&t.includes('→'))||inspectDemo().error,null,{timeout:20000});
+  let snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');
   await page.waitForFunction(()=>inspectDemo().visuals.some(v=>v.action.length&&v.targets.length&&v.badges.includes('MỤC TIÊU')),null,{timeout:10000});
-  await page.waitForFunction(()=>['action_seer','action_protect','action_witch_kill'].every(id=>inspectDemo().calls.some(x=>x.url.endsWith('/battle-action')&&x.status===200&&JSON.parse(x.body).actionId===id))||inspectDemo().error,null,{timeout:25000});assert.equal((await page.evaluate(()=>inspectDemo())).error,'');
-  await page.waitForFunction(()=>inspectDemo().calls.some(x=>x.url.endsWith('/demo')&&x.body.includes('"command":"vote"')&&x.status===200)||inspectDemo().error,null,{timeout:25000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');assert.ok(snapshot.calls.some(x=>x.body.includes('"command":"vote"')&&x.status===200),'Real day votes must occur');
+  // All automatic gameplay is server-side: this browser only requests state/control.
+  assert.ok(!snapshot.calls.some(x=>/\/(battle-action|day-action|turn|cycle|gallows)$/.test(x.url)&&x.body),'viewer never submits automatic gameplay');
   await page.waitForFunction(()=>inspectDemo().completion.winner||inspectDemo().error,null,{timeout:60000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');assert.equal(snapshot.room.phase,'running','Winner announcement must wait for GM');assert.equal(snapshot.running,false);await page.locator('#playCompletionConfirm').waitFor({state:'visible'});await page.click('#playCompletionConfirm');await page.waitForFunction(()=>inspectDemo().completion.completed,null,{timeout:15000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.room.phase,'lobby');await page.locator('#playCompletionChoices').waitFor({state:'visible'});const surface=await page.locator('.play-completion-card').evaluate(el=>({bg:getComputedStyle(el).backgroundImage,columns:getComputedStyle(document.getElementById('playCompletionChoices')).gridTemplateColumns}));assert.match(surface.bg,/linear-gradient/);assert.equal(surface.columns.split(' ').length,2);await page.click('[data-completion-next="exit"]');await page.waitForFunction(()=>document.getElementById('home').classList.contains('active')&&!document.body.classList.contains('play-immersive'));assert.equal(await page.locator('#playMatchCompletionSheet').isVisible(),false);assert.deepEqual(errors,[]);
   await context.close();console.log('PASS cross-origin iPhone WebKit Demo '+mode+': CORS, drag, start/pause/resume, actual night actions, day votes, finish');
  }

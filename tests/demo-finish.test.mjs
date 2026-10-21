@@ -1,21 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {runServerDemo,serverDemoActive} from '../src/gmww-demo-runner.js';
+import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 import vm from 'node:vm';
 import fs from 'node:fs';
 const source=fs.readFileSync('src/index.js','utf8');
-const start=source.indexOf('  async gmDemo(request,body){'),end=source.indexOf('  async gmAuto(request,body){',start);
-const Room=vm.runInNewContext('(class {'+source.slice(start,end)+'})',{j:(x,s=200)=>Response.json(x,{status:s}),Date,Number,String});
-test('Demo finish requires current owned lease and server winner, closes only isolated match',async()=>{
- const room=new Room(),owner='demo-abcdefghijklmnop',meta={demo:true,phase:'running',matchId:'m1',cycleKey:'night-1'};
- const rows=new Map([['demoLease',{running:true,until:Date.now()+15000,owner}],['assignments',[]],['interactions',[]]]);
- room.ctx={storage:{get:async k=>rows.get(k),put:async(k,v)=>rows.set(k,v)}};
- room.gmAuthorized=async()=>({ok:true,meta});
- let ended=0;room.computeWinProposal=()=>null;
- room.gmEnd=async(_req,body)=>{ended++;assert.equal(body.winnerFaction,'Phe Dân');assert.equal(body.matchId,'m1');return Response.json({ok:true})};
- const run=async(extra={})=>{const r=await room.gmDemo({}, {command:'finish',owner,matchId:'m1',cycleKey:'night-1',...extra});return {status:r.status,...await r.json()}};
- assert.equal((await run()).error,'DEMO_WIN_NOT_CONFIRMED');assert.equal(ended,0);
- room.computeWinProposal=()=>({winnerFaction:'Phe Dân',winnerLabel:'Phe Dân'});
- assert.equal((await run({matchId:'stale'})).error,'STALE_DEMO_CYCLE');assert.equal(ended,0);
- assert.equal((await run()).ok,true);assert.equal(ended,1);assert.equal(rows.get('demoLease').running,false);
- meta.demo=false;assert.equal((await run()).error,'NOT_DEMO_ROOM');assert.equal(ended,1);
+const Room=vm.runInNewContext('(class {'+source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'))+'})',{projectDemoClock,nextDemoClock,serverDemoActive,j:(x,s=200)=>Response.json(x,{status:s}),Date,Request});
+test('Server winner stops autonomous execution and waits for explicit GM completion',async()=>{
+ const room=new Room(),meta={demo:true,phase:'running',cyclePhase:'night',matchId:'m1',cycleKey:'night-1',autoGM:false},lease={engine:'server',matchId:'m1',running:true,startedAt:Date.now(),steps:1,speed:1};
+ const rows=new Map([['demoLease',lease]]),events=[];room.ctx={storage:{get:async k=>structuredClone(rows.get(k)),put:async(k,v)=>rows.set(k,structuredClone(v))}};
+ room.broadcast=e=>events.push(e);room.scheduleRoomAlarm=async()=>{};room.getNightRuntime=async()=>({queue:[],cursor:0});
+ room.computeWinProposal=()=>({winnerFaction:'Phe Dân',winnerLabel:'Phe Dân'});let ended=0;room.gmEnd=async()=>{ended++};
+ await runServerDemo(room,meta);assert.equal(rows.get('demoLease').running,false);assert.equal(rows.get('demoLease').reason,'winner');assert.equal(meta.phase,'running');assert.equal(ended,0);assert.equal(events[0].type,'demo_winner');
+ await runServerDemo(room,meta);assert.equal(events.length,1,'duplicate alarm cannot duplicate winner');
 });
