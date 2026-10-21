@@ -762,8 +762,17 @@ function battleMorningRows(){
     const loginId=String(entry.loginId||entry.playerId||'').replace(/^member:/,'');
     const member=loginId?battleMember(loginId):null;
     const rawLabel=labels[key]||String(entry.effectName||entry.message||entry.actionId||key).trim();
-    rows.push({id,kind:key,name:String(member?.displayName||member?.name||loginId||'Làng'),
-      label:rawLabel,negative:negative.has(key),at:String(entry.createdAt||''),day:isDay});
+    const targetRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===loginId);
+    const sourceId=String(entry.actorId||entry.sourceActorId||entry.causedBy||'').replace(/^member:/,'');
+    const sourceMember=sourceId?battleMember(sourceId):null;
+    const sourceRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===sourceId);
+    const targetName=String(member?.displayName||member?.name||loginId||'Người chơi');
+    const role=String(targetRole?.roleName||targetRole?.roleCard?.name||targetRole?.roleId||'Vai Trò');
+    const actor=sourceId?(String(sourceRole?.roleName||sourceRole?.roleCard?.name||sourceRole?.roleId||'Vai Trò')+
+      ' ('+String(sourceMember?.displayName||sourceId)+')'):'';
+    const isNegative=negative.has(key);
+    rows.push({id,kind:key,name:targetName,role,actor,label:rawLabel,negative:isNegative,
+      at:String(entry.createdAt||''),day:isDay});
   }
   return rows.sort((a,b)=>Number(b.negative)-Number(a.negative)||a.at.localeCompare(b.at));
 }
@@ -805,12 +814,24 @@ function battleMorningShow(){
     signature=key+':'+JSON.stringify(rows)+':'+JSON.stringify(historyRows);
   if(battleState.morningDayKey!==key){
     battleState.morningDayKey=key;battleState.morningOpen=true;battleState.morningSig='';
+    if(battleState.morningAutoHideTimer)clearTimeout(battleState.morningAutoHideTimer);
+    // Only the automatic daybreak bulletin closes after ten seconds;
+    // history remains accessible on manual reopen through the toolbar.
+    battleState.morningAutoHideTimer=setTimeout(()=>{
+      if(battleState.morningDayKey!==key||playSceneState.phase!=='day')return;
+      battleState.morningOpen=false;
+      const sheet=document.getElementById('battleMorningReport');
+      if(sheet)sheet.hidden=true;
+    },10000);
   }
   const appendRows=(host,notices)=>{
     for(const row of notices){
       const line=document.createElement('p'),name=document.createElement('strong');
       if(row.negative)line.classList.add('is-critical');
-      name.textContent=row.name;line.append(name,document.createTextNode(' '+row.label+'.'));host.append(line);
+      name.textContent=row.name+' ('+row.role+')';
+      const sentence=row.negative?' đã bị ('+row.label.replace(/^đã (?:bị |được )?/,'')+')':' '+row.label;
+      line.append(name,document.createTextNode(sentence+(row.actor?' bởi '+row.actor:'')+'.'));
+      host.append(line);
     }
   };
   if(battleState.morningSig!==signature){
