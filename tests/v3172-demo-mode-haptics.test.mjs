@@ -13,8 +13,8 @@ test('Creating a room exposes Online, Offline and Demo choices without a dedicat
   assert.doesNotMatch(html,/<select id="playRoomModeToggle"/);
   assert.match(setup,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
   assert.doesNotMatch(html,/playDemoRoomChoice/);
-  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
-  assert.match(setup,/demo:isDemo/);
+  assert.match(setup,/playUpdateRoomSettings\(patch\)/);
+  assert.match(setup,/demo:false,roomMode:'offline'/);
   assert.match(setup,/room\.demo===true\?'demo'/);
 });
 
@@ -23,7 +23,7 @@ test('Demo auto-start is one-shot per match, respects pause and stays inside GM 
   assert.match(battle,/demoRunner\.autoStartedMatch!==matchKey/);
   assert.match(battle,/void demoToggle\(\)/);
   assert.match(battle,/!demoRunner\.paused/);
-  assert.match(battle,/demoRunner\.running\?'⏸ TẠM DỪNG'/);
+  assert.match(battle,/demoRunner\.running\?'⏸ DEMO'/);
 });
 
 test('A Demo action is not scheduled in the first half of the clock',()=>{
@@ -42,5 +42,5 @@ test('Confirmed Demo and GM actions have audio and an opt-in native haptic path'
   assert.match(swift,/message\.frameInfo\.isMainFrame/);
   assert.match(swift,/UIImpactFeedbackGenerator\(style: \.medium\)/);
   assert.match(bundle,/function demoConfirmedFeedback\(\)/);
-  assert.match(bundle,/const VERSION='3\.174'/);
+  assert.match(bundle,/const VERSION='3\.175'/);
 });

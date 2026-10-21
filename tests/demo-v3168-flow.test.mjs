@@ -17,8 +17,8 @@ test('Demo rooms are listed like any other user-created room, with no extra fixe
  assert.ok(!children.some(x=>x.id==='playDemoRoomChoice'));
 });
 test('New Demo room uses its own server flag and the normal gather workflow',()=>{
- assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
- assert.match(setup,/demo:isDemo/);
+ assert.match(setup,/playCreateRoom\(false\)/);
+ assert.match(setup,/demo:false,roomMode:'offline'/);
  assert.match(setup,/playSceneState\.step='seats'/);
 });
 test('Online Demo GM manually selects existing members through same roster sheet',async()=>{
@@ -34,7 +34,7 @@ test('Choosing sample game preserves selected roster instead of random replaceme
 test('Demo controller appears before other GM actions in the campfire menu',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const panel=html.indexOf('id="battleDemoPanel"'),menu=html.indexOf('id="battleWolfMenu"'),actions=html.indexOf('class="battle-wolf-actions"');
- assert.ok(menu>0&&panel>menu&&panel<actions);
+ assert.ok(menu>0&&actions>menu&&panel>actions);
  assert.match(html,/id="battleDemoStatus"/);
  assert.match(html,/id="battleDemoToggle"/);
 });

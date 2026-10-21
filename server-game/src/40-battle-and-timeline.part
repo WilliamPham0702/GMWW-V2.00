@@ -210,7 +210,7 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ TẠM DỪNG':demoRunner.paused?'▶ TIẾP TỤC':'▶ CHẠY';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ DEMO':demoRunner.paused?'▶ TIẾP TỤC':'▶ DEMO';button.title=demoRunner.error||demoRunner.status;button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
   if(wrap)wrap.hidden=!enabled;
   if(auto)auto.hidden=false;
   if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
@@ -1686,7 +1686,7 @@ function initBattleControls(){
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   initBattleFloatingClock();initBattleDayClockSwipe();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();
   battleBindAuxiliaryDrag('battleWolfMenu','header');
-  battleBindAuxiliaryDrag('battleDemoPanel','header');battleBindAuxiliaryDrag('battleDemoObserver','header');
+  battleBindAuxiliaryDrag('battleDemoObserver','header');
   battleBindAuxiliaryDrag('battleMorningReport','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   document.getElementById('battleDayNoticeToggle')?.addEventListener('click',()=>{
@@ -2225,20 +2225,28 @@ async function applyPlayGameTemplate(id){
     updatePlayArtifactToggle();await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(err){playFlashError(err.message)}
 }
+let playGameSheetOpenSeq=0;
 async function openPlayGameSheet(){
+  const openSeq=++playGameSheetOpenSeq;
   playGameStatus('');
   if(!isLivePlayRoom()){await playCreateRoom();return}if(!playLiveMembers().length){setPlayStep('members');if(playSceneRuntime.room?.demo===true||playSceneState.roomMode==='offline')openPlayRosterSheet();return}
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='play';
   const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Chọn Ván Mẫu';const roomLabel=document.getElementById('playGameRoomLabel');if(roomLabel)roomLabel.textContent='Phòng '+playSceneState.roomCode+' • '+playLiveMembers().length+' Người Chơi';const save=document.getElementById('playGameSave');if(save)save.textContent='CHỌN VÁN';const del=document.getElementById('playGameDelete');if(del)del.hidden=true;
   for(const detailId of ['playGameTimingDetails','playRoleTimingDetails']){const detail=document.getElementById(detailId);if(detail)detail.open=false}
-  sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){
+  // Render the only template sheet AFTER hydration to avoid a flash of stale UI.
+  sheet.classList.add('hidden');await loadPlayGameTemplates();
+  if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
+  const sel=document.getElementById('playGameTemplateSelect');if(sel){
     sel.onchange=e=>applyPlayGameTemplate(e.target.value);
     if(!sel.value&&playSceneRuntime.gameTemplates[0])sel.value=String(playSceneRuntime.gameTemplates[0].id);
     // Always rehydrate the SELECTED template rather than reusing another template's stale draft.
     if(sel.value)await applyPlayGameTemplate(sel.value);
-  }renderPlayGameRoleTimings();updatePlayArtifactToggle();updatePlayGameRoleCount();
+  }if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
+  renderPlayGameRoleTimings();updatePlayArtifactToggle();updatePlayGameRoleCount();
+  sheet.classList.remove('hidden');
 }
 async function openLibraryGameTemplate(id=''){
+  ++playGameSheetOpenSeq;
   playGameStatus('');
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='library';const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Thiết kế Ván Mẫu';const label=document.getElementById('playGameRoomLabel');if(label)label.textContent='Thư Viện • lưu trước khi vào Phòng';const save=document.getElementById('playGameSave');if(save)save.textContent='LƯU';const del=document.getElementById('playGameDelete');if(del)del.hidden=!id;
   if(!id){playSceneState.gameTemplateId='';playSceneState.gameName='Ván GMWW';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};playSceneState.artifactsEnabled=playFavoriteArtifacts().length>0;playSceneState.artifactIds=playFavoriteArtifacts().map(a=>String(a.id));playSceneState.artifactLimitPerCycle=3;playSceneState.gameTiming={villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true};const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance'),quota=document.getElementById('playArtifactLimitPerCycle');if(v)v.value=300;
@@ -2249,7 +2257,7 @@ async function openLibraryGameTemplate(id=''){
   sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
   updatePlayArtifactToggle();
 }
-function closePlayGameSheet(){document.getElementById('playGameSheet')?.classList.add('hidden')}
+function closePlayGameSheet(){++playGameSheetOpenSeq;document.getElementById('playGameSheet')?.classList.add('hidden')}
 function suggestPlayGameRoles(){
   const mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play',need=mode==='library'?Math.max(1,playRolePlanTotal()||12):playLiveMembers().length,roles=playSortedRoles();playSceneState.rolePlan={};for(let i=0;i<need&&i<roles.length;i++)playSceneState.rolePlan[roles[i].id]=(playSceneState.rolePlan[roles[i].id]||0)+1;savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount();
 }

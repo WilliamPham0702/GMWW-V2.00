@@ -18,7 +18,7 @@ test('Demo is selected as a room mode at creation, not as a hardwired extra room
   assert.match(html,/id="playRoomModeToggle"/);
   assert.match(html,/<button id="playRoomModeToggle"/);
   assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
-  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
+  assert.match(setup,/playCreateRoom\(false\)/);
   assert.match(worker,/if\(body\.demo===true&&bearer\(request\)!==GM_SYNC_TOKEN\)/);
 });
 
