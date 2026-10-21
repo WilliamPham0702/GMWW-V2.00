@@ -12,7 +12,7 @@ try{
  await context.route('**/*',route=>route.abort());
  const page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.setContent('<html><body class="play-immersive"><section id="start"></section></body></html>');
+ await page.setContent('<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body class="play-immersive"><section id="start"></section></body></html>');
  await page.evaluate(source=>{
    const parsed=new DOMParser().parseFromString(source,'text/html');
    document.getElementById('start').append(parsed.getElementById('playShell'));
@@ -133,6 +133,7 @@ try{
  });
  for(const width of [320,390,430]){
    await page.setViewportSize({width,height:844});
+   assert.equal(await page.evaluate(()=>innerWidth),width,'WebKit layout viewport must match the requested iPhone width');
    assert.equal(await page.locator('#battleActionTray').isVisible(),false,'Day must not show the cramped inline list');
    await page.locator('#battleDayActionToggle').click();
    assert.equal(await page.locator('#battleDayActionMenu').isVisible(),true,'A single tap opens the picker');
