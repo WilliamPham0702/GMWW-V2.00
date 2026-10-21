@@ -6397,3 +6397,23 @@ body.play-immersive #start #playShell[data-step="battle"]
 #battleDemoPanel button{min-height:42px;border-radius:10px;padding:8px 12px;color:#fff;background:#166b63;border:1px solid #b9eed9;font-weight:800;font-size:12px;touch-action:manipulation}
 #battleDemoStatus{margin:8px 2px 2px;font-size:11px;line-height:1.4;color:#c6e9e2;overflow-wrap:anywhere}
 #battleDemoStatus.is-error{color:#ff9d91}
+
+/* Compact glass Auto control. All visible controls share one row. */
+#battleDemoPanel{display:flex;align-items:center;gap:5px;width:max-content;max-width:calc(100vw - 16px);padding:4px 6px;border-radius:13px;background:var(--gmww-stage-glass-v330,rgba(7,36,48,.6));border:1px solid var(--gmww-stage-glass-border-v330,#a9dfe766);box-shadow:var(--gmww-stage-glass-shadow-v330,0 8px 24px #001a2855);backdrop-filter:blur(13px) saturate(145%);-webkit-backdrop-filter:blur(13px) saturate(145%)}
+#battleDemoPanel header{min-height:34px;min-width:13px;margin:0}
+#battleDemoPanel .battle-demo-actions{display:flex;gap:5px;align-items:center;margin:0;white-space:nowrap}
+#battleDemoPanel button{min-height:34px;padding:5px 9px;font-size:11px}
+#battleDemoPanel #battleDemoSpeedWrap{margin:0;font-size:11px}
+#battleDemoPanel #battleDemoSpeed{padding:5px 2px;min-height:34px}
+#battleDemoPanel #battleDemoExpand{display:none}
+#battleDemoPanel.is-collapsed>header,#battleDemoPanel.is-collapsed>.battle-demo-actions{display:none}
+#battleDemoPanel.is-collapsed #battleDemoExpand{display:inline-flex;align-items:center;gap:4px}
+#battleDemoStatus,.demo-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+.play-completion-card{max-width:440px;text-align:center}
+.play-completion-card .sheet-head h3{color:#ffe0a0}
+.play-completion-winners{display:flex;gap:7px;justify-content:center;margin:12px 0}
+.play-completion-winners button{flex:1;min-height:42px;border-radius:10px}
+.play-completion-winners button[aria-pressed="true"]{background:#087f6b;color:white;border-color:#f7d590}
+.play-completion-primary,#playCompletionChoices button{width:100%;min-height:46px;border-radius:12px;margin:6px 0;font-weight:800}
+#playCompletionChoices[hidden]{display:none!important}
+#playCompletionConfirm[hidden],#playCompletionAbort[hidden]{display:none!important}

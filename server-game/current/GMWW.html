@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.168</title>
-<link rel="stylesheet" href="style.css?v=3.168-compact-room-mobile2">
+<title>GMWW V3.169</title>
+<link rel="stylesheet" href="style.css?v=3.169-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -331,10 +331,11 @@
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
           <section id="battleDemoPanel" class="battle-demo-panel" hidden aria-label="Điều khiển DEMO">
-            <header aria-label="Giữ và kéo để di chuyển DEMO"><span class="battle-menu-grip" aria-hidden="true"></span><b>DEMO</b></header>
+            <header aria-label="Giữ và kéo điều khiển Auto"><span class="battle-menu-grip" aria-hidden="true"></span></header>
+            <button id="battleDemoExpand" type="button" aria-label="Mở điều khiển Auto" aria-expanded="true">↻ Auto</button>
             <div class="battle-demo-actions">
               <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
-              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden>TỐC ĐỘ <select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1">1×</option><option value="2" selected>2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
+              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden><span class="demo-sr-only">Tốc độ</span><select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
             </div>
             <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng — nhấn Chạy Demo</p>
           </section>
@@ -830,6 +831,19 @@
   </div>
 </div>
 
+<div class="sheet hidden" id="playMatchCompletionSheet">
+ <section class="sheet-card play-completion-card" role="dialog" aria-modal="true" aria-labelledby="playCompletionTitle">
+  <div class="sheet-head"><h3 id="playCompletionTitle">KẾT QUẢ VÁN</h3><button id="playCompletionClose" type="button" aria-label="Đóng">×</button></div>
+  <p id="playCompletionMessage" role="status"></p>
+  <div class="play-completion-winners" aria-label="Phe thắng">
+   <button type="button" data-completion-winner="Phe Dân" aria-pressed="false">Phe Dân</button><button type="button" data-completion-winner="Phe Sói" aria-pressed="false">Phe Sói</button><button type="button" data-completion-winner="Phe Ba" aria-pressed="false">Phe Ba</button>
+  </div>
+  <button id="playCompletionConfirm" type="button" class="play-completion-primary">HOÀN THÀNH VÁN</button>
+  <div id="playCompletionChoices" hidden><button type="button" data-completion-next="replay">CHƠI LẠI</button><button type="button" data-completion-next="game">TẠO VÁN MỚI</button><button type="button" data-completion-next="room">TẠO PHÒNG MỚI</button></div>
+  <button id="playCompletionAbort" type="button" class="secondary">Hủy ván không ghi kết quả</button>
+ </section>
+</div>
+
 <div class="sheet hidden" id="playEndSheet">
   <div class="sheet-card play-end-sheet-card" role="dialog" aria-modal="true" aria-labelledby="playEndTitle">
     <div class="sheet-head"><div><h3 id="playEndTitle">XÁC NHẬN KẾT THÚC VÁN</h3><small id="playEndRoomLabel">Phòng —</small></div><button id="playEndClose" type="button" aria-label="Đóng">×</button></div>
@@ -950,10 +964,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.168-timeline"></script>
+<script src="battle-controls.js?v=3.169-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.168-compact-room&status=4"></script>
+<script src="app.js?v=3.169-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
