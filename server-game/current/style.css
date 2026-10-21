@@ -6485,3 +6485,8 @@ body.play-immersive #start #playShell[data-step="battle"]
 #playCreateRoomSheet .play-room-control-row button#playRoomModeToggle:focus-visible{
   outline:2px solid #fff1bd!important;outline-offset:2px!important;
 }
+
+/* GM battle scene displays the same published background as Player Web. */
+#start #playWorld.has-custom-scene{
+ background-image:var(--gmww-gm-scene-image)!important;
+}
