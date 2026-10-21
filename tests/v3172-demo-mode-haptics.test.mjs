@@ -40,7 +40,8 @@ test('Confirmed Demo and GM actions have audio and an opt-in native haptic path'
   assert.match(battle,/GMWW_GM_HAPTIC_KEY/);
   assert.match(swift,/add\(context\.coordinator, name: "gmwwHaptic"\)/);
   assert.match(swift,/message\.frameInfo\.isMainFrame/);
-  assert.match(swift,/UIImpactFeedbackGenerator\(style: \.medium\)/);
+  assert.match(swift,/UINotificationFeedbackGenerator\(\)/);
+  assert.match(swift,/AudioServicesPlaySystemSound\(kSystemSoundID_Vibrate\)/);
   assert.match(bundle,/function demoConfirmedFeedback\(\)/);
   const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
   assert.ok(bundle.includes("const VERSION='"+runtimeVersion+"'"));
