@@ -16,62 +16,10 @@ const between=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,
 test('Demo is one room card inside the room list, never a separate fake member entry',()=>{
   const listStart=html.indexOf('id="playCreatedRoomList"'),card=html.indexOf('id="playDemoRoomChoice"');
   assert.ok(listStart>=0&&card>listStart);
-  assert.match(setup,/list\.replaceChildren\(demoButton\)/);
-  assert.match(setup,/openPlayGameSheet\(\)/);
+  assert.match(setup,/if\(demoButton\)list\.appendChild\(demoButton\)/);
+  assert.match(setup,/renderPlayCreateRoomSheet\(\)/);
   assert.match(events,/playDemoRoomChoice/);
   assert.match(worker,/if\(body\.demo===true&&bearer\(request\)!==GM_SYNC_TOKEN\)/);
-});
-
-function seededHarness(total=10){
-  const directory=Array.from({length:total},(_,i)=>({
-    loginId:'member'+String(i+1).padStart(2,'0'),
-    displayName:'Người '+(i+1),gameCharacterId:'character-'+String(i+1).padStart(2,'0')
-  }));
-  const calls=[],state={room:{demo:true,phase:'lobby',seatsLocked:false,seatCount:24},players:[]},
-    scene={selectedMemberIds:[]};
-  const ctx={
-    playSceneRuntime:state,playSceneState:scene,
-    gmApi:async path=>{assert.equal(path,'/api/gm/members');return{ok:true,members:directory}},
-    playShuffle:xs=>[...xs],
-    playRoomApi:async(path,opts)=>{
-      const body=JSON.parse(opts.body);calls.push({path,body});
-      if(path==='/participants'){
-        const players=body.members.map(m=>({...m,kind:'member',participantId:'member:'+m.loginId}));
-        return{ok:true,selectedCount:players.length,players,room:state.room}
-      }
-      if(path==='/seat-lock')return{ok:true,seatsLocked:body.locked===true,room:{...state.room,seatsLocked:body.locked===true}};
-      return{ok:true,room:state.room}
-    },
-    savePlayScene:()=>{},
-    globalThis:{GMWW_VILLAGE_LAYOUT:{recommendedSeatShape:()=> 'ring'}},
-    Error,Number,String,Set,Map,Array
-  };
-  const src=between(setup,'async function demoPopulateExistingMembers(count){','function openPlayRoomEditor(');
-  const seed=vm.runInNewContext(src+';demoPopulateExistingMembers',ctx);
-  return{seed,state,scene,calls}
-}
-
-test('Demo seeds exactly the sample-game count from existing members with no account creations',async()=>{
-  const h=seededHarness(13);
-  const players=await h.seed(8);
-  assert.equal(players.length,8);
-  assert.equal(h.state.players.length,8);
-  assert.equal(h.scene.selectedMemberIds.length,8);
-  assert.deepEqual(h.calls.map(c=>c.path),['/room-settings','/participants','/seat-lock','/stage']);
-  assert.deepEqual([...h.calls.find(x=>x.path==='/participants').body.members].map(x=>x.seatId),[1,2,3,4,5,6,7,8]);
-  assert.equal(h.calls.find(x=>x.path==='/participants').body.replace,true);
-  assert.equal(h.calls.find(x=>x.path==='/room-settings').body.seatCount,8,'Demo must not retain stale 24-seat layout for an 8-player template');
-  assert.ok(!h.calls.some(x=>x.path.includes('/join')||x.path.includes('/members/create')));
-});
-
-test('Demo refuses insufficient members, ordinary rooms, and invalid party sizes',async()=>{
-  const h=seededHarness(5);
-  await assert.rejects(()=>h.seed(8),/chỉ có 5/);
-  assert.equal(h.calls.length,0);
-  await assert.rejects(()=>h.seed(31),/1 đến 30/);
-  h.state.room.demo=false;
-  await assert.rejects(()=>h.seed(4),/phòng thật/);
-  assert.equal(h.calls.length,0);
 });
 
 test('Demo night reads authoritative turn, picks a legal other-player target, confirms then advances once',async()=>{

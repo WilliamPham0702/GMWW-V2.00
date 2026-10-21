@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.167</title>
-<link rel="stylesheet" href="style.css?v=3.167-compact-room-mobile2">
+<title>GMWW V3.168</title>
+<link rel="stylesheet" href="style.css?v=3.168-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -330,7 +330,15 @@
         </section>
 
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
-          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu đống lửa" role="dialog" aria-modal="false">
+          <section id="battleDemoPanel" class="battle-demo-panel" hidden aria-label="Điều khiển DEMO">
+            <header aria-label="Giữ và kéo để di chuyển DEMO"><span class="battle-menu-grip" aria-hidden="true"></span><b>DEMO</b></header>
+            <div class="battle-demo-actions">
+              <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
+              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden>TỐC ĐỘ <select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1">1×</option><option value="2" selected>2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
+            </div>
+            <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng — nhấn Chạy Demo</p>
+          </section>
+          <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
               <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
@@ -338,8 +346,6 @@
               <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
               <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
               <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
-              <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
-              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden>TỐC ĐỘ <select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1">1×</option><option value="2" selected>2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
               <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
@@ -944,10 +950,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.167-timeline"></script>
+<script src="battle-controls.js?v=3.168-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.167-compact-room&status=4"></script>
+<script src="app.js?v=3.168-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

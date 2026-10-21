@@ -621,8 +621,8 @@ async function savePlayRosterIds(ids){
     seatId:existing.get(String(m.loginId))?.seatId||null
   }));
   if(chosen.length!==ids.length){playRosterSaveFeedback('Danh sách đã thay đổi. Hãy mở lại Gọi Người.',true);return}
-  if(playSceneState.roomMode==='online'){
-    const offline=chosen.filter(m=>m.online!==true);
+  if(playSceneState.roomMode==='online'&&playSceneRuntime.room?.demo!==true){
+    const offline=source.filter(m=>selected.has(String(m.loginId))&&m.online!==true);
     if(offline.length){playRosterSaveFeedback('Chế độ ONLINE chỉ chọn Người Chơi đang Online.',true);playFlashError('Chế độ ONLINE chỉ chọn Người Chơi đang Online.');return}
   }
   const roomCode=String(playSceneState.roomCode);

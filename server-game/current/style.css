@@ -6343,12 +6343,12 @@ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day
 /* Demo is a GM-only playback workspace; controls follow the current compact menu. */
 #playDemoRoomChoice{border-style:solid!important;border-color:rgba(252,209,119,.76)!important}
 #playDemoRoomChoice.active{box-shadow:0 0 0 1px #f7d486 inset!important}
-#battleWolfMenu #battleDemoToggle[hidden],
-#battleWolfMenu #battleDemoSpeedWrap[hidden],
+#battleDemoPanel #battleDemoToggle[hidden],
+#battleDemoPanel #battleDemoSpeedWrap[hidden],
 #battleWolfMenu #battleGMAuto[hidden]{display:none!important}
-#battleWolfMenu #battleDemoToggle[aria-pressed="true"]{border-color:#ffe49e;background:rgba(182,123,37,.22)}
-#battleWolfMenu .play-demo-speed{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;color:inherit}
-#battleWolfMenu .play-demo-speed select{background:rgba(8,33,53,.82);color:#fff;border:1px solid rgba(150,211,239,.4);border-radius:8px;padding:6px 3px;font-size:12px}
+#battleDemoPanel #battleDemoToggle[aria-pressed="true"]{border-color:#ffe49e;background:rgba(182,123,37,.22)}
+#battleDemoPanel .play-demo-speed{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;color:inherit}
+#battleDemoPanel .play-demo-speed select{background:rgba(8,33,53,.82);color:#fff;border:1px solid rgba(150,211,239,.4);border-radius:8px;padding:6px 3px;font-size:12px}
 
 /* V3.165 Demo CI: hidden daytime action tray must beat the legacy flex !important dock. */
 body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"] #battleBottomControls #battleActionTray.battle-action-tray-v399[hidden]{display:none!important}
@@ -6388,3 +6388,12 @@ body.play-immersive #start #playShell[data-step="battle"]
   #battleBottomControls #battleActionTray.battle-action-tray-v399[hidden]{
   display:none!important;
 }
+
+/* Isolated DEMO controller: independent of the GM Menu and draggable on touch. */
+#battleDemoPanel{pointer-events:auto;position:fixed;z-index:260;top:max(82px,env(safe-area-inset-top));right:12px;width:min(290px,calc(100vw - 24px));border:1px solid #efcc82;border-radius:16px;background:rgba(7,36,48,.96);box-shadow:0 8px 28px #0007;color:#fff;padding:9px}
+#battleDemoPanel[hidden]{display:none!important}
+#battleDemoPanel header{display:flex;align-items:center;justify-content:center;gap:8px;min-height:28px;cursor:grab;touch-action:none;user-select:none;color:#ffe1a0;font-size:12px}
+#battleDemoPanel .battle-demo-actions{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:5px}
+#battleDemoPanel button{min-height:42px;border-radius:10px;padding:8px 12px;color:#fff;background:#166b63;border:1px solid #b9eed9;font-weight:800;font-size:12px;touch-action:manipulation}
+#battleDemoStatus{margin:8px 2px 2px;font-size:11px;line-height:1.4;color:#c6e9e2;overflow-wrap:anywhere}
+#battleDemoStatus.is-error{color:#ff9d91}

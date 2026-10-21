@@ -57,7 +57,7 @@ test('Demo moves completed night into the next day then advances resolved day in
     playSetServerCycle:async(phase,day)=>{calls.push([phase,day])},
     demoActionDay:async()=>calls.push(['day-action']),demoActionNight:async()=>calls.push(['night-action']),
     demoStop:async()=>calls.push(['stop']),demoSchedule:()=>calls.push(['schedule']),
-    demoStopTimer:()=>{},playFlashError:x=>{throw Error(x)},renderPlayBattle:()=>{},
+    demoRenderControls:()=>{},demoStopTimer:()=>{},playFlashError:x=>{throw Error(x)},renderPlayBattle:()=>{},
     Math,Number,String,Error,Date
   };
   const step=vm.runInNewContext(fragment+';demoStep',ctx);

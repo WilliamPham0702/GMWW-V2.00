@@ -9,7 +9,7 @@ const app=fs.readFileSync('server-game/current/app.js','utf8');
 const worker=fs.readFileSync('src/index.js','utf8');
 
 test('V3.157: tapping the firepit opens an untitled menu with a usable drag grip',()=>{
-  assert.match(html,/<div id="battleWolfMenu"[^>]*aria-label="Menu đống lửa"/);
+  assert.match(html,/<div id="battleWolfMenu"[^>]*aria-label="Menu GM"/);
   assert.match(html,/<header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip"/);
   assert.doesNotMatch(html,/<strong>🐺 CÔNG CỤ GM<\/strong>/);
   assert.match(source,/battleBindAuxiliaryDrag\('battleWolfMenu','header'\)/);
