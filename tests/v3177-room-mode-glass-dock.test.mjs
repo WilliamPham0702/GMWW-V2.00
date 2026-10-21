@@ -68,7 +68,7 @@ test('Magnet snaps at both menu edges, detaches outside threshold',()=>{
     getElementById:id=>id==='playSetupStrip'?{hidden:false,getClientRects:()=>[top],getBoundingClientRect:()=>top}:
       id==='gmTopMenu'?{hidden:false,getClientRects:()=>[bottom],getBoundingClientRect:()=>bottom}:null
   }};
-  const snap=vm.runInNewContext(extract(battle,'function gmwwMenuSnap(','/* Battle overlays share'),context);
+  const snap=vm.runInNewContext(extract(battle,'function gmwwMenuSnap(','/* Battle overlays share')+';gmwwMenuSnap',context);
   const nearTop=snap({left:12,right:400,top:137,bottom:300,width:388,height:163});
   assert.equal(nearTop.edge,'top');assert.equal(nearTop.left,12);
   const nearBottom=snap({left:12,right:400,top:500,bottom:694,width:388,height:194});
