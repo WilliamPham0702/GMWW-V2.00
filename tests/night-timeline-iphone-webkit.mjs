@@ -120,5 +120,45 @@ try{
  assert.deepEqual(errors,[]);
  await page.screenshot({path:'/tmp/gmww-night-timeline-iphone-webkit.png',fullPage:true});
  console.log('iPhone-sized WebKit: scrolling actions, double-tap targets, atomic confirmation, undo, countdown and timeline PASS');
+
+ // Day selector: actual handlers and responsive CSS, with legal role + Artifact actions.
+ await page.evaluate(()=>{
+   playSceneState.phase='day';
+   state.cards[0].functions=[{id:'day-vision',actionId:'inspect',phase:'day',targetCount:1}];
+   state.actions.role[0].name='Quan sát người chơi và công bố kết quả ban ngày';
+   state.artifacts[0].functions=[{id:'swap',actionId:'swap',phase:'day',targetCount:2}];
+   playSceneRuntime.assignments=[{loginId:'alice',roleId:'seer',artifactId:'stone'}];
+   playSceneRuntime.activeEffects=[];playSceneRuntime.recentInteractions=[];
+   renderPlayBattle();
+ });
+ for(const width of [320,390,430]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await page.locator('#battleActionTray').isVisible(),false,'Day must not show the cramped inline list');
+   await page.locator('#battleDayActionToggle').click();
+   assert.equal(await page.locator('#battleDayActionMenu').isVisible(),true,'A single tap opens the picker');
+   assert.equal(await page.locator('#battleDayActionList button').count(),2);
+   const layout=await page.evaluate(()=>{
+     const ids=['playBattleClockFloat','battleDayNoticeFloat','battleDayActionFloat','battleDayGallowsFloat','battleUndoFloat'];
+     const boxes=ids.map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,right:r.right,width:r.width}});
+     const labels=[...document.querySelectorAll('#battleDayActionList button span')];
+     return {boxes,viewport:innerWidth,unclipped:labels.every(el=>el.scrollWidth<=el.clientWidth+1)};
+   });
+   assert.ok(layout.unclipped,'Full action names must wrap');
+   layout.boxes.forEach((b,i)=>{assert.ok(b.width>30&&b.x>=0&&b.right<=width+1,JSON.stringify(layout));if(i)assert.ok(b.x>=layout.boxes[i-1].right-1,'Dock controls overlap')});
+   await page.locator('#battleDayActionToggle').click();
+   assert.equal(await page.locator('#battleDayActionMenu').isVisible(),false);
+ }
+ await page.locator('#battleDayActionToggle').click();
+ await page.locator('#battleDayActionList button').first().click();
+ assert.equal(await page.locator('#battleTargetSheet').isVisible(),true,'Picking a role opens its existing target chooser');
+ await page.locator('#battleTargetCancel').click();
+ await page.evaluate(()=>{playSceneRuntime.assignments=[];renderPlayBattle()});
+ assert.equal(await page.locator('#battleDayActionToggle').isDisabled(),true);
+ assert.equal(await page.locator('#battleDayActionMenu').isVisible(),false);
+ await page.evaluate(()=>{playSceneState.phase='night';renderPlayBattle()});
+ assert.equal(await page.locator('#battleDayActionFloat').isVisible(),false);
+ assert.equal(await page.locator('#battleActionTray').isVisible(),true);
+ assert.deepEqual(errors,[]);
+ console.log('Day action selector: single tap, role/Artifact choices, targets and 320/390/430px dock PASS');
  await context.close();
 }finally{await browser.close()}

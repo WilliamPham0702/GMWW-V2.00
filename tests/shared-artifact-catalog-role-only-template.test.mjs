@@ -55,7 +55,7 @@ test('Room receives Artifact from central server, never via Ván Mẫu package o
   assert.doesNotMatch(preload,/playArtifactArtworkData\(/);
   const save=app.slice(app.indexOf('async function savePlayGame(){'),app.indexOf('function playRandomInt',app.indexOf('async function savePlayGame(){')));
   assert.match(save,/await playEnsureTemplateAssets\(id,base\)/);
-  assert.match(save,/await playEnsureSharedArtifactPool\(cfg\)/);
+  assert.doesNotMatch(save,/await playEnsureSharedArtifactPool\(cfg\)/);
   assert.doesNotMatch(save,/playArtifactArtworkData\(/);
   assert.match(worker,/Artwork is not released/);
 });

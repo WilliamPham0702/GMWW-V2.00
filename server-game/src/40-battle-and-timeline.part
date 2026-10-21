@@ -257,7 +257,7 @@ async function advancePlayPhase(){
 }
 
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
-const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',morningOpen:false,morningDayKey:'',morningAudioKey:'',morningSig:'',gallowsOpen:false,dayActionsOpen:false,dayMenuSig:'',dayTrayLastTap:0,dayClockBusy:false,key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
+const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',morningOpen:false,morningDayKey:'',morningAudioKey:'',morningSig:'',gallowsOpen:false,dayActionsOpen:false,dayMenuSig:'',dayClockBusy:false,key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleDayActions=()=>{
@@ -941,7 +941,7 @@ function renderPlayBattle(){
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   const shell=document.getElementById('playShell');if(shell)shell.dataset.battlePhase=phase;
-  for(const id of ['battleDayNoticeFloat','battleDayGallowsFloat']){
+  for(const id of ['battleDayNoticeFloat','battleDayActionFloat','battleDayGallowsFloat']){
     const el=document.getElementById(id);if(el)el.hidden=phase!=='day';
   }
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
@@ -961,7 +961,9 @@ function renderPlayBattle(){
   const actions=phase==='day'?allActions.filter(a=>!a.unavailable):allActions,
     bar=document.getElementById('battleActionBar');
   const actionTray=document.getElementById('battleActionTray');
-  if(actionTray)actionTray.hidden=phase==='day'?!actions.length:false;
+  if(actionTray)actionTray.hidden=phase==='day';
+  const dayToggle=document.getElementById('battleDayActionToggle');
+  if(dayToggle){dayToggle.disabled=!actions.length;dayToggle.setAttribute('aria-expanded',String(!!actions.length&&battleState.dayActionsOpen));}
   if(phase==='day'&&!actions.length)battleState.dayActionsOpen=false;
   // Dead actors are informational, not actionable. The GM chooses when to continue.
   const actorIds=[...(t?.loginIds||[]),...(t?.roles||[]).flatMap(r=>r.loginIds||[])];
@@ -995,7 +997,7 @@ function renderPlayBattle(){
     if(menuSig!==battleState.dayMenuSig){
       battleState.dayMenuSig=menuSig;
       dayList.innerHTML=actions.map(a=>'<button type="button" role="listitem" data-day-action="'+playEsc(a.id)+'"><span>'+playEsc(a.name)+'</span><small>'+
-        playEsc((a.actorIds||[]).map(id=>battleMember(id)?.displayName||id).join(', '))+'</small></button>').join('');
+        playEsc((a.artifactId?'Artifact':'Vai Trò')+' · '+(a.actorIds||[]).map(id=>battleMember(id)?.displayName||id).join(', '))+'</small></button>').join('');
     }
   }
   document.getElementById('battleDayNoticeToggle')?.setAttribute('aria-pressed',String(phase==='day'&&battleState.morningOpen));
@@ -1457,6 +1459,8 @@ function initBattleControls(){
     const btn=e.target.closest('[data-day-action]');if(!btn||playSceneState.phase!=='day')return;
     const id=btn.dataset.dayAction;
     battleState.dayActionsOpen=false;
+    document.getElementById('battleDayActionMenu').hidden=true;
+    document.getElementById('battleDayActionToggle')?.setAttribute('aria-expanded','false');
     const action=battleActions().find(a=>a.id===id&&!a.unavailable);
     if(!action)return;
     if(action.noTarget){
@@ -1464,14 +1468,10 @@ function initBattleControls(){
       battleClear();battleState.actionId=id;void battleConfirmDay(true);
     }else battleOpenTargetSheet(id,'list');
   });
-  document.getElementById('battleActionTray')?.addEventListener('click',e=>{
-    if(playSceneState.phase!=='day'||e.target.closest('[data-battle-action],#battleAudioReplay,.battle-action-arrow'))return;
-    const now=Date.now();
-    if(now-battleState.dayTrayLastTap<430){
-      battleState.dayTrayLastTap=0;
-      battleState.dayActionsOpen=!battleState.dayActionsOpen;
-      battleState.gallowsOpen=false;battleState.morningOpen=false;renderPlayBattle();
-    }else battleState.dayTrayLastTap=now;
+  document.getElementById('battleDayActionToggle')?.addEventListener('click',()=>{
+    if(playSceneState.phase!=='day'||!battleActions().some(a=>!a.unavailable))return;
+    battleState.dayActionsOpen=!battleState.dayActionsOpen;
+    battleState.gallowsOpen=false;battleState.morningOpen=false;renderPlayBattle();
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
@@ -1496,7 +1496,7 @@ function initBattleControls(){
       battleState.gallowsOpen=false;document.getElementById('battleGallowsPanel').hidden=true;
       document.getElementById('battleDayGallowsToggle')?.setAttribute('aria-pressed','false');
     }
-    if(battleState.dayActionsOpen&&!inside('#battleDayActionMenu,#battleActionTray')){
+    if(battleState.dayActionsOpen&&!inside('#battleDayActionMenu,#battleDayActionToggle')){
       battleState.dayActionsOpen=false;document.getElementById('battleDayActionMenu').hidden=true;
     }
     const picker=document.getElementById('battleTargetSheet');
@@ -1657,17 +1657,27 @@ function playSortedRoles(){
 function playFavoriteArtifacts(){
   return [...(state.artifacts||[])].filter(a=>prefs.artifacts?.[a.id]?.starred).sort((a,b)=>(Number(prefs.artifacts?.[a.id]?.starOrder||9999)-Number(prefs.artifacts?.[b.id]?.starOrder||9999))||String(a.name||'').localeCompare(String(b.name||''),'vi'));
 }
+function playRememberMatchArtifacts(){
+  if(document.querySelector('.play-game-sheet-card')?.dataset.mode!=='play')return;
+  playSceneState.matchArtifactSettings={enabled:!!playSceneState.artifactsEnabled,ids:[...(playSceneState.artifactIds||[])],limit:playSceneState.artifactLimitPerCycle??3,seconds:playSceneState.gameTiming?.artifactActionSec??30,earlySeconds:playSceneState.gameTiming?.earlyArtifactSec??30};
+}
+function playMatchArtifactConfig(){
+  const enabled=!!playSceneState.artifactsEnabled;
+  return {artifactsEnabled:enabled,
+    artifacts:enabled?playTemplateSelectedArtifacts().map((a,i)=>({artifactId:String(a.id),order:i+1})):[],
+    artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(playSceneState.artifactLimitPerCycle??3)||0)))};
+}
 function updatePlayArtifactToggle(){
   const box=document.getElementById('playArtifactsEnabled'),hint=document.getElementById('playArtifactPoolHint'),pool=playAvailableTemplateArtifacts(),selected=playTemplateSelectedArtifacts();
-  if(box){box.checked=!!playSceneState.artifactsEnabled;box.disabled=document.querySelector('.play-game-sheet-card')?.dataset.mode==='play'&&!selected.length;}
+  if(box){box.checked=!!playSceneState.artifactsEnabled;box.disabled=!pool.length;}
   const actionSec=document.getElementById('playArtifactActionSec');if(actionSec)actionSec.disabled=!playSceneState.artifactsEnabled;
-  if(hint)hint.textContent=!pool.length?'Chưa có Artifact ★ trong Thư Viện':selected.length+' / '+pool.length+' Artifact đã chọn cho Ván Mẫu • bật hoặc tắt cho mỗi trận tại Chọn Ván Mẫu.';
+  if(hint)hint.textContent=!pool.length?'Chưa có Artifact ★ trong Thư Viện':selected.length+' / '+pool.length+' Artifact đã chọn cho trận này.';
   const readonly=document.getElementById('playTemplateArtifactSummary');
   if(readonly)readonly.textContent=playSceneState.artifactsEnabled
-    ?'Artifact: CÓ sử dụng • '+selected.length+' lá từ Ván Mẫu • '+(playSceneState.artifactLimitPerCycle??3)+' lá mới mỗi Ngày / Đêm'
+    ?'Artifact: CÓ sử dụng • '+selected.length+' lá cho trận này • '+(playSceneState.artifactLimitPerCycle??3)+' lá mới mỗi Ngày / Đêm'
     :'Artifact: KHÔNG sử dụng trong trận này';
-  // Never construct the editable Artifact gallery in the read-only Choose Ván view.
-  if(document.querySelector('.play-game-sheet-card')?.dataset.mode==='library')renderPlayArtifactPicker();
+  const controls=document.getElementById('playMatchArtifactSettings');if(controls)controls.hidden=!playSceneState.artifactsEnabled;
+  if(document.querySelector('.play-game-sheet-card')?.dataset.mode==='play')renderPlayArtifactPicker();
 }
 function playTemplateSelectedRoles(){
   const plan=playSceneState.rolePlan||{},orders=playSceneState.roleOrders||{};
@@ -1797,7 +1807,7 @@ function renderPlayArtifactPicker(){
     const img=button.querySelector('img');
     void resolveArtwork('artifacts',artifact.id,'thumb').then(url=>{if(img.isConnected)img.src=url||'default-artwork.webp'}).catch(()=>{if(img.isConnected)img.src='default-artwork.webp'});
     img.onerror=()=>{img.onerror=null;img.src='default-artwork.webp'};
-    button.onclick=()=>{const next=new Set((playSceneState.artifactIds||[]).map(String));if(next.has(String(artifact.id)))next.delete(String(artifact.id));else next.add(String(artifact.id));playSceneState.artifactIds=[...next];savePlayScene();updatePlayArtifactToggle()};
+    button.onclick=()=>{const next=new Set((playSceneState.artifactIds||[]).map(String));if(next.has(String(artifact.id)))next.delete(String(artifact.id));else next.add(String(artifact.id));playSceneState.artifactIds=[...next];playRememberMatchArtifacts();savePlayScene();updatePlayArtifactToggle()};
     picker.appendChild(button);
   }
   if(!pool.length)picker.innerHTML='<p class="play-template-help">Chưa có Artifact ★. Hãy đánh dấu trong Thư Viện trước.</p>';
@@ -1912,6 +1922,8 @@ function renderGameTemplateLibrary(){
   for(const t of playSceneRuntime.gameTemplates){const b=document.createElement('button');b.type='button';b.className='template-library-item';b.innerHTML='<b>'+playEsc(t.name||'Ván Mẫu')+'</b><small>'+Number(t.playerCount||0)+' người • chạm để sửa</small>';b.onclick=()=>openLibraryGameTemplate(String(t.id||''));box.appendChild(b)}
 }
 async function applyPlayGameTemplate(id){
+  const matchMode=document.querySelector?.('.play-game-sheet-card')?.dataset.mode==='play';
+  const matchSettings=matchMode?playSceneState.matchArtifactSettings:null;
   id=String(id||'');if(!id){playSceneRuntime.templateArtifactPoolIds=[];playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};await renderPlayGameRoles();updatePlayGameRoleCount();return}
   try{
     const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)throw new Error('Ván Mẫu chưa tải được dữ liệu. Vui lòng thử lại.');
@@ -1924,11 +1936,20 @@ async function applyPlayGameTemplate(id){
       ||(cfg.artifactsEnabled!==false&&templateArtifactIds.length>0);
     playSceneState.artifactIds=templateArtifactIds;
     playSceneState.gameTiming={villageDiscussionSec:Math.max(0,Number(cfg?.timing?.villageDiscussionSec??300)||0),gallowsNominationSec:Math.max(1,Number(cfg?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,Number(cfg?.timing?.gallowsVoteSec??10)||10),wolfDiscussionSec:Math.max(0,Number(cfg?.timing?.wolfDiscussionSec??30)||0),earlyArtifactSec:30,defaultActionSec:Math.max(0,Number(cfg?.timing?.defaultActionSec??30)||0),artifactActionSec:Math.max(0,Number(cfg?.timing?.artifactActionSec??30)||0),autoAdvance:cfg?.timing?.autoAdvance!==false};playSceneState.artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(cfg?.artifactLimitPerCycle??3)||0)));savePlayScene();
+    if(matchMode){
+      const settings=matchSettings||{enabled:playSceneState.artifactsEnabled,ids:templateArtifactIds.length?templateArtifactIds:playFavoriteArtifacts().map(a=>String(a.id)),limit:playSceneState.artifactLimitPerCycle,seconds:playSceneState.gameTiming.artifactActionSec,earlySeconds:30};
+      playSceneState.artifactsEnabled=!!settings.enabled;
+      playSceneState.artifactIds=[...settings.ids];
+      playSceneState.artifactLimitPerCycle=settings.limit;
+      playSceneState.gameTiming.artifactActionSec=settings.seconds;
+      playSceneState.gameTiming.earlyArtifactSec=settings.earlySeconds;
+      playSceneState.matchArtifactSettings={...settings,ids:[...settings.ids]};savePlayScene();
+    }
     const name=document.getElementById('playGameName');if(name)name.value=playSceneState.gameName;const v=document.getElementById('playVillageDiscussionSec'),w=document.getElementById('playWolfDiscussionSec'),d=document.getElementById('playDefaultActionSec'),a=document.getElementById('playAutoAdvance');if(v)v.value=playSceneState.gameTiming.villageDiscussionSec;
     const nominationInput=document.getElementById('playGallowsNominationSec'),voteInput=document.getElementById('playGallowsVoteSec');
     if(nominationInput)nominationInput.value=playSceneState.gameTiming.gallowsNominationSec;
     if(voteInput)voteInput.value=playSceneState.gameTiming.gallowsVoteSec;
-    if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=30;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
+    if(w)w.value=playSceneState.gameTiming.wolfDiscussionSec;if(d)d.value=playSceneState.gameTiming.defaultActionSec;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=playSceneState.gameTiming.artifactActionSec;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=playSceneState.gameTiming.earlyArtifactSec;if(a)a.checked=playSceneState.gameTiming.autoAdvance;const quota=document.getElementById('playArtifactLimitPerCycle');if(quota)quota.value=String(playSceneState.artifactLimitPerCycle);
     updatePlayArtifactToggle();await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(err){playFlashError(err.message)}
 }
@@ -1992,19 +2013,13 @@ async function savePlayGame(){
       if(missingRoles.length)throw new Error('Thiếu '+missingRoles.length+' Lá Vai Trò trong Thư Viện. Vui lòng đồng bộ Bộ Bài rồi thử lại.');
       await playEnsureTemplateAssets(id,base);
       playGameStatus('Đang chuẩn bị cấu hình và Artwork cho trận…','progress');
-      // The template supplies the Artifact pool; GM decides whether to use it per match.
-      const artifactEnabled=!!document.getElementById('playArtifactsEnabled')?.checked;
-      const chosenArtifactRefs=artifactEnabled?(base.artifacts||[]):[];
-      const missingArtifacts=chosenArtifactRefs.filter(r=>!(state.artifacts||[]).some(a=>String(a.id)===String(r.artifactId)));
-      if(artifactEnabled&&(!chosenArtifactRefs.length||missingArtifacts.length))
-        throw new Error('Ván Mẫu thiếu Artifact đã cấu hình. Hãy vào Thư Viện sửa và LƯU Ván Mẫu trước.');
+      const artifactConfig=playMatchArtifactConfig();
+      if(artifactConfig.artifactsEnabled&&!artifactConfig.artifacts.length)
+        throw new Error('Hãy chọn ít nhất một Artifact hoặc tắt Artifact cho trận này.');
       const configured={
         ...base,
         roles:(base.roles||[]).map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),
-        timing,
-        artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(base.artifactLimitPerCycle??3)||0))),
-        artifactsEnabled:artifactEnabled,
-        artifacts:chosenArtifactRefs.map((a,i)=>({artifactId:String(a.artifactId),order:Number(a.order)||i+1}))
+        timing,...artifactConfig
       };
       // V3.71: register lightweight references to ALL canonical role images.
       // The Server owns the packaged bytes; never transfer images to each room.
@@ -2050,12 +2065,10 @@ async function savePlayGame(){
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
   const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
-  const selectedArtifacts=playTemplateSelectedArtifacts();
   const cfg={id:templateId,name:gameName,playerCount:total,
     roles:chosen.map(r=>({...r,actionDurationSec:playRoleDurationSec(r.roleId,timing.defaultActionSec)})),
-    artifactsEnabled:selectedArtifacts.length>0,
-    artifacts:selectedArtifacts.map((a,i)=>({artifactId:String(a.id),order:i+1})),
-    timing,artifactLimitPerCycle};
+    artifactsEnabled:false,artifacts:[],
+    timing:{...timing,artifactActionSec:30,earlyArtifactSec:30},artifactLimitPerCycle:3};
   playSceneState.gameTiming=timing;playSceneState.artifactLimitPerCycle=artifactLimitPerCycle;
   playSetBusy(true);
   const saveButton=document.getElementById('playGameSave');
@@ -2068,12 +2081,6 @@ async function savePlayGame(){
     playSceneState.gameName=gameName;savePlayScene();
     playGameStatus('Đang đóng gói artwork Vai Trò; Artifact dùng kho chung của server…','progress');
     await playEnsureTemplateAssets(playSceneState.gameTemplateId,cached?.template?.compiledConfig||cfg);
-    // Prewarm the selected Artifact pool when the template is SAVED, not during room setup.
-    // Artifact bytes remain in the global shared catalog; never copy them into a template.
-    if(cfg.artifacts.length){
-      playGameStatus('Đang chuẩn bị trước '+cfg.artifacts.length+' Artifact dùng chung…','progress');
-      await playEnsureSharedArtifactPool(cfg);
-    }
     closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary();
   }catch(err){
     const raw=String(err?.message||'Không lưu được Ván Mẫu.');

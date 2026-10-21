@@ -11,16 +11,16 @@ const section=(source,from,to)=>{
   assert.ok(a>=0&&b>a,'source fragment not found: '+from);
   return source.slice(a,b);
 };
-test('Artifact pool stays in Ván Mẫu editor while ON/OFF is per match on Chọn Ván',()=>{
+test('All Artifact setup is per match on Chọn Ván',()=>{
   const editor=section(html,'<div class="play-template-editor-only">','<div class="play-template-play-review">');
   const play=section(html,'<div class="play-template-play-review">','<div class="button-row play-roster-actions">');
   for(const id of ['playGameArtifactPicker','playArtifactActionSec','playArtifactLimitPerCycle'])
-    assert.match(editor,new RegExp('id="'+id+'"'));
+    assert.match(play,new RegExp('id="'+id+'"'));
   assert.doesNotMatch(editor,/id="playArtifactsEnabled"/);
   assert.match(play,/id="playArtifactsEnabled"/);
-  assert.doesNotMatch(play,/id="playGameArtifactPicker"|id="playArtifactActionSec"|id="playArtifactLimitPerCycle"/);
+  assert.doesNotMatch(editor,/id="playGameArtifactPicker"|id="playArtifactActionSec"|id="playArtifactLimitPerCycle"/);
   assert.match(play,/id="playTemplateArtifactSummary"/);
-  assert.match(app,/if\(document\.querySelector\('\.play-game-sheet-card'\)\?\.dataset\.mode==='library'\)renderPlayArtifactPicker\(\)/);
+  assert.match(app,/if\(document\.querySelector\('\.play-game-sheet-card'\)\?\.dataset\.mode==='play'\)renderPlayArtifactPicker\(\)/);
   assert.match(play,/id="playGameTimingDetails"/);
   assert.match(play,/id="playRoleTimingDetails"/);
 });
@@ -39,15 +39,15 @@ test('The Worker preserves explicit Artifact on/off and accepts previous templat
   const none=sanitizeGameConfig({...data,artifacts:[]});
   assert.equal(none.artifactsEnabled,false);
 });
-test('Save prepares the reusable Artifact catalog; choose only references stored template',()=>{
+test('Template save is role-only; match selection uses its own Artifact configuration',()=>{
   const save=section(app,'async function savePlayGame(){','function playRandomInt(max)');
   const play=section(save,"if(mode==='play'){","const total=playRolePlanTotal();");
   const library=save.slice(save.indexOf('const total=playRolePlanTotal();'));
-  assert.match(library,/artifactsEnabled:selectedArtifacts\.length>0/);
+  assert.match(library,/artifactsEnabled:false,artifacts:\[\]/);
   assert.match(library,/await playEnsureTemplateAssets\(playSceneState\.gameTemplateId/);
-  assert.match(library,/await playEnsureSharedArtifactPool\(cfg\)/);
-  assert.match(play,/const chosenArtifactRefs=artifactEnabled\?\(base\.artifacts\|\|\[\]\):\[\]/);
-  assert.match(play,/artifacts:chosenArtifactRefs\.map\(/);
+  assert.doesNotMatch(library,/await playEnsureSharedArtifactPool\(cfg\)/);
+  assert.match(play,/const artifactConfig=playMatchArtifactConfig\(\)/);
+  assert.match(play,/timing,\.\.\.artifactConfig/);
   assert.doesNotMatch(play,/selectedArtifacts\s*=\s*playTemplateSelectedArtifacts/);
   assert.doesNotMatch(play,/playArtifactArtworkData\(/);
   assert.match(app,/await playEnsureSharedArtifactReferencesReady\(cfg\)/);
