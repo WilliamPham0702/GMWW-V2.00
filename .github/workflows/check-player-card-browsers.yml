@@ -14,6 +14,9 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-compact-battle-panels.mjs"
+      - "tests/v3178-compact-battle-panels.test.mjs"
+      - "server-game/current/style.css"
       - "tests/home-v389-iphone-webkit.mjs"
       - "tests/night-timeline-iphone-webkit.mjs"
       - "tests/demo-room-cross-origin-webkit.mjs"
@@ -39,6 +42,9 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-compact-battle-panels.mjs"
+      - "tests/v3178-compact-battle-panels.test.mjs"
+      - "server-game/current/style.css"
       - "tests/home-v389-iphone-webkit.mjs"
       - "tests/night-timeline-iphone-webkit.mjs"
       - "tests/demo-room-cross-origin-webkit.mjs"
@@ -77,6 +83,8 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
+      - name: Verify compact GM battle panels on iPhone-sized WebKit
+        run: node tests/browser-compact-battle-panels.mjs
       - name: Check night timeline on iPhone-sized WebKit
         run: node tests/night-timeline-iphone-webkit.mjs
       - name: Exercise private card UI with Chrome, Edge and WebKit
@@ -100,6 +108,13 @@ jobs:
         run: node tests/seat-css-webkit.mjs
       - name: Check OTA startup recovery in WebKit
         run: node tests/runtime-recovery-webkit.mjs
+      - name: Upload compact battle panel preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-v3178-iphone-compact-battle
+          path: /tmp/gmww-v3178-iphone-layout.png
+          if-no-files-found: ignore
       - name: Upload WebKit Home preview
         if: always()
         uses: actions/upload-artifact@v4
