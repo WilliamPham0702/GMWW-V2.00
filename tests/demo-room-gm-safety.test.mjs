@@ -9,7 +9,7 @@ const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const events=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 
-test('Demo identity is an immutable server flag, never inferred from room name',()=>{
+test('Demo identity is an authoritative server flag, never inferred from room name',()=>{
   assert.match(worker,/demo:b\?\.demo===true/);
   assert.match(contract,/demo:m\.demo===true/);
   assert.match(worker,/if\(r\?\.demo===true\)continue/);
@@ -38,12 +38,13 @@ test('Playback uses one lease owner and existing server game action endpoints',(
   assert.match(battle,/demoRunner\.completed\.add\(signature\)/);
 });
 
-test('Demo is selected as an immutable room type, with controls inside GM menu only',()=>{
+test('Demo is selected after creating a shared room, with GM controls on same menu row',()=>{
   for(const id of ['playRoomModeToggle','battleDemoToggle','battleDemoSpeed'])assert.match(html,new RegExp('id="'+id+'"'));
   assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
-  assert.match(setup,/demo:isDemo/);
-  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
-  assert.ok(html.indexOf('id="battleWolfMenu"')<html.indexOf('id="battleDemoPanel"'));
+  assert.match(setup,/demo:false,roomMode:'offline'/);
+  assert.match(setup,/playUpdateRoomSettings\(patch\)/);
+  assert.ok(html.indexOf('id="battleWolfMenu"')<html.indexOf('id="battleDemoToggle"'));
+  assert.ok(html.indexOf('id="battleDemoToggle"')<html.indexOf('id="battleLabelArtifact"'));
   assert.match(battle,/if\(auto\)auto\.hidden=false/);
   assert.match(events,/demoStop\('exit_play'\)/);
 });
