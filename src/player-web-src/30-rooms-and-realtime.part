@@ -201,7 +201,7 @@ function renderGallowsWidget(){
   el.hidden=!canNominate||!state.gallowsNominationOpen;
   if(el.hidden){gallowsTick();return}
   const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
-  el.querySelector('#gmwwGallowsPrompt').textContent='Chọn người đề cử rồi nhấn OK.';
+  el.querySelector('#gmwwGallowsPrompt').textContent='Chọn người đề cử rồi nhấn OK. Thời gian bỏ phiếu: '+(g.voteDurationSec||10)+' giây.';
   const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
   sel.replaceChildren();
   for(const p of state.players||[]){
