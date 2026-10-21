@@ -919,6 +919,29 @@ function battleBindResultPopup(){
     handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
   }
 }
+/* Magnetic docking: align a dragged panel with the visible top/bottom GM menu.
+   Pure geometry from current layout; release farther than 32px detaches again. */
+function gmwwMenuSnap(rect,threshold=32){
+  if(!rect||!Number.isFinite(rect.top))return null;
+  const anchors=['playSetupStrip','gmTopMenu','battleBottomControls'];
+  let best=null;
+  for(const id of anchors){
+    const bar=document.getElementById(id);
+    if(!bar||bar.hidden||!bar.getClientRects?.().length)continue;
+    const menu=bar.getBoundingClientRect();
+    if(menu.width<90||menu.height<20)continue;
+    const centerDelta=Math.abs((rect.left+rect.right-menu.left-menu.right)/2);
+    if(centerDelta>Math.max(menu.width,rect.width)*.55)continue;
+    const above=(menu.top+menu.bottom)/2>innerHeight/2;
+    const gap=above?Math.abs(rect.bottom-(menu.top-5)):Math.abs(rect.top-(menu.bottom+5));
+    if(gap>threshold||best&&best.distance<=gap)continue;
+    const width=Math.min(menu.width,innerWidth-16);
+    const left=Math.max(8,Math.min(innerWidth-width-8,menu.left+(menu.width-width)/2));
+    const top=above?menu.top-5-rect.height:menu.bottom+5;
+    best={left,top,width,distance:gap,edge:above?'bottom':'top'};
+  }
+  return best;
+}
 /* Battle overlays share viewport-clamped title dragging, without interfering with action buttons. */
 function battleBindAuxiliaryDrag(panelId,handleSelector){
   const panel=document.getElementById(panelId),handle=panel?.querySelector(handleSelector);
@@ -936,9 +959,28 @@ function battleBindAuxiliaryDrag(panelId,handleSelector){
     if(!drag||e.pointerId!==drag.id)return;
     const p=battleTargetClampPosition(panel.offsetWidth,panel.offsetHeight,drag.left+e.clientX-drag.startX,drag.top+e.clientY-drag.startY);
     for(const [name,value] of Object.entries({left:p.left+'px',top:p.top+'px',right:'auto',bottom:'auto',transform:'none'}))panel.style.setProperty(name,value,'important');
+    const preview=gmwwMenuSnap(panel.getBoundingClientRect());
+    panel.classList.toggle('gmww-dock-near',!!preview);
+    if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>12)panel.classList.remove('gmww-dock-snapped');
     e.preventDefault();
   });
-  const stop=e=>{if(!drag||e.pointerId!==drag.id)return;drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}};
+  const stop=e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const snap=e.type==='pointerup'?gmwwMenuSnap(panel.getBoundingClientRect()):null;
+    panel.classList.remove('gmww-dock-near');
+    if(snap){
+      const p=battleTargetClampPosition(snap.width,panel.offsetHeight,snap.left,snap.top);
+      panel.style.setProperty('--gmww-dock-width',snap.width+'px');
+      panel.style.setProperty('left',p.left+'px','important');
+      panel.style.setProperty('top',p.top+'px','important');
+      panel.style.setProperty('right','auto','important');
+      panel.style.setProperty('bottom','auto','important');
+      panel.style.setProperty('transform','none','important');
+      panel.classList.add('gmww-dock-snapped');
+      panel.dataset.dockEdge=snap.edge;
+    }else{panel.classList.remove('gmww-dock-snapped');panel.style.removeProperty('--gmww-dock-width');delete panel.dataset.dockEdge}
+    drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}
+  };
   handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
   const keepVisible=()=>{
     if(panel.hidden||!panel.style.left)return;
