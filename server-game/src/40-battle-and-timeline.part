@@ -923,13 +923,13 @@ function battleBindResultPopup(){
    Pure geometry from current layout; release farther than 32px detaches again. */
 function gmwwMenuSnap(rect,threshold=32){
   if(!rect||!Number.isFinite(rect.top))return null;
-  const anchors=['playSetupStrip','gmTopMenu','battleBottomControls'];
+  const anchors=['playSetupStrip','playBattleTop','gmTopMenu','battleBottomControls'];
   let best=null;
   for(const id of anchors){
     const bar=document.getElementById(id);
     if(!bar||bar.hidden||!bar.getClientRects?.().length)continue;
     const menu=bar.getBoundingClientRect();
-    if(menu.width<90||menu.height<20)continue;
+    if(menu.width<90||menu.height<20||menu.bottom<=0||menu.top>=innerHeight)continue;
     const centerDelta=Math.abs((rect.left+rect.right-menu.left-menu.right)/2);
     if(centerDelta>Math.max(menu.width,rect.width)*.55)continue;
     const above=(menu.top+menu.bottom)/2>innerHeight/2;
@@ -937,7 +937,8 @@ function gmwwMenuSnap(rect,threshold=32){
     if(gap>threshold||best&&best.distance<=gap)continue;
     const width=Math.min(menu.width,innerWidth-16);
     const left=Math.max(8,Math.min(innerWidth-width-8,menu.left+(menu.width-width)/2));
-    const top=above?menu.top-5-rect.height:menu.bottom+5;
+    const rawTop=above?menu.top-5-rect.height:menu.bottom+5;
+    const top=Math.max(8,Math.min(Math.max(8,innerHeight-rect.height-8),rawTop));
     best={left,top,width,distance:gap,edge:above?'bottom':'top'};
   }
   return best;
