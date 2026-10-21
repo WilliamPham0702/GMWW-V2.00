@@ -29,7 +29,7 @@ test('Reconciled room stays private and invisible to normal Player Web',()=>{
 
 test('Reconciled runner retains authoritative phases, resumable playback and lease',()=>{
   assert.match(battle,/demoRunner\.paused/);
-  assert.match(battle,/⏸ DEMO/);
+  assert.match(battle,/demoRunner\.running\?'↻':'Ⅱ'/);
   assert.match(battle,/TIẾP TỤC/);
   assert.match(battle,/async function demoActionNight/);
   assert.match(battle,/async function demoActionDay/);
