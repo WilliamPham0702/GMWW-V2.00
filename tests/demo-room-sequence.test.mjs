@@ -108,7 +108,9 @@ test('Demo uses the actual server cycles, ordered role/Artifact queue, and day b
   assert.match(battle,/demoActionNight\(t,epoch\)/);
   assert.match(battle,/demoActionDay\(epoch\)/);
   for(const phase of ['ready','nominating','selecting','voting','closed','resolved'])assert.ok(battle.includes("stage==='"+phase+"'"));
-  for(const endpoint of ['/battle-action','/day-action','/gallows','/turn','/cycle'])assert.ok(battle.includes("'"+endpoint+"'"));
+  // The V3.166 source boundary groups server-cycle helpers with setup and playback with battle.
+  const gmSources=setup+'\\n'+battle;
+  for(const endpoint of ['/battle-action','/day-action','/gallows','/turn','/cycle'])assert.ok(gmSources.includes("'"+endpoint+"'"),'Missing GM endpoint '+endpoint);
   assert.match(battle,/TẠM DỪNG/);
   assert.match(battle,/TIẾP TỤC/);
   assert.match(battle,/reason==='manual'&&active/);
