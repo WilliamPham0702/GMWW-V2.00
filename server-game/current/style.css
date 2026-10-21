@@ -6367,6 +6367,16 @@ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day
  #battleGallowsMembers .battle-gallows-member button{font-size:8px;padding:3px}
 }
 
+/* V3.166 WebKit regression: the in-day picker replaces the legacy inline tray.
+   A more-specific flex!important rule on #battleBottomControls previously
+   overrode the tray's [hidden] attribute and exposed the cramped list. */
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"]
+  #battleBottomControls #battleActionTray.battle-action-tray-v399,
+body.play-immersive #start #playShell[data-step="battle"]
+  #battleBottomControls #battleActionTray.battle-action-tray-v399[hidden]{
+  display:none!important;
+}
+
 /* Demo is a GM-only playback workspace; controls follow the current compact menu. */
 #playDemoRoomChoice{border-style:solid!important;border-color:rgba(252,209,119,.76)!important}
 #playDemoRoomChoice.active{box-shadow:0 0 0 1px #f7d486 inset!important}
