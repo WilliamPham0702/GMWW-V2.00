@@ -33,7 +33,7 @@ test('Playback uses one lease owner and existing server game action endpoints',(
   assert.match(battle,/\/battle-action/);
   assert.match(battle,/\/day-action/);
   assert.match(battle,/\/gallows/);
-  assert.match(battle,/expectedTurnId:t\.id/);
+  assert.match(setup,/expectedTurnId:t\.id/);
   assert.match(battle,/demoRunner\.pending\.add\(signature\)/);
   assert.match(battle,/demoRunner\.completed\.add\(signature\)/);
 });
@@ -42,13 +42,13 @@ test('GM-only Demo appears as a room tile and only renders controls inside Demo 
   for(const id of ['playDemoRoomChoice','battleDemoToggle','battleDemoSpeed'])assert.match(html,new RegExp('id="'+id+'"'));
   assert.match(setup,/async function playOpenDemoRoom/);
   assert.match(setup,/demo:isDemo/);
-  assert.match(battle,/if\(auto\)auto\.hidden=enabled/);
+  assert.match(battle,/if\(auto\)auto\.hidden=false/);
   assert.match(events,/playDemoRoomChoice/);
   assert.match(events,/demoStop\('exit_play'\)/);
 });
 
 test('Playback stops on uncertainty and does not proclaim unverified victories',()=>{
-  assert.match(battle,/Kết quả giao dịch lượt này chưa rõ/);
+  assert.match(setup,/Kết quả giao dịch lượt này chưa rõ/);
   assert.match(battle,/if\(playSceneRuntime\.winProposal\)/);
   assert.match(battle,/await demoStop\('winner_ready'\);await openPlayCompletionSheet\(\)/);
   assert.doesNotMatch(battle,/demoActionNight[\s\S]*?gmEnd\(/);

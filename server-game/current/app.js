@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.170';
+const VERSION='3.171';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2545,7 +2545,7 @@ function playFlashError(message){
 async function playRoomApi(path='',opts={}){
   if(!isLivePlayRoom())throw new Error('Chưa có Phòng Online.');
   // While the Demo bot owns a lease, all its writes carry the same owner ID.
-  const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.running
+  const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.owner&&demoRunner.roomCode===String(playSceneState.roomCode)
     ?{...(opts.headers||{}),'x-gmww-demo-owner':demoRunner.owner}:opts.headers;
   return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers});
 }
@@ -2752,6 +2752,55 @@ function demoRenderObserver(){
   const statuses={pending:'Đang gửi',accepted:'Đã thực hiện',skipped:'Bỏ qua',uncertain:'Chưa xác nhận'};
   set('battleDemoEvent',event?(statuses[event.status]||'Đã thực hiện')+' · '+[event.actor,event.action].filter(Boolean).join(' · ')+(event.targets.length?' → '+event.targets.join(', '):''): 'Chưa có hành động trong ván này.');
   set('battleDemoObserverError',demoRunner.error||'');
+}
+function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
+function demoNightAlreadyUsed(action){
+  const roleIds=action.roleIds?.length?action.roleIds:action.roleId?[action.roleId]:String(action.id||'').startsWith('role:')?[action.id.split(':')[1]]:[];
+  return !action.artifactId&&(playSceneRuntime.battleActionUsage||[]).some(row=>String(row.matchId)===String(playSceneRuntime.room?.matchId)&&Number(row.night)===Number(playSceneState.night)&&String(row.actionId)===String(action.actionId)&&(!row.roleId||!roleIds.length||roleIds.includes(String(row.roleId)))&&(action.actorIds||[]).includes(String(row.actorId)));
+}
+async function demoRunNight(t,epoch){
+  const key=demoNightPlanKey(t),active=()=>demoRunner.running&&epoch===demoRunner.epoch&&battleTurn()?.id===t.id&&demoNightPlanKey(t)===key&&demoRunner.roomCode===playSceneState.roomCode;
+  if(!active())return;
+  const clock=playSceneRuntime.demoControl?.clock||{durationMs:0,remainingMs:0};
+  if(demoRunner.nightPlan?.key!==key){
+    const all=battleActions(),tasks=all.filter(a=>!a.unavailable&&a.actorIds?.length&&!demoNightAlreadyUsed(a)),optional=tasks.find(a=>a.actionId==='action_witch_save'&&!a.artifactId);
+    demoRunner.nightPlan={key,ids:tasks.map(a=>a.id),cursor:0,declined:optional&&Math.random()>=.5?optional.id:''};
+    if(!tasks.length)demoObserve(all.map(a=>a.unavailableReason).filter(Boolean).join(' · ')||'Không có chức năng chủ động còn hợp lệ', '', [], 'skipped');
+  }
+  const plan=demoRunner.nightPlan,total=Math.max(1,plan.ids.length),elapsed=Math.max(0,Number(clock.durationMs)-Number(clock.remainingMs));
+  while(plan.cursor<plan.ids.length&&active()&&elapsed>=Number(clock.durationMs)*plan.cursor/total){
+    const id=plan.ids[plan.cursor],action=battleActions().find(a=>a.id===id),signature=key+':'+id;
+    if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
+    if(!demoRunner.completed.has(signature)&&action&&!demoNightAlreadyUsed(action)){
+      if(plan.declined===id)demoObserve('Phù Thuỷ chọn không Cứu','',[],'skipped');
+      else if(action.unavailable)demoObserve(action.name+' · '+(action.unavailableReason||'Không còn hợp lệ'),'',[],'skipped');
+      else if(action.artifactId&&Number(playSceneRuntime.artifactCycle?.count||0)>=Number(playSceneRuntime.artifactCycle?.max??3))demoObserve(action.name+' · Đã đạt giới hạn Artifact trong chu kỳ','',[],'skipped');
+      else await demoExecuteNight(action,demoPick(action.actorIds),t,signature,epoch);
+    }
+    plan.cursor++;
+    if(!active())return;
+    const beforeSync=Number(playSceneRuntime.syncSerial||0);
+    if(!await playSyncRoom(true)){if(Number(playSceneRuntime.syncSerial)>beforeSync+1)return;throw Error('Chưa đồng bộ được kết quả hành động.')}
+  }
+  if(!active()||Number(clock.remainingMs)>0)return;
+  const response=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',expectedTurnId:t.id,source:'demo'})});
+  if(response?.ok!==true)throw Error(response?.message||response?.error||'Không thể chuyển lượt.');
+  demoRunner.visual=null;demoRunner.steps++;
+  document.getElementById('battleResultPopup')?.setAttribute('hidden','');
+}
+function demoVisualCurrent(){
+  const v=demoRunner.visual;
+  return playSceneRuntime.room?.demo===true&&playSceneState.step==='battle'&&v&&v.matchId===String(playSceneRuntime.room.matchId||'')&&v.cycleKey===String(playSceneRuntime.room.cycleKey||'')&&v.turnId===String(battleTurn()?.id||playSceneState.phase)?v:null;
+}
+function demoFocus(action,actorId,targets){
+  demoRunner.visual={matchId:String(playSceneRuntime.room?.matchId||''),cycleKey:String(playSceneRuntime.room?.cycleKey||''),turnId:String(battleTurn()?.id||playSceneState.phase),actionId:action.id,actorId,targetIds:[...targets]};
+  demoRenderVisual();if(typeof battleMarkPlayers==='function')battleMarkPlayers();
+}
+function demoRenderVisual(){
+  const v=demoVisualCurrent();
+  const manual=playSceneRuntime.room?.demo===true&&typeof battleState!=='undefined'&&battleState.targets.length?battleState.actionId:'';
+  document.querySelectorAll('[data-battle-action],[data-day-action]').forEach(node=>node.classList.toggle('demo-action-active',!!(manual||v?.actionId)&&(node.dataset.battleAction||node.dataset.dayAction)===(manual||v?.actionId)));
+  document.getElementById('battleDemoEvent')?.classList.toggle('demo-action-active',!!v);
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
@@ -3359,8 +3408,8 @@ function syncPlayAutoAdvance(){
   playSceneRuntime.autoTurnKey='';
 }
 async function togglePlayAutoGM(){
-  if(playSceneRuntime.room?.demo===true)return;
   if(playSceneRuntime.busy)return;
+  if(demoRunner.running)await demoStop('auto_gm');
   const enabled=!playSceneState.autoGM;
   if(!isLivePlayRoom()){playSceneState.autoGM=enabled;savePlayScene();renderPlayScene();return}
   playSetBusy(true);
@@ -3440,7 +3489,6 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
-  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
@@ -3494,7 +3542,8 @@ async function demoStop(reason='manual'){
   renderPlayBattle();
 }
 function demoRenderControls(){
-  initDemoPanel();demoRenderObserver();
+  initDemoPanel();demoRenderObserver();demoRenderVisual();
+  document.getElementById('battleDemoExpand')?.classList.toggle('is-running',demoRunner.running);
   const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
   if(panel)panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(status){status.textContent=demoRunner.error||demoRunner.status;status.classList.toggle('is-error',!!demoRunner.error)}
@@ -3503,21 +3552,22 @@ function demoRenderControls(){
     field=document.getElementById('battleDemoSpeed');
   if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ TẠM DỪNG':demoRunner.paused?'▶ TIẾP TỤC':'▶ CHẠY';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
   if(wrap)wrap.hidden=!enabled;
-  if(auto)auto.hidden=enabled;
+  if(auto)auto.hidden=false;
   if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
 }
 async function demoToggle(){
   if(playSceneRuntime.room?.demo!==true)return;
   if(demoRunner.running){await demoStop();return}
   if(playSceneState.step!=='battle'){playFlashError('Hãy setup và vào trận trước khi chạy Demo.');return}
-  const sameMatch=demoRunner.paused&&demoRunner.roomCode===String(playSceneState.roomCode)&&
+  const sameMatch=demoRunner.roomCode===String(playSceneState.roomCode)&&
     demoRunner.matchId===String(playSceneRuntime.room?.matchId||'');
-  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0;demoRunner.lastEvent=null}
+  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0;demoRunner.lastEvent=null;demoRunner.nightPlan=null;demoRunner.visual=null}
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
   demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
   demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||1;
   try{
+    if(playSceneRuntime.room?.autoGM!==false){const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.autoGM=false}
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('start'))});
     if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
     demoRunner.running=true;demoRunner.paused=false;demoRunner.error='';demoRunner.status='Đang chạy Demo';demoRunner.epoch++;
@@ -3530,23 +3580,18 @@ function demoSchedule(ms=demoDelay()){
   const epoch=demoRunner.epoch;
   demoRunner.timer=setTimeout(()=>{demoRunner.timer=0;if(demoRunner.running&&epoch===demoRunner.epoch)void demoStep(epoch)},ms);
 }
-async function demoActionNight(t,epoch){
-  const room=playSceneRuntime.room,signature=[room.matchId,room.cycleKey,t.id].join(':');
-  // A fresh GM tab can recover an already-committed action from the server receipt.
-  if(String(playSceneRuntime.battleUndo?.turnId||'')===String(t.id))demoRunner.completed.add(signature);
-  if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
-  if(!demoRunner.completed.has(signature)){
-    const options=battleActions().filter(a=>!a.unavailable&&Array.isArray(a.actorIds)&&a.actorIds.length);
-    const action=options.length&&Math.random()<0.85?demoPick(options):null;
-    if(action){
-      const actorId=demoPick(action.actorIds);
-      const available=playLiveMembers().filter(m=>m?.loginId&&(!action.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
+async function demoActionNight(t,epoch){return demoRunNight(t,epoch)}
+async function demoExecuteNight(action,actorId,t,signature,epoch){
+  const room=playSceneRuntime.room;
+      const saveTargets=action.actionId==='action_witch_save'?(playSceneRuntime.nightIntel?.attacked||[]).map(x=>x.to):null;
+      const available=playLiveMembers().filter(m=>m?.loginId&&(!saveTargets||saveTargets.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
         action,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night));
       const count=Math.max(0,Number(action.targetCount)||0),chosen=[];
       while(chosen.length<count&&available.length){
         const id=demoPick(available).loginId;
         chosen.push(id);available.splice(available.findIndex(x=>x.loginId===id),1);
       }
+      if(chosen.length!==count){demoObserve(action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
       if(chosen.length===count){
         const seer=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three',
           'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer']
@@ -3563,6 +3608,7 @@ async function demoActionNight(t,epoch){
           ...(transfer?{direction,message:'Demo dịch vết cắn '+direction}:{}),
           ...(action.actionId==='action_assassin_mark'?{assassinChoice:demoPick(['👍','👎'])}:{})
         };
+        demoFocus(action,actorId,chosen);
         demoObserve(action.name,actorId,seer?chosen:transfer?[]:chosen,'pending');
         demoRunner.pending.add(signature);
         try{
@@ -3572,17 +3618,8 @@ async function demoActionNight(t,epoch){
           demoObserve(action.name+(transfer?' · '+({left:'Trái',right:'Phải',none:'Không dịch'}[direction]||''):''),actorId,seer?chosen:transfer?[]:chosen);
           if(result.revelation?.message&&demoRunner.running&&epoch===demoRunner.epoch)
             battleShowResultPopup('',String(result.revelation.message),true);
-        }catch(err){throw Error('Xác nhận hành động không chắc chắn: '+String(err?.message||err))}
-      }
+        }catch(err){if(err?.status>=400&&err?.status<500)demoRunner.pending.delete(signature);throw err}
     }
-  }
-  if(!demoRunner.running||epoch!==demoRunner.epoch)return;
-  if(!demoRunner.completed.has(signature))demoObserve('Không thực hiện hành động', '', [], 'skipped');
-  // A successful receipt is never repeated; the standard turn endpoint advances.
-  const response=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',expectedTurnId:t.id,source:'demo'})});
-  if(response?.ok!==true)throw Error(response?.message||response?.error||'Không thể chuyển lượt.');
-  demoRunner.completed.delete(signature);
-  document.getElementById('battleResultPopup')?.setAttribute('hidden','');
 }
 async function demoActionDay(epoch){
   const room=playSceneRuntime.room,cycle=String(room.matchId||'')+':'+String(room.cycleKey||'');
@@ -3597,7 +3634,7 @@ async function demoActionDay(epoch){
     }
     demoRunner.dayDone.add(cycle+':'+a.id);
     if(chosen.length===a.targetCount&&Math.random()<0.85){
-      demoObserve(a.name,actorId,chosen,'pending');
+      demoFocus(a,actorId,chosen);demoObserve(a.name,actorId,chosen,'pending');
       const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
         matchId:room.matchId,cycleKey:room.cycleKey,actorId,
         roleId:a.roleId||'',artifactId:a.artifactId||'',actionId:a.actionId,targetIds:chosen,
@@ -3661,10 +3698,13 @@ async function demoStep(epoch){
     if(demoRunner.steps>800)throw Error('Đã đạt giới hạn an toàn 800 bước. GM cần kiểm tra ván.');
     const beat=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('heartbeat'))});
     if(beat?.ok!==true)throw Error(beat?.message||beat?.error||'Mất quyền điều khiển Demo.');
+    if(playSceneRuntime.busy||battleState.busy||battleState.syncPending||battleState.gallowsBusy||battleState.undoBusy||(typeof battleConfirmAudioGate!=='undefined'&&battleConfirmAudioGate)||battleState.targetSheet||battleState.targets.length){demoSchedule(250);return}
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
-    const latest=await playSyncRoom(true);
+    const beforeSync=Number(playSceneRuntime.syncSerial||0),latest=await playSyncRoom(true);
+    if(!latest&&Number(playSceneRuntime.syncSerial)>beforeSync+1){demoSchedule(250);return}
     if(!latest)throw Error('Mất đồng bộ với server; không thể tiếp tục tự chơi.');
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(playSceneRuntime.busy||battleState.busy||battleState.syncPending||battleState.gallowsBusy||battleState.undoBusy||(typeof battleConfirmAudioGate!=='undefined'&&battleConfirmAudioGate)||battleState.targetSheet||battleState.targets.length){demoSchedule(250);return}
     const room=playSceneRuntime.room;
     demoRunner.status='Đang chạy · '+(playSceneState.phase==='day'?'Ngày ':'Đêm ')+Number(playSceneState.night||1)+' · '+String(battleTurn()?.label||'Lên Giàn');
     demoRenderControls();
@@ -3675,10 +3715,10 @@ async function demoStep(epoch){
       await demoStop('winner_ready');await openPlayCompletionSheet();return;
     }
     const clock=playSceneRuntime.demoControl?.clock;
-    if(clock&&['night','discussion'].includes(clock.kind)&&clock.remainingMs>0){
+    if(clock&&clock.kind==='discussion'&&clock.remainingMs>0){
       demoSchedule(Math.min(1000,Math.max(50,clock.remainingMs/Math.max(1,clock.speed))));return;
     }
-    demoRunner.steps++;
+    if(playSceneState.phase!=='night')demoRunner.steps++;
     if(playSceneState.phase==='night'){
       const rt=playSceneRuntime.nightRuntime,t=battleTurn();
       if(t)await demoActionNight(t,epoch);
@@ -3686,9 +3726,10 @@ async function demoStep(epoch){
       else throw Error('Không tìm thấy lượt Đêm hợp lệ.');
     }else if(playSceneState.phase==='day')await demoActionDay(epoch);
     else throw Error('Demo chỉ chạy khi đã vào Ngày hoặc Đêm.');
-    if(demoRunner.running&&epoch===demoRunner.epoch)demoSchedule();
+    if(demoRunner.running&&epoch===demoRunner.epoch)demoSchedule(clock?.kind==='night'&&clock.remainingMs>0?Math.min(500,Math.max(50,clock.remainingMs/Math.max(1,clock.speed)/Math.max(1,demoRunner.nightPlan?.ids.length||1))):demoDelay());
   }catch(error){
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(['STALE_TURN','STALE_BATTLE_ACTION','ARTIFACT_ALREADY_USED','ROLE_NIGHT_ACTION_EXHAUSTED','ACTION_GAME_LIMIT_REACHED','ACTION_NIGHT_LIMIT_REACHED'].includes(error?.code)){await playSyncRoom(true);demoRunner.nightPlan=null;demoSchedule();return}
     const msg=String(error?.message||error);
     demoRunner.error='Đã dừng: '+msg;
     if(demoRunner.lastEvent?.status==='pending')demoRunner.lastEvent.status='uncertain';
@@ -3801,9 +3842,9 @@ const battleActions=()=>{
       if(fn){
         const mode=String(fn.usageMode||''),quota=Math.max(1,Number(fn.usageCount)||1);
         const hits=own.filter(row=>String(row.actionId)===String(action.actionId)&&
-          (mode==='onceGame'||Number(row.night)===night)).length;
-        if((mode==='onceGame'||mode==='eachNight')&&hits>=quota){
-          unavailableReason=mode==='onceGame'?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
+          (['onceGame','nGame'].includes(mode)||Number(row.night)===night)).length;
+        if((['onceGame','nGame','eachNight'].includes(mode))&&hits>=quota){
+          unavailableReason=['onceGame','nGame'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
           return false
         }
       }else if(roleId==='role_old_witch'&&String(action.actionId)==='action_revive'&&
@@ -3878,7 +3919,6 @@ function battleTickCountdown(){
   clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
 }
 async function battleNavigateIndex(index){
-  if(demoRunner.running)return;
   if(battleState.busy||battleState.syncPending||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
   const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
   if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
@@ -3892,14 +3932,22 @@ async function battleNavigateIndex(index){
   if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận để chuyển lượt?'))return;
   battleState.busy=true;renderPlayBattle();
   try{
-    const result=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex:index,expectedTurnId:rt.currentId||'',source:'gm-timeline'})});
+    const targetId=queue[index].id,jump=(targetIndex,expectedTurnId)=>playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex,expectedTurnId,source:'gm-timeline'})});
+    let result;
+    try{result=await jump(index,rt.currentId||'')}
+    catch(err){
+      if(err?.code!=='STALE_TURN'||!demoRunner.running)throw err;
+      await playSyncRoom(true);
+      const fresh=playSceneRuntime.nightRuntime,retryIndex=fresh?.queue?.findIndex(x=>x.id===targetId)??-1;
+      if(retryIndex<0||battleUsed(fresh.queue[retryIndex]))throw err;
+      result=retryIndex===fresh.cursor?{runtime:fresh}:await jump(retryIndex,fresh.currentId||'');
+    }
     playSceneRuntime.nightRuntime=result?.runtime||rt;
     battleClear();await playSyncRoom(true);
   }catch(err){playFlashError('Không thể chuyển lượt: '+String(err?.message||err));await playSyncRoom(true).catch(()=>{})}
   finally{battleState.busy=false;renderPlayBattle()}
 }
 function battleNavigateRelative(delta){
-  if(demoRunner.running)return;
   const rt=playSceneRuntime.nightRuntime;
   if(playSceneState.phase!=='night'||!rt?.queue?.length)return;
   let index=rt.cursor+delta;
@@ -4300,7 +4348,7 @@ function battlePickTargetWithAudio(id,actionId){
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   if(battleState.impacts.size)battleState.impacts.clear();
-  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets),now=Date.now();
+  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),now=Date.now();
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
@@ -4422,7 +4470,6 @@ function battleGallowsRender(phase){
   battleGallowsTick();
 }
 async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
-  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(battleState.gallowsBusy||playSceneState.phase!=='day'||!isLivePlayRoom())return;
   if(command==='resolve'&&outcome==='dead'&&!confirm('Xác nhận giết người chơi bị lên giàn?'))return;
   battleState.gallowsBusy=true;battleGallowsRender('day');
@@ -4577,7 +4624,6 @@ function renderPlayBattle(){
   battleMarkPlayers();battleTickCountdown();
 }
 async function battleConfirmDay(confirmed=false){
-  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   const a=battleAction();
   if(playSceneState.phase!=='day'||playSceneState.step!=='battle'||!isLivePlayRoom()||
      battleState.busy||battleState.syncPending||!a||a.unavailable||
@@ -4610,7 +4656,6 @@ async function battleConfirmDay(confirmed=false){
   }finally{battleState.busy=false;renderPlayBattle()}
 }
 async function battleConfirm(confirmed=false){
-  if(typeof demoRunner!=='undefined'&&demoRunner.running)return;
   if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
   const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
@@ -4778,6 +4823,7 @@ async function battleUndoLast(){
   try{
     const d=await playRoomApi('/battle-undo',{method:'POST',body:JSON.stringify({undoToken:rec.token})});
     if(d?.ok!==true)throw new Error(d?.message||d?.error||'Server chưa xác nhận hoàn tác');
+    if(playSceneRuntime.room?.demo===true){demoRunner.completed.clear();demoRunner.nightPlan=null;demoRunner.visual=null}
     battleState.impacts.clear();battleClear();await playSyncRoom(true);
   }catch(err){playFlashError('Không thể khôi phục: '+String(err?.message||err))}
   finally{battleState.undoBusy=false;renderPlayBattle()}
@@ -4951,7 +4997,7 @@ function initBattleControls(){
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   initBattleFloatingClock();initBattleDayClockSwipe();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();
   battleBindAuxiliaryDrag('battleWolfMenu','header');
-  battleBindAuxiliaryDrag('battleDemoPanel','header');
+  battleBindAuxiliaryDrag('battleDemoPanel','header');battleBindAuxiliaryDrag('battleDemoObserver','header');
   battleBindAuxiliaryDrag('battleMorningReport','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   document.getElementById('battleDayNoticeToggle')?.addEventListener('click',()=>{

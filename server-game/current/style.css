@@ -6436,3 +6436,22 @@ body.play-immersive #start #playShell[data-step="battle"]
 #playMatchCompletionSheet [data-completion-next="exit"]{border-color:rgba(255,179,158,.65)!important;color:#ffd5c8!important}
 #playCompletionAbort{display:block;width:100%;margin-top:10px;font-size:11px;color:#ffd5c8}
 #playMatchCompletionSheet button:disabled{opacity:.5;cursor:wait}
+
+/* Movable observation and clear per-action focus, without changing turn timing. */
+#battleDemoObserver{pointer-events:auto}
+#battleDemoObserver>header{display:flex;gap:8px;align-items:center;cursor:grab;touch-action:none;user-select:none;min-height:26px}
+#battleDemoObserver>header .battle-menu-grip{flex:none;width:15px;height:16px;border-top:3px solid #b9e6ed;border-bottom:3px solid #b9e6ed;opacity:.8}
+#battleDemoPanel{border-radius:22px;padding:4px 7px;background:var(--gmww-stage-glass-v330)}
+#battleDemoPanel .battle-demo-actions{gap:7px}
+#battleDemoPanel #battleDemoToggle{border-radius:16px;background:linear-gradient(135deg,#167b75cc,#125061cc);border:1px solid #a2f1dc88;letter-spacing:.03em}
+#battleDemoPanel #battleDemoToggle[aria-pressed="true"]{background:linear-gradient(135deg,#8f681acc,#245b60cc);border-color:#ffe0a0}
+#battleDemoPanel #battleDemoExpand{border-radius:18px;align-items:center;gap:6px;background:transparent;border:0}
+#battleDemoPanel .demo-auto-orbit{display:inline-block;font-size:22px;line-height:1}
+#battleDemoExpand.is-running .demo-auto-orbit{animation:gmww-demo-spin 1.8s linear infinite}
+@keyframes gmww-demo-spin{to{transform:rotate(360deg)}}
+.demo-action-active{position:relative!important;outline:2px solid #ffe8a0!important;outline-offset:-2px;box-shadow:0 0 14px #f6d67d88!important}
+.demo-action-active::before,.demo-action-active::after{content:'✦';position:absolute;pointer-events:none;color:#ffe5a0;font-size:14px;text-shadow:0 0 6px #fff1b0;z-index:3;animation:gmww-demo-stars 1.8s ease-in-out infinite}
+.demo-action-active::before{left:3px;top:1px}.demo-action-active::after{right:3px;bottom:1px;animation-delay:-.9s}
+#battleDemoEvent.demo-action-active{padding:8px 15px;border-radius:10px;background:#0a4d5a66}
+@keyframes gmww-demo-stars{0%,100%{transform:translate(0,0) rotate(0);opacity:.65}50%{transform:translate(5px,-3px) rotate(180deg);opacity:1}}
+@media(prefers-reduced-motion:reduce){.demo-action-active::before,.demo-action-active::after{animation:none}}

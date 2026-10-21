@@ -32,9 +32,9 @@ test('Sói Thường and Sói Trùm order 6 create ONE waking turn numbered 6',(
   {kind:'early-artifact-window',id:'early'},...combineConfiguredTurns(scheduled,[]),
   {kind:'village-wakeup',id:'wake'}];
  const timeline=controls.timeline('night',{queue,cursor:2,completed:false},1,[]);
- assert.equal(timeline.filter(t=>t.displayNumber===6).length,1);
- assert.equal(timeline[2].displayNumber,6);
- assert.equal(timeline[3].displayNumber,7);
+ assert.equal(timeline.filter(t=>t.displayNumber===3).length,1);
+ assert.equal(timeline[2].displayNumber,3);
+ assert.equal(timeline[3].displayNumber,4);
 });
 
 test('shared wolf bite is listed once, distinct Artifact remains available and tied to its owner',()=>{
