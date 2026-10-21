@@ -59,6 +59,6 @@ test('Demo uses the actual server cycles, ordered role/Artifact queue, and day b
   for(const phase of ['ready','nominating','selecting','voting','closed','resolved'])assert.ok(battle.includes("stage==='"+phase+"'"));
   for(const endpoint of ['/battle-action','/day-action','/gallows','/turn','/cycle'])assert.ok(battle.includes("'"+endpoint+"'"));
   assert.match(battle,/demoRunner\.running\?'↻':'Ⅱ'/);
-  assert.match(battle,/TIẾP TỤC/);
+  assert.match(battle,/chạm để tiếp tục/);
   assert.match(battle,/reason==='manual'&&active/);
 });
