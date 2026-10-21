@@ -333,16 +333,9 @@
           <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="true"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><p id="battleDemoObserverError"></p></aside>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
-          <section id="battleDemoPanel" class="battle-demo-panel" hidden aria-label="Điều khiển DEMO">
-            <header aria-label="Giữ và kéo điều khiển Auto"><span class="battle-menu-grip" aria-hidden="true"></span></header>
-            <button id="battleDemoExpand" type="button" aria-label="Mở điều khiển Auto" aria-expanded="true"><span class="demo-auto-orbit" aria-hidden="true">↻</span><span>Auto</span></button>
-            <div class="battle-demo-actions">
-              <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
-              <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden><span class="demo-sr-only">Tốc độ</span><select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
-            </div>
-            <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng — nhấn Chạy Demo</p>
-          </section>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
+               <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc tạm dừng DEMO">▶ DEMO</button>
+               <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden aria-label="Tốc độ DEMO"><span class="demo-sr-only">Tốc độ</span><select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
               <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
               <button id="battleLabelRole" type="button" aria-pressed="true" title="Ẩn/hiện tên Vai Trò trên GM Server">Vai Trò</button>
               <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
@@ -353,7 +346,10 @@
               <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
               <button id="battleForceEnd" type="button" title="Kết thúc Ván">⏻ Kết thúc Ván</button>
-            </div>
+              <section id="battleDemoPanel" hidden aria-label="Trạng thái DEMO">
+               <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng</p>
+             </section>
+           </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
             <div class="play-battle-turn"><div><small id="battleTurnType">ĐÊM 1</small><b id="battleTurnTitle">BẮT ĐẦU ĐÊM 1</b></div><span id="battleTurnProgress">CHƯA BẮT ĐẦU</span></div>
@@ -946,7 +942,7 @@
 
       <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep" aria-label="Chế độ và trạng thái phòng">
         <div class="play-room-control-row">
-          <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chọn chế độ phòng. Nhấn lần lượt Offline, Online, Demo rồi lặp lại."><b>CHẾ ĐỘ</b></button>
+          <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Sau khi tạo phòng, nhấn để đổi Offline, Online, Demo"><b>CHẾ ĐỘ</b></button>
           <button id="playCreateRoomEnabled" type="button" aria-pressed="false" aria-label="Bật hoặc tắt phòng"><span></span><b>ON</b></button>
           <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
