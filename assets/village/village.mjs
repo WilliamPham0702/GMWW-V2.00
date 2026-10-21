@@ -206,6 +206,28 @@ if(game){
     const role=document.createElement("span");role.className="player-role";role.textContent=safeText(data.roleName||"");if(!role.textContent)role.hidden=true;
     over.append(name,role);button.append(over,avatar);const statusBadge=button.querySelector(":scope > .gmww-sv-badges");if(statusBadge)over.prepend(statusBadge);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+(data?.online===false?" · Offline":" · Online"));
     button._gmwwLive={data,actualSeat,playerName,isGM};
+    // Player-led nomination: drag the viewer's own Character to another Character.
+    // The server validates eligibility, nomination window and restrictions.
+    if(embedded&&!isGM){
+      button.addEventListener('pointerdown',e=>{
+        if(!setupState.gallowsCanNominate||!button.classList.contains('self')||e.button>0)return;
+        const startX=e.clientX,startY=e.clientY,pointerId=e.pointerId;
+        const release=up=>{
+          if(up.pointerId!==pointerId)return;
+          document.removeEventListener('pointerup',release,true);
+          document.removeEventListener('pointercancel',cancel,true);
+          if(Math.hypot(up.clientX-startX,up.clientY-startY)<20)return;
+          const target=document.elementFromPoint(up.clientX,up.clientY)?.closest?.('.player[data-player-id]');
+          const targetId=String(target?.dataset.playerId||'');
+          if(!targetId||target===button||targetId==='gm')return;
+          try{window.parent.postMessage({type:'gmww:gallows-drag-nominate',participantId:targetId},window.location.origin)}catch{}
+        };
+        const cancel=()=>{document.removeEventListener('pointerup',release,true);document.removeEventListener('pointercancel',cancel,true)};
+        document.addEventListener('pointerup',release,true);
+        document.addEventListener('pointercancel',cancel,true);
+      });
+    }
+
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
       if(current.isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}
