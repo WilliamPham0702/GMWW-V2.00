@@ -19,7 +19,7 @@ const cards=[{id:'role_werewolf',name:'Sói',faction:'Phe Sói',functions:[fn]},
 let code;
 try{
  for(const mode of ['online','offline']){
-  const gameConfig={id:'demo-test',name:'Demo test',playerCount:8,roles:cards.map((r,i)=>({roleId:r.id,roleName:r.name,faction:r.faction,count:i?7:1,order:i+1,actionDurationSec:1})),artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:1,wolfDiscussionSec:1,gallowsNominationSec:1,gallowsVoteSec:1,defaultActionSec:1}};
+  const gameConfig={id:'demo-test',name:'Demo test',playerCount:8,roles:cards.map((r,i)=>({roleId:r.id,roleName:r.name,faction:r.faction,count:i?7:1,order:i+1,actionDurationSec:1})),artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:1,wolfDiscussionSec:1,gallowsNominationSec:10,gallowsVoteSec:10,defaultActionSec:1}};
   const created=await req('/api/rooms',{demo:true,roomName:'Demo browser '+mode,roomMode:mode,seatCount:8,gameConfig});code=created.roomCode;
   const gm=(path,body)=>req('/api/gm/rooms/'+code+path,body);
   await gm('/participants',{members:people,replace:true});await gm('/seat-lock',{locked:true});
