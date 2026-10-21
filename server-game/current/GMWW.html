@@ -373,8 +373,8 @@
     <section class="page" id="library">
       <div id="libraryHome">
         <nav class="library-tabs">
-          <button class="libtab active" data-lib="lab">🧪<b>Lab</b></button>
-          <button class="libtab" data-lib="cards">🎭<b>VAI TRÒ</b></button>
+          
+          <button class="libtab active" data-lib="cards">🎭<b>VAI TRÒ</b></button>
           <button class="libtab" data-lib="artifacts">✦<b>ARTIFACTS</b></button>
           <button class="libtab" data-lib="actions">⚡<b>Hành Động</b></button>
           <button class="libtab" data-lib="effects">◉<b>Hiệu Ứng</b></button>
@@ -384,18 +384,7 @@
           <button class="libtab" data-lib="templates">▦<b>Ván Mẫu</b></button>
         </nav>
 
-        <section class="libpane active" id="lib-lab" aria-label="Lab kiểm thử Engine">
-          <div class="gmww-lab">
-            <header class="gmww-lab-head"><span class="gmww-lab-symbol" aria-hidden="true">⚗</span><div><h2>Lab</h2><p>Kiểm thử mô phỏng chuỗi hiệu ứng nhiều đêm</p></div></header>
-            <div class="gmww-lab-warning" role="note"><b>MÔ PHỎNG THAM CHIẾU — CHƯA XÁC MINH ENGINE THỰC</b><span>Lab chạy trong bộ nhớ riêng, không tạo phòng, gửi hành động, sửa dữ liệu hoặc kết nối phiên chơi trên Production. Kết quả PASS chỉ xác nhận bộ mô phỏng, không khẳng định luật trong game đã hoạt động đúng.</span></div>
-            <div class="gmww-lab-controls"><label>Số đêm mô phỏng<select id="gmwwLabNights"><option value="3">3 đêm</option><option value="5" selected>5 đêm</option><option value="10">10 đêm</option></select></label><label>Tình huống<select id="gmwwLabScenario"><option value="all">Tất cả tương tác</option><option value="freeze">Đóng băng → Chặn hành động</option><option value="protect">Bảo vệ → Sói tấn công</option><option value="redirect">Dịch chuyển mục tiêu</option><option value="revive">Giết → Hồi sinh</option><option value="artifact">Artifact ưu tiên → Giới hạn</option></select></label></div>
-            <button id="gmwwLabRun" type="button" class="gmww-lab-run">▶ Chạy mô phỏng</button>
-            <div id="gmwwLabSummary" class="gmww-lab-summary" aria-live="polite">Chọn tình huống và nhấn Chạy mô phỏng để xem nhật ký.</div>
-            <div id="gmwwLabLog" class="gmww-lab-log" aria-live="polite"></div>
-          </div>
-        </section>
-
-        <section class="libpane" id="lib-cards">
+        <section class="libpane active" id="lib-cards">
           <section class="favorite-shelf" id="cardFavoriteShelf"><div class="favorite-shelf-head"><b>★ Thường dùng</b><small class="catalog-count-badge" id="cardFaceCount">0 / 0</small></div><div class="card-grid favorite-grid" id="cardFavoriteGrid"></div></section>
           <div class="filter-row" data-filter-kind="cards">
             <button class="filter active" data-filter="all">Tất cả</button>
@@ -773,7 +762,7 @@
     <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
       <label class="play-game-name-label">Ván Mẫu đã lưu
-        <select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu đã lưu"><option value="">Tạo Ván Mẫu mới</option></select>
+        <div class="play-template-picker-row"><select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu đã lưu"><option value="">Tạo Ván Mẫu mới</option></select><button id="playGameTemplateAdd" type="button" class="play-template-add" aria-label="Tạo Ván Mẫu mới" title="Mở trang tạo Ván Mẫu">＋ MỚI</button></div><button id="playGameTemplateBack" type="button" class="play-template-return" hidden>← QUAY LẠI CHỌN VÁN</button>
       </label>
       <div class="play-template-editor-only">
         <label class="play-game-name-label">Tên Ván Mẫu<input id="playGameName" maxlength="48" value="Ván GMWW" placeholder="Tên Ván Mẫu"></label>
@@ -1031,73 +1020,7 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
-<script id="gmww-lab-script">
-/* Isolated reference simulator, not the production Rule/Effect executor. No fetch, no storage. */
-(()=>{
-  'use strict';
-  const checks={
-    freeze:{label:'Đóng băng → chặn Tiên Tri',run(ctx){
-      const seer={alive:true,frozen:false};
-      seer.frozen=true;ctx.trace('Sói Tuyết đóng băng Tiên Tri');
-      const canAct=seer.alive&&!seer.frozen;
-      ctx.trace(canAct?'Tiên Tri thực hiện Soi (sai luật)':'Tiên Tri bị chặn thực hiện Soi');
-      return !canAct;
-    }},
-    protect:{label:'Bảo vệ → Sói cắn',run(ctx){
-      const target={alive:true,protected:false};
-      target.protected=true;ctx.trace('Bảo Vệ bảo vệ mục tiêu');
-      if(!target.protected)target.alive=false;
-      ctx.trace(target.alive?'Sói cắn: mục tiêu được cứu':'Sói cắn: mục tiêu chết');
-      return target.alive;
-    }},
-    redirect:{label:'Dịch chuyển mục tiêu',run(ctx){
-      const p={A:{alive:true},B:{alive:true}};
-      let target='A';ctx.trace('Sói chọn cắn A');
-      target='B';ctx.trace('Yêu Tinh chuyển tác động A → B');
-      p[target].alive=false;ctx.trace('Kết quả: B chết, A sống');
-      return p.A.alive&&!p.B.alive;
-    }},
-    revive:{label:'Giết → hồi sinh',run(ctx){
-      const target={alive:true};
-      target.alive=false;ctx.trace('Mục tiêu chết vì tấn công');
-      target.alive=true;ctx.trace('Phù Thủy hồi sinh mục tiêu');
-      return target.alive;
-    }},
-    artifact:{label:'Artifact ưu tiên → giới hạn theo ván',run(ctx){
-      const before=ctx.used.has('swap');
-      if(!before){ctx.used.add('swap');ctx.trace('Đá Đổi Vai Trò kích hoạt ở lượt ưu tiên');}
-      else ctx.trace('Đá Đổi Vai Trò đã dùng: từ chối kích hoạt lại');
-      return ctx.used.has('swap')&&(before||ctx.night===1);
-    }}
-  };
-  const runButton=document.getElementById('gmwwLabRun');
-  if(!runButton)return;
-  runButton.addEventListener('click',()=>{
-    const nights=Math.min(10,Math.max(1,Number(document.getElementById('gmwwLabNights').value)||3));
-    const scenario=document.getElementById('gmwwLabScenario').value;
-    const selected=scenario==='all'?Object.keys(checks):[scenario];
-    const summary=document.getElementById('gmwwLabSummary'),log=document.getElementById('gmwwLabLog');
-    log.replaceChildren();let pass=0,fail=0;const used=new Set();
-    for(let night=1;night<=nights;night++){
-      const box=document.createElement('section');box.className='gmww-lab-night';
-      const header=document.createElement('h3');header.textContent='ĐÊM '+night;box.append(header);
-      for(const key of selected){
-        const rule=checks[key];if(!rule)continue;
-        const traces=[];const ctx={night,used,trace:message=>traces.push(message)};
-        let ok=false;
-        try{ok=rule.run(ctx)===true;}catch(err){traces.push('Lỗi mô phỏng: '+String(err.message||err));}
-        if(ok)pass++;else fail++;
-        const line=document.createElement('div');line.className='gmww-lab-event';
-        const tag=document.createElement('span');tag.className=ok?'gmww-lab-pass':'gmww-lab-fail';tag.textContent=ok?'PASS':'FAIL';
-        const msg=document.createElement('span');msg.textContent=rule.label+' — '+traces.join(' · ');
-        line.append(tag,msg);box.append(line);
-      }
-      log.append(box);
-    }
-    summary.textContent=nights+' đêm · '+pass+' PASS / '+fail+' FAIL (bộ mô phỏng tham chiếu). CHƯA kiểm thử Engine thực hoặc phiên chơi Production.';
-  });
-})();
-</script>
+
 <script>
 /* GMWW Cloudflare maintenance — on-demand, read-only status in Server Settings.
  * Destructive commands remain owner-authenticated GitHub Actions, never public GM APIs. */
