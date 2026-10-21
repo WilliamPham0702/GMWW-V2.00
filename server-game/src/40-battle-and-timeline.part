@@ -210,10 +210,11 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ DEMO':demoRunner.paused?'▶ TIẾP TỤC':'▶ DEMO';button.title=demoRunner.error||demoRunner.status;button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  if(button){button.hidden=!enabled;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||'DEMO';button.setAttribute('aria-label',demoRunner.running?'Đang chạy DEMO, chạm để tạm dừng':'Đã tạm dừng DEMO, chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=demoRunner.running?'↻':'Ⅱ';
   if(wrap)wrap.hidden=!enabled;
   if(auto)auto.hidden=false;
-  if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
+  if(field){field.dataset.speed=String(demoRunner.speed);field.textContent='×'+String(demoRunner.speed);field.setAttribute('aria-label','Tốc độ DEMO: '+demoRunner.speed+' lần. Chạm để thay đổi.');}
   const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
   // Start once when a DEMO match enters battle; never override the GM's Pause.
   if(playSceneRuntime.demoControl?.engine!=='server'&&enabled&&playSceneState.step==='battle'&&playSceneRuntime.room?.phase==='running'&&
@@ -233,7 +234,7 @@ async function demoToggle(){
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
   demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
-  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||1;
+  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.dataset.speed)||1;
   try{
     if(playSceneRuntime.room?.autoGM!==false){const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.autoGM=false}
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'start',speed:demoRunner.speed})});
@@ -1805,9 +1806,10 @@ function initBattleControls(){
   document.getElementById('battleActionBar')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
   document.getElementById('playPlayerRing')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
   document.getElementById('battleDemoToggle')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();void demoToggle()});
-  document.getElementById('battleDemoSpeed')?.addEventListener('change',event=>{
-    const selected=Number(event.target.value);
-    if(![1,2,5,10].includes(selected))return;
+  document.getElementById('battleDemoSpeed')?.addEventListener('click',event=>{
+    const speeds=[1,2,5,10],current=Number(event.currentTarget.dataset.speed||demoRunner.speed||1);
+    const selected=speeds[(speeds.indexOf(current)+1)%speeds.length];
+    event.currentTarget.dataset.speed=String(selected);event.currentTarget.textContent='×'+selected;
     demoRunner.speed=selected;
     if(demoRunner.running)void playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'speed',speed:selected})})
       .then(data=>{playSceneRuntime.demoControl=data;demoApplyServerControl(data);renderPlayBattle()})
