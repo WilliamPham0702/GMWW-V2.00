@@ -91,6 +91,9 @@ try{
  assert.equal(await page.locator('[data-battle-action]').count(),2);
  await page.locator('[data-battle-index="1"]').click();
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early');
+ // A prior index click commits asynchronously; don't start a second gesture before
+ // its server-authoritative transition has settled (especially on narrow iPhone).
+ await page.waitForFunction(()=>playSceneRuntime.nightRuntime.currentId==='early'&&!battleState.busy&&!battleState.syncPending);
  // Verify an actual finger-scroll inside Timeline submits exactly one move.
  // The click above must never be mistaken for a swipe caused by scrollIntoView.
  const swipeTurn=await page.evaluate(async()=>{
