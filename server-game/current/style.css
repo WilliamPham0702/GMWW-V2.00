@@ -6517,6 +6517,7 @@ body.play-immersive #start #playShell[data-step="battle"]
 /* V3.177 — one visual width system for top/bottom bars and full-width overlays. */
 body.play-immersive{--gmww-rail-width:min(680px,calc(100vw - 24px));--gmww-rail-left:max(12px,calc((100vw - 680px)/2))}
 body.play-immersive #start #playSetupStrip,
+body.play-immersive #start #playBattleTop,
 body.play-immersive #start #gmTopMenu,
 body.play-immersive #start #battleBottomControls{
   left:var(--gmww-rail-left)!important;right:auto!important;
@@ -6607,3 +6608,10 @@ body.play-immersive .gmww-dock-snapped{
 @media(prefers-reduced-motion:reduce){
   #battleDemoToggle[data-run-state="running"] .demo-clockwise-orbit{animation:none}
 }
+
+/* Cover legacy opaque sheet shells with a consistent semi-transparent scrim. */
+body.play-immersive #playGameSheet:not(.hidden),
+body.play-immersive #playCreateRoomSheet:not(.hidden),
+body.play-immersive #playRosterSheet:not(.hidden),
+body.play-immersive #playSeatSheet:not(.hidden),
+body.play-immersive #playDisbandSheet:not(.hidden){background:rgba(2,16,30,.17)!important}
