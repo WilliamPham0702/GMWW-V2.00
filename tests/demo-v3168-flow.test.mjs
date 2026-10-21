@@ -6,16 +6,20 @@ test('IPA cross-origin Demo owner header is accepted by real server CORS policy'
  const allowed=cors['access-control-allow-headers'].toLowerCase().split(',').map(s=>s.trim());
  for(const header of ['content-type','authorization','x-gmww-demo-owner'])assert.ok(allowed.includes(header),header+' must pass browser preflight');
 });
-test('Real rooms render before Demo',()=>{
- const children=[],demo={classList:{toggle(){}},querySelector:()=>null},list={replaceChildren(...xs){children.splice(0,children.length,...xs)},appendChild(x){children.push(x)}};
- const ctx={document:{getElementById:id=>id==='playCreatedRoomList'?list:demo,createElement:()=>({})},playRoomRegistry:()=>[{roomCode:'A',roomName:'A'},{roomCode:'B',roomName:'B'},{roomCode:'D',demo:true}],playSceneState:{},playRoomUiState:{},playEsc:x=>x,playReadableRoomName:x=>x};
- vm.runInNewContext(extract(setup,'function renderPlayCreatedRooms(){','async function playOpenDemoRoom(){')+';renderPlayCreatedRooms()',ctx);
- assert.equal(children.length,3);assert.equal(children[2],demo);
+test('Demo rooms are listed like any other user-created room, with no extra fixed tile',()=>{
+ const children=[],list={replaceChildren(){children.length=0},appendChild(x){children.push(x)}};
+ const ctx={document:{getElementById:id=>id==='playCreatedRoomList'?list:null,createElement:()=>({})},
+  playRoomRegistry:()=>[{roomCode:'A',roomName:'A'},{roomCode:'B',roomName:'B'},{roomCode:'D',roomName:'D',demo:true}],
+  playSceneState:{},playRoomUiState:{},playEsc:x=>x,playReadableRoomName:x=>x};
+ vm.runInNewContext(extract(setup,'function renderPlayCreatedRooms(){','/* Demo controls')+';renderPlayCreatedRooms()',ctx);
+ assert.equal(children.length,3);
+ assert.match(children[2].innerHTML,/DEMO/);
+ assert.ok(!children.some(x=>x.id==='playDemoRoomChoice'));
 });
-test('Opening Demo keeps normal room mode screen and never skips gathering',async()=>{
- let selected=0,template=0;const ctx={playSceneRuntime:{room:{demo:true,phase:'lobby'}},playSceneState:{roomCode:'D',roomMode:'online'},playRoomRegistry:()=>[{roomCode:'D',demo:true}],selectPlayExistingRoom:async()=>selected++,playRoomUiState:{},document:{getElementById:()=>({classList:{add(){throw Error('must keep room mode visible')}}})},renderPlayScene(){},renderPlayCreateRoomSheet(){},openPlayGameSheet:async()=>template++,playFlashError:x=>{throw Error(x)}};
- const open=vm.runInNewContext(extract(setup,'async function playOpenDemoRoom(){','function openPlayRoomEditor(')+';playOpenDemoRoom',ctx);
- await open();assert.equal(selected,1);assert.equal(template,0);assert.equal(ctx.playRoomUiState.stage,'mode');assert.equal(ctx.playSceneState.roomMode,'online');
+test('New Demo room uses its own server flag and the normal gather workflow',()=>{
+ assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
+ assert.match(setup,/demo:isDemo/);
+ assert.match(setup,/playSceneState\.step='seats'/);
 });
 test('Online Demo GM manually selects existing members through same roster sheet',async()=>{
  let roster=0,online=0;const ctx={playSceneRuntime:{room:{demo:true,seatsLocked:false}},playSceneState:{roomMode:'online'},isLivePlayRoom:()=>true,openPlayRosterSheet:async()=>roster++,playCallOnlineMembers:async()=>online++};
@@ -27,12 +31,12 @@ test('Choosing sample game preserves selected roster instead of random replaceme
  assert.doesNotMatch(choose,/demoPopulateExistingMembers/);
  assert.match(choose,/need=playLiveMembers\(\)\.length/);
 });
-test('Demo controller is a separate draggable panel outside GM Menu',()=>{
+test('Demo controller appears before other GM actions in the campfire menu',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- const panel=html.indexOf('id="battleDemoPanel"'),menu=html.indexOf('id="battleWolfMenu"'),toggle=html.indexOf('id="battleDemoToggle"');
- assert.ok(panel>0&&toggle>panel&&toggle<menu);
- assert.match(battle,/battleBindAuxiliaryDrag\('battleDemoPanel','header'\)/);
+ const panel=html.indexOf('id="battleDemoPanel"'),menu=html.indexOf('id="battleWolfMenu"'),actions=html.indexOf('class="battle-wolf-actions"');
+ assert.ok(menu>0&&panel>menu&&panel<actions);
  assert.match(html,/id="battleDemoStatus"/);
+ assert.match(html,/id="battleDemoToggle"/);
 });
 test('Demo roster saves only GM-selected snapshots in both modes, without presence writes',async()=>{
  const events=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
