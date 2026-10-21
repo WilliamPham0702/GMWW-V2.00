@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.167';
+const VERSION='3.168';
 const villageSceneDraft={day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
@@ -2679,12 +2679,12 @@ function renderPlayCreatedRooms(){
   const list=document.getElementById('playCreatedRoomList');if(!list)return;
   const rows=playRoomRegistry().filter(r=>r.demo!==true),savedDemo=playRoomRegistry().find(r=>r.demo===true);
   const demoButton=document.getElementById('playDemoRoomChoice');
-  // Keep the one real DEMO card as the first member of the ROOM LIST.
+  // Real playing rooms keep priority; the isolated DEMO entry is always last.
   if(demoButton){
     demoButton.classList.toggle('active',!!savedDemo&&savedDemo.roomCode===playSceneState.roomCode);
     demoButton.title=savedDemo?'Mở Phòng Demo đã có':'Tạo Phòng Demo cách ly';
     const status=demoButton.querySelector('i');if(status)status.textContent=savedDemo?'ON':'MỚI';
-    list.replaceChildren(demoButton);
+    list.replaceChildren();
   }else list.replaceChildren();
   rows.forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
@@ -2696,7 +2696,8 @@ function renderPlayCreatedRooms(){
       await selectPlayExistingRoom(r)
     };
     list.appendChild(b)
-  })
+  });
+  if(demoButton)list.appendChild(demoButton);
 }
 async function playOpenDemoRoom(){
   if(playSceneRuntime.busy)return;
@@ -2704,63 +2705,16 @@ async function playOpenDemoRoom(){
   if(saved)await selectPlayExistingRoom(saved);
   else{
     if(typeof demoStop==='function')await demoStop('room_change');
-    playSceneState.roomMode='offline';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
+    playSceneState.roomMode=playSceneState.roomMode==='offline'?'offline':'online';playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
     if(!await playCreateRoom(true))return;
   }
   if(playSceneRuntime.room?.demo!==true){playFlashError('Không thể xác nhận đây là Phòng DEMO cách ly.');return}
   playRoomUiState.selectedCode=String(playSceneState.roomCode||'');
   playRoomUiState.editorMode='';playRoomUiState.stage='mode';
-  document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
-  renderPlayScene();
-  // Demo selects the template FIRST; membership comes from the existing directory.
-  if(!['running','started','game','playing'].includes(String(playSceneRuntime.room.phase||'')))
-    await openPlayGameSheet();
-}
-async function demoPopulateExistingMembers(count){
-  if(playSceneRuntime.room?.demo!==true)throw Error('Không được nạp danh sách thử vào phòng thật.');
-  if(!Number.isInteger(count)||count<1||count>30)throw Error('Ván Mẫu phải có từ 1 đến 30 người chơi.');
   if(['running','started','game','playing'].includes(String(playSceneRuntime.room.phase||'')))
-    throw Error('Không được thay danh sách khi Demo đang chơi.');
-  // READ the existing accounts as snapshots. Never create accounts, join them
-  // to an actual room, modify their currentRoomCode, statistics or passwords.
-  const directory=await gmApi('/api/gm/members');
-  const source=Array.isArray(directory?.members)?directory.members:[];
-  const unique=new Map();
-  for(const m of source){
-    const loginId=String(m?.loginId||'').trim().toLowerCase();
-    if(loginId&&!unique.has(loginId))unique.set(loginId,m);
-  }
-  if(unique.size<count)throw Error('Ván Mẫu cần '+count+' người, nhưng danh sách có sẵn chỉ có '+unique.size+'. Không tạo tài khoản mới.');
-  const chosen=playShuffle([...unique.values()]).slice(0,count).map((m,i)=>({
-    loginId:String(m.loginId).trim().toLowerCase(),displayName:String(m.displayName||m.loginId),
-    avatarId:m.avatarId||'',gameCharacterId:m.gameCharacterId||null,seatId:i+1
-  }));
-  if(playSceneRuntime.room.seatsLocked){
-    const opened=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:false})});
-    if(opened?.ok!==true)throw Error('Không mở được Seat DEMO để nạp danh sách.');
-  }
-  const roomSize=Math.max(8,count);
-  const layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  const settings=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify({
-    seatCount:roomSize,
-    seatLayout:layout.recommendedSeatShape(roomSize)
-  })});
-  if(settings?.ok!==true)throw Error('Không điều chỉnh được Seat DEMO.');
-  const selected=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
-  if(selected?.ok!==true||Number(selected.selectedCount)!==count)throw Error('Server chưa nạp đủ danh sách DEMO.');
-  const seated=(selected.players||[]).filter(x=>x.kind==='member');
-  if(seated.length!==count||new Set(seated.map(x=>Number(x.seatId))).size!==count||seated.some(x=>!Number(x.seatId)))
-    throw Error('Số người hoặc vị trí Seat DEMO không đúng Ván Mẫu.');
-  const locked=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:true})});
-  if(locked?.seatsLocked!==true)throw Error('Chưa chốt được vị trí DEMO.');
-  playSceneRuntime.room=locked.room||selected.room||playSceneRuntime.room;
-  playSceneRuntime.players=seated;playSceneState.selectedMemberIds=seated.map(x=>x.loginId);
-  savePlayScene();
-  // The normal room still needs to publish the GAME stage before ROLE setup.
-  const published=await playRoomApi('/stage',{method:'POST',body:JSON.stringify({step:'game'})});
-  if(published?.ok!==true)throw Error('Không chuyển được DEMO sang bước chọn Ván.');
-  playSceneRuntime.room=published.room||playSceneRuntime.room;
-  return seated;
+    document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
+  // Use the standard room mode -> gather -> template flow. GM chooses the roster.
+  renderPlayCreateRoomSheet();renderPlayScene();
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
@@ -3382,14 +3336,14 @@ async function togglePlayAutoGM(){
 async function playGatherCallMembers(){
   if(playSceneRuntime.busy||!isLivePlayRoom())return;
   if(playSceneRuntime.room?.seatsLocked){playFlashError('Mở khóa vị trí trước khi gọi người.');return}
-  if(playSceneState.roomMode==='offline'){await openPlayRosterSheet();return}
+  if(playSceneRuntime.room?.demo===true||playSceneState.roomMode==='offline'){await openPlayRosterSheet();return}
   await playCallOnlineMembers();
 }
 async function playGatherRandomize(){
   if(playSceneRuntime.busy||!isLivePlayRoom())return;
   if(playSceneRuntime.room?.seatsLocked){playFlashError('Mở khóa vị trí trước khi xếp ngẫu nhiên.');return}
   if(!playLiveMembers().length){
-    if(playSceneState.roomMode==='offline'){await openPlayRosterSheet();return}
+    if(playSceneRuntime.room?.demo===true||playSceneState.roomMode==='offline'){await openPlayRosterSheet();return}
     await playCallOnlineMembers();
   }
   if(playLiveMembers().length)await playRandomSeatRemaining();
@@ -3485,7 +3439,7 @@ async function advancePlayPhase(){
 /* Isolated Demo playback. All decisions are sampled from currently legal GM
  * choices and submitted through the same server action/turn endpoints. */
 const demoRunner={running:false,paused:false,owner:'',speed:2,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
-  completed:new Set(),pending:new Set(),dayDone:new Set()};
+  completed:new Set(),pending:new Set(),dayDone:new Set(),status:'Sẵn sàng — nhấn Chạy Demo',error:''};
 const demoPick=rows=>rows[Math.floor(Math.random()*rows.length)];
 const demoDelay=()=>Math.max(220,Math.round(1800/Math.max(1,demoRunner.speed)));
 const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:demoRunner.speed,...extra});
@@ -3493,6 +3447,7 @@ function demoStopTimer(){if(demoRunner.timer){clearTimeout(demoRunner.timer);dem
 async function demoStop(reason='manual'){
   const active=demoRunner.running,code=demoRunner.roomCode;
   demoRunner.paused=reason==='manual'&&active;
+  demoRunner.status=demoRunner.paused?'Đã tạm dừng':reason==='completed'?'Ván Demo đã kết thúc':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
   if(!active)return;
   try{
@@ -3502,6 +3457,9 @@ async function demoStop(reason='manual'){
   renderPlayBattle();
 }
 function demoRenderControls(){
+  const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
+  if(panel)panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
+  if(status){status.textContent=demoRunner.error||demoRunner.status;status.classList.toggle('is-error',!!demoRunner.error)}
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
@@ -3524,9 +3482,9 @@ async function demoToggle(){
   try{
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('start'))});
     if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
-    demoRunner.running=true;demoRunner.paused=false;demoRunner.epoch++;
+    demoRunner.running=true;demoRunner.paused=false;demoRunner.error='';demoRunner.status='Đang chạy Demo';demoRunner.epoch++;
     renderPlayBattle();demoSchedule(0);
-  }catch(err){playFlashError('Demo: '+String(err?.message||err));renderPlayBattle()}
+  }catch(err){demoRunner.error='Không chạy được: '+String(err?.message||err);playFlashError('Demo: '+String(err?.message||err));renderPlayBattle()}
 }
 function demoSchedule(ms=demoDelay()){
   demoStopTimer();
@@ -3660,6 +3618,8 @@ async function demoStep(epoch){
     if(!latest)throw Error('Mất đồng bộ với server; không thể tiếp tục tự chơi.');
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
     const room=playSceneRuntime.room;
+    demoRunner.status='Đang chạy · '+(playSceneState.phase==='day'?'Ngày ':'Đêm ')+Number(playSceneState.night||1)+' · '+String(battleTurn()?.label||'Lên Giàn');
+    demoRenderControls();
     if(room?.demo!==true||String(playSceneState.roomCode)!==demoRunner.roomCode||room?.phase!=='running'){
       await demoStop('room_or_match_changed');return;
     }
@@ -3680,6 +3640,7 @@ async function demoStep(epoch){
   }catch(error){
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
     const msg=String(error?.message||error);
+    demoRunner.error='Đã dừng: '+msg;
     demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
     // Keep an uncertain request blocked; do not blindly retry with a new receipt ID.
     if(!/DEMO_LEASE_OWNED|DEMO_LEASE_EXPIRED/.test(msg))
@@ -4939,6 +4900,7 @@ function initBattleControls(){
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   initBattleFloatingClock();initBattleDayClockSwipe();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();
   battleBindAuxiliaryDrag('battleWolfMenu','header');
+  battleBindAuxiliaryDrag('battleDemoPanel','header');
   battleBindAuxiliaryDrag('battleMorningReport','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   document.getElementById('battleDayNoticeToggle')?.addEventListener('click',()=>{
@@ -5475,7 +5437,7 @@ async function applyPlayGameTemplate(id){
 }
 async function openPlayGameSheet(){
   playGameStatus('');
-  if(!isLivePlayRoom()){await playCreateRoom();return}if(playSceneRuntime.room?.demo!==true&&!playLiveMembers().length){setPlayStep('members');if(playSceneState.roomMode==='offline')openPlayRosterSheet();return}
+  if(!isLivePlayRoom()){await playCreateRoom();return}if(!playLiveMembers().length){setPlayStep('members');if(playSceneRuntime.room?.demo===true||playSceneState.roomMode==='offline')openPlayRosterSheet();return}
   const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;card.dataset.mode='play';
   const title=card.querySelector('.sheet-head h3');if(title)title.textContent='Chọn Ván Mẫu';const roomLabel=document.getElementById('playGameRoomLabel');if(roomLabel)roomLabel.textContent='Phòng '+playSceneState.roomCode+' • '+playLiveMembers().length+' Người Chơi';const save=document.getElementById('playGameSave');if(save)save.textContent='CHỌN VÁN';const del=document.getElementById('playGameDelete');if(del)del.hidden=true;
   for(const detailId of ['playGameTimingDetails','playRoleTimingDetails']){const detail=document.getElementById(detailId);if(detail)detail.open=false}
@@ -5508,7 +5470,7 @@ async function savePlayGame(){
   if(mode==='play'){
     const id=String(document.getElementById('playGameTemplateSelect')?.value||'');
     if(!id){playFlashError('Hãy chọn Ván Mẫu đã lưu trong Thư Viện.');return}
-    const total=playRolePlanTotal(),need=playSceneRuntime.room?.demo===true?total:playLiveMembers().length;
+    const total=playRolePlanTotal(),need=playLiveMembers().length;
     if(total!==need){playFlashError('Ván Mẫu có '+total+' lá, nhưng phòng có '+need+' người. Hãy chọn Ván Mẫu phù hợp.');return}
     const timing={
       villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value),
@@ -5529,12 +5491,6 @@ async function savePlayGame(){
       const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));
       const base=template?.template?.compiledConfig||template?.template?.gameConfig;
       if(!base)throw new Error('Không tải được Ván Mẫu.');
-      if(playSceneRuntime.room?.demo===true){
-        const required=Number(base.playerCount)||((base.roles||[]).reduce((n,row)=>n+Math.max(0,Number(row.count)||0),0));
-        if(required!==total)throw Error('Số lượng Vai Trò và người chơi của Ván Mẫu không khớp.');
-        playGameStatus('Đang lấy '+required+' thành viên có sẵn để tạo bản sao trong DEMO…','progress');
-        await demoPopulateExistingMembers(required);
-      }
       const missingRoles=(base.roles||[]).filter(r=>!(state.cards||[]).some(card=>String(card.id)===String(r.roleId)));
       if(missingRoles.length)throw new Error('Thiếu '+missingRoles.length+' Lá Vai Trò trong Thư Viện. Vui lòng đồng bộ Bộ Bài rồi thử lại.');
       await playEnsureTemplateAssets(id,base);
@@ -6279,8 +6235,8 @@ async function savePlayRosterIds(ids){
     seatId:existing.get(String(m.loginId))?.seatId||null
   }));
   if(chosen.length!==ids.length){playRosterSaveFeedback('Danh sách đã thay đổi. Hãy mở lại Gọi Người.',true);return}
-  if(playSceneState.roomMode==='online'){
-    const offline=chosen.filter(m=>m.online!==true);
+  if(playSceneState.roomMode==='online'&&playSceneRuntime.room?.demo!==true){
+    const offline=source.filter(m=>selected.has(String(m.loginId))&&m.online!==true);
     if(offline.length){playRosterSaveFeedback('Chế độ ONLINE chỉ chọn Người Chơi đang Online.',true);playFlashError('Chế độ ONLINE chỉ chọn Người Chơi đang Online.');return}
   }
   const roomCode=String(playSceneState.roomCode);

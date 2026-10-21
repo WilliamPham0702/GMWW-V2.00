@@ -5,14 +5,14 @@ import fs from 'node:fs';
 const worker=fs.readFileSync('src/index.js','utf8');
 const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
 const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const events=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 
 test('PR367/369 reconciliation uses existing members, never fabricated account identifiers',()=>{
-  assert.match(setup,/async function demoPopulateExistingMembers\(count\)/);
-  assert.match(setup,/gmApi\('\/api\/gm\/members'\)/);
-  assert.match(setup,/if\(unique\.size<count\)throw Error/);
-  assert.match(setup,/playShuffle\(\[\.\.\.unique\.values\(\)\]\)\.slice\(0,count\)/);
-  assert.match(setup,/\/participants/);
+  assert.doesNotMatch(setup,/demoPopulateExistingMembers/);
+  assert.match(events,/async function openPlayRosterSheet/);
+  assert.match(events,/async function savePlayRosterIds/);
+  assert.match(events,/const chosen=source\.filter/);
   assert.doesNotMatch(worker,/import\s*\{[^}]*makeDemoPlayers/);
   assert.doesNotMatch(setup,/dm\s*\+\s*roomCode/);
   assert.match(worker,/DEMO_ROOM_GM_ONLY/);
