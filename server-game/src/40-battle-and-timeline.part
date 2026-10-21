@@ -741,7 +741,7 @@ function battleShowResultPopup(title,message,scanOnly=false){
   if(body)body.textContent=String(message||'');
   popup.classList.toggle('is-wolf-result',String(title||'').includes('VẾT CẮN'));
   popup.classList.toggle('is-scan-result',scanOnly);
-  const negative=/bị giết|bị cắn|bị chết|đầu độc|bị đóng băng|bị đuổi|thất bại|không thành công|tử vong|bị phạt/i.test(String(title||'')+' '+String(message||''));
+  const negative=/bị giết|bị cắn|sói cắn|vết cắn|bị chết|đầu độc|bị đóng băng|bị đuổi|thất bại|không thành công|tử vong|bị phạt/i.test(String(title||'')+' '+String(message||''));
   popup.dataset.resultTone=negative?'negative':'positive';
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
 }
@@ -1161,18 +1161,18 @@ function battleGallowsRender(phase){
   const panel=document.getElementById('battleGallowsPanel');if(!panel)return;
   const g=playSceneRuntime.gallows||{stage:'ready',mode:'auto',nominationDurationSec:10,
     voteDurationSec:10,nominations:{},votes:{},blockedNomination:[],blockedVotes:[]};
-  // Vote tally remains readable when the server closes the voting stage.
-  const finalStage=g.stage==='closed'||g.stage==='resolved';
-  const showKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,g.stage].join(':');
+  // Use the projected server deadline as well as confirmed stage to reveal a tally.
+  const now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
+  const selectionExpired=g.stage==='nominating'&&g.nominationDeadlineAt&&now>=Number(g.nominationDeadlineAt);
+  const stage=g.stage==='voting'&&now>=Number(g.deadlineAt||0)?'closed':selectionExpired?'selecting':g.stage;
+  const finalStage=stage==='closed'||stage==='resolved';
+  const showKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,stage].join(':');
   if(phase==='day'&&finalStage&&battleState.gallowsShowKey!==showKey){
     battleState.gallowsShowKey=showKey;
     battleState.gallowsOpen=true;
   }
   panel.hidden=phase!=='day'||!battleState.gallowsOpen;
   if(panel.hidden)return;
-  const now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
-  const selectionExpired=g.stage==='nominating'&&g.nominationDeadlineAt&&now>=Number(g.nominationDeadlineAt);
-  const stage=g.stage==='voting'&&now>=Number(g.deadlineAt||0)?'closed':selectionExpired?'selecting':g.stage;
   const members=playLiveMembers().filter(p=>p?.loginId&&playPlayerEffect(p.loginId)!=='dead'&&playPlayerEffect(p.loginId)!=='expelled');
   const memberName=id=>battleMember(id)?.displayName||id||'';
   const mode=g.mode==='gm'?'gm':'auto',nomBans=new Set(g.blockedNomination||[]),
