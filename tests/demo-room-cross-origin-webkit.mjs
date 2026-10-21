@@ -63,7 +63,7 @@ initPlayCompletion();battleBindAuxiliaryDrag('battleDemoObserver','header');glob
   const paused=await page.evaluate(()=>inspectDemo());assert.equal(paused.running,false);await page.waitForTimeout(500);
   assert.equal((await page.evaluate(()=>inspectDemo())).steps,paused.steps);assert.match(await page.locator('#battleDemoToggle').getAttribute('aria-label'),/tiếp tục/i);
   await page.evaluate(()=>document.getElementById('battleDemoToggle').click());await page.waitForFunction(()=>inspectDemo().running);
-  await page.waitForFunction(()=>inspectDemo().observed.some(t=>t.includes('Đã thực hiện')&&t.includes('Cắn')&&t.includes('Demo Test')&&t.includes('→'))||inspectDemo().error,null,{timeout:20000});
+  await page.waitForFunction(()=>inspectDemo().observed.some(t=>t.includes('đã thực hiện hành động')&&t.includes('Cắn')&&t.includes('Demo Test')&&t.includes(' đến '))||inspectDemo().error,null,{timeout:20000});
   let snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');
   await page.waitForFunction(()=>inspectDemo().visuals.some(v=>v.action.length&&v.targets.length&&v.badges.includes('MỤC TIÊU')),null,{timeout:10000});
   // All automatic gameplay is server-side: this browser only requests state/control.

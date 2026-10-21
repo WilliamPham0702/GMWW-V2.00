@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AudioToolbox
 import CryptoKit
 
 struct GameView: View {
@@ -260,9 +261,14 @@ struct GameWebView: UIViewRepresentable {
                       let body = message.body as? [String: Any],
                       body["event"] as? String == "action-confirmed" else { return }
                 DispatchQueue.main.async {
-                    let feedback = UIImpactFeedbackGenerator(style: .medium)
+                    // UIKit tap feedback can be subtle on some iPhones. Add native
+                    // system vibration for a confirmed action, not for every render.
+                    let feedback = UINotificationFeedbackGenerator()
                     feedback.prepare()
-                    feedback.impactOccurred()
+                    feedback.notificationOccurred(.success)
+                    if UIDevice.current.userInterfaceIdiom == .phone {
+                        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+                    }
                 }
                 return
             }

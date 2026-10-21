@@ -543,20 +543,42 @@ function demoTurnDescription(){
   const stages={ready:'Thảo luận',nominating:'Đề cử',selecting:'Chọn người lên giàn',voting:'Bỏ phiếu',closed:'Chốt phiếu',resolved:'Kết quả Lên Giàn'};
   return 'Ngày '+night+' · '+(stages[playSceneRuntime.gallows?.stage||'ready']||'Lên Giàn');
 }
+function demoActorIdentity(loginId){
+  const id=String(loginId||'').replace(/^member:/,'');
+  if(!id)return 'Không rõ Vai Trò (không rõ người chơi)';
+  const member=playLiveMembers().find(m=>String(m.loginId)===id);
+  const assignment=(playSceneRuntime.assignments||[]).find(row=>String(row.loginId)===id);
+  const role=String(assignment?.roleName||assignment?.roleCard?.name||assignment?.roleId||'Vai Trò');
+  const name=String(member?.displayName||member?.name||id);
+  return role+' ('+name+')';
+}
+function demoActionLabel(event){
+  const text=String(event?.action||event?.actionName||event?.actionId||'hành động').trim();
+  const known=(playSceneRuntime.gameConfig?.roles||[]).flatMap(r=>r.functions||[]);
+  return known.find(f=>[f.actionId,f.id].includes(text))?.name||text;
+}
 function demoObserve(action,actorId='',targetIds=[],status='accepted'){
-  const members=playLiveMembers(),name=id=>members.find(m=>m.loginId===id)?.displayName||id;
-  demoRunner.lastEvent={matchId:String(playSceneRuntime.room?.matchId||''),turn:demoTurnDescription(),action:String(action),actor:name(actorId),targets:targetIds.map(name),status};
+  demoRunner.lastEvent={matchId:String(playSceneRuntime.room?.matchId||''),turn:demoTurnDescription(),
+    action:String(action),actorId,actor:demoActorIdentity(actorId),targetIds:targetIds.slice(),
+    targets:targetIds.map(demoActorIdentity),status};
   demoRenderObserver();
 }
 function demoRenderObserver(){
   const panel=document.getElementById('battleDemoObserver');if(!panel)return;
-  panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
+  const day=playSceneState.phase==='day';
+  panel.hidden=day||!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(panel.hidden)return;
-  const set=(id,text)=>{const node=document.getElementById(id);if(node)node.textContent=text},event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
+  const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
+  const event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
   set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
-  set('battleDemoEventTurn',event?'Hành động · '+event.turn:'');
-  const statuses={pending:'Đang gửi',accepted:'Đã thực hiện',skipped:'Bỏ qua',uncertain:'Chưa xác nhận'};
-  set('battleDemoEvent',event?(statuses[event.status]||'Đã thực hiện')+' · '+[event.actor,event.action].filter(Boolean).join(' · ')+(event.targets.length?' → '+event.targets.join(', '):''): 'Chưa có hành động trong ván này.');
+  set('battleDemoEventTurn',event?'Hành động · '+String(event.turn||''):'');
+  const actor=event?.actorId?demoActorIdentity(event.actorId):String(event?.actor||'Vai Trò (người chơi)');
+  const targets=event?.targetIds?.length?event.targetIds.map(demoActorIdentity):event?.targets||[];
+  const action=demoActionLabel(event);
+  const msg=event?(event.status==='pending'?'Đang thực hiện: ':event.status==='skipped'?'Bỏ qua: ':'')+
+    actor+' đã thực hiện hành động ('+action+')'+(targets.length?' đến '+targets.join(', '):''):'Chưa có hành động trong ván này.';
+  set('battleDemoEvent',msg);
+  panel.dataset.resultTone=/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(action)?'negative':'positive';
   set('battleDemoObserverError',demoRunner.error||'');
 }
 function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
