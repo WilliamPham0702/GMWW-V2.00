@@ -42,7 +42,7 @@ test('Demo is selected after creating a shared room, with GM controls on same me
   for(const id of ['playRoomModeToggle','battleDemoToggle','battleDemoSpeed'])assert.match(html,new RegExp('id="'+id+'"'));
   assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
   assert.match(setup,/demo:false,roomMode:'offline'/);
-  assert.match(setup,/playUpdateRoomSettings\(patch\)/);
+  assert.match(setup,/flushPlayRoomMode\(\)/);
   assert.ok(html.indexOf('id="battleWolfMenu"')<html.indexOf('id="battleDemoToggle"'));
   assert.ok(html.indexOf('id="battleDemoToggle"')<html.indexOf('id="battleLabelArtifact"'));
   assert.match(battle,/if\(auto\)auto\.hidden=false/);
