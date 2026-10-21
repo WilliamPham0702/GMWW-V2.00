@@ -3592,23 +3592,26 @@ async function demoActionDay(epoch){
     const a=demoPick(available),actorId=demoPick(a.actorIds),memberIds=playLiveMembers().filter(m=>
       m?.loginId&&(!a.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
         a,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night)).map(m=>m.loginId);
-    const chosen=[];
-    while(chosen.length<a.targetCount&&memberIds.length){
+    const targetCount=Math.max(0,Number(a.targetCount)||0),chosen=[],signature=cycle+':'+a.id;
+    if(demoRunner.pending.has(signature))throw Error('Kết quả hành động Ban Ngày chưa rõ; GM phải kiểm tra trước khi chạy tiếp.');
+    while(chosen.length<targetCount&&memberIds.length){
       const id=demoPick(memberIds);chosen.push(id);memberIds.splice(memberIds.indexOf(id),1);
     }
-    demoRunner.dayDone.add(cycle+':'+a.id);
-    if(chosen.length===a.targetCount&&Math.random()<0.85){
+    if(chosen.length===targetCount&&Math.random()<0.85){
+      demoRunner.pending.add(signature);
       const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
         matchId:room.matchId,cycleKey:room.cycleKey,actorId,
         roleId:a.roleId||'',artifactId:a.artifactId||'',actionId:a.actionId,targetIds:chosen,
         clientEventId:'demo-'+(globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2))
       })});
       if(result?.ok!==true)throw Error('Hành động ngày không hợp lệ: '+(result?.message||result?.error||'Server từ chối.'));
+      demoRunner.pending.delete(signature);
     }
+    demoRunner.dayDone.add(signature);
     return;
   }
   const g=playSceneRuntime.gallows||{},stage=String(g.stage||'ready'),
-    now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0),
+    now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0),mode=g.mode==='gm'?'gm':'auto',
     eligible=(Array.isArray(g.eligible)?g.eligible:playLiveMembers().map(x=>x.loginId)).filter(id=>id&&playPlayerEffect(id)!=='dead'&&playPlayerEffect(id)!=='expelled');
   const post=async(command,extra={})=>{
     const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,...extra})});
@@ -3616,8 +3619,11 @@ async function demoActionDay(epoch){
   };
   if(!eligible.length)throw Error('Không còn thành viên đủ điều kiện để bỏ phiếu; GM cần kiểm tra kết quả thắng.');
   if(stage==='ready'){await post('open');return}
+  if(stage==='nominating'&&mode==='gm'){
+    await post('begin',{targetId:demoPick(eligible)});return;
+  }
   if(stage==='nominating'&&now<Number(g.nominationDeadlineAt||0)){
-    const awaiting=eligible.filter(id=>!Object.hasOwn(g.nominations||{},id));
+    const awaiting=eligible.filter(id=>!Object.hasOwn(g.nominations||{},id)&&!(g.blockedNomination||[]).includes(id));
     if(awaiting.length){
       const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('nominate',{
         loginId:demoPick(awaiting),targetId:demoPick(eligible),matchId:room.matchId,cycleKey:room.cycleKey}))});
@@ -3631,11 +3637,15 @@ async function demoActionDay(epoch){
     await post('begin',{targetId:rank[0]||demoPick(eligible)});return;
   }
   if(stage==='voting'&&now<Number(g.deadlineAt||0)){
-    const awaiting=eligible.filter(id=>id!==g.candidateId&&!Object.hasOwn(g.votes||{},id)&&!(g.blocked||[]).includes(id));
+    const banned=g.blockedVotes||g.blocked||[],awaiting=eligible.filter(id=>id!==g.candidateId&&!Object.hasOwn(g.votes||{},id)&&!banned.includes(id));
     if(awaiting.length){
-      const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('vote',{
-        loginId:demoPick(awaiting),choice:demoPick(['👍','👎']),matchId:room.matchId,cycleKey:room.cycleKey}))});
-      if(result?.ok!==true)throw Error(result?.message||result?.error||'Bỏ phiếu không thành công.');
+      const voter=demoPick(awaiting),choice=demoPick(['👍','👎']);
+      if(mode==='gm')await post('manual_vote',{targetId:voter,choice});
+      else{
+        const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('vote',{
+          loginId:voter,choice,matchId:room.matchId,cycleKey:room.cycleKey}))});
+        if(result?.ok!==true)throw Error(result?.message||result?.error||'Bỏ phiếu không thành công.');
+      }
     }
     return;
   }
