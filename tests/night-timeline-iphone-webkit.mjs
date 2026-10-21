@@ -12,7 +12,7 @@ try{
  await context.route('**/*',route=>route.abort());
  const page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.setContent('<html><body class="play-immersive"><section id="start"></section></body></html>');
+ await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body class="play-immersive"><section id="start"></section></body></html>');
  await page.evaluate(source=>{
    const parsed=new DOMParser().parseFromString(source,'text/html');
    document.getElementById('start').append(parsed.getElementById('playShell'));
@@ -143,6 +143,7 @@ try{
      const labels=[...document.querySelectorAll('#battleDayActionList button span')];
      return {boxes,viewport:innerWidth,unclipped:labels.every(el=>el.scrollWidth<=el.clientWidth+1)};
    });
+   assert.equal(layout.viewport,width,'iPhone WebKit must honor the configured CSS viewport width');
    assert.ok(layout.unclipped,'Full action names must wrap');
    layout.boxes.forEach((b,i)=>{assert.ok(b.width>30&&b.x>=0&&b.right<=width+1,JSON.stringify(layout));if(i)assert.ok(b.x>=layout.boxes[i-1].right-1,'Dock controls overlap')});
    await page.locator('#battleDayActionToggle').click();
