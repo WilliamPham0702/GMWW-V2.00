@@ -39,7 +39,8 @@ test('gallows is connected to authenticated GM and player APIs and private room 
   const gm=readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
   const player=readFileSync(new URL('../src/player-web-src/30-rooms-and-realtime.part',import.meta.url),'utf8');
   assert.match(server,/async gmGallows\(request,body\)/);
-  assert.match(server,/async playerGallows\(body\)/);
+  assert.match(server,/async playerGallows\(body,authorizedDemo=false\)/);
+  assert.match(server,/if\(meta\?\.demo===true&&!authorizedDemo\)return j\(\{ok:false,error:"DEMO_ROOM_GM_ONLY"/);
   assert.match(server,/await this.gmAuthorized\(request\)/);
   assert.match(server,/memberStore\(env\).fetch\(new Request\("https:\/\/member.internal\/members\/session"/);
   assert.match(server,/gallowsId:ballot.id/);

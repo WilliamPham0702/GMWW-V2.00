@@ -136,6 +136,7 @@ try{
  });
  for(const width of [320,390,430]){
    await page.setViewportSize({width,height:844});
+   assert.equal(await page.evaluate(()=>innerWidth),width,'WebKit layout viewport must match the requested iPhone width');
    assert.equal(await page.locator('#battleActionTray').isVisible(),false,'Day must not show the cramped inline list');
    await page.locator('#battleDayActionToggle').click();
    assert.equal(await page.locator('#battleDayActionMenu').isVisible(),true,'A single tap opens the picker');
