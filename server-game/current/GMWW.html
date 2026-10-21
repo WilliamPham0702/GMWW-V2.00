@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.164</title>
-<link rel="stylesheet" href="style.css?v=3.164-compact-room-mobile2">
+<title>GMWW V3.165</title>
+<link rel="stylesheet" href="style.css?v=3.165-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -250,7 +250,10 @@
 
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
-          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng">📖</button>
+          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Bảng Tin">📖<small>BẢNG TIN</small></button>
+        </section>
+        <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
+          <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
         </section>
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
@@ -261,7 +264,7 @@
           </div>
         </section>
         <section id="battleDayGallowsFloat" class="battle-day-icon-float" aria-label="Lên Giàn" hidden>
-          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">🤯</button>
+          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">🤯<small>LÊN GIÀN</small></button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
@@ -759,8 +762,13 @@
         <div class="play-template-team-summary" id="playTemplateTeamSummary" role="status"></div>
         <div class="play-game-role-list" id="playGameRoleList"></div>
         <p class="play-template-help">Chọn một lần để thêm 1 lá, chạm lại để bỏ chọn. Số lượng và thứ tự của vai đã chọn được điều chỉnh trong danh sách.</p>
-        <div class="play-template-section-title"><b>ARTIFACT CỦA VÁN MẪU</b><span>Thiết lập một lần khi tạo Ván Mẫu</span></div>
-        
+      </div>
+      <div class="play-template-play-review">
+        <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
+        <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
+        <label class="play-template-artifact play-match-artifact-toggle"><input type="checkbox" id="playArtifactsEnabled"> <span><b>CÓ SỬ DỤNG ARTIFACT</b><small>Bật hoặc tắt riêng cho trận này, không thay đổi Ván Mẫu đã lưu</small></span></label>
+        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo lựa chọn trận này</p>
+        <div id="playMatchArtifactSettings" class="play-match-artifact-settings">
         <label class="play-template-artifact-time">Thời gian sử dụng Artifact (giây): <span class="play-timing-value"><input id="playArtifactActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Artifact"></span></label>
         <label class="play-template-artifact-quota">Số Artifact được sử dụng mới mỗi Ngày / Đêm
           <input id="playArtifactLimitPerCycle" type="number" inputmode="numeric" min="0" max="30" step="1" value="3" aria-label="Hạn mức Artifact mỗi ngày hoặc đêm">
@@ -768,13 +776,9 @@
         </label>
         <p class="play-template-help" id="playArtifactPoolHint">Artifact ★ được chọn sẵn; có thể vuốt ngang hoặc bỏ chọn.</p>
         <div class="play-template-artifact-gallery" id="playGameArtifactPicker" role="region" tabindex="0" aria-label="Artifact thường dùng, vuốt ngang để xem tiếp"></div>
-        <p class="play-template-help">Chọn trước những Artifact mà Ván Mẫu có thể sử dụng. Bật hoặc tắt Artifact cho mỗi trận ở màn Chọn Ván Mẫu.</p>
-      </div>
-      <div class="play-template-play-review">
-        <div class="play-template-section-title"><b>VÁN MẪU ĐÃ CHỌN</b><span>Thiết lập cho trận này</span></div>
-        <span id="playTemplatePlaySummary">Chưa chọn Ván Mẫu</span>
-        <label class="play-template-artifact play-match-artifact-toggle"><input type="checkbox" id="playArtifactsEnabled"> <span><b>CÓ SỬ DỤNG ARTIFACT</b><small>Bật hoặc tắt riêng cho trận này, không thay đổi Ván Mẫu đã lưu</small></span></label>
-        <p id="playTemplateArtifactSummary" class="play-template-help" aria-live="polite">Artifact: theo lựa chọn trận này</p>
+        <p class="play-template-help">Chọn Artifact cho trận này; Ván Mẫu đã lưu không thay đổi.</p>
+          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
+        </div>
         <details class="play-template-collapsible" id="playGameTimingDetails"><summary>THỜI GIAN THỰC HIỆN <small>Chạm để tùy chỉnh (giây)</small></summary>
         <div class="play-timing-grid" aria-label="Cài đặt thời gian chung cho trận">
           <label>Thời gian thảo luận (giây): <span class="play-timing-value"><input id="playVillageDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="300"></span></label>
@@ -782,7 +786,6 @@
           <label>Thời gian bỏ phiếu Lên Giàn (giây): <span class="play-timing-value"><input id="playGallowsVoteSec" type="number" inputmode="numeric" min="1" max="3600" value="10" aria-label="Thời gian bỏ phiếu Lên Giàn"></span></label>
           <label>Thời gian sử dụng Vai Trò (giây): <span class="play-timing-value"><input id="playDefaultActionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian sử dụng Vai Trò mặc định, đơn vị giây"></span></label>
           <label>Sói nhận diện nhau – Bầy Sói (giây): <span class="play-timing-value"><input id="playWolfDiscussionSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Bầy Sói nhận diện nhau"></span></label>
-          <label>Artifact đầu game (giây): <span class="play-timing-value"><input id="playEarlyArtifactSec" type="number" inputmode="numeric" min="0" max="3600" value="30" aria-label="Thời gian Artifact ưu tiên đầu game"></span></label>
           <input id="playAutoAdvance" type="checkbox" checked hidden>
         </div>
         </details>
@@ -918,10 +921,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.164-timeline"></script>
+<script src="battle-controls.js?v=3.165-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.164-compact-room&status=4"></script>
+<script src="app.js?v=3.165-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

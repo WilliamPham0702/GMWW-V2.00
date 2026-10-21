@@ -6322,3 +6322,20 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDayActionMenu{
  #start #playShell[data-step="battle"][data-battle-phase="day"] #battleCountdown.is-ending{animation:none!important}
 }
 
+
+/* Day actions use one selector; the full action names live in the sheet. */
+#start #playShell #battleDayActionFloat[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"] #battleBottomControls #battleDayActionFloat{
+ flex:1 1 94px!important;width:auto!important;min-width:78px!important;
+}
+#start #playShell[data-step="battle"] .battle-day-icon-float>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px 3px}
+#start #playShell[data-step="battle"] .battle-day-icon-float>button small{font-size:8px;line-height:1.2;white-space:nowrap}
+#start #playShell[data-step="battle"] #battleDayActionToggle{font-size:16px;background:linear-gradient(145deg,#235963,#112d44)}
+#battleDayActionToggle b{font-size:11px;line-height:1.2;white-space:nowrap}
+#battleDayActionToggle:disabled{opacity:.45}
+#battleDayActionToggle[aria-expanded="true"]{border-color:#ecd18d!important}
+#battleDayActionList button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:14px;line-height:1.4;min-height:60px}
+#battleDayActionList button span{white-space:normal;overflow-wrap:anywhere}
+#battleDayActionList button small{text-align:left;font-size:11px}
+.play-match-artifact-settings{display:grid;gap:12px;padding:12px;border:1px solid rgba(164,218,226,.25);border-radius:14px;background:rgba(10,42,55,.4)}
+.play-match-artifact-settings[hidden]{display:none!important}

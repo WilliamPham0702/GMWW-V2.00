@@ -12,19 +12,19 @@ const playerCss=readFileSync('assets/village/village.css','utf8');
 const shared=readFileSync('server-game/current/gmww-shared-motion.js','utf8');
 const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 
-test('Chọn Ván Mẫu owns per-match Artifact switch; library still owns the Artifact pool',()=>{
+test('Chọn Ván Mẫu owns per-match Artifact switch; including the Artifact pool',()=>{
  const editor=between(html,'<div class="play-template-editor-only">','<div class="play-template-play-review">');
  const review=between(html,'<div class="play-template-play-review">','<div class="button-row play-roster-actions">');
  assert.doesNotMatch(editor,/id="playArtifactsEnabled"/);
- assert.match(editor,/id="playGameArtifactPicker"/);
+ assert.doesNotMatch(editor,/id="playGameArtifactPicker"/);
  assert.match(review,/id="playArtifactsEnabled"/);
  assert.match(review,/CÓ SỬ DỤNG ARTIFACT/);
- assert.doesNotMatch(review,/id="playGameArtifactPicker"/);
+ assert.match(review,/id="playGameArtifactPicker"/);
  const saved=between(gm,'async function savePlayGame(){','function playRandomInt(max)');
- assert.match(saved,/const artifactEnabled=!!document.getElementById\('playArtifactsEnabled'\)\?\.checked/);
- assert.match(saved,/const chosenArtifactRefs=artifactEnabled\?\(base\.artifacts\|\|\[\]\):\[\]/);
- assert.match(saved,/artifactsEnabled:selectedArtifacts\.length>0/);
- assert.match(gm,/playSceneState\.artifactsEnabled=!!e\.currentTarget\.checked&&playTemplateSelectedArtifacts\(\)\.length>0/);
+ assert.match(saved,/const artifactConfig=playMatchArtifactConfig\(\)/);
+ assert.match(saved,/timing,\.\.\.artifactConfig/);
+ assert.match(saved,/artifactsEnabled:false,artifacts:\[\]/);
+ assert.match(gm,/playSceneState\.artifactsEnabled=!!e\.currentTarget\.checked;/);
 });
 
 test('Timing panels are collapsed by default, with all timing inputs intact',()=>{

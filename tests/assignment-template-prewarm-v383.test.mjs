@@ -23,10 +23,10 @@ test('Assignment LƯU advances to Phát Vai only after GM stage acknowledgment',
   assert.match(app,/getElementById\('playAssignmentConfirm'\)\?\.addEventListener\('click',playSaveAssignments\)/);
 });
 
-test('Ván Mẫu saving prepackages roles and prepares selected Artifact before choosing the match',()=>{
+test('Ván Mẫu saving prepackages roles; selected Artifact is prepared per match',()=>{
   const save=block('async function savePlayGame(){','function playRandomInt(max){');
   assert.match(save,/await playEnsureTemplateAssets\(playSceneState\.gameTemplateId,cached\?\.template\?\.compiledConfig\|\|cfg\)/);
-  assert.match(save,/await playEnsureSharedArtifactPool\(cfg\)/);
+  assert.doesNotMatch(save,/await playEnsureSharedArtifactPool\(cfg\)/);
   const choosing=save.slice(save.indexOf("if(mode==='play')"),save.indexOf('const total=playRolePlanTotal();'));
   assert.match(choosing,/await playEnsureTemplateAssets\(id,base\)/);
   assert.doesNotMatch(choosing,/playArtifactArtworkData|playRoleArtworkData/);
