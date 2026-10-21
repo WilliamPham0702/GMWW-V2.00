@@ -2742,8 +2742,8 @@ async function demoPopulateExistingMembers(count){
   const roomSize=Math.max(8,count);
   const layout=globalThis.GMWW_VILLAGE_LAYOUT;
   const settings=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify({
-    seatCount:Math.max(roomSize,Number(playSceneRuntime.room?.seatCount)||roomSize),
-    seatLayout:layout.recommendedSeatShape(Math.max(roomSize,Number(playSceneRuntime.room?.seatCount)||roomSize))
+    seatCount:roomSize,
+    seatLayout:layout.recommendedSeatShape(roomSize)
   })});
   if(settings?.ok!==true)throw Error('Không điều chỉnh được Seat DEMO.');
   const selected=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
