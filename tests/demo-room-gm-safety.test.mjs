@@ -50,6 +50,6 @@ test('GM-only Demo appears as a room tile and only renders controls inside Demo 
 test('Playback stops on uncertainty and does not proclaim unverified victories',()=>{
   assert.match(battle,/Kết quả giao dịch lượt này chưa rõ/);
   assert.match(battle,/if\(playSceneRuntime\.winProposal\)/);
-  assert.match(battle,/demoLeaseBody\('finish'/);
+  assert.match(battle,/await demoStop\('winner_ready'\);await openPlayCompletionSheet\(\)/);
   assert.doesNotMatch(battle,/demoActionNight[\s\S]*?gmEnd\(/);
 });

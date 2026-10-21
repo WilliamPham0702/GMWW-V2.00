@@ -144,10 +144,10 @@ async function advancePlayPhase(){
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
 /* Isolated Demo playback. All decisions are sampled from currently legal GM
  * choices and submitted through the same server action/turn endpoints. */
-const demoRunner={running:false,paused:false,owner:'',speed:2,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
+const demoRunner={running:false,paused:false,owner:'',speed:1,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
   completed:new Set(),pending:new Set(),dayDone:new Set(),status:'Sẵn sàng — nhấn Chạy Demo',error:''};
 const demoPick=rows=>rows[Math.floor(Math.random()*rows.length)];
-const demoDelay=()=>Math.max(220,Math.round(1800/Math.max(1,demoRunner.speed)));
+const demoDelay=()=>500;
 const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:demoRunner.speed,...extra});
 function demoStopTimer(){if(demoRunner.timer){clearTimeout(demoRunner.timer);demoRunner.timer=0}}
 async function demoStop(reason='manual'){
@@ -163,13 +163,14 @@ async function demoStop(reason='manual'){
   renderPlayBattle();
 }
 function demoRenderControls(){
+  initDemoPanel();
   const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
   if(panel)panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(status){status.textContent=demoRunner.error||demoRunner.status;status.classList.toggle('is-error',!!demoRunner.error)}
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ TẠM DỪNG':demoRunner.paused?'▶ TIẾP TỤC':'▶ CHẠY DEMO';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  if(button){button.hidden=!enabled;button.textContent=demoRunner.running?'⏸ TẠM DỪNG':demoRunner.paused?'▶ TIẾP TỤC':'▶ CHẠY';button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
   if(wrap)wrap.hidden=!enabled;
   if(auto)auto.hidden=enabled;
   if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
@@ -184,7 +185,7 @@ async function demoToggle(){
   demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   demoRunner.roomCode=String(playSceneState.roomCode);
   demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
-  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||2;
+  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||1;
   try{
     const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('start'))});
     if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
@@ -275,7 +276,7 @@ async function demoActionDay(epoch){
     now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0),
     eligible=(Array.isArray(g.eligible)?g.eligible:playLiveMembers().map(x=>x.loginId)).filter(id=>id&&playPlayerEffect(id)!=='dead'&&playPlayerEffect(id)!=='expelled');
   const post=async(command,extra={})=>{
-    const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,...extra})});
+    const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,source:'demo',...extra})});
     if(result?.ok!==true)throw Error(result?.message||result?.error||'Lên Giàn không hợp lệ.');
   };
   if(!eligible.length)throw Error('Không còn thành viên đủ điều kiện để bỏ phiếu; GM cần kiểm tra kết quả thắng.');
@@ -316,7 +317,7 @@ async function demoActionDay(epoch){
 async function demoStep(epoch){
   if(!demoRunner.running||epoch!==demoRunner.epoch)return;
   try{
-    if(++demoRunner.steps>800)throw Error('Đã đạt giới hạn an toàn 800 bước. GM cần kiểm tra ván.');
+    if(demoRunner.steps>800)throw Error('Đã đạt giới hạn an toàn 800 bước. GM cần kiểm tra ván.');
     const beat=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('heartbeat'))});
     if(beat?.ok!==true)throw Error(beat?.message||beat?.error||'Mất quyền điều khiển Demo.');
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
@@ -330,11 +331,13 @@ async function demoStep(epoch){
       await demoStop('room_or_match_changed');return;
     }
     if(playSceneRuntime.winProposal){
-      const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('finish',{
-        matchId:room.matchId,cycleKey:room.cycleKey}))});
-      if(result?.ok!==true)throw Error(result?.message||result?.error||'Server chưa xác nhận kết thúc Demo.');
-      await demoStop('completed');await playSyncRoom(true);renderPlayScene();return;
+      await demoStop('winner_ready');await openPlayCompletionSheet();return;
     }
+    const clock=playSceneRuntime.demoControl?.clock;
+    if(clock&&['night','discussion'].includes(clock.kind)&&clock.remainingMs>0){
+      demoSchedule(Math.min(1000,Math.max(50,clock.remainingMs/Math.max(1,clock.speed))));return;
+    }
+    demoRunner.steps++;
     if(playSceneState.phase==='night'){
       const rt=playSceneRuntime.nightRuntime,t=battleTurn();
       if(t)await demoActionNight(t,epoch);
@@ -1601,7 +1604,7 @@ function initBattleDayClockSwipe(){
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
   document.getElementById('battleBack')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleNavigateRelative(-1)});
-  document.getElementById('battleForceEnd')?.addEventListener('click',openPlayEndSheet);
+  document.getElementById('battleForceEnd')?.addEventListener('click',()=>{void openPlayCompletionSheet()});
   document.getElementById('battleExit')?.addEventListener('click',exitPlayImmersive);
   document.getElementById('battleInfoToggle')?.addEventListener('click',()=>battleToggleDetails());
   initBattleFloatingClock();initBattleDayClockSwipe();initBattleFloatingUndo();battleBindTargetSheetDrag();battleBindConfirmDrag();battleBindResultPopup();

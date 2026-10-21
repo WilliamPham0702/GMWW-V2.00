@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 
 const worker=readFileSync('src/index.js','utf8'),battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const extract=(s,start,end)=>{const a=s.indexOf(start),b=s.indexOf(end,a+1);assert.ok(a>=0&&b>a);return s.slice(a,b)};
@@ -9,10 +10,11 @@ const extract=(s,start,end)=>{const a=s.indexOf(start),b=s.indexOf(end,a+1);asse
 function leaseHarness(){
   const meta={demo:true,phase:'running',cyclePhase:'night',matchId:'match1',cycleKey:'night-1'};
   const data=new Map(),room=new (vm.runInNewContext('(class {'+
-    extract(worker,'  async gmDemo(request,body){','  async gmAuto(request,body){')+'})',{
-    j:(v,status=200)=>Response.json(v,{status}),Response,Date,Number,String,Error,JSON
+    extract(worker,'  async demoClockContext(meta){','  async gmAuto(request,body){')+'})',{
+    projectDemoClock,nextDemoClock,j:(v,status=200)=>Response.json(v,{status}),Response,Date,Number,String,Error,JSON
   }))();
   room.ctx={storage:{get:async key=>data.get(key),put:async(key,value)=>{data.set(key,value)}}};
+  room.getNightRuntime=async()=>({queue:[],cursor:0});
   room.gmAuthorized=async()=>({ok:true,meta});
   return {room,meta,data,run:async(body)=>{const r=await room.gmDemo({method:'POST'},body);return{status:r.status,...await r.json()}}};
 }

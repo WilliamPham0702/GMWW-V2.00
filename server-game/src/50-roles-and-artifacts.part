@@ -476,6 +476,88 @@ async function playFinishSeating(){
   const members=playLiveMembers(),missing=members.filter(m=>!Number(m?.seatId||0));if(missing.length){playFlashError('Còn '+missing.length+' Người Chơi chưa có vị trí. Dùng “Phân vị trí còn lại” hoặc chọn từng người.');return}
   const locked=await playSetSeatLock(true);if(locked){playSceneState.step='game';playSceneState.activePlayerId='';savePlayScene();renderPlayScene();void playPublishStage('game')}
 }
+/* Match completion is shared by ordinary rooms and DEMO. No room is reset until GM chooses. */
+const playCompletionState={key:'',dismissed:'',winner:'',completed:false,busy:false,matchId:'',roomCode:'',config:null,templateId:''};
+function renderPlayCompletion(){
+  const s=playCompletionState,title=document.getElementById('playCompletionTitle'),text=document.getElementById('playCompletionMessage');
+  if(title)title.textContent=s.winner?s.winner.toUpperCase()+' THẮNG':'KẾT QUẢ VÁN';
+  if(text)text.textContent=s.completed?'Ván đã hoàn thành. Chọn bước tiếp theo.':'Xác nhận phe thắng rồi hoàn thành ván.';
+  for(const b of document.querySelectorAll('[data-completion-winner]')){b.setAttribute('aria-pressed',String(b.dataset.completionWinner===s.winner));b.disabled=s.completed||s.busy}
+  const confirm=document.getElementById('playCompletionConfirm');if(confirm){confirm.hidden=s.completed;confirm.disabled=!s.winner||s.busy}
+  const choices=document.getElementById('playCompletionChoices');if(choices)choices.hidden=!s.completed;
+  const abort=document.getElementById('playCompletionAbort');if(abort)abort.hidden=s.completed;
+  for(const b of document.querySelectorAll('[data-completion-next]'))b.disabled=s.busy;
+}
+async function openPlayCompletionSheet(){
+  if(!isLivePlayRoom())return;
+  const room=playSceneRuntime.room||{},s=playCompletionState,key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+  if(s.key!==key){
+    s.key=key;s.roomCode=String(playSceneState.roomCode);s.matchId=String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+    s.config=playSceneRuntime.gameConfig;s.templateId=playSceneState.gameTemplateId||'';
+    s.winner=String(room.winnerFaction||playSceneRuntime.winProposal?.winnerFaction||'');s.completed=!!room.endedAt&&!!room.winnerFaction;
+  }
+  if(typeof demoStop==='function'&&demoRunner.running)await demoStop('winner_ready');
+  if(!s.completed&&room.autoGM===true&&room.phase==='running'){
+    const paused=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=paused.room||room;playSceneState.autoGM=false;
+  }
+  renderPlayCompletion();document.getElementById('playMatchCompletionSheet')?.classList.remove('hidden');
+}
+function closePlayCompletionSheet(){playCompletionState.dismissed=playCompletionState.key;document.getElementById('playMatchCompletionSheet')?.classList.add('hidden')}
+async function playWatchCompletion(data){
+  const room=data?.room;if(!room)return;
+  const key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+  if((data.winProposal||room.endedAt&&room.winnerFaction)&&playCompletionState.key!==key&&playCompletionState.dismissed!==key)
+    await openPlayCompletionSheet();
+}
+async function confirmPlayCompletion(){
+  const s=playCompletionState;if(s.busy||s.completed||!s.winner||s.roomCode!==String(playSceneState.roomCode))return;
+  s.busy=true;renderPlayCompletion();
+  try{
+    if(demoRunner.running)await demoStop('winner_ready');
+    const data=await playRoomApi('/end',{method:'POST',body:JSON.stringify({matchId:s.matchId,winnerFaction:s.winner,winnerLabel:s.winner})});
+    if(data?.ok!==true)throw Error(data?.message||data?.error||'Server chưa xác nhận hoàn thành ván.');
+    playSceneRuntime.room=data.room||playSceneRuntime.room;s.completed=true;
+    await playSyncRoom(true);renderPlayCompletion();
+  }catch(err){playFlashError(err?.message||String(err))}
+  finally{s.busy=false;renderPlayCompletion()}
+}
+async function playCompletionNext(choice){
+  const s=playCompletionState;if(!s.completed||s.busy||s.roomCode!==String(playSceneState.roomCode))return;
+  if(!['replay','game','room'].includes(choice))return;
+  s.busy=true;renderPlayCompletion();
+  try{
+    if(choice==='room'){
+      disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
+      closePlayCompletionSheet();savePlayScene();renderPlayScene();await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
+    }
+    const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({postGame:true,preserveParticipants:true,expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),transactionId:'next-'+s.matchId})});
+    if(data?.ok!==true||data.preserveParticipants!==true)throw Error('Server chưa xác nhận chuẩn bị ván tiếp theo.');
+    playSceneRuntime.room=data.room;playSceneRuntime.players=data.players||[];playSceneRuntime.assignments=[];playSceneRuntime.nightRuntime=null;playSceneRuntime.activeEffects=[];playSceneRuntime.winProposal=null;playSceneRuntime.dayActionUsage=[];playSceneRuntime.battleActionUsage=[];playSceneRuntime.gallows=null;playSceneRuntime.artifactCycle={count:0,max:Number(s.config?.artifactLimitPerCycle??3),accepted:[]};
+    playSceneState.phase='lobby';playSceneState.night=0;playSceneState.assignmentsPreview=[];playSceneState.artifactCount=0;
+    if(choice==='replay'){
+      if(!s.config)throw Error('Không tìm thấy Ván Mẫu của ván trước.');
+      const matchId='match-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36));
+      const configured=await playRoomApi('/config',{method:'POST',body:JSON.stringify({gameConfig:s.config,matchId,matchRevision:1})});
+      playSceneRuntime.room=configured.room||playSceneRuntime.room;playSceneRuntime.gameConfig=configured.gameConfig||s.config;
+      playSceneState.matchId=matchId;playSceneState.gameTemplateId=s.templateId;playSceneState.step='roles';
+      await playPublishStage('roles');playBuildAssignments({random:true});
+    }else{
+      playSceneState.matchId='';playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.step='game';await playPublishStage('game');
+    }
+    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameSheet();
+  }catch(err){playFlashError(err?.message||String(err))}
+  finally{s.busy=false;renderPlayCompletion()}
+}
+function initPlayCompletion(){
+  const sheet=document.getElementById('playMatchCompletionSheet');if(!sheet||sheet.dataset.bound)return;sheet.dataset.bound='1';
+  document.getElementById('playCompletionConfirm')?.addEventListener('click',()=>{void confirmPlayCompletion()});
+  document.getElementById('playCompletionClose')?.addEventListener('click',closePlayCompletionSheet);
+  document.getElementById('playCompletionAbort')?.addEventListener('click',()=>{closePlayCompletionSheet();void openPlayEndSheet()});
+  for(const button of sheet.querySelectorAll('[data-completion-winner]'))button.addEventListener('click',()=>{playCompletionState.winner=button.dataset.completionWinner;renderPlayCompletion()});
+  for(const button of sheet.querySelectorAll('[data-completion-next]'))button.addEventListener('click',()=>{void playCompletionNext(button.dataset.completionNext)});
+}
+
 async function openPlayEndSheet(){
   // Forced end is available during room setup, seating, role delivery, day or night.
   if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
@@ -864,6 +946,7 @@ async function handlePlayTimelineStep(step){
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
 }
 function initPlayScene(){
+  initPlayCompletion();
   const shell=document.getElementById('playShell');if(!shell)return;
   initBattleControls();
   initPlayGameChromeAutoHide();
@@ -898,7 +981,7 @@ function initPlayScene(){
     if(playSceneState.step==='room'){openPlayCreateRoomSheet();return}
     advancePlayPhase();
   });
-  document.getElementById('playEndGame')?.addEventListener('click',openPlayEndSheet);
+  document.getElementById('playEndGame')?.addEventListener('click',()=>{void openPlayCompletionSheet()});
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
   document.getElementById('playRoomButton')?.addEventListener('click',openPlayGMSheet);
   document.getElementById('playGMClose')?.addEventListener('click',closePlayGMSheet);
