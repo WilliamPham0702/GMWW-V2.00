@@ -591,7 +591,8 @@ function demoRenderObserver(){
 }
 function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
 function demoNightAlreadyUsed(action){
-  return !action.artifactId&&(playSceneRuntime.battleActionUsage||[]).some(row=>String(row.matchId)===String(playSceneRuntime.room?.matchId)&&Number(row.night)===Number(playSceneState.night)&&String(row.actionId)===String(action.actionId)&&(action.actorIds||[]).includes(String(row.actorId)));
+  const roleIds=action.roleIds?.length?action.roleIds:action.roleId?[action.roleId]:String(action.id||'').startsWith('role:')?[action.id.split(':')[1]]:[];
+  return !action.artifactId&&(playSceneRuntime.battleActionUsage||[]).some(row=>String(row.matchId)===String(playSceneRuntime.room?.matchId)&&Number(row.night)===Number(playSceneState.night)&&String(row.actionId)===String(action.actionId)&&(!row.roleId||!roleIds.length||roleIds.includes(String(row.roleId)))&&(action.actorIds||[]).includes(String(row.actorId)));
 }
 async function demoRunNight(t,epoch){
   const key=demoNightPlanKey(t),active=()=>demoRunner.running&&epoch===demoRunner.epoch&&battleTurn()?.id===t.id&&demoNightPlanKey(t)===key&&demoRunner.roomCode===playSceneState.roomCode;
