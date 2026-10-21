@@ -11,7 +11,7 @@ const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.
 
 test('V3.17 runtime keeps offline/online room flow with GM-only seating',()=>{
   assertCurrentRelease();
-  assert.match(app,/roomMode:isDemo\?'online':playSceneState\.roomMode,enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
+  assert.match(app,/demo:false,roomMode:'offline',enabled:playSceneState\.roomEnabled===true,seatMoveMode:'instant',seatCount:playSceneState\.seatCount/);
   assert.match(html,/id="playRoomModeToggle"/);
   assert.doesNotMatch(html,/data-play-room-mode=/);
   assert.match(html,/id="playCreateRoomName"/);
