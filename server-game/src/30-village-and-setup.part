@@ -565,8 +565,13 @@ async function demoRunNight(t,epoch){
     demoRunner.nightPlan={key,ids:tasks.map(a=>a.id),cursor:0,declined:optional&&Math.random()>=.5?optional.id:''};
     if(!tasks.length)demoObserve(all.map(a=>a.unavailableReason).filter(Boolean).join(' · ')||'Không có chức năng chủ động còn hợp lệ', '', [], 'skipped');
   }
-  const plan=demoRunner.nightPlan,total=Math.max(1,plan.ids.length),elapsed=Math.max(0,Number(clock.durationMs)-Number(clock.remainingMs));
-  while(plan.cursor<plan.ids.length&&active()&&elapsed>=Number(clock.durationMs)*plan.cursor/total){
+  const plan=demoRunner.nightPlan,total=Math.max(1,plan.ids.length),
+    duration=Math.max(0,Number(clock.durationMs)||0),remaining=Math.max(0,Number(clock.remainingMs)||0),
+    elapsed=Math.max(0,duration-remaining),halfway=duration/2;
+  // First half of each turn is exclusively GM-controlled. Schedule actions in the
+  // second half and respect existing GM receipts/usage before automatic execution.
+  if(duration>0&&elapsed<halfway)return;
+  while(plan.cursor<plan.ids.length&&active()&&elapsed>=halfway+(duration-halfway)*plan.cursor/total){
     const id=plan.ids[plan.cursor],action=battleActions().find(a=>a.id===id),signature=key+':'+id;
     if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
     if(!demoRunner.completed.has(signature)&&action&&!demoNightAlreadyUsed(action)){
