@@ -1,4 +1,4 @@
-# Server-owned DEMO — V3.173
+# Server-owned DEMO — V3.174
 
 User-approved outcome: DEMO runs in its existing isolated RoomDurableObject. IPA/GM Web are observers and controllers. Preserve V3.172 room mode, first-half GM intervention, audio/haptic, actual timeline, existing game APIs, completion choices, member isolation and native shell.
 
@@ -9,6 +9,6 @@ Implementation and verification:
 2. Implement src/gmww-demo-runner.js and integrate control/state, scheduling, atomic alarm, lifecycle cleanup in src/index.js. Server-owned control removes browser-owner lock while retaining auth.
 3. Replace browser mutation loop with state projection and read-only polling, retaining observer/target/glow, feedback and GM controls. Closing/leaving the viewer must not stop server; explicit pause does.
 4. Verify unit suite, assembly, bundle; local workerd test with no GM clients and >15 seconds no heartbeat, pause/resume/speed, manual actions, game winner and existing-account snapshots. iPhone WebKit checks observer and control only, asserts no frontend gameplay POSTs.
-5. Bump runtime V3.173, commit/push PR; only merge after all applicable CI succeeds. Verify deployment SHA, health, OTA hashes and old runtime rollback route.
+5. Bump runtime V3.174, commit/push PR; only merge after all applicable CI succeeds. Verify deployment SHA, health, OTA hashes and old runtime rollback route.
 
 Review focus: duplicate alarms; GM action before/after midpoint; pause/resume reload; expired old browser lease; room end/reset/replay; no-target/policy rejection; server resource bounds. Changes remain limited to DEMO scheduling and client projection, shared game law unchanged.

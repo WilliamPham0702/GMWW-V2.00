@@ -73,6 +73,10 @@ async function observe(room,meta,lease,action,actorId='',targets=[],status='acce
  lease.lastEvent=event;await room.ctx.storage.put('demoLease',lease);room.broadcast({type:'demo_event',demoEvent:event,serverTime:Date.now()});
 }
 async function checked(response){const data=await response.json();if(!response.ok||!data.ok){const e=new Error(data.message||data.error||'DEMO_ACTION_FAILED');e.code=data.detail||data.error;throw e}return data}
+async function ballotAction(room,body){
+ try{return await checked(await room.playerGallows(body,true))}
+ catch(error){if(['NOMINATION_CLOSED','VOTE_DEADLINE_PASSED'].includes(error.code))return null;throw error}
+}
 async function execute(room,meta,lease,ctx,action,day=false){
  const actorId=pick(action.actorIds),targets=targetsFor(action,actorId,ctx,meta);
  if(!targets){await observe(room,meta,lease,action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
@@ -115,7 +119,7 @@ export async function nextServerDemoDue(room,meta){
 export async function stopServerDemo(room,meta,lease,reason,error=''){
  const stopped={...lease,running:false,reason,error,holdUntil:0};await room.syncDemoClock(meta,stopped);await room.ctx.storage.put('demoLease',stopped);return stopped;
 }
-export async function runServerDemo(room,meta){
+export async function runServerDemo(room,meta,budget=32){
  const store=room.ctx.storage,lease=await store.get('demoLease');if(!serverDemoActive(meta,lease))return false;
  const now=Date.now();if(Number(lease.holdUntil)>now){await room.scheduleRoomAlarm(meta);return true}
  if(Number(lease.steps)>=MAX_STEPS||now-Number(lease.startedAt)>MAX_RUN_MS){await stopServerDemo(room,meta,lease,'limit','Demo đã đạt giới hạn an toàn; GM cần kiểm tra ván.');await room.scheduleRoomAlarm(meta);return true}
@@ -124,17 +128,18 @@ export async function runServerDemo(room,meta){
  if(!['night','morning'].includes(meta.cyclePhase)){await room.applyCycle(meta,'night',1,'night-1','demo-server');await room.scheduleRoomAlarm();return true}
  lease.failures=0;lease.error='';
  const clock=await room.syncDemoClock(meta,lease),plan=await planFor(room,meta,clock),duration=Number(clock.durationMs)||0,remaining=Number(clock.remainingMs)||0;
+ if(remaining<=0&&['nominating','voting'].includes(clock.kind)){plan.cursor=plan.tasks.length;await store.put('demoPlan',plan)}
  const slot=duration/2+duration/2*plan.cursor/Math.max(1,plan.tasks.length);
  if(plan.cursor<plan.tasks.length&&duration-remaining+1>=slot){
   const task=plan.tasks[plan.cursor],ctx=await context(room,meta);
   if(task.kind){
    const {ballot,eligible}=await room.gallowsState(meta);
    if(ballot.mode==='gm'){ /* GM owns this ballot; retain their choices. */ }
-   else if(task.kind==='nominate'&&!Object.hasOwn(ballot.nominations||{},task.actorId)){
-    const targets=eligible.filter(id=>!(ballot.blockedNomination||[]).includes(id));
-    if(targets.length){const target=pick(targets);await checked(await room.playerGallows({command:'nominate',loginId:task.actorId,targetId:target},true));await observe(room,meta,lease,'Đề cử',task.actorId,[target])}
-   }else if(task.kind==='vote'&&!Object.hasOwn(ballot.votes||{},task.actorId)){
-    const choice=pick(['👍','👎']);await checked(await room.playerGallows({command:'vote',loginId:task.actorId,choice},true));await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);
+   else if(task.kind==='nominate'&&eligible.includes(task.actorId)&&!(ballot.blockedNomination||[]).includes(task.actorId)&&!Object.hasOwn(ballot.nominations||{},task.actorId)){
+    const targets=eligible.slice();
+    if(targets.length){const target=pick(targets);if(await ballotAction(room,{command:'nominate',loginId:task.actorId,targetId:target}))await observe(room,meta,lease,'Đề cử',task.actorId,[target])}
+   }else if(task.kind==='vote'&&eligible.includes(task.actorId)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(task.actorId)&&!Object.hasOwn(ballot.votes||{},task.actorId)){
+    const choice=pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice}))await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);
    }
   }else{
    const day=meta.cyclePhase==='morning',rt=day?null:await room.getNightRuntime(meta,meta.cycleNight,false),actions=day?dayActions(ctx,meta,await store.get('dayRoleUsage:'+meta.matchId)||[],(await room.gallowsState(meta)).ballot):nightActions(ctx,meta,rt.queue[rt.cursor],await store.get('battleRoleUsage:'+meta.matchId)||[]),action=actions.find(a=>a.id===task.id);
@@ -156,7 +161,7 @@ export async function runServerDemo(room,meta){
    const {ballot,eligible}=await room.gallowsState(meta),request=room.demoInternalRequest();
    if(ballot.stage==='ready')await checked(await room.gmGallows(request,{command:'open',source:'demo'}));
    else if(['nominating','selecting'].includes(ballot.stage)){
-    const allowed=eligible.filter(id=>!(ballot.blockedNomination||[]).includes(id));if(!allowed.length)throw Error('Không có mục tiêu Lên Giàn hợp lệ.');
+    const allowed=eligible.slice();if(!allowed.length)throw Error('Không có mục tiêu Lên Giàn hợp lệ.');
     const counts={};for(const id of Object.values(ballot.nominations||{}))counts[id]=(counts[id]||0)+1;
     const rank=allowed.sort((a,b)=>(counts[b]||0)-(counts[a]||0));await checked(await room.gmGallows(request,{command:'begin',source:'demo',targetId:rank[0]||pick(allowed)}));
    }else if(['voting','closed'].includes(ballot.stage)){
@@ -165,5 +170,10 @@ export async function runServerDemo(room,meta){
   }
   lease.steps=Number(lease.steps||0)+1;await store.put('demoLease',lease);
  }
- await room.scheduleRoomAlarm();return true;
+ await room.scheduleRoomAlarm();
+ // Batch already-due work so 30-player ballots at 10x are not throttled by
+ // one separate wakeup per voter. Keep each alarm bounded.
+ const fresh=await store.get('meta');
+ if(budget>1&&serverDemoActive(fresh,await store.get('demoLease'))&&(await nextServerDemoDue(room,fresh))<=Date.now())return runServerDemo(room,fresh,budget-1);
+ return true;
 }

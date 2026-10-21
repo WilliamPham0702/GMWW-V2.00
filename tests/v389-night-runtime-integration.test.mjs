@@ -1,4 +1,5 @@
 import test from 'node:test';
+import * as gallowsRules from '../src/gmww-gallows-rules.js';
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 import assert from 'node:assert/strict';
@@ -20,6 +21,7 @@ import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 const source=fs.readFileSync('src/index.js','utf8');
 const demoMethods=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'));
 const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('  async gmRename('));
+const gallowsMethods=source.slice(source.indexOf('  async gallowsState(meta){'),source.indexOf('  async gmState(request){'));
 const alarmMethods=source.slice(source.indexOf('  async alarm(){'),source.indexOf('  async gmDelete(request){'));
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
 const cycleHelper=source.slice(source.indexOf('function currentArtifactCycleKey('),source.indexOf('function gameLabelKey('));
@@ -28,8 +30,8 @@ const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
 const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 
-const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+methods+alarmMethods+activate+' })',{
-  ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
+const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
+  ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
@@ -539,4 +541,13 @@ test('Manual Undo invalidates server plan so restored role availability is re-ev
  await runServerDemo(h.room,await h.meta());const undo=h.data.get('battleLastAction:test-match');assert.ok(undo);
  const undone=await result(await h.room.gmBattleUndo(null,{matchId:'test-match',turnId:undo.turnId,undoToken:undo.token}));assert.equal(undone.ok,true);assert.equal(h.data.has('demoPlan'),false);
  await runServerDemo(h.room,await h.meta());assert.equal(h.data.get('battleRoleUsage:test-match').length,1);
+});
+
+test('Delayed alarm never submits expired ballots; it resolves the stage and continues',async()=>{
+ const h=await serverHarness(),meta=await h.meta();meta.cyclePhase='morning';meta.cycleKey='morning-1';await h.storage.put('meta',meta);
+ const players=await h.storage.get('players');for(const p of Object.values(players))p.kind='member';await h.storage.put('players',players);
+ await h.storage.put('gallows:test-match:morning-1',{id:'g1',matchId:'test-match',cycleKey:'morning-1',stage:'voting',candidateId:'carol',votes:{alice:'👍'},eligible:['alice','bob','carol','dave'],mode:'auto',voteDurationSec:10,deadlineAt:Date.now()-1000});
+ await h.room.syncDemoClock(meta,await h.storage.get('demoLease'));const clock=h.data.get('demoClock');clock.remainingMs=0;clock.at=Date.now();h.data.set('demoClock',clock);
+ await h.storage.put('demoPlan',{key:clock.key,cursor:0,tasks:[{id:'vote:bob',actorId:'bob',kind:'vote'}]});
+ await runServerDemo(h.room,meta);assert.equal(h.data.get('gallows:test-match:morning-1').stage,'resolved');assert.equal(h.data.get('demoLease').error||'','');
 });
