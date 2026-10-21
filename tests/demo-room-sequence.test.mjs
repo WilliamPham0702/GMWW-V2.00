@@ -13,12 +13,12 @@ const between=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,
   return source.slice(start,end);
 };
 
-test('Demo is one room card inside the room list, never a separate fake member entry',()=>{
-  const listStart=html.indexOf('id="playCreatedRoomList"'),card=html.indexOf('id="playDemoRoomChoice"');
-  assert.ok(listStart>=0&&card>listStart);
-  assert.match(setup,/if\(demoButton\)list\.appendChild\(demoButton\)/);
-  assert.match(setup,/renderPlayCreateRoomSheet\(\)/);
-  assert.match(events,/playDemoRoomChoice/);
+test('Demo is selected as a room mode at creation, not as a hardwired extra room',()=>{
+  assert.match(html,/id="playCreatedRoomList"/);
+  assert.match(html,/id="playRoomModeToggle"/);
+  assert.match(html,/<option value="demo">/);
+  assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
+  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
   assert.match(worker,/if\(body\.demo===true&&bearer\(request\)!==GM_SYNC_TOKEN\)/);
 });
 
@@ -28,7 +28,7 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
   const observed=[],calls=[],runner={running:true,epoch:2,pending:new Set(),completed:new Set()};
   const ctx={
     demoRunner:runner,demoFocus:()=>{},battleTurn:()=>({id:'role:role_wolf'}),playSyncRoom:async()=>({ok:true}),demoObserve:(...args)=>observed.push(args),
-    demoPick:items=>items[0],
+    demoPick:items=>items[0],demoConfirmedFeedback:()=>{},
     battleActions:()=>[action],battleRules:()=>({targetAllowed:()=>true}),
     playLiveMembers:()=>[{loginId:'alice'},{loginId:'bob'}],
     playPlayerEffect:()=> 'alive',
