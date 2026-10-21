@@ -3718,7 +3718,7 @@ function battleMorningRows(){
     if(!entry||Number(entry.night)!==night||
        (entry.matchId&&String(entry.matchId)!==match)||
        (entry.effectActive===false&&(night===Math.max(1,Number(playSceneState.night)||1)||/UNDO|RESTORE|REVERT/i.test(String(entry.expiredReason||'')))))continue;
-    const isDay=entry.source==='gallows'||['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
+    const isDay=['gallows','day-action'].includes(String(entry.source||''))||['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
     if(isDay!==(timeOfDay==='day'))continue;
     const type=String(entry.type||''),key=type==='status'?String(entry.statusId||'status'):type;
     if(!key||['pending','responded'].includes(key))continue;
