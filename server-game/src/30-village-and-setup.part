@@ -589,6 +589,54 @@ function demoRenderObserver(){
   set('battleDemoEvent',event?(statuses[event.status]||'Đã thực hiện')+' · '+[event.actor,event.action].filter(Boolean).join(' · ')+(event.targets.length?' → '+event.targets.join(', '):''): 'Chưa có hành động trong ván này.');
   set('battleDemoObserverError',demoRunner.error||'');
 }
+function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
+function demoNightAlreadyUsed(action){
+  return !action.artifactId&&(playSceneRuntime.battleActionUsage||[]).some(row=>String(row.matchId)===String(playSceneRuntime.room?.matchId)&&Number(row.night)===Number(playSceneState.night)&&String(row.actionId)===String(action.actionId)&&(action.actorIds||[]).includes(String(row.actorId)));
+}
+async function demoRunNight(t,epoch){
+  const key=demoNightPlanKey(t),active=()=>demoRunner.running&&epoch===demoRunner.epoch&&battleTurn()?.id===t.id&&demoNightPlanKey(t)===key&&demoRunner.roomCode===playSceneState.roomCode;
+  if(!active())return;
+  const clock=playSceneRuntime.demoControl?.clock||{durationMs:0,remainingMs:0};
+  if(demoRunner.nightPlan?.key!==key){
+    const all=battleActions(),tasks=all.filter(a=>!a.unavailable&&a.actorIds?.length&&!demoNightAlreadyUsed(a)),optional=tasks.find(a=>a.actionId==='action_witch_save'&&!a.artifactId);
+    demoRunner.nightPlan={key,ids:tasks.map(a=>a.id),cursor:0,declined:optional&&Math.random()>=.5?optional.id:''};
+    if(!tasks.length)demoObserve(all.map(a=>a.unavailableReason).filter(Boolean).join(' · ')||'Không có chức năng chủ động còn hợp lệ', '', [], 'skipped');
+  }
+  const plan=demoRunner.nightPlan,total=Math.max(1,plan.ids.length),elapsed=Math.max(0,Number(clock.durationMs)-Number(clock.remainingMs));
+  while(plan.cursor<plan.ids.length&&active()&&elapsed>=Number(clock.durationMs)*plan.cursor/total){
+    const id=plan.ids[plan.cursor],action=battleActions().find(a=>a.id===id),signature=key+':'+id;
+    if(demoRunner.pending.has(signature))throw Error('Kết quả giao dịch lượt này chưa rõ. GM cần kiểm tra trước khi chạy tiếp.');
+    if(!demoRunner.completed.has(signature)&&action&&!demoNightAlreadyUsed(action)){
+      if(plan.declined===id)demoObserve('Phù Thuỷ chọn không Cứu','',[],'skipped');
+      else if(action.unavailable)demoObserve(action.name+' · '+(action.unavailableReason||'Không còn hợp lệ'),'',[],'skipped');
+      else if(action.artifactId&&Number(playSceneRuntime.artifactCycle?.count||0)>=Number(playSceneRuntime.artifactCycle?.max??3))demoObserve(action.name+' · Đã đạt giới hạn Artifact trong chu kỳ','',[],'skipped');
+      else await demoExecuteNight(action,demoPick(action.actorIds),t,signature,epoch);
+    }
+    plan.cursor++;
+    if(!active())return;
+    const beforeSync=Number(playSceneRuntime.syncSerial||0);
+    if(!await playSyncRoom(true)){if(Number(playSceneRuntime.syncSerial)>beforeSync+1)return;throw Error('Chưa đồng bộ được kết quả hành động.')}
+  }
+  if(!active()||Number(clock.remainingMs)>0)return;
+  const response=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'next',expectedTurnId:t.id,source:'demo'})});
+  if(response?.ok!==true)throw Error(response?.message||response?.error||'Không thể chuyển lượt.');
+  demoRunner.visual=null;demoRunner.steps++;
+  document.getElementById('battleResultPopup')?.setAttribute('hidden','');
+}
+function demoVisualCurrent(){
+  const v=demoRunner.visual;
+  return playSceneRuntime.room?.demo===true&&playSceneState.step==='battle'&&v&&v.matchId===String(playSceneRuntime.room.matchId||'')&&v.cycleKey===String(playSceneRuntime.room.cycleKey||'')&&v.turnId===String(battleTurn()?.id||playSceneState.phase)?v:null;
+}
+function demoFocus(action,actorId,targets){
+  demoRunner.visual={matchId:String(playSceneRuntime.room?.matchId||''),cycleKey:String(playSceneRuntime.room?.cycleKey||''),turnId:String(battleTurn()?.id||playSceneState.phase),actionId:action.id,actorId,targetIds:[...targets]};
+  demoRenderVisual();if(typeof battleMarkPlayers==='function')battleMarkPlayers();
+}
+function demoRenderVisual(){
+  const v=demoVisualCurrent();
+  const manual=playSceneRuntime.room?.demo===true&&typeof battleState!=='undefined'&&battleState.targets.length?battleState.actionId:'';
+  document.querySelectorAll('[data-battle-action],[data-day-action]').forEach(node=>node.classList.toggle('demo-action-active',!!(manual||v?.actionId)&&(node.dataset.battleAction||node.dataset.dayAction)===(manual||v?.actionId)));
+  document.getElementById('battleDemoEvent')?.classList.toggle('demo-action-active',!!v);
+}
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
   playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';

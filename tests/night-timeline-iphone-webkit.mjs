@@ -37,7 +37,7 @@ try{
  const playLiveMembers=()=>members,playPlayerEffect=()=>'',playPlayerBlocked=()=>false,playAudioMuted=()=>false;
  const playEsc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const playFlashError=x=>{throw new Error(x)};
- const exitPlayImmersive=()=>{},openPlayEndSheet=()=>{},openPlayCompletionSheet=()=>{},initDemoPanel=()=>{},demoRenderObserver=()=>{},demoObserve=()=>{},advancePlayPhase=()=>{},togglePlayAutoGM=()=>{},togglePlayAudio=()=>{};
+ const exitPlayImmersive=()=>{},openPlayEndSheet=()=>{},openPlayCompletionSheet=()=>{},initDemoPanel=()=>{},demoRenderObserver=()=>{},demoRenderVisual=()=>{},demoVisualCurrent=()=>null,demoObserve=()=>{},advancePlayPhase=()=>{},togglePlayAutoGM=()=>{},togglePlayAudio=()=>{};
  // This isolated test extracts only the battle handlers. Audio playback is
  // integration-tested separately with the actual media/IndexedDB helper.
  const battleAudioForTurn=()=>{},battleTurnAudioCue=()=>({kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'}),battleFindAudio=()=>null,battleWarmAudio=async()=>null,battlePlayConfiguredAudio=async()=>false,battleReplayAudio=()=>{},battleUnlockAudioFromGesture=()=>{};
@@ -67,6 +67,7 @@ try{
  // V3.99: actions are always visible in the scrollable tray, not in the wolf Info panel.
  assert.equal(await artifact.isVisible(),true);
  assert.equal(await page.locator('#battleTargetSheet').isVisible(),false);
+ await page.evaluate(()=>{demoRunner.running=true}); // GM actions stay enabled while DEMO is running.
  await artifact.dblclick();
  assert.equal(await page.locator('#battleTargetSheet').isVisible(),true);
  await page.locator('[data-battle-candidate="bob"]').click();

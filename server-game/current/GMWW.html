@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.170</title>
-<link rel="stylesheet" href="style.css?v=3.170-compact-room-mobile2">
+<title>GMWW V3.171</title>
+<link rel="stylesheet" href="style.css?v=3.171-compact-room-mobile2">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -332,14 +332,14 @@
         <section id="playBattleDock" class="play-battle-dock battle-compact-v391 battle-wolf-v392 battle-actor-v393 battle-float-v396" aria-label="Thanh công cụ trận đấu" hidden>
           <section id="battleDemoPanel" class="battle-demo-panel" hidden aria-label="Điều khiển DEMO">
             <header aria-label="Giữ và kéo điều khiển Auto"><span class="battle-menu-grip" aria-hidden="true"></span></header>
-            <button id="battleDemoExpand" type="button" aria-label="Mở điều khiển Auto" aria-expanded="true">↻ Auto</button>
+            <button id="battleDemoExpand" type="button" aria-label="Mở điều khiển Auto" aria-expanded="true"><span class="demo-auto-orbit" aria-hidden="true">↻</span><span>Auto</span></button>
             <div class="battle-demo-actions">
               <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Chạy hoặc dừng ván Demo">▶ DEMO</button>
               <label class="play-demo-speed" id="battleDemoSpeedWrap" hidden><span class="demo-sr-only">Tốc độ</span><select id="battleDemoSpeed" aria-label="Tốc độ chạy Demo"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
             </div>
             <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng — nhấn Chạy Demo</p>
           </section>
-          <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="true"><strong id="battleDemoTurn"></strong><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><p id="battleDemoObserverError"></p></aside>
+          <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="true"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><p id="battleDemoObserverError"></p></aside>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
             <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
@@ -965,10 +965,10 @@
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.128-village"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
-<script src="battle-controls.js?v=3.170-timeline"></script>
+<script src="battle-controls.js?v=3.171-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.170-compact-room&status=4"></script>
+<script src="app.js?v=3.171-compact-room&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

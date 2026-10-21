@@ -53,7 +53,7 @@ test('Demo moves completed night into the next day then advances resolved day in
     scene={roomCode:'ABCDEF',phase:'night',night:1},runtime={room:{demo:true,phase:'running',matchId:'match1',cycleKey:'night-1'},
       nightRuntime:{completed:true},winProposal:null},calls=[];
   const ctx={
-    demoRunner:runner,playSceneRuntime:runtime,playSceneState:scene,
+    demoDelay:()=>500,demoRunner:runner,battleState:{targets:[]},playSceneRuntime:runtime,playSceneState:scene,
     demoLeaseBody:command=>({command}),playRoomApi:async()=>({ok:true}),
     playSyncRoom:async()=>({ok:true}),battleTurn:()=>null,
     playSetServerCycle:async(phase,day)=>{calls.push([phase,day])},
@@ -72,3 +72,4 @@ test('Demo moves completed night into the next day then advances resolved day in
   await step(4);
   assert.deepEqual(calls,[['night',2],['schedule']]);
 });
+test('Standard Auto GM and Demo cannot own two simultaneous automatic clocks',async()=>{const h=leaseHarness();h.meta.autoGM=true;assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).error,'DEMO_AUTO_GM_ACTIVE');h.meta.autoGM=false;assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).running,true)});

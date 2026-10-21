@@ -27,7 +27,7 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
     effectIds:[],actorIds:['alice'],targetCount:1,noSelf:true};
   const observed=[],calls=[],runner={running:true,epoch:2,pending:new Set(),completed:new Set()};
   const ctx={
-    demoRunner:runner,demoObserve:(...args)=>observed.push(args),
+    demoRunner:runner,demoFocus:()=>{},battleTurn:()=>({id:'role:role_wolf'}),playSyncRoom:async()=>({ok:true}),demoObserve:(...args)=>observed.push(args),
     demoPick:items=>items[0],
     battleActions:()=>[action],battleRules:()=>({targetAllowed:()=>true}),
     playLiveMembers:()=>[{loginId:'alice'},{loginId:'bob'}],
@@ -39,7 +39,7 @@ test('Demo night reads authoritative turn, picks a legal other-player target, co
     Math:{random:()=>0.2,floor:Math.floor,max:Math.max,min:Math.min,round:Math.round},
     String,Number,Set,Array,Error
   };
-  const src=between(battle,'async function demoActionNight(t,epoch){','async function demoActionDay(epoch){');
+  const src=between(setup,'function demoNightPlanKey(','function demoVisualCurrent(')+between(battle,'async function demoActionNight(t,epoch){','async function demoActionDay(epoch){');
   const run=vm.runInNewContext(src+';demoActionNight',ctx);
   await run({id:'role:role_wolf'},2);
   assert.deepEqual(calls.map(x=>x.path),['/battle-action','/turn']);
