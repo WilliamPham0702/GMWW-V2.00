@@ -101,6 +101,7 @@ try{
    const el=document.getElementById('battleTimeline');
     // The standardized wider GM rail can fit every chip: constrain this test to ensure overflow.
     el.style.width='175px';el.style.maxWidth='175px';el.style.overflowX='auto';
+   [...el.children].forEach(child=>{child.style.flex='0 0 112px';child.style.minWidth='112px'});
    const gesture=(name,key,x)=>{
      const e=new Event(name,{bubbles:true});Object.defineProperty(e,key,{value:[{clientX:x,clientY:185}]});
      el.dispatchEvent(e);
@@ -110,7 +111,7 @@ try{
    el.scrollLeft+=Math.max(50,el.clientWidth/2);
    el.dispatchEvent(new Event('scroll'));
    gesture('touchend','changedTouches',120);
-   await new Promise(resolve=>setTimeout(resolve,330));
+   await new Promise(resolve=>setTimeout(resolve,650));
    return playSceneRuntime.nightRuntime.currentId;
  });
  assert.equal(swipeTurn,'seer','Horizontal swipe should advance one confirmed server turn');
