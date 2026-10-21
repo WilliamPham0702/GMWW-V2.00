@@ -420,7 +420,9 @@ function connectPlaySocket(){
   playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
   ws.onopen=()=>{if(playSceneRuntime.socket===ws){setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
   ws.onmessage=e=>{try{
-    const d=JSON.parse(e.data||'{}'),movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
+    const d=JSON.parse(e.data||'{}');
+    if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
+    const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
     if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
     if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
       // The durable object stores acknowledgement timestamps; refresh from it,
@@ -743,6 +745,7 @@ async function playSyncRoom(force=false){
       if(playSceneState.step==='battle')playSceneState.step=data.assignments?.length?'deal':'room';
     }
     try{await playSyncStatusDisplayDraft()}catch(error){console.warn('Status permissions will retry on next room sync',error)}
+    if(typeof demoApplyServerControl==='function')demoApplyServerControl(data.demoControl);
     savePlayScene();connectPlaySocket();ensurePlayRealtimePoll();renderPlayScene();await playWatchCompletion(data);return data;
   }catch(err){
     if(syncSerial!==playSceneRuntime.syncSerial)return null;

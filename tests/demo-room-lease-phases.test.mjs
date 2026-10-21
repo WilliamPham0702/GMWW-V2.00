@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {serverDemoActive} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 
 const worker=readFileSync('src/index.js','utf8'),battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
@@ -11,40 +12,23 @@ function leaseHarness(){
   const meta={demo:true,phase:'running',cyclePhase:'night',matchId:'match1',cycleKey:'night-1'};
   const data=new Map(),room=new (vm.runInNewContext('(class {'+
     extract(worker,'  async demoClockContext(meta){','  async gmAuto(request,body){')+'})',{
-    projectDemoClock,nextDemoClock,j:(v,status=200)=>Response.json(v,{status}),Response,Date,Number,String,Error,JSON
+    serverDemoActive,projectDemoClock,nextDemoClock,j:(v,status=200)=>Response.json(v,{status}),Response,Date,Number,String,Error,JSON
   }))();
   room.ctx={storage:{get:async key=>data.get(key),put:async(key,value)=>{data.set(key,value)}}};
   room.getNightRuntime=async()=>({queue:[],cursor:0});
-  room.gmAuthorized=async()=>({ok:true,meta});
+  room.gmAuthorized=async()=>({ok:true,meta});room.scheduleRoomAlarm=async()=>{};room.broadcast=()=>{};
   return {room,meta,data,run:async(body)=>{const r=await room.gmDemo({method:'POST'},body);return{status:r.status,...await r.json()}}};
 }
-test('Demo only starts in a running isolated room, denies concurrent owners, stops and resumes',async()=>{
-  const h=leaseHarness(),one='demo-abcdefghijklmnop',two='demo-qrstuvwxyz012345';
-  h.meta.phase='lobby';
-  assert.equal((await h.run({command:'start',owner:one})).error,'DEMO_MATCH_NOT_STARTED');
-  h.meta.phase='running';
-  assert.equal((await h.run({command:'start',owner:one})).running,true);
-  const competing=await h.run({command:'start',owner:two});
-  assert.equal(competing.status,409);
-  assert.equal(competing.error,'DEMO_LEASE_OWNED');
-  assert.equal((await h.run({command:'heartbeat',owner:one})).running,true);
-  assert.equal((await h.run({command:'stop',owner:one})).running,false);
-  assert.equal((await h.run({command:'start',owner:two})).running,true);
-  h.meta.demo=false;
-  assert.equal((await h.run({command:'status'})).error,'NOT_DEMO_ROOM');
+test('Server Demo starts only in a running isolated match; every authorized GM can pause/resume',async()=>{
+ const h=leaseHarness();h.meta.phase='lobby';assert.equal((await h.run({command:'start'})).error,'DEMO_MATCH_NOT_STARTED');h.meta.phase='running';
+ assert.equal((await h.run({command:'start'})).running,true);assert.equal((await h.run({command:'stop'})).running,false);assert.equal((await h.run({command:'start'})).running,true);
+ h.meta.demo=false;assert.equal((await h.run({command:'status'})).error,'NOT_DEMO_ROOM');
 });
-
-test('Demo forbids stale day votes and does not perform fake player authentication',async()=>{
-  const h=leaseHarness(),owner='demo-abcdefghijklmnop';
-  await h.run({command:'start',owner});
-  h.meta.cyclePhase='morning';h.meta.cycleKey='morning-1';
-  const stale=await h.run({command:'vote',owner,loginId:'member01',choice:'👍',matchId:'match1',cycleKey:'night-1'});
-  assert.equal(stale.status,409);assert.equal(stale.error,'STALE_DEMO_CYCLE');
-  let calls=0;
-  h.room.playerGallows=async(body,authorized)=>{calls++;assert.equal(authorized,true);return Response.json({ok:true})};
-  assert.equal((await h.run({command:'vote',owner,loginId:'member01',choice:'👍',matchId:'match1',cycleKey:'morning-1'})).ok,true);
-  assert.equal(calls,1);
-  assert.match(worker,/if\(meta\?\.demo===true&&!authorizedDemo\)return j/);
+test('Browser cannot nominate or vote on behalf of Demo once server owns execution',async()=>{
+ const h=leaseHarness();await h.run({command:'start'});let calls=0;h.room.playerGallows=async()=>{calls++;return Response.json({ok:true})};
+ for(const command of ['heartbeat','nominate','vote','finish'])assert.equal((await h.run({command})).error,'DEMO_SERVER_OWNED');assert.equal(calls,0);
+ assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).error,'DEMO_RUNTIME_UPDATE_REQUIRED');
+ assert.match(worker,/if\(meta\?\.demo===true&&!authorizedDemo\)return j/);
 });
 
 test('Demo moves completed night into the next day then advances resolved day into the next night',async()=>{
@@ -72,4 +56,4 @@ test('Demo moves completed night into the next day then advances resolved day in
   await step(4);
   assert.deepEqual(calls,[['night',2],['schedule']]);
 });
-test('Standard Auto GM and Demo cannot own two simultaneous automatic clocks',async()=>{const h=leaseHarness();h.meta.autoGM=true;assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).error,'DEMO_AUTO_GM_ACTIVE');h.meta.autoGM=false;assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).running,true)});
+test('Standard Auto GM and Demo cannot own two simultaneous automatic clocks',async()=>{const h=leaseHarness();h.meta.autoGM=true;assert.equal((await h.run({command:'start'})).error,'DEMO_AUTO_GM_ACTIVE');h.meta.autoGM=false;assert.equal((await h.run({command:'start'})).running,true)});

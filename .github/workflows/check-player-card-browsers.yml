@@ -87,6 +87,7 @@ jobs:
             sleep 1
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
+          node tests/demo-server-autonomous-e2e.mjs
           node tests/demo-room-cross-origin-webkit.mjs
           node tests/browser-private-cards.mjs
       - name: Check Khám Phá on iPhone-sized WebKit

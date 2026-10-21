@@ -166,6 +166,26 @@ function demoConfirmedFeedback(){
   if(!playAudioMuted())void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
 }
 
+// Project server progress; polling never chooses or submits gameplay actions.
+function demoApplyServerControl(control){
+  if(control?.engine!=='server')return;
+  const event=control.lastEvent,sameRoom=demoRunner.roomCode===String(playSceneState.roomCode),previous=demoRunner.lastEvent;
+  const feedback=sameRoom&&previous&&event&&event.id!==previous.id&&event.status==='accepted';
+  demoRunner.roomCode=String(playSceneState.roomCode);demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
+  demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
+  demoRunner.steps=Number(control.steps)||0;demoRunner.error=control.error||'';
+  demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
+  demoRunner.lastEvent=event||null;
+  demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
+  if(feedback)demoConfirmedFeedback();
+  if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
+}
+function demoHoldForGM(){
+  if(playSceneRuntime.demoControl?.engine!=='server'||!demoRunner.running)return;
+  if(Date.now()-Number(demoRunner.lastHoldAt||0)<1000)return;
+  demoRunner.lastHoldAt=Date.now();
+  void playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'hold'})}).catch(()=>{});
+}
 function demoStopTimer(){if(demoRunner.timer){clearTimeout(demoRunner.timer);demoRunner.timer=0}}
 async function demoStop(reason='manual'){
   const active=demoRunner.running,code=demoRunner.roomCode;
@@ -173,6 +193,7 @@ async function demoStop(reason='manual'){
   demoRunner.status=demoRunner.paused?'Đã tạm dừng':reason==='completed'?'Ván Demo đã kết thúc':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
   if(!active)return;
+  if(playSceneRuntime.demoControl?.engine==='server'&&['room_change','exit_play'].includes(reason)){renderPlayBattle();return}
   try{
     if(code===String(playSceneState.roomCode)&&isLivePlayRoom())
       await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('stop'))});
@@ -194,7 +215,7 @@ function demoRenderControls(){
   if(field&&document.activeElement!==field)field.value=String(demoRunner.speed);
   const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
   // Start once when a DEMO match enters battle; never override the GM's Pause.
-  if(enabled&&playSceneState.step==='battle'&&playSceneRuntime.room?.phase==='running'&&
+  if(playSceneRuntime.demoControl?.engine!=='server'&&enabled&&playSceneState.step==='battle'&&playSceneRuntime.room?.phase==='running'&&
      playSceneRuntime.room?.matchId&&demoRunner.autoStartedMatch!==matchKey&&!demoRunner.running&&!demoRunner.paused){
     demoRunner.autoStartedMatch=matchKey;
     setTimeout(()=>{if(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle'&&
@@ -214,9 +235,10 @@ async function demoToggle(){
   demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.value)||1;
   try{
     if(playSceneRuntime.room?.autoGM!==false){const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.autoGM=false}
-    const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('start'))});
+    const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'start',speed:demoRunner.speed})});
     if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
     demoRunner.running=true;demoRunner.paused=false;demoRunner.error='';demoRunner.status='Đang chạy Demo';demoRunner.epoch++;
+    if(status.engine==='server'){playSceneRuntime.demoControl=status;demoApplyServerControl(status)}
     renderPlayBattle();demoSchedule(0);
   }catch(err){demoRunner.error='Không chạy được: '+String(err?.message||err);playFlashError('Demo: '+String(err?.message||err));renderPlayBattle()}
 }
@@ -345,6 +367,12 @@ async function demoActionDay(epoch){
 }
 async function demoStep(epoch){
   if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+  if(playSceneRuntime.demoControl?.engine==='server'){
+    // A failed refresh only affects this viewer. It must never pause the server.
+    await playSyncRoom(true);
+    if(demoRunner.running&&String(playSceneState.roomCode)===demoRunner.roomCode)demoSchedule(750);
+    return;
+  }
   try{
     if(demoRunner.steps>800)throw Error('Đã đạt giới hạn an toàn 800 bước. GM cần kiểm tra ván.');
     const beat=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('heartbeat'))});
@@ -1773,13 +1801,16 @@ function initBattleControls(){
     const row=e.target.closest('[data-battle-candidate]');if(row&&!row.disabled)battlePickTarget(row.dataset.battleCandidate)
   });
   document.getElementById('battleGMAuto')?.addEventListener('click',()=>{void togglePlayAutoGM()});
+  document.getElementById('battleActionBar')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
+  document.getElementById('playPlayerRing')?.addEventListener('pointerdown',demoHoldForGM,{capture:true});
   document.getElementById('battleDemoToggle')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();void demoToggle()});
   document.getElementById('battleDemoSpeed')?.addEventListener('change',event=>{
     const selected=Number(event.target.value);
     if(![1,2,5,10].includes(selected))return;
     demoRunner.speed=selected;
-    if(demoRunner.running)void playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('heartbeat'))})
-      .catch(err=>{playFlashError('Tốc độ Demo: '+String(err.message||err));void demoStop('speed_failed')});
+    if(demoRunner.running)void playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'speed',speed:selected})})
+      .then(data=>{playSceneRuntime.demoControl=data;demoApplyServerControl(data);renderPlayBattle()})
+      .catch(err=>{playFlashError('Tốc độ Demo: '+String(err.message||err));void playSyncRoom(true)});
     renderPlayBattle();
   });
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
