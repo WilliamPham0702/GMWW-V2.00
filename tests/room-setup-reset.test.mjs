@@ -18,7 +18,7 @@ test('room setup has no seat-count control and uses mode, power and next control
   assert.match(css,/\.play-room-control-row\{/);
   assert.match(css,/grid-template-columns:/);
   assert.match(app,/playRoomUiState\.stage='mode'/);
-  assert.match(app,/\['online','offline','demo'\]\.includes\(mode\)/);
+  assert.match(app,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
 });
 
 test('hard room reset returns removed players to waiting room ready state',()=>{

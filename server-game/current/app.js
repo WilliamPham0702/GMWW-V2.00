@@ -2648,7 +2648,13 @@ function renderPlayRealtimeHeader(){
 }
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='room';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}
 const PLAY_ROOM_REGISTRY_KEY='gmww_v306_room_registry';
-const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0};
+const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0,modeTouched:false};
+const PLAY_ROOM_MODE_CYCLE=['offline','online','demo'];
+function nextPlayRoomMode(current,hasSelected=true){
+  if(!hasSelected)return 'offline'; // First touch explicitly selects Offline.
+  const at=PLAY_ROOM_MODE_CYCLE.indexOf(current);
+  return PLAY_ROOM_MODE_CYCLE[(at+1)%PLAY_ROOM_MODE_CYCLE.length];
+}
 function playRoomRegistry(){try{const v=JSON.parse(localStorage.getItem(PLAY_ROOM_REGISTRY_KEY)||'[]');return Array.isArray(v)?v:[]}catch{return []}}
 function savePlayRoomRegistry(rows){try{localStorage.setItem(PLAY_ROOM_REGISTRY_KEY,JSON.stringify((rows||[]).slice(0,30)))}catch{}}
 function rememberPlayRoom(roomCode,gmToken,room={}){
@@ -2773,9 +2779,9 @@ function demoRenderVisual(){
 }
 function openPlayRoomEditor(isNew=false){
   const ed=document.getElementById('playRoomEditor');if(!ed)return;
-  playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';
+  playRoomUiState.editorMode=isNew?'new':'existing';playRoomUiState.stage='edit';playRoomUiState.modeTouched=!isNew;
   if(isNew){
-    playRoomUiState.selectedCode='';playSceneState.seatCount=24;playSceneState.roomMode='online';playSceneState.roomEnabled=true;savePlayScene();
+    playRoomUiState.selectedCode='';playSceneState.seatCount=24;playSceneState.roomMode='offline';playSceneState.roomEnabled=true;savePlayScene();
     const n=document.getElementById('playCreateRoomName');if(n)n.value='';
   }else{
     playRoomUiState.selectedCode=String(playSceneState.roomCode||'');
@@ -2786,6 +2792,7 @@ function openPlayRoomEditor(isNew=false){
 async function savePlayRoomEditor(){
   if(playSceneRuntime.busy)return;
   if(playRoomUiState.editorMode==='new'){
+    if(!playRoomUiState.modeTouched){playFlashError('Chạm CHẾ ĐỘ để chọn OFFLINE, ONLINE hoặc DEMO trước khi lưu phòng.');return}
     playSceneState.seatCount=24;playSceneState.roomEnabled=true;savePlayScene();
     const ok=await playCreateRoom(playSceneState.roomMode==='demo');if(!ok)return;
     playRoomUiState.selectedCode=String(playSceneState.roomCode||'');playRoomUiState.editorMode='';playRoomUiState.stage='mode';
@@ -2802,7 +2809,17 @@ function renderPlayCreateRoomSheet(){
   const name=document.getElementById('playCreateRoomName'),seatCount=document.getElementById('playCreateRoomSeatCount'),modeToggle=document.getElementById('playRoomModeToggle'),toggle=document.getElementById('playCreateRoomEnabled'),reset=document.getElementById('playCreateRoomReset'),del=document.getElementById('playCreateRoomDelete');
   if(seatCount&&document.activeElement!==seatCount)seatCount.value=String(playSceneState.seatCount||12);
   if(name&&live&&playRoomUiState.editorMode!=='new'&&document.activeElement!==name)name.value=String(room.roomName||name.value||'Làng Asahi');
-  if(modeToggle){const demo=playSceneRuntime.room?.demo===true&&playRoomUiState.editorMode!=='new';const mode=demo?'demo':playSceneState.roomMode;modeToggle.value=['online','offline','demo'].includes(mode)?mode:'online';modeToggle.disabled=demo;const opt=modeToggle.querySelector('option[value="demo"]');if(opt)opt.disabled=playRoomUiState.editorMode!=='new'&&!demo;}
+  if(modeToggle){
+    const creating=playRoomUiState.editorMode==='new';
+    const mode=room.demo===true&&!creating?'demo':playSceneState.roomMode;
+    const selected=creating&&!playRoomUiState.modeTouched?'choose':mode;
+    modeToggle.dataset.mode=selected;
+    modeToggle.disabled=!creating||!!playSceneRuntime.busy;
+    const labels={choose:'CHẾ ĐỘ',offline:'📴 OFFLINE',online:'🌐 ONLINE',demo:'🎮 DEMO'};
+    const label=modeToggle.querySelector('b');if(label)label.textContent=labels[selected]||labels.choose;
+    modeToggle.setAttribute('aria-label',creating?'Chọn chế độ phòng. Nhấn lần lượt Offline, Online, Demo rồi lặp lại.':'Chế độ phòng đã lưu: '+(labels[selected]||labels.choose));
+    modeToggle.setAttribute('aria-pressed',String(creating&&playRoomUiState.modeTouched));
+  }
   const enabled=playSceneState.roomEnabled===true;if(toggle){toggle.classList.toggle('is-on',enabled);toggle.setAttribute('aria-pressed',String(enabled));const b=toggle.querySelector('b');if(b)b.textContent=enabled?'ON':'OFF'}
   document.getElementById('playRoomModeStep')?.classList.toggle('hidden',!((['mode','settings'].includes(stage)&&!!playRoomUiState.selectedCode)||(stage==='edit'&&playRoomUiState.editorMode==='new')));
   document.getElementById('playRoomSettingsStep')?.classList.add('hidden');
@@ -3156,15 +3173,11 @@ async function renderPlayCards(){
   if(artifactImg&&useArtifact){artifactImg.style.opacity=roleVisible&&artifact?'1':'.28';artifactImg.src=artifact?await resolveArtwork('artifacts',artifact.id,'thumb'):'default-artwork.webp'}
 }
 function bindPlayRoomModeButtons(){
-  const select=document.getElementById('playRoomModeToggle');if(!select)return;
-  select.addEventListener('change',async()=>{
-    if(playSceneRuntime.busy)return;
-    const mode=select.value;
-    if(!['online','offline','demo'].includes(mode))return;
-    if(playRoomUiState.editorMode!=='new'&&mode==='demo'){renderPlayCreateRoomSheet();return}
-    playSceneState.roomMode=mode;savePlayScene();renderPlayCreateRoomSheet();
-    if(playRoomUiState.editorMode!=='new'&&isLivePlayRoom()&&playSceneRuntime.room?.demo!==true)
-      await playUpdateRoomSettings({roomMode:mode});
+  const button=document.getElementById('playRoomModeToggle');if(!button)return;
+  button.addEventListener('click',()=>{
+    if(playSceneRuntime.busy||playRoomUiState.editorMode!=='new')return;
+    playSceneState.roomMode=nextPlayRoomMode(playSceneState.roomMode,playRoomUiState.modeTouched);
+    playRoomUiState.modeTouched=true;savePlayScene();renderPlayCreateRoomSheet();
   });
 }
 function bindPlaySeatMoveButtons(){document.querySelectorAll('[data-play-seat-move]').forEach(b=>b.onclick=async()=>{const mode=b.dataset.playSeatMove==='walk'?'walk':'instant';playSceneState.seatMoveMode=mode;savePlayScene();if(isLivePlayRoom())await playUpdateRoomSettings({seatMoveMode:mode});else renderPlayScene()})}
