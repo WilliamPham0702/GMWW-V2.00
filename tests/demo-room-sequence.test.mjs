@@ -16,7 +16,7 @@ const between=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,
 test('Demo is selected as a room mode at creation, not as a hardwired extra room',()=>{
   assert.match(html,/id="playCreatedRoomList"/);
   assert.match(html,/id="playRoomModeToggle"/);
-  assert.match(html,/<option value="demo">/);
+  assert.match(html,/<button id="playRoomModeToggle"/);
   assert.doesNotMatch(html,/id="playDemoRoomChoice"/);
   assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
   assert.match(worker,/if\(body\.demo===true&&bearer\(request\)!==GM_SYNC_TOKEN\)/);
