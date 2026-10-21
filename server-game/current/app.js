@@ -5603,7 +5603,6 @@ async function applyPlayGameTemplate(id){
     updatePlayArtifactToggle();await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(err){playFlashError(err.message)}
 }
-let playGameSheetOpenSeq=0;
 async function openPlayGameSheet(){
   const openSeq=++playGameSheetOpenSeq;
   playGameStatus('');
@@ -5623,6 +5622,7 @@ async function openPlayGameSheet(){
   renderPlayGameRoleTimings();updatePlayArtifactToggle();updatePlayGameRoleCount();
   sheet.classList.remove('hidden');
 }
+let playGameSheetOpenSeq=0;
 async function openLibraryGameTemplate(id=''){
   ++playGameSheetOpenSeq;
   playGameStatus('');
