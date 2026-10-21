@@ -150,7 +150,16 @@ const demoDelay=()=>250;
 const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:demoRunner.speed,...extra});
 const GMWW_GM_HAPTIC_KEY='gmww_gm_haptic_v1';
 function gmHapticEnabled(){try{return localStorage.getItem(GMWW_GM_HAPTIC_KEY)==='1'}catch{return false}}
-function setGmHapticEnabled(value){try{localStorage.setItem(GMWW_GM_HAPTIC_KEY,value?'1':'0')}catch{}}
+function gmHapticAvailable(){return !!window.webkit?.messageHandlers?.gmwwHaptic||typeof navigator.vibrate==='function'}
+function setGmHapticEnabled(value){
+  if(value&&!gmHapticAvailable()){
+    playFlashError('iPhone Safari không hỗ trợ rung từ trang web. Cần IPA GMWW mới có cầu nối gmwwHaptic.');
+    return false;
+  }
+  try{localStorage.setItem(GMWW_GM_HAPTIC_KEY,value?'1':'0')}catch{}
+  if(value)gmHapticFeedback(); // instant tactile confirmation that the toggle is functional
+  return true;
+}
 function gmHapticFeedback(){
   if(!gmHapticEnabled())return false;
   try{
@@ -732,6 +741,8 @@ function battleShowResultPopup(title,message,scanOnly=false){
   if(body)body.textContent=String(message||'');
   popup.classList.toggle('is-wolf-result',String(title||'').includes('VẾT CẮN'));
   popup.classList.toggle('is-scan-result',scanOnly);
+  const negative=/bị giết|bị cắn|bị chết|đầu độc|bị đóng băng|bị đuổi|thất bại|không thành công|tử vong|bị phạt/i.test(String(title||'')+' '+String(message||''));
+  popup.dataset.resultTone=negative?'negative':'positive';
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
 }
 /* Morning notices are derived only from committed interactions for this match and night.
@@ -1908,7 +1919,9 @@ function initBattleControls(){
     renderPlayBattle();
   });
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
-  document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{setGmHapticEnabled(!gmHapticEnabled());renderPlayBattle()});
+  document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{
+    setGmHapticEnabled(!gmHapticEnabled());renderPlayBattle();
+  });
   for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player']])
     document.getElementById(id)?.addEventListener('click',()=>battleToggleLabelVisibility(kind));
   battleSyncLabelVisibility();
