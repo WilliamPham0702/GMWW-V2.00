@@ -1,35 +1,102 @@
 (()=>{'use strict';
 
-const VERSION='3.174';
+const VERSION='3.175';
 const villageSceneDraft={day:null,night:null};
+let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
- if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>950000)throw Error('Chỉ nhận PNG/JPEG/WebP dưới 950 KB');
- return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Không đọc được ảnh'));reader.readAsDataURL(file)});
+ if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>12000000)throw Error('Chỉ nhận ảnh PNG/JPEG/WebP tối đa 12 MB');
+ // Keep published image bytes small for Durable Objects and iPhone Player Web.
+ const objectUrl=URL.createObjectURL(file);
+ try{
+  const picture=new Image();picture.decoding='async';
+  await new Promise((resolve,reject)=>{picture.onload=resolve;picture.onerror=()=>reject(Error('Không thể mở ảnh'));picture.src=objectUrl});
+  if(!picture.naturalWidth||!picture.naturalHeight)throw Error('Ảnh không hợp lệ');
+  let scale=Math.min(1,1920/picture.naturalWidth,1080/picture.naturalHeight);
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+  if(!ctx)throw Error('Trình duyệt không hỗ trợ xử lý ảnh');
+  for(let attempt=0;attempt<6;attempt++){
+   canvas.width=Math.max(320,Math.round(picture.naturalWidth*scale));
+   canvas.height=Math.max(180,Math.round(picture.naturalHeight*scale));
+   ctx.drawImage(picture,0,0,canvas.width,canvas.height);
+   for(const quality of [.86,.74,.62,.50,.40]){
+    let result=canvas.toDataURL('image/webp',quality);
+    if(!result.startsWith('data:image/webp'))result=canvas.toDataURL('image/jpeg',quality);
+    if(result.length<=850000)return result;
+   }
+   scale*=.82;
+  }
+  throw Error('Ảnh quá phức tạp để tối ưu. Vui lòng chọn ảnh khác.');
+ }finally{URL.revokeObjectURL(objectUrl)}
 }
 function villageSceneStatus(message){const node=document.getElementById('gmVillageStatus');if(node)node.textContent=message}
 async function villageSceneRequest(path,method,body){
  const response=await fetch(GMWW_SERVER_BASE+path,{method,headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:method==='GET'?undefined:JSON.stringify(body||{}),cache:'no-store'});
  const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||'HTTP '+response.status);return data;
 }
+function applyGMVillageScene(){
+ const world=document.getElementById('playWorld');if(!world)return;
+ const key=document.getElementById('playShell')?.dataset.phase==='night'?'night':'day';
+ const image=villageScenePublished[key];
+ if(image){
+  world.style.setProperty('--gmww-gm-scene-image',`url("${new URL(image,GMWW_SERVER_BASE).href}")`);
+  world.classList.add('has-custom-scene');
+ }else{
+  world.style.removeProperty('--gmww-gm-scene-image');world.classList.remove('has-custom-scene');
+ }
+}
+async function refreshVillageScenePublished(){
+ const data=await villageSceneRequest('/api/village-scene','GET');
+ if(data.scene&&(data.scene.revision!==villageScenePublished.revision||data.scene.day!==villageScenePublished.day||data.scene.night!==villageScenePublished.night)){
+  villageScenePublished=data.scene;applyGMVillageScene();
+ }
+ return data;
+}
 function initVillageSceneManager(){
  const day=document.getElementById('gmVillageDay');if(!day||day.dataset.bound)return;day.dataset.bound='1';
  for(const key of ['day','night'])document.getElementById(key==='day'?'gmVillageDay':'gmVillageNight').addEventListener('change',async e=>{
-  try{villageSceneDraft[key]=await villageSceneFile(e.target.files[0]);villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Chưa xuất bản.')}catch(error){villageSceneStatus(error.message)}
+  try{
+   villageSceneStatus('Đang tối ưu ảnh '+(key==='day'?'ban ngày':'ban đêm')+'...');
+   villageSceneDraft[key]=await villageSceneFile(e.target.files?.[0]);
+   villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Nhấn XUẤT BẢN để đồng bộ.');
+  }catch(error){villageSceneDraft[key]=null;villageSceneStatus(error.message)}
  });
  document.getElementById('gmVillagePreview').addEventListener('click',()=>{
-  const url=GMWW_SERVER_BASE+'/village/?sceneEditor=preview';window.open(url,'_blank','noopener');villageSceneStatus('Đã mở bản xem trước. Ảnh chưa được xuất bản.');
+  const popup=window.open(GMWW_SERVER_BASE+'/village/?sceneEditor=preview','gmwwVillagePreview');
+  if(!popup){villageSceneStatus('Trình duyệt chặn cửa sổ xem trước.');return}
+  const origin=new URL(GMWW_SERVER_BASE).origin;
+  const payload={type:'gmww:village-preview',...villageSceneDraft};
+  const send=()=>{try{if(!popup.closed)popup.postMessage(payload,origin)}catch{}};
+  const onReady=event=>{if(event.origin===origin&&event.source===popup&&event.data?.type==='gmww:village-preview-ready'){send();window.removeEventListener('message',onReady)}};
+  window.addEventListener('message',onReady);
+  send();setTimeout(send,900);setTimeout(()=>window.removeEventListener('message',onReady),12000);
+  villageSceneStatus('Đã mở xem trước ảnh đã chọn. Ảnh chưa được xuất bản.');
  });
- document.getElementById('gmVillagePublish').addEventListener('click',async()=>{
+ const publish=document.getElementById('gmVillagePublish');
+ publish.addEventListener('click',async()=>{
   if(!villageSceneDraft.day&&!villageSceneDraft.night){villageSceneStatus('Hãy chọn ảnh Ngày hoặc Đêm trước.');return}
-  try{const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);villageSceneStatus('Đã xuất bản phiên bản '+data.scene.revision+' tới Player Web.');villageSceneDraft.day=null;villageSceneDraft.night=null}
-  catch(error){villageSceneStatus('Lỗi xuất bản: '+error.message)}
+  if(publish.disabled)return;
+  publish.disabled=true;villageSceneStatus('Đang xuất bản ảnh làng lên Server...');
+  try{
+   const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);
+   const check=await refreshVillageScenePublished();
+   if(Number(check.scene?.revision)!==Number(data.scene?.revision))throw Error('Server chưa xác nhận phiên bản mới. Vui lòng kiểm tra lại.');
+   villageSceneDraft.day=null;villageSceneDraft.night=null;
+   document.getElementById('gmVillageDay').value='';
+   document.getElementById('gmVillageNight').value='';
+   villageSceneStatus('Đã xuất bản phiên bản '+data.scene.revision+'. Player Web sẽ tự đồng bộ trong vài giây.');
+  }catch(error){villageSceneStatus('Lỗi xuất bản: '+error.message)}
+  finally{publish.disabled=false}
  });
- document.getElementById('gmVillageRollback').addEventListener('click',async()=>{
-  if(!confirm('Khôi phục hình nền làng trước đó cho cả Server và Player Web?'))return;
-  try{const data=await villageSceneRequest('/api/gm/village-scene/rollback','POST',{});villageSceneStatus('Đã khôi phục phiên bản '+data.scene.revision)}
+ const rollback=document.getElementById('gmVillageRollback');
+ rollback.addEventListener('click',async()=>{
+  if(rollback.disabled||!confirm('Khôi phục hình nền làng trước đó cho cả Server và Player Web?'))return;
+  rollback.disabled=true;
+  try{const data=await villageSceneRequest('/api/gm/village-scene/rollback','POST',{});await refreshVillageScenePublished();villageSceneStatus('Đã khôi phục phiên bản '+data.scene.revision+'. Player Web sẽ tự đồng bộ.')}
   catch(error){villageSceneStatus('Lỗi khôi phục: '+error.message)}
+  finally{rollback.disabled=false}
  });
- villageSceneRequest('/api/village-scene','GET').then(data=>villageSceneStatus('Phiên bản đang dùng: '+data.scene.revision)).catch(()=>villageSceneStatus('Chưa kết nối được cấu hình làng.'));
+ refreshVillageScenePublished().then(data=>villageSceneStatus('Phiên bản đang dùng: '+data.scene.revision)).catch(()=>villageSceneStatus('Chưa kết nối được cấu hình làng.'));
+ setInterval(()=>{void refreshVillageScenePublished().catch(()=>{})},5000);
 }
 document.addEventListener('DOMContentLoaded',initVillageSceneManager);
 
@@ -5274,7 +5341,7 @@ function initBattleControls(){
 }
 
 function renderPlayScene(){
-  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;
+  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;applyGMVillageScene();
   if(playSceneRuntime.setupPopupStep!==playSceneState.step){playSceneRuntime.setupPopupStep=playSceneState.step;playSceneRuntime.setupPopupClosed=false}
   const phase=playSceneState.phase,night=Math.max(0,Number(playSceneState.night)||0),put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
   const artifactMax=Math.max(0,Math.min(30,Number(playSceneRuntime.artifactCycle?.max??playSceneRuntime.gameConfig?.artifactLimitPerCycle??3)||0));
