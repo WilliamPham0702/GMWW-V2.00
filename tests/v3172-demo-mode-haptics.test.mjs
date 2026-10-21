@@ -13,8 +13,8 @@ test('Creating a room exposes Online, Offline and Demo choices without a dedicat
   assert.doesNotMatch(html,/<select id="playRoomModeToggle"/);
   assert.match(setup,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
   assert.doesNotMatch(html,/playDemoRoomChoice/);
-  assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
-  assert.match(setup,/demo:isDemo/);
+  assert.match(setup,/playUpdateRoomSettings\(patch\)/);
+  assert.match(setup,/demo:false,roomMode:'offline'/);
   assert.match(setup,/room\.demo===true\?'demo'/);
 });
 
