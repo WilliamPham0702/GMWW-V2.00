@@ -22,3 +22,15 @@ test('Server DEMO remains running without a browser heartbeat and can be control
 test('Changing speed preserves configured virtual time instead of restarting a turn',async()=>{
  const h=controlHarness();await h.command({command:'start',speed:1});h.advance(10000);const s=await h.command({command:'speed',speed:5});assert.equal(s.clock.remainingMs,50000);assert.equal(s.clock.speed,5);h.advance(5000);assert.equal((await h.command({command:'status'})).clock.remainingMs,25000);
 });
+const frontend=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+test('Server viewer confirms each new action once, including first action after an empty initial snapshot',()=>{
+ const fragment=frontend.slice(frontend.indexOf('function demoApplyServerControl('),frontend.indexOf('function demoHoldForGM('));
+ const runner={roomCode:'',lastEvent:null},ctx={demoRunner:runner,playSceneState:{roomCode:'ABCDEF',step:'seats'},playSceneRuntime:{room:{matchId:'m1'}},demoConfirmedFeedback:()=>{ctx.confirmations++},confirmations:0};
+ const apply=vm.runInNewContext(fragment+';demoApplyServerControl',ctx),control={engine:'server',running:true,lastEvent:null};
+ apply(control);apply({...control,lastEvent:{id:'first',status:'accepted'}});assert.equal(ctx.confirmations,1);apply({...control,lastEvent:{id:'first',status:'accepted'}});assert.equal(ctx.confirmations,1);
+});
+test('A failed viewer refresh never sends a pause or gameplay request to the server',async()=>{
+ const fragment=frontend.slice(frontend.indexOf('async function demoStep(epoch){'),frontend.indexOf('const battleState='));let scheduled=0;
+ const ctx={demoRunner:{running:true,epoch:1,roomCode:'ABCDEF'},playSceneState:{roomCode:'ABCDEF'},playSceneRuntime:{demoControl:{engine:'server'}},playSyncRoom:async()=>null,demoSchedule:()=>{scheduled++},playRoomApi:()=>{throw Error('viewer must not mutate server')}};
+ await vm.runInNewContext(fragment+';demoStep(1)',ctx);assert.equal(ctx.demoRunner.running,true);assert.equal(scheduled,1);
+});
