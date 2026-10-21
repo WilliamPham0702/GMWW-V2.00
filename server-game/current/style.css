@@ -6485,3 +6485,26 @@ body.play-immersive #start #playShell[data-step="battle"]
 #playCreateRoomSheet .play-room-control-row button#playRoomModeToggle:focus-visible{
   outline:2px solid #fff1bd!important;outline-offset:2px!important;
 }
+
+/* V3.174: DEMO is one tool in the same GM action grid, never a separate row. */
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu #battleDemoPanel{display:none!important}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoToggle{
+  grid-column:span 2!important;min-width:0!important;min-height:44px!important;
+  border:1px solid #d3b46c!important;background:rgba(53,99,95,.92)!important;
+  border-radius:12px!important;font-size:12px!important;white-space:normal!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoToggle[aria-pressed="true"]{
+  background:rgba(136,98,29,.86)!important;border-color:#ffe0a0!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeedWrap{
+  grid-column:span 2!important;min-width:0!important;min-height:44px!important;
+  margin:0!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeed{
+  width:100%!important;min-width:0!important;border:1px solid #8dc5d9!important;border-radius:12px!important;
+  color:#fff!important;background:#173c52!important;font-size:12px!important;font-weight:800!important;text-align:center!important;
+}
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoToggle[hidden],
+#start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu .battle-wolf-actions #battleDemoSpeedWrap[hidden]{
+  display:none!important;
+}
