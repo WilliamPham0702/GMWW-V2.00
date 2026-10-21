@@ -1,7 +1,7 @@
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -36,7 +36,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.165",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3165",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.167",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3167",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -698,7 +698,7 @@ export class RoomDurableObject extends DurableObject {
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
       day:Number(meta.cycleNight||0),stage:"ready",candidateId:null,
       nominationDurationSec,voteDurationSec,
-      nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
+      nominations:{},votes:{},blocked:[],blockedNomination:[],blockedVotes:[],mode:"auto",eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
     const eligible=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
@@ -706,7 +706,7 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
-    return {key,ballot:{...ballot,eligible,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
+    return {key,ballot:{...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
   }
   async gmGallows(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -723,9 +723,13 @@ export class RoomDurableObject extends DurableObject {
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
       result=gallowsBegin(ballot,target,now);
     }else if(command==="ban"){
-      if(!eligible.includes(target)||ballot.stage==="voting"&&now>=ballot.deadlineAt)
-        return j({ok:false,error:"GALLOWS_VOTING_CLOSED"},409);
       result=gallowsBan(ballot,target,now);
+    }else if(command==="restriction"){
+      result=gallowsSetRestriction(ballot,target,String(body?.kind||""),body?.banned===true,now);
+    }else if(command==="mode"){
+      result=gallowsSetMode(ballot,String(body?.mode||""),now);
+    }else if(command==="manual_vote"){
+      result=gallowsManualVote(ballot,target,body?.choice===null?null:String(body?.choice||""),now);
     }else if(command==="resolve"){
       result=gallowsResolve(ballot,String(body?.outcome||""),now);
       if(result.ok&&result.value.outcome==="dead"){
@@ -766,14 +770,18 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
     if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
-    if(ballot.blocked.includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+    if(gallowsMode(ballot)==="gm")return j({ok:false,error:"GM_MANUAL_MODE"},403);
     const command=String(body?.command||""),now=Date.now();
     let result;
     if(command==="nominate"){
       const target=normalizeLoginId(body?.targetId);
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      if(gallowsBlockedNomination(ballot).includes(loginId))return j({ok:false,error:"NOMINATION_BANNED"},403);
       result=gallowsNominate(ballot,loginId,target,now);
-    }else if(command==="vote")result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }else if(command==="vote"){
+      if(gallowsBlockedVotes(ballot).includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+      result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }
     else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
     if(!result.ok)return j({ok:false,error:result.error},409);
     await this.ctx.storage.put(key,result.value);
@@ -791,7 +799,10 @@ export class RoomDurableObject extends DurableObject {
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
     const demoLease=meta.demo?await this.ctx.storage.get("demoLease"):null;
-    return j({ok:true,demoControl:meta.demo?{running:!!demoLease?.running&&Number(demoLease.until)>Date.now(),speed:Math.max(1,Number(demoLease?.speed)||2),until:Number(demoLease?.until)||0}:null,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    return j({ok:true,demoControl:meta.demo?{running:!!demoLease?.running&&Number(demoLease.until)>Date.now(),speed:Math.max(1,Number(demoLease?.speed)||2),until:Number(demoLease?.until)||0}:null,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+      villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
+        Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
+      interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -935,7 +946,7 @@ export class RoomDurableObject extends DurableObject {
       // The snapshot contains both private cards in one durable entry, committed before room release.
       await this.ctx.storage.put("deliverySnapshot:"+loginId,buildPrivateDeliverySnapshot({matchId:nextMatchId,matchRevision:nextMatchRevision,deliveryVersion:nextDeliveryVersion,publishedAt:nextPublishedAt,roles:list}));
     }
-    const summary=clean.map(({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,order,deliveredAt,viewedAt,artifact})=>({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,order,deliveredAt,viewedAt,artifactId:artifact?.artifactId||null,artifactName:artifact?.artifactName||null,artifactDeliveredAt:artifact?.deliveredAt||null,artifactViewedAt:artifact?.viewedAt||null,artifactUsedAt:artifact?.usedAt||null,artifactPriorityFirst:artifact?artifact.priorityFirst===true:null,artifactSingleUse:artifact?.singleUse===true}));
+    const summary=clean.map(({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,faction,order,deliveredAt,viewedAt,artifact})=>({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,faction,order,deliveredAt,viewedAt,artifactId:artifact?.artifactId||null,artifactName:artifact?.artifactName||null,artifactDeliveredAt:artifact?.deliveredAt||null,artifactViewedAt:artifact?.viewedAt||null,artifactUsedAt:artifact?.usedAt||null,artifactPriorityFirst:artifact?artifact.priorityFirst===true:null,artifactSingleUse:artifact?.singleUse===true}));
     await this.ctx.storage.put("assignments",summary);
     meta.multiAssign=multiAssign;meta.matchId=String(body?.matchId||meta.matchId||"")||null;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.deliveryVersion=nextDeliveryVersion;meta.phase="role_delivery";meta.status="role_delivery";meta.gmStage="deal";meta.roleDeliveredAt=nextPublishedAt;meta.updatedAt=meta.roleDeliveredAt;await this.ctx.storage.put("meta",meta);
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),assignments:summary,multiAssign});
@@ -1017,6 +1028,15 @@ export class RoomDurableObject extends DurableObject {
     if(command==="start"){
       if(String(meta.phase)!=="running")return j({ok:false,error:"DEMO_MATCH_NOT_STARTED",message:"Hãy hoàn tất setup và vào trận trước khi bật Demo."},409);
     }else if(!live||previous.owner!==owner)return j({ok:false,error:"DEMO_LEASE_EXPIRED"},409);
+    if(command==="finish"){
+      if(String(body?.matchId||"")!==String(meta.matchId||"")||String(body?.cycleKey||"")!==String(meta.cycleKey||""))
+        return j({ok:false,error:"STALE_DEMO_CYCLE"},409);
+      const proposal=this.computeWinProposal(meta,await this.ctx.storage.get("assignments")||[],await this.ctx.storage.get("interactions")||[]);
+      if(!proposal)return j({ok:false,error:"DEMO_WIN_NOT_CONFIRMED"},409);
+      const result=await this.gmEnd(request,{matchId:meta.matchId,winnerFaction:proposal.winnerFaction,winnerLabel:proposal.winnerLabel});
+      if(result.ok)await this.ctx.storage.put("demoLease",{running:false,speed,until:0,owner:""});
+      return result;
+    }
     if(!["start","heartbeat","nominate","vote"].includes(command))return j({ok:false,error:"INVALID_DEMO_COMMAND"},400);
     if(["nominate","vote"].includes(command)){
       if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")return j({ok:false,error:"DEMO_DAY_ONLY"},409);
@@ -2077,7 +2097,7 @@ export class RoomDurableObject extends DurableObject {
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");

@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import fs from 'node:fs';
+const source=fs.readFileSync('src/index.js','utf8');
+const start=source.indexOf('  async gmDemo(request,body){'),end=source.indexOf('  async gmAuto(request,body){',start);
+const Room=vm.runInNewContext('(class {'+source.slice(start,end)+'})',{j:(x,s=200)=>Response.json(x,{status:s}),Date,Number,String});
+test('Demo finish requires current owned lease and server winner, closes only isolated match',async()=>{
+ const room=new Room(),owner='demo-abcdefghijklmnop',meta={demo:true,phase:'running',matchId:'m1',cycleKey:'night-1'};
+ const rows=new Map([['demoLease',{running:true,until:Date.now()+15000,owner}],['assignments',[]],['interactions',[]]]);
+ room.ctx={storage:{get:async k=>rows.get(k),put:async(k,v)=>rows.set(k,v)}};
+ room.gmAuthorized=async()=>({ok:true,meta});
+ let ended=0;room.computeWinProposal=()=>null;
+ room.gmEnd=async(_req,body)=>{ended++;assert.equal(body.winnerFaction,'Phe Dân');assert.equal(body.matchId,'m1');return Response.json({ok:true})};
+ const run=async(extra={})=>{const r=await room.gmDemo({}, {command:'finish',owner,matchId:'m1',cycleKey:'night-1',...extra});return {status:r.status,...await r.json()}};
+ assert.equal((await run()).error,'DEMO_WIN_NOT_CONFIRMED');assert.equal(ended,0);
+ room.computeWinProposal=()=>({winnerFaction:'Phe Dân',winnerLabel:'Phe Dân'});
+ assert.equal((await run({matchId:'stale'})).error,'STALE_DEMO_CYCLE');assert.equal(ended,0);
+ assert.equal((await run()).ok,true);assert.equal(ended,1);assert.equal(rows.get('demoLease').running,false);
+ meta.demo=false;assert.equal((await run()).error,'NOT_DEMO_ROOM');assert.equal(ended,1);
+});

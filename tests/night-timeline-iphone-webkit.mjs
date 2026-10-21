@@ -12,7 +12,7 @@ try{
  await context.route('**/*',route=>route.abort());
  const page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.setContent('<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body class="play-immersive"><section id="start"></section></body></html>');
+ await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body class="play-immersive"><section id="start"></section></body></html>');
  await page.evaluate(source=>{
    const parsed=new DOMParser().parseFromString(source,'text/html');
    document.getElementById('start').append(parsed.getElementById('playShell'));
@@ -91,6 +91,9 @@ try{
  assert.equal(await page.locator('[data-battle-action]').count(),2);
  await page.locator('[data-battle-index="1"]').click();
  assert.equal(await page.evaluate(()=>playSceneRuntime.nightRuntime.currentId),'early');
+ // A prior index click commits asynchronously; don't start a second gesture before
+ // its server-authoritative transition has settled (especially on narrow iPhone).
+ await page.waitForFunction(()=>playSceneRuntime.nightRuntime.currentId==='early'&&!battleState.busy&&!battleState.syncPending);
  // Verify an actual finger-scroll inside Timeline submits exactly one move.
  // The click above must never be mistaken for a swipe caused by scrollIntoView.
  const swipeTurn=await page.evaluate(async()=>{
@@ -144,6 +147,7 @@ try{
      const labels=[...document.querySelectorAll('#battleDayActionList button span')];
      return {boxes,viewport:innerWidth,unclipped:labels.every(el=>el.scrollWidth<=el.clientWidth+1)};
    });
+   assert.equal(layout.viewport,width,'iPhone WebKit must honor the configured CSS viewport width');
    assert.ok(layout.unclipped,'Full action names must wrap');
    layout.boxes.forEach((b,i)=>{assert.ok(b.width>30&&b.x>=0&&b.right<=width+1,JSON.stringify(layout));if(i)assert.ok(b.x>=layout.boxes[i-1].right-1,'Dock controls overlap')});
    await page.locator('#battleDayActionToggle').click();

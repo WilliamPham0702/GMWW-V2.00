@@ -73,6 +73,8 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
+      - name: Check night timeline on iPhone-sized WebKit
+        run: node tests/night-timeline-iphone-webkit.mjs
       - name: Exercise private card UI with Chrome, Edge and WebKit
         shell: bash
         run: |
@@ -88,8 +90,6 @@ jobs:
           node tests/browser-private-cards.mjs
       - name: Check Khám Phá on iPhone-sized WebKit
         run: node tests/home-v389-iphone-webkit.mjs
-      - name: Check night timeline on iPhone-sized WebKit
-        run: node tests/night-timeline-iphone-webkit.mjs
       - name: Check Seat anchors with production status CSS in WebKit
         run: node tests/seat-css-webkit.mjs
       - name: Check OTA startup recovery in WebKit
