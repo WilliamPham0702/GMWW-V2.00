@@ -324,6 +324,7 @@ async function demoStep(epoch){
     if(!latest&&Number(playSceneRuntime.syncSerial)>beforeSync+1){demoSchedule(250);return}
     if(!latest)throw Error('Mất đồng bộ với server; không thể tiếp tục tự chơi.');
     if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(playSceneRuntime.busy||battleState.busy||battleState.syncPending||battleState.gallowsBusy||battleState.undoBusy||(typeof battleConfirmAudioGate!=='undefined'&&battleConfirmAudioGate)||battleState.targetSheet||battleState.targets.length){demoSchedule(250);return}
     const room=playSceneRuntime.room;
     demoRunner.status='Đang chạy · '+(playSceneState.phase==='day'?'Ngày ':'Đêm ')+Number(playSceneState.night||1)+' · '+String(battleTurn()?.label||'Lên Giàn');
     demoRenderControls();
@@ -551,7 +552,16 @@ async function battleNavigateIndex(index){
   if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận để chuyển lượt?'))return;
   battleState.busy=true;renderPlayBattle();
   try{
-    const result=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex:index,expectedTurnId:rt.currentId||'',source:'gm-timeline'})});
+    const targetId=queue[index].id,jump=(targetIndex,expectedTurnId)=>playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex,expectedTurnId,source:'gm-timeline'})});
+    let result;
+    try{result=await jump(index,rt.currentId||'')}
+    catch(err){
+      if(err?.code!=='STALE_TURN'||!demoRunner.running)throw err;
+      await playSyncRoom(true);
+      const fresh=playSceneRuntime.nightRuntime,retryIndex=fresh?.queue?.findIndex(x=>x.id===targetId)??-1;
+      if(retryIndex<0||battleUsed(fresh.queue[retryIndex]))throw err;
+      result=retryIndex===fresh.cursor?{runtime:fresh}:await jump(retryIndex,fresh.currentId||'');
+    }
     playSceneRuntime.nightRuntime=result?.runtime||rt;
     battleClear();await playSyncRoom(true);
   }catch(err){playFlashError('Không thể chuyển lượt: '+String(err?.message||err));await playSyncRoom(true).catch(()=>{})}
