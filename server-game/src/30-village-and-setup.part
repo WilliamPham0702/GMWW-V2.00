@@ -1015,11 +1015,11 @@ async function flushPlayRoomMode(){
   playRoomUiState.modeSaving=true;
   try{
     while(playRoomUiState.pendingMode){
-      if(!isLivePlayRoom()||!playRoomUiState.selectedCode)break;
+      if(!isLivePlayRoom()||!playRoomUiState.selectedCode){playRoomUiState.pendingMode='';break;}
       const target=playRoomUiState.pendingMode,roomCode=String(playSceneState.roomCode);
       const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};
       const data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)});
-      if(roomCode!==String(playSceneState.roomCode))break;
+      if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
       playSceneRuntime.room=data.room||playSceneRuntime.room;
       playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
       playSceneState.roomMode=playSceneRuntime.room?.demo===true?'demo':playSceneRuntime.room?.roomMode==='offline'?'offline':'online';
