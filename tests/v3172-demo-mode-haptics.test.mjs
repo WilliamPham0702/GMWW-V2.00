@@ -42,5 +42,6 @@ test('Confirmed Demo and GM actions have audio and an opt-in native haptic path'
   assert.match(swift,/message\.frameInfo\.isMainFrame/);
   assert.match(swift,/UIImpactFeedbackGenerator\(style: \.medium\)/);
   assert.match(bundle,/function demoConfirmedFeedback\(\)/);
-  assert.match(bundle,/const VERSION='3\.173'/);
+  const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
+  assert.ok(bundle.includes("const VERSION='"+runtimeVersion+"'"));
 });
