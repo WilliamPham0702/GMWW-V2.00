@@ -103,3 +103,10 @@ html.embedded .hud{display:none!important}
     background-position:center center!important;
   }
 }
+
+/* Published GM 2.5D scene overrides the default camera background layer.
+   The actors, fire, seats, zoom and night overlays remain in their own layers. */
+.stage.custom-scene::after,
+.night .stage.custom-scene::after{
+  background-image:var(--gmww-scene-image)!important;
+}

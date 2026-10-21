@@ -1900,7 +1900,7 @@ function initBattleControls(){
 }
 
 function renderPlayScene(){
-  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;
+  const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;applyGMVillageScene();
   if(playSceneRuntime.setupPopupStep!==playSceneState.step){playSceneRuntime.setupPopupStep=playSceneState.step;playSceneRuntime.setupPopupClosed=false}
   const phase=playSceneState.phase,night=Math.max(0,Number(playSceneState.night)||0),put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v)};
   const artifactMax=Math.max(0,Math.min(30,Number(playSceneRuntime.artifactCycle?.max??playSceneRuntime.gameConfig?.artifactLimitPerCycle??3)||0));
