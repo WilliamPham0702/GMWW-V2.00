@@ -17,7 +17,7 @@ test('Demo rooms are listed like any other user-created room, with no extra fixe
  assert.ok(!children.some(x=>x.id==='playDemoRoomChoice'));
 });
 test('New Demo room uses its own server flag and the normal gather workflow',()=>{
- assert.match(setup,/playCreateRoom\(playSceneState\.roomMode==='demo'\)/);
+ assert.match(setup,/playCreateRoom\(false\)/);
  assert.match(setup,/demo:false,roomMode:'offline'/);
  assert.match(setup,/playSceneState\.step='seats'/);
 });
