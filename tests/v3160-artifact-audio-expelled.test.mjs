@@ -28,7 +28,8 @@ test('GM fire menu begins with 3 stateful one-tap label switches',()=>{
   const html=read('server-game/current/GMWW.html'),gm=read('server-game/current/app.js');
   const row=html.match(/<div class="battle-wolf-actions"[^>]*>([\s\S]*?)<\/div>/)?.[1]||'';
   const order=[...row.matchAll(/id="(battle\w+)"/g)].map(x=>x[1]);
-  assert.deepEqual(order.slice(0,3),['battleLabelArtifact','battleLabelRole','battleLabelPlayer']);
+  assert.deepEqual(order.slice(0,1),['battleDemoToggle']);
+  assert.deepEqual(order.slice(1,4),['battleLabelArtifact','battleLabelRole','battleLabelPlayer']);
   assert.match(gm,/menuRow\.scrollLeft=0/);
   assert.match(gm,/button\.setAttribute\('aria-pressed',String\(enabled\)\)/);
   assert.match(gm,/button\.textContent=label/);
