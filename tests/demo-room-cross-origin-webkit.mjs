@@ -7,7 +7,11 @@ const between=(s,a,b)=>{const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert.ok
 const req=async(path,body,token=auth)=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+token,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert.equal(r.ok,true,path+': '+JSON.stringify(d));return d};
 const people=Array.from({length:8},(_,i)=>({loginId:'demo'+i+serial,displayName:'Demo Test '+i,seatId:i+1}));
 for(const person of people)await req('/api/members/register',{...person,gameCharacterId:'character-01'});
-const before=(await req('/api/gm/members')).members.filter(m=>people.some(p=>p.loginId===m.loginId));
+// Directory rendering projects clock-driven idle movement and online TTL. Compare
+// stored account fields, including presence timestamps/room/readiness and history.
+const accountSnapshot=members=>members.filter(m=>people.some(p=>p.loginId===m.loginId)).map(m=>Object.fromEntries(
+ ['loginId','displayName','avatarId','gameCharacterId','source','createdAt','updatedAt','lastSeenAt','currentRoomCode','ready','resetRequestedAt','passwordResetAt','stats','history'].map(k=>[k,m[k]])));
+const before=accountSnapshot((await req('/api/gm/members')).members);
 const pageServer=http.createServer((_q,r)=>{r.writeHead(200,{'content-type':'text/html'});r.end('<html><meta name="viewport" content="width=device-width,initial-scale=1"><body></body></html>')});await new Promise(r=>pageServer.listen(0,'127.0.0.1',r));
 const browser=await webkit.launch({headless:true});
 const fn={id:'bite',actionId:'action_wolf_bite',name:'Cắn',phase:'night',targetCount:1,noSelf:true,usageMode:'eachNight',usageCount:1};
@@ -47,5 +51,5 @@ battleBindAuxiliaryDrag('battleDemoPanel','header');globalThis.inspectDemo=()=>(
   await page.waitForFunction(()=>inspectDemo().room.phase==='lobby'||inspectDemo().error,{timeout:45000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');assert.equal(snapshot.room.phase,'lobby');assert.equal(snapshot.running,false);assert.deepEqual(errors,[]);
   await context.close();console.log('PASS cross-origin iPhone WebKit Demo '+mode+': CORS, drag, start/pause/resume, actual night actions, day votes, finish');
  }
- const after=(await req('/api/gm/members')).members.filter(m=>people.some(p=>p.loginId===m.loginId));assert.deepEqual(after,before,'Demo must not write real member presence/history/statistics');console.log('PASS Demo existing-member snapshots remain unchanged in both modes');
+ const after=accountSnapshot((await req('/api/gm/members')).members);assert.deepEqual(after,before,'Demo must not write real member presence/history/statistics');console.log('PASS Demo existing-member snapshots remain unchanged in both modes');
 }finally{await browser.close();await new Promise(r=>pageServer.close(r));}
