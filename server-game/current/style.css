@@ -6615,3 +6615,24 @@ body.play-immersive #playCreateRoomSheet:not(.hidden),
 body.play-immersive #playRosterSheet:not(.hidden),
 body.play-immersive #playSeatSheet:not(.hidden),
 body.play-immersive #playDisbandSheet:not(.hidden){background:rgba(2,16,30,.17)!important}
+
+/* Audit of remaining generated GM overlays: all retain legible glass and village visibility. */
+body.play-immersive #start #playShell #playSeatPresetPanel,
+body.play-immersive #start #playShell #playRoleAssignmentPanel,
+body.play-immersive #start #playShell #playGatherToolbar,
+body.play-immersive #start #playShell #battleClockPopover,
+body.play-immersive #start #playShell #battleDayActionMenu,
+body.play-immersive #start #playShell #battleUndoFloat,
+body.play-immersive #start #playShell #battleDemoPanel,
+body.play-immersive #start #playShell #playBattleDock #battleDetails,
+body.play-immersive #start #playShell .battle-result-popup{
+  background:rgba(7,34,52,.70)!important;
+  -webkit-backdrop-filter:blur(5px) saturate(112%)!important;
+  backdrop-filter:blur(5px) saturate(112%)!important;
+  border-color:rgba(127,223,232,.44)!important;
+}
+body.play-immersive #start #playShell #playGatherToolbar,
+body.play-immersive #start #playShell #playRoleAssignmentPanel,
+body.play-immersive #start #playShell #playSeatPresetPanel{
+  max-width:var(--gmww-rail-width)!important;box-sizing:border-box!important;
+}
