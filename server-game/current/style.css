@@ -6366,3 +6366,16 @@ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day
  #battleGallowsMembers .battle-gallows-member{grid-template-columns:minmax(64px,1fr) auto auto;gap:3px}
  #battleGallowsMembers .battle-gallows-member button{font-size:8px;padding:3px}
 }
+
+/* Demo is a GM-only playback workspace; controls follow the current compact menu. */
+#playDemoRoomChoice{border-style:solid!important;border-color:rgba(252,209,119,.76)!important}
+#playDemoRoomChoice.active{box-shadow:0 0 0 1px #f7d486 inset!important}
+#battleWolfMenu #battleDemoToggle[hidden],
+#battleWolfMenu #battleDemoSpeedWrap[hidden],
+#battleWolfMenu #battleGMAuto[hidden]{display:none!important}
+#battleWolfMenu #battleDemoToggle[aria-pressed="true"]{border-color:#ffe49e;background:rgba(182,123,37,.22)}
+#battleWolfMenu .play-demo-speed{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;color:inherit}
+#battleWolfMenu .play-demo-speed select{background:rgba(8,33,53,.82);color:#fff;border:1px solid rgba(150,211,239,.4);border-radius:8px;padding:6px 3px;font-size:12px}
+
+/* V3.165 Demo CI: hidden daytime action tray must beat the legacy flex !important dock. */
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"] #battleBottomControls #battleActionTray.battle-action-tray-v399[hidden]{display:none!important}
