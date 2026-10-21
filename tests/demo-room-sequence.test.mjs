@@ -60,6 +60,7 @@ test('Demo seeds exactly the sample-game count from existing members with no acc
   assert.deepEqual(h.calls.map(c=>c.path),['/room-settings','/participants','/seat-lock','/stage']);
   assert.deepEqual([...h.calls.find(x=>x.path==='/participants').body.members].map(x=>x.seatId),[1,2,3,4,5,6,7,8]);
   assert.equal(h.calls.find(x=>x.path==='/participants').body.replace,true);
+  assert.equal(h.calls.find(x=>x.path==='/room-settings').body.seatCount,8,'Demo must not retain stale 24-seat layout for an 8-player template');
   assert.ok(!h.calls.some(x=>x.path.includes('/join')||x.path.includes('/members/create')));
 });
 
