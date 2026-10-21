@@ -99,6 +99,8 @@ try{
  // The click above must never be mistaken for a swipe caused by scrollIntoView.
  const swipeTurn=await page.evaluate(async()=>{
    const el=document.getElementById('battleTimeline');
+    // The standardized wider GM rail can fit every chip: constrain this test to ensure overflow.
+    el.style.width='175px';el.style.maxWidth='175px';el.style.overflowX='auto';
    const gesture=(name,key,x)=>{
      const e=new Event(name,{bubbles:true});Object.defineProperty(e,key,{value:[{clientX:x,clientY:185}]});
      el.dispatchEvent(e);
