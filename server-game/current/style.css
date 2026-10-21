@@ -6455,3 +6455,13 @@ body.play-immersive #start #playShell[data-step="battle"]
 #battleDemoEvent.demo-action-active{padding:8px 15px;border-radius:10px;background:#0a4d5a66}
 @keyframes gmww-demo-stars{0%,100%{transform:translate(0,0) rotate(0);opacity:.65}50%{transform:translate(5px,-3px) rotate(180deg);opacity:1}}
 @media(prefers-reduced-motion:reduce){.demo-action-active::before,.demo-action-active::after{animation:none}}
+
+/* V3.172: select room mode when creating; DEMO controls reside in GM menu. */
+#playRoomModeToggle{min-height:42px;padding:7px 12px;border-radius:12px;border:1px solid #a9dfe7;color:#fff;background:#173c52;font-weight:800;flex:1;min-width:110px}
+#battleWolfMenu #battleDemoPanel{position:relative!important;inset:auto!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;z-index:auto!important;display:flex!important;flex-wrap:wrap;align-items:center;justify-content:flex-start;width:100%!important;max-width:100%!important;margin:0 0 9px;padding:8px 10px;border-radius:13px;box-shadow:none;transform:none!important;background:rgba(10,54,63,.75)}
+#battleWolfMenu #battleDemoPanel[hidden]{display:none!important}
+#battleWolfMenu #battleDemoPanel>header,#battleWolfMenu #battleDemoExpand{display:none!important}
+#battleWolfMenu #battleDemoPanel .battle-demo-actions{display:flex!important;flex:1;gap:9px;flex-wrap:wrap}
+#battleWolfMenu #battleDemoPanel #battleDemoToggle{min-width:124px}
+#battleWolfMenu #battleDemoStatus{position:static!important;width:100%!important;height:auto!important;clip-path:none!important;overflow:visible!important;margin:4px 0 0!important;white-space:normal!important}
+#battleGMHaptic[aria-pressed="false"]{opacity:.75}
