@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.182';
+const VERSION='3.183';
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
