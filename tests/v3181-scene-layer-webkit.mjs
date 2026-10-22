@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {webkit}=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
@@ -10,8 +11,12 @@ try {
  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
  const image='url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'4\' height=\'4\'%3E%3Crect width=\'4\' height=\'4\' fill=\'%2388cba7\'/%3E%3C/svg%3E")';
  await page.setContent('<!doctype html><main class="game day" id="game"><section class="stage custom-scene" style="width:390px;height:844px"><div class="scene" id="scene"><div class="plaza"></div><button class="fire" aria-label="Đống lửa"></button><div class="players" id="players"></div></div></section></main>');
- await page.addStyleTag({path:'assets/village/village.css'});
- await page.addStyleTag({path:'assets/village/village-art.css'});
+ // The source CSS starts with a relative @import. On Playwright's about:blank
+ // document that import has no resolvable base URL and rejects addStyleTag.
+ // Inject exactly the layout rules under test; status effects are unrelated here.
+ const css=fs.readFileSync('assets/village/village.css','utf8').replace(/^@import[^;]*;\\s*/,'');
+ await page.addStyleTag({content:css});
+ await page.addStyleTag({content:fs.readFileSync('assets/village/village-art.css','utf8')});
  for(const night of [false,true]){
   const result=await page.evaluate(({night,image})=>{
    const game=document.querySelector('#game'),stage=document.querySelector('.stage'),scene=document.querySelector('#scene'),players=document.querySelector('#players');
