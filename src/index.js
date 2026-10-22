@@ -11,7 +11,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight, DIVINATION_ACTION_IDS, isNightImmuneTarget } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight, isNightImmuneTarget } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -1862,7 +1862,11 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
-    const divination=DIVINATION_ACTION_IDS.includes(String(body?.actionId||""))&&!artifactId;
+    // Self-contained on purpose: isolated Durable Object harnesses load class methods
+    // without module imports, while the resolver re-checks the same whitelist.
+    const divination=['action_seer','action_aura_read','action_fox_scan','action_bear_scan',
+      'action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction',
+      'action_wolf_seer','action_rotten_seer'].includes(String(body?.actionId||""))&&!artifactId;
     if(divination){
       const reveals=Array.isArray(body?.revealTargetIds)?body.revealTargetIds.map(normalizeLoginId):[];
       if(!reveals.length||reveals.length>3||new Set(reveals).size!==reveals.length||
