@@ -3487,7 +3487,7 @@ function renderPlaySeatPresetPanel(){
   const exactCount=Math.max(6,Math.min(30,minimum));
   const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
   const hint=document.getElementById('playSeatPresetAutoHint');
-  if(hint)hint.textContent='Bố trí trên MỘT chu vi quanh đống lửa • Tròn / Thoi / Chữ nhật (cạnh dài ở hai bên) • Giữ Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
+  if(hint)hint.textContent='Một chu vi quanh đống lửa • Tròn / Thoi / Chữ nhật (cạnh dài hai bên) • Giữ Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
   for(const n of counts){
     const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;
