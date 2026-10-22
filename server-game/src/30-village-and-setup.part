@@ -166,7 +166,7 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // Battle audio must be tied to a real action or wake-up event, not just a
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
-let battleActiveAudio=null,battleAudioLast={key:'',at:0};
+let battleActiveAudio=null,battleSpeechFinish=null,battleAudioLast={key:'',at:0};
 function battleInvalidateAudioCache(kind,id){
   const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
@@ -199,8 +199,18 @@ async function battleWarmAudio(kind,item){
 function battleSpeakCue(message,showError=false,onFinished=null){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
   if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');onFinished?.();return false}
-  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();speech.speak(cue);return true}
-  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
+  // Resolve the previous clip's completion before cancelling it; speech.cancel()
+  // does not reliably fire onend in iOS WebKit.
+  if(battleSpeechFinish){const previous=battleSpeechFinish;battleSpeechFinish=null;previous()}
+  try{
+    speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;
+    let completed=false;const finish=()=>{if(completed)return;completed=true;if(battleSpeechFinish===finish)battleSpeechFinish=null;onFinished?.()};
+    battleSpeechFinish=finish;cue.onend=finish;cue.onerror=finish;speech.speak(cue);return true;
+  }catch{
+    if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');
+    if(battleSpeechFinish){const finish=battleSpeechFinish;battleSpeechFinish=null;finish()}else onFinished?.();
+    return false;
+  }
 }
 let battleUnlockedAudioContext=null;
 function battleUnlockAudioFromGesture(){
@@ -239,16 +249,23 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
   if(!src)return battleSpeakCue(name,showError,onFinished);
-  if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
+  if(battleActiveAudio){
+    const previous=battleActiveAudio;
+    try{previous.pause();previous.currentTime=0}catch{}
+    previous.gmwwFinish?.();
+  }
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  let completed=false;const done=()=>{if(completed)return;completed=true;if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  player.gmwwFinish=done;battleActiveAudio=player;
+  player.onended=done;player.onerror=()=>{if(completed)return;done();if(!playAudioMuted())battleSpeakCue(name)};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
     if(await battlePlayWebAudioFallback(src,onFinished))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
-    onFinished?.();
+    if(!playAudioMuted())battleSpeakCue(name);
+    done();
     return false
   }
 }
