@@ -95,6 +95,7 @@ test('V3.128: Player Web renders seated people from shared seat IDs, never fake 
   assert.match(web,/if\(seat\)return seat/);
   assert.match(web,/displaySeatId\|\|item\?\.seatId/);
   assert.match(web,/village-layout\.js\?v=fire3101/);
-  assert.match(read('server-game/current/GMWW.html'),/village-layout\.js\?v=3\.183-seat-ring-recovery/);
+  const version=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
+  assert.ok(read('server-game/current/GMWW.html').includes('village-layout.js?v='+version+'-seat-ring-recovery'));
   assert.match(read('assets/village/index.html'),/seat=3131/);
 });
