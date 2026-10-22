@@ -9,7 +9,7 @@
   const fire={x:50,y:64};
   const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:99,
     zones:Object.freeze({back:[29,48],middle:[48,73],front:[73,94]})});
-  // The central paving must accommodate the whole 30-seat rectangle.
+  // The central paving must accommodate the full 30-person circular perimeter.
   // Outer roofs/sea are excluded, while the lower bridge remains walkable.
   // Paved 2.5D courtyard; outer houses, sea and foliage are never walkable.
   const polygon=[[16,28],[84,28],[89,35],[89,53],[91,70],[89,88],
@@ -83,40 +83,6 @@
     const portion=(target-dist[lo])/Math.max(1e-9,dist[hi]-dist[lo]);
     return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
       y:points[lo].y+(points[hi].y-points[lo].y)*portion};
-  }
-  function diamondContour(index,count,rx,ry){
-    // Every vertex is a Seat. Distribute integer segments across the four
-    // diagonals: uniform fractional progress crowds pairs at sharp corners.
-    const vertices=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
-    const base=Math.floor(count/4),extra=count%4;
-    let cursor=index;
-    for(let edge=0;edge<4;edge++){
-      const segments=base+(edge<extra?1:0);
-      if(cursor<segments){
-        const f=cursor/segments;
-        return{x:vertices[edge][0]+(vertices[edge+1][0]-vertices[edge][0])*f,
-          y:vertices[edge][1]+(vertices[edge+1][1]-vertices[edge][1])*f};
-      }
-      cursor-=segments;
-    }
-    return{x:0,y:-ry};
-  }
-  function rectangleContour(t,rx,ry){
-    // Long LEFT and RIGHT edges, a single closed perimeter, no interior rows.
-    const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
-    const lengths=corners.slice(1).map((p,i)=>
-      Math.hypot(p[0]-corners[i][0],SCREEN_Y_SCALE*(p[1]-corners[i][1])));
-    const total=lengths.reduce((a,b)=>a+b,0);
-    let distance=((t%1)+1)%1*total;
-    for(let i=0;i<lengths.length;i++){
-      if(distance<=lengths[i]||i===lengths.length-1){
-        const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
-        return{x:corners[i][0]+(corners[i+1][0]-corners[i][0])*f,
-          y:corners[i][1]+(corners[i+1][1]-corners[i][1])*f};
-      }
-      distance-=lengths[i];
-    }
-    return{x:0,y:-ry};
   }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
