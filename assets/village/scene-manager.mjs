@@ -13,15 +13,29 @@ function apply(){
  if(image){scene.style.setProperty('--gmww-scene-image',`url("${image}")`);scene.classList.add('custom-scene')}
  else{scene.style.removeProperty('--gmww-scene-image');scene.classList.remove('custom-scene')}
 }
+let syncInFlight=false;
+function preloadSceneImage(src){
+ if(!src)return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+  const img=new Image();
+  img.onload=()=>resolve();
+  img.onerror=()=>reject(new Error('Không tải được ảnh làng đã xuất bản'));
+  img.src=src;
+ });
+}
 async function sync(){
+ if(syncInFlight)return;
+ syncInFlight=true;
  try{
   const r=await fetch('/api/village-scene',{cache:'no-store'});
   if(!r.ok)return;
-  const data=await r.json();
-  if(data.ok&&data.scene&&(data.scene.revision!==state.published.revision||data.scene.day!==state.published.day||data.scene.night!==state.published.night)){
-   state.published=data.scene;apply();
+  const data=await r.json(),next=data.scene;
+  if(data.ok&&next&&(next.revision!==state.published.revision||next.day!==state.published.day||next.night!==state.published.night)){
+   await Promise.all([preloadSceneImage(next.day),preloadSceneImage(next.night)]);
+   state.published=next;apply();
   }
- }catch{ /* Temporary network errors never clear the published background. */ }
+ }catch(error){if(editor)setStatus(String(error?.message||error))}
+ finally{syncInFlight=false}
 }
 function readFile(file){
  return new Promise((resolve,reject)=>{
