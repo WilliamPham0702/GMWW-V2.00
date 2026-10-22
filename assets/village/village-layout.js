@@ -151,7 +151,7 @@
     if(!shift.x&&!shift.y&&scale===1)return points;
     // Keep the whole 30-person formation inside the courtyard: independent
     // per-point clamping piles characters on top of each other at high spacing.
-    const scaleX=Math.min(scale,1.06),scaleY=Math.min(scale,1.08);
+    const scaleX=Math.max(.94,Math.min(scale,1.06)),scaleY=Math.max(.96,Math.min(scale,1.08));
     const raw=points.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,y:fire.y+(p.y-fire.y)*scaleY}));
     const xs=raw.map(p=>p.x),ys=raw.map(p=>p.y);
     const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
