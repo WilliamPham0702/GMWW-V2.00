@@ -26,6 +26,9 @@ on:
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/gp2-qa-webkit.mjs"
+      - "assets/village/gp2-qa.*"
+      - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
@@ -54,6 +57,9 @@ on:
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/gp2-qa-webkit.mjs"
+      - "assets/village/gp2-qa.*"
+      - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
@@ -102,6 +108,7 @@ jobs:
           node tests/demo-server-autonomous-e2e.mjs
           node tests/demo-room-cross-origin-webkit.mjs
           node tests/browser-private-cards.mjs
+          node tests/gp2-qa-webkit.mjs
       - name: Check Khám Phá on iPhone-sized WebKit
         run: node tests/home-v389-iphone-webkit.mjs
       - name: Check Seat anchors with production status CSS in WebKit
