@@ -23,7 +23,7 @@ test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative
  assert.ok(battle.includes("body:JSON.stringify({action:'jump',targetIndex,expectedTurnId"));
  assert.ok(audio.includes('function battleUnlockAudioFromGesture()'));
  assert.ok(audio.includes('async function battlePlayWebAudioFallback(src,onFinished=null)'));
- assert.ok(audio.includes('if(await battlePlayWebAudioFallback(src,onFinished))return true'));
+ assert.ok(audio.includes('if(await battlePlayWebAudioFallback(src,done))return true'));
  assert.ok(battle.includes("battleState.lastAudioTurnKey")&&battle.includes('battleAudioForTurn(t,true)'));
 });
 test('V3.143: GM patrol and manual movement no longer run',()=>{
