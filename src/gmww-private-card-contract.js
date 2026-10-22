@@ -41,14 +41,14 @@ export function sanitizePlayerRoleCard(v){
     ...(Array.isArray(fn?.effectIds)?{effectIds:fn.effectIds.map(String).slice(0,8)}:{}),
     usageCount:Math.max(1,Math.min(100,Math.trunc(Number(fn?.usageCount)||1)))
   })):null;
-  const flags=x.flags&&typeof x.flags.allowMultipleActions==="boolean"?
-    {allowMultipleActions:x.flags.allowMultipleActions}:null;
+  const flagEntries=['allowMultipleActions','nightImmune'].filter(key=>typeof x.flags?.[key]==="boolean").map(key=>[key,x.flags[key]]);
+  const flags=flagEntries.length?Object.fromEntries(flagEntries):null;
   const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
   return{version:Number(x.version||x.playerCardVersion||7),name:String(x.name||x.roleName||"").slice(0,120),faction:x.faction==null?null:String(x.faction).slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),objective:x.objective==null?null:String(x.objective).slice(0,3000),actions,functions,flags,limits:x.limits??null,artworkAssetId,artworkId:artworkAssetId}
 }
 export function mergePlayerRoleCard(base,over){
   const b=(base&&typeof base==="object")?base:{},o=(over&&typeof over==="object")?over:{};
   const artworkAssetId=o.artworkAssetId??o.artworkId??b.artworkAssetId??b.artworkId??null;
-  return{version:Number(o.version||b.version||7),name:o.name||b.name||"",faction:o.faction??b.faction??null,information:o.information??b.information??null,objective:o.objective??b.objective??null,actions:(Array.isArray(o.actions)&&o.actions.length)?o.actions:(Array.isArray(b.actions)?b.actions:[]),functions:o.functions??b.functions??null,flags:o.flags??b.flags??null,limits:o.limits??b.limits??null,artworkAssetId,artworkId:artworkAssetId}
+  return{version:Number(o.version||b.version||7),name:o.name||b.name||"",faction:o.faction??b.faction??null,information:o.information??b.information??null,objective:o.objective??b.objective??null,actions:(Array.isArray(o.actions)&&o.actions.length)?o.actions:(Array.isArray(b.actions)?b.actions:[]),functions:o.functions??b.functions??null,flags:o.flags||b.flags?{...(b.flags||{}),...(o.flags||{})}:null,limits:o.limits??b.limits??null,artworkAssetId,artworkId:artworkAssetId}
 }
 export function privateRole(r){return{matchId:r.matchId||null,matchRevision:Number(r.matchRevision||0),roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,order:r.order,roleImage:r.roleImage||null,artworkAssetId:r.artworkAssetId||r.artworkId||null,artworkId:r.artworkAssetId||r.artworkId||null,artworkAvailable:r.artworkAvailable!==false,playerCardVersion:r.playerCardVersion||7,roleCard:r.roleCard||null,deliveredAt:r.deliveredAt,viewedAt:r.viewedAt||null}}
