@@ -2491,16 +2491,16 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
   let completed=false;const done=()=>{if(completed)return;completed=true;if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
   player.gmwwFinish=done;battleActiveAudio=player;
-  player.onended=done;player.onerror=()=>{if(completed)return;done();if(!playAudioMuted())battleSpeakCue(name)};
+  player.onended=done;
+  player.onerror=()=>{if(completed)return;if(!playAudioMuted())battleSpeakCue(name,false,done);else done()};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src,onFinished))return true;
+    if(await battlePlayWebAudioFallback(src,done))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
-    if(!playAudioMuted())battleSpeakCue(name);
-    done();
-    return false
+    if(!playAudioMuted())return battleSpeakCue(name,false,done);
+    done();return false
   }
 }
 function battleTurnAudioCue(turn){
@@ -4316,9 +4316,11 @@ function battleMorningPlayAudio(){
       queue.push(['audio_system_morning_marked',row.name+' đã bị đánh dấu']);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
   }
+  const audioRun=(battleState.morningAudioRun||0)+1;
+  battleState.morningAudioRun=audioRun;
   let index=0;
   const next=()=>{
-    if(index>=queue.length||playSceneState.phase!=='day')return;
+    if(audioRun!==battleState.morningAudioRun||index>=queue.length||playSceneState.phase!=='day')return;
     const [id,label]=queue[index++];
     void Promise.resolve(battlePlayConfiguredAudio('system',id,label,false,next))
       .catch(()=>{if(!playAudioMuted())battleSpeakCue(label,false,next);else next()});
