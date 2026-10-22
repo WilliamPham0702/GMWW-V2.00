@@ -7,11 +7,17 @@ async function req(path,body,token){
  const data=await response.json();assert.equal(data.ok,true,JSON.stringify(data));return data;
 }
 const people=[['seer','role_seer','action_seer'],['aura','role_aura_seer','action_aura_read'],['spirit','role_spiritualist','action_compare_faction'],['witch','role_witch','action_witch_kill'],['wolf','role_wolf','action_wolf_bite'],['immortal','role_destroyer','action_destroyer_scry'],['villager','role_villager','inspect']];
-const ids=Object.fromEntries(people.map(([n])=>[n,'rule'+n]));
+const serial=Date.now().toString(36),ids=Object.fromEntries(people.map(([n])=>[n,'r'+n+serial]));
 const room=await req('/api/rooms',{roomName:'Night rule regression',seatCount:8,gameConfig:{roles:people.map(([,roleId],i)=>({roleId,order:i+1})),timing:{defaultActionSec:600,wolfDiscussionSec:600}}});
 const gm=(path,body)=>req('/api/gm/rooms/'+room.roomCode+path,body,room.gmToken);
 try{
- await gm('/participants',{members:people.map(([n],i)=>({loginId:ids[n],displayName:n,seatId:i+1}))});
+ for(const [i,[name]] of people.entries()){
+  const loginId=ids[name];
+  await req('/api/members/register',{loginId,displayName:name+serial,gameCharacterId:'character-01'});
+  const session=await req('/api/members/login',{loginId});
+  await req('/api/rooms/'+room.roomCode+'/join',{token:session.token});
+  await gm('/seat',{loginId,seatId:i+1});
+ }
  const matchId='rules-'+Date.now();
  await gm('/assignments',{matchId,assignments:people.map(([n,roleId,actionId])=>({loginId:ids[n],roleId,roleName:n,roleCard:{name:n,faction:n==='wolf'?'Phe Sói':n==='immortal'?'Phe Ba':'Phe Dân',flags:{nightImmune:n==='immortal',allowMultipleActions:false},functions:[{actionId,usageMode:'eachNight',usageCount:1}]}}))});
  await gm('/start',{matchId});await gm('/auto',{enabled:false});await gm('/cycle',{phase:'night',night:1,cycleKey:'night-1'});
