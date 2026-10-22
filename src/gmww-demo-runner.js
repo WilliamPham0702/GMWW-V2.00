@@ -60,8 +60,10 @@ function dayActions(ctx,meta,usage,ballot){
  }
  return list;
 }
-function targetsFor(action,actorId,ctx,meta){
- const attacked=action.actionId==='action_witch_save'&&!action.artifactId?resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight}).attacked.map(x=>x.to):null;
+export function targetsFor(action,actorId,ctx,meta){
+ const wolfNight=action.actionId==='action_witch_save'&&!action.artifactId
+  ?resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight}):null;
+ const attacked=wolfNight?(Array.isArray(wolfNight.attacked)?wolfNight.attacked:[]).map(x=>x.to).filter(Boolean):null;
  const available=Object.values(ctx.players).filter(m=>(!attacked||attacked.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&rules.targetAllowed(action,m,effect(ctx.rows,meta,m.loginId),ctx.rows,meta.cycleNight)).map(m=>m.loginId),chosen=[];
  while(chosen.length<action.targetCount&&available.length){const id=pick(available);chosen.push(id);available.splice(available.indexOf(id),1)}
  return chosen.length===action.targetCount?chosen:null;
