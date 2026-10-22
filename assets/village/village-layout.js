@@ -149,7 +149,15 @@
     const points=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
     const shift=normalizeSeatOffset(offset),scale=normalizeSeatSpacing(spacing)/100;
     if(!shift.x&&!shift.y&&scale===1)return points;
-    return points.map(p=>({...clampPoint(fire.x+(p.x-fire.x)*scale+shift.x,fire.y+(p.y-fire.y)*scale+shift.y),ring:0}));
+    // Keep the whole 30-person formation inside the courtyard: independent
+    // per-point clamping piles characters on top of each other at high spacing.
+    const scaleX=Math.min(scale,1.06),scaleY=Math.min(scale,1.08);
+    const raw=points.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,y:fire.y+(p.y-fire.y)*scaleY}));
+    const xs=raw.map(p=>p.x),ys=raw.map(p=>p.y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+    const offsetX=Math.max(14-minX,Math.min(86-maxX,shift.x));
+    const offsetY=Math.max(31-minY,Math.min(91-maxY,shift.y));
+    return raw.map((p,i)=>({...clampPoint(p.x+offsetX,p.y+offsetY),ring:0,depth:points[i].depth}));
   }
   // Presentation/transition repair: old rooms can contain members without seats
   // even after role delivery. Keep every valid seat ID and deterministically
