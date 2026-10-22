@@ -1,0 +1,211 @@
+{
+  "id": "gp2-art-candidate-v2",
+  "status": "QA_BLOCKED_DO_NOT_DEPLOY",
+  "coordinateFrame": "portrait-864x1536",
+  "fire": {
+    "x": 52,
+    "y": 53.9,
+    "radiusX": 8,
+    "radiusY": 5
+  },
+  "characterBoundingBoxPx": {
+    "width": 56,
+    "height": 74,
+    "origin": "bottom-center"
+  },
+  "pavedFootprintCandidate": {
+    "left": 22,
+    "right": 82,
+    "top": 38,
+    "bottom": 77
+  },
+  "seatPositions": [
+    {
+      "seatId": 1,
+      "x": 29,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 2,
+      "x": 37,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 3,
+      "x": 45,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 4,
+      "x": 55,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 5,
+      "x": 63,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 6,
+      "x": 71,
+      "y": 42,
+      "depth": 0
+    },
+    {
+      "seatId": 7,
+      "x": 26,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 8,
+      "x": 35,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 9,
+      "x": 44,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 10,
+      "x": 60,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 11,
+      "x": 69,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 12,
+      "x": 78,
+      "y": 49,
+      "depth": 1
+    },
+    {
+      "seatId": 13,
+      "x": 25,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 14,
+      "x": 34,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 15,
+      "x": 43,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 16,
+      "x": 61,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 17,
+      "x": 70,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 18,
+      "x": 79,
+      "y": 62,
+      "depth": 2
+    },
+    {
+      "seatId": 19,
+      "x": 27,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 20,
+      "x": 36,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 21,
+      "x": 45,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 22,
+      "x": 55,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 23,
+      "x": 64,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 24,
+      "x": 73,
+      "y": 69,
+      "depth": 3
+    },
+    {
+      "seatId": 25,
+      "x": 29,
+      "y": 76,
+      "depth": 4
+    },
+    {
+      "seatId": 26,
+      "x": 37,
+      "y": 76,
+      "depth": 4
+    },
+    {
+      "seatId": 27,
+      "x": 45,
+      "y": 76,
+      "depth": 4
+    },
+    {
+      "seatId": 28,
+      "x": 55,
+      "y": 76,
+      "depth": 4
+    },
+    {
+      "seatId": 29,
+      "x": 63,
+      "y": 76,
+      "depth": 4
+    },
+    {
+      "seatId": 30,
+      "x": 71,
+      "y": 76,
+      "depth": 4
+    }
+  ],
+  "artworkApproved": false,
+  "notes": [
+    "Candidate 30-seat coordinates are only a calibration fixture; live GMWW world remains unchanged",
+    "Painted bonfire at (52,53.9) does not match active PR draft anchor (50,64)",
+    "Artwork collision with fences, stalls, foliage is NOT verified by geometric unit tests",
+    "Do not deploy images or enable this layout until human art approval and real iPhone/Player Web QA"
+  ]
+}
