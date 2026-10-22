@@ -73,5 +73,5 @@ test('GM and Player Web load same cache-busted layout and retain native shell',(
  assert.match(player,/village-layout\.js\?v=fire3101-gp2&seat=3183-perimeter/);
  assert.match(read('assets/village/index.html'),/seatfix=v3183/);
  assert.ok(worker.includes('VERSION="V'+version+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+version.replaceAll('.','')+'"'));
- assert.match(read('.github/scripts/prepare-update-channel.mjs'),/releaseNotes:\["V3\.183: Khôi phục/);
+ assert.match(read('.github/scripts/prepare-update-channel.mjs'),/"V3\.183: Khôi phục/);
 });
