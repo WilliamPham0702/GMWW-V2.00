@@ -281,44 +281,66 @@ function battleTurnAudioCue(turn){
     return {kind:'artifacts',targetId:turn.artifactId,name:String(turn.artifactName||turn.label||'Artifact')};
   return {kind:'cards',targetId:role.roleId||'',name:String(role.label||turn.label||'Lượt vai trò')};
 }
+// Grouped turns may contain several different roles. Announce EACH unique role,
+// while preserving the single shared Bầy Sói cue for the pack.
+function battleAudioCuesForTurn(turn){
+  if(!turn)return [];
+  if(turn.kind!=='role-group')return [battleTurnAudioCue(turn)].filter(Boolean);
+  const roles=Array.isArray(turn.roles)?turn.roles:[],cues=[],seen=new Set();
+  const wolves=roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
+  if(wolves){cues.push({kind:'cards',targetId:'audio_group_wolves',name:'Bầy sói ơi dậy đi'});seen.add('audio_group_wolves')}
+  for(const role of roles){
+    const id=String(role?.roleId||'');
+    if(!id||seen.has(id)||(wolves&&['role_wolf','role_alpha_wolf'].includes(id)))continue;
+    cues.push({kind:'cards',targetId:id,name:String(role?.label||role?.roleName||id)});
+    seen.add(id);
+  }
+  return cues.length?cues:[battleTurnAudioCue(turn)].filter(Boolean);
+}
+function battlePlayTurnAudioSequence(cues,expectedKey,showError=false){
+  let index=0;
+  const next=()=>{
+    if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    const cue=cues[index++];if(!cue)return;
+    void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,next);
+  };
+  next();
+}
 function battleAudioForTurn(turn,auto=false){
-  const cue=battleTurnAudioCue(turn);if(!cue)return;
+  const cues=battleAudioCuesForTurn(turn),cue=cues[0];if(!cue)return;
   const {kind,targetId,name}=cue;
   const audio=battleFindAudio(kind,targetId,name);
-  // Prepare the clip while GM is navigating, so a first tap plays before
-  // losing the user-activation event on iOS Safari / WKWebView.
+  // Preload all unique role clips, not just the first role in a grouped turn.
   const configured=battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),
     state,playSceneRuntime.artifactCycle?.accepted)||[];
   for(const action of configured){
     const entry=battleFindAudio('actions',action.actionId,action.name);
     if(entry)void battleWarmAudio('actions',entry);
   }
-  if(audio)void battleWarmAudio(kind,audio);
-  // Preload the following cue before its first arrival (e.g. Wolves -> early Artifacts).
+  for(const clip of cues){
+    const row=battleFindAudio(clip.kind,clip.targetId,clip.name);
+    if(row)void battleWarmAudio(clip.kind,row);
+  }
   const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[],cursor=Number(rt?.cursor);
   if(Number.isInteger(cursor)&&queue[cursor]?.id===turn.id&&queue[cursor+1]){
-    const nextCue=battleTurnAudioCue(queue[cursor+1]);
-    if(nextCue){
+    for(const nextCue of battleAudioCuesForTurn(queue[cursor+1])){
       const nextAudio=battleFindAudio(nextCue.kind,nextCue.targetId,nextCue.name);
       if(nextAudio)void battleWarmAudio(nextCue.kind,nextAudio);
     }
   }
   if(auto){
-    // Wait for IndexedDB-backed audio to be ready before first arrival.
-    // This avoids a first-swipe race (Bầy Sói -> Artifact) on iOS Safari.
     const expectedKey=battleState.key;
     void (async()=>{
       if(audio)await battleWarmAudio(kind,audio);
       if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
-      await battlePlayConfiguredAudio(kind,targetId,name,false);
+      battlePlayTurnAudioSequence(cues,expectedKey);
     })().catch(error=>console.warn('GMWW first-turn audio:',error));
   }
 }
 function battleReplayAudio(){
   const selected=battleAction();
   if(selected){void battlePlayConfiguredAudio('actions',selected.actionId,selected.name,true);return}
-  const cue=battleTurnAudioCue(battleTurn());
-  if(cue)void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,true);
+  battlePlayTurnAudioSequence(battleAudioCuesForTurn(battleTurn()),battleState.key,true);
 }
 
 function applyPlayAudioState(){
