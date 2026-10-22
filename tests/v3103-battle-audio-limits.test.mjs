@@ -28,7 +28,7 @@ test('Actual battle action audio is wired to a matching assigned clip, not only 
   assert.match(errors[0],/Chưa gán Audio/);
 });
 test('Role card function limits are serialized for authoritative worker validation',()=>{
-  assert.match(app,/flags:\{allowMultipleActions:role\.flags\?\.allowMultipleActions===true\}/);
+  assert.match(app,/flags:\{allowMultipleActions:role\.flags\?\.allowMultipleActions===true,nightImmune:role\.flags\?\.nightImmune===true\}/);
   assert.match(app,/functions:\(role\.functions\|\|\[\]\)\.map/);
   const normalized=sanitizePlayerRoleCard({functions:[{actionId:'action_exile',usageMode:'eachNight',usageCount:1}]});
   assert.equal(normalized.functions[0].actionId,'action_exile');

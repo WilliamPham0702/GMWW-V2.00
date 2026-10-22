@@ -187,7 +187,11 @@ function demoApplyServerControl(control){
   demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.lastEvent=event||null;
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
-  if(feedback)demoConfirmedFeedback();
+  if(feedback){
+    if(event.revelation?.message&&event.revelation?.actionId){
+      gmHapticFeedback();battlePresentRevelation(event.revelation.actionId,event.revelation);
+    }else demoConfirmedFeedback();
+  }
   if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
 }
 function demoHoldForGM(){
@@ -297,7 +301,7 @@ async function demoExecuteNight(action,actorId,t,signature,epoch){
           demoObserve(action.name+(transfer?' · '+({left:'Trái',right:'Phải',none:'Không dịch'}[direction]||''):''),actorId,seer?chosen:transfer?[]:chosen);
           demoConfirmedFeedback();
           if(result.revelation?.message&&demoRunner.running&&epoch===demoRunner.epoch)
-            battleShowResultPopup('',String(result.revelation.message),true);
+            battlePresentRevelation(action.actionId,result.revelation);
         }catch(err){if(err?.status>=400&&err?.status<500)demoRunner.pending.delete(signature);throw err}
     }
 }
@@ -789,13 +793,9 @@ function battleMorningRows(){
 }
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
-  if(dead){
-    if(dead<=5){
-      queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
-      queue.push(['audio_system_morning_number_'+dead,String(dead)]);
-      queue.push(['audio_system_morning_dead_noun','người chết']);
-    }else queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có '+dead+' người chết']);
-  }
+  queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+  queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+  queue.push(['audio_system_morning_dead_noun','người chết']);
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')
@@ -865,7 +865,7 @@ function battleMorningShow(){
     }
   }
   panel.hidden=!battleState.morningOpen;
-  if(rows.length&&battleState.morningAudioKey!==key){
+  if(battleState.morningAudioKey!==key){
     battleState.morningAudioKey=key;battleMorningPlayAudio();
   }
 }
@@ -881,6 +881,19 @@ function battleDivinationSystemAudioCue(actionId,result){
   const yes=!!result?.wolf;
   return prefix==='seer'?(yes?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):
     'audio_system_'+prefix+(yes?'_wolf':'_no_wolf');
+}
+function battlePresentRevelation(actionId,revelation){
+  if(!revelation?.message)return;
+  battleShowResultPopup('',String(revelation.message||''),true);
+  const cue=battleDivinationSystemAudioCue(actionId,revelation);
+  if(actionId==='action_aura_read'){
+    const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
+    if(!playAudioMuted()&&roleName){
+      if(cue&&battleFindAudio('system',cue,revelation.message))
+        void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
+      else battleSpeakCue(roleName);
+    }
+  }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
 }
 async function battleWakeupToDay(expectedKey){
   if(battleState.wakeAdvanceInFlight||battleState.key!==expectedKey||
@@ -1484,21 +1497,9 @@ async function battleConfirm(confirmed=false){
     // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     if(seerReveal&&result.revelation){
-      const revelation=result.revelation;
-      // Only actual GM divination results own this compact popup.
-      battleShowResultPopup('',String(revelation.message||''),true);
-      const cue=battleDivinationSystemAudioCue(a.actionId,revelation);
-      if(a.actionId==='action_aura_read'){
-        // The Aura Seer must hear the actual role name, never its functions.
-        // Play the configured system cue first when available, then pronounce the
-        // exact name. This also handles roles without dedicated sound recordings.
-        const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
-        if(!playAudioMuted()&&roleName){
-          if(cue&&battleFindAudio('system',cue,revelation.message))
-            void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
-          else battleSpeakCue(roleName);
-        }
-      }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+      battlePresentRevelation(a.actionId,result.revelation);
+      // The result replaces confirmation audio; do not leave its navigation gate locked.
+      finishConfirmAudio();
     }
     // Advance a confirmed turn after Server sync. Scan results stay visible until GM taps outside.
     battleState.pendingNextTurnId=t.id;

@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.180';
+const VERSION='3.181';
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
@@ -451,6 +451,7 @@ function migrateOld(raw){
   s.version=VERSION;return s;
 }
 function applyV210Rules(s){
+  const preferLinked=rows=>rows.find(a=>a.url)||rows.find(a=>a.fileName||a.verifiedBinary)||rows[0];
   const witch=(s.cards||[]).find(x=>x.id==='role_old_witch'||x.legacyId==='source-18');
   if(witch){
     const oldInfo='Phe Dân. Mỗi đêm chọn Đuổi 1 người hoặc Hồi Sinh 1 người, không được làm cả hai. Hồi Sinh chỉ áp dụng cho người chết ở ngày trước hoặc đêm trước theo luật.';
@@ -462,8 +463,8 @@ function applyV210Rules(s){
   }
   const cardAudio=(s.audio&&s.audio.cards)||[];
   const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.sourceKey==='ROLE:source-18'||a.name==='Phù Thuỷ Già');
-  const keepCard=witchAudio[0]||{};
-  Object.assign(keepCard,{id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',verifiedBinary:true});
+  const keepCard=preferLinked(witchAudio)||{};
+  Object.assign(keepCard,{id:keepCard.id||'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:keepCard.sourceKey||'ROLE:source-18',fileName:keepCard.fileName||'Phù Thuỷ Già.mp3',verifiedBinary:keepCard.verifiedBinary!==false});
   s.audio.cards=[keepCard,...cardAudio.filter(a=>!witchAudio.includes(a))];
 
   const actionAudio=(s.audio&&s.audio.actions)||[];
@@ -471,13 +472,16 @@ function applyV210Rules(s){
     {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',verifiedBinary:false},
     {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',verifiedBinary:false}
   ];
-  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||a.sourceKey===c.sourceKey||a.name===c.name));
-  s.audio.actions=[...canonicalActions,...otherActions];
+  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name));
+  s.audio.actions=[...canonicalActions.map(slot=>{
+    const previous=preferLinked(actionAudio.filter(a=>a.id===slot.id||a.targetId===slot.targetId||a.sourceKey===slot.sourceKey||a.name===slot.name));
+    return {...slot,...(previous||{}),targetId:slot.targetId};
+  }),...otherActions];
 
   const currentCards=s.audio.cards||[];
   const wolfCandidates=currentCards.filter(a=>a.id==='audio_group_wolves'||a.sourceKey==='GROUP:WOLVES'||a.name==='Bầy Sói'||a.name==='Sói thức dậy');
-  const wolfKeep=wolfCandidates[0]||{};
-  Object.assign(wolfKeep,{id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',sourceKey:'GROUP:WOLVES',fileName:'gmww-wolf-pack.m4a',verifiedBinary:true});
+  const wolfKeep=preferLinked(wolfCandidates)||{};
+  Object.assign(wolfKeep,{id:wolfKeep.id||'audio_group_wolves',targetId:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',sourceKey:wolfKeep.sourceKey||'GROUP:WOLVES',fileName:wolfKeep.fileName||'gmww-wolf-pack.m4a',verifiedBinary:wolfKeep.verifiedBinary!==false});
   s.audio.cards=[...s.audio.cards.filter(a=>!wolfCandidates.includes(a)),wolfKeep];
 
   const systemAudio=(s.audio&&s.audio.system)||[];
@@ -496,7 +500,7 @@ function applyV210Rules(s){
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
-    ...Array.from({length:5},(_,i)=>({id:'audio_system_morning_number_'+(i+1),name:String(i+1),targetId:'audio_system_morning_number_'+(i+1),fileName:'',verifiedBinary:false})),
+    ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
 
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
@@ -516,12 +520,13 @@ function applyV210Rules(s){
     {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
-  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||a.sourceKey===c.sourceKey||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
+  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
   // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
   // Only add missing slots; never overwrite an existing chosen file/audio binding.
   s.audio.system=[...canonicalSystem.map(slot=>{
-    const previous=systemAudio.find(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId));
-    return {...slot,...(previous||{}),id:slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
+    const previous=preferLinked(systemAudio.filter(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId)
+      ||x.name===slot.name||(slot.sourceKey&&x.sourceKey===slot.sourceKey)));
+    return {...slot,...(previous||{}),id:previous?.id||slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
   }),...otherSystem];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
@@ -2400,7 +2405,7 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // Battle audio must be tied to a real action or wake-up event, not just a
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
-let battleActiveAudio=null,battleAudioLast={key:'',at:0};
+let battleActiveAudio=null,battleAudioLast={key:'',at:0},battleAudioRequestId=0;
 function battleInvalidateAudioCache(kind,id){
   const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
@@ -2411,9 +2416,10 @@ function battleFindAudio(kind,targetId,name){
   const target=String(targetId||''),label=String(name||'').trim().toLowerCase();
   // Empty IDs are not a wildcard: this previously played "Xác nhận" for Artifact đầu ván.
   const fold=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-  return list.find(item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target))
-    ||list.find(item=>label&&fold(item?.name)===fold(label))
-    ||null;
+  const exact=item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target);
+  const candidates=list.filter(item=>exact(item)||(label&&fold(item?.name)===fold(label)&&(!item?.targetId||String(item.targetId)===target)));
+  const linked=item=>!!(item?.url||item?.fileName||item?.sourceKey||item?.verifiedBinary);
+  return candidates.find(item=>exact(item)&&linked(item))||candidates.find(linked)||candidates[0]||null;
 }
 async function battleWarmAudio(kind,item){
   if(!item)return null;
@@ -2463,6 +2469,7 @@ async function battlePlayWebAudioFallback(src,onFinished=null){
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
+  const requestId=++battleAudioRequestId;
   const row=battleFindAudio(kind,targetId,name);
   if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
@@ -2472,6 +2479,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
+  if(requestId!==battleAudioRequestId){onFinished?.();return false}
   if(!src)return battleSpeakCue(name,showError,onFinished);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
@@ -3686,7 +3694,11 @@ function demoApplyServerControl(control){
   demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.lastEvent=event||null;
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
-  if(feedback)demoConfirmedFeedback();
+  if(feedback){
+    if(event.revelation?.message&&event.revelation?.actionId){
+      gmHapticFeedback();battlePresentRevelation(event.revelation.actionId,event.revelation);
+    }else demoConfirmedFeedback();
+  }
   if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
 }
 function demoHoldForGM(){
@@ -3796,7 +3808,7 @@ async function demoExecuteNight(action,actorId,t,signature,epoch){
           demoObserve(action.name+(transfer?' · '+({left:'Trái',right:'Phải',none:'Không dịch'}[direction]||''):''),actorId,seer?chosen:transfer?[]:chosen);
           demoConfirmedFeedback();
           if(result.revelation?.message&&demoRunner.running&&epoch===demoRunner.epoch)
-            battleShowResultPopup('',String(result.revelation.message),true);
+            battlePresentRevelation(action.actionId,result.revelation);
         }catch(err){if(err?.status>=400&&err?.status<500)demoRunner.pending.delete(signature);throw err}
     }
 }
@@ -4288,13 +4300,9 @@ function battleMorningRows(){
 }
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
-  if(dead){
-    if(dead<=5){
-      queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
-      queue.push(['audio_system_morning_number_'+dead,String(dead)]);
-      queue.push(['audio_system_morning_dead_noun','người chết']);
-    }else queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có '+dead+' người chết']);
-  }
+  queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+  queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+  queue.push(['audio_system_morning_dead_noun','người chết']);
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')
@@ -4364,7 +4372,7 @@ function battleMorningShow(){
     }
   }
   panel.hidden=!battleState.morningOpen;
-  if(rows.length&&battleState.morningAudioKey!==key){
+  if(battleState.morningAudioKey!==key){
     battleState.morningAudioKey=key;battleMorningPlayAudio();
   }
 }
@@ -4380,6 +4388,19 @@ function battleDivinationSystemAudioCue(actionId,result){
   const yes=!!result?.wolf;
   return prefix==='seer'?(yes?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):
     'audio_system_'+prefix+(yes?'_wolf':'_no_wolf');
+}
+function battlePresentRevelation(actionId,revelation){
+  if(!revelation?.message)return;
+  battleShowResultPopup('',String(revelation.message||''),true);
+  const cue=battleDivinationSystemAudioCue(actionId,revelation);
+  if(actionId==='action_aura_read'){
+    const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
+    if(!playAudioMuted()&&roleName){
+      if(cue&&battleFindAudio('system',cue,revelation.message))
+        void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
+      else battleSpeakCue(roleName);
+    }
+  }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
 }
 async function battleWakeupToDay(expectedKey){
   if(battleState.wakeAdvanceInFlight||battleState.key!==expectedKey||
@@ -4983,21 +5004,9 @@ async function battleConfirm(confirmed=false){
     // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
     if(seerReveal&&result.revelation){
-      const revelation=result.revelation;
-      // Only actual GM divination results own this compact popup.
-      battleShowResultPopup('',String(revelation.message||''),true);
-      const cue=battleDivinationSystemAudioCue(a.actionId,revelation);
-      if(a.actionId==='action_aura_read'){
-        // The Aura Seer must hear the actual role name, never its functions.
-        // Play the configured system cue first when available, then pronounce the
-        // exact name. This also handles roles without dedicated sound recordings.
-        const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
-        if(!playAudioMuted()&&roleName){
-          if(cue&&battleFindAudio('system',cue,revelation.message))
-            void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
-          else battleSpeakCue(roleName);
-        }
-      }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+      battlePresentRevelation(a.actionId,result.revelation);
+      // The result replaces confirmation audio; do not leave its navigation gate locked.
+      finishConfirmAudio();
     }
     // Advance a confirmed turn after Server sync. Scan results stay visible until GM taps outside.
     battleState.pendingNextTurnId=t.id;
@@ -6144,7 +6153,7 @@ function playCycleActiveArtifact(){
 function playRoleCardPayload(role){
   const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
   return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,
-    flags:{allowMultipleActions:role.flags?.allowMultipleActions===true},
+    flags:{allowMultipleActions:role.flags?.allowMultipleActions===true,nightImmune:role.flags?.nightImmune===true},
     functions:(role.functions||[]).map(fn=>({id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
       usageMode:String(fn.usageMode||'eachNight'),usageCount:Math.max(1,Number(fn.usageCount)||1)})),
     limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};

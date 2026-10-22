@@ -43,10 +43,10 @@ test('Village morning report is draggable, dismissible outside, displays bold na
   assert.ok(css.includes('var(--gmww-stage-glass-v330)'));
 });
 
-test('Audio catalog keeps configurable death notice prefix, suffix and exact 1-5 clips',()=>{
+test('Audio catalog keeps configurable death notice prefix, suffix and exact 0-30 clips',()=>{
   for(const id of ['audio_system_morning_deaths_intro','audio_system_morning_dead_noun',
     'audio_system_morning_expelled','audio_system_morning_marked'])
     assert.ok(catalog.includes(id),id);
-  assert.ok(catalog.includes("Array.from({length:5}"), 'one through five are separate configurable clips');
+  assert.ok(catalog.includes("Array.from({length:31}"), 'zero through thirty are separate configurable clips');
   assert.ok(gm.includes('battleMorningPlayAudio()'));
 });

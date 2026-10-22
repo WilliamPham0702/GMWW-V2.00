@@ -7,7 +7,21 @@ const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'')
 const isFrom=(row,matchId,night)=>String(row?.matchId||'')===matchId&&Number(row?.night)===night;
 const distinct=values=>[...new Set(values)];
 
-export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
+// Private rule snapshots are intentionally not added to public assignment summaries.
+export async function readNightAssignments(storage,matchId){
+  const summary=await storage.get('assignments')||[];
+  return Promise.all(summary.map(async row=>{
+    const id=login(row.loginId),stored=await storage.get('roles:'+id),legacy=await storage.get('role:'+id);
+    const records=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
+    const record=records.find(r=>String(r.roleId)===String(row.roleId)&&(!r.matchId||String(r.matchId)===String(matchId)));
+    return {...row,roleCard:record?.roleCard||row.roleCard||{}};
+  }));
+}
+export function isNightImmune(assignments,loginId){
+  return assignments.some(row=>login(row.loginId)===login(loginId)&&row.roleCard?.flags?.nightImmune===true);
+}
+
+export function resolveWolfNight({interactions=[],players={},assignments=[],matchId,night}={}){
   const match=String(matchId||''),cycle=Number(night);
   if(!match||!Number.isInteger(cycle)||cycle<1)
     return {ok:false,error:'INVALID_RESOLUTION_CONTEXT',victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
@@ -39,8 +53,9 @@ export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
       target=seated[next].loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    attacked.push({from:origin,to:target,direction:direction||'none',protected:guards.has(target)});
-    if(guards.has(target)){protectedTargets.push(target);continue}
+    const protectedTarget=guards.has(target)||isNightImmune(assignments,target);
+    attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
+    if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&
       ['dead','expelled'].includes(String(row?.type||''))&&row?.effectActive!==false))continue;
     victims.push(target);

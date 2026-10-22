@@ -112,3 +112,4 @@ jobs:
           node tests/worker-private-delivery-e2e.mjs
           # FAST G4 acceptance uses real HTTP/WebSocket routes and SQLite DO storage.
           node tests/worker-engine-multinight-e2e.mjs
+          node tests/worker-night-rules-e2e.mjs

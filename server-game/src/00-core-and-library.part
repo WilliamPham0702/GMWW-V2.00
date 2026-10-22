@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.180';
+const VERSION='3.181';
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
@@ -451,6 +451,7 @@ function migrateOld(raw){
   s.version=VERSION;return s;
 }
 function applyV210Rules(s){
+  const preferLinked=rows=>rows.find(a=>a.url)||rows.find(a=>a.fileName||a.verifiedBinary)||rows[0];
   const witch=(s.cards||[]).find(x=>x.id==='role_old_witch'||x.legacyId==='source-18');
   if(witch){
     const oldInfo='Phe Dân. Mỗi đêm chọn Đuổi 1 người hoặc Hồi Sinh 1 người, không được làm cả hai. Hồi Sinh chỉ áp dụng cho người chết ở ngày trước hoặc đêm trước theo luật.';
@@ -462,8 +463,8 @@ function applyV210Rules(s){
   }
   const cardAudio=(s.audio&&s.audio.cards)||[];
   const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.sourceKey==='ROLE:source-18'||a.name==='Phù Thuỷ Già');
-  const keepCard=witchAudio[0]||{};
-  Object.assign(keepCard,{id:'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:'ROLE:source-18',fileName:'Phù Thuỷ Già.mp3',verifiedBinary:true});
+  const keepCard=preferLinked(witchAudio)||{};
+  Object.assign(keepCard,{id:keepCard.id||'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:keepCard.sourceKey||'ROLE:source-18',fileName:keepCard.fileName||'Phù Thuỷ Già.mp3',verifiedBinary:keepCard.verifiedBinary!==false});
   s.audio.cards=[keepCard,...cardAudio.filter(a=>!witchAudio.includes(a))];
 
   const actionAudio=(s.audio&&s.audio.actions)||[];
@@ -471,13 +472,16 @@ function applyV210Rules(s){
     {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',verifiedBinary:false},
     {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',verifiedBinary:false}
   ];
-  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||a.sourceKey===c.sourceKey||a.name===c.name));
-  s.audio.actions=[...canonicalActions,...otherActions];
+  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name));
+  s.audio.actions=[...canonicalActions.map(slot=>{
+    const previous=preferLinked(actionAudio.filter(a=>a.id===slot.id||a.targetId===slot.targetId||a.sourceKey===slot.sourceKey||a.name===slot.name));
+    return {...slot,...(previous||{}),targetId:slot.targetId};
+  }),...otherActions];
 
   const currentCards=s.audio.cards||[];
   const wolfCandidates=currentCards.filter(a=>a.id==='audio_group_wolves'||a.sourceKey==='GROUP:WOLVES'||a.name==='Bầy Sói'||a.name==='Sói thức dậy');
-  const wolfKeep=wolfCandidates[0]||{};
-  Object.assign(wolfKeep,{id:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',sourceKey:'GROUP:WOLVES',fileName:'gmww-wolf-pack.m4a',verifiedBinary:true});
+  const wolfKeep=preferLinked(wolfCandidates)||{};
+  Object.assign(wolfKeep,{id:wolfKeep.id||'audio_group_wolves',targetId:'audio_group_wolves',name:'Bầy Sói',targetGroup:'wolves',sourceKey:wolfKeep.sourceKey||'GROUP:WOLVES',fileName:wolfKeep.fileName||'gmww-wolf-pack.m4a',verifiedBinary:wolfKeep.verifiedBinary!==false});
   s.audio.cards=[...s.audio.cards.filter(a=>!wolfCandidates.includes(a)),wolfKeep];
 
   const systemAudio=(s.audio&&s.audio.system)||[];
@@ -496,7 +500,7 @@ function applyV210Rules(s){
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
-    ...Array.from({length:5},(_,i)=>({id:'audio_system_morning_number_'+(i+1),name:String(i+1),targetId:'audio_system_morning_number_'+(i+1),fileName:'',verifiedBinary:false})),
+    ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
 
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
     {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
@@ -516,12 +520,13 @@ function applyV210Rules(s){
     {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
-  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||a.sourceKey===c.sourceKey||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
+  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
   // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
   // Only add missing slots; never overwrite an existing chosen file/audio binding.
   s.audio.system=[...canonicalSystem.map(slot=>{
-    const previous=systemAudio.find(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId));
-    return {...slot,...(previous||{}),id:slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
+    const previous=preferLinked(systemAudio.filter(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId)
+      ||x.name===slot.name||(slot.sourceKey&&x.sourceKey===slot.sourceKey)));
+    return {...slot,...(previous||{}),id:previous?.id||slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
   }),...otherSystem];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');

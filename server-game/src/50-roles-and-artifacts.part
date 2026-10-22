@@ -121,7 +121,7 @@ function playCycleActiveArtifact(){
 function playRoleCardPayload(role){
   const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
   return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,
-    flags:{allowMultipleActions:role.flags?.allowMultipleActions===true},
+    flags:{allowMultipleActions:role.flags?.allowMultipleActions===true,nightImmune:role.flags?.nightImmune===true},
     functions:(role.functions||[]).map(fn=>({id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
       usageMode:String(fn.usageMode||'eachNight'),usageCount:Math.max(1,Number(fn.usageCount)||1)})),
     limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};
