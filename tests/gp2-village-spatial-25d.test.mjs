@@ -34,19 +34,14 @@ test('30 actors have distinct depth-sorted positions without resizing assets',()
  assert.match(gmCss,/body\.play-immersive \.play-player-avatar\{width:56px!important;height:74px!important\}/);
 });
 
-test('GP2 scene is background-only, matching day/night world geometry and artwork paths',()=>{
- const day=read('assets/backgrounds/gmww-gp2-village-day.svg');
- const night=read('assets/backgrounds/gmww-gp2-village-night.svg');
- for(const svg of [day,night]){
-  assert.match(svg,/<svg[^>]*viewBox="0 0 864 1536"/);
-  assert.doesNotMatch(svg,/<text\b|<button\b|GMWW|XEM TRƯỚC/i);
-  assert.match(svg,/cx="432" cy="983"/);
- }
- const gm=read('server-game/current/style.css'),web=read('assets/village/village-art.css');
- assert.match(gm,/gmww-gp2-village-day\.svg/);
- assert.match(gm,/gmww-gp2-village-night\.svg/);
- assert.match(web,/gmww-gp2-village-day\.svg/);
- assert.match(web,/gmww-gp2-village-night\.svg/);
+test('GP2 does not silently ship the rejected placeholder backgrounds',()=>{
+  for(const path of ['assets/backgrounds/gmww-gp2-village-day.svg','assets/backgrounds/gmww-gp2-village-night.svg'])
+    assert.equal(fs.existsSync(path),false,'Rejected placeholder must not be shipped: '+path);
+  const gm=read('server-game/current/style.css'),web=read('assets/village/village-art.css');
+  assert.doesNotMatch(gm,/gmww-gp2-village-(day|night)\\.svg/);
+  assert.doesNotMatch(web,/gmww-gp2-village-(day|night)\\.svg/);
+  assert.match(gm,/gmww-village-day-v260\\.webp/);
+  assert.match(web,/gmww-village-night-v260\\.webp/);
 });
 
 test('GM and Player Web anchor fire to the shared layout and preserve route guard',()=>{
