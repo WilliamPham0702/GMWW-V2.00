@@ -18,7 +18,9 @@ test('Auto GM pause and resume preserves authoritative remaining time',()=>{
   assert.ok(server.includes('autoPausedRemainingMs'));
   assert.ok(server.includes('runtime.deadlineAt=null;runtime.autoAdvance=false'));
   assert.ok(server.includes('runtime.deadlineAt=remaining>0?new Date(nowMs+Math.max(100,remaining)).toISOString():null'));
-  assert.ok(server.includes('meta.cycleStartedAt=new Date(nowMs-Math.max(0,totalMs-remaining)).toISOString()'));
+  assert.ok(server.includes('meta.autoPausedRemainingMs=dayClockRemainingMs(meta,cfg,nowMs)'));
+  assert.ok(server.includes('meta.dayDeadlineAt=new Date(nowMs+remaining).toISOString()'));
+  assert.ok(server.includes('await this.scheduleRoomAlarm(meta)'));
   assert.ok(server.includes('nightRuntime:runtime||null'));
 });
 

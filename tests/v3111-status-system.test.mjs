@@ -42,8 +42,9 @@ test('Worker blocks battle actions for blocking statuses and keeps legacy blocks
   const rules={disabled_permanent:{blocks:true},disabled_2n:{blocks:true},infected:{blocks:false}};
   const evaluate=(type,extra={})=>isBattleActorBlocked([{...base,type,...extra}],
     {actorId:'gm-player',matchId:'m1',statusDefs:rules});
-  for(const type of ['frozen','dead','expelled'])
+  for(const type of ['frozen','dead'])
     assert.equal(evaluate(type),true,type);
+  assert.equal(evaluate('expelled'),false);
   assert.equal(evaluate('status',{statusId:'disabled_permanent'}),true);
   assert.equal(evaluate('status',{statusId:'disabled_2n'}),true);
   assert.equal(evaluate('status',{statusId:'infected'}),false);

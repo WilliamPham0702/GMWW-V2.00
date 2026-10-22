@@ -77,6 +77,6 @@ test('Legacy night-one presentation keeps the Bầy Sói introduction exactly on
   const queue=buildNightQueue({night:1,normalTurns:[]});
   const display=timelineDisplaySteps(queue);
   assert.equal(display.filter(x=>x.kind==='wolf-introduction').length,1);
-  assert.equal(display.filter(x=>x.kind==='early-artifact-window').length,1);
+  assert.equal(display.filter(x=>x.kind==='early-artifact-window').length,0);
   assert.equal(display.at(-1).kind,'village-wakeup');
 });

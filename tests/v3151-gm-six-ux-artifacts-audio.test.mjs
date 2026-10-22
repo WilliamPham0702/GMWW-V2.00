@@ -81,7 +81,8 @@ test('V3.152 GM packaged Runtime and prior IPA shell remain stable',()=>{
  '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''),fs.readFileSync('server-game/current/app.js','utf8'));
  const worker=fs.readFileSync('src/index.js','utf8');
- assert.match(worker,/VERSION="V3.154",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3154"/);
+ const version=JSON.parse(fs.readFileSync('package.json','utf8')).version.replace(/\.0$/,'');
+ assert.ok(worker.includes('VERSION="V'+version+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+version.replaceAll('.','')+'"'));
 });
 
 test('V3.152 artifact action count and drag touch behavior are bounded',()=>{

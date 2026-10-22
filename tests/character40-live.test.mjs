@@ -6,9 +6,26 @@ import {character40Catalog,character40VisualId,character40Image,character40State
 import {normalizeGameCharacterId,activeGameCharacterId} from '../src/gmww-player-identity-rules.js';
 import {normalizeRendererCommand} from '../assets/village/character40-renderer.mjs';
 const read=p=>fs.readFileSync(p);
+function hasWebpAlpha(bytes){
+ assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
+ for(let offset=12;offset+8<=bytes.length;){
+  const type=bytes.toString('ascii',offset,offset+4),size=bytes.readUInt32LE(offset+4),start=offset+8;
+  if(type==='VP8X'&&(bytes[start]&0x10))return true;
+  if(type==='VP8L'&&(bytes.readUInt32LE(start+1)&0x10000000))return true;
+  offset=start+size+(size&1);
+ }
+ return false;
+}
+test('all forty shipped portraits contain real alpha transparency, including characters 11–40',()=>{
+ for(let n=1;n<=40;n++){
+  const id='character-'+String(n).padStart(2,'0');
+  assert.ok(hasWebpAlpha(read('assets/characters/gmww40/originals/'+id+'.webp')),id+' must not ship an opaque white rectangle');
+ }
+});
 test('active catalog replaces all forty IDs including 15; aliases preserve existing account identity',()=>{
  const rows=character40Catalog();assert.equal(rows.length,40);assert.equal(new Set(rows.map(x=>x.id)).size,40);
  assert.equal(rows[14].id,'character-15');assert.ok(rows.every(c=>c.motionVersion==='c40-1'&&c.actions.length===4));
+ assert.ok(rows.every(c=>c.imageUrl.endsWith('/image?rev=c40-4')),'portrait cache revision must advance independently of the unchanged motion version');
  assert.equal(normalizeGameCharacterId('character-41'),'character-41');assert.equal(activeGameCharacterId('character-42'),'character-42');
  assert.equal(character40VisualId('character-41'),'character-39');assert.equal(character40VisualId('character-42'),'character-40');assert.equal(character40VisualId('character-43'),null);
 });
@@ -25,7 +42,7 @@ test('stationary death and revival change both production Player command keys wi
 test('all portrait routes serve the accepted art with revalidation and CORS, never old character15',async()=>{
  const env={ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{headers:{'content-type':'image/webp'}})}};
  for(let n=1;n<=42;n++){const id='character-'+String(n).padStart(2,'0');const response=await character40Image(env,id,new Request('https://example.test/api/game-characters/'+id+'/image'));
- assert.equal(await response.text(),'/characters/gmww40/originals/'+character40VisualId(id)+'.webp');assert.equal(response.headers.get('access-control-allow-origin'),'*');assert.match(response.headers.get('cache-control'),/must-revalidate/);}
+ assert.equal(await response.text(),'/characters/gmww40/portraits/'+character40VisualId(id)+'.webp');assert.equal(response.headers.get('access-control-allow-origin'),'*');assert.match(response.headers.get('cache-control'),/must-revalidate/);}
 });
 test('accepted atlas/original bytes packaged for GM and Web are hash identical to reviewed preview',()=>{
  const catalog=JSON.parse(read('prototype/character40/catalog.json'));

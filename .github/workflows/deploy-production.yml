@@ -156,6 +156,12 @@ jobs:
           echo "::error::Deployment blocked: candidate is older than Production, versions are inconsistent or Production health is unavailable."
           exit 1
 
+      - name: Generate and verify Character40 avatar portrait assets
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Deploy Worker to Production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -180,6 +186,55 @@ jobs:
           done
           cat /tmp/health.json
           test "$OK" = "1"
+          # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
+          # alone cannot prove the just-uploaded static assets have reached the edge.
+          # Wait for the new portrait bytes, then verify all 40 IDs. Fail closed if
+          # propagation never finishes; retain the previous deployment for rollback.
+          AVATAR_READY=0
+          for TRY in $(seq 1 40); do
+            if curl --fail --location --silent --show-error --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
+              > /tmp/gmww-live-avatar.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
+                AVATAR_READY=1
+                break
+              fi
+              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/portraits/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+            fi
+            sleep 2
+          done
+          test "$AVATAR_READY" = "1" || {
+            echo "::error::New Worker assets did not propagate; production verification blocked."
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/portraits/character-01.webp)"
+            echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+            exit 1
+          }
+          echo "Verify Production: fresh Character40 portrait revision is live."
+
+          for N in $(seq 1 40); do
+            ID=$(printf 'character-%02d' "$N")
+            MATCHED=0
+            for TRY in $(seq 1 5); do
+              if curl --fail --location --silent --show-error --max-time 20 \
+                -H 'Cache-Control: no-cache' \
+                "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
+                > /tmp/gmww-live-avatar.webp && \
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
+                MATCHED=1
+                break
+              fi
+              sleep 2
+            done
+            test "$MATCHED" = "1" || {
+              echo "::error::Production avatar/atlas bytes differ for $ID"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/portraits/$ID.webp")"
+              echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+              exit 1
+            }
+          done
+          echo "Verify Production: all 40 portrait/animation identities and bytes PASS."
+
           # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
           curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
           grep -q '<main class="game day"' /tmp/gmww-production-village.html

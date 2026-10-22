@@ -26,6 +26,7 @@ function harness(result={ok:true,undoToken:'undo-1',label:'Bảo Vệ',serverPro
     playSyncRoom:()=>{syncCalls++;return sync},playFlashError:msg=>errors.push(msg),
     renderPlayBattle:()=>{renders++},battleVisualType:()=> 'protected',
     battleClear:()=>{battleState.targets=[];battleState.actionId='';battleState.nonce=''},
+    gmHapticFeedback:()=>{},
     document:{getElementById:id=>id==='playPhaseTitle'?title:null},
     state:{cards:[]},confirm:()=>true,console:{info:(...v)=>logs.push(v)},Date};
   const start=part.indexOf('async function battleConfirm(confirmed=false){');

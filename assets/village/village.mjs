@@ -1,10 +1,11 @@
 import "../status-visuals.js?v=v3139-orbits";
-import "./village-layout.js?v=fire3101&seat=3128";
+import "./village-layout.js?v=fire3101-gp2&seat=3187-circle360-presets-even";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
 import {startVillagePerformanceReporter} from "./village-performance.mjs";
-import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character40-renderer.mjs?v=c40-1";
+import {mountCharacterRenderer,updateCharacterRenderer,normalizeRendererCommand} from "./character40-renderer.mjs?v=c40-1-mobile2";
+import {resolveVillageCharacterId} from "./character40-identity.mjs";
 // Isolated visual prototype: never writes to live rooms or player accounts.
 // Exported helpers allow deterministic Node tests without a DOM.
 export function positions(count,shape="",offset=null,spacing=100){if(!Number.isInteger(count)||count<1||count>30)throw Error("COUNT_OUT_OF_RANGE");return layout.positions(count,shape,offset,spacing)}
@@ -22,6 +23,14 @@ export function reconcileVillageChildren(container,nodes){
   while(container.children.length>nodes.length)container.lastElementChild.remove();
 }
 export function villageMotionNeedsFrame(players){return players.some(p=>p?.movementStatus==="moving")}
+export function liveDisplaySeatId(player, projectedSeats={}) {
+  // Preview Seat IDs are only placeholders. Never anchor an unseated walker to
+  // one: that disables interpolation and makes click-to-move look like teleport.
+  const assigned=Number(player?.seatId||0);
+  if(!Number.isInteger(assigned)||assigned<=0)return null;
+  return Number(projectedSeats?.[String(player?.id||player?.participantId||'')])||assigned;
+}
+
 
 export function mapCharacterAnimation(p){
   const a=p?.characterAnimation;
@@ -74,9 +83,12 @@ if(game){
     }catch{return "";}
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
-  let matchStartedAt=0;
+  let matchStartedAt=0,battleStatic=false;
   let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
+  // Last actually painted world position; never infer an expired move's start
+  // from a newer heartbeat (which would make avatars teleport to the endpoint).
+  const visualLastPaintedPositions=new Map();
   const mountedPlayerNodes=new Map(),mountedEmptySeatNodes=new Map();
   let sitWakeTimer=0;
   const villageRenderMetrics={renders:0,created:0,reused:0,movementFrames:0,mounted:0};
@@ -96,7 +108,7 @@ if(game){
     if(data?.movementStatus!=="moving")return false;
     // Preserve previous interpolation for unseated visitors and the stored
     // per-person death anchor even after the movement duration elapses.
-    if(!Number(data?.displaySeatId||data?.seatId||0))return true;
+    if(!Number(data?.seatId||0))return true; // Only actual assigned Seats block free roaming.
     const started=Number(data?.moveStartedAt||0),duration=Number(data?.moveDurationMs||0);
     if(!(started>0&&duration>0&&now<started+duration))return false;
     // Assigned Seats remain on the fire-centred template in setup; only a
@@ -126,6 +138,7 @@ if(game){
     return spawnPosition(data?.id)
   }
   function bridgeIncomingPositions(incoming,nextSetup,nextCount,previousRows=all){
+    if(battleStatic){visualFallbackMoves.clear();visualLastPaintedPositions.clear();return incoming}
     const clock=Number(nextSetup?.clockOffsetMs||setupState.clockOffsetMs||0),now=Date.now()+clock,previous=new Map(previousRows.map(p=>[String(p?.id||''),p])),seen=new Set();
     const out=incoming.map(p=>{
       const id=String(p?.id||'');if(!id)return p;seen.add(id);
@@ -143,12 +156,14 @@ if(game){
         visualFallbackMoves.delete(id)
       }
       const prev=previous.get(id);if(!prev)return p;
-      const from=visualPlayerPoint(prev,count,now),distance=Math.hypot(target.x-from.x,(target.y-from.y)*2);
+      const painted=visualLastPaintedPositions.get(id);
+      const from=painted||movementPosition(prev,null,now),distance=Math.hypot(target.x-from.x,(target.y-from.y)*2);
       if(!Number.isFinite(distance)||distance<.65)return p;
       const duration=Math.max(720,Math.min(1900,Math.round(distance*42))),move={moveFromX:from.x,moveFromY:from.y,moveToX:target.x,moveToY:target.y,moveStartedAt:now,moveDurationMs:duration,moveId:'visual:'+id+':'+now};
       visualFallbackMoves.set(id,move);return{...p,...move,movementStatus:'moving'}
     });
     for(const id of visualFallbackMoves.keys())if(!seen.has(id))visualFallbackMoves.delete(id);
+    for(const id of visualLastPaintedPositions.keys())if(!seen.has(id))visualLastPaintedPositions.delete(id);
     return out
   }
   function screenPoint(p,width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536){return layout.toScreen(p,width,height)}
@@ -156,7 +171,7 @@ if(game){
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!dead&&!!position?.moving,sitting=!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
@@ -178,9 +193,7 @@ if(game){
     }
     const display=screenPoint(position);button.style.left=display.x+"%";button.style.top=display.y+"%";button.style.zIndex=String(10+Math.round(position.y));if(position?.moving)button.dataset.walkDir=walkDirection(data)
     const avatar=document.createElement("span");avatar.className="portrait";
-    const rawCharacterId=typeof data.gameCharacterId==="string"&&/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(data.gameCharacterId)?data.gameCharacterId:"";
-    const legacyIndex=rawCharacterId?Number(rawCharacterId.slice(-2)):0,seed=String(data.id||data.participantId||data.displayName||index),seedHash=[...seed].reduce((h,ch)=>((h*31)+ch.charCodeAt(0))>>>0,0);
-    const characterId=rawCharacterId?"character-"+String(((legacyIndex-1)%20)+1).padStart(2,"0"):"character-"+String((seedHash%20)+1).padStart(2,"0");
+    const characterId=resolveVillageCharacterId(data.gameCharacterId,data.id||data.participantId||data.displayName||index);
     const avatarId=typeof data.avatarId==="string"&&/^[A-Za-z0-9._-]{1,100}$/.test(data.avatarId)?data.avatarId:"";
     const direction=position?.moving&&!visuallyDeceased(data)?walkDirection(data):"right",gmUrl=isGM?trustedAvatarUrl(data.avatarUrl||"/gm/gm-white-wolf.webp"):"",characterUrl=isGM?"":(position?.sitting&&!visuallyDeceased(data)&&seatedCharacterUrl(characterId)?seatedCharacterUrl(characterId):trustedAvatarUrl(walkFrameUrl(characterId,walkFrameFor(data),direction))),legacyUrl=trustedAvatarUrl(data.avatarUrl||(avatarId?"/api/avatars/"+encodeURIComponent(avatarId)+"/image":"")),safeDefault=trustedAvatarUrl(walkFrameUrl("character-01",1));
     const sources=(isGM?[gmUrl]:[characterUrl,legacyUrl,safeDefault]).filter((u,i,a)=>u&&a.indexOf(u)===i);
@@ -193,6 +206,28 @@ if(game){
     const role=document.createElement("span");role.className="player-role";role.textContent=safeText(data.roleName||"");if(!role.textContent)role.hidden=true;
     over.append(name,role);button.append(over,avatar);const statusBadge=button.querySelector(":scope > .gmww-sv-badges");if(statusBadge)over.prepend(statusBadge);button.setAttribute("aria-label",(actualSeat?("Vị trí "+actualSeat+" · "):"")+playerName+(data?.online===false?" · Offline":" · Online"));
     button._gmwwLive={data,actualSeat,playerName,isGM};
+    // Player-led nomination: drag the viewer's own Character to another Character.
+    // The server validates eligibility, nomination window and restrictions.
+    if(embedded&&!isGM){
+      button.addEventListener('pointerdown',e=>{
+        if(!setupState.gallowsCanNominate||!button.classList.contains('self')||e.button>0)return;
+        const startX=e.clientX,startY=e.clientY,pointerId=e.pointerId;
+        const release=up=>{
+          if(up.pointerId!==pointerId)return;
+          document.removeEventListener('pointerup',release,true);
+          document.removeEventListener('pointercancel',cancel,true);
+          if(Math.hypot(up.clientX-startX,up.clientY-startY)<20)return;
+          const target=document.elementFromPoint(up.clientX,up.clientY)?.closest?.('.player[data-player-id]');
+          const targetId=String(target?.dataset.playerId||'');
+          if(!targetId||target===button||targetId==='gm')return;
+          try{window.parent.postMessage({type:'gmww:gallows-drag-nominate',participantId:targetId},window.location.origin)}catch{}
+        };
+        const cancel=()=>{document.removeEventListener('pointerup',release,true);document.removeEventListener('pointercancel',cancel,true)};
+        document.addEventListener('pointerup',release,true);
+        document.addEventListener('pointercancel',cancel,true);
+      });
+    }
+
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
       if(current.isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}
@@ -256,6 +291,7 @@ if(game){
     else if(button.dataset.seatId)delete button.dataset.seatId;
     if(data.moveId){if(button.dataset.moveId!==String(data.moveId))button.dataset.moveId=String(data.moveId)}
     else if(button.dataset.moveId)delete button.dataset.moveId;
+    if(id)visualLastPaintedPositions.set(id,{x:pos.x,y:pos.y});
     const point=screenPoint(pos),left=point.x+"%",top=point.y+"%",depth=String(10+Math.round(pos.y));
     if(button.style.left!==left)button.style.left=left;
     if(button.style.top!==top)button.style.top=top;
@@ -314,7 +350,7 @@ if(game){
       }
       const pos=movementPosition(data,p),button=stablePlayerNode(data,pos,seatId,i);desiredPlayers.push(button);const item=document.createElement("span");item.textContent=seatId+" · "+safeText(data.displayName)+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item)
     });
-    for(const data of unseated){const pos=movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
+    for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
     const alive=new Set(all.map(p=>String(p.id)));
     for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
@@ -324,17 +360,17 @@ if(game){
     const clock=Date.now()+Number(setupState.clockOffsetMs||0);
     const expirations=all.filter(p=>p?.villageActivity==="sitting"&&Number(p.sitUntil||0)>clock).map(p=>Number(p.sitUntil));
     if(expirations.length)sitWakeTimer=setTimeout(()=>{sitWakeTimer=0;render()},Math.max(40,Math.min(2147483647,Math.min(...expirations)-clock+30)));
-    if(villageMotionNeedsFrame(all)&&!document.hidden)moveFrame=requestAnimationFrame(animateMovementFrame)
+    if(!battleStatic&&villageMotionNeedsFrame(all)&&!document.hidden)moveFrame=requestAnimationFrame(animateMovementFrame)
   }
   function animateMovementFrame(now){
-    moveFrame=0;if(document.hidden)return;
+    moveFrame=0;if(document.hidden||battleStatic)return;
     villageRenderMetrics.movementFrames++;
     let active=false;
     const nowMs=Date.now()+Number(setupState.clockOffsetMs||0),width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536;
     for(const data of all){
       if(data?.movementStatus!=="moving")continue;
       const el=mountedPlayerNodes.get(String(data.id));if(!el||!el.isConnected)continue;if(visuallyDeceased(data))continue; // Display-only: deceased chibi does not visually walk.
-      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
+      const pos=movementPosition(data,null,nowMs),display=screenPoint(pos,width,height);visualLastPaintedPositions.set(String(data.id),{x:pos.x,y:pos.y});el.style.left=display.x+"%";el.style.top=display.y+"%";el.style.zIndex=String(10+Math.round(pos.y));active=active||pos.moving;
       const avatar=el.querySelector(".portrait.game-character"),renderedId=avatar?.querySelector('[data-character-renderer]')?.dataset.characterId||data?.gameCharacterId,
       semantic=animationCommandFor({...data,gameCharacterId:renderedId},pos);
       const rigUpdated=!!avatar?.querySelector('[data-character-renderer]');
@@ -380,15 +416,17 @@ if(game){
     // Old running rooms with missing IDs no longer spawn players in a clump.
     const visualSeats=layout.projectedSeatIds(incoming.filter(p=>!p.isGM),nextCount);
     matchStartedAt=Date.parse(room.startedAt||"")||0;
+    battleStatic=room.playerSceneMode==='battle'||['running','started','game','playing'].includes(String(room.phase||'').toLowerCase());
     for(const p of incoming){
+      if(battleStatic){p.movementStatus='idle';p.villageActivity='idle';}
       if(p.isGM)continue;
-      p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
+      p.displaySeatId=liveDisplaySeatId(p,visualSeats);
       if(matchStartedAt&&p.movementStatus==="moving"&&Number(p.moveStartedAt)>0&&
         Number(p.moveStartedAt)<=matchStartedAt)p.movementStatus="idle";
     }
     const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
-    document.body.classList.toggle("player-battle",room.playerSceneMode==="battle");
+    document.body.classList.toggle("player-battle",battleStatic);
     if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
@@ -430,7 +468,7 @@ if(game){
         count=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(all.length,...all.map(x=>Number(x?.seatId||0)||0),1)));
         matchStartedAt=Date.parse(room.startedAt||"")||0;
         const visualSeats=layout.projectedSeatIds(all.filter(p=>!p.isGM),count);
-        for(const p of all)if(!p.isGM)p.displaySeatId=visualSeats[String(p.id)]||p.seatId||null;
+        for(const p of all)if(!p.isGM)p.displaySeatId=liveDisplaySeatId(p,visualSeats);
         if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
         render();if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
       },

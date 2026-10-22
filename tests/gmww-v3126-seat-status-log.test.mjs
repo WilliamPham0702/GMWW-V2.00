@@ -23,7 +23,7 @@ test('V3.126: twelve occupied seats use exactly 12 perimeter anchors around the 
   for(const p of ps)assert.ok(layout.inside(p.x,p.y));
   const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y);
   assert.ok(Math.min(...xs)<35&&Math.max(...xs)>65);
-  assert.ok(Math.min(...ys)<42&&Math.max(...ys)>56);
+  assert.ok(Math.min(...ys)<layout.fire.y-12&&Math.max(...ys)>layout.fire.y+12);
   assert.match(village,/For a seated player, the authoritative seat map always wins/);
 });
 test('V3.126: simultaneous Bảo Vệ and Săn each get orbit icons without stacking animation loops',()=>{

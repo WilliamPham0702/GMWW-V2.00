@@ -221,7 +221,7 @@ function memberCharacterCatalog(serverRows=[]){
   const source=new Map((Array.isArray(serverRows)?serverRows:[]).map(x=>[String(x?.id||''),x]));
   return Array.from({length:MEMBER_CHARACTER_COUNT},(_,i)=>{
     const n=String(i+1).padStart(2,'0'),id='character-'+n,remote=source.get(id)||{};
-    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-1',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
+    return{id,name:String(remote.name||('Nhân vật '+n)),imageUrl:GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(id)+'/image?rev=c40-2',frameCount:i<MEMBER_ANIMATED_CHARACTER_COUNT?6:1,source:'game-character'};
   });
 }
 function memberCharacterFrameUrl(id,frame=1){
@@ -229,7 +229,7 @@ function memberCharacterFrameUrl(id,frame=1){
   if(!m)return memberAvatarUrl(raw);
   return Number(m[1])<=MEMBER_ANIMATED_CHARACTER_COUNT
     ?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/frame/'+f
-    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-1';
+    :GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-2';
 }
 function memberSelectedCharacterId(m){
   const direct=String(m?.gameCharacterId||m?.avatarId||'');
@@ -257,7 +257,7 @@ function ensureMemberCharacterPreviewTicker(){
 }
 function memberEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function memberTitleCase(v){return String(v||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w?w.charAt(0).toLocaleUpperCase('vi-VN')+w.slice(1):w).join(' ')}
-function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-1':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image?rev=c40-1'}
+function memberAvatarUrl(id){const raw=String(id||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(raw)+'/image?rev=c40-2':GMWW_SERVER_BASE+'/api/avatars/'+encodeURIComponent(raw)+'/image?rev=c40-2'}
 function memberDate(v,withTime=false){
   if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
   return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -709,7 +709,7 @@ const PLAY_STEP_COPY={
   battle:{k:'VÀO TRẬN',t:'Vào Trận',x:'Tiếp tục điều khiển toàn bộ trận ngay trong Làng 2D.',a:'BẮT ĐẦU ĐÊM 1'}
 };
 let playSceneState=(()=>{
-  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
+  const base={step:'lobby',lobbyGeneration:0,roomMode:'online',roomEnabled:false,seatMoveMode:'instant',seatCount:24,autoGM:true,phase:'lobby',night:0,artifactCount:0,roomCode:'—',gmToken:'',selectedMemberIds:[],activePlayerId:'',roleId:'',artifactId:'',rolePlan:{},roleDurations:{},assignmentsPreview:[],gameName:'Ván GMWW',gameTemplateId:'',gameTiming:{villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,defaultActionSec:30,artifactActionSec:30,autoAdvance:true},artifactLimitPerCycle:3,matchId:'',artifactsEnabled:false};
   try{let raw=localStorage.getItem(GMWW_PLAY_SCENE_KEY),migratedFrom='';if(!raw)for(const key of GMWW_OLD_PLAY_SCENE_KEYS){raw=localStorage.getItem(key);if(raw){migratedFrom=key;break}}const saved=Object.assign(base,JSON.parse(raw||'{}'));saved.roomMode=saved.roomMode==='online'?'online':'offline';saved.roomEnabled=saved.roomEnabled===true;saved.seatMoveMode=saved.seatMoveMode==='walk'?'walk':'instant';saved.seatCount=Math.max(1,Math.min(30,Number(saved.seatCount)||12));if(saved.step==='members')saved.step='seats';saved.lobbyGeneration=Math.max(0,Number(saved.lobbyGeneration||0));if(migratedFrom){saved.roomCode='—';saved.gmToken='';saved.roomEnabled=false;saved.selectedMemberIds=[];saved.assignmentsPreview=[];saved.activePlayerId='';saved.roleId='';saved.artifactId='';saved.matchId='';saved.gameTemplateId='';saved.rolePlan={};saved.roleDurations={};saved.step='lobby';saved.phase='lobby';saved.night=0;saved.artifactCount=0}if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))&&!['lobby','room'].includes(saved.step))saved.step='lobby';if(['lobby','room'].includes(saved.step)&&!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(saved.roomCode||''))){saved.roomCode='—';saved.gmToken='';saved.selectedMemberIds=[];saved.activePlayerId=''}return saved}catch{return base}
 })();
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};

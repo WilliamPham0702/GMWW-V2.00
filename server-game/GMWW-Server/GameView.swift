@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AudioToolbox
 import CryptoKit
 
 struct GameView: View {
@@ -19,6 +20,7 @@ struct GameWebView: UIViewRepresentable {
         config.websiteDataStore = .default()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.userContentController.add(context.coordinator, name: "gmwwUpdater")
+        config.userContentController.add(context.coordinator, name: "gmwwHaptic")
 
         let shellVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
         let escapedVersion = shellVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
@@ -46,6 +48,7 @@ struct GameWebView: UIViewRepresentable {
 
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "gmwwUpdater")
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "gmwwHaptic")
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
@@ -253,6 +256,22 @@ struct GameWebView: UIViewRepresentable {
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "gmwwHaptic" {
+                guard message.frameInfo.isMainFrame,
+                      let body = message.body as? [String: Any],
+                      body["event"] as? String == "action-confirmed" else { return }
+                DispatchQueue.main.async {
+                    // UIKit tap feedback can be subtle on some iPhones. Add native
+                    // system vibration for a confirmed action, not for every render.
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.prepare()
+                    feedback.notificationOccurred(.success)
+                    if UIDevice.current.userInterfaceIdiom == .phone {
+                        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+                    }
+                }
+                return
+            }
             guard message.name == "gmwwUpdater",
                   let body = message.body as? [String: Any],
                   let action = body["action"] as? String,

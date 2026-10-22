@@ -13,7 +13,7 @@ const village=fs.readFileSync('assets/village/village.mjs','utf8');
 const villageCss=fs.readFileSync('assets/village/village.css','utf8');
 
 test('V3.149 GM displays day powers and posts an authenticated day-action with no night turn',async()=>{
-  assert.match(gm,/const actions=\(phase==='day'\|\|\(t&&phase==='night'\)\)\?battleActions\(\):\[\]/);
+  assert.match(gm,/const allActions=\(phase==='day'\|\|\(t&&phase==='night'\)\)\?battleActions\(\):\[\]/);
   assert.match(gm,/if\(playSceneState.phase==='day'\)\{await battleConfirmDay\(confirmed\);return\}/);
   const start=gm.indexOf('async function battleConfirmDay(');
   const end=gm.indexOf('async function battleConfirm(',start);
@@ -27,6 +27,7 @@ test('V3.149 GM displays day powers and posts an authenticated day-action with n
     renderPlayBattle:()=>{},battleClear:()=>{state.targets=[];state.nonce='';state.actionId=''},
     playSyncRoom:async()=>true,playRoomApi:async(path,opts)=>{apiCalls.push({path,data:JSON.parse(opts.body)});return {ok:true,result:{message:'Đã thực hiện'}}},
     battleShowResultPopup:(title,message)=>notices.push(message),battlePlayConfiguredAudio:()=>Promise.resolve(),
+    gmHapticFeedback:()=>{},
     confirm:()=>true,Date
   };
   const confirmDay=vm.runInNewContext(gm.slice(start,end)+';battleConfirmDay',ctx);

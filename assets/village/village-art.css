@@ -103,3 +103,29 @@ html.embedded .hud{display:none!important}
     background-position:center center!important;
   }
 }
+
+/* V3.185: published image is the stage's own background, not ::after.
+   Await metadata + both decoded images before the first visible paint. */
+.stage.scene-awaiting{visibility:hidden!important}
+.scene-boot-status{
+ position:fixed;inset:0;z-index:80;display:grid;place-items:center;
+ background:#081a27;color:#f3f7fb;font:600 14px system-ui,sans-serif;
+ text-align:center;pointer-events:none;
+}
+.scene-boot-status[hidden]{display:none!important}
+.stage.custom-scene,.night .stage.custom-scene{
+ background-image:var(--gmww-scene-image)!important;
+ background-color:#081a27!important;
+ background-size:100% 100%!important;
+ background-position:center center!important;
+ background-repeat:no-repeat!important;
+}
+.stage.custom-scene::after,.night .stage.custom-scene::after{
+ content:none!important;display:none!important;
+}
+.night .stage.custom-scene::before{
+ background:transparent!important;
+}
+.stage.custom-scene > .scene{
+ position:absolute!important;inset:0!important;z-index:2!important;
+}

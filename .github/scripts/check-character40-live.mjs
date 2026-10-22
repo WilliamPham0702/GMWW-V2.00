@@ -19,6 +19,23 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
  // Run rendering between inspector calls instead of holding the suite inside one evaluation.
  await page.waitForTimeout(1000);
  console.log(name+' external rAF probe: '+await page.evaluate(()=>JSON.stringify({probe:window.__c40Test.probe,hidden:document.hidden})));
+ // Decode the real portrait responses: an alpha flag alone does not prove the white background is gone.
+ const portraits=await page.evaluate(async()=>{
+  const {characters}=await (await fetch('/api/game-characters')).json();let checked=0;
+  for(const c of characters){
+   const img=new Image();img.src=c.imageUrl;await img.decode();
+   const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+   const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);const {data}=ctx.getImageData(0,0,canvas.width,canvas.height);
+   let clear=0,solid=0;for(let i=3;i<data.length;i+=4){if(data[i]===0)clear++;if(data[i]>=240)solid++;}
+   if(clear<data.length/4*.08||solid<data.length/4*.08)throw Error(c.id+' requires transparent background and visible character');
+   for(const [x,y] of [[0,0],[canvas.width-1,0],[0,canvas.height-1],[canvas.width-1,canvas.height-1]]){
+    if(data[(y*canvas.width+x)*4+3]>1)throw Error(c.id+' has opaque portrait corner');
+   }
+   checked++;
+  }
+  return checked;
+ });
+ assert.equal(portraits,40);console.log(name+': 40 live portraits decoded; transparent backgrounds and visible characters verified');
  const command=async c=>page.evaluate(c=>{const t=window.__c40Test;if(!t.renderer.updateCharacterRenderer(t.host,c))throw Error('Update failed');},c);
  const picture=async()=>page.evaluate(()=>window.__c40Test.root.firstElementChild.toDataURL());
  const diagnostic=async()=>page.evaluate(()=>{const r=window.__c40Test.root;return JSON.stringify({dataset:r.dataset,state:r._gmwwMotion,hidden:document.hidden,connected:r.isConnected});});
@@ -44,5 +61,45 @@ for(const [name,browserType] of [['webkit',webkit],['chromium',chromium]]){
    await command({characterId:id,state:'idle',motion:'idle',facing:'left',paused:false});const living=new Set();for(let k=0;k<6;k++){living.add(await picture());await page.waitForTimeout(150);}assert.ok(living.size>1,'revived actor must resume');
   }
  }
+ // End-to-end: test through the REAL parent→iframe postMessage bridge.
+ // Opening /village/?embed=1 at top level is intentionally not embedded:
+ // window.parent===window, so it cannot receive trusted parent state.
+ await page.evaluate(()=>{
+  const iframe=document.createElement('iframe');
+  iframe.id='gmwwAvatarIdentityE2E';
+  iframe.src='/village/?embed=1';
+  iframe.style.cssText='position:fixed;left:0;top:0;width:390px;height:844px;z-index:-1';
+  document.body.append(iframe);
+ });
+ await page.waitForFunction(()=>{
+  const iframe=document.getElementById('gmwwAvatarIdentityE2E');
+  return iframe?.contentDocument?.readyState==='complete'&&!!iframe.contentDocument.querySelector('.stage');
+ },null,{timeout:15000});
+ for(let n=1;n<=40;n++){
+  const selected='character-'+String(n).padStart(2,'0');
+  await page.evaluate(characterId=>{
+   document.getElementById('gmwwAvatarIdentityE2E').contentWindow.postMessage({
+    type:'gmww:village-state',
+    players:[{participantId:'member:avatar-regression',displayName:'Avatar regression',gameCharacterId:characterId,positionX:48,positionY:48,online:true,movementStatus:'idle'}],
+    room:{seatCount:8,playerSceneMode:'lobby',roomMode:'online'},
+    setup:{viewerParticipantId:'member:avatar-regression',showSeats:false,walkEnabled:false,characterScale:100},
+    cycle:{phase:'lobby'}
+   },location.origin);
+  },selected);
+  try{
+   await page.waitForFunction(expected=>{
+    const doc=document.getElementById('gmwwAvatarIdentityE2E')?.contentDocument;
+    const node=doc?.querySelector('.player[data-player-id="member:avatar-regression"] [data-character-renderer]');
+    return node?.dataset.characterId===expected;
+   },selected,{timeout:6500});
+  }catch(error){
+   const observed=await page.evaluate(()=>{
+    const doc=document.getElementById('gmwwAvatarIdentityE2E')?.contentDocument;
+    return [...(doc?.querySelectorAll('.player')||[])].map(p=>({id:p.dataset.playerId,characterId:p.querySelector('[data-character-renderer]')?.dataset.characterId}));
+   });
+   throw new Error(name+': Village actor mismatched selected '+selected+': '+JSON.stringify(observed)+'; '+error.message);
+  }
+ }
+ console.log(name+': 40/40 embedded Village actors preserve exact profile-selected IDs');
  assert.equal(checked,168);assert.deepEqual(errors,[]);await browser.close();console.log(name+': live adapter passed 42 identities × 4 actions');
 }

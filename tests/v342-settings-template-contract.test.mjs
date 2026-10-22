@@ -39,13 +39,15 @@ test('Archived issue data remains testable but is no longer exposed as inaccurat
  assert.doesNotMatch(html,/settingsGroupTasks/);
 });
 
-test('Ván Mẫu uses thumbnail toggle selection; Artifact settings live in Ván Mẫu while per-match timing lives in Chọn Ván',()=>{
+test('Ván Mẫu stores roles; choose screen owns all Artifact settings',()=>{
  const part=html.slice(html.indexOf('id="playGameSheet"'),html.indexOf('id="playEndSheet"'));
  const editor=part.slice(part.indexOf('<div class="play-template-editor-only">'),part.indexOf('<div class="play-template-play-review">'));
  const play=part.slice(part.indexOf('<div class="play-template-play-review">'));
  for(const id of ['playGameRolePicker','playGameRoleList','playGameRoleCount','playTemplateRoleSearch','playTemplateTeamSummary'])assert.ok(editor.includes('id="'+id+'"'),id);
  for(const id of ['playVillageDiscussionSec','playWolfDiscussionSec','playDefaultActionSec','playAutoAdvance','playGameRoleTimingList'])assert.ok(play.includes('id="'+id+'"'),id);
- for(const id of ['playArtifactsEnabled','playArtifactActionSec','playGameArtifactPicker'])assert.ok(editor.includes('id="'+id+'"'),id);
+ for(const id of ['playArtifactActionSec','playGameArtifactPicker'])assert.ok(play.includes('id="'+id+'"'),id);
+ assert.ok(play.includes('id="playArtifactsEnabled"'));
+ assert.ok(!editor.includes('id="playArtifactsEnabled"'));
  assert.doesNotMatch(editor,/id="playVillageDiscussionSec"|id="playAutoAdvance"/);
  assert.match(app,/resolveArtwork\('cards',role\.id,'thumb'\)/);
  assert.match(app,/button\.onclick=\(\)=>playTemplateSetCount\(role\.id,chosen\?0:1\)/);
@@ -54,7 +56,7 @@ test('Ván Mẫu uses thumbnail toggle selection; Artifact settings live in Ván
  assert.match(app,/function renderPlayArtifactPicker\(\)/);
  assert.match(app,/gameConfig:configured,matchId/);
  assert.match(app,/const cfg=\{id:templateId,name:gameName,playerCount:total,\s*roles:/);
- assert.match(app,/artifacts:selectedArtifacts\.map\(/);
+ assert.match(app,/artifactsEnabled:false,artifacts:\[\]/);
  assert.match(app,/artifactLimitPerCycle/);
  assert.match(html,/id="playVillageDiscussionSec"[^>]*value="300"/);
  for(const field of ['data-role-count','data-role-order','data-role-remove','data-move-up','data-move-down'])assert.ok(app.includes(field),field);

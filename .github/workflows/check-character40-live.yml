@@ -2,7 +2,7 @@ name: Check Character40 Live Integration
 on:
   pull_request:
     branches: [main]
-    paths: ['assets/characters/gmww40/**','assets/village/character40-renderer.mjs','server-game/shared/character40-adapter.js','tests/character40-live.test.mjs','.github/scripts/check-character40-live.mjs','.github/workflows/check-character40-live.yml']
+    paths: ['assets/characters/gmww40/**','assets/village/character40-renderer.mjs','src/gmww-character40-catalog.js','tools/generate-character40-portraits.py','server-game/shared/character40-adapter.js','tests/character40-live.test.mjs','.github/scripts/check-character40-live.mjs','.github/workflows/check-character40-live.yml']
 permissions:
   contents: read
 jobs:
@@ -17,6 +17,12 @@ jobs:
       - run: npm ci
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium webkit
+      - name: Build and verify all 40 matching portrait assets
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Verify actual Worker APIs and live renderer adapters
         run: |
           npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/character40-worker.log 2>&1 &

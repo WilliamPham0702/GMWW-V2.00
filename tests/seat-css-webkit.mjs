@@ -15,7 +15,7 @@ try{
  await oldRule.evaluate(el=>el.remove());
  await page.addStyleTag({path:'server-game/current/status-visuals.css'});
  await page.addScriptTag({path:'assets/village/village-layout.js'});
- for(const n of [8,10,12,14,16,18,20,22,24,26,28,30])for(const shape of ['circle','ellipse','rectangle']){
+ for(let n=6;n<=30;n++)for(const shape of ['circle','diamond','rectangle']){
   const result=await page.evaluate(({n,shape})=>{
    const ring=document.getElementById('playPlayerRing');ring.replaceChildren();
    const box=ring.getBoundingClientRect(),layout=GMWW_VILLAGE_LAYOUT;
@@ -25,5 +25,5 @@ try{
   },{n,shape});
   assert.ok(result.every(p=>p.position==='absolute'&&p.errorX<=1&&p.errorY<=1),`${n} ${shape}: status CSS displaced seat anchors: ${JSON.stringify(result)}`);
  }
- console.log('PASS: WebKit rendered seat anchors, 8–30 players, all three shapes, production CSS cascade');
+ console.log('PASS: WebKit rendered seat anchors, 6–30 players, circle/diamond/rectangle, production CSS cascade');
 }finally{await browser.close()}

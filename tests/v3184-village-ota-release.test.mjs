@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=path=>fs.readFileSync(path,'utf8');
+test('V3.184 and newer runtime version consistent across Worker, GM and package without native IPA bump',()=>{
+ const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
+ assert.ok(Number(pkg.version.split('.')[1])>=184);
+ assert.equal(lock.version,pkg.version);
+ assert.equal(lock.packages[''].version,pkg.version);
+ const ver=pkg.version.replace(/\.0$/,'');
+ assert.ok(read('src/index.js').includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
+ assert.ok(read('server-game/current/app.js').includes("const VERSION='"+ver+"'"));
+ assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+ver+"'"));
+ const html=read('server-game/current/GMWW.html');
+ assert.ok(html.includes('<title>GMWW V'+ver+'</title>'));
+ assert.ok(html.includes('style.css?v='+ver));
+ assert.ok(html.includes('app.js?v='+ver));
+});
+test('V3.184 gives user-facing village editor notes and retains current seats',()=>{
+ const gm=read('server-game/current/GMWW.html');
+ assert.match(gm,/>ÁP DỤNG<\/button>/);
+ assert.match(gm,/>KHÔI PHỤC MẶC ĐỊNH<\/button>/);
+ assert.doesNotMatch(gm,/gmVillagePreview/);
+ const worker=read('src/index.js');
+ assert.match(worker,/sceneSettingsReset\(/);
+ assert.match(worker,/scenePruneImages\(/);
+ const notes=read('.github/scripts/prepare-update-channel.mjs');
+ assert.match(notes,/V3\.184: Phát hành PR #404/);
+ assert.match(notes,/V3\.183: Khôi phục đầy đủ Seat Mẫu 6–30/);
+ assert.match(read('docs/RELEASE-V3.184-VILLAGE-APPLY-RESET.md'),/Runtime V3\.184/);
+});

@@ -8,7 +8,7 @@ test('Vào Trận swaps both menus without altering pre-game step menus',()=>{
   const swap=css.slice(css.lastIndexOf('/* V3.79: In battle'));
   assert.match(swap,/\#playShell\[data-step="battle"\] \#playBattleDock\{[^}]*top:calc\(env\(safe-area-inset-top\) \+ 7px\);[^}]*bottom:auto;/);
   assert.match(swap,/\#playShell\[data-step="battle"\] \#playBattleTop\{[^}]*top:auto;[^}]*bottom:calc\(env\(safe-area-inset-bottom\) \+ 7px\);/);
-  assert.ok(!swap.includes('playSetupStrip'), 'Setup timeline remains in original position');
+  assert.match(css,/body\.play-immersive #start #playSetupStrip/); // shared width does not alter setup stage logic
   assert.match(swap,/max-height:min\(44dvh,420px\)/);
 });
 test('Back button shows night number, without arrow, preserving previous-turn accessibility',()=>{

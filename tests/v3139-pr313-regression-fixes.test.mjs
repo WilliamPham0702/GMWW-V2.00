@@ -20,7 +20,7 @@ test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative
  assert.ok(battle.includes('timeline.gmwwCancelScrollNavigation=cancel'));
  assert.ok(battle.includes('if(!armed||!moved||playSceneState.step'));
  assert.ok(battle.includes('if(delta)battleNavigateRelative(delta)'));
- assert.ok(battle.includes("body:JSON.stringify({action:'jump',targetIndex:index"));
+ assert.ok(battle.includes("body:JSON.stringify({action:'jump',targetIndex,expectedTurnId"));
  assert.ok(audio.includes('function battleUnlockAudioFromGesture()'));
  assert.ok(audio.includes('async function battlePlayWebAudioFallback(src,onFinished=null)'));
  assert.ok(audio.includes('if(await battlePlayWebAudioFallback(src,onFinished))return true'));

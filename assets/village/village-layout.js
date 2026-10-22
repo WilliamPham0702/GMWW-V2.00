@@ -4,13 +4,17 @@
      A deliberately conservative courtyard + central bridge corridor.
      The sea, roofs, landscaped terraces and lawns remain beyond this boundary.
      This shared object is loaded unchanged in Worker, GM IPA and Player Web. */
-  const fire={x:50,y:49.7};
-  // The central paving must accommodate the whole 30-seat rectangle.
+  // GP2: the fire is a scene landmark, not the centre of the bitmap.
+  // All coordinates are 0..100 in the common Day/Night world frame.
+  const fire={x:50,y:64};
+  const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:99,
+    zones:Object.freeze({back:[29,48],middle:[48,73],front:[73,94]})});
+  // The central paving must accommodate the full 30-person circular perimeter.
   // Outer roofs/sea are excluded, while the lower bridge remains walkable.
-  const polygon=[[21,33],[79,33],[82,44],[82,60],[79,74],
-    [64,86],[62,90],[62,99],[38,99],[38,90],[36,86],
-    [21,74],[18,60],[18,44]];
-  const fireRadius={x:7,y:4.2};
+  // Paved 2.5D courtyard; outer houses, sea and foliage are never walkable.
+  const polygon=[[16,28],[84,28],[89,35],[89,53],[91,70],[89,88],
+    [84,94],[62,94],[62,99],[38,99],[38,94],[16,94],[11,88],[9,70],[11,53],[11,35]];
+  const fireRadius={x:8.8,y:5.6};
   function polygonInside(x,y){
     let hit=false;
     for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
@@ -23,8 +27,8 @@
   function inside(x,y){x=Number(x);y=Number(y);return Number.isFinite(x)&&Number.isFinite(y)&&polygonInside(x,y)&&fireClear(x,y)}
   function clampPoint(x,y){
     x=Number(x);y=Number(y);
-    if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:75};
-    y=Math.max(34,Math.min(98,y));
+    if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:82};
+    y=Math.max(29,Math.min(98,y));
     // Never clamp just the Y coordinate then leave X in a roof or water area.
     // Find the actual left/right courtyard intersections at this latitude.
     const xs=[];
@@ -46,25 +50,26 @@
   }
   /* Single perimeter, like a real Werewolf circle of people seated around the fire.
      Coordinates shared by GM IPA, Cloudflare Worker, and Player Web. */
-  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
-  const seatTemplateShapes=Object.freeze(['circle','ellipse','rectangle']);
+  // V3.187: only even-sized Seat Mau presets: 6,8,...30. Actual seat IDs
+  // remain contiguous (1..count), and odd-size existing rooms stay supported.
+  const seatTemplateCounts=Object.freeze(Array.from({length:13},(_,i)=>6+i*2));
+  const seatTemplateShapes=Object.freeze(['circle']);
   function normalizeSeatLayout(shape){
+    // Render all saved legacy outlines on the same real-life circular ring.
+    // Do not rewrite assignments or persisted Seat IDs.
     const value=String(shape||'');
-    // Existing V3.100 rooms may carry 'diamond'; interpret them safely
-    // without losing seat IDs or breaking ongoing room metadata.
-    return value==='diamond'?'ellipse':seatTemplateShapes.includes(value)?value:'';
+    return ['circle','ellipse','diamond','rectangle'].includes(value)?'circle':'';
   }
   function recommendedSeatShape(count){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    return n<=12?'circle':n<=20?'ellipse':'rectangle';
+    return 'circle';
   }
   const SCREEN_Y_SCALE=1.78;
   function circleContour(t,rx,ry){
     const a=-Math.PI/2+2*Math.PI*t;
     return{x:rx*Math.cos(a),y:ry*Math.sin(a)};
   }
-  // Even distribution by on-screen distance, not by angle: no clusters
-  // at the narrow ends of the ellipse.
+  // Spread by displayed arc length so small and large groups use one balanced
+  // perimeter, even in the portrait 2.5D camera projection.
   function ovalContour(t,rx,ry){
     const steps=360,dist=[0],points=[circleContour(0,rx,ry)];
     for(let i=1;i<=steps;i++){
@@ -79,50 +84,19 @@
     return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
       y:points[lo].y+(points[hi].y-points[lo].y)*portion};
   }
-  function rectangleContour(t,rx,ry){
-    // Follow exactly ONE closed perimeter, starting at the top midpoint.
-    const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
-    const lengths=corners.slice(1).map((p,i)=>
-      Math.hypot(p[0]-corners[i][0],SCREEN_Y_SCALE*(p[1]-corners[i][1])));
-    const length=lengths.reduce((a,b)=>a+b,0);
-    let distance=((t%1)+1)%1*length;
-    for(let i=0;i<lengths.length;i++){
-      if(distance<=lengths[i]||i===lengths.length-1){
-        const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
-        return{x:corners[i][0]+(corners[i+1][0]-corners[i][0])*f,
-          y:corners[i][1]+(corners[i+1][1]-corners[i][1])*f};
-      }
-      distance-=lengths[i];
-    }
-    return{x:0,y:-ry};
-  }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
-    // Radius adapts to available courtyard, with fire permanently at
-    // world (50,49.7). For 30 players we expand ONE rectangle, not rings.
-    const rx=kind==='circle'?22.8:kind==='ellipse'?27.4:27.5;
-    const ry=kind==='circle'?13.1:kind==='ellipse'?12.9:13.2;
-    // A small deterministic phase search keeps 25–30 adjacent players
-    // from bunching diagonally around rectangle corners.
-    let phase=0;
-    if(kind==='rectangle'){
-      let bestDistance=-1;
-      for(let step=0;step<32;step++){
-        const shift=step/(32*n),points=Array.from({length:n},(_,i)=>
-          rectangleContour(i/n+shift,rx,ry));
-        const minGap=Math.min(...points.map((p,i)=>{
-          const q=points[(i+1)%n];
-          return Math.hypot(p.x-q.x,SCREEN_Y_SCALE*(p.y-q.y));
-        }));
-        if(minGap>bestDistance+1e-8){bestDistance=minGap;phase=shift}
-      }
-    }
+    // Physical circle, displayed as an ellipse in the 2.5D perspective.
+    // As player count increases, expand the ONE perimeter around the campfire
+    // without changing Character scale or using inner tiers / box formations.
+    const radiusX=Math.min(35,22+(n-6)*0.54);
+    const radiusY=radiusX/SCREEN_Y_SCALE;
     const result=[];
     for(let i=0;i<n;i++){
-      const p=kind==='rectangle'?rectangleContour(i/n+phase,rx,ry):ovalContour(i/n,rx,ry);
-      const point=clampPoint(fire.x+p.x,fire.y+p.y);
-      result.push({x:point.x,y:point.y,ring:0});
+      const p=ovalContour(i/n,radiusX,radiusY);
+      const x=fire.x+p.x,y=fire.y+p.y;
+      if(!inside(x,y))throw Error('INVALID_SEAT_CIRCLE_'+n+'_'+i);
+      result.push({x,y,ring:0,depth:Math.max(0,Math.min(5,Math.floor((y-29)/11)))});
     }
     return result;
   }
@@ -138,7 +112,15 @@
     const points=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
     const shift=normalizeSeatOffset(offset),scale=normalizeSeatSpacing(spacing)/100;
     if(!shift.x&&!shift.y&&scale===1)return points;
-    return points.map(p=>({...clampPoint(fire.x+(p.x-fire.x)*scale+shift.x,fire.y+(p.y-fire.y)*scale+shift.y),ring:0}));
+    // Keep the whole 30-person formation inside the courtyard: independent
+    // per-point clamping piles characters on top of each other at high spacing.
+    const scaleX=Math.max(.94,Math.min(scale,1.06)),scaleY=Math.max(.96,Math.min(scale,1.08));
+    const raw=points.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,y:fire.y+(p.y-fire.y)*scaleY}));
+    const xs=raw.map(p=>p.x),ys=raw.map(p=>p.y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+    const offsetX=Math.max(14-minX,Math.min(86-maxX,shift.x));
+    const offsetY=Math.max(31-minY,Math.min(91-maxY,shift.y));
+    return raw.map((p,i)=>({...clampPoint(p.x+offsetX,p.y+offsetY),ring:0,depth:points[i].depth}));
   }
   // Presentation/transition repair: old rooms can contain members without seats
   // even after role delivery. Keep every valid seat ID and deterministically
@@ -172,7 +154,7 @@
     }
     return mapping;
   }
-  function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(26+h%4800/100,65+(h>>>8)%1400/100)}
+  function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(17+h%6600/100,38+(h>>>8)%4900/100)}
   function fitMode(w,h){const ratio=Number(w)/Math.max(1,Number(h));return ratio>=.85?"stretch":ratio>=.72?"contain":"cover"}
   function rect(w,h){w=Math.max(1,Number(w)||864);h=Math.max(1,Number(h)||1536);const mode=fitMode(w,h);if(mode==="stretch")return{width:w,height:h,left:0,top:0,mode};const s=(mode==="contain"?Math.min:Math.max)(w/864,h/1536),width=864*s,height=1536*s;return{width,height,left:(w-width)/2,top:(h-height)/2,mode}}
   function toScreen(p,w,h){const r=rect(w,h);return{x:(r.left+r.width*p.x/100)/w*100,y:(r.top+r.height*p.y/100)/h*100}}
@@ -180,9 +162,9 @@
   // Visibility-graph route planner. Cached per pair of endpoints; all path
   // segments remain inside the paving, avoiding the fire and outer gardens.
   const routeCache=new Map();
-  const waypoints=[[50,38],[36,40],[64,40],[40.5,50],[59.5,50],
-    [32,59],[68,59],[42,60],[58,60],[50,65],[35,73],[65,73],
-    [50,79],[50,87],[50,92]].map(p=>({x:p[0],y:p[1]}));
+  const waypoints=[[50,34],[29,39],[71,39],[34,50],[66,50],
+    [29,61],[39,62],[61,62],[71,61],[33,72],[67,72],
+    [50,79],[28,83],[72,83],[50,90]].map(p=>({x:p[0],y:p[1]}));
   function safeSegment(a,b){
     const steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
     for(let i=0;i<=steps;i++){
@@ -234,5 +216,5 @@
     }
     return clampPoint(b.x,b.y);
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({scene,fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);

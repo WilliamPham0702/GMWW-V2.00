@@ -14,13 +14,25 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-compact-battle-panels.mjs"
+      - "tests/v3178-compact-battle-panels.test.mjs"
+      - "server-game/current/style.css"
       - "tests/home-v389-iphone-webkit.mjs"
       - "tests/night-timeline-iphone-webkit.mjs"
+      - "tests/demo-room-cross-origin-webkit.mjs"
+      - "tests/demo-server-autonomous-e2e.mjs"
       - "server-game/current/battle-controls.js"
       - "server-game/current/app.js"
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/v3181-scene-layer-webkit.mjs"
+      - "assets/village/village.css"
+      - "assets/village/village-art.css"
+      - "assets/village/index.html"
+      - "tests/gp2-qa-webkit.mjs"
+      - "assets/village/gp2-qa.*"
+      - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
@@ -37,13 +49,25 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-compact-battle-panels.mjs"
+      - "tests/v3178-compact-battle-panels.test.mjs"
+      - "server-game/current/style.css"
       - "tests/home-v389-iphone-webkit.mjs"
       - "tests/night-timeline-iphone-webkit.mjs"
+      - "tests/demo-room-cross-origin-webkit.mjs"
+      - "tests/demo-server-autonomous-e2e.mjs"
       - "server-game/current/battle-controls.js"
       - "server-game/current/app.js"
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/v3181-scene-layer-webkit.mjs"
+      - "assets/village/village.css"
+      - "assets/village/village-art.css"
+      - "assets/village/index.html"
+      - "tests/gp2-qa-webkit.mjs"
+      - "assets/village/gp2-qa.*"
+      - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
       - ".github/workflows/check-player-card-browsers.yml"
@@ -73,6 +97,10 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
+      - name: Verify compact GM battle panels on iPhone-sized WebKit
+        run: node tests/browser-compact-battle-panels.mjs
+      - name: Check night timeline on iPhone-sized WebKit
+        run: node tests/night-timeline-iphone-webkit.mjs
       - name: Exercise private card UI with Chrome, Edge and WebKit
         shell: bash
         run: |
@@ -85,21 +113,45 @@ jobs:
             sleep 1
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
+          node tests/demo-server-autonomous-e2e.mjs
+          node tests/demo-room-cross-origin-webkit.mjs
           node tests/browser-private-cards.mjs
+          node tests/gp2-qa-webkit.mjs
       - name: Check Khám Phá on iPhone-sized WebKit
         run: node tests/home-v389-iphone-webkit.mjs
-      - name: Check night timeline on iPhone-sized WebKit
-        run: node tests/night-timeline-iphone-webkit.mjs
       - name: Check Seat anchors with production status CSS in WebKit
         run: node tests/seat-css-webkit.mjs
+      - name: Check published village Day/Night actor layers in iPhone WebKit
+        run: node tests/v3181-scene-layer-webkit.mjs
       - name: Check OTA startup recovery in WebKit
         run: node tests/runtime-recovery-webkit.mjs
+      - name: Upload compact battle panel preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-v3178-iphone-compact-battle
+          path: /tmp/gmww-v3178-iphone-layout.png
+          if-no-files-found: ignore
       - name: Upload WebKit Home preview
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: home-v389-iphone-webkit-preview
           path: /tmp/gmww-v389-iphone-webkit-home.png
+          if-no-files-found: ignore
+      - name: Upload village-layer iPhone WebKit previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-v3181-village-background-actor-layer
+          path: /tmp/gmww-v3181-scene-layer-*.png
+          if-no-files-found: ignore
+      - name: Upload isolated GP2 iPhone QA screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-gp2-30-atlas-iphone-draft
+          path: /tmp/gmww-gp2-qa-iphone-30-atlas.png
           if-no-files-found: ignore
       - name: Upload failure screenshots
         if: failure()

@@ -7,10 +7,10 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const ctx=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
-const sizes=[8,10,12,14,16,18,20,22,24,25,26,27,28,29,30];
-const shapes=['circle','ellipse','rectangle'];
+const sizes=Array.from({length:13},(_,i)=>6+i*2);
+const shapes=['circle'];
 
-test('all 15 Seat Mẫu capacities exist in circle, ellipse and rectangle, without duplicate locations or invalid world points',()=>{
+test('13 even-sized Seat Mẫu presets use a single closed circle, without invalid points',()=>{
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
   assert.deepEqual(Array.from(layout.seatTemplateShapes),shapes);
   for(const size of sizes)for(const shape of shapes){
@@ -27,20 +27,18 @@ test('all 15 Seat Mẫu capacities exist in circle, ellipse and rectangle, witho
   }
 });
 
-test('layouts are distinct and form a single outline around the fire',()=>{
-  for(const size of sizes){
-    const rendered=shapes.map(s=>JSON.stringify(layout.positions(size,s).map(p=>[p.x,p.y])));
-    assert.equal(new Set(rendered).size,3,'different shapes must not reuse the same geometry for '+size);
-    for(const shape of shapes){
-      const points=layout.positions(size,shape);
-      const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
-      const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
-      assert.ok(width>30&&height>25,shape+' '+size+' must use the wider courtyard');
+test('one fire-centered circle renders across 6..30, including legacy and odd-size rooms',()=>{
+  for(let count=6;count<=30;count++){
+    const seats=layout.positions(count,'circle');
+    assert.equal(seats.length,count);
+    assert.ok(seats.every(p=>p.ring===0&&layout.inside(p.x,p.y)));
+    for(const legacy of ['ellipse','diamond','rectangle']){
+      assert.deepEqual(layout.positions(count,legacy).map(p=>[p.x,p.y]),seats.map(p=>[p.x,p.y]));
     }
   }
-  assert.equal(layout.positions(12).length,12,'seat capacity must exactly match configured room size');
-  assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback has no inner ring');
-  assert.equal(layout.positions(8,'circle').length,8,'a selected 8-slot layout is not forced to 24');
+  assert.equal(layout.positions(8).length,8);
+  assert.equal(layout.positions(7).length,7,'pre-existing odd seatCount remains renderable');
+  assert.equal(layout.recommendedSeatShape(30),'circle');
 });
 
 test('GM swipes the Gọi Người action menu, while dot samples stay in a separate closeable panel',()=>{

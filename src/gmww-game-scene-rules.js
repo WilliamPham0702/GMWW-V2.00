@@ -17,7 +17,7 @@ export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
   // Every cycle, eligible configured Artifacts act before roles. No unused
   // Artifact is consumed simply by appearing in this opening window.
   const earlyActions=artifactOwners.filter(owner=>!owner?.used&&artifactPriorityFirst(owner)).map(owner=>({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId}));
-  queue.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:earlyActions});
+  if(artifactOwners.length>0)queue.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:earlyActions});
   for(const turn of normalTurns){
     if((turn?.artifactId||turn?.artifactName)&&artifactOwners.some(x=>x.playerId===turn.playerId&&(turn.artifactId?x.artifactId===turn.artifactId:x.artifactName===turn.artifactName)&&x.used))continue;
     queue.push({...turn,kind:turn.kind||"normal"});

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GMWW GP2 — QA không ghi dữ liệu</title>
+<link rel="stylesheet" href="./character-renderer.css?v=ce7">
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#071624;color:#f3f9ff;font-family:system-ui,-apple-system,sans-serif}
+#stage{position:fixed;inset:0;overflow:hidden;background:#0e2130;touch-action:none;overscroll-behavior:none}
+#world{position:absolute;width:864px;height:1536px;left:0;top:0;transform:translate3d(0,0,0);will-change:transform;background-size:100% 100%;background-position:center}
+.actor{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;flex-direction:column;min-width:56px;min-height:74px;border:0;padding:0;background:transparent;color:white;touch-action:manipulation;z-index:5}
+.actor .portrait{display:block;width:56px;height:74px;overflow:visible;pointer-events:none}
+.actor .portrait canvas{width:100%;height:100%;object-fit:contain}
+.actor .label{position:absolute;top:calc(100% + 1px);white-space:nowrap;background:#08263bdb;padding:2px 4px;border:1px solid #80adc7a0;border-radius:6px;font-size:10px;pointer-events:none}
+.actor.selected .label{background:#0b656f;color:#fff7be;border-color:#e8ca74}
+#fire{position:absolute;width:40px;height:40px;border:2px dashed #ffc355;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 15px #ef9d54;z-index:4}
+#top{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;right:8px;z-index:15;pointer-events:none}
+.panel{pointer-events:auto;background:#071b2ce8;border:1px solid #77aeb0aa;border-radius:12px;padding:9px 11px;max-width:580px;margin:auto;font-size:12px}
+button{font:inherit;color:#f7fbff;background:#184a65;border:1px solid #8bbfd2;border-radius:8px;padding:6px 8px;min-height:32px}
+button:focus-visible{outline:2px solid #f6d48c}input{font:inherit;max-width:100%}
+.controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;align-items:center}
+input[type=file]{width:124px;font-size:11px}
+#bottom{position:fixed;z-index:14;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));pointer-events:none}
+#message{pointer-events:auto;background:#081e30e9;border-radius:12px;padding:8px;max-width:580px;margin:auto;font-size:12px;line-height:1.35}
+#message b{color:#ffe1a2}
+</style>
+</head><body>
+<div id="stage" aria-label="Bản đồ GP2 — vuốt để di chuyển camera"><div id="world"><div id="fire" title="Mốc đống lửa được đo trên artwork candidate"></div><div id="actors"></div></div></div>
+<div id="top"><div class="panel">
+<b>GMWW GP2 · QA camera 2,5D · KHÔNG phải Production</b>
+<div class="controls">
+<button id="day" type="button">☀️ Ngày</button><button id="night" type="button">🌙 Đêm</button>
+<button id="center" type="button">◎ Đống lửa</button><button id="left" type="button">← Trái</button>
+<button id="right" type="button">Phải →</button>
+</div><div class="controls">
+<label>Ảnh Ngày <input id="dayfile" type="file" accept="image/webp,image/png,image/jpeg"></label>
+<label>Ảnh Đêm <input id="nightfile" type="file" accept="image/webp,image/png,image/jpeg"></label>
+</div>
+</div></div>
+<div id="bottom"><div id="message" role="status"><b>Thử nghiệm độc lập:</b> 30 Character dùng renderer atlas game thật. Không đăng nhập, không ghi phòng. Vuốt sân để pan; chạm Character để chọn. Ảnh mặc định là bản hiện hành, có thể nạp cặp ảnh thử qua ô chọn tệp.</div></div>
+<script type="module" src="./gp2-qa.mjs?v=1"></script></body></html>

@@ -35,7 +35,7 @@ test('V3.129: stale motion cannot displace assigned Seats after Tập Hợp',()=
   state.step='seats';assert.equal(active(seated),false);
   assert.equal(active({...seated,moveTargetSeatId:5}),true,'only explicit Seat transfer may move');
   state.step='battle';assert.equal(active(seated),false,'no pre-battle drift');
-  assert.equal(active({...seated,moveStartedAt:started+1000}),true,'fresh battle move still allowed');
+  assert.equal(active({...seated,moveStartedAt:started+1000}),false,'battle motion is frozen for every seated actor');
   assert.equal(active({...seated,seatId:null}),false,'stale unseated battle move is also blocked');
 });
 

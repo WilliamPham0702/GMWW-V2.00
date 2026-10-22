@@ -36,7 +36,7 @@
     if(phase!=="night")return [{id:"start",kind:"start",label:"Đêm thứ "+n,status:"active",active:true}];
     const queue=Array.isArray(runtime?.queue)?runtime.queue:[];
     const cursor=Math.max(0,Number(runtime?.cursor)||0);
-    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:row?.kind==="village-wakeup"?"Làng ơi dậy đi":displayLabel(row,"Lượt "+(i+1)),displayNumber:["role","role-group"].includes(row?.kind)&&Number.isFinite(Number(row?.order))&&Number(row.order)>0?Number(row.order):i+1,status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
+    const rows=queue.map((row,i)=>({id:String(row?.id||i),kind:String(row?.kind||"role"),label:row?.kind==="village-wakeup"?"Làng ơi dậy đi":displayLabel(row,"Lượt "+(i+1)),displayNumber:i+1,status:artifactUsed(used,row)?"used":row?.status==="skipped"?"skipped":i<cursor?"completed":i===cursor&&!runtime?.completed?"active":"pending",active:i===cursor&&!runtime?.completed}));
     if(!queue.some(row=>row?.kind==="village-wakeup"))rows.push({id:"wake",kind:"day",label:"Làng ơi dậy đi",status:runtime?.completed?"active":"pending",active:!!runtime?.completed});
     return rows;
   }
@@ -134,14 +134,14 @@
   function targetAllowed(action,member,effect,rows=[],night=0){
     if(!action||!member?.loginId||action.noTarget)return false;
     if(action.noSelf&&action.actorIds.includes(loginOf(member.loginId)))return false;
-    if(action.type==="revive")return effect==="dead";
+    if(action.type==="revive")return effect==="dead"||effect==="expelled";
     // A night victim is announced at dawn; the Seer may still scan them tonight.
     // Historical deaths remain ineligible on subsequent nights.
     const nightVictim=action.actionId==="action_seer"&&effect==="dead"&&
       (Array.isArray(rows)?rows:[]).some(x=>
         loginOf(x?.loginId)===loginOf(member.loginId)&&x?.type==="dead"&&
         x?.effectActive!==false&&Number(x?.night)===Number(night)&&night>0);
-    return nightVictim||action.allowDead||effect!=="dead"&&effect!=="expelled";
+    return nightVictim||action.allowDead||effect!=="dead";
   }
   const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
   root.GMWW_BATTLE_CONTROLS=api;

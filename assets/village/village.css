@@ -434,9 +434,9 @@ html.embedded .player .player-over .name{font-size:11px}
 /* Player-only preparation: keep the same 2D characters and seating, without showing gameplay HUD. */
 html.embedded body.player-prep .hud{display:none!important}
 
-/* Scene Manager: background-only overlay, preserve all collision and seat geometry. */
-.stage.custom-scene::before{content:"";position:absolute;inset:0;background-image:var(--gmww-scene-image);background-position:center;background-size:cover;pointer-events:none;z-index:0}
-.stage.custom-scene > *{position:relative}
+/* Published scenery is rendered only in village-art.css ::after.
+   Keep .scene absolute: forced relative positioning collapses its camera and
+   displaces the entire Player Web Character/Seat layer when custom art loads. */
 
 
 /* Server-synchronized freeze state: a translucent frost layer above the live character rig. */
@@ -475,3 +475,17 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* Accepted full-frame motion owns the artwork; scene coordinates and effect overlays stay independent. */
 .player .portrait:has(.gmww40-character){animation:none!important;transform:none!important}
+
+
+/* V3.163 battle-only low-power presentation. The approved Character40 renderer
+   and its rollback bytes are untouched; this applies only inside live battle. */
+body.player-battle .player .portrait.game-character,
+body.player-battle .player .portrait.game-character .gmww-character-renderer,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig,
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *,
+body.player-battle .player .portrait.game-character img[data-walk-character]{
+  animation:none!important;transition:none!important;will-change:auto!important;
+}
+body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
+  transform:none!important;
+}

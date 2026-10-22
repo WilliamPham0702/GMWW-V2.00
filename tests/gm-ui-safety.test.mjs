@@ -22,14 +22,14 @@ test('timeline at top and five primary actions at bottom keep their original IDs
   assert.doesNotMatch(html,/play-control-bar-three|id="playBack"|id="playPrimaryAction"|id="playNext"/);
 });
 test('cancel Exit leaves village and local room data untouched',()=>{
-  let changes=0;const code=section('function exitPlayImmersive()','function initPlayScene()');
+  let changes=0;const code=section('function exitPlayImmersive(','function initPlayScene()');
   const ctx={playSceneRuntime:{busy:false},confirm:()=>false,document:{body:{classList:{remove(){changes++}}},querySelectorAll(){changes++;return[]}},localStorage:{setItem(){throw new Error('must not mutate room')}}};
   vm.runInNewContext(code+';exitPlayImmersive()',ctx);assert.equal(changes,0);
 });
 test('confirmed Exit returns Home without ending/deleting room',()=>{
   let page='',removed=false;
   const ctx={playSceneRuntime:{busy:false},confirm:()=>true,document:{body:{classList:{remove(){removed=true}}},querySelectorAll(s){return s==='.page'?[{id:'home',classList:{toggle(_,active){if(active)page='home'}}}]:[]},getElementById(){return{scrollTop:9}}}};
-  vm.runInNewContext(section('function exitPlayImmersive()','function initPlayScene()')+';exitPlayImmersive()',ctx);
+  vm.runInNewContext(section('function exitPlayImmersive(','function initPlayScene()')+';exitPlayImmersive()',ctx);
   assert.equal(page,'home');assert.equal(removed,true);
 });
 test('force End modal opens at any phase and requires explicit confirmation',async()=>{
@@ -86,7 +86,7 @@ test('fixed seats use stable, distinct positions for every room size',()=>{
   const ctx={playSceneRuntime:{room:{}},playSeatSpacingPreview:null};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../assets/village/village-layout.js',import.meta.url),'utf8'),ctx);vm.runInContext(section('function playGatherSpacing()','function playEsc(v)'),ctx);
   for(let n=1;n<=30;n++){
     const points=ctx.playSeatPositions(n),expected=n;assert.equal(points.length,expected);assert.equal(new Set(points.map(p=>p.map(v=>v.toFixed(2)).join(','))).size,expected);
-    for(const [x,y] of points){assert.ok(x>=14&&x<=86);assert.ok(y>=32&&y<=70)}
+    for(const [x,y] of points){assert.ok(x>=14&&x<=86);assert.ok(y>=29&&y<=93)}
   }
 });
 test('V2.64 preserves persistent state/preferences and safely resets stale play room',()=>{

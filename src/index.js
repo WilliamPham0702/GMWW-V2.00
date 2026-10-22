@@ -1,6 +1,9 @@
+import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
+import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec} from "./gmww-gallows-rules.js";
+import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -8,7 +11,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -35,7 +38,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.154",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3154",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.186",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3186",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -61,7 +64,17 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+      const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
+      if(meta?.demo&&response.ok){
+        if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
+        const lease=await this.ctx.storage.get("demoLease");
+        if(lease?.engine==="server"&&path!=="/gm/demo"&&lease.holdUntil){lease.holdUntil=0;await this.ctx.storage.put("demoLease",lease)}
+        await this.scheduleRoomAlarm(meta);
+      }
+      return response;
+    });
     return this.handleFetch(request);
   }
   async securityRateLimit(body){
@@ -127,8 +140,11 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-assets/card-back"&&request.method==="GET")return this.globalAssetGet("globalAsset:cardBack","image/webp");
     if(url.pathname==="/global-assets/card-back"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:cardBack","image/webp",125000);
     if(url.pathname==="/global-settings/village-scene"&&request.method==="GET")return this.sceneSettingsGet();
+    const storedSceneImage=url.pathname.match(/^\/global-settings\/village-scene\/image\/(day|night)$/);
+    if(storedSceneImage&&request.method==="GET")return this.sceneSettingsImage(storedSceneImage[1],url.searchParams.get("revision"));
     if(url.pathname==="/global-settings/village-scene"&&request.method==="PUT")return this.sceneSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/village-scene/rollback"&&request.method==="POST")return this.sceneSettingsRollback(await safeJson(request));
+    if(url.pathname==="/global-settings/village-scene/reset"&&request.method==="POST")return this.sceneSettingsReset();
     if(url.pathname==="/global-settings/ui"&&request.method==="GET")return this.globalUiSettingsGet();
     if(url.pathname==="/global-settings/ui"&&request.method==="PUT")return this.globalUiSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/web-sync"&&request.method==="GET")return this.globalWebSyncGet();
@@ -139,7 +155,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
-      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
+      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:b?.demo===true?false:true,demo:b?.demo===true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);if(cfg)await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(b?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(b.cardBackImage));return j({ok:true,room:publicRoom(meta),gmToken},201);
     }
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
@@ -155,6 +171,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
     if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
     if(url.pathname==="/gm/day-action"&&request.method==="POST")return this.gmDayAction(request,await safeJson(request));
+    if(url.pathname==="/gm/day-clock"&&request.method==="POST")return this.gmDayClock(request,await safeJson(request));
     if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
     if(url.pathname==="/gm/gallows"&&request.method==="POST")return this.gmGallows(request,await safeJson(request));
     if(url.pathname==="/gm/participants"&&request.method==="POST")return this.gmParticipants(request,await safeJson(request));
@@ -166,6 +183,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/seat-lock"&&request.method==="POST")return this.gmSeatLock(request,await safeJson(request));
     if(url.pathname==="/gm/cycle"&&request.method==="POST")return this.gmCycle(request,await safeJson(request));
     if(url.pathname==="/gm/turn"&&request.method==="POST")return this.gmTurn(request,await safeJson(request));
+    if(url.pathname==="/gm/demo"&&request.method==="POST")return this.gmDemo(request,await safeJson(request));
     if(url.pathname==="/gm/auto"&&request.method==="POST")return this.gmAuto(request,await safeJson(request));
     if(url.pathname==="/gm/enabled"&&request.method==="POST")return this.gmEnabled(request,await safeJson(request));
     if(url.pathname==="/gm/lock"&&request.method==="POST")return this.gmLock(request,await safeJson(request));
@@ -516,29 +534,97 @@ export class RoomDurableObject extends DurableObject {
   }
   async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
   async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
+  async sceneNormalizeRecord(raw){
+    const record=raw&&typeof raw==="object"?raw:{revision:0};
+    const revision=Math.max(0,Math.trunc(Number(record.revision)||0));
+    const output={revision,dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
+    for(const key of ["day","night"]){
+      if(validImageDataUrl(record[key])&&revision>0){
+        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,record[key]);
+        output[key+"Revision"]=revision;
+      }
+    }
+    return output;
+  }
+  scenePublicRecord(rec){
+    const revision=Math.max(0,Number(rec?.revision)||0);
+    const imageRevision=key=>Math.max(0,Number(rec?.[key+"Revision"])||(validImageDataUrl(rec?.[key])?revision:0));
+    const day=imageRevision("day"),night=imageRevision("night");
+    return {revision,updatedAt:rec?.updatedAt||null,
+      day:day?"/api/village-scene/image/day?revision="+day:null,
+      night:night?"/api/village-scene/image/night?revision="+night:null};
+  }
   async sceneSettingsGet(){
     const current=await this.ctx.storage.get("globalSetting:villageScene");
-    return j({ok:true,scene:current||{revision:0,day:null,night:null},history:(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[]});
+    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+    return j({ok:true,scene:this.scenePublicRecord(current),
+      history:history.map(row=>({revision:Number(row?.revision)||0,updatedAt:row?.updatedAt||null}))});
+  }
+  async sceneSettingsImage(key,rawRevision){
+    const revision=Number(rawRevision);
+    if(!["day","night"].includes(key)||!Number.isSafeInteger(revision)||revision<1)return new Response("Invalid scene reference",{status:400});
+    let image=await this.ctx.storage.get("globalSetting:villageSceneImage:"+revision+":"+key);
+    // Read old stored scenes without changing existing user data.
+    if(!image){
+      const current=await this.ctx.storage.get("globalSetting:villageScene");
+      const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
+      const legacy=[current,...history].find(row=>Number(row?.revision)===revision&&validImageDataUrl(row?.[key]));
+      image=legacy?.[key];
+    }
+    return gmwwStoredArtworkResponse(image);
+  }
+  async scenePruneImages(keepRevision=0){
+    const prefix="globalSetting:villageSceneImage:";
+    const keep=keepRevision>0?new Set(["day","night"].map(key=>prefix+keepRevision+":"+key)):new Set();
+    const all=await this.ctx.storage.list({prefix});
+    const stale=[...all.keys()].filter(key=>!keep.has(key));
+    if(stale.length)await this.ctx.storage.delete(stale);
+    await this.ctx.storage.delete("globalSetting:villageSceneHistory");
   }
   async sceneSettingsPut(body){
-    const isImage=v=>v===null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
+    // Reset via the same proven authenticated PUT endpoint as Apply on iOS WebKit.
+    if(body?.resetToDefault===true){
+      if(body.day||body.night)return j({ok:false,error:"RESET_AND_IMAGE_CONFLICT"},400);
+      return this.sceneSettingsReset();
+    }
+    const isImage=v=>v==null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
     if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
-    const previous=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0,day:null,night:null};
-    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
-    const next={revision:previous.revision+1,day:body.day??previous.day,night:body.night??previous.night,updatedAt:new Date().toISOString()};
-    await this.ctx.storage.put("globalSetting:villageSceneHistory",[previous,...history].slice(0,5));
+    const previousRaw=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
+    const previous=await this.sceneNormalizeRecord(previousRaw);
+    const revision=previous.revision+1;
+    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0};
+    for(const key of ["day","night"]){
+      let image=body[key];
+      // A single replacement leaves the other currently applied image intact.
+      if(!image){
+        const oldRevision=Number(previous[key+"Revision"])||0;
+        if(oldRevision)image=await this.ctx.storage.get("globalSetting:villageSceneImage:"+oldRevision+":"+key);
+        if(!image&&validImageDataUrl(previousRaw[key]))image=previousRaw[key];
+        if(oldRevision&&!image)return j({ok:false,error:"CURRENT_SCENE_IMAGE_MISSING_"+key.toUpperCase()},409);
+      }
+      if(image){
+        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,image);
+        next[key+"Revision"]=revision;
+      }
+    }
     await this.ctx.storage.put("globalSetting:villageScene",next);
-    return j({ok:true,scene:next});
+    // Commit metadata first; obsolete versions are removed only after new images are active.
+    try{await this.scenePruneImages(revision)}catch(error){console.warn("village scene prune deferred",String(error))}
+    return j({ok:true,scene:this.scenePublicRecord(next)});
   }
-  async sceneSettingsRollback(body){
-    const history=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
-    if(!history.length)return j({ok:false,error:"NO_PREVIOUS_SCENE"},409);
+  async sceneSettingsReset(){
     const current=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
-    const previous=history[0],next={...previous,revision:current.revision+1,updatedAt:new Date().toISOString()};
+    const next={revision:Math.max(0,Number(current.revision)||0)+1,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0};
     await this.ctx.storage.put("globalSetting:villageScene",next);
-    await this.ctx.storage.put("globalSetting:villageSceneHistory",[current,...history.slice(1)].slice(0,5));
-    return j({ok:true,scene:next});
+    try{await this.scenePruneImages()}catch(error){console.warn("village scene reset prune deferred",String(error))}
+    return j({ok:true,scene:this.scenePublicRecord(next)});
   }
+  // Backward-compatible legacy route: older clients cannot undo an Apply after
+  // history is cleared, and must upgrade to use explicit Reset to default.
+  async sceneSettingsRollback(){
+    return j({ok:false,error:"USE_RESET_TO_DEFAULT"},409);
+  }
+
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
     return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
@@ -616,12 +702,12 @@ export class RoomDurableObject extends DurableObject {
     const code=normalizeRoomCode(body?.code);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
     const key="roomdir:"+code,old=await this.ctx.storage.get(key),incomingResetVersion=Math.max(0,Number(body?.resetVersion||0)),oldResetVersion=Math.max(0,Number(old?.resetVersion||0));
     if(old&&incomingResetVersion<oldResetVersion)return j({ok:true,staleIgnored:true,room:old});
-    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatMoveMode:normalizeSeatMoveMode(body?.seatMoveMode||old?.seatMoveMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
+    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,demo:body?.demo===true,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatMoveMode:normalizeSeatMoveMode(body?.seatMoveMode||old?.seatMoveMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
     await this.ctx.storage.put(key,rec);return j({ok:true,room:rec});
   }
   async roomDirectoryList(url){
     const includeEnded=String(url?.searchParams?.get("includeEnded")||"")==="1",includeDisabled=String(url?.searchParams?.get("includeDisabled")||"")==="1",rows=await this.ctx.storage.list({prefix:"roomdir:"}),rooms=[],nowMs=Date.now();
-    for(const [key,r] of rows){const phase=String(r?.phase||"").toLowerCase(),last=Date.parse(r?.updatedAt||r?.createdAt||"");if(phase==="deleted"||(Number.isFinite(last)&&nowMs-last>=ROOM_IDLE_TTL)){await this.ctx.storage.delete(key);continue}if(!includeDisabled&&r?.enabled===false)continue;if(!includeEnded){if(phase==="ended")continue;const lease=Number(r?.leaseUntil||0);if((lease&&nowMs>lease)||(!lease&&Number.isFinite(last)&&nowMs-last>ROOM_DIRECTORY_LEASE))continue}rooms.push(r)}
+    for(const [key,r] of rows){const phase=String(r?.phase||"").toLowerCase(),last=Date.parse(r?.updatedAt||r?.createdAt||"");if(phase==="deleted"||(Number.isFinite(last)&&nowMs-last>=ROOM_IDLE_TTL)){await this.ctx.storage.delete(key);continue}if(r?.demo===true)continue;if(!includeDisabled&&r?.enabled===false)continue;if(!includeEnded){if(phase==="ended")continue;const lease=Number(r?.leaseUntil||0);if((lease&&nowMs>lease)||(!lease&&Number.isFinite(last)&&nowMs-last>ROOM_DIRECTORY_LEASE))continue}rooms.push(r)}
     rooms.sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));return j({ok:true,count:rooms.length,rooms,ttlHours:72,leaseSeconds:Math.floor(ROOM_DIRECTORY_LEASE/1000)});
   }
   async roomDirectoryDelete(body){const code=normalizeRoomCode(body?.code);if(isValidRoomCode(code))await this.ctx.storage.delete("roomdir:"+code);return j({ok:true,deleted:true,code})}
@@ -637,7 +723,13 @@ export class RoomDurableObject extends DurableObject {
     return{players:players||{},removed:[]};
   }
   async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===false?false:frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
-  async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
+  async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
+    if(meta.demo&&request.method==="POST"&&/^\/gm\/(?:battle-action|day-action|day-clock|gallows|turn|cycle|end)$/.test(new URL(request.url).pathname)){
+      const lease=await this.ctx.storage.get("demoLease");
+      if(lease?.engine!=="server"&&lease?.running&&Number(lease.until)>Date.now()&&request.headers.get("x-gmww-demo-owner")!==lease.owner)
+        return{ok:false,response:j({ok:false,error:"DEMO_LEASE_OWNED",message:"Phòng Demo đang được điều khiển ở một phiên GM khác."},409)};
+    }
+    return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
   computeWinProposal(meta,assignments,interactions){
     if(String(meta?.phase||"").toLowerCase()!=="running")return null;
     const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||!meta?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean)),byPlayer=new Map();
@@ -689,7 +781,7 @@ export class RoomDurableObject extends DurableObject {
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
       day:Number(meta.cycleNight||0),stage:"ready",candidateId:null,
       nominationDurationSec,voteDurationSec,
-      nominations:{},votes:{},blocked:[],eligible:[],outcome:null};
+      nominations:{},votes:{},blocked:[],blockedNomination:[],blockedVotes:[],mode:"auto",eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
     const eligible=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
@@ -697,7 +789,7 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
-    return {key,ballot:{...ballot,eligible,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
+    return {key,ballot:{...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
   }
   async gmGallows(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -707,6 +799,9 @@ export class RoomDurableObject extends DurableObject {
     const {key,ballot,eligible}=await this.gallowsState(meta),command=String(body?.command||"");
     const target=normalizeLoginId(body?.targetId||body?.loginId);
     const now=Date.now();
+    if(meta.demo&&body?.source==="demo"&&["open","begin","resolve"].includes(command)){
+      const c=await this.ctx.storage.get("demoClock");if(c&&projectDemoClock(c,now).remainingMs>0)return j({ok:false,error:"DEMO_TIMER_RUNNING"},409);
+    }
     let result;
     if(command==="open"){
       result=gallowsOpen(ballot,now);
@@ -714,9 +809,13 @@ export class RoomDurableObject extends DurableObject {
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
       result=gallowsBegin(ballot,target,now);
     }else if(command==="ban"){
-      if(!eligible.includes(target)||ballot.stage==="voting"&&now>=ballot.deadlineAt)
-        return j({ok:false,error:"GALLOWS_VOTING_CLOSED"},409);
       result=gallowsBan(ballot,target,now);
+    }else if(command==="restriction"){
+      result=gallowsSetRestriction(ballot,target,String(body?.kind||""),body?.banned===true,now);
+    }else if(command==="mode"){
+      result=gallowsSetMode(ballot,String(body?.mode||""),now);
+    }else if(command==="manual_vote"){
+      result=gallowsManualVote(ballot,target,body?.choice===null?null:String(body?.choice||""),now);
     }else if(command==="resolve"){
       result=gallowsResolve(ballot,String(body?.outcome||""),now);
       if(result.ok&&result.value.outcome==="dead"){
@@ -746,28 +845,35 @@ export class RoomDurableObject extends DurableObject {
     }else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
     if(!result.ok)return j({ok:false,error:result.error},409);
     await this.ctx.storage.put(key,result.value);
-    const publicBallot=gallowsSnapshot(result.value,meta,now);
+    if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
+    const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
     this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
-  async playerGallows(body){
+  async playerGallows(body,authorizedDemo=false){
     const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
+    if(meta?.demo===true&&!authorizedDemo)return j({ok:false,error:"DEMO_ROOM_GM_ONLY"},403);
     if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
     if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
-    if(ballot.blocked.includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+    if(gallowsMode(ballot)==="gm")return j({ok:false,error:"GM_MANUAL_MODE"},403);
     const command=String(body?.command||""),now=Date.now();
     let result;
     if(command==="nominate"){
       const target=normalizeLoginId(body?.targetId);
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      if(gallowsBlockedNomination(ballot).includes(loginId))return j({ok:false,error:"NOMINATION_BANNED"},403);
       result=gallowsNominate(ballot,loginId,target,now);
-    }else if(command==="vote")result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }else if(command==="vote"){
+      if(gallowsBlockedVotes(ballot).includes(loginId))return j({ok:false,error:"VOTER_BANNED"},403);
+      result=gallowsCast(ballot,loginId,String(body?.choice||""),now);
+    }
     else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
     if(!result.ok)return j({ok:false,error:result.error},409);
     await this.ctx.storage.put(key,result.value);
-    const publicBallot=gallowsSnapshot(result.value,meta,now);
+    if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
+    const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
     this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
@@ -779,8 +885,18 @@ export class RoomDurableObject extends DurableObject {
     const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
-    return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+    const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    const demoLease=meta.demo?await this.ctx.storage.get("demoLease"):null;
+    const storedDemoClock=meta.demo?await this.ctx.storage.get("demoClock"):null,
+      demoClock=storedDemoClock?projectDemoClock(storedDemoClock,Date.now()):null;
+    if(meta.demo&&meta.autoGM!==true&&nightRuntime&&demoClock?.kind==="night"){
+      nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
+      nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
+    }
+    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+      villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
+        Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
+      interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -924,7 +1040,7 @@ export class RoomDurableObject extends DurableObject {
       // The snapshot contains both private cards in one durable entry, committed before room release.
       await this.ctx.storage.put("deliverySnapshot:"+loginId,buildPrivateDeliverySnapshot({matchId:nextMatchId,matchRevision:nextMatchRevision,deliveryVersion:nextDeliveryVersion,publishedAt:nextPublishedAt,roles:list}));
     }
-    const summary=clean.map(({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,order,deliveredAt,viewedAt,artifact})=>({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,order,deliveredAt,viewedAt,artifactId:artifact?.artifactId||null,artifactName:artifact?.artifactName||null,artifactDeliveredAt:artifact?.deliveredAt||null,artifactViewedAt:artifact?.viewedAt||null,artifactUsedAt:artifact?.usedAt||null,artifactPriorityFirst:artifact?artifact.priorityFirst===true:null,artifactSingleUse:artifact?.singleUse===true}));
+    const summary=clean.map(({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,faction,order,deliveredAt,viewedAt,artifact})=>({assignmentIndex,loginId,displayName,matchId,matchRevision,roleId,roleName,faction,order,deliveredAt,viewedAt,artifactId:artifact?.artifactId||null,artifactName:artifact?.artifactName||null,artifactDeliveredAt:artifact?.deliveredAt||null,artifactViewedAt:artifact?.viewedAt||null,artifactUsedAt:artifact?.usedAt||null,artifactPriorityFirst:artifact?artifact.priorityFirst===true:null,artifactSingleUse:artifact?.singleUse===true}));
     await this.ctx.storage.put("assignments",summary);
     meta.multiAssign=multiAssign;meta.matchId=String(body?.matchId||meta.matchId||"")||null;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.deliveryVersion=nextDeliveryVersion;meta.phase="role_delivery";meta.status="role_delivery";meta.gmStage="deal";meta.roleDeliveredAt=nextPublishedAt;meta.updatedAt=meta.roleDeliveredAt;await this.ctx.storage.put("meta",meta);
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),assignments:summary,multiAssign});
@@ -964,30 +1080,102 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("interactions",[]);
     meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=Number(meta.resultVersion||0);
     meta.updatedAt=meta.startedAt;await this.ctx.storage.put("meta",meta);
+    if(meta.demo){
+      meta.autoGM=false;await this.ctx.storage.put("meta",meta);await this.ctx.storage.delete("demoClock");await this.ctx.storage.delete("demoPlan");
+      await this.ctx.storage.put("demoLease",{engine:"server",matchId:String(meta.matchId||""),running:true,speed:1,until:0,owner:"",steps:0,startedAt:Date.now()});
+    }
     await this.scheduleRoomAlarm(meta);
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
     return j({ok:true,room:publicRoom(meta)});
   }
   async gmConfig(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,cfg=sanitizeGameConfig(body?.gameConfig);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG",message:"Ván Mẫu không hợp lệ."},400);await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(body?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(body.cardBackImage));if(body?.matchId)meta.matchId=String(body.matchId);meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);meta.gameName=cfg.name||meta.gameName||"";meta.playerCount=Number(cfg.playerCount||0);meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta),gameConfig:cfg})}
 
+  async gmDayClock(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,phase=String(meta.cyclePhase||'').toLowerCase();
+    if(String(meta.phase||'').toLowerCase()!=='running'||!['day','morning'].includes(phase))
+      return j({ok:false,error:'DAY_PHASE_REQUIRED'},409);
+    if(String(body?.matchId||'')!==String(meta.matchId||'')||String(body?.cycleKey||'')!==String(meta.cycleKey||''))
+      return j({ok:false,error:'STALE_DAY_CLOCK'},409);
+    const cfg=(await this.ctx.storage.get('gameConfig'))||{},updated=shiftDayClock(meta,cfg,body?.deltaMinutes,Date.now());
+    if(!updated)return j({ok:false,error:'INVALID_DELTA'},400);
+    meta.dayDeadlineAt=updated.dayDeadlineAt;meta.autoPausedRemainingMs=updated.autoPausedRemainingMs;
+    meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
+    await this.ctx.storage.put('meta',meta);
+    const room=publicRoom(meta);
+    this.broadcast({type:'room_state',room,serverTime:Date.now()});
+    await this.scheduleRoomAlarm(meta);
+    return j({ok:true,room,remainingSeconds:Math.ceil(updated.remainingMs/1000),serverTime:Date.now()});
+  }
+  async demoClockContext(meta){
+    const cfg=await this.ctx.storage.get("gameConfig")||{},prefix=String(meta.matchId||"")+":"+String(meta.cycleKey||"");
+    if(meta.cyclePhase==="night"){
+      const rt=await this.getNightRuntime(meta,Math.max(1,Number(meta.cycleNight)||1),false),turn=rt?.queue?.[rt.cursor];
+      return {key:prefix+":"+String(turn?.id||"done"),kind:"night",durationMs:Math.max(0,Number(turn?.durationSec)||0)*1000};
+    }
+    const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""),ballot=await this.ctx.storage.get(key)||{stage:"ready"},stage=String(ballot.stage||"ready"),
+      seconds=stage==="ready"?cfg.timing?.villageDiscussionSec:stage==="nominating"?ballot.nominationDurationSec:stage==="voting"?ballot.voteDurationSec:0;
+    return {key:prefix+":"+String(ballot.id||"day")+":"+stage,kind:stage==="ready"?"discussion":stage,durationMs:Math.max(0,Number(seconds)||0)*1000};
+  }
+  async syncDemoClock(meta,lease){
+    if(meta.demo!==true||meta.autoGM===true)return null;
+    const now=Date.now(),context=await this.demoClockContext(meta),previous=await this.ctx.storage.get("demoClock"),clock=nextDemoClock(previous,context,lease,now);
+    await this.ctx.storage.put("demoClock",clock);
+    if(meta.cyclePhase==="morning"){
+      if(clock.kind==="discussion"){meta.dayDeadlineAt=clock.deadlineAt?new Date(clock.deadlineAt).toISOString():null;meta.autoPausedRemainingMs=clock.running?null:clock.remainingMs/clock.speed;await this.ctx.storage.put("meta",meta)}
+      const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""),ballot=await this.ctx.storage.get(key);
+      if(ballot&&["nominating","voting"].includes(clock.kind)){
+        const field=clock.kind==="nominating"?"nominationDeadlineAt":"deadlineAt";
+        ballot[field]=clock.deadlineAt;await this.ctx.storage.put(key,ballot);
+      }
+    }
+    return clock;
+  }
+  demoInternalRequest(){return new Request("https://room.internal/gm/demo-server",{method:"POST",headers:{authorization:"Bearer "+GM_SYNC_TOKEN}})}
+  async gmDemo(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
+    if(meta.demo!==true)return j({ok:false,error:"NOT_DEMO_ROOM"},403);
+    const command=String(body?.command||"status"),previous=await this.ctx.storage.get("demoLease")||{},now=Date.now(),
+      speed=[1,2,5,10].includes(Number(body?.speed))?Number(body.speed):Math.max(1,Number(previous.speed)||1);
+    if(!["status","start","stop","speed","hold","release"].includes(command))return j({ok:false,error:"DEMO_SERVER_OWNED",message:"Demo chạy trên server. Hãy cập nhật Runtime để điều khiển."},409);
+    if(command==="start"&&body?.owner)return j({ok:false,error:"DEMO_RUNTIME_UPDATE_REQUIRED",message:"Hãy cập nhật Runtime để dùng Demo chạy trên server."},409);
+    if(command==="start"){
+      if(meta.autoGM===true)return j({ok:false,error:"DEMO_AUTO_GM_ACTIVE"},409);
+      if(meta.phase!=="running")return j({ok:false,error:"DEMO_MATCH_NOT_STARTED"},409);
+    }
+    const same=previous.engine==="server"&&previous.matchId===String(meta.matchId||"");
+    let lease=same?{...previous}:{engine:"server",matchId:String(meta.matchId||""),running:false,speed,steps:0,startedAt:now,until:0,owner:""};
+    if(command==="stop")lease={...lease,running:false,reason:"paused",holdUntil:0};
+    if(command==="start")lease={...lease,running:true,reason:"",error:"",holdUntil:0};
+    if(command==="hold"&&lease.running)lease.holdUntil=now+10000;
+    if(command==="release")lease.holdUntil=0;
+    if(command!=="status"){
+      lease.speed=speed;await this.syncDemoClock(meta,lease);await this.ctx.storage.put("demoLease",lease);await this.scheduleRoomAlarm(meta);
+      this.broadcast({type:"demo_control",running:lease.running,serverTime:now});
+    }
+    const stored=await this.ctx.storage.get("demoClock"),clock=stored?projectDemoClock(stored,now):null;
+    return j({ok:true,engine:"server",running:serverDemoActive(meta,lease),paused:lease.reason==="paused",speed:lease.speed,clock,reason:lease.reason||"",error:lease.error||"",steps:Number(lease.steps||0),lastEvent:lease.lastEvent||null});
+  }
+
   async gmAuto(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    if(body?.enabled!==false&&auth.meta.demo){const lease=await this.ctx.storage.get("demoLease");if(lease?.engine==="server")await stopServerDemo(this,auth.meta,lease,"auto_gm")}
     const meta=auth.meta,enabled=body?.enabled!==false,wasEnabled=meta.autoGM!==false,nowMs=Date.now(),now=new Date(nowMs).toISOString(),phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(0,Number(meta.cycleNight||0)),runtimeKey=night>0?this.nightRuntimeKey(meta,night):"",runtime=phase==="night"&&night>0?await this.getNightRuntime(meta,night,false):null;
     if(wasEnabled&&!enabled){
       if(runtime&&!runtime.completed){
         const deadline=Date.parse(runtime.deadlineAt||""),active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0;
         runtime.autoPausedRemainingMs=Number.isFinite(deadline)?Math.max(0,deadline-nowMs):fallback;runtime.deadlineAt=null;runtime.autoAdvance=false;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
       }else if(phase==="morning"||phase==="day"){
-        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,started=Date.parse(meta.cycleStartedAt||""),due=Number.isFinite(started)?started+totalMs:NaN;
-        meta.autoPausedRemainingMs=totalMs>0?(Number.isFinite(due)?Math.max(0,due-nowMs):totalMs):0
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{};
+        meta.autoPausedRemainingMs=dayClockRemainingMs(meta,cfg,nowMs)
       }
     }else if(!wasEnabled&&enabled){
       if(runtime&&!runtime.completed){
         const active=runtime.queue?.[runtime.cursor],fallback=active&&Number(active.durationSec)>0?Number(active.durationSec)*1000:0,stored=Number(runtime.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,stored):fallback;
         runtime.deadlineAt=remaining>0?new Date(nowMs+Math.max(100,remaining)).toISOString():null;runtime.autoPausedRemainingMs=0;runtime.autoAdvance=true;runtime.updatedAt=now;await this.ctx.storage.put(runtimeKey,runtime)
       }else if(phase==="morning"||phase==="day"){
-        const cfg=(await this.ctx.storage.get("gameConfig"))||{},totalMs=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000,stored=Number(meta.autoPausedRemainingMs),remaining=Number.isFinite(stored)?Math.max(0,Math.min(totalMs,stored)):totalMs;
-        if(totalMs>0)meta.cycleStartedAt=new Date(nowMs-Math.max(0,totalMs-remaining)).toISOString();meta.autoPausedRemainingMs=null
+        const cfg=(await this.ctx.storage.get("gameConfig"))||{},remaining=dayClockRemainingMs(meta,cfg,nowMs);
+        meta.dayDeadlineAt=new Date(nowMs+remaining).toISOString();meta.autoPausedRemainingMs=null
       }
     }
     meta.autoGM=enabled;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
@@ -1119,7 +1307,18 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},phase=String(meta.phase||"lobby").toLowerCase();
     if(["running","started","game","playing"].includes(phase))return j({ok:false,error:"ROOM_SETTINGS_LOCKED",message:"Không đổi chế độ hoặc số ghế khi ván đang chạy."},409);
-    const roomMode=body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
+    // Room is created once; GM selects Online / Offline / Demo afterwards.
+    // Only an EMPTY lobby can cross the demo isolation boundary.
+    const previousDemo=meta.demo===true,desiredDemo=body&&Object.prototype.hasOwnProperty.call(body,"demo")?body.demo===true:previousDemo;
+    const demoChanging=desiredDemo!==previousDemo;
+    if(demoChanging){
+      const assignments=await this.ctx.storage.get("assignments")||[];
+      const locked=meta.seatsLocked===true||meta.locked===true;
+      if(locked||Object.keys(players).length||assignments.length||meta.startedAt||meta.roleDeliveredAt){
+        return j({ok:false,error:"ROOM_MODE_REQUIRES_EMPTY_RESET",message:"Để đổi sang hoặc rời DEMO, hãy dùng phòng trống hoặc RESET phòng trước. Dữ liệu người chơi hiện tại được giữ nguyên."},409);
+      }
+    }
+    const roomMode=desiredDemo?"offline":body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
     const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),changedCount=requested!==normalizeSeatCount(meta.seatCount),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):changedCount?villageLayout.recommendedSeatShape(requested):normalizeSeatLayout(meta.seatLayout);
@@ -1142,6 +1341,11 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;meta.seatSpacing=seatSpacing;
+    if(demoChanging){
+      meta.demo=desiredDemo;meta.autoGM=desiredDemo?false:true;
+      // Retain historical room data; only clear stale demonstration lease/timer.
+      await this.ctx.storage.delete("demoLease");await this.ctx.storage.delete("demoClock");
+    }
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
     await this.ctx.storage.put("players",players);await this.ctx.storage.put("meta",meta);
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers});
@@ -1216,7 +1420,7 @@ export class RoomDurableObject extends DurableObject {
     return runtime||null
   }
   async buildNightRuntime(meta,night){
-    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=Math.max(0,Number(timing.earlyArtifactSec??60)||0),artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
+    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=30,artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
     if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:[...new Set(assignments.filter(a=>{const faction=String(a?.roleCard?.factionId||a?.factionId||a?.faction||'').toLowerCase();return faction==='wolf'||faction.includes('sói')||faction.includes('soi')||String(a?.roleId||'').includes('wolf')}).map(a=>normalizeLoginId(a?.loginId)).filter(Boolean))],
       durationSec:wolfDiscussionSec,status:"pending"});
@@ -1229,8 +1433,10 @@ export class RoomDurableObject extends DurableObject {
       const priorityFirst=typeof a.artifactPriorityFirst==="boolean"?a.artifactPriorityFirst:typeof assigned?.priorityFirst==="boolean"?assigned.priorityFirst:defaultPriorityFirst(a.artifactName);
       artifactRows.push({...a,_index:index,_priorityFirst:priorityFirst});
     }
-    // Keep a stable, always-visible opening window even when no Artifact is assigned.
-    queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:artifactRows.filter(a=>a._priorityFirst).map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
+    // No configured/assigned Artifact means no opening Artifact turn or countdown.
+    // Never create an empty window: it misleads the GM and blocks the night timeline.
+    if(artifactRows.length>0)
+      queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:artifactRows.filter(a=>a._priorityFirst).map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
     for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(roleOrder.get(rid)??a?.order??9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
@@ -1316,6 +1522,7 @@ export class RoomDurableObject extends DurableObject {
     }
     const active=runtime.completed?null:runtime.queue[runtime.cursor];if(active){active.startedAt=now;const durationMs=Number(active.durationSec)>0?Number(active.durationSec)*1000:0;if(meta.autoGM===false){runtime.deadlineAt=null;runtime.autoPausedRemainingMs=durationMs}else{runtime.deadlineAt=durationMs>0?new Date(Date.parse(now)+durationMs).toISOString():null;runtime.autoPausedRemainingMs=0}}else{runtime.deadlineAt=null;runtime.autoPausedRemainingMs=0}
     runtime.autoAdvance=meta.autoGM!==false;runtime.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);meta.currentNightTurnId=runtime.currentId;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
+    if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     this.broadcast({type:"night_turn",night,runtime,source,room:publicRoom(meta),serverTime:Date.now()});return runtime
   }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
@@ -1323,14 +1530,16 @@ export class RoomDurableObject extends DurableObject {
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
-    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
+    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.dayDeadlineAt=null;
+    if(p==='morning'){const cfg=(await this.ctx.storage.get('gameConfig'))||{},ms=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000;meta.dayDeadlineAt=ms>0?new Date(Date.parse(now)+ms).toISOString():null;if(meta.autoGM===false&&!meta.demo)meta.autoPausedRemainingMs=ms}
+    meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
     // and night. Guards block final, potentially transferred bite destinations.
     // An absent bite or a malformed seating ring never manufactures a death.
     const wolfResolution=p==="morning"&&n>0?
-      resolveWolfNight({interactions:rows,players:(await this.ctx.storage.get("players"))||{},
+      resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,players:(await this.ctx.storage.get("players"))||{},
         matchId:String(meta.matchId||""),night:n}):null;
     if(wolfResolution?.ok)for(const loginId of wolfResolution.victims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
@@ -1379,6 +1588,7 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
+    if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     const room=publicRoom(meta);this.broadcast({type:"room_cycle",cycleKey:key,phase:p,night:n,matchId:String(meta.matchId||""),expired,nightRuntime,room,source,serverTime:Date.now()});
     this.broadcast({type:"room_state",room,players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
     await this.scheduleRoomAlarm(meta);
@@ -1388,13 +1598,13 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
-    if(cyclePhase==="morning"||cyclePhase==="day"){const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
+    if(cyclePhase==="morning"||cyclePhase==="day"){const deadline=Date.parse(meta.dayDeadlineAt||'');if(Number.isFinite(deadline))return deadline;const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
     return 0
   }
   async scheduleRoomAlarm(meta=null){
     meta=meta||await this.ctx.storage.get("meta");if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return 0;
-    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),due=autoDue>0?Math.min(expiryDue,autoDue):expiryDue,next=Math.max(Date.now()+100,due);
-    try{await this.ctx.storage.setAlarm(next)}catch(_){}
+    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity),next=Math.max(Date.now()+25,due);
+    try{await this.ctx.storage.setAlarm(next)}catch(error){if(meta.demo)throw error}
     return next
   }
   async runAutoAdvanceIfDue(meta){
@@ -1422,6 +1632,7 @@ export class RoomDurableObject extends DurableObject {
       if((target.kind==="artifact-main"||target.kind==="early-artifact")&&await this.artifactUsedInNight(meta,target))
         return j({ok:false,error:"ARTIFACT_ALREADY_USED",message:"Artifact này đã sử dụng trong đêm, không thể thực hiện lần nữa."},409);
     }
+    if(meta.demo&&source==="demo"){const c=await this.ctx.storage.get("demoClock");if(c&&projectDemoClock(c,Date.now()).remainingMs>0)return j({ok:false,error:"DEMO_TIMER_RUNNING"},409)}
     const runtime=await this.advanceNightRuntime(meta,action,source,targetIndex);
     // Manual GM navigation must resolve morning just like the automatic timer.
     const morning=action==="next"&&runtime.completed?await this.applyCycle(meta,"morning",night,"morning-"+night,source):null;
@@ -1497,9 +1708,9 @@ export class RoomDurableObject extends DurableObject {
     if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
       affected(actorId,"expelled")||affected(actorId,"frozen"))
       return j({ok:false,error:"DAY_ACTOR_BLOCKED"},409);
-    if(targets.some(x=>fn.allowDead!==true&&affected(x,"dead")&&
-      !String(actionId).toLowerCase().includes("revive")||
-      affected(x,"expelled")))
+    // Expelled players remain targetable, but every effect on them is inert.
+    if(targets.some(x=>!affected(x,"expelled")&&fn.allowDead!==true&&affected(x,"dead")&&
+      !String(actionId).toLowerCase().includes("revive")))
       return j({ok:false,error:"DAY_TARGET_NOT_ELIGIBLE"},409);
     const usageKey="dayRoleUsage:"+matchId,
       priorUsage=await this.ctx.storage.get(usageKey)||[],
@@ -1528,35 +1739,39 @@ export class RoomDurableObject extends DurableObject {
         artifactId,cycleKey:artifactCycleKey,eligible:true,limit});
       if(!artifactReservation.ok)return j({ok:false,error:artifactReservation.error},409);
     }
-    const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role";
+    const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role",
+      effectiveTargets=targets.filter(id=>!affected(id,"expelled"));
     let message="",deadVictims=[],result=null;
     const isWolf=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("soi")||f==="wolf"||f==="wolves"};
     const isThird=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("phe ba")||f.includes("phe thu")||f==="third"};
-    if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
-      const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===targets[0]);
+    if(targets.length&&effectiveTargets.length===0){
+      message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
+      result={message,noEffect:true};
+    }else if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
+      const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
       const correctlyStabbed=chosen.some(x=>isWolf(x)||isThird(x));
-      deadVictims=[correctlyStabbed?targets[0]:actorId];
+      deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
       message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
       result={message,correctlyStabbed};
     }else if(!artifactId&&actionId==="action_bear_scan"&&roleId==="role_bear"){
-      const hasWolf=targets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
+      const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
       result={message,hasWolf};
     }else if(roleKnight){
-      const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+targets[0];
+      const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+effectiveTargets[0];
       if(await this.ctx.storage.get(pendingKey))
         return j({ok:false,error:"KNIGHT_TARGET_ALREADY_QUEUED"},409);
       changes.push({kind:"knight_pending",key:pendingKey,value:{matchId,actorId,
-        targetId:targets[0],createdAt:time,resolveDay:day+1}});
+        targetId:effectiveTargets[0],createdAt:time,resolveDay:day+1}});
       message="Hiệp Sĩ đã chọn mục tiêu. Hiệu lực vào sáng ngày tiếp theo.";
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
       const terms=[actionId,...effects].join(" ").toLowerCase();
       if(/revive|hoi_sinh/.test(terms)){
-        for(const id of targets){
+        for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
           for(const x of changed){x.effectActive=false;x.expiredAt=time;x.expiredReason="DAY_ARTIFACT_REVIVE"}
@@ -1564,15 +1779,15 @@ export class RoomDurableObject extends DurableObject {
         }
         message="Artifact hồi sinh đã được ghi nhận.";
       }else if(/kill|dead|giet|chet|poison/.test(terms)){
-        deadVictims=targets;message="Artifact đã gây tác động Chết.";
+        deadVictims=effectiveTargets;message="Artifact đã gây tác động Chết.";
       }else if(/expel|exile|duoi/.test(terms)){
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"expelled"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
       }else if(/freeze|frozen|dong_bang/.test(terms)){
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"frozen"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"frozen"});
         message="Artifact đã thực hiện Đóng Băng.";
       }else{
-        for(const id of targets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
         message="Artifact đã ghi nhận hành động. Hiệu ứng đặc biệt chờ GM xử lý theo luật đã cấu hình.";
       }
       result={message};
@@ -1648,8 +1863,14 @@ export class RoomDurableObject extends DurableObject {
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
+    const isExpelled=id=>interactions.some(row=>
+      normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
+      row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===matchId)&&
+      (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
+    if(isExpelled(actorId))
+      return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
-      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng, đuổi hoặc đã chết."},409);
+      return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
@@ -1710,9 +1931,16 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }};
     const before=await snapshot(),results=[];
+    // Other players may select expelled targets. The selection consumes the
+    // actor's normal action, but never applies gameplay effects to those targets.
+    const effectiveTargets=targets.filter(id=>!isExpelled(id));
     for(const id of targets){
+      if(!effectiveTargets.includes(id)){
+        results.push({ok:true,loginId:id,noEffect:true,reason:"EXPELLED"});
+        continue;
+      }
       const action={...body,loginId:id,actorId,clientEventId:token+":"+id,
-        actionNonce:token,targetIds:targets};
+        actionNonce:token,targetIds:effectiveTargets};
       const response=await this.executeGmInteraction(request,action,auth);
       const data=await response.clone().json().catch(()=>({ok:false,error:"INVALID_RESPONSE"}));
       if(!response.ok||data.ok!==true){
@@ -1730,10 +1958,10 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds,
-      assignments:(await this.ctx.storage.get("assignments"))||[]});
-    const wolfOutcome=['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
-      resolveWolfNight({interactions:(await this.ctx.storage.get("interactions"))||[],players,
+    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&!isExpelled(id)),
+      assignments:await readNightAssignments(this.ctx.storage,matchId)}):null;
+    const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
+      resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:(await this.ctx.storage.get("interactions"))||[],players,
         matchId,night:Number(meta.cycleNight||0)}):null;
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
       ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
@@ -1760,6 +1988,7 @@ export class RoomDurableObject extends DurableObject {
       if(row.exists)await this.ctx.storage.put(row.key,row.value);
       else await this.ctx.storage.delete(row.key);
     }
+    if(meta.demo)await this.ctx.storage.delete("demoPlan");
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
     const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
     this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
@@ -1852,6 +2081,14 @@ export class RoomDurableObject extends DurableObject {
     }
     const allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice"]);if(!loginId||!allowed.has(type))return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
+    // Automatic night deaths respect the delivered card. Explicit GM overrides
+    // (without a turn) and the Destroyer's self-inflicted backlash remain possible.
+    if(type==="dead"&&body?.turnId&&String(meta.cyclePhase)==="night"&&
+       !(String(body.actionId)==="action_destroyer_kill"&&normalizeLoginId(body.actorId)===loginId)&&
+       isNightImmune(await readNightAssignments(this.ctx.storage,meta.matchId),loginId)){
+      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
+      return j({ok:true,loginId,noEffect:true,reason:"NIGHT_IMMUNE"});
+    }
     const defaults={frozen:"Bạn đang bị Đóng Băng.",expelled:"Bạn đã bị Đuổi Khỏi Làng.",dead:"Bạn đã Chết.",thumb_vote:"Hãy chọn dấu phù hợp.",assassin_mark:"Bạn đã bị Đánh Dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.",effect_notice:"Bạn đã nhận một Hiệu Ứng."},rawOptions=Array.isArray(body?.options)?body.options.map(x=>String(x||"").slice(0,40)).filter(Boolean).slice(0,4):[],cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??body?.nightIndex??body?.roundIndex??meta.cycleKey??"").slice(0,160),expiresAt=body?.expiresAt?String(body.expiresAt).slice(0,64):null,effectActive=["frozen","expelled","dead","assassin_mark"].includes(type),clientEventId=String(body?.clientEventId||"").slice(0,240),rows=(await this.ctx.storage.get("interactions"))||[];
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
@@ -1918,12 +2155,14 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,roomWasEnabled=meta.enabled!==false,now=new Date().toISOString(),transactionId=String(body?.transactionId||"").trim().slice(0,160),currentVersion=Number(meta.resetVersion||0),hasExpected=body?.expectedResetVersion!==undefined&&body?.expectedResetVersion!==null,expected=Number(body?.expectedResetVersion||0);
     const softPostGame=body?.postGame===true&&body?.preserveParticipants===true;
+    if(softPostGame&&hasExpected&&Number(expected)!==currentVersion&&meta.lastResetTransactionId!==transactionId)return j({ok:false,error:"RESET_VERSION_CONFLICT"},409);
+    if(softPostGame&&transactionId&&meta.lastResetTransactionId===transactionId){const players=await this.ctx.storage.get("players")||{};return j({ok:true,reset:true,hardReset:false,idempotent:true,preserveParticipants:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
     if(softPostGame){
       const players=(await this.ctx.storage.get("players"))||{},nextVersion=currentVersion+1;
       for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.lastSeenAt=now}
       await this.ctx.storage.put("players",players);await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
       for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
-      meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.enabled=roomWasEnabled;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("postgame-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
+      meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.enabled=roomWasEnabled;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastEndedMatchId=null;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.dayDeadlineAt=null;meta.lastResetTransactionId=transactionId||("postgame-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
       const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer),ack={ok:true,reset:true,hardReset:false,preserveParticipants:true,transactionId:meta.lastResetTransactionId,resetVersion:nextVersion,phase:room.phase,locked:room.locked,playersCount:publicPlayers.length,assignmentsCount:0,room,players:publicPlayers,removedPlayers:[]};
       this.broadcast({type:"room_reset",room,players:publicPlayers,resetVersion:nextVersion,transactionId:ack.transactionId,preserveParticipants:true});
@@ -1948,8 +2187,11 @@ export class RoomDurableObject extends DurableObject {
     for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_HARD_RESET")}catch{}
     return j(ack)
   }
-  async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});return j({ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true})}
-  async alarm(){
+  async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);const completionKey="matchCompletion:"+String(incomingMatchId||meta.matchId||""),completed=await this.ctx.storage.get(completionKey);
+    if(completed){const requested=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||"");if(requested&&requested!==completed.winnerFaction)return j({ok:false,error:"WINNER_ALREADY_CONFIRMED"},409);return j({...completed,idempotent:true})}
+    if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});const ack={ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true};if(endedMatchId)await this.ctx.storage.put(completionKey,ack);return j(ack)}
+  async alarm(){return this.ctx.blockConcurrencyWhile(()=>this.roomAlarm())}
+  async roomAlarm(){
     try{
       let meta=await this.ctx.storage.get("meta");
       if(!meta){
@@ -1963,11 +2205,27 @@ export class RoomDurableObject extends DurableObject {
       }
       if(String(meta.phase||"").toLowerCase()==="deleted")return;
       if(meta.reopenAt){meta.reopenAt=null;await this.ctx.storage.put("meta",meta)}
+      if(serverDemoActive(meta,await this.ctx.storage.get("demoLease"))){
+        const events=[];this.demoBroadcastBuffer=events;
+        try{await this.ctx.storage.transaction(async()=>{events.length=0;await runServerDemo(this,await this.ctx.storage.get("meta"))})}
+        finally{this.demoBroadcastBuffer=null}
+        for(const event of events)this.broadcast(event);
+        return;
+      }
       if(await this.runAutoAdvanceIfDue(meta))return;
       meta=await this.ctx.storage.get("meta");const due=this.roomExpiryDue(meta);
       if(Date.now()<due){await this.scheduleRoomAlarm(meta);return}
       const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}
-    }catch(e){console.error("GMWW_ROOM_ALARM",e);try{await this.ctx.storage.setAlarm(Date.now()+60*1000)}catch(_){}}
+    }catch(e){
+      console.error("GMWW_ROOM_ALARM",e);
+      const meta=await this.ctx.storage.get("meta"),lease=await this.ctx.storage.get("demoLease");
+      if(serverDemoActive(meta,lease)){
+        lease.failures=Number(lease.failures||0)+1;lease.error="Server đang thử lại: "+String(e?.message||e);
+        if(lease.failures>=3)await stopServerDemo(this,meta,lease,"error","Demo tạm dừng sau lỗi server: "+String(e?.message||e));
+        else await this.ctx.storage.put("demoLease",lease);
+        await this.ctx.storage.setAlarm(Date.now()+(lease.failures>=3?ROOM_IDLE_TTL:1000));
+      }else try{await this.ctx.storage.setAlarm(Date.now()+60*1000)}catch(_){}
+    }
   }
   async gmDelete(request){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{};meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=new Date().toISOString();meta.updatedAt=meta.deletedAt;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}this.broadcast({type:"room_deleted",room:publicRoom(meta)});for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_DELETED")}catch{}return j({ok:true,deleted:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
 
@@ -1995,7 +2253,7 @@ export class RoomDurableObject extends DurableObject {
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?(await this.gallowsState(meta)).ballot:null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
@@ -2141,7 +2399,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,room,player:publicPlayer(p),players:publicPlayers,arrived:true,seatId:targetSeatId})
   }
   async join(body){
-    const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
+    const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.demo===true)return j({ok:false,error:"DEMO_ROOM_GM_ONLY",message:"Phòng Demo chỉ dùng trong GM Server."},403);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
     let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;const now=new Date().toISOString(),phase=String(meta.phase||"lobby").toLowerCase(),inProgress=["role_delivery","running","started","game","playing"].includes(phase);let player;
     if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,evicted=(await this.ctx.storage.get("evictedMembers"))||[];if(evicted.includes(normalizeLoginId(m.loginId))&&!players[key])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"GM đã mời bạn ra khỏi Phòng. Hãy chờ GM gọi lại."},403);const resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
     else{const displayName=normalizeDisplayName(body?.guest?.displayName),avatarId=String(body?.guest?.avatarId||"");if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_GUEST_NAME"},400);if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR"},400);const guestId=String(body?.guest?.guestId||crypto.randomUUID()),key="guest:"+guestId;if(meta.enabled===false&&!players[key])return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!players[key])return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Người ngoài không thể tham gia giữa trận."},423);player={participantId:key,kind:"guest",guestId,displayName,avatarId,gameCharacterId:normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:players[key]?.ready||false,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now()};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
@@ -2157,7 +2415,7 @@ export class RoomDurableObject extends DurableObject {
   async websocket(request,url){if(request.headers.get("Upgrade")?.toLowerCase()!=="websocket")return new Response("Expected WebSocket upgrade",{status:426});const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);const participantId=url.searchParams.get("participantId")||null;let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(participantId&&!players[participantId])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},403);const now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}const pair=new WebSocketPair(),[client,server]=Object.values(pair);this.ctx.acceptWebSocket(server);server.serializeAttachment({participantId,connectedAt:now});const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer),payload={type:"room_state",room,players:publicPlayers,serverTime:Date.now(),presenceChanged:true};server.send(JSON.stringify(payload));this.broadcast(payload);return new Response(null,{status:101,webSocket:client})}
   async webSocketMessage(ws,message){let d;try{d=JSON.parse(typeof message==="string"?message:new TextDecoder().decode(message))}catch{return}if(d?.type!=="ping")return;const participantId=ws.deserializeAttachment()?.participantId||null,meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}try{ws.send(JSON.stringify({type:"pong",at:now,serverTime:Date.now()}))}catch{}if(meta&&participantId&&players[participantId])this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now(),presenceChanged:true})}
   async markSocketDisconnected(ws){const participantId=ws?.deserializeAttachment?.()?.participantId||null;if(!participantId){this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length});return}const other=this.ctx.getWebSockets().some(s=>s!==ws&&s.deserializeAttachment?.()?.participantId===participantId);if(other)return;const players=(await this.ctx.storage.get("players"))||{},meta=await this.ctx.storage.get("meta");if(players[participantId]){players[participantId].lastHeartbeatAt=0;players[participantId].lastSeenAt=new Date().toISOString();await this.ctx.storage.put("players",players)}if(meta)this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now(),presenceChanged:true});this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length})}
-  async webSocketClose(ws){await this.markSocketDisconnected(ws)} async webSocketError(ws){await this.markSocketDisconnected(ws)} broadcast(payload){const e=JSON.stringify(payload);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}}
+  async webSocketClose(ws){await this.markSocketDisconnected(ws)} async webSocketError(ws){await this.markSocketDisconnected(ws)} broadcast(payload){if(this.demoBroadcastBuffer){this.demoBroadcastBuffer.push(payload);return}const e=JSON.stringify(payload);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}}
 }
 
 export default {async fetch(request,env){
@@ -2325,9 +2583,22 @@ export default {async fetch(request,env){
     try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true}'}))}catch(_){}
   }
   if(url.pathname==="/api/village-scene"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/village-scene");
+  const sceneImagePath=url.pathname.match(/^\/api\/village-scene\/image\/(day|night)$/);
+  if(sceneImagePath&&request.method==="GET"){
+    const revision=url.searchParams.get("revision")||"";
+    const image=await memberStore(env).fetch("https://member.internal/global-settings/village-scene/image/"+sceneImagePath[1]+"?revision="+encodeURIComponent(revision));
+    // IPA's file:// WebView must read bytes to persist its local scene pair.
+    const response=new Response(image.body,image);
+    response.headers.set("access-control-allow-origin","*");
+    return response;
+  }
   if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene",{method:"PUT",headers:{"content-type":"application/json"},body:request.body}));
+  }
+  if(url.pathname==="/api/gm/village-scene/reset"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene/reset",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}));
   }
   if(url.pathname==="/api/gm/village-scene/rollback"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
@@ -2452,10 +2723,11 @@ export default {async fetch(request,env){
   const gmInteraction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/interaction$/);if(gmInteraction&&request.method==="POST")return roomProxy(env,gmInteraction[1],"/gm/interaction",request);
   const gmBattleAction=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-action$/);if(gmBattleAction&&request.method==="POST")return roomProxy(env,gmBattleAction[1],"/gm/battle-action",request);
   const gmDayActionRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/day-action$/);if(gmDayActionRoute&&request.method==="POST")return roomProxy(env,gmDayActionRoute[1],"/gm/day-action",request);
+  const gmDayClockRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/day-clock$/);if(gmDayClockRoute&&request.method==="POST")return roomProxy(env,gmDayClockRoute[1],"/gm/day-clock",request);
   const gmBattleUndo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/battle-undo$/);if(gmBattleUndo&&request.method==="POST")return roomProxy(env,gmBattleUndo[1],"/gm/battle-undo",request);
   const gmGallowsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(gmGallowsRoute&&request.method==="POST")return roomProxy(env,gmGallowsRoute[1],"/gm/gallows",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
-  const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return roomProxy(env,gmRoomSettingsRoute[1],"/gm/room-settings",request);
+  const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return gmRoomSettingsApi(env,gmRoomSettingsRoute[1],request);
   const gmStageRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/stage$/);if(gmStageRoute&&request.method==="POST")return roomProxy(env,gmStageRoute[1],"/gm/stage",request);
   const gmSeatRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat$/);if(gmSeatRoute&&request.method==="POST")return roomProxy(env,gmSeatRoute[1],"/gm/seat",request);
   const gmRandomSeatsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seats\/randomize-remaining$/);if(gmRandomSeatsRoute&&request.method==="POST")return roomProxy(env,gmRandomSeatsRoute[1],"/gm/seats/randomize-remaining",request);
@@ -2463,6 +2735,7 @@ export default {async fetch(request,env){
   const gmSeatLockRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat-lock$/);if(gmSeatLockRoute&&request.method==="POST")return roomProxy(env,gmSeatLockRoute[1],"/gm/seat-lock",request);
   const gmCycle=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/cycle$/);if(gmCycle&&request.method==="POST")return roomProxy(env,gmCycle[1],"/gm/cycle",request);
   const gmTurn=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/turn$/);if(gmTurn&&request.method==="POST")return roomProxy(env,gmTurn[1],"/gm/turn",request);
+  const gmDemo=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/demo$/);if(gmDemo&&request.method==="POST")return roomProxy(env,gmDemo[1],"/gm/demo",request);
   const gmAuto=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/auto$/);if(gmAuto&&request.method==="POST")return roomProxy(env,gmAuto[1],"/gm/auto",request);
   const gmEnabled=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/enabled$/);if(gmEnabled&&request.method==="POST")return gmRoomEnabled(env,gmEnabled[1],request);
   const gmLock=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/lock$/);if(gmLock&&request.method==="POST")return gmRoomLock(env,gmLock[1],request);
@@ -2510,7 +2783,7 @@ async function applyPublicEntryRateLimit(env,request,policy){
   return j({ok:false,error:"ADMISSION_UNAVAILABLE",message:"Tạm thời không thể xác nhận yêu cầu. Vui lòng thử lại."},503);
 }
 
-async function createRoom(env,url,request){const body=await safeJson(request)||{};for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
+async function createRoom(env,url,request){const body=await safeJson(request)||{};if(body.demo===true&&bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"DEMO_GM_ONLY"},403);for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",demo:body.demo===true,enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
 async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const body=await safeJson(request);if(body?.token){const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:{Authorization:"Bearer "+body.token}}));if(!me.ok)return me;const data=await me.json();const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({member:data.member})});if(joined.ok){await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,roomCode:code,ready:false})});await syncRoomDirectory(env,code)}return joined}const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({guest:body?.guest})});if(joined.ok)await syncRoomDirectory(env,code);return joined}
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
@@ -2586,6 +2859,7 @@ async function gmRoomParticipants(env,raw,request){
   const res=await roomStub(env,code).fetch("https://room.internal/gm/participants",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});
   if(!res.ok)return res;
   const data=await res.clone().json().catch(()=>({}));
+  if(data?.room?.demo===true){await syncRoomDirectory(env,code);return res}
   const syncPresence=async(loginId,roomCode,ready,expectedRoomCode=null,calledByGM=false)=>{
     for(let attempt=0;attempt<3;attempt++){
       try{
@@ -2596,24 +2870,42 @@ async function gmRoomParticipants(env,raw,request){
     return false
   };
   const failures=[];
-  for(const p of (Array.isArray(data?.players)?data.players:[]))if(p?.loginId&&!await syncPresence(p.loginId,code,true,null,true))failures.push(p.loginId);
+  // Each member's presence record is independent; bounded concurrency avoids
+  // a 30-person room waiting for 30 sequential Durable Object round trips.
+  const syncBatch=async(rows,roomCode,ready,expectedRoomCode=null,calledByGM=false)=>{
+    for(let offset=0;offset<rows.length;offset+=6){
+      const results=await Promise.all(rows.slice(offset,offset+6).map(async loginId=>({
+        loginId,ok:await syncPresence(loginId,roomCode,ready,expectedRoomCode,calledByGM)
+      })));
+      for(const result of results)if(!result.ok)failures.push(result.loginId);
+    }
+  };
+  const admitted=[...new Set((Array.isArray(data?.players)?data.players:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean))];
+  await syncBatch(admitted,code,true,null,true);
   // Retry both newly removed accounts and incomplete releases from an earlier disband.
   // The storage guard preserves anyone who has already joined a different room.
   const releaseLogins=new Set((Array.isArray(data?.removedPlayers)?data.removedPlayers:[]).map(p=>normalizeLoginId(p?.loginId)).filter(Boolean));
   if(data?.disbanded)for(const loginId of (Array.isArray(data?.reconcileLogins)?data.reconcileLogins:[]))if(normalizeLoginId(loginId))releaseLogins.add(normalizeLoginId(loginId));
-  for(const loginId of releaseLogins)if(!await syncPresence(loginId,null,false,code))failures.push(loginId);
+  await syncBatch([...releaseLogins],null,false,code);
   await syncRoomDirectory(env,code);
   if(failures.length)return j({ok:false,error:"ROSTER_PRESENCE_PENDING",message:"Phòng đã giải tán, nhưng có tài khoản chưa xác nhận trở về Sảnh chờ.",pendingCount:failures.length,removedCount:Number(data.removedCount||0)},502);
   return res
 }
+async function gmRoomSettingsApi(env,raw,request){
+  const code=normalizeRoomCode(raw);
+  if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const response=await roomStub(env,code).fetch(new Request("https://room.internal/gm/room-settings",{method:"POST",headers:request.headers,body:request.body}));
+  if(response.ok)await syncRoomDirectory(env,code);
+  return response;
+}
 async function gmRoomConfig(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/config",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok)await syncRoomDirectory(env,c);return res}
-async function gmRoomEnabled(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/enabled",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.enabled===false){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({online:true,roomCode:null})}))}catch{}}await syncRoomDirectory(env,c)}return res}
+async function gmRoomEnabled(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/enabled",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.enabled===false&&data?.room?.demo!==true){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({online:true,roomCode:null})}))}catch{}}await syncRoomDirectory(env,c)}return res}
 async function gmRoomLock(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/lock",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok)await syncRoomDirectory(env,c);return res}
-async function gmRoomKick(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/kick",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),p=data?.player||{};if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}await syncRoomDirectory(env,c)}return res}
+async function gmRoomKick(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/kick",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),p=data?.player||{};if(data?.room?.demo!==true&&p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}await syncRoomDirectory(env,c)}return res}
 async function gmRoomRename(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/rename",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok)await syncRoomDirectory(env,c);return res}
-async function gmRoomReset(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.hardReset===false&&data?.preserveParticipants===true){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:c,ready:true})})}catch{}}}else{for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}}await syncRoomDirectory(env,c)}return res}
-async function gmRoomEnd(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/end",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),room=data?.room||{};for(const r of (Array.isArray(data?.memberResults)?data.memberResults:[])){try{await memberStore(env).fetch("https://member.internal/members/record-result",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,matchId:data.matchId||room.matchId,roomCode:c,roomName:room.roomName,gameName:room.gameName,roleName:r.roleName,faction:r.faction,winnerFaction:data.winnerFaction||room.winnerFaction,result:r.result,playedAt:room.endedAt})})}catch(e){console.warn("GMWW_RESULT_RECORD",r?.loginId,e)}try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,roomCode:c,ready:true})})}catch(e){console.warn("GMWW_END_LOBBY_PRESENCE",r?.loginId,e)}}await syncRoomDirectory(env,c)}return res}
-async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(bearer(request)!==GM_SYNC_TOKEN){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
+async function gmRoomReset(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.room?.demo===true){await syncRoomDirectory(env,c);return res}if(data?.hardReset===false&&data?.preserveParticipants===true){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:c,ready:true})})}catch{}}}else{for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}}await syncRoomDirectory(env,c)}return res}
+async function gmRoomEnd(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/end",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),room=data?.room||{};for(const r of (room.demo===true?[]:Array.isArray(data?.memberResults)?data.memberResults:[])){try{await memberStore(env).fetch("https://member.internal/members/record-result",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,matchId:data.matchId||room.matchId,roomCode:c,roomName:room.roomName,gameName:room.gameName,roleName:r.roleName,faction:r.faction,winnerFaction:data.winnerFaction||room.winnerFaction,result:r.result,playedAt:room.endedAt})})}catch(e){console.warn("GMWW_RESULT_RECORD",r?.loginId,e)}try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,roomCode:c,ready:true})})}catch(e){console.warn("GMWW_END_LOBBY_PRESENCE",r?.loginId,e)}}await syncRoomDirectory(env,c)}return res}
+async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(bearer(request)!==GM_SYNC_TOKEN){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=data?.room?.demo===true?[]:Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
 
 async function gmPreloadSharedArtifacts(env,raw,request){
   if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
@@ -2751,6 +3043,6 @@ function activeFrozenLoginIds(interactions,meta={},now=Date.now()){
     .map(x=>normalizeLoginId(x?.loginId)).filter(Boolean));
 }
 function normalizeDisplayName(v){return titleCaseDisplayName(String(v||"").trim().replace(/\s+/g," "))}function titleCaseDisplayName(v){return String(v||"").split(" ").map(w=>w?w.charAt(0).toLocaleUpperCase("vi-VN")+w.slice(1):w).join(" ")}function randomNumericPassword(n=12){const a=new Uint32Array(n);crypto.getRandomValues(a);return Array.from(a,x=>String(x%10)).join("")}function normalizeRoomName(v){return String(v||"").trim().replace(/\s+/g," ").slice(0,40)}function publicMember(m){return{loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:activeGameCharacterId(m.gameCharacterId,m.loginId),lobbyMotionEnabled:m.lobbyMotionEnabled!==false,source:m.source,createdAt:m.createdAt,updatedAt:m.updatedAt,currentRoomCode:m.currentRoomCode||null,ready:!!m.ready,stats:m.stats||{wins:0,losses:0},history:Array.isArray(m.history)?m.history:[]}}function directoryMember(m){const presenceAt=Number(m?.presenceAt||0),online=presenceAt>0&&(Date.now()-presenceAt)<=PRESENCE_TTL,stats=m?.stats&&typeof m.stats==="object"?{wins:Number(m.stats.wins||0),losses:Number(m.stats.losses||0)}:{wins:0,losses:0},history=Array.isArray(m?.history)?m.history.slice(0,50).map(x=>({matchId:String(x?.matchId||""),result:x?.result==="win"?"win":"loss",roomCode:String(x?.roomCode||""),roomName:String(x?.roomName||""),gameName:String(x?.gameName||""),roleName:String(x?.roleName||""),faction:String(x?.faction||""),winnerFaction:String(x?.winnerFaction||""),playedAt:x?.playedAt||null})):[];return{loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:activeGameCharacterId(m.gameCharacterId,m.loginId),source:m.source||"WEB",createdAt:m.createdAt,updatedAt:m.updatedAt,lastSeenAt:m.lastSeenAt||null,online,currentRoomCode:online?(m.currentRoomCode||null):null,ready:online?!!m.ready:false,resetRequestedAt:m.resetRequestedAt||null,passwordResetAt:m.passwordResetAt||null,stats,history,...villagePresence(m)}}async function derivePasswordHash(password,salt,iterations=PBKDF2_ITERATIONS){const count=Number(iterations);if(!Number.isSafeInteger(count)||count<1)throw new Error("INVALID_PASSWORD_ITERATIONS");const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),{name:"PBKDF2"},false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:count},key,256);return bytesToBase64(new Uint8Array(bits))}async function verifyPassword(password,m){const iterations=Number(m?.passwordIterations)||PBKDF2_ITERATIONS;return timingSafeEqual(await derivePasswordHash(password,base64ToBytes(m.passwordSalt),iterations),m.passwordHash)}async function sha256(v){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));return[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")}
-function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}function randomToken(n){return bytesToBase64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function bytesToBase64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}function base64ToBytes(v){const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0))}function bearer(r){const h=r.headers.get("Authorization")||"";return h.startsWith("Bearer ")?h.slice(7).trim():""}async function safeJson(r){try{return await r.json()}catch{return null}}function j(data,status=200){return Response.json(data,{status,headers:{...corsHeaders(),"cache-control":"no-store"}})}function corsHeaders(){return{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,PUT,DELETE,OPTIONS","access-control-allow-headers":"content-type,authorization","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}}
+function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}function randomToken(n){return bytesToBase64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function bytesToBase64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}function base64ToBytes(v){const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0))}function bearer(r){const h=r.headers.get("Authorization")||"";return h.startsWith("Bearer ")?h.slice(7).trim():""}async function safeJson(r){try{return await r.json()}catch{return null}}function j(data,status=200){return Response.json(data,{status,headers:{...corsHeaders(),"cache-control":"no-store"}})}function corsHeaders(){return{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,PUT,DELETE,OPTIONS","access-control-allow-headers":"content-type,authorization,x-gmww-demo-owner","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}}
 
 async function playerSeatSwapApi(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);const me=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,code).fetch('https://room.internal/player/seat-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,loginId:data.member.loginId})})}
