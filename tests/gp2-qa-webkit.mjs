@@ -24,9 +24,14 @@ try{
  const transform=await page.locator('#world').evaluate(el=>getComputedStyle(el).transform);
  // Browser-issued pointer events have active pointer IDs; synthetic DOM events
  // cannot call setPointerCapture and would produce a false failure.
- await page.mouse.move(195,696);
+ // At y=696 the press can land on an atlas Character, which correctly
+ // consumes the gesture as a selection. Choose a verified bare-ground point.
+ const bare={x:195,y:558};
+ const target=await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('.actor,#top,#bottom')?.id||document.elementFromPoint(x,y)?.className||'',bare);
+ assert.ok(!String(target).includes('actor'),'camera gesture must begin on empty courtyard: '+String(target));
+ await page.mouse.move(bare.x,bare.y);
  await page.mouse.down();
- await page.mouse.move(260,696,{steps:6});
+ await page.mouse.move(bare.x+65,bare.y,{steps:6});
  await page.mouse.up();
  const afterTransform=await page.locator('#world').evaluate(el=>getComputedStyle(el).transform);
  assert.notEqual(transform,afterTransform,'Touch pan must move world & actors together');
