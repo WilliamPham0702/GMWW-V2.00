@@ -118,21 +118,3 @@ html.embedded .hud{display:none!important}
  background-position:center center!important;
  background-repeat:no-repeat!important;
 }
-
-
-/* GP2 — day/night scene is a real separate background layer; chibi sprites stay above it.
-   GM, Player Web and Worker share the same scene file aspect and world geometry. */
-.stage:not(.custom-scene)::after{
- background:#9d8666 url("../backgrounds/gmww-gp2-village-day.svg") center center / cover no-repeat!important;
-}
-.night .stage:not(.custom-scene)::after{
- background:#263347 url("../backgrounds/gmww-gp2-village-night.svg") center center / cover no-repeat!important;
-}
-@media(min-aspect-ratio:18/25){
- .stage:not(.custom-scene)::after,.night .stage:not(.custom-scene)::after{background-size:contain!important}
-}
-@media(min-aspect-ratio:17/20){
- .stage:not(.custom-scene)::after,.night .stage:not(.custom-scene)::after{background-size:100% 100%!important}
-}
-/* Scene positioning is from layout.toScreen; CSS overrides must never lock fire at 49.7%. */
-.fire{left:auto;top:auto}
