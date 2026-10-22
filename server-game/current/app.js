@@ -3459,7 +3459,7 @@ function renderPlaySeatPresetPanel(){
   const exactCount=Math.max(8,Math.min(30,minimum));
   const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
   const hint=document.getElementById('playSeatPresetAutoHint');
-  if(hint)hint.textContent='Một vòng quanh lửa • Hình tự chọn theo số người'+(minimum?' • Hiện có '+members.length+' người':'');
+  if(hint)hint.textContent='Bố trí 2,5D theo tầng • Giữ nguyên Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
   for(const n of counts){
     const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;
