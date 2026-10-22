@@ -2,6 +2,7 @@
 
 Ngày: 22/10/2026. Runtime OTA và Player Web; không thay IPA shell.
 
+- Cho phép IPA đọc bytes từ đường ảnh nền công khai bằng CORS để lưu local. Không thay quyền ghi ảnh.
 - Lưu dữ liệu ảnh Ngày/Đêm và cấu hình đã xác nhận vào IndexedDB riêng, một bản ghi nguyên tử cho mỗi server.
 - Khởi động khôi phục và giải mã ảnh local trước khi đồng bộ server. Không chờ mạng để hiển thị ảnh đã lưu; chuyển Ngày/Đêm dùng cùng cặp local.
 - Kiểm tra cấu hình ngầm; không tải lại ảnh khi đường dẫn phiên bản không đổi. Cặp ảnh mới chỉ thay cặp cũ sau khi tải và giải mã thành công.
