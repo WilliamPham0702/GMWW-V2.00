@@ -64,7 +64,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
@@ -144,6 +144,7 @@ export class RoomDurableObject extends DurableObject {
     if(storedSceneImage&&request.method==="GET")return this.sceneSettingsImage(storedSceneImage[1],url.searchParams.get("revision"));
     if(url.pathname==="/global-settings/village-scene"&&request.method==="PUT")return this.sceneSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/village-scene/rollback"&&request.method==="POST")return this.sceneSettingsRollback(await safeJson(request));
+    if(url.pathname==="/global-settings/village-scene/reset"&&request.method==="POST")return this.sceneSettingsReset();
     if(url.pathname==="/global-settings/ui"&&request.method==="GET")return this.globalUiSettingsGet();
     if(url.pathname==="/global-settings/ui"&&request.method==="PUT")return this.globalUiSettingsPut(await safeJson(request));
     if(url.pathname==="/global-settings/web-sync"&&request.method==="GET")return this.globalWebSyncGet();
@@ -572,35 +573,55 @@ export class RoomDurableObject extends DurableObject {
     }
     return gmwwStoredArtworkResponse(image);
   }
+  // Only the active Day/Night images are retained. Revision remains a cache-buster,
+  // not an image-history counter. Existing versioned data is migrated on first Apply.
+  async scenePruneImages(keepRevision=0){
+    const prefix="globalSetting:villageSceneImage:";
+    const keep=keepRevision>0?new Set(["day","night"].map(key=>prefix+keepRevision+":"+key)):new Set();
+    const all=await this.ctx.storage.list({prefix});
+    const stale=[...all.keys()].filter(key=>!keep.has(key));
+    if(stale.length)await this.ctx.storage.delete(stale);
+    await this.ctx.storage.delete("globalSetting:villageSceneHistory");
+  }
   async sceneSettingsPut(body){
     const isImage=v=>v==null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
     if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
     const previousRaw=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
-    const historyRaw=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
     const previous=await this.sceneNormalizeRecord(previousRaw);
-    const history=await Promise.all(historyRaw.map(row=>this.sceneNormalizeRecord(row)));
     const revision=previous.revision+1;
-    const next={...previous,revision,updatedAt:new Date().toISOString()};
+    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0};
     for(const key of ["day","night"]){
-      if(body[key]){
-        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,body[key]);
+      let image=body[key];
+      // A single replacement leaves the other currently applied image intact.
+      if(!image){
+        const oldRevision=Number(previous[key+"Revision"])||0;
+        if(oldRevision)image=await this.ctx.storage.get("globalSetting:villageSceneImage:"+oldRevision+":"+key);
+        if(!image&&validImageDataUrl(previousRaw[key]))image=previousRaw[key];
+        if(oldRevision&&!image)return j({ok:false,error:"CURRENT_SCENE_IMAGE_MISSING_"+key.toUpperCase()},409);
+      }
+      if(image){
+        await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,image);
         next[key+"Revision"]=revision;
       }
     }
-    await this.ctx.storage.put("globalSetting:villageSceneHistory",[previous,...history].slice(0,5));
     await this.ctx.storage.put("globalSetting:villageScene",next);
+    // Commit metadata first; obsolete versions are removed only after new images are active.
+    try{await this.scenePruneImages(revision)}catch(error){console.warn("village scene prune deferred",String(error))}
     return j({ok:true,scene:this.scenePublicRecord(next)});
   }
+  async sceneSettingsReset(){
+    const current=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
+    const next={revision:Math.max(0,Number(current.revision)||0)+1,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0};
+    await this.ctx.storage.put("globalSetting:villageScene",next);
+    try{await this.scenePruneImages()}catch(error){console.warn("village scene reset prune deferred",String(error))}
+    return j({ok:true,scene:this.scenePublicRecord(next)});
+  }
+  // Backward-compatible legacy route: older clients cannot undo an Apply after
+  // history is cleared, and must upgrade to use explicit Reset to default.
   async sceneSettingsRollback(){
-    const historyRaw=(await this.ctx.storage.get("globalSetting:villageSceneHistory"))||[];
-    if(!historyRaw.length)return j({ok:false,error:"NO_PREVIOUS_SCENE"},409);
-    const current=await this.sceneNormalizeRecord((await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0});
-    const history=await Promise.all(historyRaw.map(row=>this.sceneNormalizeRecord(row)));
-    const next={...history[0],revision:current.revision+1,updatedAt:new Date().toISOString()};
-    await this.ctx.storage.put("globalSetting:villageScene",next);
-    await this.ctx.storage.put("globalSetting:villageSceneHistory",[current,...history.slice(1)].slice(0,5));
-    return j({ok:true,scene:this.scenePublicRecord(next)});
+    return j({ok:false,error:"USE_RESET_TO_DEFAULT"},409);
   }
+
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
     return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
@@ -2567,6 +2588,10 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene",{method:"PUT",headers:{"content-type":"application/json"},body:request.body}));
+  }
+  if(url.pathname==="/api/gm/village-scene/reset"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene/reset",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}));
   }
   if(url.pathname==="/api/gm/village-scene/rollback"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
