@@ -7,13 +7,13 @@
   // GP2: the fire is a scene landmark, not the centre of the bitmap.
   // All coordinates are 0..100 in the common Day/Night world frame.
   const fire={x:50,y:64};
-  const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:94,
+  const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:99,
     zones:Object.freeze({back:[29,48],middle:[48,73],front:[73,94]})});
   // The central paving must accommodate the whole 30-seat rectangle.
   // Outer roofs/sea are excluded, while the lower bridge remains walkable.
   // Paved 2.5D courtyard; outer houses, sea and foliage are never walkable.
   const polygon=[[16,28],[84,28],[89,35],[89,53],[91,70],[89,88],
-    [84,94],[16,94],[11,88],[9,70],[11,53],[11,35]];
+    [84,94],[62,94],[62,99],[38,99],[38,94],[16,94],[11,88],[9,70],[11,53],[11,35]];
   const fireRadius={x:8.8,y:5.6};
   function polygonInside(x,y){
     let hit=false;
@@ -28,7 +28,7 @@
   function clampPoint(x,y){
     x=Number(x);y=Number(y);
     if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:82};
-    y=Math.max(29,Math.min(93,y));
+    y=Math.max(29,Math.min(98,y));
     // Never clamp just the Y coordinate then leave X in a roof or water area.
     // Find the actual left/right courtyard intersections at this latitude.
     const xs=[];
