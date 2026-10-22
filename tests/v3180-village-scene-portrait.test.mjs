@@ -13,7 +13,7 @@ test('approved portrait art remains aligned between GM and Player Web',()=>{
 });
 test('Player loads both published image revisions before switching backgrounds',()=>{
  const s=read('assets/village/scene-manager.mjs');
- assert.match(s,/await Promise\.all\(\[preloadSceneImage\(next\.day\),preloadSceneImage\(next\.night\)\]\)/);
+ assert.match(s,/await Promise\.all\(\[preloadSceneImage\(saved\.images\.day\),preloadSceneImage\(saved\.images\.night\)\]\)/);
  assert.ok(s.indexOf('await Promise.all')<s.indexOf('state.published=next;state.ready=true;apply()'));
  assert.match(s,/if\(syncInFlight\)return/);
  assert.match(s,/finally\{syncInFlight=false\}/);

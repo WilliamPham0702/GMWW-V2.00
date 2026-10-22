@@ -1,6 +1,56 @@
 (()=>{'use strict';
 
-const VERSION='3.185';
+const VERSION='3.186';
+function createVillageLocalCache(base){
+ const scope=new URL(base).origin;
+ const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
+ function transaction(value){
+  return new Promise((resolve,reject)=>{
+   let db,done=false;
+   const finish=(error,result)=>{if(done)return;done=true;clearTimeout(timer);if(db)db.close();error?reject(error):resolve(result)};
+   const timer=setTimeout(()=>finish(Error('Không mở được kho ảnh local')),2500);
+   try{
+    const open=indexedDB.open('GMWW_VILLAGE_LOCAL_V1',1);
+    open.onupgradeneeded=()=>open.result.createObjectStore('scenes');
+    open.onerror=()=>finish(open.error);
+    open.onsuccess=()=>{
+     db=open.result;if(done){db.close();return}
+     const tx=db.transaction('scenes',value?'readwrite':'readonly'),store=tx.objectStore('scenes');
+     const request=store.get(scope);let result=null;
+     request.onsuccess=()=>{
+      result=request.result;
+      // A slower request/tab must never overwrite a newer saved pair.
+      if(value&&(!valid(result)||value.record.revision>=result.record.revision)){store.put(value,scope);result=value}
+     };
+     tx.oncomplete=()=>finish(null,result);
+     tx.onerror=()=>finish(tx.error||Error('Không lưu được ảnh local'));
+     tx.onabort=()=>finish(tx.error||Error('Giao dịch ảnh local bị hủy'));
+    };
+   }catch(error){finish(error)}
+  });
+ }
+ async function imageBytes(src){
+  if(!src)return null;
+  if(/^data:image\/(png|jpeg|webp);base64,/.test(src))return src;
+  const response=await fetch(new URL(src,base).href,{signal:AbortSignal.timeout(15000)});
+  if(!response.ok)throw Error('Không tải được ảnh nền: HTTP '+response.status);
+  const blob=await response.blob();
+  if(!/^image\/(png|jpeg|webp)$/.test(blob.type))throw Error('Ảnh nền không hợp lệ');
+  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error||Error('Không đọc được ảnh nền'));reader.readAsDataURL(blob)});
+ }
+ return {
+  async restore(){try{const saved=await transaction();return valid(saved)?saved:null}catch{return null}},
+  async prepare(record,previous){
+   const images={};
+   await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null},images};
+   if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
+   return next;
+  },
+  save:transaction
+ };
+}
+// End village local cache
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
@@ -35,11 +85,23 @@ async function villageSceneRequest(path,method,body){
 }
 let villageSceneReady=false;
 let villageSceneNewestRevision=0;
+let villageLocalSnapshot=null,villageLocalBoot=null;
+let villageLocalCache=null;
+async function restoreGMVillageLocal(){
+ villageLocalCache=createVillageLocalCache(GMWW_SERVER_BASE);
+ const saved=await villageLocalCache.restore();
+ if(!saved)return;
+ try{
+  await Promise.all([preloadGMVillageScene(saved.images.day),preloadGMVillageScene(saved.images.night)]);
+  villageLocalSnapshot=saved;villageScenePublished=saved.record;
+  villageSceneNewestRevision=saved.record.revision;villageSceneReady=true;applyGMVillageScene();
+ }catch{/* A damaged local record can be replaced by the background sync. */}
+}
 function applyGMVillageScene(){
  const world=document.getElementById('playWorld');if(!world)return;
  if(!villageSceneReady)return;
  const key=document.getElementById('playShell')?.dataset.phase==='night'?'night':'day';
- const image=villageScenePublished[key];
+ const image=villageLocalSnapshot?.images[key]||null;
  if(image){
   world.style.setProperty('--gmww-gm-scene-image',`url("${new URL(image,GMWW_SERVER_BASE).href}")`);
   world.classList.add('has-custom-scene');
@@ -64,12 +126,15 @@ async function setGMVillageScenePublished(record){
  if(revision<villageSceneNewestRevision)return;
  villageSceneNewestRevision=revision;
  // Never display the bundled art while waiting for the active custom image.
- await Promise.all([preloadGMVillageScene(record.day),preloadGMVillageScene(record.night)]);
+ const saved=await villageLocalCache.prepare(record,villageLocalSnapshot);
+ await Promise.all([preloadGMVillageScene(saved.images.day),preloadGMVillageScene(saved.images.night)]);
  if(revision<villageSceneNewestRevision)return;
- villageScenePublished=record;
+ villageLocalSnapshot=saved;villageScenePublished=record;
  villageSceneReady=true;applyGMVillageScene();
+ try{await villageLocalCache.save(saved)}catch{throw Error('Ảnh đã hiển thị nhưng chưa lưu được local. Kiểm tra dung lượng thiết bị rồi nhấn ÁP DỤNG lại.')}
 }
 async function refreshVillageScenePublished(){
+ await villageLocalBoot;
  const data=await villageSceneRequest('/api/village-scene','GET');
  if(data.scene&&!villageSceneReady || data.scene&&(data.scene.revision!==villageScenePublished.revision||data.scene.day!==villageScenePublished.day||data.scene.night!==villageScenePublished.night))
   await setGMVillageScenePublished(data.scene);
@@ -77,6 +142,7 @@ async function refreshVillageScenePublished(){
 }
 function initVillageSceneManager(){
  const day=document.getElementById('gmVillageDay');if(!day||day.dataset.bound)return;day.dataset.bound='1';
+ villageLocalBoot=restoreGMVillageLocal();
  for(const key of ['day','night'])document.getElementById(key==='day'?'gmVillageDay':'gmVillageNight').addEventListener('change',async e=>{
   try{
    villageSceneStatus('Đang tối ưu ảnh '+(key==='day'?'ban ngày':'ban đêm')+'...');
@@ -90,6 +156,7 @@ function initVillageSceneManager(){
   if(publish.disabled)return;
   publish.disabled=true;villageSceneStatus('Đang áp dụng ảnh làng lên Server...');
   try{
+   await villageLocalBoot;
    const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);
    await setGMVillageScenePublished(data.scene);
    if(Number(villageScenePublished.revision)!==Number(data.scene?.revision))throw Error('Server chưa xác nhận phiên bản mới. Vui lòng kiểm tra lại.');
@@ -105,6 +172,7 @@ function initVillageSceneManager(){
   if(rollback.disabled||!confirm('Khôi phục cả ảnh Ngày và Đêm về bối cảnh mặc định ban đầu cho Server GM và Player Web?'))return;
   rollback.disabled=true;villageSceneStatus('Đang khôi phục bối cảnh mặc định...');
   try{
+   await villageLocalBoot;
    const data=await villageSceneRequest('/api/gm/village-scene','PUT',{resetToDefault:true});
    await setGMVillageScenePublished(data.scene);
    if(Number(villageScenePublished.revision)!==Number(data.scene?.revision)||villageScenePublished.day||villageScenePublished.night)throw Error('Server chưa xác nhận khôi phục mặc định.');

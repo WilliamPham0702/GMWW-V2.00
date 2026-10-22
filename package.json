@@ -1,6 +1,6 @@
 {
   "name": "gmww-v2-00",
-  "version": "3.185.0",
+  "version": "3.186.0",
   "type": "module",
   "private": true,
   "description": "GMWW V2 Player Web and Cloudflare realtime gateway",
@@ -11,6 +11,7 @@
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.4",
     "wrangler": "4.145.0"
   }
 }

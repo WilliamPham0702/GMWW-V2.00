@@ -13,8 +13,8 @@ test('V3.185 scene is never visibly painted from bundled image before network se
  assert.match(gmHtml,/class="play-world gmww-scene-awaiting"/);
  assert.match(playerCss,/\.stage\.scene-awaiting\{visibility:hidden!important\}/);
  assert.match(gmCss,/#start #playWorld\.gmww-scene-awaiting\{visibility:hidden!important\}/);
- assert.ok(playerJs.indexOf('await Promise.all([preloadSceneImage(next.day),preloadSceneImage(next.night)])')<playerJs.indexOf('state.published=next;state.ready=true;apply()'));
- assert.ok(gmJs.indexOf('await Promise.all([preloadGMVillageScene(record.day),preloadGMVillageScene(record.night)])')<gmJs.indexOf('villageScenePublished=record;'));
+ assert.ok(playerJs.indexOf('await Promise.all([preloadSceneImage(saved.images.day),preloadSceneImage(saved.images.night)])')<playerJs.indexOf('state.published=next;state.ready=true;apply()'));
+ assert.ok(gmJs.indexOf('await Promise.all([preloadGMVillageScene(saved.images.day),preloadGMVillageScene(saved.images.night)])')<gmJs.indexOf('villageScenePublished=record;'));
  assert.match(playerCss,/\.stage\.custom-scene,\.night \.stage\.custom-scene\{\s*background-image:var\(--gmww-scene-image\)!important/);
  assert.match(playerCss,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*content:none!important/);
  assert.match(gmCss,/#start #playWorld\.has-custom-scene > \.play-island-front/);
@@ -27,6 +27,6 @@ test('V3.185 restore shares Apply PUT and is versioned with release notes',()=>{
  assert.doesNotMatch(gm,/villageSceneRequest\('\/api\/gm\/village-scene\/reset','POST'/);
  assert.match(read('.github/scripts/prepare-update-channel.mjs'),/V3\.185: Sửa Load failed/);
  const pkg=JSON.parse(read('package.json'));
- assert.equal(pkg.version,'3.185.0');
+ assert.ok(pkg.version.localeCompare('3.185.0',undefined,{numeric:true})>=0);
  assert.match(read('docs/RELEASE-V3.185-SCENE-FIRST-PAINT.md'),/Runtime V3\.185/);
 });
