@@ -50,3 +50,13 @@ for(const path of paths){
   assert.match([...properties.values()][0],/data:image\/png/);
  });
 }
+test('public scene image bytes are readable from IPA file origin, including errors',async()=>{
+ const worker=fs.readFileSync('src/index.js','utf8');
+ const route=worker.slice(worker.indexOf('  const sceneImagePath='),worker.indexOf('  if(url.pathname==="/api/gm/village-scene"'));
+ for(const status of [200,404]){
+ const run=new Function('memberStore','Response','return async function(url,request,env){'+route+'}')(()=>({fetch:async()=>new Response('pixels',{status,headers:{'content-type':'image/png'}})}),Response);
+ const response=await run(new URL('https://game.example/api/village-scene/image/day?revision=7'),new Request('https://game.example',{headers:{Origin:'null'}}),{});
+ assert.equal(response.headers.get('access-control-allow-origin'),'*');
+ assert.equal(response.headers.get('content-type'),'image/png');assert.equal(await response.text(),'pixels');assert.equal(response.status,status);
+ }
+});
