@@ -790,11 +790,9 @@ function battleMorningRows(){
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
   if(dead){
-    if(dead<=5){
-      queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
-      queue.push(['audio_system_morning_number_'+dead,String(dead)]);
-      queue.push(['audio_system_morning_dead_noun','người chết']);
-    }else queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có '+dead+' người chết']);
+    queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+    queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+    queue.push(['audio_system_morning_dead_noun','người chết']);
   }
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
@@ -806,7 +804,8 @@ function battleMorningPlayAudio(){
   const next=()=>{
     if(index>=queue.length||playSceneState.phase!=='day')return;
     const [id,label]=queue[index++];
-    void battlePlayConfiguredAudio('system',id,label,false,next);
+    void Promise.resolve(battlePlayConfiguredAudio('system',id,label,false,next))
+      .catch(()=>{if(!playAudioMuted())battleSpeakCue(label,false,next);else next()});
   };
   next();
 }
@@ -1489,14 +1488,15 @@ async function battleConfirm(confirmed=false){
       battleShowResultPopup('',String(revelation.message||''),true);
       const cue=battleDivinationSystemAudioCue(a.actionId,revelation);
       if(a.actionId==='action_aura_read'){
-        // The Aura Seer must hear the actual role name, never its functions.
-        // Play the configured system cue first when available, then pronounce the
-        // exact name. This also handles roles without dedicated sound recordings.
-        const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
-        if(!playAudioMuted()&&roleName){
-          if(cue&&battleFindAudio('system',cue,revelation.message))
-            void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
-          else battleSpeakCue(roleName);
+        // Aura Seer reads functions, not the target's role identity.
+        const spoken=String(revelation.message||'').trim();
+        if(!playAudioMuted()&&spoken){
+          const row=cue&&battleFindAudio('system',cue,spoken);
+          void (async()=>{
+            const clip=row?await battleWarmAudio('system',row):null;
+            if(clip)await battlePlayConfiguredAudio('system',cue,spoken,false,()=>battleSpeakCue(spoken));
+            else battleSpeakCue(spoken);
+          })();
         }
       }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
     }
