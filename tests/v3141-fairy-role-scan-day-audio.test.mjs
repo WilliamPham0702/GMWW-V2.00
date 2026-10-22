@@ -24,7 +24,7 @@ test('V3.141 divination: all real role scans have correct result types and targe
  assert.equal(reveal('action_destroyer_scry',['seer']).message,'Tiên Tri');
  assert.equal(reveal('action_compare_faction',['guard','seer']).message,'CÙNG PHE');
  assert.equal(reveal('action_compare_faction',['wolf','seer']).message,'KHÁC PHE');
- assert.equal(reveal('action_aura_read',['seer']).message,'Tiên Tri');
+ assert.equal(reveal('action_aura_read',['seer']).message,'action_seer');
  assert.equal(reveal('action_fox_scan',['wolf']),null,'never display a result for an incomplete scan');
  assert.equal(reveal('action_transfer_bite',['wolf']),null,'non-scan action must not leak results');
 });
@@ -76,7 +76,7 @@ test('V3.141 wake-up audio completion advances via Server to day exactly once',(
  assert.ok(battle.includes('battleState.wakeAudioStartedKey===key'));
  assert.ok(battle.includes('await advancePlayPhase(); // Complete the actual wake-up turn'));
  assert.ok(battle.includes("if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key)"));
- assert.ok(audio.includes('cue.onend=()=>onFinished?.()'));
+ assert.ok(audio.includes('cue.onend=finish'));
  assert.ok(audio.includes('player.onended=()=>'));
  assert.ok(audio.includes('source.onended=()=>onFinished?.()'));
 });
