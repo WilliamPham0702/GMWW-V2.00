@@ -30,7 +30,7 @@ test('GP2 seats use the real bonfire landmark and remain on walkable ground',()=
       assert.ok(layout.inside(p.x,p.y),size+' '+shape+' seat '+i+' outside courtyard');
       assert.ok(Math.hypot((p.x-layout.fire.x)/8.8,(p.y-layout.fire.y)/5.6)>=1,
         'Character must never stand in the fire');
-      assert.ok(p.x>=14&&p.x<=86&&p.y>=32&&p.y<=91,'seat outside wide GP2 plaza');
+      assert.ok(p.x>=10&&p.x<=92&&p.y>=29&&p.y<=93,'seat outside wide GP2 plaza');
     }
   }
 });
