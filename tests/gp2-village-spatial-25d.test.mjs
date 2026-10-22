@@ -31,7 +31,7 @@ test('30 actors have distinct depth-sorted positions without resizing assets',()
   assert.ok(iphone.every(p=>p.x>2&&p.x<98&&p.y>2&&p.y<98));
  }
  const gmCss=read('server-game/current/style.css');
- assert.match(gmCss,/body\.play-immersive #start \.play-player-avatar\{width:56px!important;height:74px!important\}/);
+ assert.match(gmCss,/body\.play-immersive \.play-player-avatar\{width:56px!important;height:74px!important\}/);
 });
 
 test('GP2 scene is background-only, matching day/night world geometry and artwork paths',()=>{
