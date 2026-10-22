@@ -83,12 +83,22 @@
     return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
       y:points[lo].y+(points[hi].y-points[lo].y)*portion};
   }
-  function diamondContour(t,rx,ry){
-    // Four straight diagonals: this must not silently become an ellipse.
+  function diamondContour(index,count,rx,ry){
+    // Every vertex is a Seat. Distribute integer segments across the four
+    // diagonals: uniform fractional progress crowds pairs at sharp corners.
     const vertices=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
-    const edge=((t%1)+1)%1*4,index=Math.floor(edge),f=edge-index;
-    return{x:vertices[index][0]+(vertices[index+1][0]-vertices[index][0])*f,
-      y:vertices[index][1]+(vertices[index+1][1]-vertices[index][1])*f};
+    const base=Math.floor(count/4),extra=count%4;
+    let cursor=index;
+    for(let edge=0;edge<4;edge++){
+      const segments=base+(edge<extra?1:0);
+      if(cursor<segments){
+        const f=cursor/segments;
+        return{x:vertices[edge][0]+(vertices[edge+1][0]-vertices[edge][0])*f,
+          y:vertices[edge][1]+(vertices[edge+1][1]-vertices[edge][1])*f};
+      }
+      cursor-=segments;
+    }
+    return{x:0,y:-ry};
   }
   function rectangleContour(t,rx,ry){
     // Long LEFT and RIGHT edges, a single closed perimeter, no interior rows.
@@ -116,7 +126,7 @@
     const result=[];
     for(let i=0;i<n;i++){
       const t=i/n,p=kind==='circle'?ovalContour(t,rx,ry):
-        kind==='diamond'?diamondContour(t,rx,ry):rectangleContour(t,rx,ry);
+        kind==='diamond'?diamondContour(i,n,rx,ry):rectangleContour(t,rx,ry);
       const x=fire.x+p.x,y=fire.y+p.y;
       // A regression into a grid or an unsafe cliff is a programming error,
       // not a reason to relocate individual seats onto one another.
