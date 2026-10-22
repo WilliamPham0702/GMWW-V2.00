@@ -2,6 +2,7 @@
 // It reuses the real game handlers and the same pure targeting rules as GM Web.
 import '../server-game/current/battle-controls.js';
 import {checkBattleRoleActionUsage} from './gmww-battle-action-policy.js';
+import {appendDemoHistory} from './gmww-demo-history.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
@@ -75,7 +76,7 @@ async function observe(room,meta,lease,action,actorId='',targets=[],status='acce
  lease.lastEvent=event;
  // Keep the accepted/skipped DEMO event ledger on the Server across GM reloads.
  // The existing MAX_STEPS limit bounds storage while retaining the full DEMO run.
- lease.history=[...(Array.isArray(lease.history)?lease.history:[]),event].slice(-MAX_STEPS);
+ lease.history=appendDemoHistory(lease.history,event);
  await room.ctx.storage.put('demoLease',lease);const {revelation,...publicEvent}=event;room.broadcast({type:'demo_event',demoEvent:publicEvent,serverTime:Date.now()});
 }
 async function checked(response){const data=await response.json();if(!response.ok||!data.ok){const e=new Error(data.message||data.error||'DEMO_ACTION_FAILED');e.code=data.detail||data.error;throw e}return data}
