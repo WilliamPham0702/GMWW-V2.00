@@ -46,9 +46,9 @@ try {
   assert.equal(result.actors,30);
   assert.ok(result.inside,'all 30 Character placeholders remain within viewport');
   assert.ok(result.hitCenter,'character should be tappable above the scene image');
-  assert.equal(result.baseImage,'none','original CSS image must be replaced');
+  assert.ok(result.baseImage.includes('data:image/svg'),'published image must be the actual stage background');
   assert.ok(!result.overlayImage.includes('data:image/svg'),'no second image over players');
-  assert.ok(result.imageLayer.includes('data:image/svg'),'published image belongs only to ::after');
+  assert.ok(!result.imageLayer.includes('data:image/svg'),'no second scene image layer may exist');
   await page.screenshot({path:night?'/tmp/gmww-v3181-scene-layer-night.png':'/tmp/gmww-v3181-scene-layer-day.png'});
  }
  await page.setContent('<!doctype html><body class="play-immersive"><main id="start"><div id="playWorld" class="play-world has-custom-scene" style="width:390px;height:844px"><div id="playPlayerRing" class="play-player-ring"><button class="play-player-token" style="left:50%;top:55%"><div class="play-player-avatar">👤</div></button></div></div></main>');

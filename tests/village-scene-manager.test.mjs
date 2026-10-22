@@ -26,9 +26,12 @@ test('Player reads lightweight published scene metadata and updates camera layer
  assert.doesNotMatch(player,/\/api\/gm\/village-scene/);
  assert.match(player,/MutationObserver\(apply\)/);
  assert.match(player,/classList\.add\('custom-scene'\)/);
- assert.match(style,/\.stage\.custom-scene::after/);
+ assert.match(style,/\.stage\.custom-scene,\.night \.stage\.custom-scene/);
  assert.match(style,/background-image:var\(--gmww-scene-image\)!important/);
  assert.match(player,/gmww:village-preview-ready/);
+ assert.match(player,/state\.ready=true;apply\(\)/);
+ assert.match(style,/\.stage\.scene-awaiting\{visibility:hidden!important\}/);
+ assert.match(style,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*content:none!important/);
 });
 test('GM editor supports image apply and reset without iPhone preview',()=>{
  for(const id of ['gmVillageDay','gmVillageNight','gmVillagePublish','gmVillageRollback','gmVillageStatus'])
@@ -40,7 +43,7 @@ test('GM editor supports image apply and reset without iPhone preview',()=>{
  assert.match(gm,/canvas\.toDataURL\('image\/webp'/);
  assert.match(gm,/villageSceneRequest\('\/api\/gm\/village-scene','PUT'/);
  assert.match(gm,/villageSceneRequest\('\/api\/village-scene','GET'/);
- assert.match(gm,/villageSceneRequest\('\/api\/gm\/village-scene\/reset','POST'/);
+ assert.match(gm,/villageSceneRequest\('\/api\/gm\/village-scene','PUT',\{resetToDefault:true\}/);
  assert.doesNotMatch(gm,/gmww:village-preview/);
  assert.match(gm,/function applyGMVillageScene\(/);
  assert.match(gm,/function refreshVillageScenePublished\(/);
@@ -90,10 +93,12 @@ test('apply keeps only the two active images and reset restores built-in scenes'
   'globalSetting:villageSceneImage:2:day','globalSetting:villageSceneImage:2:night'
  ]);
  assert.equal(data.has('globalSetting:villageSceneHistory'),false);
- const reset=await(await store.sceneSettingsReset()).json();
+ const reset=await(await store.sceneSettingsPut({resetToDefault:true})).json();
  assert.equal(reset.scene.revision,3);
  assert.equal(reset.scene.day,null);
  assert.equal(reset.scene.night,null);
+ assert.equal(data.get('globalSetting:villageScene').dayRevision,0);
+ assert.equal(data.get('globalSetting:villageScene').nightRevision,0);
  assert.equal([...data.keys()].filter(k=>k.startsWith('globalSetting:villageSceneImage:')).length,0);
  const again=await(await store.sceneSettingsPut({day:photo('new-day')})).json();
  assert.equal(again.scene.revision,4);
@@ -121,4 +126,15 @@ test('legacy stored scenes are migrated to a two-image active set without retain
  assert.equal(reset.scene.revision,9);
  assert.equal(reset.scene.day,null);
  assert.equal(reset.scene.night,null);
+});
+
+test('reset through Apply PUT rejects mixed payloads and retains game data',async()=>{
+ const initial=new Map([['room:protect','seat-and-game-data']]);
+ const {store,data}=createMockStore(initial);
+ await store.sceneSettingsPut({day:photo('day'),night:photo('night')});
+ const conflict=await store.sceneSettingsPut({resetToDefault:true,day:photo('not-allowed')});
+ assert.equal(conflict.status,400);
+ const result=await(await store.sceneSettingsPut({resetToDefault:true})).json();
+ assert.equal(result.scene.day,null);assert.equal(result.scene.night,null);
+ assert.equal(data.get('room:protect'),'seat-and-game-data');
 });

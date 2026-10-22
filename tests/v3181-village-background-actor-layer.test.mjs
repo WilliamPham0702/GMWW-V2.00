@@ -10,8 +10,8 @@ const gm=read('server-game/current/style.css');
 test('published Player Web image replaces old art without a second overlay',()=>{
  assert.doesNotMatch(layout,/\.stage\.custom-scene::before\s*\{/,'custom scene must not paint an image in ::before');
  assert.doesNotMatch(layout,/\.stage\.custom-scene\s*>\s*\*\s*\{\s*position:\s*relative/,'the old rule collapses the absolute camera');
- assert.match(art,/\.stage\.custom-scene,\.night \.stage\.custom-scene\{\s*background-image:none!important/);
- assert.match(art,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*z-index:0!important/);
+ assert.match(art,/\.stage\.custom-scene,\.night \.stage\.custom-scene\{\s*background-image:var\(--gmww-scene-image\)!important/);
+ assert.match(art,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*content:none!important;display:none!important/);
  assert.match(art,/\.stage\.custom-scene > \.scene\{\s*position:absolute!important;\s*inset:0!important;\s*z-index:2!important/);
  assert.match(art,/\.scene\{\s*z-index:2!important/);
  assert.match(art,/\.scene \.players\{pointer-events:auto\}/);
@@ -28,7 +28,7 @@ test('iPhone caches reload corrected styles without touching gameplay sources',(
  const player=read('assets/village/index.html');
  const server=read('server-game/current/GMWW.html');
  assert.match(player,/village\.css\?v=303&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1/);
- assert.match(player,/village-art\.css\?v=gp2-25d-actor-layer-fix1/);
+ assert.match(player,/village-art\.css\?v=gp2-25d-direct-scene-v3185/);
  const runtime=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  assert.ok(server.includes('style.css?v='+runtime+'-compact-room-mobile2-village-scene-align-1-actor-layer-fix1'));
  assert.match(read('assets/village/scene-manager.mjs'),/scene\.classList\.add\('custom-scene'\)/);

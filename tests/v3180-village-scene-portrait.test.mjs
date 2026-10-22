@@ -5,16 +5,16 @@ const read=p=>fs.readFileSync(p,'utf8');
 test('approved portrait art remains aligned between GM and Player Web',()=>{
  const gm=read('server-game/current/style.css'),player=read('assets/village/village-art.css');
  assert.match(gm,/#start #playWorld\.has-custom-scene\{\s*background-size:100% 100%!important/);
- assert.match(player,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*background-size:100% 100%!important/);
+ assert.match(player,/\.stage\.custom-scene,\.night \.stage\.custom-scene\{[\s\S]*?background-size:100% 100%!important/);
  assert.match(read('assets/village/village-layout.js'),/const fire=\{x:50,y:64\}/);
- assert.ok(player.includes('gmww-village-night-v260.webp'));
- assert.ok(player.includes('gmww-village-day-v260.webp'));
+ assert.match(read('assets/village/index.html'),/class="stage scene-awaiting"/);
+ assert.match(player,/\.stage\.scene-awaiting\{visibility:hidden!important\}/);
  assert.doesNotMatch(gm.slice(gm.indexOf('/* V3.180 — same full-frame')),/play-player-avatar|play-player-token|seat-offset/);
 });
 test('Player loads both published image revisions before switching backgrounds',()=>{
  const s=read('assets/village/scene-manager.mjs');
  assert.match(s,/await Promise\.all\(\[preloadSceneImage\(next\.day\),preloadSceneImage\(next\.night\)\]\)/);
- assert.ok(s.indexOf('await Promise.all')<s.indexOf('state.published=next;apply()'));
+ assert.ok(s.indexOf('await Promise.all')<s.indexOf('state.published=next;state.ready=true;apply()'));
  assert.match(s,/if\(syncInFlight\)return/);
  assert.match(s,/finally\{syncInFlight=false\}/);
  assert.match(s,/MutationObserver\(apply\)\.observe\(game/);
