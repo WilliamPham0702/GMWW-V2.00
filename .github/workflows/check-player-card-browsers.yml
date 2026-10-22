@@ -26,6 +26,10 @@ on:
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/v3181-scene-layer-webkit.mjs"
+      - "assets/village/village.css"
+      - "assets/village/village-art.css"
+      - "assets/village/index.html"
       - "tests/gp2-qa-webkit.mjs"
       - "assets/village/gp2-qa.*"
       - "assets/village/gp2-world-camera.mjs"
@@ -57,6 +61,10 @@ on:
       - "server-game/current/runtime-recovery.js"
       - "tests/runtime-recovery-webkit.mjs"
       - "tests/seat-css-webkit.mjs"
+      - "tests/v3181-scene-layer-webkit.mjs"
+      - "assets/village/village.css"
+      - "assets/village/village-art.css"
+      - "assets/village/index.html"
       - "tests/gp2-qa-webkit.mjs"
       - "assets/village/gp2-qa.*"
       - "assets/village/gp2-world-camera.mjs"
@@ -113,6 +121,8 @@ jobs:
         run: node tests/home-v389-iphone-webkit.mjs
       - name: Check Seat anchors with production status CSS in WebKit
         run: node tests/seat-css-webkit.mjs
+      - name: Check published village Day/Night actor layers in iPhone WebKit
+        run: node tests/v3181-scene-layer-webkit.mjs
       - name: Check OTA startup recovery in WebKit
         run: node tests/runtime-recovery-webkit.mjs
       - name: Upload compact battle panel preview
@@ -128,6 +138,13 @@ jobs:
         with:
           name: home-v389-iphone-webkit-preview
           path: /tmp/gmww-v389-iphone-webkit-home.png
+          if-no-files-found: ignore
+      - name: Upload village-layer iPhone WebKit previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-v3181-village-background-actor-layer
+          path: /tmp/gmww-v3181-scene-layer-*.png
           if-no-files-found: ignore
       - name: Upload isolated GP2 iPhone QA screenshot
         if: always()

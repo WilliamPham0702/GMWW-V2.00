@@ -118,3 +118,18 @@ html.embedded .hud{display:none!important}
  background-position:center center!important;
  background-repeat:no-repeat!important;
 }
+
+/* Actor-layer hotfix: a published image replaces, never stacks upon, the default art.
+   The only image is ::after at z=0; gradients stay in ::before at z=1.
+   The camera must retain its full absolute frame for seats and Character40. */
+.stage.custom-scene,.night .stage.custom-scene{
+ background-image:none!important;
+}
+.stage.custom-scene::after,.night .stage.custom-scene::after{
+ z-index:0!important;
+}
+.stage.custom-scene > .scene{
+ position:absolute!important;
+ inset:0!important;
+ z-index:2!important;
+}
