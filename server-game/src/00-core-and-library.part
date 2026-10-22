@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.184';
+const VERSION='3.185';
 const villageSceneDraft={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
@@ -33,8 +33,11 @@ async function villageSceneRequest(path,method,body){
  const response=await fetch(GMWW_SERVER_BASE+path,{method,headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:method==='GET'?undefined:JSON.stringify(body||{}),cache:'no-store'});
  const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||'HTTP '+response.status);return data;
 }
+let villageSceneReady=false;
+let villageSceneNewestRevision=0;
 function applyGMVillageScene(){
  const world=document.getElementById('playWorld');if(!world)return;
+ if(!villageSceneReady)return;
  const key=document.getElementById('playShell')?.dataset.phase==='night'?'night':'day';
  const image=villageScenePublished[key];
  if(image){
@@ -43,12 +46,33 @@ function applyGMVillageScene(){
  }else{
   world.style.removeProperty('--gmww-gm-scene-image');world.classList.remove('has-custom-scene');
  }
+ world.classList.remove('gmww-scene-awaiting');
+ const loading=document.getElementById('gmVillageBootStatus');if(loading)loading.hidden=true;
+}
+function preloadGMVillageScene(src){
+ if(!src)return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+  const image=new Image();
+  image.onload=resolve;
+  image.onerror=()=>reject(Error('Không tải được ảnh nền đã lưu'));
+  image.src=new URL(src,GMWW_SERVER_BASE).href;
+ });
+}
+async function setGMVillageScenePublished(record){
+ if(!record)throw Error('Server không trả về cấu hình hình nền.');
+ const revision=Math.max(0,Number(record.revision)||0);
+ if(revision<villageSceneNewestRevision)return;
+ villageSceneNewestRevision=revision;
+ // Never display the bundled art while waiting for the active custom image.
+ await Promise.all([preloadGMVillageScene(record.day),preloadGMVillageScene(record.night)]);
+ if(revision<villageSceneNewestRevision)return;
+ villageScenePublished=record;
+ villageSceneReady=true;applyGMVillageScene();
 }
 async function refreshVillageScenePublished(){
  const data=await villageSceneRequest('/api/village-scene','GET');
- if(data.scene&&(data.scene.revision!==villageScenePublished.revision||data.scene.day!==villageScenePublished.day||data.scene.night!==villageScenePublished.night)){
-  villageScenePublished=data.scene;applyGMVillageScene();
- }
+ if(data.scene&&!villageSceneReady || data.scene&&(data.scene.revision!==villageScenePublished.revision||data.scene.day!==villageScenePublished.day||data.scene.night!==villageScenePublished.night))
+  await setGMVillageScenePublished(data.scene);
  return data;
 }
 function initVillageSceneManager(){
@@ -67,8 +91,8 @@ function initVillageSceneManager(){
   publish.disabled=true;villageSceneStatus('Đang áp dụng ảnh làng lên Server...');
   try{
    const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);
-   const check=await refreshVillageScenePublished();
-   if(Number(check.scene?.revision)!==Number(data.scene?.revision))throw Error('Server chưa xác nhận phiên bản mới. Vui lòng kiểm tra lại.');
+   await setGMVillageScenePublished(data.scene);
+   if(Number(villageScenePublished.revision)!==Number(data.scene?.revision))throw Error('Server chưa xác nhận phiên bản mới. Vui lòng kiểm tra lại.');
    villageSceneDraft.day=null;villageSceneDraft.night=null;
    document.getElementById('gmVillageDay').value='';
    document.getElementById('gmVillageNight').value='';
@@ -81,9 +105,9 @@ function initVillageSceneManager(){
   if(rollback.disabled||!confirm('Khôi phục cả ảnh Ngày và Đêm về bối cảnh mặc định ban đầu cho Server GM và Player Web?'))return;
   rollback.disabled=true;villageSceneStatus('Đang khôi phục bối cảnh mặc định...');
   try{
-   const data=await villageSceneRequest('/api/gm/village-scene/reset','POST',{});
-   const check=await refreshVillageScenePublished();
-   if(Number(check.scene?.revision)!==Number(data.scene?.revision)||check.scene?.day||check.scene?.night)throw Error('Server chưa xác nhận khôi phục mặc định.');
+   const data=await villageSceneRequest('/api/gm/village-scene','PUT',{resetToDefault:true});
+   await setGMVillageScenePublished(data.scene);
+   if(Number(villageScenePublished.revision)!==Number(data.scene?.revision)||villageScenePublished.day||villageScenePublished.night)throw Error('Server chưa xác nhận khôi phục mặc định.');
    villageSceneDraft.day=null;villageSceneDraft.night=null;
    document.getElementById('gmVillageDay').value='';
    document.getElementById('gmVillageNight').value='';
@@ -91,7 +115,7 @@ function initVillageSceneManager(){
   }catch(error){villageSceneStatus('Lỗi khôi phục: '+error.message)}
   finally{rollback.disabled=false}
  });
-  refreshVillageScenePublished().then(data=>villageSceneStatus(data.scene.day||data.scene.night?'Đang sử dụng bối cảnh tùy chỉnh.':'Đang sử dụng bối cảnh mặc định ban đầu.')).catch(()=>villageSceneStatus('Chưa kết nối được cấu hình làng.'));
+  refreshVillageScenePublished().then(data=>villageSceneStatus(data.scene?.day||data.scene?.night?'Đang sử dụng bối cảnh tùy chỉnh.':'Đang sử dụng bối cảnh mặc định ban đầu.')).catch(error=>villageSceneStatus('Không nạp được bối cảnh: '+error.message));
  setInterval(()=>{void refreshVillageScenePublished().catch(()=>{})},5000);
 }
 document.addEventListener('DOMContentLoaded',initVillageSceneManager);

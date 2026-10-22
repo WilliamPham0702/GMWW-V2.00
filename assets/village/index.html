@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GMWW V3.139 · Ngôi làng</title><link rel="stylesheet" href="./village.css?v=303&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1"><link rel="stylesheet" href="./character-renderer.css?v=ce7"><link rel="stylesheet" href="./village-art.css?v=gp2-25d-actor-layer-fix1"></head>
+<title>GMWW V3.139 · Ngôi làng</title><link rel="stylesheet" href="./village.css?v=303&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1"><link rel="stylesheet" href="./character-renderer.css?v=ce7"><link rel="stylesheet" href="./village-art.css?v=gp2-25d-direct-scene-v3185"></head>
 <body>
 <div id="villageSceneManager" style="position:fixed;z-index:100;top:12px;right:12px;max-width:300px;background:#09263be8;color:white;border:1px solid #79d7ef;border-radius:14px;padding:12px;font:13px system-ui;display:none">
  <strong>🌊 Quản lý bối cảnh Làng 2D</strong>
@@ -10,8 +10,9 @@
  <div style="display:flex;gap:6px;margin-top:8px"><button id="scenePreview" type="button">Xem trước</button><button id="scenePublish" type="button">Xuất bản</button><button id="sceneRollback" type="button">Khôi phục</button></div>
  <small id="sceneManagerStatus" role="status"></small>
 </div>
+<div id="sceneBootStatus" class="scene-boot-status" role="status">Đang tải hình nền làng…</div>
 <main class="game day" id="game">
-  <section class="stage" aria-label="Quảng trường ngôi làng">
+  <section class="stage scene-awaiting" aria-label="Quảng trường ngôi làng">
     <div class="sky"></div><div class="houses" aria-hidden="true">
       <div class="house h1"><i></i><b></b></div><div class="house h2"><i></i><b></b></div><div class="house h3"><i></i><b></b></div><div class="house h4"><i></i><b></b></div><div class="house h5"><i></i><b></b></div>
     </div>
@@ -33,4 +34,4 @@
     <section id="role" class="tab" hidden><strong>Vai Trò</strong><p>Bản thử nghiệm đồ họa. Vai trò và quyền tương tác sẽ lấy từ máy chủ sau khi hoàn tất Lá Chức Năng và Artifact.</p></section>
     <div class="selection" id="selection" hidden><span id="selectedLabel"></span><button type="button" id="clearSelection">Bỏ chọn</button></div>
   </section>
-</main><script type="module" src="./village.mjs?v=fire3101&amp;status=freeze1&amp;gp2=1&amp;visual=v3139&amp;seat=3131&amp;character=c40-1-mobile2&amp;roam=v3158&amp;seatfix=v3183"></script><script type="module" src="./scene-manager.mjs?v=3180"></script></body></html>
+</main><script type="module" src="./village.mjs?v=fire3101&amp;status=freeze1&amp;gp2=1&amp;visual=v3139&amp;seat=3131&amp;character=c40-1-mobile2&amp;roam=v3158&amp;seatfix=v3183"></script><script type="module" src="./scene-manager.mjs?v=3185"></script></body></html>

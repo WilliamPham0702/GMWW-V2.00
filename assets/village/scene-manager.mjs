@@ -5,13 +5,17 @@ const scene=document.querySelector('.stage');
 const game=document.getElementById('game');
 const embedded=new URLSearchParams(location.search).has('embed');
 const editor=!embedded&&new URLSearchParams(location.search).get('sceneEditor')==='preview';
-const state={published:{revision:0,day:null,night:null},draft:{day:null,night:null}};
+const state={published:{revision:0,day:null,night:null},draft:{day:null,night:null},ready:false};
+const boot=document.getElementById('sceneBootStatus');
 const setStatus=t=>{if(status)status.textContent=t};
 function apply(){
+ if(!state.ready)return;
  const key=game?.classList.contains('night')?'night':'day';
  const image=(editor&&state.draft[key])||state.published[key];
  if(image){scene.style.setProperty('--gmww-scene-image',`url("${image}")`);scene.classList.add('custom-scene')}
  else{scene.style.removeProperty('--gmww-scene-image');scene.classList.remove('custom-scene')}
+ scene.classList.remove('scene-awaiting');
+ if(boot)boot.hidden=true;
 }
 let syncInFlight=false;
 function preloadSceneImage(src){
@@ -28,13 +32,18 @@ async function sync(){
  syncInFlight=true;
  try{
   const r=await fetch('/api/village-scene',{cache:'no-store'});
-  if(!r.ok)return;
+  if(!r.ok)throw Error('HTTP '+r.status);
   const data=await r.json(),next=data.scene;
-  if(data.ok&&next&&(next.revision!==state.published.revision||next.day!==state.published.day||next.night!==state.published.night)){
+  if(!data.ok||!next)throw Error('Cấu hình bối cảnh không hợp lệ');
+  if(!state.ready||next.revision!==state.published.revision||next.day!==state.published.day||next.night!==state.published.night){
+   // Atomic reveal: no original background, blue frame, or late overlay flash.
    await Promise.all([preloadSceneImage(next.day),preloadSceneImage(next.night)]);
-   state.published=next;apply();
+   state.published=next;state.ready=true;apply();
   }
- }catch(error){if(editor)setStatus(String(error?.message||error))}
+ }catch(error){
+  if(editor)setStatus(String(error?.message||error));
+  if(!state.ready&&boot)boot.textContent='Không thể tải hình nền làng. Đang kết nối lại…';
+ }
  finally{syncInFlight=false}
 }
 function readFile(file){
