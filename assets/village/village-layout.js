@@ -127,9 +127,15 @@
   }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    // GP2 renders all seat counts on the same ground-plane terrace geometry.
-    // The saved shape is kept for API compatibility; it no longer alters the world map.
-    return terraceSeats(n);
+    // All patterns use the same walkable 2.5D terraces. Circle/ellipse bow their
+    // columns toward the centre; rectangle fills the full courtyard width.
+    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n),base=terraceSeats(n);
+    if(kind==='rectangle')return base;
+    return base.map((p,i)=>{
+      const nearCentre=1-Math.min(1,Math.abs(p.y-fire.y)/34);
+      const factor=kind==='circle'?.89+nearCentre*.03:.95+nearCentre*.02;
+      return {...clampPoint(fire.x+(p.x-fire.x)*factor,p.y+(kind==='circle'?(i%2?.4:-.4):0)),ring:0,depth:p.depth};
+    });
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
