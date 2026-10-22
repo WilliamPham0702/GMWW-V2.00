@@ -49,7 +49,7 @@ test('V3.133: server-verified Seer recognizes regular wolf but Alpha appears non
 });
 test('V3.133: other divination can show role abilities or group wolf status without revealing to Player Web',()=>{
  const aura=resolveNightReveal({actionId:'action_aura_read',targetIds:['chi'],assignments:assigned});
- assert.match(aura.message,/Tiên Tri/);assert.deepEqual(aura.targets[0].functions,['action_seer']);
+ assert.equal(aura.message,'action_seer');assert.deepEqual(aura.targets[0].functions,['action_seer']);
  assert.equal(resolveNightReveal({actionId:'action_fox_scan',targetIds:['anna','chi','bao'],assignments:assigned}).wolf,true);
  assert.equal(resolveNightReveal({actionId:'action_witch_kill',targetIds:['anna'],assignments:assigned}),null);
  const worker=read('src/index.js');
