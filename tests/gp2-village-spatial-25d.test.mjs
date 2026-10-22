@@ -38,10 +38,10 @@ test('GP2 does not silently ship the rejected placeholder backgrounds',()=>{
   for(const path of ['assets/backgrounds/gmww-gp2-village-day.svg','assets/backgrounds/gmww-gp2-village-night.svg'])
     assert.equal(fs.existsSync(path),false,'Rejected placeholder must not be shipped: '+path);
   const gm=read('server-game/current/style.css'),web=read('assets/village/village-art.css');
-  assert.doesNotMatch(gm,/gmww-gp2-village-(day|night)\\.svg/);
-  assert.doesNotMatch(web,/gmww-gp2-village-(day|night)\\.svg/);
-  assert.match(gm,/gmww-village-day-v260\\.webp/);
-  assert.match(web,/gmww-village-night-v260\\.webp/);
+  assert.doesNotMatch(gm,/gmww-gp2-village-(day|night)\.svg/);
+  assert.doesNotMatch(web,/gmww-gp2-village-(day|night)\.svg/);
+  assert.match(gm,/gmww-village-day-v260\.webp/);
+  assert.match(web,/gmww-village-night-v260\.webp/);
 });
 
 test('GM and Player Web anchor fire to the shared layout and preserve route guard',()=>{
