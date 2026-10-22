@@ -21,9 +21,9 @@ test('G3.6: clamp village coordinates, preserve legacy layouts and 30-seat bound
   assert.equal(normalizeVillageCoord(200),96);
   assert.equal(normalizeVillageCoord(-1),4);
   assert.equal(normalizeVillageCoord(undefined,71),71);
-  assert.equal(normalizeSeatLayout('diamond'),'diamond');
-  assert.equal(normalizeSeatLayout('ellipse'),'diamond','legacy ellipse retains Seat IDs');
-  assert.equal(normalizeSeatLayout('rectangle'),'rectangle');
+  assert.equal(normalizeSeatLayout('diamond'),'circle');
+  assert.equal(normalizeSeatLayout('ellipse'),'circle','legacy ellipse retains Seat IDs on the shared circle');
+  assert.equal(normalizeSeatLayout('rectangle'),'circle');
   assert.equal(normalizeSeatId(30,30),30);
   assert.equal(normalizeSeatId(31,30),null);
   assert.equal(normalizeSeatId('2.9',30),2);
