@@ -110,3 +110,11 @@ html.embedded .hud{display:none!important}
 .night .stage.custom-scene::after{
   background-image:var(--gmww-scene-image)!important;
 }
+
+/* V3.180 — custom GM-published 2.5D scene uses the same normalized frame
+   as GM Server. Original day/night art and player/seat layers are unchanged. */
+.stage.custom-scene::after,.night .stage.custom-scene::after{
+ background-size:100% 100%!important;
+ background-position:center center!important;
+ background-repeat:no-repeat!important;
+}
