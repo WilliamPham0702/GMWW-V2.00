@@ -11,7 +11,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, resolveNightReveal, canSnowWolfBite, resolveMaidenNight, DIVINATION_ACTION_IDS, isNightImmuneTarget } from "./gmww-wolf-night-resolution.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -861,7 +861,9 @@ export class RoomDurableObject extends DurableObject {
     const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
-    const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,
+      assignments:await this.privateAssignmentsForNight(assignments),
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
     const demoLease=meta.demo?await this.ctx.storage.get("demoLease"):null;
     const storedDemoClock=meta.demo?await this.ctx.storage.get("demoClock"):null,
       demoClock=storedDemoClock?projectDemoClock(storedDemoClock,Date.now()):null;
@@ -1501,6 +1503,18 @@ export class RoomDurableObject extends DurableObject {
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     this.broadcast({type:"night_turn",night,runtime,source,room:publicRoom(meta),serverTime:Date.now()});return runtime
   }
+  // Rehydrate private card flags only inside the Durable Object (never on Player Web).
+  async privateAssignmentsForNight(assignments){
+    return Promise.all((Array.isArray(assignments)?assignments:[]).map(async row=>{
+      const id=normalizeLoginId(row?.loginId);
+      const list=await this.ctx.storage.get("roles:"+id);
+      const legacy=Array.isArray(list)&&list.length?list:((await this.ctx.storage.get("role:"+id))?[await this.ctx.storage.get("role:"+id)]:[]);
+      const stored=legacy.find(x=>String(x?.roleId||"")===String(row.roleId||"")&&
+        Number(x?.assignmentIndex||0)===Number(row.assignmentIndex||0))||
+        legacy.find(x=>String(x?.roleId||"")===String(row.roleId||""));
+      return {...row,roleCard:stored?.roleCard||null};
+    }));
+  }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
     // Replayed completion must not restart day timers or expire effects twice.
@@ -1516,6 +1530,7 @@ export class RoomDurableObject extends DurableObject {
     // An absent bite or a malformed seating ring never manufactures a death.
     const wolfResolution=p==="morning"&&n>0?
       resolveWolfNight({interactions:rows,players:(await this.ctx.storage.get("players"))||{},
+        assignments:await this.privateAssignmentsForNight((await this.ctx.storage.get("assignments"))||[]),
         matchId:String(meta.matchId||""),night:n}):null;
     if(wolfResolution?.ok)for(const loginId of wolfResolution.victims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
@@ -1847,6 +1862,15 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
+    const divination=DIVINATION_ACTION_IDS.includes(String(body?.actionId||""))&&!artifactId;
+    if(divination){
+      const reveals=Array.isArray(body?.revealTargetIds)?body.revealTargetIds.map(normalizeLoginId):[];
+      if(!reveals.length||reveals.length>3||new Set(reveals).size!==reveals.length||
+        reveals.some(id=>!id||!players["member:"+id]||isExpelled(id)||
+          interactions.some(x=>normalizeLoginId(x?.loginId)===id&&x?.type==="dead"&&
+            x?.effectActive!==false&&(!x?.matchId||String(x.matchId)===matchId))))
+        return j({ok:false,error:"INVALID_REVEAL_TARGETS",message:"Mục tiêu soi không hợp lệ hoặc không còn sống."},409);
+    }
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
@@ -1934,11 +1958,15 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>effectiveTargets.includes(id)),
-      assignments:(await this.ctx.storage.get("assignments"))||[]}):null;
+    // Scan target ids must not be intersected with actor-only receipt targets.
+    const needsPrivate=divination||['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''));
+    const privateAssignments=needsPrivate?await this.privateAssignmentsForNight((await this.ctx.storage.get("assignments"))||[]):[];
+    const revelation=divination?resolveNightReveal({actionId:String(body?.actionId||''),
+      targetIds:revealIds.filter(id=>!!players["member:"+id]&&!isExpelled(id)),
+      assignments:privateAssignments}):null;
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({interactions:(await this.ctx.storage.get("interactions"))||[],players,
-        matchId,night:Number(meta.cycleNight||0)}):null;
+        assignments:privateAssignments,matchId,night:Number(meta.cycleNight||0)}):null;
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
       ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
@@ -2057,6 +2085,13 @@ export class RoomDurableObject extends DurableObject {
     }
     const allowed=new Set(["frozen","expelled","dead","thumb_vote","assassin_mark","effect_notice"]);if(!loginId||!allowed.has(type))return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
     const p=players["member:"+loginId];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
+    // A Witch kill potion is consumed even when the target survives through night immunity.
+    if(type==="dead"&&String(body?.actionId||"")==="action_witch_kill"){
+      const assignments=(await this.ctx.storage.get("assignments"))||[];
+      const row=assignments.find(a=>normalizeLoginId(a?.loginId)===loginId);
+      if(row&&isNightImmuneTarget(await this.privateAssignmentsForNight([row]),loginId))
+        return j({ok:true,loginId,noEffect:true,reason:"NIGHT_IMMUNE"});
+    }
     const defaults={frozen:"Bạn đang bị Đóng Băng.",expelled:"Bạn đã bị Đuổi Khỏi Làng.",dead:"Bạn đã Chết.",thumb_vote:"Hãy chọn dấu phù hợp.",assassin_mark:"Bạn đã bị Đánh Dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.",effect_notice:"Bạn đã nhận một Hiệu Ứng."},rawOptions=Array.isArray(body?.options)?body.options.map(x=>String(x||"").slice(0,40)).filter(Boolean).slice(0,4):[],cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??body?.nightIndex??body?.roundIndex??meta.cycleKey??"").slice(0,160),expiresAt=body?.expiresAt?String(body.expiresAt).slice(0,64):null,effectActive=["frozen","expelled","dead","assassin_mark"].includes(type),clientEventId=String(body?.clientEventId||"").slice(0,240),rows=(await this.ctx.storage.get("interactions"))||[];
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
