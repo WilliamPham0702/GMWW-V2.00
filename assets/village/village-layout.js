@@ -4,13 +4,17 @@
      A deliberately conservative courtyard + central bridge corridor.
      The sea, roofs, landscaped terraces and lawns remain beyond this boundary.
      This shared object is loaded unchanged in Worker, GM IPA and Player Web. */
-  const fire={x:50,y:49.7};
+  // GP2: the fire is a scene landmark, not the centre of the bitmap.
+  // All coordinates are 0..100 in the common Day/Night world frame.
+  const fire={x:50,y:64};
+  const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:94,
+    zones:Object.freeze({back:[29,48],middle:[48,73],front:[73,94]})});
   // The central paving must accommodate the whole 30-seat rectangle.
   // Outer roofs/sea are excluded, while the lower bridge remains walkable.
-  const polygon=[[21,33],[79,33],[82,44],[82,60],[79,74],
-    [64,86],[62,90],[62,99],[38,99],[38,90],[36,86],
-    [21,74],[18,60],[18,44]];
-  const fireRadius={x:7,y:4.2};
+  // Paved 2.5D courtyard; outer houses, sea and foliage are never walkable.
+  const polygon=[[16,28],[84,28],[89,35],[89,53],[91,70],[89,88],
+    [84,94],[16,94],[11,88],[9,70],[11,53],[11,35]];
+  const fireRadius={x:8.8,y:5.6};
   function polygonInside(x,y){
     let hit=false;
     for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
@@ -23,8 +27,8 @@
   function inside(x,y){x=Number(x);y=Number(y);return Number.isFinite(x)&&Number.isFinite(y)&&polygonInside(x,y)&&fireClear(x,y)}
   function clampPoint(x,y){
     x=Number(x);y=Number(y);
-    if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:75};
-    y=Math.max(34,Math.min(98,y));
+    if(!Number.isFinite(x)||!Number.isFinite(y))return{x:50,y:82};
+    y=Math.max(29,Math.min(93,y));
     // Never clamp just the Y coordinate then leave X in a roof or water area.
     // Find the actual left/right courtyard intersections at this latitude.
     const xs=[];
@@ -96,35 +100,36 @@
     }
     return{x:0,y:-ry};
   }
+  // The 30-seat GP2 layout is a staggered depth grid, NOT an outline.
+  // Six columns × five terraces leave a walkable central lane around the fire.
+  // Seat ID order remains stable; old room assignments are never rewritten.
+  function terraceSeats(count){
+    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
+    const columns=n>=21?6:n>=13?5:n>=7?4:n>=4?3:n;
+    const rows=Math.ceil(n/columns);
+    const ys=rows===5?[35,47,58,76,89]:rows===4?[37,51,77,88]:
+      rows===3?[38,55,83]:rows===2?[45,82]:[81];
+    const positions=[];
+    for(let i=0;i<n;i++){
+      const row=Math.floor(i/columns),used=Math.min(columns,n-row*columns);
+      const col=i%columns,step=used>1?66/(used-1):0;
+      let x=used===1?50:17+(6-used)*3.1+col*step*(used-1)/Math.max(1,columns-1);
+      // Symmetric row staggering improves the perspective while keeping hit areas apart.
+      x+=row%2===0?0:1;
+      let y=ys[Math.min(row,ys.length-1)];
+      if(!fireClear(x,y)){
+        // Preserve seat order and prevent a Character appearing in the flame.
+        x+=x<fire.x?-9.5:9.5;
+      }
+      positions.push({...clampPoint(x,y),ring:0,depth:row});
+    }
+    return positions;
+  }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
-    // Radius adapts to available courtyard, with fire permanently at
-    // world (50,49.7). For 30 players we expand ONE rectangle, not rings.
-    const rx=kind==='circle'?22.8:kind==='ellipse'?27.4:27.5;
-    const ry=kind==='circle'?13.1:kind==='ellipse'?12.9:13.2;
-    // A small deterministic phase search keeps 25–30 adjacent players
-    // from bunching diagonally around rectangle corners.
-    let phase=0;
-    if(kind==='rectangle'){
-      let bestDistance=-1;
-      for(let step=0;step<32;step++){
-        const shift=step/(32*n),points=Array.from({length:n},(_,i)=>
-          rectangleContour(i/n+shift,rx,ry));
-        const minGap=Math.min(...points.map((p,i)=>{
-          const q=points[(i+1)%n];
-          return Math.hypot(p.x-q.x,SCREEN_Y_SCALE*(p.y-q.y));
-        }));
-        if(minGap>bestDistance+1e-8){bestDistance=minGap;phase=shift}
-      }
-    }
-    const result=[];
-    for(let i=0;i<n;i++){
-      const p=kind==='rectangle'?rectangleContour(i/n+phase,rx,ry):ovalContour(i/n,rx,ry);
-      const point=clampPoint(fire.x+p.x,fire.y+p.y);
-      result.push({x:point.x,y:point.y,ring:0});
-    }
-    return result;
+    // GP2 renders all seat counts on the same ground-plane terrace geometry.
+    // The saved shape is kept for API compatibility; it no longer alters the world map.
+    return terraceSeats(n);
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
@@ -172,7 +177,7 @@
     }
     return mapping;
   }
-  function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(26+h%4800/100,65+(h>>>8)%1400/100)}
+  function spawn(id){let h=0;for(const ch of String(id||''))h=(h*31+ch.charCodeAt(0))>>>0;return clampPoint(17+h%6600/100,38+(h>>>8)%4900/100)}
   function fitMode(w,h){const ratio=Number(w)/Math.max(1,Number(h));return ratio>=.85?"stretch":ratio>=.72?"contain":"cover"}
   function rect(w,h){w=Math.max(1,Number(w)||864);h=Math.max(1,Number(h)||1536);const mode=fitMode(w,h);if(mode==="stretch")return{width:w,height:h,left:0,top:0,mode};const s=(mode==="contain"?Math.min:Math.max)(w/864,h/1536),width=864*s,height=1536*s;return{width,height,left:(w-width)/2,top:(h-height)/2,mode}}
   function toScreen(p,w,h){const r=rect(w,h);return{x:(r.left+r.width*p.x/100)/w*100,y:(r.top+r.height*p.y/100)/h*100}}
@@ -180,9 +185,9 @@
   // Visibility-graph route planner. Cached per pair of endpoints; all path
   // segments remain inside the paving, avoiding the fire and outer gardens.
   const routeCache=new Map();
-  const waypoints=[[50,38],[36,40],[64,40],[40.5,50],[59.5,50],
-    [32,59],[68,59],[42,60],[58,60],[50,65],[35,73],[65,73],
-    [50,79],[50,87],[50,92]].map(p=>({x:p[0],y:p[1]}));
+  const waypoints=[[50,34],[29,39],[71,39],[34,50],[66,50],
+    [29,61],[39,62],[61,62],[71,61],[33,72],[67,72],
+    [50,79],[28,83],[72,83],[50,90]].map(p=>({x:p[0],y:p[1]}));
   function safeSegment(a,b){
     const steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,(b.y-a.y)*1.78)/1.5));
     for(let i=0;i<=steps;i++){
@@ -234,5 +239,5 @@
     }
     return clampPoint(b.x,b.y);
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({scene,fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);
