@@ -23,7 +23,7 @@ try {
     el.style.left=x+'%';el.style.top=y+'%';el.innerHTML='<span class="portrait game-character">👤</span><span class="name">P'+i+'</span>';
     players.append(el);return el;
    };
-   const center=create(50,55,1),centerBox=center.getBoundingClientRect();
+   const center=create(25,55,1),centerBox=center.getBoundingClientRect();
    const hit=document.elementFromPoint(centerBox.left+centerBox.width/2,centerBox.top+centerBox.height/2);
    const hitCenter=hit===center||center.contains(hit);
    for(let i=1;i<30;i++)create(17+(i%5)*16,20+Math.floor(i/5)*10,i+1);
