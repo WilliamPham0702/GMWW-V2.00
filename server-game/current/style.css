@@ -6803,12 +6803,11 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDetails:not(.gm
 
 /* GP2 — 2.5D village world: shared camera and scene landmarks with Player Web.
    No character-size overrides: keep approved 56×74 / 62×82 rigs. */
-#start #playShell[data-phase="day"] #playWorld:not(.has-custom-scene),
-#start #playShell[data-phase="lobby"] #playWorld:not(.has-custom-scene){
+#start #playWorld:not(.has-custom-scene){
   background-image:url("/backgrounds/gmww-gp2-village-day.svg")!important;
   background-size:cover!important;background-position:center center!important;
 }
-#start #playShell[data-phase="night"] #playWorld:not(.has-custom-scene){
+#start #playShell[data-phase^="n"] #playWorld:not(.has-custom-scene){
   background-image:url("/backgrounds/gmww-gp2-village-night.svg")!important;
   background-size:cover!important;background-position:center center!important;
 }
