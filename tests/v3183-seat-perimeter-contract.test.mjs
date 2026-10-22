@@ -64,13 +64,14 @@ test('rectangles prioritize the two long side edges and templates preserve Seat 
  assert.ok(base[mapping.a-1]&&base[mapping.b-1]);
 });
 
-test('GM and Player Web load same cached-busted layout, runtime 3.183 retains native shell',()=>{
+test('GM and Player Web load same cache-busted layout and retain native shell',()=>{
  const gm=read('server-game/current/GMWW.html');
  const player=read('assets/village/village.mjs');
  const worker=read('src/index.js');
- assert.match(gm,/village-layout\.js\?v=3\.183-seat-ring-recovery/);
+ const version=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
+ assert.ok(gm.includes('village-layout.js?v='+version+'-seat-ring-recovery'));
  assert.match(player,/village-layout\.js\?v=fire3101-gp2&seat=3183-perimeter/);
  assert.match(read('assets/village/index.html'),/seatfix=v3183/);
- assert.match(worker,/VERSION="V3\.183",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3183"/);
+ assert.ok(worker.includes('VERSION="V'+version+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+version.replaceAll('.','')+'"'));
  assert.match(read('.github/scripts/prepare-update-channel.mjs'),/releaseNotes:\["V3\.183: Khôi phục/);
 });
