@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import {resolveWolfNight,resolveNightReveal,isNightImmuneTarget} from '../src/gmww-wolf-night-resolution.js';
 
 const players=Object.fromEntries(['seer','wolf','aura','immune'].map((loginId,i)=>
@@ -58,4 +59,20 @@ test('V3.181: audio catalogue maps Witch and three chained morning phrases',()=>
   assert.match(app,/battleSpeechFinish/);
   assert.match(app,/gmwwBundledLegacyAudio\[a\.sourceKey\]/);
   assert.match(app,/const spoken=String\(revelation\.message\|\|''\)/);
+});
+
+test('V3.181: grouped turns keep the Old Witch clip and announce other unique roles',()=>{
+  const app=fs.readFileSync('server-game/current/app.js','utf8');
+  const start=app.indexOf('function battleTurnAudioCue('),end=app.indexOf('function battleAudioForTurn(',start);
+  assert.ok(start>=0&&end>start);
+  const scope={};
+  vm.runInNewContext(app.slice(start,end)+';globalThis.getCues=battleAudioCuesForTurn;',scope);
+  const cues=scope.getCues({kind:'role-group',roles:[
+    {roleId:'role_guard',label:'Bảo Vệ'},{roleId:'role_old_witch',label:'Phù Thuỷ Già'},
+    {roleId:'role_guard',label:'Bảo Vệ'}]});
+  assert.deepEqual(Array.from(cues,row=>row.targetId),['role_guard','role_old_witch']);
+  const wolfCues=scope.getCues({kind:'role-group',roles:[
+    {roleId:'role_wolf',label:'Sói Thường'},{roleId:'role_alpha_wolf',label:'Sói Trùm'},
+    {roleId:'role_old_witch',label:'Phù Thuỷ Già'}]});
+  assert.deepEqual(Array.from(wolfCues,row=>row.targetId),['audio_group_wolves','role_old_witch']);
 });
