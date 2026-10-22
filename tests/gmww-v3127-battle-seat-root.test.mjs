@@ -25,8 +25,8 @@ test('V3.127 root regression: missing seats in GM-1..GM-9 cannot clump by accoun
   assert.equal(points.length,12);
   assert.ok(Math.min(...points.map(p=>p.x))<35);
   assert.ok(Math.max(...points.map(p=>p.x))>65);
-  assert.ok(Math.min(...points.map(p=>p.y))<42);
-  assert.ok(Math.max(...points.map(p=>p.y))>56);
+  assert.ok(Math.min(...points.map(p=>p.y))<layout.fire.y-12);
+  assert.ok(Math.max(...points.map(p=>p.y))>layout.fire.y+12);
   assert.ok(points.every(p=>layout.inside(p.x,p.y)));
   const other=layout.projectedSeatIds([...rows].reverse(),12);
   assert.deepEqual(Object.entries(other).sort(),Object.entries(ids).sort(),
