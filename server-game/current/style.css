@@ -6799,3 +6799,10 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDetails:not(.gm
  background-position:center center!important;
  background-repeat:no-repeat!important;
 }
+/* Published GM art is a CSS background, not a foreground image.
+   Protect the existing interactive actor grid and never modify seat coordinates. */
+#start #playWorld.has-custom-scene > #playPlayerRing{
+ position:absolute!important;
+ inset:0!important;
+ z-index:3!important;
+}
