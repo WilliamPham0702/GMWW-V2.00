@@ -592,16 +592,45 @@ function demoRenderObserver(){
   panel.hidden=day||!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(panel.hidden)return;
   const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
-  const event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
+  const matchId=String(playSceneRuntime.room?.matchId||''),night=Math.max(1,Number(playSceneState.night)||1);
+  const belongsToNight=event=>event&&String(event.matchId||'')===matchId&&
+    String(event.turn||'').startsWith('Đêm '+night+' ');
+  const records=(Array.isArray(demoRunner.history)?demoRunner.history:[])
+    .filter(belongsToNight).slice().sort((a,b)=>Number(a.at||0)-Number(b.at||0));
+  const last=belongsToNight(demoRunner.lastEvent)?demoRunner.lastEvent:null;
+  const event=last||records[records.length-1]||null;
+  const others=records.filter(row=>!event||String(row.id)!==String(event.id)).reverse();
+  const actionText=row=>{
+    const actor=row?.actorId?demoActorIdentity(row.actorId):String(row?.actor||'Hệ thống');
+    const targets=row?.targetIds?.length?row.targetIds.map(demoActorIdentity):row?.targets||[];
+    const action=demoActionLabel(row);
+    const verb=row?.status==='pending'?'Đang thực hiện: ':row?.status==='skipped'?'Bỏ qua: ':'';
+    return verb+actor+' · '+action+(targets.length?' → '+targets.join(', '):'');
+  };
   set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
-  set('battleDemoEventTurn',event?'Hành động · '+String(event.turn||''):'');
-  const actor=event?.actorId?demoActorIdentity(event.actorId):String(event?.actor||'Vai Trò (người chơi)');
-  const targets=event?.targetIds?.length?event.targetIds.map(demoActorIdentity):event?.targets||[];
-  const action=demoActionLabel(event);
-  const msg=event?(event.status==='pending'?'Đang thực hiện: ':event.status==='skipped'?'Bỏ qua: ':'')+
-    actor+' đã thực hiện hành động ('+action+')'+(targets.length?' đến '+targets.join(', '):''):'Chưa có hành động trong ván này.';
-  set('battleDemoEvent',msg);
-  panel.dataset.resultTone=/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(action)?'negative':'positive';
+  set('battleDemoEventTurn',event?'MỚI NHẤT · '+String(event.turn||''):'');
+  set('battleDemoEvent',event?actionText(event):'Chưa có hành động được xác nhận trong đêm này.');
+  const action=event?demoActionLabel(event):'';
+  panel.dataset.resultTone=!event?'neutral':/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(action)?'negative':'positive';
+  const history=document.getElementById('battleDemoHistory');
+  const list=document.getElementById('battleDemoHistoryList');
+  const label=document.getElementById('battleDemoHistoryCount');
+  if(history&&list){
+    history.hidden=others.length===0;
+    if(label)label.textContent='LỊCH SỬ ĐÊM '+night+' · '+others.length+' hành động trước';
+    // Replace only when the Server ledger changes; keep the user's open/scroll state.
+    const signature=matchId+':'+night+':'+others.map(row=>String(row.id||'')+':'+String(row.status||'')).join('|');
+    if(list.dataset.signature!==signature){
+      list.dataset.signature=signature;list.replaceChildren();
+      for(const row of others){
+        const item=document.createElement('li'),turn=document.createElement('small'),detail=document.createElement('span');
+        turn.textContent=String(row.turn||'').replace(/^Đêm \d+\s*·\s*/,'');
+        detail.textContent=actionText(row);
+        if(/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(demoActionLabel(row)))item.classList.add('is-critical');
+        item.append(turn,detail);list.append(item);
+      }
+    }
+  }
   set('battleDemoObserverError',demoRunner.error||'');
 }
 function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
