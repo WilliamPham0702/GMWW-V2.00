@@ -129,6 +129,13 @@ jobs:
           name: home-v389-iphone-webkit-preview
           path: /tmp/gmww-v389-iphone-webkit-home.png
           if-no-files-found: ignore
+      - name: Upload isolated GP2 iPhone QA screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-gp2-30-atlas-iphone-draft
+          path: /tmp/gmww-gp2-qa-iphone-30-atlas.png
+          if-no-files-found: ignore
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4
