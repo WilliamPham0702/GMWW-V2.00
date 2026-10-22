@@ -45,7 +45,7 @@ test('V3.181: Durable Object reads private cards only for server-side resolution
   const source=fs.readFileSync('src/index.js','utf8');
   assert.match(source,/async privateAssignmentsForNight\(assignments\)/);
   assert.match(source,/assignments:await this.privateAssignmentsForNight/);
-  assert.match(source,/const divination=DIVINATION_ACTION_IDS\.includes/);
+  assert.match(source,/const divination=\['action_seer'/);
   assert.match(source,/targetIds:revealIds\.filter\(id=>!!players\["member:"\+id\]/);
   assert.match(source,/isNightImmuneTarget\(await this\.privateAssignmentsForNight\(\[row\]\),loginId\)/);
 });
