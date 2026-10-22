@@ -7,7 +7,16 @@ const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'')
 const isFrom=(row,matchId,night)=>String(row?.matchId||'')===matchId&&Number(row?.night)===night;
 const distinct=values=>[...new Set(values)];
 
-export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
+// Private assignment metadata is supplied by the Durable Object only. Never send it to Player Web.
+export function isNightImmuneTarget(assignments=[],targetId){
+  const target=login(targetId),row=(Array.isArray(assignments)?assignments:[])
+    .find(item=>login(item?.loginId)===target);
+  if(!row)return false;
+  const flag=row.roleCard?.flags?.nightImmune??row.flags?.nightImmune;
+  // Compatibility for private cards issued by older runtimes without flags.
+  return typeof flag==='boolean'?flag:['role_assassin','role_destroyer'].includes(String(row.roleId||''));
+}
+export function resolveWolfNight({interactions=[],players={},assignments=[],matchId,night}={}){
   const match=String(matchId||''),cycle=Number(night);
   if(!match||!Number.isInteger(cycle)||cycle<1)
     return {ok:false,error:'INVALID_RESOLUTION_CONTEXT',victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
@@ -40,7 +49,7 @@ export function resolveWolfNight({interactions=[],players={},matchId,night}={}){
       transfers.push({from:origin,to:target,direction});
     }
     attacked.push({from:origin,to:target,direction:direction||'none',protected:guards.has(target)});
-    if(guards.has(target)){protectedTargets.push(target);continue}
+    if(guards.has(target)||isNightImmuneTarget(assignments,target)){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&
       ['dead','expelled'].includes(String(row?.type||''))&&row?.effectActive!==false))continue;
     victims.push(target);
@@ -70,11 +79,12 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
       wolf=roleId==='role_snow_wolf'||roleId==='role_wolf'||roleId==='role_alpha_wolf'||
         faction==='wolf'||faction.includes('sói')||faction.includes('soi');
     return {loginId:id,roleId,roleName:String(a.roleName||a.roleCard?.name||roleId),
-      faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};
+      faction,wolf,functions:(a.roleCard?.functions||[]).filter(f=>f&&!f.passive).map(f=>String(f.description||f.name||f.actionId||'').trim()).filter(Boolean)};
   });
   if(action==='action_aura_read'){
-    const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),
-      message:result.roleName};
+    const result=reads[0];return {kind:'aura',actionId:action,
+      targets:reads.map(({loginId,functions})=>({loginId,functions})),
+      message:result.functions.length?result.functions.join(' • '):'Không có chức năng chủ động'};
   }
   if(action==='action_destroyer_scry')
     return {kind:'role',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleName:x.roleName})),message:reads[0].roleName};
