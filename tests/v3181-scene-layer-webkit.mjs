@@ -14,7 +14,7 @@ try {
  // The source CSS starts with a relative @import. On Playwright's about:blank
  // document that import has no resolvable base URL and rejects addStyleTag.
  // Inject exactly the layout rules under test; status effects are unrelated here.
- const css=fs.readFileSync('assets/village/village.css','utf8').replace(/^@import[^;]*;\\s*/,'');
+ const css=fs.readFileSync('assets/village/village.css','utf8').replace(/^@import[^;]*;/,'');
  await page.addStyleTag({content:css});
  await page.addStyleTag({content:fs.readFileSync('assets/village/village-art.css','utf8')});
  for(const night of [false,true]){
