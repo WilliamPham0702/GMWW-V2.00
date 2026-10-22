@@ -6,7 +6,7 @@ Status: **feature branch / pending CI and iPhone GM acceptance**. No Production 
 - Restore confirmed private scan results to GM for **Tiên Tri**, **Tiên Tri Hào Quang** and **Nhà Tinh Thần Học**. Actual chosen targets are sent in `revealTargetIds`; previously the server intersected them with the actor-only confirmation target.
 - Tiên Tri Hào Quang reads a target's **functions**, not its identity/role. Display and spoken result use function descriptions.
 - Apply `nightImmune` from **private assigned role card**, not public assignment summary. Direct/transferred Sói Cắn and Phù Thủy kill potion do not kill an immune target; actions remain consumed. Explicit `false` on custom cards overrides legacy role defaults.
-- Repair Old Witch bundled-audio availability detection; preserve user-uploaded audio mappings/IDs and handle WebKit playback fallback and callbacks.
+- Repair Old Witch bundled-audio availability detection; **announce every unique role in same-order grouped turns**, not only the first role. Preserve user-uploaded audio mappings/IDs and handle WebKit playback fallback and callbacks.
 - Dawn audio uses discrete ordered parts: `audio_system_morning_deaths_intro` + `audio_system_morning_number_N` + `audio_system_morning_dead_noun`. Missing uploaded parts speak via vi-VN speech synthesis where available.
 
 ## Test matrix / acceptance
