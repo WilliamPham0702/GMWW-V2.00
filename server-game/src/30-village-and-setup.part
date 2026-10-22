@@ -257,16 +257,16 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
   let completed=false;const done=()=>{if(completed)return;completed=true;if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
   player.gmwwFinish=done;battleActiveAudio=player;
-  player.onended=done;player.onerror=()=>{if(completed)return;done();if(!playAudioMuted())battleSpeakCue(name)};
+  player.onended=done;
+  player.onerror=()=>{if(completed)return;if(!playAudioMuted())battleSpeakCue(name,false,done);else done()};
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src,onFinished))return true;
+    if(await battlePlayWebAudioFallback(src,done))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
-    if(!playAudioMuted())battleSpeakCue(name);
-    done();
-    return false
+    if(!playAudioMuted())return battleSpeakCue(name,false,done);
+    done();return false
   }
 }
 function battleTurnAudioCue(turn){
