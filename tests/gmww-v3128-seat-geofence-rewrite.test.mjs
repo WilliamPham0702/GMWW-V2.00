@@ -12,7 +12,7 @@ const worker=read('src/index.js');
 const web=read('assets/village/village.mjs');
 
 test('V3.128: shared walk boundary strictly excludes sea, roofs, terraces and campfire',()=>{
-  for(const [x,y] of [[1,1],[90,24],[9,48],[97,59],[8,90],[90,90],[50,15],[50,49.7]])
+  for(const [x,y] of [[1,1],[90,24],[9,48],[97,59],[8,90],[90,90],[50,15],[50,64]])
     assert.equal(layout.inside(x,y),false,'invalid area '+x+','+y);
   for(const [x,y] of [[50,39],[29,58],[70,58],[50,75],[50,90]])
     assert.equal(layout.inside(x,y),true,'expected courtyard at '+x+','+y);
@@ -58,7 +58,7 @@ test('V3.128: spacing and manual offsets remain bounded inside paving',()=>{
 });
 
 test('V3.128: walking paths stay inside the actual village from roofs, sea and across fire',()=>{
-  const endpoints=[[0,0],[95,10],[99,60],[50,49.7],[50,95],[20,49],[80,59],[30,73],[70,40]];
+  const endpoints=[[0,0],[95,10],[99,60],[50,64],[50,95],[20,49],[80,59],[30,73],[70,40]];
   for(const rawA of endpoints)for(const rawB of endpoints){
     const a=layout.clampPoint(...rawA),b=layout.clampPoint(...rawB);
     const path=layout.route(a,b);
