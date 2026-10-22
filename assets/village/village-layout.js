@@ -50,25 +50,25 @@
   }
   /* Single perimeter, like a real Werewolf circle of people seated around the fire.
      Coordinates shared by GM IPA, Cloudflare Worker, and Player Web. */
-  const seatTemplateCounts=Object.freeze([8,10,12,14,16,18,20,22,24,25,26,27,28,29,30]);
-  const seatTemplateShapes=Object.freeze(['circle','ellipse','rectangle']);
+  // Every supported 6–30 capacity is offered; legacy ellipse rooms are treated
+  // as diamonds without changing assigned Seat IDs.
+  const seatTemplateCounts=Object.freeze(Array.from({length:25},(_,i)=>i+6));
+  const seatTemplateShapes=Object.freeze(['circle','diamond','rectangle']);
   function normalizeSeatLayout(shape){
     const value=String(shape||'');
-    // Existing V3.100 rooms may carry 'diamond'; interpret them safely
-    // without losing seat IDs or breaking ongoing room metadata.
-    return value==='diamond'?'ellipse':seatTemplateShapes.includes(value)?value:'';
+    return value==='ellipse'?'diamond':seatTemplateShapes.includes(value)?value:'';
   }
   function recommendedSeatShape(count){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    return n<=12?'circle':n<=20?'ellipse':'rectangle';
+    const n=Math.max(6,Math.min(30,Math.trunc(Number(count)||12)));
+    return n<=12?'circle':n<=20?'diamond':'rectangle';
   }
   const SCREEN_Y_SCALE=1.78;
   function circleContour(t,rx,ry){
     const a=-Math.PI/2+2*Math.PI*t;
     return{x:rx*Math.cos(a),y:ry*Math.sin(a)};
   }
-  // Even distribution by on-screen distance, not by angle: no clusters
-  // at the narrow ends of the ellipse.
+  // Spread by displayed arc length so small and large groups use one balanced
+  // perimeter, even in the portrait 2.5D camera projection.
   function ovalContour(t,rx,ry){
     const steps=360,dist=[0],points=[circleContour(0,rx,ry)];
     for(let i=1;i<=steps;i++){
@@ -83,13 +83,20 @@
     return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
       y:points[lo].y+(points[hi].y-points[lo].y)*portion};
   }
+  function diamondContour(t,rx,ry){
+    // Four straight diagonals: this must not silently become an ellipse.
+    const vertices=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
+    const edge=((t%1)+1)%1*4,index=Math.floor(edge),f=edge-index;
+    return{x:vertices[index][0]+(vertices[index+1][0]-vertices[index][0])*f,
+      y:vertices[index][1]+(vertices[index+1][1]-vertices[index][1])*f};
+  }
   function rectangleContour(t,rx,ry){
-    // Follow exactly ONE closed perimeter, starting at the top midpoint.
+    // Long LEFT and RIGHT edges, a single closed perimeter, no interior rows.
     const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
     const lengths=corners.slice(1).map((p,i)=>
       Math.hypot(p[0]-corners[i][0],SCREEN_Y_SCALE*(p[1]-corners[i][1])));
-    const length=lengths.reduce((a,b)=>a+b,0);
-    let distance=((t%1)+1)%1*length;
+    const total=lengths.reduce((a,b)=>a+b,0);
+    let distance=((t%1)+1)%1*total;
     for(let i=0;i<lengths.length;i++){
       if(distance<=lengths[i]||i===lengths.length-1){
         const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
@@ -100,42 +107,23 @@
     }
     return{x:0,y:-ry};
   }
-  // The 30-seat GP2 layout is a staggered depth grid, NOT an outline.
-  // Six columns × five terraces leave a walkable central lane around the fire.
-  // Seat ID order remains stable; old room assignments are never rewritten.
-  function terraceSeats(count){
-    const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    const columns=n>=21?6:n>=13?5:n>=7?4:n>=4?3:n;
-    const rows=Math.ceil(n/columns);
-    const ys=rows===5?[35,47,58,76,89]:rows===4?[37,51,77,88]:
-      rows===3?[38,55,83]:rows===2?[45,82]:[81];
-    const positions=[];
-    for(let i=0;i<n;i++){
-      const row=Math.floor(i/columns),used=Math.min(columns,n-row*columns);
-      const col=i%columns,step=used>1?66/(used-1):0;
-      let x=used===1?50:17+(6-used)*3.1+col*step*(used-1)/Math.max(1,columns-1);
-      // Symmetric row staggering improves the perspective while keeping hit areas apart.
-      x+=row%2===0?0:1;
-      let y=ys[Math.min(row,ys.length-1)];
-      if(!fireClear(x,y)){
-        // Preserve seat order and prevent a Character appearing in the flame.
-        x+=x<fire.x?-9.5:9.5;
-      }
-      positions.push({...clampPoint(x,y),ring:0,depth:row});
-    }
-    return positions;
-  }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    // All patterns use the same walkable 2.5D terraces. Circle/ellipse bow their
-    // columns toward the centre; rectangle fills the full courtyard width.
-    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n),base=terraceSeats(n);
-    if(kind==='rectangle')return base;
-    return base.map((p,i)=>{
-      const nearCentre=1-Math.min(1,Math.abs(p.y-fire.y)/34);
-      const factor=kind==='circle'?.89+nearCentre*.03:.95+nearCentre*.02;
-      return {...clampPoint(fire.x+(p.x-fire.x)*factor,p.y+(kind==='circle'?(i%2?.4:-.4):0)),ring:0,depth:p.depth};
-    });
+    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
+    // Center exactly on the published scene's campfire; preserve Character size.
+    const rx=kind==='rectangle'?30:kind==='diamond'?32:31;
+    const ry=kind==='circle'?18:27;
+    const result=[];
+    for(let i=0;i<n;i++){
+      const t=i/n,p=kind==='circle'?ovalContour(t,rx,ry):
+        kind==='diamond'?diamondContour(t,rx,ry):rectangleContour(t,rx,ry);
+      const x=fire.x+p.x,y=fire.y+p.y;
+      // A regression into a grid or an unsafe cliff is a programming error,
+      // not a reason to relocate individual seats onto one another.
+      if(!inside(x,y))throw Error('INVALID_SEAT_PERIMETER_'+kind+'_'+n+'_'+i);
+      result.push({x,y,ring:0,depth:Math.max(0,Math.min(5,Math.floor((y-29)/11)))});
+    }
+    return result;
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
