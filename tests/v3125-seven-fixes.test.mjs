@@ -36,7 +36,7 @@ test('V3.125 — all four GM adjustments and spacing use server-persisted room c
   assert.match(gm,/playUpdateRoomSettings\(\{seatOffset:next\}\)/);
 });
 test('V3.125 — fire and forbidden surroundings reject clicks and moving sprites remain legal',()=>{
-  assert.equal(layout.inside(50,49.7),false,'center fire is forbidden');
+  assert.equal(layout.inside(layout.fire.x,layout.fire.y),false,'center fire is forbidden');
   assert.equal(layout.inside(5,12),false,'house roofs are forbidden');
   assert.ok(layout.inside(50,75),'courtyard is walkable');
   const source={movementStatus:'moving',moveStartedAt:1000,moveDurationMs:2000,

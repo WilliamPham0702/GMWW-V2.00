@@ -3467,7 +3467,7 @@ function renderPlaySeatPresetPanel(){
   const exactCount=Math.max(8,Math.min(30,minimum));
   const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
   const hint=document.getElementById('playSeatPresetAutoHint');
-  if(hint)hint.textContent='Một vòng quanh lửa • Hình tự chọn theo số người'+(minimum?' • Hiện có '+members.length+' người':'');
+  if(hint)hint.textContent='Bố trí 2,5D theo tầng • Giữ nguyên Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
   for(const n of counts){
     const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;
@@ -5528,7 +5528,7 @@ function renderPlayScene(){
   const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Bước hiện tại '+playVisibleStageLabel()+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=playSceneState.step==='deal'&&playDeliveryProgress().success?'VÀO TRẬN':step.t.toUpperCase()}
-  const core=document.querySelector('.play-village-core'),fire=playMapDisplay(50,49.7);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
+  const anchor=globalThis.GMWW_VILLAGE_LAYOUT.fire,core=document.querySelector('.play-village-core'),fire=playMapDisplay(anchor.x,anchor.y);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
   renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();renderPlayBattle();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 

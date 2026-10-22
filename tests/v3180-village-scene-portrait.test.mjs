@@ -6,7 +6,7 @@ test('approved portrait art remains aligned between GM and Player Web',()=>{
  const gm=read('server-game/current/style.css'),player=read('assets/village/village-art.css');
  assert.match(gm,/#start #playWorld\.has-custom-scene\{\s*background-size:100% 100%!important/);
  assert.match(player,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*background-size:100% 100%!important/);
- assert.match(read('assets/village/village-layout.js'),/const fire=\{x:50,y:49\.7\}/);
+ assert.match(read('assets/village/village-layout.js'),/const fire=\{x:50,y:64\}/);
  assert.ok(player.includes('gmww-village-night-v260.webp'));
  assert.ok(player.includes('gmww-village-day-v260.webp'));
  assert.doesNotMatch(gm.slice(gm.indexOf('/* V3.180 — same full-frame')),/play-player-avatar|play-player-token|seat-offset/);

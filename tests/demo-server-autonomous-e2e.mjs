@@ -47,8 +47,14 @@ try{
    await wait(200);const state=await day('');assert.equal(state.demoControl.error,'');
    if(state.gallows?.stage==='voting'&&Object.keys(state.gallows.votes||{}).length){
     observedVotes=true;
-    if(!manual){await day('/gallows',{command:'mode',mode:'gm'});manual=true}
-    for(const p of people.slice(1))await day('/gallows',{command:'manual_vote',targetId:p.loginId,choice:'👎'});
+    if(!manual){
+     // Prevent DEMO automation from reopening or resolving while GM edits votes.
+     await day('/demo',{command:'stop'});
+     await day('/gallows',{command:'mode',mode:'gm'});
+     for(const p of people.slice(1))await day('/gallows',{command:'manual_vote',targetId:p.loginId,choice:'👎'});
+     manual=true;
+     await day('/demo',{command:'start'});
+    }
    }
    if(state.winProposal){finished=true;break}
   }

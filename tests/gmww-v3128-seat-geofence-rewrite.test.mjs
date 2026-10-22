@@ -12,7 +12,7 @@ const worker=read('src/index.js');
 const web=read('assets/village/village.mjs');
 
 test('V3.128: shared walk boundary strictly excludes sea, roofs, terraces and campfire',()=>{
-  for(const [x,y] of [[1,1],[90,24],[9,48],[97,59],[8,90],[90,90],[50,15],[50,49.7]])
+  for(const [x,y] of [[1,1],[90,24],[9,48],[97,59],[8,90],[90,90],[50,15],[50,64]])
     assert.equal(layout.inside(x,y),false,'invalid area '+x+','+y);
   for(const [x,y] of [[50,39],[29,58],[70,58],[50,75],[50,90]])
     assert.equal(layout.inside(x,y),true,'expected courtyard at '+x+','+y);
@@ -35,7 +35,7 @@ test('V3.128: 8–30 seats form one unique, complete ring around the fire for al
       assert.equal(ids.size,n,'overlapping seat anchors '+n+' '+kind);
       const minX=Math.min(...ps.map(p=>p.x)),maxX=Math.max(...ps.map(p=>p.x)),
         minY=Math.min(...ps.map(p=>p.y)),maxY=Math.max(...ps.map(p=>p.y));
-      assert.ok(minX<35&&maxX>65&&minY<42&&maxY>56,'not fire-centred '+n+' '+kind);
+      assert.ok(minX<45&&maxX>55&&minY<layout.fire.y-8&&maxY>layout.fire.y+8,'not fire-centred '+n+' '+kind);
       assert.ok(ps.every(p=>Math.hypot((p.x-layout.fire.x)/7,(p.y-layout.fire.y)/4.2)>1));
       const perimeterGap=Math.min(...ps.map((p,i)=>{
         const q=ps[(i+1)%n];return Math.hypot(p.x-q.x,(p.y-q.y)*1.78);
@@ -58,7 +58,7 @@ test('V3.128: spacing and manual offsets remain bounded inside paving',()=>{
 });
 
 test('V3.128: walking paths stay inside the actual village from roofs, sea and across fire',()=>{
-  const endpoints=[[0,0],[95,10],[99,60],[50,49.7],[50,95],[20,49],[80,59],[30,73],[70,40]];
+  const endpoints=[[0,0],[95,10],[99,60],[50,64],[50,95],[20,49],[80,59],[30,73],[70,40]];
   for(const rawA of endpoints)for(const rawB of endpoints){
     const a=layout.clampPoint(...rawA),b=layout.clampPoint(...rawB);
     const path=layout.route(a,b);

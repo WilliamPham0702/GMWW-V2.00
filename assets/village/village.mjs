@@ -1,5 +1,5 @@
 import "../status-visuals.js?v=v3139-orbits";
-import "./village-layout.js?v=fire3101&seat=3128";
+import "./village-layout.js?v=fire3101-gp2&seat=3128";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";
@@ -350,7 +350,7 @@ if(game){
       }
       const pos=movementPosition(data,p),button=stablePlayerNode(data,pos,seatId,i);desiredPlayers.push(button);const item=document.createElement("span");item.textContent=seatId+" · "+safeText(data.displayName)+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item)
     });
-    for(const data of unseated){const pos=movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
+    for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
     const alive=new Set(all.map(p=>String(p.id)));
     for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
