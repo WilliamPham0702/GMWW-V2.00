@@ -6792,3 +6792,10 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDetails:not(.gm
 #start #playShell[data-step="battle"] #battleGallowsResult[data-result-tone="positive"]{
   background:rgba(15,111,59,.80)!important;border-color:#77e7a2!important;color:white!important;
 }
+
+/* V3.180 — same full-frame portrait coordinate system as Player Web. */
+#start #playWorld.has-custom-scene{
+ background-size:100% 100%!important;
+ background-position:center center!important;
+ background-repeat:no-repeat!important;
+}
