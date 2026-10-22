@@ -22,7 +22,7 @@ test('30 actors have distinct depth-sorted positions without resizing assets',()
  for(const shape of layout.seatTemplateShapes){
   const places=layout.positions(30,shape);
   assert.equal(places.length,30);
-  assert.equal(new Set(places.map(p=>p.depth)).size,5);
+  assert.ok(new Set(places.map(p=>p.depth)).size>=4,'depth buckets follow one perimeter, not five horizontal terraces');
   assert.equal(new Set(places.map(p=>p.x.toFixed(4)+','+p.y.toFixed(4))).size,30);
   for(const p of places)assert.ok(layout.inside(p.x,p.y));
   for(let i=0;i<places.length;i++)for(let j=i+1;j<places.length;j++)
