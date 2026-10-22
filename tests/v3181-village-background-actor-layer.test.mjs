@@ -29,6 +29,7 @@ test('iPhone caches reload corrected styles without touching gameplay sources',(
  const server=read('server-game/current/GMWW.html');
  assert.match(player,/village\.css\?v=303&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1/);
  assert.match(player,/village-art\.css\?v=gp2-25d-actor-layer-fix1/);
- assert.match(server,/style\.css\?v=3\.181-compact-room-mobile2-village-scene-align-1-actor-layer-fix1/);
+ const runtime=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
+ assert.ok(server.includes('style.css?v='+runtime+'-compact-room-mobile2-village-scene-align-1-actor-layer-fix1'));
  assert.match(read('assets/village/scene-manager.mjs'),/scene\.classList\.add\('custom-scene'\)/);
 });
