@@ -60,17 +60,6 @@ function initVillageSceneManager(){
    villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Nhấn XUẤT BẢN để đồng bộ.');
   }catch(error){villageSceneDraft[key]=null;villageSceneStatus(error.message)}
  });
- document.getElementById('gmVillagePreview').addEventListener('click',()=>{
-  const popup=window.open(GMWW_SERVER_BASE+'/village/?sceneEditor=preview','gmwwVillagePreview');
-  if(!popup){villageSceneStatus('Trình duyệt chặn cửa sổ xem trước.');return}
-  const origin=new URL(GMWW_SERVER_BASE).origin;
-  const payload={type:'gmww:village-preview',...villageSceneDraft};
-  const send=()=>{try{if(!popup.closed)popup.postMessage(payload,origin)}catch{}};
-  const onReady=event=>{if(event.origin===origin&&event.source===popup&&event.data?.type==='gmww:village-preview-ready'){send();window.removeEventListener('message',onReady)}};
-  window.addEventListener('message',onReady);
-  send();setTimeout(send,900);setTimeout(()=>window.removeEventListener('message',onReady),12000);
-  villageSceneStatus('Đã mở xem trước ảnh đã chọn. Ảnh chưa được xuất bản.');
- });
  const publish=document.getElementById('gmVillagePublish');
  publish.addEventListener('click',async()=>{
   if(!villageSceneDraft.day&&!villageSceneDraft.night){villageSceneStatus('Hãy chọn ảnh Ngày hoặc Đêm trước.');return}
