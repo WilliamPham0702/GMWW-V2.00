@@ -2586,7 +2586,11 @@ export default {async fetch(request,env){
   const sceneImagePath=url.pathname.match(/^\/api\/village-scene\/image\/(day|night)$/);
   if(sceneImagePath&&request.method==="GET"){
     const revision=url.searchParams.get("revision")||"";
-    return memberStore(env).fetch("https://member.internal/global-settings/village-scene/image/"+sceneImagePath[1]+"?revision="+encodeURIComponent(revision));
+    const image=await memberStore(env).fetch("https://member.internal/global-settings/village-scene/image/"+sceneImagePath[1]+"?revision="+encodeURIComponent(revision));
+    // IPA's file:// WebView must read bytes to persist its local scene pair.
+    const response=new Response(image.body,image);
+    response.headers.set("access-control-allow-origin","*");
+    return response;
   }
   if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
