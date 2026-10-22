@@ -800,11 +800,11 @@ function battleMorningPlayAudio(){
       queue.push(['audio_system_morning_marked',row.name+' đã bị đánh dấu']);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
   }
-  const audioRun=(battleState.morningAudioRun||0)+1;
-  battleState.morningAudioRun=audioRun;
+  const audioRun=(playSceneState.morningAudioRun||0)+1;
+  playSceneState.morningAudioRun=audioRun;
   let index=0;
   const next=()=>{
-    if(audioRun!==battleState.morningAudioRun||index>=queue.length||playSceneState.phase!=='day')return;
+    if(audioRun!==playSceneState.morningAudioRun||index>=queue.length||playSceneState.phase!=='day')return;
     const [id,label]=queue[index++];
     void Promise.resolve(battlePlayConfiguredAudio('system',id,label,false,next))
       .catch(()=>{if(!playAudioMuted())battleSpeakCue(label,false,next);else next()});
