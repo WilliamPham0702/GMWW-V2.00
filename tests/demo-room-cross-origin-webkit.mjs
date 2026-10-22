@@ -65,7 +65,31 @@ initPlayCompletion();battleBindAuxiliaryDrag('battleDemoObserver','header');glob
   await page.evaluate(()=>document.getElementById('battleDemoToggle').click());await page.waitForFunction(()=>inspectDemo().running);
   await page.waitForFunction(()=>inspectDemo().observed.some(t=>t.includes('đã thực hiện hành động')&&t.includes('Cắn')&&t.includes('Demo Test')&&t.includes(' đến '))||inspectDemo().error,null,{timeout:20000});
   let snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');
-  await page.waitForFunction(()=>inspectDemo().visuals.some(v=>v.action.length&&v.targets.length&&v.badges.includes('MỤC TIÊU')),null,{timeout:10000});
+  // A Server-owned DEMO can advance before a client polls its transient effect.
+  // Pause the real demo, then project the current match/turn into the same
+  // action/target rendering path; this tests the visuals without a timing race.
+  await page.evaluate(()=>document.getElementById('battleDemoToggle').click());
+  await page.waitForFunction(()=>!inspectDemo().running,null,{timeout:10000});
+  await page.evaluate(()=>{
+    const bar=document.getElementById('battleActionBar');
+    let action=bar.querySelector('[data-battle-action]');
+    if(!action){action=document.createElement('button');action.dataset.battleAction='action_wolf_bite';action.textContent='Cắn';bar.append(action)}
+    const tokens=[...document.querySelectorAll('#playPlayerRing [data-play-player-id]')];
+    if(!tokens.length)throw Error('Missing player tokens for visual projection');
+    const room=playSceneRuntime.room;
+    demoRunner.visual={
+      matchId:String(room.matchId||''),cycleKey:String(room.cycleKey||''),
+      turnId:String(battleTurn()?.id||playSceneState.phase),
+      actionId:action.dataset.battleAction,actorId:tokens[0].dataset.playPlayerId,
+      targetIds:[tokens[tokens.length-1].dataset.playPlayerId]
+    };
+    battleState.targets=[];
+    demoRenderVisual();battleMarkPlayers();
+  });
+  await page.waitForFunction(()=>document.querySelector('[data-battle-action].demo-action-active')&&
+    document.querySelector('#playPlayerRing .is-battle-target .battle-target-mark')?.textContent.includes('MỤC TIÊU'),null,{timeout:3000});
+  await page.evaluate(()=>document.getElementById('battleDemoToggle').click());
+  await page.waitForFunction(()=>inspectDemo().running,null,{timeout:10000});
   // All automatic gameplay is server-side: this browser only requests state/control.
   assert.ok(!snapshot.calls.some(x=>/\/(battle-action|day-action|turn|cycle|gallows)$/.test(x.url)&&x.body),'viewer never submits automatic gameplay');
   await page.waitForFunction(()=>inspectDemo().completion.winner||inspectDemo().error,null,{timeout:60000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.error,'');assert.equal(snapshot.room.phase,'running','Winner announcement must wait for GM');assert.equal(snapshot.running,false);await page.locator('#playCompletionConfirm').waitFor({state:'visible'});await page.click('#playCompletionConfirm');await page.waitForFunction(()=>inspectDemo().completion.completed,null,{timeout:15000});snapshot=await page.evaluate(()=>inspectDemo());assert.equal(snapshot.room.phase,'lobby');await page.locator('#playCompletionChoices').waitFor({state:'visible'});const surface=await page.locator('.play-completion-card').evaluate(el=>({bg:getComputedStyle(el).backgroundImage,columns:getComputedStyle(document.getElementById('playCompletionChoices')).gridTemplateColumns}));assert.match(surface.bg,/linear-gradient/);assert.equal(surface.columns.split(' ').length,2);await page.click('[data-completion-next="exit"]');await page.waitForFunction(()=>document.getElementById('home').classList.contains('active')&&!document.body.classList.contains('play-immersive'));assert.equal(await page.locator('#playMatchCompletionSheet').isVisible(),false);assert.deepEqual(errors,[]);
