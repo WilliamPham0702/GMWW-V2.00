@@ -22,9 +22,12 @@ try{
  }));
  assert.ok(sizes.every(s=>s.w===56&&s.h===74),'Character sizes must stay native: '+JSON.stringify(sizes));
  const transform=await page.locator('#world').evaluate(el=>getComputedStyle(el).transform);
- await page.locator('#stage').dispatchEvent('pointerdown',{pointerId:11,clientX:195,clientY:580,pointerType:'touch'});
- await page.locator('#stage').dispatchEvent('pointermove',{pointerId:11,clientX:260,clientY:580,pointerType:'touch'});
- await page.locator('#stage').dispatchEvent('pointerup',{pointerId:11,clientX:260,clientY:580,pointerType:'touch'});
+ // Browser-issued pointer events have active pointer IDs; synthetic DOM events
+ // cannot call setPointerCapture and would produce a false failure.
+ await page.mouse.move(195,696);
+ await page.mouse.down();
+ await page.mouse.move(260,696,{steps:6});
+ await page.mouse.up();
  const afterTransform=await page.locator('#world').evaluate(el=>getComputedStyle(el).transform);
  assert.notEqual(transform,afterTransform,'Touch pan must move world & actors together');
  await page.locator('#night').click();
