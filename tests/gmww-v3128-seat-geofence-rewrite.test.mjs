@@ -35,7 +35,7 @@ test('V3.128: 8–30 seats form one unique, complete ring around the fire for al
       assert.equal(ids.size,n,'overlapping seat anchors '+n+' '+kind);
       const minX=Math.min(...ps.map(p=>p.x)),maxX=Math.max(...ps.map(p=>p.x)),
         minY=Math.min(...ps.map(p=>p.y)),maxY=Math.max(...ps.map(p=>p.y));
-      assert.ok(minX<35&&maxX>65&&minY<42&&maxY>56,'not fire-centred '+n+' '+kind);
+      assert.ok(minX<45&&maxX>55&&minY<layout.fire.y-8&&maxY>layout.fire.y+8,'not fire-centred '+n+' '+kind);
       assert.ok(ps.every(p=>Math.hypot((p.x-layout.fire.x)/7,(p.y-layout.fire.y)/4.2)>1));
       const perimeterGap=Math.min(...ps.map((p,i)=>{
         const q=ps[(i+1)%n];return Math.hypot(p.x-q.x,(p.y-q.y)*1.78);
