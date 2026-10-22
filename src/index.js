@@ -893,7 +893,7 @@ export class RoomDurableObject extends DurableObject {
       nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
       nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
     }
-    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event.cycleKey||'')===String(meta.cycleKey||'')).slice(-100),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
       villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
         Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
       interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
@@ -1154,7 +1154,7 @@ export class RoomDurableObject extends DurableObject {
       this.broadcast({type:"demo_control",running:lease.running,serverTime:now});
     }
     const stored=await this.ctx.storage.get("demoClock"),clock=stored?projectDemoClock(stored,now):null;
-    return j({ok:true,engine:"server",running:serverDemoActive(meta,lease),paused:lease.reason==="paused",speed:lease.speed,clock,reason:lease.reason||"",error:lease.error||"",steps:Number(lease.steps||0),lastEvent:lease.lastEvent||null});
+    return j({ok:true,engine:"server",running:serverDemoActive(meta,lease),paused:lease.reason==="paused",speed:lease.speed,clock,reason:lease.reason||"",error:lease.error||"",steps:Number(lease.steps||0),lastEvent:lease.lastEvent||null,history:(Array.isArray(lease.history)?lease.history:[]).filter(event=>String(event.cycleKey||'')===String(meta.cycleKey||'')).slice(-100)});
   }
 
   async gmAuto(request,body){
