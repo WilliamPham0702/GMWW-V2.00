@@ -2921,7 +2921,7 @@ function demoRenderObserver(){
   const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
   const matchId=String(playSceneRuntime.room?.matchId||''),night=Math.max(1,Number(playSceneState.night)||1);
   const belongsToNight=event=>event&&String(event.matchId||'')===matchId&&
-    String(event.turn||'').startsWith('Đêm '+night+' ');
+    (String(event.turn||'')==='Đêm '+night||String(event.turn||'').startsWith('Đêm '+night+' '));
   const records=(Array.isArray(demoRunner.history)?demoRunner.history:[])
     .filter(belongsToNight).slice().sort((a,b)=>Number(a.at||0)-Number(b.at||0));
   const last=belongsToNight(demoRunner.lastEvent)?demoRunner.lastEvent:null;
@@ -2932,7 +2932,7 @@ function demoRenderObserver(){
     const targets=row?.targetIds?.length?row.targetIds.map(demoActorIdentity):row?.targets||[];
     const action=demoActionLabel(row);
     const verb=row?.status==='pending'?'Đang thực hiện: ':row?.status==='skipped'?'Bỏ qua: ':'';
-    return verb+actor+' · '+action+(targets.length?' → '+targets.join(', '):'');
+    return verb+actor+' đã thực hiện hành động ('+action+')'+(targets.length?' đến '+targets.join(', '):'');
   };
   set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
   set('battleDemoEventTurn',event?'MỚI NHẤT · '+String(event.turn||''):'');
@@ -2947,7 +2947,7 @@ function demoRenderObserver(){
     if(label)label.textContent='LỊCH SỬ ĐÊM '+night+' · '+others.length+' hành động trước';
     // Replace only when the Server ledger changes; keep the user's open/scroll state.
     const signature=matchId+':'+night+':'+others.map(row=>String(row.id||'')+':'+String(row.status||'')).join('|');
-    if(list.dataset.signature!==signature){
+    if(typeof list.replaceChildren==='function'&&typeof document.createElement==='function'&&list.dataset.signature!==signature){
       list.dataset.signature=signature;list.replaceChildren();
       for(const row of others){
         const item=document.createElement('li'),turn=document.createElement('small'),detail=document.createElement('span');
