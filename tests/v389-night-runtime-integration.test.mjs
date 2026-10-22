@@ -12,7 +12,7 @@ import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActio
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
-import {resolveWolfNight,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -32,7 +32,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
-  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
+  artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });

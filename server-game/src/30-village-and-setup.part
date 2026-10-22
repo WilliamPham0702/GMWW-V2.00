@@ -166,7 +166,7 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // Battle audio must be tied to a real action or wake-up event, not just a
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
-let battleActiveAudio=null,battleAudioLast={key:'',at:0};
+let battleActiveAudio=null,battleAudioLast={key:'',at:0},battleAudioRequestId=0;
 function battleInvalidateAudioCache(kind,id){
   const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
@@ -177,9 +177,10 @@ function battleFindAudio(kind,targetId,name){
   const target=String(targetId||''),label=String(name||'').trim().toLowerCase();
   // Empty IDs are not a wildcard: this previously played "Xác nhận" for Artifact đầu ván.
   const fold=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-  return list.find(item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target))
-    ||list.find(item=>label&&fold(item?.name)===fold(label))
-    ||null;
+  const exact=item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target);
+  const candidates=list.filter(item=>exact(item)||(label&&fold(item?.name)===fold(label)&&(!item?.targetId||String(item.targetId)===target)));
+  const linked=item=>!!(item?.url||item?.fileName||item?.sourceKey||item?.verifiedBinary);
+  return candidates.find(item=>exact(item)&&linked(item))||candidates.find(linked)||candidates[0]||null;
 }
 async function battleWarmAudio(kind,item){
   if(!item)return null;
@@ -229,6 +230,7 @@ async function battlePlayWebAudioFallback(src,onFinished=null){
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
+  const requestId=++battleAudioRequestId;
   const row=battleFindAudio(kind,targetId,name);
   if(!row)return battleSpeakCue(name,showError,onFinished);
   const key=kind+':'+row.id,now=Date.now();
@@ -238,6 +240,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
   const src=ready||await battleWarmAudio(kind,row);
+  if(requestId!==battleAudioRequestId){onFinished?.();return false}
   if(!src)return battleSpeakCue(name,showError,onFinished);
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';

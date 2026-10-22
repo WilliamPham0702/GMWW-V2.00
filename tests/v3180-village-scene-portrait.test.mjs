@@ -21,11 +21,11 @@ test('Player loads both published image revisions before switching backgrounds',
 });
 test('GM Runtime V3.180 includes new scene camera without changing native shell',()=>{
  const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
- assert.equal(v,'3.180');
+ assert.ok(v.localeCompare('3.180',undefined,{numeric:true})>=0);
  const worker=read('src/index.js'),gm=read('server-game/current/app.js');
  assert.ok(worker.includes('VERSION="V'+v+'"'));
  assert.ok(worker.includes('NATIVE_SHELL_VERSION="3.110"'));
- assert.ok(worker.includes('UPDATE_CHANNEL_REV="runtime-3180"'));
+ assert.ok(worker.includes('UPDATE_CHANNEL_REV="runtime-'+v.replaceAll('.','')+'"'));
  assert.ok(gm.includes("const VERSION='"+v+"'"));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+v+"'"));
  assert.ok(read('server-game/current/GMWW.html').includes('style.css?v='+v));
