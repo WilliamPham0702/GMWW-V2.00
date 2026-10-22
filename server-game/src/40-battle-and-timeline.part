@@ -186,6 +186,7 @@ function demoApplyServerControl(control){
   demoRunner.steps=Number(control.steps)||0;demoRunner.error=control.error||'';
   demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.lastEvent=event||null;
+  demoRunner.history=Array.isArray(control.history)?control.history:[];
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
   if(feedback){
     if(event.revelation?.message&&event.revelation?.actionId){
@@ -838,9 +839,11 @@ function battleMorningShow(){
   const appendRows=(host,notices)=>{
     for(const row of notices){
       const line=document.createElement('p'),name=document.createElement('strong');
-      if(row.negative)line.classList.add('is-critical');
+      line.className='battle-morning-line'+(row.negative?' is-critical':'');
       name.textContent=row.name+' ('+row.role+')';
-      const sentence=row.negative?' đã bị ('+row.label.replace(/^đã (?:bị |được )?/,'')+')':' '+row.label;
+      const action=String(row.label||'').trim();
+      const sentence=row.negative&&action.startsWith('đã bị ')?' đã bị ('+action.slice(6)+')':
+        row.negative&&!action.startsWith('đã ')?' đã bị ('+action+')':' '+action;
       line.append(name,document.createTextNode(sentence+(row.actor?' bởi '+row.actor:'')+'.'));
       host.append(line);
     }
@@ -848,8 +851,9 @@ function battleMorningShow(){
   if(battleState.morningSig!==signature){
     battleState.morningSig=signature;body.replaceChildren();
     const summary=document.createElement('p');
-    summary.textContent=deaths?'Đêm qua làng chúng ta có '+deaths+' người chết.':
-      rows.length?'Thông cáo các tác động đêm qua:':'Đêm qua không ghi nhận tác động.';
+    summary.className='battle-morning-summary';
+    summary.textContent='ĐÊM '+currentNight+' · '+(deaths?'Làng có '+deaths+' người chết':
+      rows.length?'Các tác động được ghi nhận':'Không ghi nhận tác động');
     body.append(summary);appendRows(body,rows);
     if(history){
       history.replaceChildren();
