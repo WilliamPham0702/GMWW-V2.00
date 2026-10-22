@@ -7,10 +7,10 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const ctx=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
-const sizes=[8,10,12,14,16,18,20,22,24,25,26,27,28,29,30];
-const shapes=['circle','ellipse','rectangle'];
+const sizes=Array.from({length:25},(_,i)=>i+6);
+const shapes=['circle','diamond','rectangle'];
 
-test('all 15 Seat Mẫu capacities exist in circle, ellipse and rectangle, without duplicate locations or invalid world points',()=>{
+test('all 25 Seat Mẫu capacities exist in circle, diamond and long-side rectangle, without duplicate locations or invalid world points',()=>{
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
   assert.deepEqual(Array.from(layout.seatTemplateShapes),shapes);
   for(const size of sizes)for(const shape of shapes){
