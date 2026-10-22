@@ -23,7 +23,7 @@ test('Snow Wolf cannot bite while any other wolf remains alive; death state scop
 test('Seer recognizes Snow Wolf while Alpha Wolf masks its faction',()=>{
  assert.equal(resolveNightReveal({actionId:'action_seer',targetIds:['snow'],assignments:roles}).wolf,true);
  assert.equal(resolveNightReveal({actionId:'action_seer',targetIds:['alpha'],assignments:roles}).wolf,false);
- assert.equal(resolveNightReveal({actionId:'action_aura_read',targetIds:['snow'],assignments:roles}).message,'Sói Tuyết');
+ assert.equal(resolveNightReveal({actionId:'action_aura_read',targetIds:['snow'],assignments:roles}).message,'Không có chức năng chủ động');
  assert.equal(resolveNightReveal({actionId:'action_compare_faction',targetIds:['snow','alpha'],assignments:roles}).message,'CÙNG PHE');
 });
 test('Maiden dies if she visits a wolf or her visited target dies in the same night',()=>{
