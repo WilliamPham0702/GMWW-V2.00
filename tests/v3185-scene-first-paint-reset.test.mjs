@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=p=>fs.readFileSync(p,'utf8');
+test('V3.185 scene is never visibly painted from bundled image before network selection',()=>{
+ const playerHtml=read('assets/village/index.html');
+ const gmHtml=read('server-game/current/GMWW.html');
+ const playerJs=read('assets/village/scene-manager.mjs');
+ const gmJs=read('server-game/current/app.js');
+ const playerCss=read('assets/village/village-art.css');
+ const gmCss=read('server-game/current/style.css');
+ assert.match(playerHtml,/class="stage scene-awaiting"/);
+ assert.match(gmHtml,/class="play-world gmww-scene-awaiting"/);
+ assert.match(playerCss,/\.stage\.scene-awaiting\{visibility:hidden!important\}/);
+ assert.match(gmCss,/#start #playWorld\.gmww-scene-awaiting\{visibility:hidden!important\}/);
+ assert.ok(playerJs.indexOf('await Promise.all([preloadSceneImage(next.day),preloadSceneImage(next.night)])')<playerJs.indexOf('state.published=next;state.ready=true;apply()'));
+ assert.ok(gmJs.indexOf('await Promise.all([preloadGMVillageScene(record.day),preloadGMVillageScene(record.night)])')<gmJs.indexOf('villageScenePublished=record;'));
+ assert.match(playerCss,/\.stage\.custom-scene,\.night \.stage\.custom-scene\{\s*background-image:var\(--gmww-scene-image\)!important/);
+ assert.match(playerCss,/\.stage\.custom-scene::after,\.night \.stage\.custom-scene::after\{\s*content:none!important/);
+ assert.match(gmCss,/#start #playWorld\.has-custom-scene > \.play-island-front/);
+ assert.match(gmCss,/#start #playWorld\.has-custom-scene > #playPlayerRing\{\s*position:absolute!important/);
+});
+test('V3.185 restore shares Apply PUT and is versioned with release notes',()=>{
+ const worker=read('src/index.js'),gm=read('server-game/current/app.js');
+ assert.match(worker,/if\(body\?\.resetToDefault===true\)/);
+ assert.match(gm,/villageSceneRequest\('\/api\/gm\/village-scene','PUT',\{resetToDefault:true\}\)/);
+ assert.doesNotMatch(gm,/villageSceneRequest\('\/api\/gm\/village-scene\/reset','POST'/);
+ assert.match(read('.github/scripts/prepare-update-channel.mjs'),/V3\.185: Sửa Load failed/);
+ const pkg=JSON.parse(read('package.json'));
+ assert.equal(pkg.version,'3.185.0');
+ assert.match(read('docs/RELEASE-V3.185-SCENE-FIRST-PAINT.md'),/Runtime V3\.185/);
+});

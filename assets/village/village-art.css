@@ -104,32 +104,28 @@ html.embedded .hud{display:none!important}
   }
 }
 
-/* Published GM 2.5D scene overrides the default camera background layer.
-   The actors, fire, seats, zoom and night overlays remain in their own layers. */
-.stage.custom-scene::after,
-.night .stage.custom-scene::after{
-  background-image:var(--gmww-scene-image)!important;
+/* V3.185: published image is the stage's own background, not ::after.
+   Await metadata + both decoded images before the first visible paint. */
+.stage.scene-awaiting{visibility:hidden!important}
+.scene-boot-status{
+ position:fixed;inset:0;z-index:80;display:grid;place-items:center;
+ background:#081a27;color:#f3f7fb;font:600 14px system-ui,sans-serif;
+ text-align:center;pointer-events:none;
 }
-
-/* V3.180 — custom GM-published 2.5D scene uses the same normalized frame
-   as GM Server. Original day/night art and player/seat layers are unchanged. */
-.stage.custom-scene::after,.night .stage.custom-scene::after{
+.scene-boot-status[hidden]{display:none!important}
+.stage.custom-scene,.night .stage.custom-scene{
+ background-image:var(--gmww-scene-image)!important;
+ background-color:#081a27!important;
  background-size:100% 100%!important;
  background-position:center center!important;
  background-repeat:no-repeat!important;
 }
-
-/* Actor-layer hotfix: a published image replaces, never stacks upon, the default art.
-   The only image is ::after at z=0; gradients stay in ::before at z=1.
-   The camera must retain its full absolute frame for seats and Character40. */
-.stage.custom-scene,.night .stage.custom-scene{
- background-image:none!important;
-}
 .stage.custom-scene::after,.night .stage.custom-scene::after{
- z-index:0!important;
+ content:none!important;display:none!important;
+}
+.night .stage.custom-scene::before{
+ background:transparent!important;
 }
 .stage.custom-scene > .scene{
- position:absolute!important;
- inset:0!important;
- z-index:2!important;
+ position:absolute!important;inset:0!important;z-index:2!important;
 }

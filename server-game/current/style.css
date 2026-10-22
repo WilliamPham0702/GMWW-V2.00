@@ -6806,3 +6806,19 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDetails:not(.gm
  inset:0!important;
  z-index:3!important;
 }
+
+/* V3.185: suppress bundled art before the actual published scene is decoded.
+   UI controls and 6–30 Character seats stay in their existing layer. */
+#start #playWorld.gmww-scene-awaiting{visibility:hidden!important}
+#start #gmVillageBootStatus[hidden]{display:none!important}
+#start #gmVillageBootStatus{
+ position:absolute;z-index:3;inset:0;display:grid;place-items:center;
+ background:#081a27;color:#f3f7fb;text-align:center;pointer-events:none;
+ font:600 14px system-ui,sans-serif;
+}
+#start #playWorld.has-custom-scene > .play-sky-glow,
+#start #playWorld.has-custom-scene > .play-cloud,
+#start #playWorld.has-custom-scene > .play-island-back,
+#start #playWorld.has-custom-scene > .play-island-front,
+#start #playWorld.has-custom-scene > .play-water-ripple{display:none!important}
+#start #playWorld.has-custom-scene::after{content:none!important;display:none!important}

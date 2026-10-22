@@ -2,18 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=path=>fs.readFileSync(path,'utf8');
-test('V3.184 runtime version consistent across Worker, GM and package without native IPA bump',()=>{
+test('V3.184 and newer runtime version consistent across Worker, GM and package without native IPA bump',()=>{
  const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
- assert.equal(pkg.version,'3.184.0');
+ assert.ok(Number(pkg.version.split('.')[1])>=184);
  assert.equal(lock.version,pkg.version);
  assert.equal(lock.packages[''].version,pkg.version);
- assert.match(read('src/index.js'),/VERSION="V3\.184",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3184"/);
- assert.match(read('server-game/current/app.js'),/const VERSION='3\.184'/);
- assert.match(read('server-game/src/00-core-and-library.part'),/const VERSION='3\.184'/);
+ const ver=pkg.version.replace(/\.0$/,'');
+ assert.ok(read('src/index.js').includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
+ assert.ok(read('server-game/current/app.js').includes("const VERSION='"+ver+"'"));
+ assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+ver+"'"));
  const html=read('server-game/current/GMWW.html');
- assert.match(html,/<title>GMWW V3\.184<\/title>/);
- assert.match(html,/style\.css\?v=3\.184/);
- assert.match(html,/app\.js\?v=3\.184/);
+ assert.ok(html.includes('<title>GMWW V'+ver+'</title>'));
+ assert.ok(html.includes('style.css?v='+ver));
+ assert.ok(html.includes('app.js?v='+ver));
 });
 test('V3.184 gives user-facing village editor notes and retains current seats',()=>{
  const gm=read('server-game/current/GMWW.html');
