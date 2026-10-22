@@ -22,7 +22,9 @@ test('effect labels surface frozen and expelled locks, with reactive signature',
 test('role and action audio remain tied to configured clips and GM mute',()=>{
  assert.match(app,/function battleAudioForTurn\(turn,auto=false\)/);
  assert.match(app,/if\(audio\)await battleWarmAudio\(kind,audio\)/);
- assert.match(app,/await battlePlayConfiguredAudio\(kind,targetId,name,false\)/);
+ // V3.181 plays all grouped role clips through a guarded sequence, not one direct cue.
+ assert.match(app,/battlePlayTurnAudioSequence\(cues,expectedKey\)/);
+ assert.match(app,/if\(battleState\.key!==expectedKey\|\|playSceneState\.step!=='battle'\|\|playSceneState\.phase!=='night'\)return/);
  assert.match(app,/if\(playAudioMuted\(\)\)/);
  assert.match(app,/battlePlayConfiguredAudio\('actions',audioAction\.actionId,audioAction\.name\)/);
 });
