@@ -445,7 +445,7 @@ function gmwwApplyRoster(rows,origin='http'){
  offlineReplace("async function gmwwRefreshPublicRoster(code,participantId){\n  try{const d=await api('/api/rooms/'+encodeURIComponent(code));",
    "async function gmwwRefreshPublicRoster(code,participantId){\n  const startedAt=Date.now();\n  try{const d=await api('/api/rooms/'+encodeURIComponent(code));");
  offlineReplace("    if(d?.room)state.room=d.room;\n    if(Array.isArray(d?.players)&&d.players.some(p=>p.participantId===participantId)){state.players=d.players;return true}",
-   "    if(d?.room&&gmwwLastRoomBroadcastAt<=startedAt)state.room=d.room;\n    if(Array.isArray(d?.players)){state.players=gmwwApplyRoster(d.players,'http');renderRooms();syncVillageFrame();return state.players.some(p=>p.participantId===participantId)}");
+   "    if(d?.room&&gmwwLastRoomBroadcastAt<=startedAt)state.room=d.room;\n    if(Array.isArray(d?.players)){const validSnapshot=d.players.some(p=>p?.participantId===participantId);state.players=gmwwApplyRoster(d.players,'http');renderRooms();syncVillageFrame();return validSnapshot}");
  offlineReplace("state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId))",
    "state.players=gmwwApplyRoster(pub.players,'http');if(!state.players.some(p=>p.participantId===state.participantId))");
  offlineReplace("state.players=(d.players||state.players||[]).map(p=>({ ...p,",
