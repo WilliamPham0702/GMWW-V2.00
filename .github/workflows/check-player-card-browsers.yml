@@ -19,6 +19,7 @@ on:
       - "server-game/current/style.css"
       - "tests/home-v389-iphone-webkit.mjs"
       - "tests/night-timeline-iphone-webkit.mjs"
+      - "tests/v3188-preview-iphone-webkit.mjs"
       - "tests/demo-room-cross-origin-webkit.mjs"
       - "tests/demo-server-autonomous-e2e.mjs"
       - "server-game/current/battle-controls.js"
@@ -99,6 +100,8 @@ jobs:
           npx playwright install --with-deps webkit
       - name: Verify compact GM battle panels on iPhone-sized WebKit
         run: node tests/browser-compact-battle-panels.mjs
+      - name: Verify V3.188 DEMO book, magnetic dock and fire menu in iPhone WebKit
+        run: node tests/v3188-preview-iphone-webkit.mjs
       - name: Check night timeline on iPhone-sized WebKit
         run: node tests/night-timeline-iphone-webkit.mjs
       - name: Exercise private card UI with Chrome, Edge and WebKit
@@ -125,6 +128,13 @@ jobs:
         run: node tests/v3181-scene-layer-webkit.mjs
       - name: Check OTA startup recovery in WebKit
         run: node tests/runtime-recovery-webkit.mjs
+      - name: Upload V3.188 preview iPhone QA screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-v3188-preview-iphone-overlay-qa
+          path: /tmp/gmww-v3188-preview-iphone-webkit.png
+          if-no-files-found: ignore
       - name: Upload compact battle panel preview
         if: always()
         uses: actions/upload-artifact@v4
