@@ -86,14 +86,14 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Tải mã nguồn dự án
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
       - name: Thiết lập Node.js và bộ nhớ đệm
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Cài đặt thư viện cần thiết
-      - run: npm install
+        run: npm install
       - name: Dùng lại trình duyệt WebKit đúng phiên bản
         uses: actions/cache@v4
         with:

@@ -1,4 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
+import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -38,7 +39,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.192",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3192",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.193",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3193",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -760,6 +761,40 @@ export class RoomDurableObject extends DurableObject {
     const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
     return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
   }
+  async applyHunterDeathConsequences(meta,rows,now=new Date().toISOString()){
+    const assignments=(await this.ctx.storage.get("assignments"))||[];
+    const history=await this.villageHistoryForMatch(meta,rows);
+    const linked=hunterLinkedDeaths({assignments,interactions:history,
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)});
+    for(const outcome of linked){
+      if(rows.some(r=>String(r.id||"")===outcome.id))continue;
+      const death={...outcome,createdAt:now,night:Math.max(1,Number(outcome.night)||Number(meta.cycleNight)||1)};
+      rows.push(death);await this.ctx.storage.put(this.actionLogKey(death),death);
+      this.broadcast({type:"player_status_changed",loginId:death.loginId,
+        statusId:"dead",active:true,serverTime:Date.now()});
+    }
+    return linked;
+  }
+  async villageHistoryForMatch(meta,latest=[]){
+    const matchId=String(meta.matchId||"");
+    if(!matchId)return [];
+    // Read all archived rows for this ROOM and match (not just the latest 100).
+    // The log is room-local. Sort once, newest edits of a receipt supersede
+    // archived originals so undo/restore never resurrects stale UI effects.
+    const stored=await this.ctx.storage.list({prefix:"actionLog:"});
+    const byId=new Map();
+    for(const row of stored.values()){
+      if(!row||String(row.matchId||"")!==matchId||!(Number(row.night)>0)||
+         Number(row.night)>Number(meta.cycleNight||0))continue;
+      const id=String(row.id||row.clientEventId||"");if(id)byId.set(id,row);
+    }
+    for(const row of latest){
+      if(!row||String(row.matchId||"")!==matchId||!(Number(row.night)>0)||
+         Number(row.night)>Number(meta.cycleNight||0))continue;
+      const id=String(row.id||row.clientEventId||"");if(id)byId.set(id,row);
+    }
+    return [...byId.values()].sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+  }
   async gmActionLog(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     // Backfill the currently retained legacy interactions once. Records that were
@@ -888,8 +923,10 @@ export class RoomDurableObject extends DurableObject {
             type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
             night:Number(meta.cycleNight),source:"gallows",gallowsId:ballot.id,effectActive:true,
             message:"Người chơi đã bị hành quyết trên giàn.",createdAt};
-          rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+          rows.push(fatal);
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
+          if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,createdAt);
+          await this.ctx.storage.put("interactions",pruneInteractions(rows));
           this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
         }
       }
@@ -898,7 +935,13 @@ export class RoomDurableObject extends DurableObject {
       const rows=await this.ctx.storage.get("interactions")||[];
       const owned=rows.filter(x=>x.gallowsId===ballot.id&&String(x.type)==="dead"&&x.effectActive!==false);
       for(const row of owned){row.effectActive=false;row.expiredAt=new Date(now).toISOString();row.expiredReason="GM_GALLOWS_RESTORE"}
-      if(owned.length){await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      if(owned.length){
+        for(const followup of rows){
+          if(followup.source!=="hunter-death-engine"||!owned.some(x=>x.id===followup.causeDeathId))continue;
+          followup.effectActive=false;followup.expiredAt=new Date(now).toISOString();
+          followup.expiredReason="GM_GALLOWS_RESTORE";
+        }
+        await this.ctx.storage.put("interactions",pruneInteractions(rows));
         this.broadcast({type:"player_revived",loginId:ballot.candidateId,serverTime:now})}
       result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),stage:"ready",
         nominationDeadlineAt:null,nominationStartedAt:null,
@@ -955,9 +998,11 @@ export class RoomDurableObject extends DurableObject {
       nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
       nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
     }
-    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')&&String(event?.cycleKey||'')===String(meta.cycleKey||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
-      villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
-        Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
+    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+      // Unlike the 100-row rules buffer, the immutable actionLog archive
+      // includes older nights and nonpersistent effects (effect_notice, healed...).
+      // Never derive the village bulletin from only the short-lived rules buffer.
+      villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
@@ -1655,6 +1700,7 @@ export class RoomDurableObject extends DurableObject {
         await this.ctx.storage.delete(storageKey);
       }
     }
+    if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
@@ -1889,6 +1935,7 @@ export class RoomDurableObject extends DurableObject {
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
         statusId:log.statusId||log.type,active:true,serverTime:Date.now()});
     }
+    if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
       roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
@@ -2187,7 +2234,9 @@ export class RoomDurableObject extends DurableObject {
       interaction.night=Number(meta.cycleNight);interaction.message="Tác động gây chết sẽ được giải quyết vào sáng hôm sau.";
     }
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
-    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);
+    if(type==="dead"&&!interaction.pendingDeath&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
+    await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
     if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});
@@ -2231,6 +2280,7 @@ export class RoomDurableObject extends DurableObject {
       rows.push(fatal);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+fatal.id,fatal);
     }
+    if(assassinOutcome==="dead"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const logId="ev-"+crypto.randomUUID();
     await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+logId,

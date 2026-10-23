@@ -40,7 +40,7 @@ test('isolated Character Lab script preserves complete verified checks',()=>{
   const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(workflow,/bash \.github\/scripts\/verify-isolated-character-labs\.sh/);
   assert.match(workflow,/verify-incremental-ota\.mjs/);
-  assert.match(workflow,/Block GMWW version rollback/);
+  assert.match(workflow,/Chặn phát hành phiên bản thấp hơn/);
 });
 
 test('isolated labs do not require retired active Character01/02 SVG or portrait-frame animation',()=>{

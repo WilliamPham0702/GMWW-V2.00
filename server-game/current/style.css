@@ -7066,3 +7066,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
  #battleGallowsPanel .battle-gallows-mode button{font-size:10px}
  #battleGallowsMembers .battle-gallows-member button{font-size:8px;padding:4px 3px}
 }
+
+/* GMWW V3.193: iPhone drag-to-position for the complete Seat formation. */
+#playWorld.is-seat-drag-enabled{touch-action:none;cursor:grab}
+#playWorld.is-seat-drag-enabled:active{cursor:grabbing}

@@ -33,14 +33,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tải mã nguồn dự án
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
       - name: Thiết lập Node.js và bộ nhớ đệm
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Cài đặt thư viện cần thiết
-      - run: npm install
+        run: npm install
       - name: Kiểm tra Worker trước khi triển khai
         run: npm run check
       - name: Kiểm tra cú pháp hiển thị GM

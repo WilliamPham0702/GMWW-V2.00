@@ -28,26 +28,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tải mã nguồn dự án
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
       - name: Thiết lập Node.js và bộ nhớ đệm
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Cài thư viện theo tệp khóa
-      - run: npm ci
+        run: npm ci
       - name: Kiểm tra mã nguồn Worker
-      - run: npm run check
+        run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW
         run: node .github/scripts/verify-gmww-versions.mjs
       - name: Kiểm tra cú pháp app.js
-      - run: node --check server-game/current/app.js
+        run: node --check server-game/current/app.js
       - name: Kiểm tra cú pháp prepare-update-channel.mjs
-      - run: node --check .github/scripts/prepare-update-channel.mjs
+        run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
-      - run: node --check assets/village/village.mjs
+        run: node --check assets/village/village.mjs
       - name: Chạy toàn bộ kiểm thử tự động
-      - run: npm test
+        run: npm test
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
         shell: bash
         run: |

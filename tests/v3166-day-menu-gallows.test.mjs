@@ -71,7 +71,7 @@ test('GM all-impact daily notice, negative-first colors and hidden persistent ti
   assert.match(html,/id="battleVillageHistory"/);
   assert.match(html,/<details id="battleVillageHistory">/);
   assert.match(css,/#battleMorningList p\.is-critical/);
-  assert.match(server,/villageHistory:interactions\.filter/);
+  assert.match(server,/villageHistory:await this\.villageHistoryForMatch\(meta,interactions\)/);
   assert.doesNotMatch(app,/Làng thảo luận và bỏ phiếu\./);
 });
 

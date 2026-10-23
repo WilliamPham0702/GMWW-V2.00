@@ -23,14 +23,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Tải mã nguồn dự án
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
       - name: Thiết lập Node.js và bộ nhớ đệm
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Cài thư viện theo tệp khóa
-      - run: npm ci
+        run: npm ci
       - name: Chạy thử hai phòng 30 người chơi trên Worker độc lập
         shell: bash
         run: |

@@ -102,7 +102,7 @@
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
-    const safe=n=>Number.isFinite(Number(n))?Math.max(-10,Math.min(10,Math.round(Number(n)*10)/10)):0;
+    const safe=n=>Number.isFinite(Number(n))?Math.max(-30,Math.min(30,Math.round(Number(n)*10)/10)):0;
     return {x:safe(value?.x),y:safe(value?.y)};
   }
   function positions(count,shape='',offset=null,spacing=100){
@@ -118,8 +118,11 @@
     const raw=points.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,y:fire.y+(p.y-fire.y)*scaleY}));
     const xs=raw.map(p=>p.x),ys=raw.map(p=>p.y);
     const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
-    const offsetX=Math.max(14-minX,Math.min(86-maxX,shift.x));
-    const offsetY=Math.max(31-minY,Math.min(91-maxY,shift.y));
+    // Seat formations are GM-adjustable; keep them visible with a 12% courtyard
+    // margin rather than pinning the top row at y=31 (which blocked ↑ at -10).
+    // Translate the WHOLE formation to preserve distances and seat identities.
+    const offsetX=Math.max(10-minX,Math.min(90-maxX,shift.x));
+    const offsetY=Math.max(30-minY,Math.min(96-maxY,shift.y));
     return raw.map((p,i)=>({...clampPoint(p.x+offsetX,p.y+offsetY),ring:0,depth:points[i].depth}));
   }
   // Presentation/transition repair: old rooms can contain members without seats

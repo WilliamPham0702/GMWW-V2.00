@@ -65,6 +65,6 @@ test('server owns layout revisions and broadcasts them to GM and Player Web with
   assert.match(server,/if\(meta\.seatsLocked/);
   assert.match(player,/seatLayout=layout\.normalizeSeatLayout\(room\.seatLayout\)/);
   assert.match(player,/ps=positions\(seatCount,seatLayout,seatOffset,seatSpacing\)/);
-  assert.match(gm,/layout\.positions\(count,room\.seatLayout,room\.seatOffset,playGatherSpacing\(\)\*100\)/);
+  assert.match(gm,/layout\.positions\(count,room\.seatLayout,[^\n]*room\.seatOffset[^\n]*playGatherSpacing\(\)\*100\)/);
   assert.match(gm,/playSceneRuntime\.room\?\.seatOffset/);
 });
