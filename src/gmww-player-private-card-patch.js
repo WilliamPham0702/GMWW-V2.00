@@ -531,6 +531,18 @@ function gmwwShouldAdvancePrivatePhase(next){
  // GM presence watchdog (seen alive in browser E2E) if room WS/poll has stalled.
  offlineReplace("function startGmPresencePoll(){if(state.gmPresencePoll)return;state.gmPresencePoll=setInterval(()=>{if(state.member&&!document.hidden)refreshGmPresence()},2500)}",
   "function startGmPresencePoll(){if(state.gmPresencePoll)return;state.gmPresencePoll=setInterval(()=>{if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId&&(!state.role||!playerScenePolicy(state.room).rolesReleased))void refreshPrivateRole(true)}},2500)}");
+ // Join now returns a public, privacy-safe room snapshot atomically with the
+ // participant. Never display self-only if Server already has the teammates.
+ offlineReplace("state.players=[d.player];state.selectedGameCharacterId=",
+   "state.players=Array.isArray(d.players)&&d.players.some(p=>p.participantId===state.participantId)?d.players:[d.player];state.selectedGameCharacterId=");
+ // An authoritative /rooms read may arrive while movement WS events stream.
+ // Respect same-match forward role release regardless of movement timestamps.
+ offlineReplace("if(d?.room&&gmwwLastRoomBroadcastAt<=startedAt)state.room=d.room;",
+   "if(d?.room&&(gmwwLastRoomBroadcastAt<=startedAt||gmwwShouldAdvancePrivatePhase(d.room)))state.room=d.room;");
+ // Fallback to an independent reconciler if the other tab initially missed WS
+ // and remained with a self-only projection; do not rely on live movement frames.
+ offlineReplace("if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId&&(!state.role||!playerScenePolicy(state.room).rolesReleased))void refreshPrivateRole(true)}",
+   "if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId){if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId);if(!state.role||!playerScenePolicy(state.room).rolesReleased)void refreshPrivateRole(true)}}");
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
