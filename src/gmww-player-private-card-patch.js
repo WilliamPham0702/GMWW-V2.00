@@ -487,6 +487,11 @@ function gmwwApplyRoster(rows,origin='http'){
  offlineReplace("if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt)return;",
    "if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt){if(roomCode===state.roomCode&&participantId===state.participantId)void refreshPrivateRole(true);return;}");
 
+ // An Edge tab can miss the first complete snapshot while another tab is
+ // already in the room. A single-player projection therefore requires a
+ // low-frequency independent public reconcile, even if a poll is superseded by WS.
+ offlineReplace("function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}",
+ "function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible'){pollRoomState();if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId)}},5000)}");
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
