@@ -53,8 +53,12 @@ try{
   s.errors=[];s.privateReads=[];page.on('pageerror',error=>s.errors.push(error.message));
   page.on('requestfailed',req=>{if(req.url().includes('/api/rooms/'))s.privateReads.push({event:'requestfailed',url:new URL(req.url()).pathname,error:req.failure()?.errorText})});
   page.on('response',res=>{if(res.url().includes('/api/rooms/')&&res.url().endsWith('/me')){
-    s.privateReads.push({event:'private-me',status:res.status(),url:new URL(res.url()).pathname,at:Date.now()});
-    if(s.privateReads.length>40)s.privateReads.shift();
+    // Record ONLY public phase and test role identifiers, never actual card text.
+    void res.json().then(d=>s.privateReads.push({event:'private-me',status:res.status(),at:Date.now(),
+      ok:d?.ok,phase:d?.room?.phase,deliveryVersion:d?.room?.deliveryVersion,
+      roleId:d?.role?.roleId,rolesCount:d?.roles?.length||0,participantId:d?.player?.participantId,
+      error:d?.error||null})).catch(err=>s.privateReads.push({event:'private-me-invalid-json',status:res.status(),error:String(err)}))
+      .finally(()=>{if(s.privateReads.length>30)s.privateReads.splice(0,s.privateReads.length-30)});
   }});
   await page.goto(origin+'/'+code,{waitUntil:'domcontentloaded',timeout:35000});
   await page.locator('#gmwwVillageFrame').waitFor({state:'attached',timeout:25000});
