@@ -74,7 +74,7 @@ test('V3.194: arrow and drag are whole-ring commands only; button reset also res
   const server=fs.readFileSync('src/index.js','utf8');
   const player=fs.readFileSync('assets/village/village.mjs','utf8');
   assert.match(server,/seatOffset=villageLayout\.resolveSeatOffset/);
-  assert.match(player,/seat=3194-rigid/);
+  assert.match(player,/seat=3195-rigid/);
 });
 
 test('V3.194: no point-specific clampPoint correction in rendering fixed Seats',()=>{
