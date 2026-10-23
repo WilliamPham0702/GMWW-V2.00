@@ -693,7 +693,9 @@ function demoRenderObserver(){
   const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
   const matchId=String(playSceneRuntime.room?.matchId||''),night=Math.max(1,Number(playSceneState.night)||1);
   const belongsToNight=event=>event&&String(event.matchId||'')===matchId&&
-    (String(event.turn||'')==='Đêm '+night||String(event.turn||'').startsWith('Đêm '+night+' '));
+    (String(event.cycleKey||'')==='night-'+night||
+     String(event.turn||'')==='Đêm '+night||
+     String(event.turn||'').startsWith('Đêm '+night+' '));
   const records=(Array.isArray(demoRunner.history)?demoRunner.history:[])
     .filter(belongsToNight).slice().sort((a,b)=>Number(a.at||0)-Number(b.at||0));
   const last=belongsToNight(demoRunner.lastEvent)?demoRunner.lastEvent:null;
