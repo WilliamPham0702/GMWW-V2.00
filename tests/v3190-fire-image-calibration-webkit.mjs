@@ -57,7 +57,7 @@ try{
  assert.equal(await picker.isVisible(),true);
  await page.mouse.click(195,420);
  await page.waitForFunction(()=>window.__requests.length===1);
- const night=await page.evaluate(()=>({position:__fire.position(),saved:__fire.published(),write:__requests[0],status:__status,error:__error}));
+ const night=await page.evaluate(()=>({position:__fire.position(),saved:__fire.published(),write:__requests[0],status:window.__status,error:window.__error}));
  assert.ok(Math.abs(night.position[0]-50)<1&&Math.abs(night.position[1]-49.76)<1,'Calibrated nighttime marker uses actual touch coordinates');
  assert.deepEqual(Object.keys(night.write.payload).sort(),['expectedRevision','fireAnchors']);
  assert.deepEqual(Object.keys(night.write.payload.fireAnchors),['night']);
