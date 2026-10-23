@@ -14,6 +14,7 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-live-realtime-vote.mjs"
       - "tests/browser-compact-battle-panels.mjs"
       - "tests/v3178-compact-battle-panels.test.mjs"
       - "server-game/current/style.css"
@@ -52,6 +53,7 @@ on:
       - "src/gmww-delivery-snapshot.js"
       - "src/index.js"
       - "tests/browser-private-cards.mjs"
+      - "tests/browser-live-realtime-vote.mjs"
       - "tests/browser-compact-battle-panels.mjs"
       - "tests/v3178-compact-battle-panels.test.mjs"
       - "server-game/current/style.css"
@@ -128,6 +130,7 @@ jobs:
           node tests/demo-server-autonomous-e2e.mjs
           node tests/demo-room-cross-origin-webkit.mjs
           node tests/browser-private-cards.mjs
+          node tests/browser-live-realtime-vote.mjs
           node tests/gp2-qa-webkit.mjs
       - name: Kiểm tra mục Khám Phá trên iPhone
         run: node tests/home-v389-iphone-webkit.mjs
