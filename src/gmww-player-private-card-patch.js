@@ -543,6 +543,9 @@ function gmwwShouldAdvancePrivatePhase(next){
  // and remained with a self-only projection; do not rely on live movement frames.
  offlineReplace("if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId&&(!state.role||!playerScenePolicy(state.room).rolesReleased))void refreshPrivateRole(true)}",
    "if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId){if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId);if(!state.role||!playerScenePolicy(state.room).rolesReleased)void refreshPrivateRole(true)}}");
+ // Mirror the source-fragment motion rule in the shipped compiled Player Web.
+ offlineReplace("return ['lobby','waiting','role_delivery'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)",
+   "return ['lobby','waiting'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)");
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
