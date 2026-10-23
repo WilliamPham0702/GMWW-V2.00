@@ -8,6 +8,7 @@
 ## Thay đổi ứng dụng
 - Sự kiện WebSocket **di chuyển nhân vật** không được tính là một bản cập nhật pha phòng. Trước đó, khi nhân vật liên tục di chuyển, các phản hồi /me và polling bị xem là cũ dù chứa pha `role_delivery`.
 - Giữ hàng rào chống phản hồi cũ ghi đè trạng thái đã xác nhận; đồng thời chấp nhận trạng thái tiến về phía trước cho cùng `matchId` (`lobby -> role_delivery -> running -> ended`). Không cho hồi quy pha `running -> role_delivery`.
+- Bổ sung kiểm tra nhận lá bài qua `/me` độc lập từ nhịp GM-presence và nhịp room khi trang đang ở lobby hoặc Role chưa nhận, phòng trường hợp WebSocket bị nghẽn bởi các sự kiện di chuyển. Chỉ truy vấn dữ liệu riêng bằng session đã được xác thực, không đưa vai trò vào roster công khai.
 - Bổ sung kiểm thử Node và CI trình duyệt Chrome/Edge theo luồng mở sẵn hai trang, GM phát vai, lá mở lần đầu, đề cử/vote, refresh. Khi nhận vai thất bại ghi lại `/me` Server và trạng thái UI.
 
 ## Điều kiện nghiệm thu trước khi merge
