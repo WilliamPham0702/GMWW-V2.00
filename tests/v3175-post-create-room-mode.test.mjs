@@ -20,7 +20,7 @@ function buildRoom(){
     normalizeSeatCount:(v,defaultCount=12)=>Math.max(1,Math.min(30,Number(v||defaultCount)||12)),
     normalizeSeatLayout:v=>v||'circle',normalizeSeatId:v=>Number(v)||0,
     clearPlayerMovement:()=>{},
-    villageLayout:{recommendedSeatShape:()=> 'circle',normalizeSeatOffset:()=>({x:0,y:0}),
+    villageLayout:{recommendedSeatShape:()=> 'circle',normalizeSeatOffset:()=>({x:0,y:0}),resolveSeatOffset:()=>({x:0,y:0}),
       normalizeSeatSpacing:v=>Number(v)||1,positions:()=>[]},
     publicRoom:x=>({...x}),publicPlayer:x=>({...x})
   };
