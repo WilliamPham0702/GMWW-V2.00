@@ -21,6 +21,33 @@ export function gallowsOpen(ballot,now=Date.now()){
     nominationDeadlineAt:now+1000*gallowsDurationSec(ballot.nominationDurationSec),
     nominations:{},votes:{},updatedAt:now}};
 }
+
+/* All public tallies derive from accepted, still-eligible Server receipts.
+   Tie for nomination needs GM choice; tied execution votes save the accused. */
+export function gallowsNominationTotals(ballot){
+  const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedNomination(ballot)),counts=new Map();
+  for(const [voter,target] of Object.entries(ballot?.nominations||{})){
+    if(!eligible.has(voter)||blocked.has(voter)||!eligible.has(target)||voter===target)continue;
+    counts.set(target,(counts.get(target)||0)+1);
+  }
+  return [...counts].map(([loginId,votes])=>({loginId,votes}))
+    .sort((a,b)=>b.votes-a.votes||a.loginId.localeCompare(b.loginId));
+}
+export function gallowsAutomaticNominee(ballot){
+  const totals=gallowsNominationTotals(ballot);
+  return totals[0]&&(!totals[1]||totals[0].votes>totals[1].votes)?totals[0].loginId:null;
+}
+export function gallowsVoteTotals(ballot){
+  const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
+  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&!blocked.has(voter)&&['👍','👎'].includes(choice));
+  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length,cast:votes.length,
+    eligible:[...eligible].filter(id=>!blocked.has(id)).length};
+}
+export function gallowsAutomaticOutcome(ballot){
+  const tally=gallowsVoteTotals(ballot);
+  return tally.kill>tally.save?'dead':'alive';
+}
+
 export function gallowsSnapshot(ballot,meta,now=Date.now()){
   if(!ballot||ballot.matchId!==String(meta?.matchId||'')||ballot.cycleKey!==String(meta?.cycleKey||''))return null;
   const stage=gallowsStage(ballot,now),blockedNomination=gallowsBlockedNomination(ballot),blockedVotes=gallowsBlockedVotes(ballot);
@@ -30,10 +57,11 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     nominationDurationSec:gallowsDurationSec(ballot.nominationDurationSec),voteDurationSec:gallowsDurationSec(ballot.voteDurationSec),
     nominations:Object.fromEntries(Object.entries(ballot.nominations||{}).filter(([id])=>!blockedNomination.includes(id))),
     votes:Object.fromEntries(Object.entries(ballot.votes||{}).filter(([id])=>!blockedVotes.includes(id))),
-    blockedNomination,blockedVotes,blocked:blockedVotes,outcome:ballot.outcome||null};
+    blockedNomination,blockedVotes,blocked:blockedVotes,outcome:ballot.outcome||null,
+    eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),voteTotals:gallowsVoteTotals(ballot)};
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
-  if(!validId(voter)||!validId(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
+  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
   if(gallowsBlockedNomination(ballot).includes(voter))return {ok:false,error:'NOMINATION_BANNED'};
   if(ballot.nominations?.[voter])return {ok:false,error:'NOMINATION_ALREADY_USED'};

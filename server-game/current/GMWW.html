@@ -282,14 +282,20 @@
             <button type="button" data-gallows-mode="auto" aria-pressed="true">TỰ ĐỘNG</button>
             <button type="button" data-gallows-mode="gm" aria-pressed="false">GM THỦ CÔNG</button>
           </div>
-          <div id="battleGallowsMembers" role="list" aria-label="Quản lý cấm đề cử và cấm bỏ phiếu"></div>
-          <label for="battleGallowsCandidate">Người lên giàn</label>
-          <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
-          <div class="battle-gallows-actions" aria-label="Hành động">
+          <div class="battle-gallows-actions battle-gallows-primary" aria-label="Điều khiển giai đoạn">
             <button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button>
             <button type="button" data-gallows-command="begin">BẮT ĐẦU BỎ PHIẾU</button>
-            <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CỨU</button>
-            <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 GIẾT</button>
+          </div>
+          <div id="battleGallowsNominationStats" aria-label="Thống kê đề cử theo người" aria-live="polite"></div>
+          <label for="battleGallowsCandidate">Người lên giàn</label>
+          <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
+          <details id="battleGallowsBanDetails" class="battle-gallows-ban-details">
+            <summary>⚙ QUẢN LÝ CẤM CHỌN / CẤM BỎ PHIẾU <span id="battleGallowsBansCount"></span></summary>
+            <div id="battleGallowsMembers" role="list" aria-label="Quản lý cấm đề cử và cấm bỏ phiếu"></div>
+          </details>
+          <div class="battle-gallows-actions battle-gallows-result-actions" aria-label="GM chốt kết quả">
+            <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CHỐT SỐNG</button>
+            <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 CHỐT CHẾT</button>
             <button type="button" data-gallows-command="restore">↶ KHÔI PHỤC</button>
           </div>
           <section id="battleGallowsManual" aria-label="GM bỏ phiếu thủ công" hidden>

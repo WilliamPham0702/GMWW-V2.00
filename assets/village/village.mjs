@@ -173,6 +173,55 @@ if(game){
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
   function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
+  /* Pirate nomination gesture lives INSIDE the village iframe so pointerup
+     can hit a Character. The parent sends a signed member request to the DO. */
+  function syncPirateNominationFlag(){
+    if(!embedded)return;
+    let button=document.getElementById('gmwwPirateNominate');
+    if(!button){
+      button=document.createElement('button');button.id='gmwwPirateNominate';button.type='button';
+      button.textContent='🏴‍☠️';button.setAttribute('aria-label','Kéo lá cờ lên người muốn đề cử, hoặc chạm hai lần để mở danh sách');
+      button.title='Kéo vào Character · chạm hai lần xem danh sách';
+      button.style.cssText='position:fixed;right:14px;bottom:max(92px,calc(env(safe-area-inset-bottom) + 92px));z-index:1005;width:58px;height:58px;border-radius:16px;border:2px solid #ffde92;background:#103749e8;box-shadow:0 6px 20px #0008;color:#fff;font-size:30px;touch-action:none;user-select:none';
+      document.body.append(button);
+      let gesture=null,lastTap=0,ghost=null;
+      const cleanup=()=>{ghost?.remove();ghost=null;gesture=null};
+      button.addEventListener('pointerdown',e=>{
+        if(!setupState.gallowsCanNominate||e.button>0)return;
+        gesture={id:e.pointerId,x:e.clientX,y:e.clientY};
+        try{button.setPointerCapture(e.pointerId)}catch{}
+        e.preventDefault();
+      });
+      button.addEventListener('pointermove',e=>{
+        if(!gesture||gesture.id!==e.pointerId)return;
+        if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<14)return;
+        if(!ghost){ghost=document.createElement('span');ghost.textContent='🏴‍☠️';
+          ghost.style.cssText='position:fixed;z-index:1010;pointer-events:none;font-size:36px;filter:drop-shadow(0 3px 6px #000);transform:translate(-50%,-50%)';
+          document.body.append(ghost)}
+        ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+      });
+      button.addEventListener('pointerup',e=>{
+        if(!gesture||gesture.id!==e.pointerId)return;
+        const distance=Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y);
+        if(distance>=20){
+          const target=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.player[data-player-id]');
+          const id=String(target?.dataset.playerId||'');
+          if(id&&id!==String(setupState.viewerParticipantId||'')&&id!=='gm'&&!target?.classList.contains('gmww-sv-dead'))
+            try{window.parent.postMessage({type:'gmww:gallows-drag-nominate',participantId:id},window.location.origin)}catch{}
+          lastTap=0;
+        }else{
+          const now=Date.now();
+          if(now-lastTap<450){lastTap=0;try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{}}
+          else lastTap=now;
+        }
+        cleanup();e.preventDefault();
+      });
+      button.addEventListener('pointercancel',cleanup);
+      button.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){
+        try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{};e.preventDefault()}});
+    }
+    button.hidden=!setupState.gallowsCanNominate;
+  }
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
     button.type="button";button.className="player"+(isGM?" gm gm-action-"+gmActionFor(data,position):"")+(data?.frozen===true&&!isGM?" is-frozen":"")+(selectedId===data.id?" selected":"")+(String(data.id)===String(setupState.viewerParticipantId||"")?" self":"")+(position?.moving?" moving":"")+(position?.sitting?" sitting":"")+(actualSeat?" seated":" roaming");
@@ -322,6 +371,7 @@ if(game){
   }
   function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}
   function render(){
+    syncPirateNominationFlag();
     cancelAnimationFrame(moveFrame);moveFrame=0;
     if(sitWakeTimer){clearTimeout(sitWakeTimer);sitWakeTimer=0}
     villageRenderMetrics.renders++;
