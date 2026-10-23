@@ -564,7 +564,79 @@ function renderPlayCreatedRooms(){
 }
 /* Demo controls now live at the top of the GM campfire menu. */
 function demoPanelTouch(){}
-function initDemoPanel(){}
+const GMWW_DEMO_OBSERVER_COMPACT_KEY='gmww_demo_observer_compact_v1';
+function initDemoPanel(){
+  const panel=document.getElementById('battleDemoObserver'),button=document.getElementById('battleDemoCollapse');
+  if(!panel||!button||button.dataset.ready)return;
+  button.dataset.ready='1';
+  const toggle=collapsed=>{
+    panel.classList.toggle('is-collapsed',collapsed);
+    button.setAttribute('aria-expanded',String(!collapsed));
+    button.setAttribute('aria-label',collapsed?'Mở bảng hành động DEMO':'Thu gọn bảng hành động DEMO');
+    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 📗';
+    if(!collapsed)panel.classList.remove('has-unread');
+  };
+  let collapsed=false;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)==='1'}catch{}
+  toggle(collapsed);
+  button.addEventListener('click',e=>{
+    e.stopPropagation();
+    const next=!panel.classList.contains('is-collapsed');toggle(next);
+    try{localStorage.setItem(GMWW_DEMO_OBSERVER_COMPACT_KEY,next?'1':'0')}catch{}
+  });
+}
+/* Local-only magnetic layout: retain a relative anchor, not absolute pixels.
+   A write happens only at pointerup; no new Server traffic during a match. */
+const GMWW_DOCK_LAYOUT_KEY='gmww_saved_overlay_docks_v1';
+function gmwwReadDocks(){
+  try{const value=JSON.parse(localStorage.getItem(GMWW_DOCK_LAYOUT_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return {}}
+}
+function gmwwSaveDock(panel,snap){
+  if(!panel?.id)return;
+  const value=gmwwReadDocks();
+  if(snap?.anchorId&&['top','bottom'].includes(snap.edge))value[panel.id]={anchorId:snap.anchorId,edge:snap.edge};
+  else delete value[panel.id];
+  try{localStorage.setItem(GMWW_DOCK_LAYOUT_KEY,JSON.stringify(value))}catch{}
+}
+function gmwwRestoreDock(panel,force=false){
+  if(!panel||panel.hidden)return false;
+  if(!force&&panel.dataset.gmwwDockApplied==='1')return panel.classList.contains('gmww-dock-snapped');
+  panel.dataset.gmwwDockApplied='1';
+  const saved=gmwwReadDocks()[panel.id],allowed=['playSetupStrip','playBattleTop','gmTopMenu','battleBottomControls'];
+  if(!saved||!allowed.includes(saved.anchorId)||!['top','bottom'].includes(saved.edge))return false;
+  const bar=document.getElementById(saved.anchorId);
+  if(!bar||bar.hidden||!bar.getClientRects()?.length)return false;
+  const anchor=bar.getBoundingClientRect(),width=Math.min(anchor.width,innerWidth-16),height=panel.offsetHeight;
+  if(width<40||!height)return false;
+  const rawTop=saved.edge==='bottom'?anchor.top-height-5:anchor.bottom+5;
+  const left=anchor.left+(anchor.width-width)/2;
+  const p=battleTargetClampPosition(width,height,left,rawTop);
+  const origin=panel.offsetParent?.getBoundingClientRect()||{left:0,top:0};
+  panel.style.setProperty('left',(p.left-origin.left)+'px','important');
+  panel.style.setProperty('top',(p.top-origin.top)+'px','important');
+  panel.style.setProperty('right','auto','important');
+  panel.style.setProperty('bottom','auto','important');
+  panel.style.setProperty('transform','none','important');
+  panel.style.setProperty('--gmww-dock-width',width+'px');
+  panel.classList.add('gmww-dock-snapped');panel.dataset.dockEdge=saved.edge;
+  return true;
+}
+function gmwwPlaceWolfMenuAtFire(menu){
+  const fire=document.querySelector('.play-village-core .play-core-pearl');
+  if(!menu||!fire||!fire.getClientRects().length)return;
+  const point=fire.getBoundingClientRect(),width=menu.offsetWidth,height=menu.offsetHeight;
+  if(!width||!height)return;
+  const left=(point.left+point.right-width)/2;
+  let top=point.top-height-10;
+  if(top<12)top=point.bottom+10;
+  const p=battleTargetClampPosition(width,height,left,top);
+  const origin=menu.offsetParent?.getBoundingClientRect()||{left:0,top:0};
+  menu.style.setProperty('left',(p.left-origin.left)+'px','important');
+  menu.style.setProperty('top',(p.top-origin.top)+'px','important');
+  menu.style.setProperty('right','auto','important');
+  menu.style.setProperty('bottom','auto','important');
+  menu.style.setProperty('transform','none','important');
+}
+
 function demoTurnDescription(){
   const phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1),rt=playSceneRuntime.nightRuntime;
   if(phase==='night')return 'Đêm '+night+' · '+(rt?.completed?'Hết lượt đêm':'Lượt '+(Math.max(0,Number(rt?.cursor)||0)+1)+'/'+(rt?.queue?.length||1)+' · '+String(battleTurn()?.label||'Đang đồng bộ'));
@@ -636,6 +708,12 @@ function demoRenderObserver(){
       }
     }
   }
+  const demoCount=document.getElementById('battleDemoCount');
+  if(demoCount)demoCount.textContent=records.length?String(records.length):'';
+  const rendered=String(event?.id||'');
+  if(panel.dataset.lastRenderedDemoEvent&&rendered!==panel.dataset.lastRenderedDemoEvent&&panel.classList.contains('is-collapsed'))
+    panel.classList.add('has-unread');
+  panel.dataset.lastRenderedDemoEvent=rendered;
   set('battleDemoObserverError',demoRunner.error||'');
 }
 function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}

@@ -6929,3 +6929,62 @@ body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{
   body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver{max-height:32dvh!important}
   body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{max-height:50dvh!important}
 }
+
+/* V3.188 candidate: DEMO observer folds into a 44px book icon, history stays on Server. */
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver>header #battleDemoCollapse{
+  display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:2px;
+  min-width:44px;min-height:44px;padding:3px 5px;border:1px solid rgba(180,229,231,.50);
+  border-radius:12px;background:rgba(6,51,64,.47);color:#fff;font-size:22px;line-height:1;
+  cursor:pointer;touch-action:manipulation;margin-left:auto
+}
+#battleDemoCollapse #battleDemoCount{font-size:10px;font-weight:800;color:#f7ecc0}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed{
+  width:52px!important;min-width:52px!important;max-width:52px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:3px!important;overflow:hidden!important;border-radius:13px!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>header{
+  padding:0!important;margin:0!important;min-height:44px!important;display:flex!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>header>.battle-menu-grip,
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>header>strong,
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>#battleDemoEventTurn,
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>#battleDemoEvent,
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>#battleDemoHistory,
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed>#battleDemoObserverError{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed #battleDemoCollapse{
+  width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+  margin:0!important;padding:2px!important;flex-direction:column;gap:0
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.is-collapsed.has-unread #battleDemoCollapse{
+  border-color:#ffdf8c!important;box-shadow:inset 0 0 0 1px rgba(255,229,141,.55)
+}
+/* Selected-game sheet: smaller controls and softer glass, no tiny tap targets. */
+body.play-immersive #playGameSheet .play-game-sheet-card[data-mode="play"]{
+  box-sizing:border-box!important;width:min(94vw,440px)!important;max-width:min(94vw,440px)!important;
+  padding:10px 12px!important;border-radius:17px!important;
+  background:rgba(5,37,52,.76)!important;border:1px solid rgba(171,225,233,.38)!important;
+  box-shadow:0 10px 28px rgba(0,19,34,.22)!important
+}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .sheet-head{padding-bottom:6px!important}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .sheet-head h3{font-size:16px!important;line-height:1.2}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-scroll{gap:5px!important}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-play-review{padding:5px 0 6px!important}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-section-title{margin:5px 0!important;font-size:11px!important}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-play-review :is(.play-template-artifact,.play-template-artifact-time,.play-template-artifact-quota,.play-template-help){
+  border-radius:10px!important;padding:5px 7px!important;margin:4px 0!important;
+  background:rgba(18,73,86,.23)!important;border-color:rgba(168,224,231,.22)!important
+}
+#playGameSheet .play-game-sheet-card[data-mode="play"] :is(select,button,input[type="number"]){min-height:40px}
+#playGameSheet .play-game-sheet-card[data-mode="play"] #playMatchArtifactSettings{gap:5px!important;padding:5px 0!important}
+#playGameSheet .play-game-sheet-card[data-mode="play"] .play-template-artifact-gallery .play-template-card{
+  flex-basis:clamp(70px,20vw,89px)!important;border-width:1px!important;
+  padding:3px!important;border-radius:10px!important;background:rgba(8,47,63,.42)!important
+}
+@media(max-width:390px){
+  body.play-immersive #playGameSheet .play-game-sheet-card[data-mode="play"]{width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;padding:9px!important}
+}
+/* GM campfire menu uses the scene's saved fire anchor; drag may override. */
+body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu{
+  max-width:calc(100vw - 18px)!important;
+}
