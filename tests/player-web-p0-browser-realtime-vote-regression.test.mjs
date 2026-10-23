@@ -54,6 +54,14 @@ test('P0: a snapshot from another room or without my membership never destroys v
  });
 });
 
+test('P0: compiled Player Web RETAINS every gallows function after private receipt simplification',()=>{
+ for(const helper of [
+  'function gallowsCurrentStage(){','function gallowsWidget(){','function gallowsDock(){',
+  'function renderGallowsWidget(){','async function sendGallowsChoice('
+ ])assert.equal(player.split(helper).length-1,1,'missing or duplicated voting helper: '+helper);
+ assert.match(player,/function renderGallowsWidget\(\)\{[\s\S]*?dock\.querySelectorAll\('\[data-gallows-vote\]'\)/);
+});
+
 test('P0: server gallows pushes authoritative phase, and private replies never roll back newer vote broadcasts',()=>{
  const events=(worker.match(/this\.broadcast\(\{type:"gallows_updated",room:publicRoom\(meta\),gallows:/g)||[]).length;
  assert.equal(events,3,'automatic timer, GM command and Player vote broadcast the full phase');
