@@ -357,7 +357,7 @@ async function gmwwVerifyMemberBeforeRemoval(){
  // The legacy private-card patch removed the second /me read from public polling;
  // keep gallows and day interactions in the surviving authenticated receipt.
  offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",
-   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
+   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
  offlineReplace("async function autoResumeActiveRoom({stayInVillage=false}={}){",
    "async function gmwwRefreshPublicRoster(code,participantId){\n"+
    "  try{const d=await api('/api/rooms/'+encodeURIComponent(code));\n"+
