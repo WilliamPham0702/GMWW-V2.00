@@ -217,25 +217,30 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src,onFinished=null){
+async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    const source=ctx.createBufferSource();source.buffer=buffer;source.onended=()=>onFinished?.();
+    if(requestId!==battleAudioRequestId)return true;
+    const source=ctx.createBufferSource();source.buffer=buffer;
+    globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
     source.connect(ctx.destination);source.start();
     return true;
   }catch(_){return false}
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
-  const requestId=++battleAudioRequestId;
   const row=battleFindAudio(kind,targetId,name);
-  if(!row)return battleSpeakCue(name,showError,onFinished);
-  const key=kind+':'+row.id,now=Date.now();
+  const key=kind+':'+(row?.id||targetId||name),now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500){onFinished?.();return false}
   battleAudioLast={key,at:now};
+  const requestId=++battleAudioRequestId;
+  if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
+  if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
+  globalThis.speechSynthesis?.cancel();
+  if(!row)return battleSpeakCue(name,showError,onFinished);
   // When preloaded, play() is invoked before the first asynchronous boundary,
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
@@ -249,7 +254,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src,onFinished))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     onFinished?.();
     return false

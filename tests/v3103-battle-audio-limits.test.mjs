@@ -54,7 +54,7 @@ test('Confirmed Phù Thuỷ Già action dims the other option immediately, while
     playSceneState:{night:2},playSceneRuntime:{room:{matchId:'match-1'},
       artifactCycle:{accepted:[]},battleActionUsage:[
        {matchId:'match-1',night:2,actorId:'old',roleId:'role_old_witch',actionId:'action_exile'}]},
-    state:{cards:[role]},playPlayerEffect:()=>'',playPlayerBlocked:()=>false,String,Array,Set,Math,Number};
+    state:{cards:[role]},playLiveMembers:()=>[{loginId:'victim'}],playPlayerEffect:id=>id==='victim'?'dead':'',playPlayerBlocked:()=>false,String,Array,Set,Math,Number};
   vm.runInNewContext(app.slice(from,to)+'\nglobalThis.result=battleActions();',ctx);
   assert.equal(ctx.result.length,2);
   assert.equal(ctx.result[0].unavailable,true);

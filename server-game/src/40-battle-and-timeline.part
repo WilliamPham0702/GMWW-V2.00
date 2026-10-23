@@ -179,7 +179,8 @@ function demoConfirmedFeedback(){
 function demoApplyServerControl(control){
   if(control?.engine!=='server')return;
   const event=control.lastEvent,sameRoom=demoRunner.roomCode===String(playSceneState.roomCode),previous=demoRunner.lastEvent;
-  const feedback=sameRoom&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
+  const heard=demoRunner.heardEvents||(demoRunner.heardEvents=new Set());
+  const feedback=!heard.has(event?.id)&&sameRoom&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
   demoRunner.observedMatch=String(playSceneRuntime.room?.matchId||'');
   demoRunner.roomCode=String(playSceneState.roomCode);demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
   demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
@@ -188,9 +189,11 @@ function demoApplyServerControl(control){
   demoRunner.lastEvent=event||null;
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
   if(feedback){
+    heard.add(event.id);if(heard.size>800)heard.delete(heard.values().next().value);
     if(event.revelation?.message&&event.revelation?.actionId){
       gmHapticFeedback();battlePresentRevelation(event.revelation.actionId,event.revelation);
-    }else demoConfirmedFeedback();
+    }else if(event.audioActionId){gmHapticFeedback();void battlePlayConfiguredAudio('actions',event.audioActionId,event.action)}
+    else demoConfirmedFeedback();
   }
   if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
 }
@@ -520,6 +523,7 @@ const battleActions=()=>{
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
     let unavailableReason='';
+    if((action.type==='revive'||action.actionId==='action_revive')&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))return {...action,unavailable:true,unavailableReason:'Chưa có người chết để hồi sinh.'};
     const actorIds=(action.actorIds||[]).filter(actorId=>{
       if(playPlayerBlocked(actorId)){unavailableReason=playBlockReason(actorId);return false}
       if(action.artifactId)return true; // Artifact use is governed by its existing cycle ledger.
@@ -1423,7 +1427,7 @@ function renderPlayBattle(){
   if(audio){audio.textContent=(playAudioMuted()?'🔇 Audio TẮT':'🔊 Audio');audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.classList.toggle('is-off',playAudioMuted())}
   const haptic=document.getElementById('battleGMHaptic');if(haptic){haptic.textContent=gmHapticEnabled()?'📳 Rung BẬT':'📴 Rung TẮT';haptic.setAttribute('aria-pressed',String(gmHapticEnabled()))}
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
-    const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy}
+    const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy||(type==='revive'&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))}
   }
   battleMarkPlayers();battleTickCountdown();
 }
@@ -1890,6 +1894,7 @@ function initBattleControls(){
       document.querySelector('.play-core-pearl')?.focus();
     }
   });
+  document.getElementById('battleGMFireAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateFire()});
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
@@ -2021,7 +2026,7 @@ function renderPlayScene(){
   const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Bước hiện tại '+playVisibleStageLabel()+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=playSceneState.step==='deal'&&playDeliveryProgress().success?'VÀO TRẬN':step.t.toUpperCase()}
-  const anchor=globalThis.GMWW_VILLAGE_LAYOUT.fire,core=document.querySelector('.play-village-core'),fire=playMapDisplay(anchor.x,anchor.y);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
+  const core=document.querySelector('.play-village-core'),fire=villageFirePosition();if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
   renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();renderPlayBattle();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 

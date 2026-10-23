@@ -27,7 +27,7 @@ async function context(room,meta){
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
- return actions.map(action=>({...action,targetCount:action.noTarget?0:action.targetCount,actorIds:action.actorIds.filter(actorId=>{
+ return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:action.targetCount,actorIds:action.actorIds.filter(actorId=>{
   if(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
   const role=turn.kind==='role-group'?turn.roles.find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
@@ -65,6 +65,7 @@ export function targetsFor(action,actorId,ctx,meta){
   ?resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight}):null;
  const attacked=wolfNight?(Array.isArray(wolfNight.attacked)?wolfNight.attacked:[]).map(x=>x.to).filter(Boolean):null;
  const available=Object.values(ctx.players).filter(m=>(!attacked||attacked.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&rules.targetAllowed(action,m,effect(ctx.rows,meta,m.loginId),ctx.rows,meta.cycleNight)).map(m=>m.loginId),chosen=[];
+ if(action.actionId==='action_protect'&&!action.artifactId&&available.includes(actorId)&&action.targetCount===1)return [actorId];
  while(chosen.length<action.targetCount&&available.length){const id=pick(available);chosen.push(id);available.splice(available.indexOf(id),1)}
  return chosen.length===action.targetCount?chosen:null;
 }
@@ -83,13 +84,14 @@ async function execute(room,meta,lease,ctx,action,day=false){
  const actorId=pick(action.actorIds),targets=targetsFor(action,actorId,ctx,meta);
  if(!targets){await observe(room,meta,lease,action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
  const request=room.demoInternalRequest(),token='demo-'+crypto.randomUUID();
- let result;
+ let result,observedTargets=targets,observedAction=action.name;
  if(day)result=await checked(await room.gmDayAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,actorId,roleId:action.roleId||'',artifactId:action.artifactId||'',actionId:action.actionId,targetIds:targets,clientEventId:token}));
  else{
-  const rt=await room.getNightRuntime(meta,meta.cycleNight,false),turn=rt.queue[rt.cursor],seer=!action.artifactId&&['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(action.actionId),transfer=!action.artifactId&&action.actionId==='action_transfer_bite',direction=transfer?pick(['left','right','none']):'';
+  const rt=await room.getNightRuntime(meta,meta.cycleNight,false),turn=rt.queue[rt.cursor],seer=!action.artifactId&&['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(action.actionId),transfer=!action.artifactId&&action.actionId==='action_transfer_bite',direction=transfer?pick(['left','right']):'';
   result=await checked(await room.gmBattleAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,turnId:turn.id,night:meta.cycleNight,actorId,type:transfer?'effect_notice':action.type,actionId:action.actionId,effectId:action.effectIds?.[0]||'',effectName:action.name,targetIds:seer||transfer||!action.targetCount?[actorId]:targets,clientEventId:token,source:'demo-server',...(action.artifactId?{artifactId:action.artifactId}:{}),...(seer?{revealTargetIds:targets,message:'GM Demo thực hiện soi xét.'}:{}),...(transfer?{direction,message:'Demo dịch vết cắn '+direction}:{}),...(action.actionId==='action_assassin_mark'?{assassinChoice:pick(['👍','👎'])}:{})}));
+  if(transfer){observedTargets=(result.wolfOutcome?.transfers||[]).map(x=>x.to);observedAction=action.name+' · '+(direction==='left'?'Trái':'Phải')+(observedTargets.length?'':' · Không có vết cắn để dịch')}
  }
- await observe(room,meta,lease,action.name,actorId,targets,'accepted',{actionId:action.id,revelation:result.revelation||result.result||null});
+ await observe(room,meta,lease,observedAction,actorId,observedTargets,'accepted',{actionId:action.id,audioActionId:action.actionId,revelation:result.revelation||result.result||null});
 }
 async function tasksFor(room,meta,ctx){
  if(meta.cyclePhase==='night'){

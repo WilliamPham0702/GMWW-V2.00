@@ -22,7 +22,7 @@ test('Assassin GM must choose 👍 or 👎; correct role, target and turn enforc
 });
 
 test('Secret Assassin thumb never leaks to Player Web at night',()=>{
-  assert.ok(doSource.includes('if(type!=="assassin_mark")this.broadcast({type:"player_interaction",interaction});'));
+  assert.ok(doSource.includes('if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});'));
   assert.ok(doSource.includes('x.type!=="assassin_mark"||(String(meta?.cyclePhase||"")==="morning"'));
   assert.ok(doSource.includes(".slice(-10).map(({gmChoice,...safe})=>safe)"));
   assert.ok(doSource.includes("const effects=Object.values(latest).map(({gmChoice,...safe})=>safe)"));

@@ -78,5 +78,5 @@ test('V3.141 wake-up audio completion advances via Server to day exactly once',(
  assert.ok(battle.includes("if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key)"));
  assert.ok(audio.includes('cue.onend=()=>onFinished?.()'));
  assert.ok(audio.includes('player.onended=()=>'));
- assert.ok(audio.includes('source.onended=()=>onFinished?.()'));
+ assert.ok(audio.includes('source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}}'));
 });

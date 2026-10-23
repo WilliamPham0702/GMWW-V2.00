@@ -537,7 +537,7 @@ export class RoomDurableObject extends DurableObject {
   async sceneNormalizeRecord(raw){
     const record=raw&&typeof raw==="object"?raw:{revision:0};
     const revision=Math.max(0,Math.trunc(Number(record.revision)||0));
-    const output={revision,dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
+    const output={revision,fireAnchors:record.fireAnchors||{},dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
     for(const key of ["day","night"]){
       if(validImageDataUrl(record[key])&&revision>0){
         await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,record[key]);
@@ -550,7 +550,7 @@ export class RoomDurableObject extends DurableObject {
     const revision=Math.max(0,Number(rec?.revision)||0);
     const imageRevision=key=>Math.max(0,Number(rec?.[key+"Revision"])||(validImageDataUrl(rec?.[key])?revision:0));
     const day=imageRevision("day"),night=imageRevision("night");
-    return {revision,updatedAt:rec?.updatedAt||null,
+    return {revision,updatedAt:rec?.updatedAt||null,fireAnchors:rec?.fireAnchors||{},
       day:day?"/api/village-scene/image/day?revision="+day:null,
       night:night?"/api/village-scene/image/night?revision="+night:null};
   }
@@ -588,12 +588,16 @@ export class RoomDurableObject extends DurableObject {
       return this.sceneSettingsReset();
     }
     const isImage=v=>v==null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
-    if(!body||(!body.day&&!body.night)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
+    if(!body||(!body.day&&!body.night&&!body.fireAnchors)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
+    if(body.fireAnchors&&(!Object.keys(body.fireAnchors).length||Object.entries(body.fireAnchors).some(([key,p])=>!["day","night"].includes(key)||!p||![p.x,p.y].every(v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100))))return j({ok:false,error:"INVALID_FIRE_ANCHOR"},400);
     const previousRaw=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
+    if(body.expectedRevision!=null&&Number(body.expectedRevision)!==Number(previousRaw.revision))return j({ok:false,error:"SCENE_CHANGED",message:"Hình nền đã thay đổi. Hãy chọn lại vị trí đống lửa."},409);
     const previous=await this.sceneNormalizeRecord(previousRaw);
     const revision=previous.revision+1;
-    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0};
+    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0,fireAnchors:{...previous.fireAnchors}};
     for(const key of ["day","night"]){
+      if(body[key])delete next.fireAnchors[key];
+      if(body.fireAnchors?.[key])next.fireAnchors[key]={x:body.fireAnchors[key].x,y:body.fireAnchors[key].y};
       let image=body[key];
       // A single replacement leaves the other currently applied image intact.
       if(!image){
@@ -1535,6 +1539,14 @@ export class RoomDurableObject extends DurableObject {
     meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
+    // Night powers record intent; only dawn activates lethal outcomes. Keep the
+    // original receipt so undo, usage and retry handling remain transactional.
+    if(p==="morning"&&n>0)for(const row of rows){
+      if(row.pendingDeath!==true||String(row.matchId)!==String(meta.matchId)||Number(row.night)!==n)continue;
+      row.pendingDeath=false;row.type="dead";row.effectActive=true;row.resolvedAt=now;
+      row.message="Bạn đã chết vì "+(row.effectName||"tác động ban đêm")+".";
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
+    }
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
     // and night. Guards block final, potentially transferred bite destinations.
     // An absent bite or a malformed seating ring never manufactures a death.
@@ -2093,11 +2105,15 @@ export class RoomDurableObject extends DurableObject {
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
     const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
       ...(type==="assassin_mark"?{gmChoice:String(body?.assassinChoice||"")}: {}),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
+    if(type==="dead"&&body?.turnId&&String(meta.cyclePhase)==="night"){
+      interaction.type="effect_notice";interaction.pendingDeath=true;interaction.effectActive=false;
+      interaction.night=Number(meta.cycleNight);interaction.message="Tác động gây chết sẽ được giải quyết vào sáng hôm sau.";
+    }
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
-    if(type!=="assassin_mark")this.broadcast({type:"player_interaction",interaction});
+    if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});
     return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){

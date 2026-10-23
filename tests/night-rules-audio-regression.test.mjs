@@ -75,3 +75,42 @@ test('card transport preserves the night immunity flag through delivery sanitiza
  assert.equal(sanitizePlayerRoleCard(input).flags.nightImmune,true);
  assert.equal(mergePlayerRoleCard(input,sanitizePlayerRoleCard({flags:{allowMultipleActions:true}})).flags.nightImmune,true);
 });
+
+test('night poison is pending and victim remains eligible until dawn',async()=>{
+ const h=harness('action_witch_kill','role_witch');
+ const r=await h.run({type:'dead',targetIds:['villager'],revealTargetIds:[]});
+ assert.equal(r.ok,true);
+ const rows=h.data.get('interactions');
+ assert.equal(rows.some(x=>x.type==='dead'&&x.effectActive!==false),false);
+ assert.equal(rows.some(x=>x.pendingDeath===true),true);
+ assert.equal(isBattleActorBlocked(rows,{actorId:'villager',matchId:'m',statusDefs:{}}),false);
+});
+
+test('dawn activates pending kills once and leaves other nights and matches untouched',async()=>{
+ const h=harness('action_witch_kill','role_witch');
+ await h.run({type:'dead',targetIds:['villager'],revealTargetIds:[]});
+ const rows=h.data.get('interactions');rows.push({...rows[0],id:'future',night:2},{...rows[0],id:'other',matchId:'other'});h.data.set('interactions',rows);
+ const apply=vm.runInNewContext('(class {'+cut(worker,'  async applyCycle(', '  async autoAdvanceDue(')+'})',{...nightRules,Date,STATUS_DEFS:{},expireCycleEffects:()=>[],pruneInteractions:x=>x,publicRoom:x=>x,publicPlayer:x=>x,normalizeLoginId:x=>x}).prototype.applyCycle;
+ h.room.ctx.storage.list=async({prefix})=>new Map([...h.data].filter(([k])=>k.startsWith(prefix)));h.room.scheduleRoomAlarm=async()=>{};
+ await apply.call(h.room,h.meta,'morning',1,'morning-1');
+ const after=h.data.get('interactions');assert.equal(after.filter(x=>x.type==='dead').length,1);
+ assert.equal(after[0].loginId,'villager');assert.equal(after[0].effectActive,true);
+ assert.equal(after.find(x=>x.id==='future').pendingDeath,true);assert.equal(after.find(x=>x.id==='other').pendingDeath,true);
+ const retry=await apply.call(h.room,h.meta,'morning',1,'morning-1');assert.equal(retry.idempotent,true);
+ assert.equal(h.data.get('interactions').filter(x=>x.type==='dead').length,1);
+});
+
+test('DEMO does not replay divination after an out-of-order observer response',()=>{
+ const heard=[],ctx={demoRunner:{roomCode:'ABCDEF',observedMatch:'m'},playSceneState:{roomCode:'ABCDEF',step:'seats'},playSceneRuntime:{room:{matchId:'m'}},gmHapticFeedback:()=>{},demoConfirmedFeedback:()=>{},battlePresentRevelation:(_a,r)=>heard.push(r.message)};
+ const apply=vm.runInNewContext(cut(battle,'function demoApplyServerControl(','function demoHoldForGM(')+';demoApplyServerControl',ctx);
+ for(const id of ['a','b','a'])apply({engine:'server',lastEvent:{id,status:'accepted',revelation:{actionId:'action_seer',message:id}}});
+ assert.deepEqual(heard,['a','b']);
+});
+
+test('duplicate cue neither overlaps nor interrupts the already playing clip',async()=>{
+ let played=0,paused=0;
+ const ctx={playAudioMuted:()=>false,battleFindAudio:()=>({id:'seer'}),battleAudioReady:new Map([['system:seer','seer.mp3']]),battleAudioLast:{key:'',at:0},battleAudioRequestId:0,battleActiveAudio:null,Audio:class{async play(){played++}pause(){paused++}},Date};
+ const play=vm.runInNewContext(cut(audio,'async function battlePlayConfiguredAudio(', 'function battleTurnAudioCue(')+';battlePlayConfiguredAudio',ctx);
+ await play('system','seer','Sói');await play('system','seer','Sói');
+ assert.equal(played,1);assert.equal(paused,0);
+});
