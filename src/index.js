@@ -1724,6 +1724,10 @@ export class RoomDurableObject extends DurableObject {
     if(targets.some(x=>!affected(x,"expelled")&&fn.allowDead!==true&&affected(x,"dead")&&
       !String(actionId).toLowerCase().includes("revive")))
       return j({ok:false,error:"DAY_TARGET_NOT_ELIGIBLE"},409);
+    // Validate resurrection before reserving a day-artifact activation.
+    if(artifactId&&/revive|hoi_sinh/.test([actionId,...(fn.effectIds||[])].join(" ").toLowerCase())&&
+      !targets.some(id=>!affected(id,"expelled")&&affected(id,"dead")))
+      return j({ok:false,error:"DAY_REVIVE_TARGET_NOT_DEAD",message:"Chưa có người chết hợp lệ để hồi sinh."},409);
     const usageKey="dayRoleUsage:"+matchId,
       priorUsage=await this.ctx.storage.get(usageKey)||[],
       own=priorUsage.filter(x=>x.actorId===actorId&&x.roleId===roleId&&x.artifactId===artifactId),
@@ -2076,8 +2080,14 @@ export class RoomDurableObject extends DurableObject {
     if(type==="revive"){
       if(!loginId)return j({ok:false,error:"INVALID_INTERACTION",receivedType:rawType},400);
       const p=Object.values(players).find(x=>normalizeLoginId(x?.loginId)===loginId);if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Người Chơi không còn trong Phòng."},404);
-      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       const rows=(await this.ctx.storage.get("interactions"))||[],revived=[],now=new Date().toISOString();
+      // A living target is not revivable. Do not debit an artifact turn or
+      // emit an empty success receipt when no active death exists.
+      const deadTarget=rows.some(x=>normalizeLoginId(x?.loginId)===loginId&&
+        String(x?.type||"")==="dead"&&x?.effectActive!==false&&
+        (!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)));
+      if(!deadTarget)return j({ok:false,error:"TARGET_NOT_DEAD",message:"Chưa có người chết hợp lệ để hồi sinh."},409);
+      if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
       for(const x of rows){if(normalizeLoginId(x?.loginId)!==loginId||x?.effectActive===false||String(x?.type||"")!=="dead")continue;if(x?.matchId&&meta.matchId&&String(x.matchId)!==String(meta.matchId))continue;x.effectActive=false;x.expiredAt=now;x.expiredReason="GM_REVIVE";revived.push({id:x.id,type:x.type})}
       await this.ctx.storage.put("interactions",pruneInteractions(rows));const auditId="ev-"+crypto.randomUUID(),audit={id:auditId,type:"revive",loginId,matchId:String(meta.matchId||""),createdAt:now,source:"gm",message:'GM hồi sinh người chơi'};await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+auditId,audit);const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);
       this.broadcast({type:"player_revived",loginId,revived,at:now,room,players:publicPlayers,serverTime:Date.now()});
