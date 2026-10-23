@@ -138,3 +138,16 @@ test('reset through Apply PUT rejects mixed payloads and retains game data',asyn
  assert.equal(result.scene.day,null);assert.equal(result.scene.night,null);
  assert.equal(data.get('room:protect'),'seat-and-game-data');
 });
+
+test('fire anchors persist per scene, reject stale edits, reset on replacing image',async()=>{
+ const {store}=createMockStore();
+ await store.sceneSettingsPut({day:photo('d'),night:photo('n')});
+ const r=await(await store.sceneSettingsPut({expectedRevision:1,fireAnchors:{day:{x:42,y:63}}})).json();
+ assert.equal(r.ok,true);assert.deepEqual(r.scene.fireAnchors.day,{x:42,y:63});
+ assert.equal((await store.sceneSettingsPut({expectedRevision:1,fireAnchors:{day:{x:1,y:2}}})).status,409);
+ const next=await(await store.sceneSettingsPut({night:photo('n2')})).json();
+ assert.deepEqual(next.scene.fireAnchors.day,{x:42,y:63});
+ const replaced=await(await store.sceneSettingsPut({day:photo('d2')})).json();
+ assert.equal(replaced.scene.fireAnchors.day,undefined);
+ assert.equal((await store.sceneSettingsPut({fireAnchors:{day:{x:-1,y:80}}})).status,400);
+});

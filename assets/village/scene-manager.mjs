@@ -40,7 +40,7 @@ function createVillageLocalCache(base){
   async prepare(record,previous){
    const images={};
    await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
-   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null},images};
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{}},images};
    if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
    return next;
   },

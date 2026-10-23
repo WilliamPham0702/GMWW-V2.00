@@ -53,3 +53,8 @@ test('Invalid wolf-night context preserves an array-shaped attacked contract',()
  assert.equal(result.ok,false);
  assert.deepEqual(result.attacked,[]);
 });
+
+test('Guard prioritizes self when self is a legal target',()=>{
+ const guard={actionId:'action_protect',type:'effect_notice',noSelf:false,targetCount:1};
+ for(let i=0;i<20;i++)assert.deepEqual(targetsFor(guard,'witch',ctx([]),meta),['witch']);
+});

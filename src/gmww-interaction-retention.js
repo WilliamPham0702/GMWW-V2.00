@@ -6,7 +6,7 @@ export function pruneInteractions(rows){
   const size=x=>JSON.stringify(x).length;
   let total=0;for(const x of list)total+=size(x);
   if(total<=INTERACTION_BYTE_BUDGET)return list;
-  const keep=new Set(list.filter(x=>LIVE_EFFECT_TYPES.has(String(x?.type||""))&&x?.effectActive!==false));
+  const keep=new Set(list.filter(x=>x?.pendingDeath===true||(LIVE_EFFECT_TYPES.has(String(x?.type||""))&&x?.effectActive!==false)));
   let budget=INTERACTION_BYTE_BUDGET;for(const x of keep)budget-=size(x);
   for(let i=list.length-1;i>=0;i--){const x=list[i];if(keep.has(x))continue;const n=size(x);if(n>budget)break;keep.add(x);budget-=n}
   return list.filter(x=>keep.has(x));

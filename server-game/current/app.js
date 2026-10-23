@@ -43,7 +43,7 @@ function createVillageLocalCache(base){
   async prepare(record,previous){
    const images={};
    await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
-   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null},images};
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{}},images};
    if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
    return next;
   },
@@ -110,6 +110,30 @@ function applyGMVillageScene(){
  }
  world.classList.remove('gmww-scene-awaiting');
  const loading=document.getElementById('gmVillageBootStatus');if(loading)loading.hidden=true;
+}
+function villageFirePosition(){
+ const key=playSceneState.phase==='night'?'night':'day';
+ const point=villageScenePublished.fireAnchors?.[key];
+ if(point&&[point.x,point.y].every(Number.isFinite))return [point.x,point.y];
+ const fallback=globalThis.GMWW_VILLAGE_LAYOUT.fire;return playMapDisplay(fallback.x,fallback.y);
+}
+function villageCalibrateFire(){
+ const world=document.getElementById('playWorld');if(!world||document.getElementById('gmFirePicker'))return;
+ const key=playSceneState.phase==='night'?'night':'day',revision=villageScenePublished.revision;
+ const picker=document.createElement('div');picker.id='gmFirePicker';
+ picker.style.cssText='position:absolute;inset:0;z-index:1000;cursor:crosshair;background:rgba(0,0,0,.08);touch-action:none';
+ const cancel=document.createElement('button');cancel.textContent='Chạm chính giữa đống lửa · Hủy';
+ cancel.style.cssText='position:absolute;top:12px;left:50%;transform:translateX(-50%);white-space:nowrap';
+ cancel.onclick=e=>{e.stopPropagation();picker.remove()};picker.append(cancel);world.append(picker);
+ picker.addEventListener('click',async e=>{
+  e.preventDefault();e.stopPropagation();
+  const rect=world.getBoundingClientRect(),point={x:Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/rect.height*100))};
+  picker.remove();
+  try{
+   const data=await villageSceneRequest('/api/gm/village-scene','PUT',{expectedRevision:revision,fireAnchors:{[key]:point}});
+   await setGMVillageScenePublished(data.scene);renderPlayScene();
+  }catch(error){playFlashError('Không lưu được vị trí đống lửa: '+error.message)}
+ },{once:true});
 }
 function preloadGMVillageScene(src){
  if(!src)return Promise.resolve();
@@ -2544,25 +2568,30 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src,onFinished=null){
+async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    const source=ctx.createBufferSource();source.buffer=buffer;source.onended=()=>onFinished?.();
+    if(requestId!==battleAudioRequestId)return true;
+    const source=ctx.createBufferSource();source.buffer=buffer;
+    globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
     source.connect(ctx.destination);source.start();
     return true;
   }catch(_){return false}
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
-  const requestId=++battleAudioRequestId;
   const row=battleFindAudio(kind,targetId,name);
-  if(!row)return battleSpeakCue(name,showError,onFinished);
-  const key=kind+':'+row.id,now=Date.now();
+  const key=kind+':'+(row?.id||targetId||name),now=Date.now();
   if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500){onFinished?.();return false}
   battleAudioLast={key,at:now};
+  const requestId=++battleAudioRequestId;
+  if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
+  if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
+  globalThis.speechSynthesis?.cancel();
+  if(!row)return battleSpeakCue(name,showError,onFinished);
   // When preloaded, play() is invoked before the first asynchronous boundary,
   // preserving iOS WKWebView user activation on a touch/click.
   const ready=battleAudioReady.get(key)||null;
@@ -2576,7 +2605,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src,onFinished))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     onFinished?.();
     return false
@@ -3823,7 +3852,8 @@ function demoConfirmedFeedback(){
 function demoApplyServerControl(control){
   if(control?.engine!=='server')return;
   const event=control.lastEvent,sameRoom=demoRunner.roomCode===String(playSceneState.roomCode),previous=demoRunner.lastEvent;
-  const feedback=sameRoom&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
+  const heard=demoRunner.heardEvents||(demoRunner.heardEvents=new Set());
+  const feedback=!heard.has(event?.id)&&sameRoom&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
   demoRunner.observedMatch=String(playSceneRuntime.room?.matchId||'');
   demoRunner.roomCode=String(playSceneState.roomCode);demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
   demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
@@ -3833,9 +3863,11 @@ function demoApplyServerControl(control){
   demoRunner.history=Array.isArray(control.history)?control.history:[];
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
   if(feedback){
+    heard.add(event.id);if(heard.size>800)heard.delete(heard.values().next().value);
     if(event.revelation?.message&&event.revelation?.actionId){
       gmHapticFeedback();battlePresentRevelation(event.revelation.actionId,event.revelation);
-    }else demoConfirmedFeedback();
+    }else if(event.audioActionId){gmHapticFeedback();void battlePlayConfiguredAudio('actions',event.audioActionId,event.action)}
+    else demoConfirmedFeedback();
   }
   if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
 }
@@ -4165,6 +4197,7 @@ const battleActions=()=>{
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
     let unavailableReason='';
+    if((action.type==='revive'||action.actionId==='action_revive')&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))return {...action,unavailable:true,unavailableReason:'Chưa có người chết để hồi sinh.'};
     const actorIds=(action.actorIds||[]).filter(actorId=>{
       if(playPlayerBlocked(actorId)){unavailableReason=playBlockReason(actorId);return false}
       if(action.artifactId)return true; // Artifact use is governed by its existing cycle ledger.
@@ -5071,7 +5104,7 @@ function renderPlayBattle(){
   if(audio){audio.textContent=(playAudioMuted()?'🔇 Audio TẮT':'🔊 Audio');audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.classList.toggle('is-off',playAudioMuted())}
   const haptic=document.getElementById('battleGMHaptic');if(haptic){haptic.textContent=gmHapticEnabled()?'📳 Rung BẬT':'📴 Rung TẮT';haptic.setAttribute('aria-pressed',String(gmHapticEnabled()))}
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
-    const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy}
+    const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy||(type==='revive'&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))}
   }
   battleMarkPlayers();battleTickCountdown();
 }
@@ -5538,6 +5571,7 @@ function initBattleControls(){
       document.querySelector('.play-core-pearl')?.focus();
     }
   });
+  document.getElementById('battleGMFireAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateFire()});
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
@@ -5669,7 +5703,7 @@ function renderPlayScene(){
   const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Bước hiện tại '+playVisibleStageLabel()+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=playSceneState.step==='deal'&&playDeliveryProgress().success?'VÀO TRẬN':step.t.toUpperCase()}
-  const anchor=globalThis.GMWW_VILLAGE_LAYOUT.fire,core=document.querySelector('.play-village-core'),fire=playMapDisplay(anchor.x,anchor.y);if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
+  const core=document.querySelector('.play-village-core'),fire=villageFirePosition();if(core){core.style.left=fire[0]+'%';core.style.top=fire[1]+'%';}
   renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();renderPlayBattle();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 

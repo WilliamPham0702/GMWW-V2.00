@@ -16,7 +16,7 @@ function harness(actionId='action_seer',roleId='role_seer'){
  const data=new Map([['assignments',assignments],['players',Object.fromEntries(ids.map((loginId,i)=>['member:'+loginId,{loginId,seatId:i+1}]))],['interactions',[]]]);
  for(const a of assignments)data.set('role:'+a.loginId,{...a,roleCard:{factionId:a.loginId==='wolf'?'wolf':'village',flags:{nightImmune:a.loginId==='immune'},functions:[{actionId,usageMode:'eachNight',usageCount:1}]}});
  const methods=cut(worker,'  async gmBattleAction(', '  async gmBattleUndo(')+cut(worker,'  async executeGmInteraction(', '  async playerInteractionRespond(');
- const Room=vm.runInNewContext('(class {'+methods+'})',{...nightRules,...policy,isBattleActorBlocked,normalizeLoginId:x=>String(x||'').replace(/^member:/,''),STATUS_DEFS:{},STATUS_VISUAL_IDS:new Set(),pruneInteractions:x=>x,crypto:webcrypto,Response,Date,j:(d,status=200)=>Response.json(d,{status})});
+ const Room=vm.runInNewContext('(class {'+methods+'})',{...nightRules,...policy,isBattleActorBlocked,normalizeLoginId:x=>String(x||'').replace(/^member:/,''),STATUS_DEFS:{},STATUS_VISUAL_IDS:new Set(),pruneInteractions:x=>x,publicRoom:x=>x,publicPlayer:x=>x,crypto:webcrypto,Response,Date,j:(d,status=200)=>Response.json(d,{status})});
  const room=new Room();room.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>data.set(k,structuredClone(v)),delete:async k=>data.delete(k)}};
  room.gmAuthorized=async()=>({ok:true,meta});room.broadcast=()=>{};
  room.getNightRuntime=async()=>({cursor:0,queue:[{id:'turn',kind:'role',roleId,loginIds:['seer']}]});
@@ -74,4 +74,82 @@ test('card transport preserves the night immunity flag through delivery sanitiza
  const input={name:'Immortal',faction:'Phe Ba',flags:{nightImmune:true,allowMultipleActions:false}};
  assert.equal(sanitizePlayerRoleCard(input).flags.nightImmune,true);
  assert.equal(mergePlayerRoleCard(input,sanitizePlayerRoleCard({flags:{allowMultipleActions:true}})).flags.nightImmune,true);
+});
+
+test('night poison is pending and victim remains eligible until dawn',async()=>{
+ const h=harness('action_witch_kill','role_witch');
+ const r=await h.run({type:'dead',targetIds:['villager'],revealTargetIds:[]});
+ assert.equal(r.ok,true);
+ const rows=h.data.get('interactions');
+ assert.equal(rows.some(x=>x.type==='dead'&&x.effectActive!==false),false);
+ assert.equal(rows.some(x=>x.pendingDeath===true),true);
+ assert.equal(isBattleActorBlocked(rows,{actorId:'villager',matchId:'m',statusDefs:{}}),false);
+});
+
+test('dawn activates pending kills once and leaves other nights and matches untouched',async()=>{
+ const h=harness('action_witch_kill','role_witch');
+ await h.run({type:'dead',targetIds:['villager'],revealTargetIds:[]});
+ const rows=h.data.get('interactions');rows.push({...rows[0],id:'future',night:2},{...rows[0],id:'other',matchId:'other'});h.data.set('interactions',rows);
+ const apply=vm.runInNewContext('(class {'+cut(worker,'  async applyCycle(', '  async autoAdvanceDue(')+'})',{...nightRules,Date,STATUS_DEFS:{},expireCycleEffects:()=>[],pruneInteractions:x=>x,publicRoom:x=>x,publicPlayer:x=>x,normalizeLoginId:x=>x}).prototype.applyCycle;
+ h.room.ctx.storage.list=async({prefix})=>new Map([...h.data].filter(([k])=>k.startsWith(prefix)));h.room.scheduleRoomAlarm=async()=>{};
+ await apply.call(h.room,h.meta,'morning',1,'morning-1');
+ const after=h.data.get('interactions');assert.equal(after.filter(x=>x.type==='dead').length,1);
+ assert.equal(after[0].loginId,'villager');assert.equal(after[0].effectActive,true);
+ assert.equal(after.find(x=>x.id==='future').pendingDeath,true);assert.equal(after.find(x=>x.id==='other').pendingDeath,true);
+ const retry=await apply.call(h.room,h.meta,'morning',1,'morning-1');assert.equal(retry.idempotent,true);
+ assert.equal(h.data.get('interactions').filter(x=>x.type==='dead').length,1);
+});
+
+test('DEMO does not replay divination after an out-of-order observer response',()=>{
+ const heard=[],ctx={demoRunner:{roomCode:'ABCDEF',observedMatch:'m'},playSceneState:{roomCode:'ABCDEF',step:'seats'},playSceneRuntime:{room:{matchId:'m'}},gmHapticFeedback:()=>{},demoConfirmedFeedback:()=>{},battlePresentRevelation:(_a,r)=>heard.push(r.message)};
+ const apply=vm.runInNewContext(cut(battle,'function demoApplyServerControl(','function demoHoldForGM(')+';demoApplyServerControl',ctx);
+ for(const id of ['a','b','a'])apply({engine:'server',lastEvent:{id,status:'accepted',revelation:{actionId:'action_seer',message:id}}});
+ assert.deepEqual(heard,['a','b']);
+});
+
+test('duplicate cue neither overlaps nor interrupts the already playing clip',async()=>{
+ let played=0,paused=0;
+ const ctx={playAudioMuted:()=>false,battleFindAudio:()=>({id:'seer'}),battleAudioReady:new Map([['system:seer','seer.mp3']]),battleAudioLast:{key:'',at:0},battleAudioRequestId:0,battleActiveAudio:null,Audio:class{async play(){played++}pause(){paused++}},Date};
+ const play=vm.runInNewContext(cut(audio,'async function battlePlayConfiguredAudio(', 'function battleTurnAudioCue(')+';battlePlayConfiguredAudio',ctx);
+ await play('system','seer','Sói');await play('system','seer','Sói');
+ assert.equal(played,1);assert.equal(paused,0);
+});
+
+test('GM cannot revive a living target; a genuine death can still be revived',async()=>{
+ const h=harness();
+ const request={loginId:'villager',type:'revive'};
+ const rejected=await h.room.executeGmInteraction({},request);
+ assert.equal(rejected.status,409);
+ assert.equal((await rejected.json()).error,'TARGET_NOT_DEAD');
+ assert.equal(h.data.get('interactions').length,0);
+ h.data.set('interactions',[{id:'death-1',loginId:'villager',matchId:'m',type:'dead',effectActive:true}]);
+ const accepted=await h.room.executeGmInteraction({},request);
+ assert.equal(accepted.status,200);
+ assert.equal((await accepted.json()).revived.length,1);
+ assert.equal(h.data.get('interactions')[0].effectActive,false);
+});
+
+test('day Artifact cannot consume a resurrection on a living player',async()=>{
+ const meta={matchId:'m',cycleKey:'morning-1',cycleNight:1,cyclePhase:'morning',phase:'running'};
+ const data=new Map([
+  ['players',{'member:seer':{loginId:'seer'},'member:villager':{loginId:'villager'}}],
+  ['assignments',[]],
+  ['interactions',[]],
+  ['artifact:seer',{artifactId:'revive-item',artifactCard:{functions:[{actionId:'action_revive',phase:'day',targetCount:1}]}}]
+ ]);
+ const getKeys=[];
+ const Room=vm.runInNewContext('(class {'+cut(worker,'  async gmDayAction(', '  async gmBattleAction(')+'})',{
+  normalizeLoginId:x=>String(x||'').replace(/^member:/,''),Response,
+  j:(d,status=200)=>Response.json(d,{status})
+ });
+ const room=new Room();
+ room.gmAuthorized=async()=>({ok:true,meta});
+ room.ctx={storage:{get:async key=>{getKeys.push(key);return structuredClone(data.get(key));}}};
+ const response=await room.gmDayAction({},{
+  actorId:'seer',artifactId:'revive-item',actionId:'action_revive',
+  targetIds:['villager'],clientEventId:'revive-1',matchId:'m',cycleKey:'morning-1'
+ });
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error,'DAY_REVIVE_TARGET_NOT_DEAD');
+ assert.equal(getKeys.some(key=>key.startsWith('artifactCycle:')),false,'must reject before reserving quota');
 });
