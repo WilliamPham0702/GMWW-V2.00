@@ -352,6 +352,52 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "  const img=dock.querySelector('[data-private-card=\"role\"] .mini-card img'),back='/card-backs/role-card-back-v1.png';");
  offlineReplace("  const artifactBack=artifact.querySelector('.mini-card img');if(artifactBack){artifactBack.hidden=!back;if(back&&artifactBack.src!==back)artifactBack.src=back}",
    "  const artifactBack=artifact.querySelector('.mini-card img'),artifactBackSrc='/card-backs/artifact-card-back-v1.png';if(artifactBack){artifactBack.hidden=false;if(artifactBack.getAttribute('src')!==artifactBackSrc)artifactBack.src=artifactBackSrc}");
+
+ // V3.194: one authoritative public roster + complete private ballot receipt.
+ // The legacy private-card patch removed the second /me read from public polling;
+ // keep gallows and day interactions in the surviving authenticated receipt.
+ offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",
+   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
+ offlineReplace("async function autoResumeActiveRoom({stayInVillage=false}={}){",
+   "async function gmwwRefreshPublicRoster(code,participantId){\n"+
+   "  try{const d=await api('/api/rooms/'+encodeURIComponent(code));\n"+
+   "    if(state.roomCode!==code||state.participantId!==participantId)return false;\n"+
+   "    if(d?.room)state.room=d.room;\n"+
+   "    if(Array.isArray(d?.players)&&d.players.some(p=>p.participantId===participantId)){state.players=d.players;return true}\n"+
+   "  }catch(e){console.warn('[GMWW roster refresh]',e)}\n"+
+   "  return false;\n"+
+   "}\nasync function autoResumeActiveRoom({stayInVillage=false}={}){");
+ offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();",
+   "    await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();");
+ offlineReplace("await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);",
+   "await sendPresence();await gmwwRefreshPublicRoster(code,state.participantId);connectWS();startRoomStateWatch();await refreshPrivateRole(true);");
+
+ // Avoid stale HTTP snapshots rolling back a newer WebSocket event, and reject
+ // responses from a room/session that has already changed.
+ offlineReplace("async function pollRoomState(){\n  if(!state.roomCode||!state.participantId)return;",
+   "let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0;\nasync function pollRoomState(){\n  if(!state.roomCode||!state.participantId)return;\n  const seq=++gmwwPublicPollSequence,roomCode=state.roomCode,participantId=state.participantId,startedAt=Date.now();");
+ offlineReplace("const pub=await api('/api/rooms/'+encodeURIComponent(state.roomCode));",
+   "const pub=await api('/api/rooms/'+encodeURIComponent(roomCode));if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt)return;");
+
+ // A superseded socket may close later than the replacement; it must not
+ // schedule another reconnect or override live data.
+ offlineReplace("function connectWS(){",
+   "let gmwwReconnectTimer=null;\nfunction connectWS(){");
+ offlineReplace("try{state.ws?.close();const proto=",
+   "try{if(gmwwReconnectTimer){clearTimeout(gmwwReconnectTimer);gmwwReconnectTimer=null}if(state.ws){state.ws.onclose=null;state.ws.onmessage=null;state.ws.onopen=null;try{state.ws.close()}catch{}}const proto=");
+ offlineReplace("state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));",
+   "state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));const activeSocket=state.ws;");
+ offlineReplace("state.ws.onopen=()=>{",
+   "state.ws.onopen=()=>{if(state.ws!==activeSocket)return;");
+ offlineReplace("state.ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return};",
+   "state.ws.onmessage=e=>{if(state.ws!==activeSocket)return;let d;try{d=JSON.parse(e.data)}catch{return};if(['room_state','player_move','player_move_complete'].includes(d.type))gmwwLastRoomBroadcastAt=Date.now();");
+ offlineReplace("state.ws.onclose=e=>{if(state.wsPingTimer){",
+   "state.ws.onclose=e=>{if(state.ws!==activeSocket)return;state.ws=null;if(state.wsPingTimer){");
+ offlineReplace("setTimeout(connectWS,1800)",
+   "gmwwReconnectTimer=setTimeout(()=>{gmwwReconnectTimer=null;if(state.roomCode&&state.participantId)connectWS()},1800)");
+ offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);return}",
+   "if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
+
  return output;
 }
 export const PLAYER_PRIVATE_CARD_PATCH_VERSION=PATCH_VERSION;
