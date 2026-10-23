@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   deploy:
@@ -31,6 +32,39 @@ jobs:
           else
             echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
+
+      # Never publish a Player Web change while Chrome/Edge browser tests are red.
+      # The Worker-only workflow can finish before the browser workflow: fail closed.
+      - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          STATUS="missing"
+          for TRY in $(seq 1 40); do
+            RESP=$(curl -fsSL --retry 3 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=JSON.parse(s).workflow_runs||[];
+                const match=runs.filter(r=>r.name==='Check Player Card Browsers'&&r.event==='push'&&r.head_sha===process.env.TESTED_SHA)
+                  .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+                process.stdout.write(match.length?(match[0].conclusion||match[0].status):'missing')
+              })")
+            echo "Chrome/Edge/WebKit gate $TRY/40: $STATUS"
+            if [ "$STATUS" = success ]; then exit 0; fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::Browser CI $STATUS for $TESTED_SHA; Production blocked without changing data."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::Browser CI did not complete SUCCESS for $TESTED_SHA ($STATUS); Production blocked."
+          exit 1
 
       - name: Tải mã nguồn dự án
         uses: actions/checkout@v4
