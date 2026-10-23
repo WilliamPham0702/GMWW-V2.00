@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planCleanup, runMaintenance, RETENTION_MS, MAX_DELETIONS } from "../tools/cloudflare-namespace-maintenance.mjs";
+import { planCleanup, auditUnlinkedPreviews, runMaintenance, RETENTION_MS, MAX_DELETIONS } from "../tools/cloudflare-namespace-maintenance.mjs";
 
 const REPO = "WilliamPham0702/GMWW-V2.00";
 const now = Date.parse("2026-10-18T00:00:00Z");
@@ -74,6 +74,57 @@ test("does not treat unmatched 4 independent namespaces as candidates", () => {
 });
 
 
+
+test("audit unlinked Preview resolves existing GitHub branch without allowing deletion", () => {
+  const f = fixtures();
+  f.previews.push({ id: "backup-preview", name: "backup/saved-scene",
+    slug: "backup-saved-scene", created_on: "2026-10-10T00:00:00Z" });
+  f.namespaces.push({ id: "backup-ns",
+    name: "gmww-v2-00_backup-saved-scene_RoomDurableObject", script: "gmww-v2-00" });
+  const plan = planCleanup(f);
+  assert.equal(plan.eligible.length, 1);
+  assert.equal(plan.unlinked.length, 1);
+  const audit = auditUnlinkedPreviews({
+    ...f, branches: [{ name: "backup/saved-scene" }], unlinked: plan.unlinked
+  });
+  assert.equal(audit[0].reason, "BRANCH_EXISTS_NO_PR");
+  assert.equal(audit[0].branchExists, true);
+  assert.equal(audit[0].namespaceStatus, "ISOLATED_MATCH");
+  assert.equal(audit[0].storageStatus, "NOT_CHECKED");
+  assert.equal(audit[0].action, "RETAIN_FOR_REVIEW");
+  assert.equal(plan.eligible.length, 1);
+});
+
+test("audit classifies orphan, backup, off-main PR and missing branch index conservatively", () => {
+  const f = fixtures();
+  f.previews = [
+    { id: "o", name: "fix/old-orphan", slug: "fix-old-orphan",
+      created_on: "2026-10-01T00:00:00Z" },
+    { id: "b", name: "backup/dont-delete", slug: "backup-dont-delete",
+      created_on: "2026-10-01T00:00:00Z" },
+    { id: "r", name: "fix/new-preview", slug: "fix-new-preview",
+      created_on: "2026-10-17T00:00:00Z" },
+    { id: "x", name: "fix/staging-only", slug: "fix-staging-only",
+      created_on: "2026-10-01T00:00:00Z" }
+  ];
+  f.pullRequests = [{...fixtures().pullRequests[0],
+    head: { ref: "fix/staging-only", repo: { full_name: REPO } },
+    base: { ref: "staging", repo: { full_name: REPO } }
+  }];
+  const plan = planCleanup(f);
+  assert.equal(plan.eligible.length, 0);
+  assert.equal(plan.unlinked.length, 4);
+  const audit = auditUnlinkedPreviews({...f, branches: [], unlinked: plan.unlinked});
+  const reason = Object.fromEntries(audit.map(x => [x.name, x.reason]));
+  assert.equal(reason["fix/old-orphan"], "NO_BRANCH_OR_PR_UNVERIFIED");
+  assert.equal(reason["backup/dont-delete"], "BACKUP_OR_WIP_NO_PR");
+  assert.equal(reason["fix/new-preview"], "RECENT_NO_BRANCH_OR_PR");
+  assert.equal(reason["fix/staging-only"], "PR_OUTSIDE_MAIN_POLICY");
+  assert.ok(audit.every(x => x.action === "RETAIN_FOR_REVIEW"));
+  const noBranches = auditUnlinkedPreviews({...f, branches: null, unlinked: plan.unlinked});
+  assert.equal(noBranches[0].reason, "BRANCH_INDEX_UNAVAILABLE");
+});
+
 function createApiMock() {
   let removed = false;
   const calls = [];
@@ -116,6 +167,7 @@ function createApiMock() {
     }
     if (url.startsWith(ghRoot)) {
       if (path.endsWith("/pulls")) return response(fixture.pullRequests);
+      if (path.endsWith("/branches")) return response([]);
       if (path.endsWith("/pulls/50")) return response(fixture.pullRequests[0]);
       if (path.endsWith("/issues/320") && options.method === "PATCH") {
         return response({ number: 320, state: "open" });
