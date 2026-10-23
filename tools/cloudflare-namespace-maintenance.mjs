@@ -302,12 +302,38 @@ export async function runMaintenance({
       String(env.GITHUB_RUN_ID || "")
   };
   // Only publish aggregated information; no token, account ID, players or room details.
+
+  const auditReasonLabels = {
+    OPEN_PR_OUTSIDE_MAIN_POLICY: "PR vẫn mở nhưng không thuộc quy tắc nhánh main",
+    PR_OUTSIDE_MAIN_POLICY: "Có lịch sử PR nhưng không thuộc quy tắc nhánh main",
+    BRANCH_INDEX_UNAVAILABLE: "Không lấy được danh sách nhánh GitHub",
+    BRANCH_EXISTS_NO_PR: "Nhánh GitHub còn tồn tại nhưng không tìm thấy PR",
+    BACKUP_OR_WIP_NO_PR: "Bản dự phòng / đang phát triển, chưa có PR đối chiếu",
+    RECENT_NO_BRANCH_OR_PR: "Preview mới, chưa tìm thấy nhánh hoặc PR",
+    NO_BRANCH_OR_PR_UNVERIFIED: "Không tìm thấy nhánh và PR; cần xác minh thủ công"
+  };
+  const auditDetails = audit.length ? audit.map(entry => {
+    const safeName = entry.name.replace(/[\\r\\n\\x60|]/g, "_");
+    const branch = entry.branchExists === null ? "chưa thể kiểm tra" :
+      entry.branchExists ? "còn tồn tại" : "không tìm thấy";
+    return "- **" + safeName + "**: " +
+      (auditReasonLabels[entry.reason] || entry.reason) +
+      "; nhánh: " + branch +
+      "; PR: " + (entry.matchingPrNumbers.join(", ") || "chưa tìm thấy") +
+      "; namespace: " + entry.namespaceStatus +
+      "; lưu trữ: " + entry.storageStatus +
+      "; deployment: " + entry.deploymentStatus +
+      (entry.latestDeploymentAt ? " (" + entry.latestDeploymentAt + ")" : "") +
+      "; **quyết định: GIỮ LẠI**";
+  }).join("\\n") : "Không có Preview chưa đối chiếu.";
   const markerStart = "<!-- GMWW_CF_STATUS_START -->";
   const markerEnd = "<!-- GMWW_CF_STATUS_END -->";
   const body = "# GMWW Cloudflare Maintenance\n\n" +
     "Thông tin tổng hợp, cập nhật qua GitHub Actions có xác thực. " +
     "Không chứa dữ liệu game hoặc thông tin bí mật.\n\n" +
     markerStart + "\n" + JSON.stringify(status) + "\n" + markerEnd + "\n\n" +
+    "### Chi tiết Preview chưa đối chiếu (chỉ kiểm toán, không tự xóa)\\n\\n" +
+    auditDetails + "\\n\\n" +
     "Nhật ký chi tiết: [GitHub Actions](" +
     "https://github.com/" + REPO + "/actions/workflows/cloudflare-maintenance.yml).\n";
   await gh("/issues/" + STATUS_ISSUE, "PATCH", { body });
@@ -321,6 +347,9 @@ export async function runMaintenance({
       "- Giữ lại (bảo vệ): " + plan.protectedPreviews.length +
       " | Chưa đối chiếu: " + plan.unlinked.length +
       " | Bỏ qua: " + skipped.length + "\n" +
+      "- Đã kiểm toán từng Preview: " + audit.length +
+      " | Lỗi xác minh API: " + auditFailures + "\\n" +
+      "- Nhóm chưa đối chiếu: " + JSON.stringify(auditReasons) + "\\n" +
       "- Production: không thay đổi binding\n";
     await writeFile(env.GITHUB_STEP_SUMMARY, summary, { flag: "a" });
   }
