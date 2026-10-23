@@ -70,6 +70,47 @@ export function planCleanup({ previews, namespaces, pullRequests, productionIds,
   return { eligible, protectedPreviews, unlinked };
 }
 
+
+export function auditUnlinkedPreviews({ previews, namespaces, pullRequests, branches, productionIds, now, unlinked }) {
+  if (![previews, namespaces, pullRequests, unlinked].every(Array.isArray) ||
+      !(productionIds instanceof Set) || !Number.isFinite(now))
+    throw new Error("Audit inventory is incomplete");
+  const branchNames = Array.isArray(branches)
+    ? new Set(branches.map(x => x?.name).filter(Boolean)) : null;
+  return unlinked.map(item => {
+    const preview = previews.find(x => x.name === item.name);
+    const name = String(item.name || "");
+    const relatedPrs = pullRequests.filter(pr =>
+      pr?.head?.ref === name && pr?.head?.repo?.full_name === REPO);
+    const hasOpenPr = relatedPrs.some(pr => pr.state === "open");
+    const matches = preview?.slug ? namespaces.filter(ns =>
+      ns.name === WORKER + "_" + preview.slug + "_RoomDurableObject" &&
+      ns.script === WORKER && ns.id) : [];
+    const namespaceId = matches.length === 1 ? matches[0].id : null;
+    const created = Date.parse(preview?.created_on || "");
+    let reason;
+    if (hasOpenPr) reason = "OPEN_PR_OUTSIDE_MAIN_POLICY";
+    else if (relatedPrs.length) reason = "PR_OUTSIDE_MAIN_POLICY";
+    else if (!branchNames) reason = "BRANCH_INDEX_UNAVAILABLE";
+    else if (branchNames.has(name)) reason = "BRANCH_EXISTS_NO_PR";
+    else if (/^(backup|wip)\//i.test(name)) reason = "BACKUP_OR_WIP_NO_PR";
+    else if (Number.isFinite(created) && now - created < 7 * RETENTION_MS)
+      reason = "RECENT_NO_BRANCH_OR_PR";
+    else reason = "NO_BRANCH_OR_PR_UNVERIFIED";
+    return {
+      name, reason, branchExists: branchNames ? branchNames.has(name) : null,
+      matchingPrNumbers: relatedPrs.map(pr => pr.number).filter(Number.isFinite),
+      createdAt: Number.isFinite(created) ? new Date(created).toISOString() : null,
+      namespaceStatus: namespaceId
+        ? productionIds.has(namespaceId) ? "PRODUCTION_BINDING_PROTECTED" : "ISOLATED_MATCH"
+        : "NO_UNIQUE_NAMESPACE_MATCH",
+      storageStatus: "NOT_CHECKED", latestDeploymentAt: null,
+      deploymentStatus: "NOT_CHECKED", action: "RETAIN_FOR_REVIEW",
+      namespaceId
+    };
+  });
+}
+
 export async function runMaintenance({
   env = process.env, request = fetch, now = Date.now()
 } = {}) {
@@ -124,12 +165,63 @@ export async function runMaintenance({
     listAll("/pulls?state=all&sort=updated&direction=desc", gh, 100),
     cf("/workers/scripts/" + WORKER + "/settings")
   ]);
+  // Branch inventory is supplementary evidence, not permission to delete.
+  let branches = null;
+  try {
+    branches = await listAll("/branches", gh, 100);
+  } catch (error) {
+    console.warn("GMWW branch audit unavailable:", error.message);
+  }
   const productionIds = new Set((settings?.result?.bindings || [])
     .filter(x => x.type === "durable_object_namespace")
     .map(x => x.namespace_id).filter(Boolean));
   const plan = planCleanup({
     previews, namespaces, pullRequests, productionIds, now
   });
+
+  const audit = auditUnlinkedPreviews({
+    previews, namespaces, pullRequests, branches, productionIds, now,
+    unlinked: plan.unlinked
+  });
+  let auditFailures = branches === null ? 1 : 0;
+  for (let offset = 0; offset < audit.length; offset += 4) {
+    await Promise.all(audit.slice(offset, offset + 4).map(async entry => {
+      const preview = previews.find(x => x.name === entry.name);
+      try {
+        const [detail, deployments] = await Promise.all([
+          cf("/workers/workers/" + WORKER + "/previews/" + encodeURIComponent(preview.id)),
+          cf("/workers/workers/" + WORKER + "/previews/" +
+            encodeURIComponent(preview.id) + "/deployments?page=1&per_page=10")
+        ]);
+        if (detail?.result?.id !== preview.id || !Array.isArray(deployments?.result))
+          throw new Error("Preview/deployment metadata incomplete");
+        const times = [detail.result.deployed_on,
+          ...deployments.result.map(x => x.created_on)]
+          .map(x => Date.parse(x || "")).filter(Number.isFinite);
+        entry.latestDeploymentAt = times.length
+          ? new Date(Math.max(...times)).toISOString() : null;
+        entry.deploymentStatus = "VERIFIED";
+      } catch (error) {
+        entry.deploymentStatus = "UNVERIFIED_API_ERROR";
+        auditFailures++;
+        console.warn("Preview deployment audit incomplete:", entry.name, error.message);
+      }
+      if (entry.namespaceStatus !== "ISOLATED_MATCH") return;
+      try {
+        const objects = await cf("/workers/durable_objects/namespaces/" +
+          entry.namespaceId + "/objects?limit=1000");
+        entry.storageStatus = emptyNamespace(objects)
+          ? "EMPTY_CONFIRMED" : "NONEMPTY_OR_UNVERIFIED";
+      } catch (error) {
+        entry.storageStatus = "UNVERIFIED_API_ERROR";
+        auditFailures++;
+        console.warn("Preview storage audit incomplete:", entry.name, error.message);
+      }
+    }));
+  }
+  const auditReasons = {};
+  for (const entry of audit)
+    auditReasons[entry.reason] = (auditReasons[entry.reason] || 0) + 1;
   const checked = [], deleted = [], skipped = [];
   let cleanupAttempts = 0;
   for (const target of plan.eligible) {
@@ -194,7 +286,7 @@ export async function runMaintenance({
     productionIds.has(x.namespace_id))) throw new Error("Production binding changed");
 
   const status = {
-    schema: 1, state: skipped.length ? "partial" : "success",
+    schema: 2, state: skipped.length || auditFailures ? "partial" : "success",
     updatedAt: new Date(now).toISOString(), mode,
     namespaceCount: afterNamespaces.length,
     previewCount: afterPreviews.length,
@@ -203,6 +295,7 @@ export async function runMaintenance({
     deletedCount: deleted.length,
     protectedCount: plan.protectedPreviews.length,
     unlinkedCount: plan.unlinked.length,
+    auditInspectedCount: audit.length, auditFailures, auditReasons,
     skippedCount: skipped.length,
     productionProtected: true,
     runUrl: "https://github.com/" + REPO + "/actions/runs/" +
