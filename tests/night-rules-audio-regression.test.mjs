@@ -114,3 +114,42 @@ test('duplicate cue neither overlaps nor interrupts the already playing clip',as
  await play('system','seer','Sói');await play('system','seer','Sói');
  assert.equal(played,1);assert.equal(paused,0);
 });
+
+test('GM cannot revive a living target; a genuine death can still be revived',async()=>{
+ const h=harness();
+ const request={loginId:'villager',type:'revive'};
+ const rejected=await h.room.executeGmInteraction({},request);
+ assert.equal(rejected.status,409);
+ assert.equal((await rejected.json()).error,'TARGET_NOT_DEAD');
+ assert.equal(h.data.get('interactions').length,0);
+ h.data.set('interactions',[{id:'death-1',loginId:'villager',matchId:'m',type:'dead',effectActive:true}]);
+ const accepted=await h.room.executeGmInteraction({},request);
+ assert.equal(accepted.status,200);
+ assert.equal((await accepted.json()).revived.length,1);
+ assert.equal(h.data.get('interactions')[0].effectActive,false);
+});
+
+test('day Artifact cannot consume a resurrection on a living player',async()=>{
+ const meta={matchId:'m',cycleKey:'morning-1',cycleNight:1,cyclePhase:'morning',phase:'running'};
+ const data=new Map([
+  ['players',{'member:seer':{loginId:'seer'},'member:villager':{loginId:'villager'}}],
+  ['assignments',[]],
+  ['interactions',[]],
+  ['artifact:seer',{artifactId:'revive-item',artifactCard:{functions:[{actionId:'action_revive',phase:'day',targetCount:1}]}}]
+ ]);
+ const getKeys=[];
+ const Room=vm.runInNewContext('(class {'+cut(worker,'  async gmDayAction(', '  async gmBattleAction(')+'})',{
+  normalizeLoginId:x=>String(x||'').replace(/^member:/,''),Response,
+  j:(d,status=200)=>Response.json(d,{status})
+ });
+ const room=new Room();
+ room.gmAuthorized=async()=>({ok:true,meta});
+ room.ctx={storage:{get:async key=>{getKeys.push(key);return structuredClone(data.get(key));}}};
+ const response=await room.gmDayAction({},{
+  actorId:'seer',artifactId:'revive-item',actionId:'action_revive',
+  targetIds:['villager'],clientEventId:'revive-1',matchId:'m',cycleKey:'morning-1'
+ });
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error,'DAY_REVIVE_TARGET_NOT_DEAD');
+ assert.equal(getKeys.some(key=>key.startsWith('artifactCycle:')),false,'must reject before reserving quota');
+});
