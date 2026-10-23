@@ -465,8 +465,15 @@ function gmwwApplyRoster(rows,origin='http'){
    "    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token&&d)?Object.assign(d,{__gmwwFetchedAt:requestedAt}):null)");
  offlineReplace("if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);",
    "if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;if(Number(d.__gmwwFetchedAt||0)>=gmwwLastGallowsBroadcastAt){state.gallows=d?.gallows||null;renderGallowsWidget()}handleSeatSwapRequests(d?.swapRequests);");
- offlineReplace("state.room=d.room||state.room;if(String(d.room?.phase||'').toLowerCase()==='ended')",
-   "if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;if(String(d.room?.phase||'').toLowerCase()==='ended')");
+ // Constrain replacement to refreshPrivateRole: other helpers also assign state.room.
+ const privateStart=output.indexOf('async function refreshPrivateRole(force=false){');
+ const privateEnd=output.indexOf('async function ensureRoleGameView(',privateStart);
+ if(privateStart<0||privateEnd<privateStart)throw new Error('Missing private role receipt scope');
+ const privateScope=output.slice(privateStart,privateEnd);
+ const roleRoomOld="state.room=d.room||state.room;if(String(d.room?.phase||'').toLowerCase()==='ended')";
+ const roleRoomNew="if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;if(String(d.room?.phase||'').toLowerCase()==='ended')";
+ if(privateScope.split(roleRoomOld).length!==2)throw new Error('Private role room transition drift');
+ output=output.slice(0,privateStart)+privateScope.replace(roleRoomOld,roleRoomNew)+output.slice(privateEnd);
  // A stale HTTP response is never allowed to suppress private role/ballot
  // reconciliation. This is critical during high-frequency room movement.
  offlineReplace("if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt)return;",
