@@ -1429,7 +1429,9 @@ export class RoomDurableObject extends DurableObject {
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
     const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),changedCount=requested!==normalizeSeatCount(meta.seatCount),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):changedCount?villageLayout.recommendedSeatShape(requested):normalizeSeatLayout(meta.seatLayout);
-    const hasSeatOffset=!!body&&Object.prototype.hasOwnProperty.call(body,"seatOffset"),seatOffset=villageLayout.normalizeSeatOffset(hasSeatOffset?body.seatOffset:meta.seatOffset),seatSpacing=villageLayout.normalizeSeatSpacing(body&&Object.prototype.hasOwnProperty.call(body,"seatSpacing")?body.seatSpacing:meta.seatSpacing);
+    const hasSeatOffset=!!body&&Object.prototype.hasOwnProperty.call(body,"seatOffset"),
+      seatSpacing=villageLayout.normalizeSeatSpacing(body&&Object.prototype.hasOwnProperty.call(body,"seatSpacing")?body.seatSpacing:meta.seatSpacing),
+      seatOffset=villageLayout.resolveSeatOffset(requested,seatLayout,hasSeatOffset?body.seatOffset:meta.seatOffset,seatSpacing);
     if(hasSeatOffset&&(!body.seatOffset||!Number.isFinite(Number(body.seatOffset.x))||!Number.isFinite(Number(body.seatOffset.y))))return j({ok:false,error:"INVALID_SEAT_OFFSET"},400);
     if(hasSeatLayout&&String(body.seatLayout||'')!==seatLayout)return j({ok:false,error:"INVALID_SEAT_LAYOUT"},400);
     const maxOccupied=Math.max(0,...Object.values(players).map(p=>Number(p?.seatId||0)||0));
