@@ -21,7 +21,7 @@ export function hunterLinkedDeaths({assignments=[],interactions=[],matchId='',ni
       id(r.loginId)===hunter&&Number(r.night||0)<=night);
     if(!deaths.length)continue;
     const marks=rows.filter(r=>matches(r)&&id(r.actorId)===hunter&&id(r.loginId)!==hunter&&
-      id(r.loginId)&&r.artifactId!=='__irrelevant__'&&!r.artifactId&&
+      id(r.loginId)&&!r.artifactId&&
       r.type!=='dead'&&r.noEffect!==true&&r.status!=='skipped'&&
       String(r.actionId||r.effectId||r.effectName||'').trim()&&
       Number(r.night||0)>0&&Number(r.night||0)<=night);
