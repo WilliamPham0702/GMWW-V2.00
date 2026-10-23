@@ -38,18 +38,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout trusted main
+      - name: Lấy mã nguồn từ nhánh main tin cậy
         uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
-      - name: Setup Node
+      - name: Thiết lập môi trường Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Safety regression tests
+      - name: Kiểm thử an toàn chống phát sinh lỗi
         run: node --test tests/cloudflare-namespace-maintenance.test.mjs tests/cleanup-closed-preview.test.mjs
-      - name: Run isolated Cloudflare maintenance backend
+      - name: Chạy bảo trì Cloudflare độc lập
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
