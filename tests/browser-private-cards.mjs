@@ -66,12 +66,9 @@ for(const [i,s] of sessions.entries()){
    await face.click({position:{x:35,y:35},timeout:10000});
    await face.waitFor({state:'hidden',timeout:10000});
    assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role automatically goes below Artifact');
-   // Each visible rear-card edge is independently clickable and brings the selected card forward.
-   // The rear card is raised first, then opened by a second tap.
+   // Chrome/Edge regression: the rear card must open on FIRST tap; refresh is never required.
    await role.click({timeout:10000});
    assert.equal(await deck.getAttribute('data-deck-top'),'role','tapping lower Role raises it above Artifact');
-   assert.equal(await face.isVisible(),false,'raising the rear Role does not disclose its face');
-   await role.click({timeout:10000});
    await face.waitFor({state:'visible',timeout:10000});
    await page.mouse.click(7,7);
    await face.waitFor({state:'hidden',timeout:10000});
