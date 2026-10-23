@@ -470,8 +470,8 @@ function gmwwApplyRoster(rows,origin='http'){
  const privateEnd=output.indexOf('async function ensureRoleGameView(',privateStart);
  if(privateStart<0||privateEnd<privateStart)throw new Error('Missing private role receipt scope');
  const privateScope=output.slice(privateStart,privateEnd);
- const roleRoomOld="state.room=d.room||state.room;if(String(d.room?.phase||'').toLowerCase()==='ended')";
- const roleRoomNew="if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;if(String(d.room?.phase||'').toLowerCase()==='ended')";
+ const roleRoomOld="state.room=d.room||state.room;\n  if(previous";
+ const roleRoomNew="if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;\n  if(previous";
  if(privateScope.split(roleRoomOld).length!==2)throw new Error('Private role room transition drift');
  output=output.slice(0,privateStart)+privateScope.replace(roleRoomOld,roleRoomNew)+output.slice(privateEnd);
  // A stale HTTP response is never allowed to suppress private role/ballot
@@ -487,8 +487,6 @@ function gmwwApplyRoster(rows,origin='http'){
  // that the player is already reading.
  offlineReplace("    setGameViewPane('village',{persist:false});\n  }else if(!hasRole",
    "    if($('#game')?.dataset.privateCardView!=='open')setGameViewPane('village',{persist:false});\n  }else if(!hasRole");
- offlineReplace("if(modalOpen&&policy.mode==='battle')setGameViewPane('village',{persist:false});",
-   "if(modalOpen&&policy.mode==='battle'&&$('#game')?.dataset.privateCardView!=='open')setGameViewPane('village',{persist:false});");
 
  return output;
 }
