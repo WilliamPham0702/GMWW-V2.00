@@ -9,7 +9,7 @@
   const fire={x:50,y:64};
   const scene=Object.freeze({id:'gp2-25d',version:1,fire,skyEnd:15,groundTop:28,groundBottom:99,
     zones:Object.freeze({back:[29,48],middle:[48,73],front:[73,94]})});
-  // The central paving must accommodate the whole 30-seat rectangle.
+  // The central paving must accommodate one 6–30-seat circle.
   // Outer roofs/sea are excluded, while the lower bridge remains walkable.
   // Paved 2.5D courtyard; outer houses, sea and foliage are never walkable.
   const polygon=[[16,28],[84,28],[89,35],[89,53],[91,70],[89,88],
@@ -50,17 +50,18 @@
   }
   /* Single perimeter, like a real Werewolf circle of people seated around the fire.
      Coordinates shared by GM IPA, Cloudflare Worker, and Player Web. */
-  // Every supported 6–30 capacity is offered; legacy ellipse rooms are treated
-  // as diamonds without changing assigned Seat IDs.
-  const seatTemplateCounts=Object.freeze(Array.from({length:25},(_,i)=>i+6));
-  const seatTemplateShapes=Object.freeze(['circle','diamond','rectangle']);
+  // V3.191: only even-sized Seat Mau presets: 6,8,...30. Actual seat IDs
+  // remain contiguous (1..count), and odd-size existing rooms stay supported.
+  const seatTemplateCounts=Object.freeze(Array.from({length:13},(_,i)=>6+i*2));
+  const seatTemplateShapes=Object.freeze(['circle']);
   function normalizeSeatLayout(shape){
+    // Render all saved legacy outlines on the same real-life circular ring.
+    // Do not rewrite assignments or persisted Seat IDs.
     const value=String(shape||'');
-    return value==='ellipse'?'diamond':seatTemplateShapes.includes(value)?value:'';
+    return ['circle','ellipse','diamond','rectangle'].includes(value)?'circle':'';
   }
   function recommendedSeatShape(count){
-    const n=Math.max(6,Math.min(30,Math.trunc(Number(count)||12)));
-    return n<=12?'circle':n<=20?'diamond':'rectangle';
+    return 'circle';
   }
   const SCREEN_Y_SCALE=1.78;
   function circleContour(t,rx,ry){
@@ -83,54 +84,18 @@
     return{x:points[lo].x+(points[hi].x-points[lo].x)*portion,
       y:points[lo].y+(points[hi].y-points[lo].y)*portion};
   }
-  function diamondContour(index,count,rx,ry){
-    // Every vertex is a Seat. Distribute integer segments across the four
-    // diagonals: uniform fractional progress crowds pairs at sharp corners.
-    const vertices=[[0,-ry],[rx,0],[0,ry],[-rx,0],[0,-ry]];
-    const base=Math.floor(count/4),extra=count%4;
-    let cursor=index;
-    for(let edge=0;edge<4;edge++){
-      const segments=base+(edge<extra?1:0);
-      if(cursor<segments){
-        const f=cursor/segments;
-        return{x:vertices[edge][0]+(vertices[edge+1][0]-vertices[edge][0])*f,
-          y:vertices[edge][1]+(vertices[edge+1][1]-vertices[edge][1])*f};
-      }
-      cursor-=segments;
-    }
-    return{x:0,y:-ry};
-  }
-  function rectangleContour(t,rx,ry){
-    // Long LEFT and RIGHT edges, a single closed perimeter, no interior rows.
-    const corners=[[0,-ry],[rx,-ry],[rx,ry],[-rx,ry],[-rx,-ry],[0,-ry]];
-    const lengths=corners.slice(1).map((p,i)=>
-      Math.hypot(p[0]-corners[i][0],SCREEN_Y_SCALE*(p[1]-corners[i][1])));
-    const total=lengths.reduce((a,b)=>a+b,0);
-    let distance=((t%1)+1)%1*total;
-    for(let i=0;i<lengths.length;i++){
-      if(distance<=lengths[i]||i===lengths.length-1){
-        const f=Math.min(1,distance/Math.max(1e-9,lengths[i]));
-        return{x:corners[i][0]+(corners[i+1][0]-corners[i][0])*f,
-          y:corners[i][1]+(corners[i+1][1]-corners[i][1])*f};
-      }
-      distance-=lengths[i];
-    }
-    return{x:0,y:-ry};
-  }
   function seatTemplatePositions(count,shape){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    const kind=normalizeSeatLayout(shape)||recommendedSeatShape(n);
-    // Center exactly on the published scene's campfire; preserve Character size.
-    const rx=kind==='rectangle'?30:kind==='diamond'?32:31;
-    const ry=kind==='circle'?18:27;
+    // Physical circle, displayed as an ellipse in the 2.5D perspective.
+    // As player count increases, expand the ONE perimeter around the campfire
+    // without changing Character scale or using inner tiers / box formations.
+    const radiusX=Math.min(35,22+(n-6)*0.54);
+    const radiusY=radiusX/SCREEN_Y_SCALE;
     const result=[];
     for(let i=0;i<n;i++){
-      const t=i/n,p=kind==='circle'?ovalContour(t,rx,ry):
-        kind==='diamond'?diamondContour(i,n,rx,ry):rectangleContour(t,rx,ry);
+      const p=ovalContour(i/n,radiusX,radiusY);
       const x=fire.x+p.x,y=fire.y+p.y;
-      // A regression into a grid or an unsafe cliff is a programming error,
-      // not a reason to relocate individual seats onto one another.
-      if(!inside(x,y))throw Error('INVALID_SEAT_PERIMETER_'+kind+'_'+n+'_'+i);
+      if(!inside(x,y))throw Error('INVALID_SEAT_CIRCLE_'+n+'_'+i);
       result.push({x,y,ring:0,depth:Math.max(0,Math.min(5,Math.floor((y-29)/11)))});
     }
     return result;

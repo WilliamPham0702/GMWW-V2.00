@@ -7,12 +7,12 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const context=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),context);
 const layout=context.GMWW_VILLAGE_LAYOUT;
-const sizes=Array.from({length:25},(_,i)=>i+6);
-const shapes=['circle','diamond','rectangle'];
+const sizes=Array.from({length:13},(_,i)=>6+i*2);
+const shapes=['circle'];
 
 test('GMWW fire-centered auto templates adapt by group size',()=>{
   for(let n=6;n<=30;n++){
-    const expected=n<=12?'circle':n<=20?'diamond':'rectangle';
+    const expected='circle';
     assert.equal(layout.recommendedSeatShape(n),expected,'recommended shape for '+n);
   }
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
@@ -35,26 +35,20 @@ test('GP2 seats use the real bonfire landmark and remain on walkable ground',()=
   }
 });
 
-test('GP2 uses one true perimeter and perspective depth without the rejected tier grid',()=>{
-  const seatSets=shapes.map(shape=>layout.positions(30,shape));
-  assert.equal(new Set(seatSets.map(s=>JSON.stringify(s.map(p=>[p.x,p.y])))).size,3);
-  for(const positions of seatSets){
-    assert.equal(positions.length,30);
-    assert.equal(new Set(positions.map(p=>p.x.toFixed(4)+'-'+p.y.toFixed(4))).size,30);
-    assert.ok(positions.every(p=>p.ring===0&&layout.inside(p.x,p.y)));
-    const rows=new Set(positions.map(p=>p.depth));
-    assert.ok(rows.size>=4,'one perimeter spans several perspective depths');
-    for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
-      const a=positions[i],b=positions[j];
-      assert.ok(Math.hypot(a.x-b.x,(a.y-b.y)*1.78)>5.2,'too close '+i+'/'+j);
-    }
-    assert.ok(positions.some(p=>p.y<layout.fire.y-6));
-    assert.ok(positions.some(p=>p.y>layout.fire.y+6));
-  }
-  assert.equal(layout.normalizeSeatLayout('diamond'),'diamond');
-  assert.equal(layout.normalizeSeatLayout('ellipse'),'diamond');
+test('GP2 uses one circular ring, safe ground and consistent physical perspective',()=>{
+ const positions=layout.positions(30,'circle');
+ assert.equal(positions.length,30);
+ assert.equal(new Set(positions.map(p=>p.x.toFixed(4)+'-'+p.y.toFixed(4))).size,30);
+ assert.ok(positions.every(p=>p.ring===0&&layout.inside(p.x,p.y)));
+ assert.ok(new Set(positions.map(p=>p.depth)).size>=4);
+ for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
+   const a=positions[i],b=positions[j];
+   assert.ok(Math.hypot(a.x-b.x,(a.y-b.y)*1.78)>5.2,'overlapping circular seats');
+ }
+ assert.equal(layout.normalizeSeatLayout('diamond'),'circle');
+ assert.equal(layout.normalizeSeatLayout('ellipse'),'circle');
+ assert.equal(layout.normalizeSeatLayout('rectangle'),'circle');
 });
-
 test('GP2 preserves unique seats with extreme setup offsets and spacing',()=>{
   for(const count of sizes)for(const shape of shapes)
     for(const [offset,spacing] of [[{x:10,y:-10},135],[{x:-10,y:10},70]]){

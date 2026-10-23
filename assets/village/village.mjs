@@ -1,5 +1,5 @@
 import "../status-visuals.js?v=v3139-orbits";
-import "./village-layout.js?v=fire3101-gp2&seat=3183-perimeter";
+import "./village-layout.js?v=fire3101-gp2&seat=3191-circle408";
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 import {installVillageCamera} from "./village-camera.mjs";
 import {createPublicRoomPoller,mergeStableSeats,validateRoomCode} from "./village-room.mjs";

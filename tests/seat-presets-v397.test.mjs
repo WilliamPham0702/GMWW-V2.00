@@ -7,8 +7,8 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const ctx=vm.createContext({});
 vm.runInContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
-const sizes=Array.from({length:25},(_,i)=>i+6);
-const shapes=['circle','diamond','rectangle'];
+const sizes=Array.from({length:13},(_,i)=>6+i*2);
+const shapes=['circle'];
 
 test('all 25 Seat Mẫu capacities exist in circle, diamond and long-side rectangle, without duplicate locations or invalid world points',()=>{
   assert.deepEqual(Array.from(layout.seatTemplateCounts),sizes);
@@ -27,22 +27,20 @@ test('all 25 Seat Mẫu capacities exist in circle, diamond and long-side rectan
   }
 });
 
-test('layouts are distinct and form a single outline around the fire',()=>{
-  for(const size of sizes){
-    const rendered=shapes.map(s=>JSON.stringify(layout.positions(size,s).map(p=>[p.x,p.y])));
-    assert.equal(new Set(rendered).size,3,'different shapes must not reuse the same geometry for '+size);
-    for(const shape of shapes){
-      const points=layout.positions(size,shape);
-      const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
-      const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
-      assert.ok(width>30&&height>25,shape+' '+size+' must use the wider courtyard');
-    }
+test('all supported sizes use a circular contour while legacy shapes retain IDs',()=>{
+ for(let n=6;n<=30;n++){
+  const baseline=layout.positions(n,'circle');
+  assert.equal(baseline.length,n);
+  assert.ok(baseline.every(p=>p.ring===0&&layout.inside(p.x,p.y)));
+  for(const savedShape of ['ellipse','diamond','rectangle']){
+   assert.deepEqual(layout.positions(n,savedShape).map(p=>[p.x,p.y]),baseline.map(p=>[p.x,p.y]));
   }
-  assert.equal(layout.positions(12).length,12,'seat capacity must exactly match configured room size');
-  assert.ok(layout.positions(12).every(p=>p.ring===0),'legacy fallback has no inner ring');
-  assert.equal(layout.positions(8,'circle').length,8,'a selected 8-slot layout is not forced to 24');
+  const width=Math.max(...baseline.map(p=>p.x))-Math.min(...baseline.map(p=>p.x));
+  const height=Math.max(...baseline.map(p=>p.y))-Math.min(...baseline.map(p=>p.y));
+  assert.ok(width>20&&height>13,'single round perimeter');
+ }
+ assert.equal(layout.positions(8).length,8);
 });
-
 test('GM swipes the Gọi Người action menu, while dot samples stay in a separate closeable panel',()=>{
   const html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css'),app=read('server-game/current/app.js');
   const order=['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual','playGatherConfirm','playGatherDisband'];
