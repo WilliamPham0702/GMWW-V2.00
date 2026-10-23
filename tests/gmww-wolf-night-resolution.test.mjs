@@ -97,7 +97,7 @@ test('Maiden visiting a house whose occupant dies also dies by visit at dawn',()
 });
 test('Maiden at home dies from wolf bite; invalid, undone and old-night visits cannot protect',()=>{
   assert.deepEqual(maidenWolf([bite('alice')]).victims,['alice']);
-  for(const invalid of [visit('bob',{undone:true}),visit('bob',{night:2}),visit('bob',{matchId:'other'}),
+  for(const invalid of [{...visit('bob'),undone:true},visit('bob',{night:2}),visit('bob',{matchId:'other'}),
     action('action_visit_house','bob',{actorId:'dave'}),
     {...visit('bob'),type:'thumb_vote'}]){
     assert.deepEqual(maidenWolf([bite('alice'),invalid]).victims,['alice']);
