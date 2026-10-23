@@ -151,7 +151,7 @@ function gallowsDock(){
   let dock=document.getElementById('gmwwGallowsDock');if(dock)return dock;
   dock=document.createElement('section');dock.id='gmwwGallowsDock';dock.hidden=true;
   dock.setAttribute('aria-label','Menu Lên Giàn trên Player Web');
-  dock.innerHTML='<button type="button" id="gmwwGallowsOpenNomination">ĐỀ CỬ</button>'+
+  dock.innerHTML='<button type="button" id="gmwwGallowsOpenNomination" title="Kéo cờ 🏴‍☠️ trong làng hoặc mở danh sách">🏴‍☠️ ĐỀ CỬ</button>'+
     '<button type="button" data-gallows-vote="👍" aria-label="Bỏ phiếu cứu">👍</button>'+
     '<button type="button" data-gallows-vote="👎" aria-label="Bỏ phiếu giết">👎</button>';
   document.body.append(dock);
@@ -168,19 +168,19 @@ function gallowsTick(){
   const g=state.gallows,el=document.getElementById('gmwwGallowsPlayer'),dock=document.getElementById('gmwwGallowsDock');
   if(g&&dock&&!dock.hidden){
     const stage=gallowsCurrentStage(),me=String(state.member?.loginId||'');
-    dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.disabled=stage!=='voting'||!!g.votes?.[me]||(g.blockedVotes||g.blocked||[]).includes(me)});
+    dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.disabled=stage!=='voting'||!!g.votes?.[me]||(g.blockedVotes||g.blocked||[]).includes(me)||g.candidateId===me});
     const nominate=dock.querySelector('#gmwwGallowsOpenNomination');
-    if(nominate)nominate.disabled=stage!=='nominating'||!!g.nominations?.[me]||(g.blockedNomination||[]).includes(me);
+    if(nominate)nominate.disabled=stage!=='nominating'||!!g.nominations?.[me]||(g.blockedNomination||[]).includes(me)||!(g.eligible||[]).includes(me);
   }
   if(!g||!el||el.hidden)return;
   const deadline=g.stage==='nominating'?g.nominationDeadlineAt:g.stage==='voting'?g.deadlineAt:null;
   const remaining=deadline?Math.max(0,Math.ceil((Number(deadline)-Date.now()-Number(state.serverClockOffsetMs||0))/1000)):g.stage==='ready'?Math.max(1,Number(g.nominationDurationSec)||10):0;
   el.querySelector('#gmwwGallowsRemaining').textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
-  const disabled=remaining<=0||g.stage!=='voting'||!!g.votes?.[state.member?.loginId]||(g.blocked||[]).includes(state.member?.loginId);
+  const disabled=remaining<=0||g.stage!=='voting'||!!g.votes?.[state.member?.loginId]||(g.blockedVotes||g.blocked||[]).includes(state.member?.loginId)||g.candidateId===state.member?.loginId;
   el.querySelector('#gmwwGallowsSave').disabled=disabled;
   el.querySelector('#gmwwGallowsKill').disabled=disabled;
   const nominate=el.querySelector('#gmwwGallowsNominate');
-  if(nominate)nominate.disabled=gallowsCurrentStage()!=='nominating'||remaining<=0||!!g.nominations?.[state.member?.loginId]||(g.blocked||[]).includes(state.member?.loginId);
+  if(nominate)nominate.disabled=gallowsCurrentStage()!=='nominating'||remaining<=0||!!g.nominations?.[state.member?.loginId]||(g.blockedNomination||[]).includes(state.member?.loginId);
 }
 function renderGallowsWidget(){
   syncGallowsVoteTags();
@@ -192,8 +192,9 @@ function renderGallowsWidget(){
   const me=String(state.member?.loginId||''),stage=gallowsCurrentStage(),
     blockedNomination=(g.blockedNomination||[]).includes(me),
     blockedVote=(g.blockedVotes||g.blocked||[]).includes(me);
-  const canNominate=stage==='nominating'&&!blockedNomination&&!g.nominations?.[me],
-    canVote=stage==='voting'&&!blockedVote&&!g.votes?.[me];
+  const eligible=Array.isArray(g.eligible)?g.eligible:[],
+    canNominate=eligible.includes(me)&&stage==='nominating'&&!blockedNomination&&!g.nominations?.[me],
+    canVote=eligible.includes(me)&&me!==g.candidateId&&stage==='voting'&&!blockedVote&&!g.votes?.[me];
   dock.hidden=!(canNominate||canVote);
   const open=dock.querySelector('#gmwwGallowsOpenNomination');
   open.hidden=!canNominate;
@@ -202,13 +203,13 @@ function renderGallowsWidget(){
   el.hidden=!canNominate||!state.gallowsNominationOpen;
   if(el.hidden){gallowsTick();return}
   const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
-  el.querySelector('#gmwwGallowsPrompt').textContent='Chọn người đề cử rồi nhấn OK. Thời gian bỏ phiếu: '+(g.voteDurationSec||10)+' giây.';
+  el.querySelector('#gmwwGallowsPrompt').textContent='🏴‍☠️ Kéo cờ vào Character trong làng, hoặc chạm hai lần vào cờ để chọn người còn sống. Mỗi người một phiếu.';
   const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
   sel.replaceChildren();
   for(const p of state.players||[]){
     if(p.kind&&p.kind!=='member')continue;
     const id=String(p.loginId||p.participantId||'').replace(/^member:/,'');
-    if(!id||id===me)continue;
+    if(!id||id===me||!eligible.includes(id))continue;
     const option=document.createElement('option');option.value=id;option.textContent=p.displayName||id;sel.append(option);
   }
   if([...sel.options].some(o=>o.value===prev))sel.value=prev;
@@ -224,7 +225,9 @@ function renderGallowsWidget(){
 async function sendGallowsChoice(command,targetId='',choice=''){
   if(!state.token||!state.roomCode||!state.gallows)return;
   const g=state.gallows,me=String(state.member?.loginId||'');
-  if(g.mode==='gm'||(command==='nominate'?(g.blockedNomination||[]):(g.blockedVotes||g.blocked||[])).includes(me))return;
+  if(state.gallowsSubmitPending||g.mode==='gm'||!(g.eligible||[]).includes(me)||(command==='vote'&&g.candidateId===me)||
+    (command==='nominate'?(g.blockedNomination||[]):(g.blockedVotes||g.blocked||[])).includes(me))return;
+  state.gallowsSubmitPending=true;
   try{
     const result=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/gallows',{
       method:'POST',headers:auth(),body:JSON.stringify({command,targetId,choice})});
@@ -232,6 +235,7 @@ async function sendGallowsChoice(command,targetId='',choice=''){
     state.gallows=result.gallows;state.gallowsNominationOpen=false;renderGallowsWidget();syncVillageFrame(true);
     toast(command==='nominate'?'Đã gửi đề cử.':'Đã gửi phiếu '+choice+'.');
   }catch(e){toast(e?.message||'Không gửi được phiếu.');pollRoomState().catch(()=>{})}
+  finally{state.gallowsSubmitPending=false}
 }
 
 function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}

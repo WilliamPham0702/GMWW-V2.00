@@ -1442,13 +1442,17 @@ function renderPlayBattle(){
   if(wolfMenu){
     wolfMenu.hidden=!battleState.wolfOpen;
     if(!wolfMenu.hidden){
-      const sceneKey=[playSceneRuntime.room?.matchId||'',phase,night].join(':');
-      if(wolfMenu.dataset.gmwwSceneKey!==sceneKey){
-        wolfMenu.dataset.gmwwSceneKey=sceneKey;
+      const gameKey=[playSceneRuntime.room?.matchId||'',phase,night].join(':'),
+        fireAnchor=villageFirePosition(),
+        anchorKey=[gameKey,villageScenePublished.revision,fireAnchor.join(','),innerWidth,innerHeight].join(':');
+      if(wolfMenu.dataset.gmwwSceneKey!==gameKey){
+        wolfMenu.dataset.gmwwSceneKey=gameKey;
         wolfMenu.dataset.gmwwDockApplied='';wolfMenu.dataset.gmwwFirePlaced='';delete wolfMenu.dataset.gmwwUserMoved;
       }
-      if(!gmwwRestoreDock(wolfMenu)&&wolfMenu.dataset.gmwwUserMoved!=='1'&&wolfMenu.dataset.gmwwFirePlaced!==sceneKey){
-        gmwwPlaceWolfMenuAtFire(wolfMenu);wolfMenu.dataset.gmwwFirePlaced=sceneKey;
+      // The GM menu belongs to this Day/Night image's calibrated 🔥.
+      // A deliberate GM drag overrides automatic placement for this phase.
+      if(wolfMenu.dataset.gmwwUserMoved!=='1'&&wolfMenu.dataset.gmwwFirePlaced!==anchorKey){
+        if(gmwwPlaceWolfMenuAtFire(wolfMenu))wolfMenu.dataset.gmwwFirePlaced=anchorKey;
       }
     }
   }

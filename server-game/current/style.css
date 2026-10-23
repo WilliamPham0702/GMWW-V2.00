@@ -6988,3 +6988,35 @@ body.play-immersive #playGameSheet .play-game-sheet-card[data-mode="play"]{
 body.play-immersive #start #playShell[data-step="battle"] #playBattleDock #battleWolfMenu{
   max-width:calc(100vw - 18px)!important;
 }
+
+/* V3.189 candidate — GM gallows: staged controls, transparent tally and compact bans.
+   Keep all 6–30 voters accessible without filling the iPhone village viewport. */
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+  max-height:min(72dvh,630px)!important;overflow-y:auto!important;padding:10px 13px!important;
+  background:rgba(5,39,51,.77)!important;backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important
+}
+#battleGallowsPanel .battle-gallows-primary{margin:7px 0 8px}
+#battleGallowsPanel #battleGallowsNominationStats{
+  border:1px solid rgba(182,228,228,.27);border-radius:10px;
+  background:rgba(7,35,43,.33);padding:6px 8px;margin:7px 0;font-size:11px
+}
+#battleGallowsNominationStats>small{display:block;color:#e7c992;margin-top:5px}
+#battleGallowsNominationStats .battle-gallows-tally-list{
+  display:grid;gap:2px;max-height:106px;overflow-y:auto;overscroll-behavior:contain;margin-top:5px
+}
+#battleGallowsNominationStats .battle-gallows-tally-list>div{
+  display:flex;justify-content:space-between;gap:8px;border-top:1px solid rgba(199,238,247,.12);
+  padding:3px 2px;font-size:11px
+}
+#battleGallowsNominationStats .battle-gallows-tally-list b{font-variant-numeric:tabular-nums;color:#ffe3ac}
+#battleGallowsPanel .battle-gallows-ban-details{margin:5px 0;border-top:1px solid rgba(210,242,241,.2)}
+#battleGallowsPanel .battle-gallows-ban-details>summary{
+  min-height:36px;display:flex;align-items:center;gap:6px;cursor:pointer;
+  font-size:11px;font-weight:800;color:#bfe5e2;touch-action:manipulation
+}
+#battleGallowsPanel .battle-gallows-ban-details #battleGallowsMembers{max-height:164px}
+#battleGallowsPanel .battle-gallows-result-actions{margin-top:9px}
+#battleGallowsPanel [data-gallows-command][hidden]{display:none!important}
+#battleGallowsPanel #battleGallowsVotes{max-height:130px;overflow-y:auto;margin-top:7px}
+#battleGallowsPanel #battleGallowsResult{font-size:12px;line-height:1.5}

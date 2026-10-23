@@ -486,9 +486,19 @@ window.addEventListener('message',event=>{
   const d=event.data||{};
   if(d.type==='gmww:user-activity'){revealPlayerTopMenu();return}
   if(d.type==='gmww:village-ready')syncVillageFrame(true);
+  else if(d.type==='gmww:gallows-open-nominations'){
+    const me=String(state.member?.loginId||''),g=state.gallows;
+    if(g&&g.mode==='auto'&&gallowsCurrentStage()==='nominating'&&(g.eligible||[]).includes(me)&&
+      !(g.blockedNomination||[]).includes(me)&&!g.nominations?.[me]){
+      state.gallowsNominationOpen=true;renderGallowsWidget();
+    }
+  }
   else if(d.type==='gmww:gallows-drag-nominate'){
     const id=String(d.participantId||'').replace(/^member:/,'');
-    if(id&&id!==String(state.member?.loginId||'')&&state.gallows?.mode!=='gm'&&gallowsCurrentStage()==='nominating')
+    const me=String(state.member?.loginId||''),g=state.gallows;
+    if(id&&id!==me&&g?.mode==='auto'&&gallowsCurrentStage()==='nominating'&&
+      (g.eligible||[]).includes(me)&&(g.eligible||[]).includes(id)&&
+      !(g.blockedNomination||[]).includes(me)&&!g.nominations?.[me])
       void sendGallowsChoice('nominate',id);
   }
   else if(d.type==='gmww:seat-click')toast(Number(currentRoomPlayer()?.seatId||0)?'Ghế do GM quản lý. Dùng RỜI GHẾ nếu cần rời vị trí.':'Vị trí do GM xếp. Vui lòng chờ Quản Trò.');
