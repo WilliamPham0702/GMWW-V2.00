@@ -129,8 +129,8 @@ jobs:
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
           node tests/demo-server-autonomous-e2e.mjs
           node tests/demo-room-cross-origin-webkit.mjs
-          node tests/browser-private-cards.mjs
           node tests/browser-live-realtime-vote.mjs
+          node tests/browser-private-cards.mjs
           node tests/gp2-qa-webkit.mjs
       - name: Kiểm tra mục Khám Phá trên iPhone
         run: node tests/home-v389-iphone-webkit.mjs
