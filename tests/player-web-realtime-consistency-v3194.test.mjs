@@ -17,12 +17,12 @@ test('V3.194: deployed Player Web remains valid JavaScript with stable realtime 
 });
 
 test('V3.194: joining or restoring a room requests the full public roster',()=>{
-  const start=compiled.indexOf('async function gmwwRefreshPublicRoster(');
+  const start=compiled.indexOf('let gmwwRosterRepairTimer=null;');
   const end=compiled.indexOf('async function autoResumeActiveRoom(',start);
   assert.ok(start>=0&&end>start);
   const code=compiled.slice(start,end);
   const state={roomCode:'ABCDEF',participantId:'member:a',players:[{participantId:'member:a'}],room:{phase:'lobby'}};
-  const ctx={state,api:async()=>({room:{phase:'role_delivery'},players:[
+  const ctx={state,gmwwLastRoomBroadcastAt:0,renderRooms:()=>{},syncVillageFrame:()=>{},gmwwVerifyMemberBeforeRemoval:async()=>false,setTimeout:()=>1,api:async()=>({room:{phase:'role_delivery'},players:[
     {participantId:'member:a'},{participantId:'member:b'},{participantId:'member:c'}]}),
     encodeURIComponent,console,Promise};
   vm.runInNewContext(code+'\nthis.refresh=gmwwRefreshPublicRoster;',ctx);
@@ -34,10 +34,10 @@ test('V3.194: joining or restoring a room requests the full public roster',()=>{
 });
 
 test('V3.194: incomplete public snapshot never erases a valid roster',async()=>{
-  const start=compiled.indexOf('async function gmwwRefreshPublicRoster(');
+  const start=compiled.indexOf('let gmwwRosterRepairTimer=null;');
   const end=compiled.indexOf('async function autoResumeActiveRoom(',start);
   const state={roomCode:'ABCDEF',participantId:'member:a',players:[{participantId:'member:a'},{participantId:'member:b'}],room:{phase:'running'}};
-  const ctx={state,api:async()=>({players:[{participantId:'member:z'}]}),encodeURIComponent,console};
+  const ctx={state,gmwwLastRoomBroadcastAt:0,renderRooms:()=>{},syncVillageFrame:()=>{},gmwwVerifyMemberBeforeRemoval:async()=>false,setTimeout:()=>1,api:async()=>({players:[{participantId:'member:z'}]}),encodeURIComponent,console};
   vm.runInNewContext(compiled.slice(start,end)+'\nthis.refresh=gmwwRefreshPublicRoster;',ctx);
   assert.equal(await ctx.refresh('ABCDEF','member:a'),false);
   assert.equal(state.players.length,2);
@@ -47,7 +47,7 @@ test('V3.194: private receipt restores current gallows and pending interactions 
   const start=compiled.indexOf('async function refreshPrivateRole(force=false){');
   const end=compiled.indexOf('async function ensureRoleGameView(',start);
   const receipt=compiled.slice(start,end);
-  assert.match(receipt,/state\.gallows=d\?\.gallows\|\|null;renderGallowsWidget\(\)/);
+  assert.match(receipt,/gmwwLastGallowsBroadcastAt\)\{state\.gallows=d\?\.gallows\|\|null;renderGallowsWidget\(\)/);
   assert.match(receipt,/handlePendingInteractions\(d\?\.interactions\)/);
   assert.match(receipt,/syncRoleEffects\(d\?\.effects\)/);
   assert.match(compiled,/if\(d\.type==='gallows_updated'\).*refreshPrivateRole\(true\)/);
