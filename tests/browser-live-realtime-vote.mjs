@@ -45,7 +45,12 @@ try{
    }
   },{token:s.token,member:s.member,roomCode:code,loginId:s.loginId});
   const page=await context.newPage();
-  s.errors=[];page.on('pageerror',error=>s.errors.push(error.message));
+  s.errors=[];s.privateReads=[];page.on('pageerror',error=>s.errors.push(error.message));
+  page.on('requestfailed',req=>{if(req.url().includes('/api/rooms/'))s.privateReads.push({event:'requestfailed',url:new URL(req.url()).pathname,error:req.failure()?.errorText})});
+  page.on('response',res=>{if(res.url().includes('/api/rooms/')&&res.url().endsWith('/me')){
+    s.privateReads.push({event:'private-me',status:res.status(),url:new URL(res.url()).pathname,at:Date.now()});
+    if(s.privateReads.length>40)s.privateReads.shift();
+  }});
   await page.goto(origin+'/'+code,{waitUntil:'domcontentloaded',timeout:35000});
   await page.locator('#gmwwVillageFrame').waitFor({state:'attached',timeout:25000});
   opened.push({browser,context,page,s});
@@ -98,11 +103,13 @@ try{
       return {dockHidden:dock?.hidden,deliveryState:dock?.dataset.deliveryState,
         roleHidden:button?.hidden,roleDisplay:button?getComputedStyle(button).display:null,
         activeScreen:[...document.querySelectorAll('.screen.active')].map(x=>x.id),
-        scene:game?.dataset.gmwwPlayerScene,privateCardView:game?.dataset.privateCardView}
+        scene:game?.dataset.gmwwPlayerScene,privateCardView:game?.dataset.privateCardView,
+        localToken:!!localStorage.getItem('gmww_token'),activeRoom:localStorage.getItem('gmww_active_room_v4')?.slice(0,100)}
     }).catch(e=>({error:String(e)}));
     throw Error(s.name+' live GM role release failed: '+JSON.stringify({
       server:{phase:receipt?.room?.phase,matchId:receipt?.room?.matchId,roleId:receipt?.role?.roleId,
         roleCount:receipt?.deliveryManifest?.roleCount,deliveryVersion:receipt?.room?.deliveryVersion},client,
+      privateReads:s.privateReads.slice(-30),browserErrors:s.errors.slice(-12),
       original:String(error)}));
   }
   await role.click({timeout:10000});
