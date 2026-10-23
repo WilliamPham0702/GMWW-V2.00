@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 
 test('Production workflow Bash syntax is valid after adding V3.82 OTA verification',()=>{
   const workflow=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
-  const head='      - name: Verify Production\n        shell: bash\n        run: |\n';
+  const head='      - name: Kiểm tra Production sau triển khai\n        shell: bash\n        run: |\n';
   assert.equal(workflow.split(head).length,2,'Verify Production block must be unique');
   const after=workflow.split(head)[1];
   const lines=after.split('\n');
