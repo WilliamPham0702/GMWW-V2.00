@@ -62,6 +62,11 @@ test('P0: compiled Player Web RETAINS every gallows function after private recei
  assert.match(player,/function renderGallowsWidget\(\)\{[\s\S]*?dock\.querySelectorAll\('\[data-gallows-vote\]'\)/);
 });
 
+test('P0: a missed initial team snapshot in Edge is independently repaired during background room polling',()=>{
+ const watcher=player.slice(player.indexOf('function startRoomStateWatch(){'),player.indexOf("document.addEventListener('visibilitychange'",player.indexOf('function startRoomStateWatch(){')));
+ assert.match(watcher,/if\(\(state\.players\|\|\[\]\)\.length<=1\)void gmwwRefreshPublicRoster\(state\.roomCode,state\.participantId\)/);
+});
+
 test('P0: server gallows pushes authoritative phase, and private replies never roll back newer vote broadcasts',()=>{
  const events=(worker.match(/this\.broadcast\(\{type:"gallows_updated",room:publicRoom\(meta\),gallows:/g)||[]).length;
  assert.equal(events,3,'automatic timer, GM command and Player vote broadcast the full phase');
