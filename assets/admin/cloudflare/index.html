@@ -104,7 +104,7 @@
     const match = String(issue.body || "").match(marker);
     if (!match) throw new Error("Không tìm thấy báo cáo hợp lệ");
     const data = JSON.parse(match[1]);
-    if (data.schema !== 1) throw new Error("Định dạng báo cáo không hợp lệ");
+    if (![1, 2].includes(data.schema) || data.productionProtected !== true) throw new Error("Báo cáo chưa xác minh an toàn Production");
     if (Number.isInteger(data.namespaceCount) && data.namespaceCount >= 0) {
       byId("ns").textContent = data.namespaceCount + " / 100";
       byId("usage").style.width = Math.min(100, data.namespaceCount) + "%";
