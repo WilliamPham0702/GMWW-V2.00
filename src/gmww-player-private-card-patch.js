@@ -546,6 +546,50 @@ function gmwwShouldAdvancePrivatePhase(next){
  // Mirror the source-fragment motion rule in the shipped compiled Player Web.
  offlineReplace("return ['lobby','waiting','role_delivery'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)",
    "return ['lobby','waiting'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)");
+ // P0: the browser receives /me with phase=role_delivery and roleId, but
+ // the legacy receipt apply pipeline can still leave state at lobby/no-role.
+ // Provide a narrow, authenticated, fail-closed application fallback. Never
+ // derive private roles from the public roster or trust another participant.
+ const PRIVATE_DELIVERY_RECOVERY=String.raw`
+let gmwwPrivateDeliveryRecoveryBusy=false;
+async function gmwwPrivateDeliveryRecovery(){
+  if(gmwwPrivateDeliveryRecoveryBusy||!state.roomCode||!state.participantId||!state.token)return false;
+  if(state.role&&playerScenePolicy(state.room).rolesReleased)return true;
+  const room=state.roomCode,participant=state.participantId,token=state.token;
+  gmwwPrivateDeliveryRecoveryBusy=true;
+  try{
+    const d=await api('/api/rooms/'+encodeURIComponent(room)+'/me',{headers:{Authorization:'Bearer '+token}});
+    if(room!==state.roomCode||participant!==state.participantId||token!==state.token)return false;
+    const phase=String(d?.room?.phase||'').toLowerCase();
+    if(!['role_delivery','running','started','game','playing'].includes(phase))return false;
+    const roles=Array.isArray(d?.roles)&&d.roles.length?d.roles:(d?.role?[d.role]:[]);
+    if(!roles.length)return false;
+    state.room=d.room;
+    state.roles=roles;
+    const oldId=String(state.role?.assignmentIndex??state.role?.roleId??'');
+    const chosen=roles.find(r=>String(r?.assignmentIndex??r?.roleId??'')===oldId)||roles[0];
+    state.roleIndex=Math.max(0,roles.indexOf(chosen));
+    state.role=chosen;
+    state.artifact=d?.artifact||null;
+    state.artifactExpected=d?.deliveryManifest?.artifactExpected===true||d?.artifactExpected===true;
+    state.artifactCycle=d?.artifactCycle||{cycleKey:'',count:0,max:3};
+    if(d?.deliveryManifest)state.privateDeliveryManifest=d.deliveryManifest;
+    if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;
+    gmwwAcknowledgePrivateDelivery(d);
+    rememberActiveRole(state.role);
+    renderRole();
+    maybeOpenGame();
+    renderPlayerPrivateDock();
+    syncVillageFrame(true);
+    return true;
+  }catch(e){console.warn('[GMWW P0 private delivery recovery]',e);return false}
+  finally{gmwwPrivateDeliveryRecoveryBusy=false}
+}
+`;
+ offlineReplace("function startGmPresencePoll(){",
+   PRIVATE_DELIVERY_RECOVERY+"\nfunction startGmPresencePoll(){");
+ offlineReplace("if(!state.role||!playerScenePolicy(state.room).rolesReleased)void refreshPrivateRole(true)}}",
+   "if(!state.role||!playerScenePolicy(state.room).rolesReleased){void refreshPrivateRole(true);void gmwwPrivateDeliveryRecovery()}}}");
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
