@@ -50,7 +50,12 @@ try{
    }
   },{token:s.token,member:s.member,roomCode:code,loginId:s.loginId});
   const page=await context.newPage();
-  s.errors=[];s.privateReads=[];page.on('pageerror',error=>s.errors.push(error.message));
+  s.errors=[];s.privateReads=[];s.consoleWarnings=[];
+  page.on('pageerror',error=>s.errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='warning'||message.type()==='error'){
+    const body=message.text().slice(0,320);
+    if(s.consoleWarnings.length<24)s.consoleWarnings.push(body);
+  }});
   page.on('requestfailed',req=>{if(req.url().includes('/api/rooms/'))s.privateReads.push({event:'requestfailed',url:new URL(req.url()).pathname,error:req.failure()?.errorText})});
   page.on('response',res=>{if(res.url().includes('/api/rooms/')&&res.url().endsWith('/me')){
     // Record ONLY public phase and test role identifiers, never actual card text.
@@ -120,6 +125,7 @@ try{
       server:{phase:receipt?.room?.phase,matchId:receipt?.room?.matchId,roleId:receipt?.role?.roleId,
         roleCount:receipt?.deliveryManifest?.roleCount,deliveryVersion:receipt?.room?.deliveryVersion},client,
       privateReads:s.privateReads.slice(-30),browserErrors:s.errors.slice(-12),
+      consoleWarnings:s.consoleWarnings.slice(-12),
       original:String(error)}));
   }
   await role.click({timeout:10000});
