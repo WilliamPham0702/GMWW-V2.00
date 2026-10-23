@@ -16,12 +16,12 @@ test('isolated Character V5.61 validation belongs to its independent preview wor
 test('main production keeps all game safety and OTA gates',()=>{
   const production=readFileSync('.github/workflows/deploy-production.yml','utf8');
   for(const guard of [
-    'Classify and prepare GMWW update channel',
-    'Verify OTA version advances when Runtime source changes',
-    'Verify Cloudflare credentials',
-    'Block GMWW version rollback',
-    'Deploy Worker to Production',
-    'Verify Production',
+    'Phân loại và chuẩn bị kênh cập nhật GMWW',
+    'Kiểm tra tăng phiên bản OTA khi Runtime thay đổi',
+    'Xác minh thông tin kết nối Cloudflare',
+    'Chặn phát hành phiên bản thấp hơn',
+    'Triển khai Worker lên Production',
+    'Kiểm tra Production sau triển khai',
     'gmww-production',
     'api/update/manifest',
     'gmww-live-health'
