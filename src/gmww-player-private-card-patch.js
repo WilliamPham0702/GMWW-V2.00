@@ -527,6 +527,10 @@ function gmwwShouldAdvancePrivatePhase(next){
  if(phaseReceipt.split(oldPhaseGuard).length!==3)throw new Error('Private role phase-fence expected 2 room updates');
  output=output.slice(0,phaseReceiptBegin)+phaseReceipt.replaceAll(oldPhaseGuard,newPhaseGuard)+output.slice(phaseReceiptEnd);
 
+ // Independent privacy-safe receipt recovery piggybacks on the already-running
+ // GM presence watchdog (seen alive in browser E2E) if room WS/poll has stalled.
+ offlineReplace("function startGmPresencePoll(){if(state.gmPresencePoll)return;state.gmPresencePoll=setInterval(()=>{if(state.member&&!document.hidden)refreshGmPresence()},2500)}",
+  "function startGmPresencePoll(){if(state.gmPresencePoll)return;state.gmPresencePoll=setInterval(()=>{if(state.member&&!document.hidden){refreshGmPresence();if(state.roomCode&&state.participantId&&(!state.role||!playerScenePolicy(state.room).rolesReleased))void refreshPrivateRole(true)}},2500)}");
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
