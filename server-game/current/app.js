@@ -2745,14 +2745,14 @@ async function refreshPlayServerRealtime(){
   }catch(err){setPlayRealtimeState('offline');btn.classList.add('is-error');playFlashError('Không cập nhật được realtime từ server. '+(err?.message||''));setTimeout(()=>btn.classList.remove('is-error'),1100)}
   finally{delete btn.dataset.syncing;btn.classList.remove('is-syncing')}
 }
-let playSeatSpacingPreview=null;
+let playSeatSpacingPreview=null,playSeatOffsetPreview=null;
 function playGatherSpacing(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT;
   return layout.normalizeSeatSpacing(playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing??100)/100;
 }
 function playSeatPositions(count){
   const room=playSceneRuntime.room||{},layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  return layout.positions(count,room.seatLayout,room.seatOffset,playGatherSpacing()*100).map(p=>[p.x,p.y]);
+  return layout.positions(count,room.seatLayout,playSeatOffsetPreview??room.seatOffset,playGatherSpacing()*100).map(p=>[p.x,p.y]);
 }
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:'character-01'}
@@ -3714,21 +3714,65 @@ function initPlayGatherSpacing(){
 }
 function initPlaySeatOffsetControls(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playSeatOffsetValue');
-  const value=layout.normalizeSeatOffset(playSceneRuntime.room?.seatOffset);
-  if(output)output.textContent='X '+value.x+' · Y '+value.y;
+  const offset=()=>layout.normalizeSeatOffset(playSeatOffsetPreview??playSceneRuntime.room?.seatOffset);
+  const refresh=()=>{const value=offset();if(output)output.textContent='X '+value.x+' · Y '+value.y};
+  refresh();
+  const adjustable=()=>playSceneState.step==='seats'&&playSceneState.phase==='lobby'&&
+    !playSceneRuntime.room?.seatsLocked&&!playSceneRuntime.busy;
   for(const button of document.querySelectorAll('[data-seat-shift]')){
-    button.disabled=!!playSceneRuntime.room?.seatsLocked||!!playSceneRuntime.busy;
+    button.disabled=!adjustable();
     if(button.dataset.bound)continue;
     button.dataset.bound='1';
     button.addEventListener('click',async()=>{
-      const current=layout.normalizeSeatOffset(playSceneRuntime.room?.seatOffset);
-      const direction=String(button.dataset.seatShift),delta={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1],reset:[-current.x,-current.y]}[direction];
+      if(!adjustable())return;
+      const current=offset(),direction=String(button.dataset.seatShift),
+        delta={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1],reset:[-current.x,-current.y]}[direction];
       if(!delta)return;
       const next=layout.normalizeSeatOffset({x:current.x+delta[0],y:current.y+delta[1]});
       if(next.x===current.x&&next.y===current.y)return;
       await playUpdateRoomSettings({seatOffset:next});
     });
   }
+  // Drag any free courtyard space on iPhone to reposition the entire formation.
+  // Preview is local; only pointerup writes one persistent seatOffset to Server.
+  const world=document.getElementById('playWorld');
+  if(!world)return;
+  world.classList.toggle('is-seat-drag-enabled',adjustable());
+  if(world.dataset.seatDragBound)return;
+  world.dataset.seatDragBound='1';
+  let gesture=null,suppressClick=false;
+  world.addEventListener('pointerdown',event=>{
+    if(!adjustable()||(event.button!=null&&event.button!==0)||
+       event.target?.closest?.('button:not(.play-player-token), input, select, textarea'))return;
+    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
+    try{world.setPointerCapture(event.pointerId)}catch{}
+  });
+  world.addEventListener('pointermove',event=>{
+    if(!gesture||gesture.id!==event.pointerId||!adjustable())return;
+    const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
+    if(!gesture.dragged&&Math.hypot(dx,dy)<6)return;
+    gesture.dragged=true;
+    const bounds=world.getBoundingClientRect();
+    playSeatOffsetPreview=layout.normalizeSeatOffset({
+      x:gesture.offset.x+dx/Math.max(1,bounds.width)*100,
+      y:gesture.offset.y+dy/Math.max(1,bounds.height)*100
+    });
+    refresh();renderPlayPlayers();event.preventDefault();
+  },{passive:false});
+  const stop=event=>{
+    if(!gesture||event.pointerId!==gesture.id)return;
+    const moved=gesture.dragged,next=playSeatOffsetPreview;
+    gesture=null;try{world.releasePointerCapture(event.pointerId)}catch{}
+    if(!moved)return;
+    suppressClick=true;
+    playSeatOffsetPreview=null;refresh();
+    if(next)void playUpdateRoomSettings({seatOffset:next});
+  };
+  world.addEventListener('pointerup',stop);
+  world.addEventListener('pointercancel',stop);
+  world.addEventListener('click',event=>{
+    if(!suppressClick)return;suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
+  },true);
 }
 function renderPlayGatherToolbar(){
   const bar=document.getElementById('playGatherToolbar');if(!bar)return;
