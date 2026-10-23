@@ -32,8 +32,8 @@ test('Player private deck uses GM overlap geometry, keeping the exposed rear edg
   }
 });
 
-test('Rear card swaps forward without revealing; front card opens private viewer',()=>{
-  assert.match(player, /if\(state\.artifact&&gmwwDeckPreferredTop!==kind\)\{\s*gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);return;/);
+test('Any card opens on the first tap, including the card behind the other one',()=>{
+  assert.doesNotMatch(player, /if\(state\.artifact&&gmwwDeckPreferredTop!==kind\)\{\s*gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);return;/);
   assert.match(player, /gmwwPendingPrivateCardTap='';gmwwDeckBringToFront\(kind\);openPrivateCardViewer\(kind\)/);
   assert.match(player, /dock\.dataset\.deckTop=state\.artifact&&gmwwDeckPreferredTop==='artifact'\?'artifact':'role'/);
   assert.match(player, /button\.setAttribute\('aria-pressed',String\(dock\.dataset\.deckTop===kind\)\)/);

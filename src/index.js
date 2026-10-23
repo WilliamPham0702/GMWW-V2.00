@@ -878,7 +878,7 @@ export class RoomDurableObject extends DurableObject {
         }
       }
       if(changed){await this.ctx.storage.put(key,current);
-        this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(current,meta,now),serverTime:now})}
+        this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:gallowsSnapshot(current,meta,now),serverTime:now})}
     }
     return {key,ballot:current,eligible};
   }
@@ -952,7 +952,7 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put(key,result.value);
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
-    this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
+    this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
   async playerGallows(body,authorizedDemo=false){
@@ -979,7 +979,7 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put(key,result.value);
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
-    this.broadcast({type:"gallows_updated",gallows:publicBallot,serverTime:now});
+    this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
   async gmState(request){

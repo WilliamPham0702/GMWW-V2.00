@@ -300,7 +300,15 @@ async function gmwwVerifyMemberBeforeRemoval(){
  const poll=result.slice(pollStart,pollEnd);
  const privateBlock=poll.indexOf("  if(!state.token)return;\n  try{");
  if(privateBlock<0)throw new Error('Private receipt inside public-room poll changed');
- result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+"  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+result.slice(pollEnd);
+ // The poll section ALSO contains gallowsCurrentStage, the voting dock,
+ // renderGallowsWidget and sendGallowsChoice. Previous slicing silently deleted
+ // every one of them, then websocket/private receipt called an undefined renderer.
+ // Replace ONLY the old private /me tail of pollRoomState; retain the voting UI.
+ const votingHelpers=poll.indexOf("\nfunction gallowsCurrentStage(){",privateBlock);
+ if(votingHelpers<0)throw new Error('GMWW public poll lost Lên Giàn helpers');
+ result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+
+   "  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+
+   poll.slice(votingHelpers)+result.slice(pollEnd);
  // Browser restore must carry the Artifact expectation, not only the role.
  replaceReceipt("state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];",
    "state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];gmwwAcknowledgePrivateDelivery(d);");
@@ -397,6 +405,105 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "gmwwReconnectTimer=setTimeout(()=>{gmwwReconnectTimer=null;if(state.roomCode&&state.participantId)connectWS()},1800)");
  offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);return}",
    "if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
+
+
+ // P0 / Chrome + Edge: Player Web is a projection of durable Server state.
+ // Movement events are partial, never an authoritative replacement roster.
+ // Reconfirm a roster shrink before hiding members; explicit loss/kick remains authoritative.
+ const ROSTER_CONSISTENCY=String.raw`
+let gmwwRosterRepairTimer=null,gmwwRosterShrinkKey='',gmwwRosterShrinkConfirmations=0;
+function gmwwScheduleRosterRepair(){
+  if(gmwwRosterRepairTimer||!state.roomCode||!state.participantId)return;
+  const room=state.roomCode,member=state.participantId;
+  gmwwRosterRepairTimer=setTimeout(()=>{
+    gmwwRosterRepairTimer=null;
+    if(room===state.roomCode&&member===state.participantId)
+      void gmwwRefreshPublicRoster(room,member);
+  },700);
+}
+function gmwwApplyRoster(rows,origin='http'){
+  const previous=Array.isArray(state.players)?state.players:[];
+  if(!Array.isArray(rows))return previous;
+  const id=state.participantId;
+  if(!id||!rows.some(p=>p?.participantId===id)){
+    gmwwScheduleRosterRepair();
+    if(origin!=='movement'&&id&&state.token)void gmwwVerifyMemberBeforeRemoval();
+    return previous;
+  }
+  const byId=new Map(previous.filter(p=>p?.participantId).map(p=>[p.participantId,p]));
+  for(const p of rows)if(p?.participantId)byId.set(p.participantId,{...byId.get(p.participantId),...p});
+  const merged=Array.from(byId.values());
+  // Player movement messages may carry only one participant, or no roster.
+  if(origin==='movement')return merged;
+  if(previous.length>rows.length){
+    if(origin!=='http'){gmwwScheduleRosterRepair();return merged}
+    const identity=[state.roomCode,rows.map(p=>p?.participantId).filter(Boolean).sort().join(',')].join('|');
+    if(gmwwRosterShrinkKey!==identity){
+      gmwwRosterShrinkKey=identity;gmwwRosterShrinkConfirmations=1;
+      gmwwScheduleRosterRepair();return merged;
+    }
+    if(++gmwwRosterShrinkConfirmations<2){gmwwScheduleRosterRepair();return merged}
+  }
+  gmwwRosterShrinkKey='';gmwwRosterShrinkConfirmations=0;
+  return rows.map(p=>({...byId.get(p?.participantId),...p}));
+}
+`;
+ offlineReplace("async function gmwwRefreshPublicRoster(code,participantId){",
+   ROSTER_CONSISTENCY+"\nasync function gmwwRefreshPublicRoster(code,participantId){");
+ offlineReplace("async function gmwwRefreshPublicRoster(code,participantId){\n  try{const d=await api('/api/rooms/'+encodeURIComponent(code));",
+   "async function gmwwRefreshPublicRoster(code,participantId){\n  const startedAt=Date.now();\n  try{const d=await api('/api/rooms/'+encodeURIComponent(code));");
+ offlineReplace("    if(d?.room)state.room=d.room;\n    if(Array.isArray(d?.players)&&d.players.some(p=>p.participantId===participantId)){state.players=d.players;return true}",
+   "    if(d?.room&&gmwwLastRoomBroadcastAt<=startedAt)state.room=d.room;\n    if(Array.isArray(d?.players)){const validSnapshot=d.players.some(p=>p?.participantId===participantId);state.players=gmwwApplyRoster(d.players,'http');renderRooms();syncVillageFrame();return validSnapshot}");
+ offlineReplace("state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId))",
+   "state.players=gmwwApplyRoster(pub.players,'http');if(!state.players.some(p=>p.participantId===state.participantId))");
+ offlineReplace("state.players=(d.players||state.players||[]).map(p=>({ ...p,",
+   "state.players=gmwwApplyRoster(d.players,movementEvent?'movement':'socket').map(p=>({ ...p,");
+
+ // Always render the exact ballot phase the Server committed when opening
+ // nomination/voting, instead of waiting for a later unrelated room_state.
+ offlineReplace("let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0;",
+   "let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0,gmwwLastGallowsBroadcastAt=0;");
+ offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}",
+   "if(d.type==='gallows_updated'){gmwwLastGallowsBroadcastAt=Date.now();if(d.room)state.room=d.room;state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
+ offlineReplace("else if(d.type==='room_cycle'){state.gallows=null;",
+   "else if(d.type==='room_cycle'){gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
+ offlineReplace("  const entry={key,promise:null};\n  entry.promise=api(",
+   "  const entry={key,promise:null},requestedAt=Date.now();\n  entry.promise=api(");
+ offlineReplace("    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token)?d:null)",
+   "    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token&&d)?Object.assign(d,{__gmwwFetchedAt:requestedAt}):null)");
+ offlineReplace("if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);",
+   "if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;if(Number(d.__gmwwFetchedAt||0)>=gmwwLastGallowsBroadcastAt){state.gallows=d?.gallows||null;renderGallowsWidget()}handleSeatSwapRequests(d?.swapRequests);");
+ // Constrain replacement to refreshPrivateRole: other helpers also assign state.room.
+ const privateStart=output.indexOf('async function refreshPrivateRole(force=false){');
+ const privateEnd=output.indexOf('async function ensureRoleGameView(',privateStart);
+ if(privateStart<0||privateEnd<privateStart)throw new Error('Missing private role receipt scope');
+ const privateScope=output.slice(privateStart,privateEnd);
+ const roleRoomOld="state.room=d.room||state.room;\n  if(previous";
+ const roleRoomNew="if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;\n  if(previous";
+ if(privateScope.split(roleRoomOld).length!==2)throw new Error('Private role room transition drift');
+ output=output.slice(0,privateStart)+privateScope.replace(roleRoomOld,roleRoomNew)+output.slice(privateEnd);
+ // A stale HTTP response is never allowed to suppress private role/ballot
+ // reconciliation. This is critical during high-frequency room movement.
+ offlineReplace("if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt)return;",
+   "if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt){if(roomCode===state.roomCode&&participantId===state.participantId)void refreshPrivateRole(true);return;}");
+
+ // A late/duplicate resume must NOT erase an already completed team roster.
+ // Only a genuine switch to another room should begin a new self-only roster.
+ offlineReplace("state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];gmwwAcknowledgePrivateDelivery(d);",
+ "const gmwwWasSameRoom=state.roomCode===code;state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=gmwwWasSameRoom?gmwwApplyRoster([d.player],'movement'):[d.player];gmwwAcknowledgePrivateDelivery(d);");
+ // An Edge tab can miss the first complete snapshot while another tab is
+ // already in the room. A single-player projection therefore requires a
+ // low-frequency independent public reconcile, even if a poll is superseded by WS.
+ offlineReplace("function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}",
+ "function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState();if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId)},5000)}");
+ // First click should OPEN the chosen card in Chrome and Edge, even if
+ // the chosen card happened to be behind the other card in the deck.
+ offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
+   "      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);");
+ // A room mode transition from delivery to running must not close a viewer
+ // that the player is already reading.
+ offlineReplace("    setGameViewPane('village',{persist:false});\n  }else if(!hasRole",
+   "    if($('#game')?.dataset.privateCardView!=='open')setGameViewPane('village',{persist:false});\n  }else if(!hasRole");
 
  return output;
 }
