@@ -27,26 +27,34 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - name: Tải mã nguồn dự án
       - uses: actions/checkout@v4
+      - name: Thiết lập Node.js và bộ nhớ đệm
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Cài thư viện theo tệp khóa
       - run: npm ci
+      - name: Kiểm tra mã nguồn Worker
       - run: npm run check
-      - name: Verify synchronized GMWW version numbers
+      - name: Kiểm tra đồng bộ phiên bản GMWW
         run: node .github/scripts/verify-gmww-versions.mjs
+      - name: Kiểm tra cú pháp app.js
       - run: node --check server-game/current/app.js
+      - name: Kiểm tra cú pháp prepare-update-channel.mjs
       - run: node --check .github/scripts/prepare-update-channel.mjs
+      - name: Kiểm tra cú pháp village.mjs
       - run: node --check assets/village/village.mjs
+      - name: Chạy toàn bộ kiểm thử tự động
       - run: npm test
-      - name: Generate and verify Character40 avatar portrait assets
+      - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
-      - name: Smoke-test Player Web locally
+      - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
         shell: bash
         run: |
           set -euo pipefail
