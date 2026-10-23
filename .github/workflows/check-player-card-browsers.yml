@@ -85,32 +85,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
+      - name: Tải mã nguồn dự án
       - uses: actions/checkout@v4
+      - name: Thiết lập Node.js và bộ nhớ đệm
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Cài đặt thư viện cần thiết
       - run: npm install
-      - name: Reuse version-pinned Playwright WebKit browser
+      - name: Dùng lại trình duyệt WebKit đúng phiên bản
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: gmww-webkit-${{ runner.os }}-playwright-1.58.2
-      - name: Install Playwright browser runner
+      - name: Cài đặt công cụ kiểm thử trình duyệt
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
-      - name: Verify compact GM battle panels on iPhone-sized WebKit
+      - name: Kiểm tra bảng điều khiển GM trên màn hình iPhone
         run: node tests/browser-compact-battle-panels.mjs
-      - name: Verify V3.188 DEMO book, magnetic dock and fire menu in iPhone WebKit
+      - name: Kiểm tra DEMO, thanh menu và đống lửa trên iPhone
         run: node tests/v3188-preview-iphone-webkit.mjs
-      - name: Verify pirate nomination and calibrated fire popup in iPhone WebKit
+      - name: Kiểm tra đề cử và cửa sổ đống lửa trên iPhone
         run: node tests/v3189-pirate-fire-webkit.mjs
-      - name: Verify calibrated Day/Night campfire with real iPhone WebKit touches
+      - name: Kiểm tra chạm đống lửa Ngày/Đêm trên iPhone
         run: node tests/v3190-fire-image-calibration-webkit.mjs
-      - name: Check night timeline on iPhone-sized WebKit
+      - name: Kiểm tra dòng thời gian ban đêm trên iPhone
         run: node tests/night-timeline-iphone-webkit.mjs
-      - name: Exercise private card UI with Chrome, Edge and WebKit
+      - name: Kiểm tra giao diện lá bài trên Chrome, Edge, WebKit
         shell: bash
         run: |
           set -euo pipefail
@@ -126,57 +129,57 @@ jobs:
           node tests/demo-room-cross-origin-webkit.mjs
           node tests/browser-private-cards.mjs
           node tests/gp2-qa-webkit.mjs
-      - name: Check Khám Phá on iPhone-sized WebKit
+      - name: Kiểm tra mục Khám Phá trên iPhone
         run: node tests/home-v389-iphone-webkit.mjs
-      - name: Check Seat anchors with production status CSS in WebKit
+      - name: Kiểm tra tọa độ ghế và trạng thái trên WebKit
         run: node tests/seat-css-webkit.mjs
-      - name: Check published village Day/Night actor layers in iPhone WebKit
+      - name: Kiểm tra lớp nhân vật và làng Ngày/Đêm trên iPhone
         run: node tests/v3181-scene-layer-webkit.mjs
-      - name: Check OTA startup recovery in WebKit
+      - name: Kiểm tra tự khôi phục khi khởi động OTA
         run: node tests/runtime-recovery-webkit.mjs
-      - name: Upload V3.189 pirate and fire iPhone WebKit QA
+      - name: Tải lên bằng chứng kiểm thử đống lửa V3.189
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gmww-v3189-iphone-pirate-fire-qa
           path: /tmp/gmww-v3189-iphone-pirate-fire.png
           if-no-files-found: ignore
-      - name: Upload V3.188 preview iPhone QA screenshot
+      - name: Tải lên ảnh nghiệm thu iPhone V3.188
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gmww-v3188-preview-iphone-overlay-qa
           path: /tmp/gmww-v3188-preview-iphone-webkit.png
           if-no-files-found: ignore
-      - name: Upload compact battle panel preview
+      - name: Tải lên ảnh bảng điều khiển thu gọn
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gmww-v3178-iphone-compact-battle
           path: /tmp/gmww-v3178-iphone-layout.png
           if-no-files-found: ignore
-      - name: Upload WebKit Home preview
+      - name: Tải lên ảnh màn hình chính WebKit
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: home-v389-iphone-webkit-preview
           path: /tmp/gmww-v389-iphone-webkit-home.png
           if-no-files-found: ignore
-      - name: Upload village-layer iPhone WebKit previews
+      - name: Tải lên ảnh kiểm thử các lớp làng trên iPhone
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gmww-v3181-village-background-actor-layer
           path: /tmp/gmww-v3181-scene-layer-*.png
           if-no-files-found: ignore
-      - name: Upload isolated GP2 iPhone QA screenshot
+      - name: Tải lên ảnh nghiệm thu GP2 trên iPhone
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gmww-gp2-30-atlas-iphone-draft
           path: /tmp/gmww-gp2-qa-iphone-30-atlas.png
           if-no-files-found: ignore
-      - name: Upload failure screenshots
+      - name: Tải lên ảnh chụp khi kiểm thử lỗi
         if: failure()
         uses: actions/upload-artifact@v4
         with:
