@@ -54,6 +54,6 @@ test('Server DEMO history spans all cycles and village notice includes nonpersis
   assert.match(server,/async villageHistoryForMatch/);
   assert.match(server,/this\.villageHistoryForMatch\(meta,interactions\)/);
   assert.match(server,/history:\(Array\.isArray\(demoLease\?\.history\)/);
-  assert.doesNotMatch(server,/String\(event\?\.cycleKey\|\|''\)===String\(meta\.cycleKey\|\|''\)/);
+  assert.match(server,/history:\(Array\.isArray\(demoLease\?\.history\)[^\n]+matchId/);
   assert.match(ui,/entry\.effectActive===false&&\/UNDO/);
 });
