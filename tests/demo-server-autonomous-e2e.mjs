@@ -52,12 +52,18 @@ try{
    if(state.gallows?.stage==='voting'&&Object.keys(state.gallows.votes||{}).length){
     observedVotes=true;
     if(!manual){
-     // Prevent DEMO automation from reopening or resolving while GM edits votes.
+     // V3.192: switch into the new GM-only direct verdict (not the old
+     // per-voter manual ballot). Player Web must never receive manual ballots.
      await day('/demo',{command:'stop'});
-     await day('/gallows',{command:'mode',mode:'gm'});
-     for(const p of people.slice(1))await day('/gallows',{command:'manual_vote',targetId:p.loginId,choice:'👎'});
+     const switched=await day('/gallows',{command:'mode',mode:'gm'});
+     assert.equal(switched.gallows.mode,'gm');
+     assert.equal(switched.gallows.stage,'ready');
+     assert.deepEqual(switched.gallows.votes,{},'switch must discard automatic receipts');
+     const resolved=await day('/gallows',{command:'resolve',targetId:people[0].loginId,outcome:'dead'});
+     assert.equal(resolved.gallows.stage,'resolved');
+     assert.equal(resolved.gallows.candidateId,people[0].loginId);
+     assert.equal(resolved.gallows.outcome,'dead');
      manual=true;
-     await day('/demo',{command:'start'});
     }
    }
    if(state.winProposal){finished=true;break}
