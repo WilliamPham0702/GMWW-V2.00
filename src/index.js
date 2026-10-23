@@ -760,6 +760,26 @@ export class RoomDurableObject extends DurableObject {
     const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
     return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
   }
+  async villageHistoryForMatch(meta,latest=[]){
+    const matchId=String(meta.matchId||"");
+    if(!matchId)return [];
+    // Read all archived rows for this ROOM and match (not just the latest 100).
+    // The log is room-local. Sort once, newest edits of a receipt supersede
+    // archived originals so undo/restore never resurrects stale UI effects.
+    const stored=await this.ctx.storage.list({prefix:"actionLog:"});
+    const byId=new Map();
+    for(const row of stored.values()){
+      if(!row||String(row.matchId||"")!==matchId||!(Number(row.night)>0)||
+         Number(row.night)>Number(meta.cycleNight||0))continue;
+      const id=String(row.id||row.clientEventId||"");if(id)byId.set(id,row);
+    }
+    for(const row of latest){
+      if(!row||String(row.matchId||"")!==matchId||!(Number(row.night)>0)||
+         Number(row.night)>Number(meta.cycleNight||0))continue;
+      const id=String(row.id||row.clientEventId||"");if(id)byId.set(id,row);
+    }
+    return [...byId.values()].sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+  }
   async gmActionLog(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     // Backfill the currently retained legacy interactions once. Records that were
@@ -955,9 +975,11 @@ export class RoomDurableObject extends DurableObject {
       nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
       nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
     }
-    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')&&String(event?.cycleKey||'')===String(meta.cycleKey||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
-      villageHistory:interactions.filter(row=>(!row?.matchId||String(row.matchId)===String(meta.matchId||""))&&
-        Number(row?.night)>0&&Number(row.night)<=Number(meta.cycleNight||0)),
+    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+      // Unlike the 100-row rules buffer, the immutable actionLog archive
+      // includes older nights and nonpersistent effects (effect_notice, healed...).
+      // Never derive the village bulletin from only the short-lived rules buffer.
+      villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
