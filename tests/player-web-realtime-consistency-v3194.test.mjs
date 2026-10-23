@@ -53,6 +53,11 @@ test('V3.194: private receipt restores current gallows and pending interactions 
   assert.match(compiled,/if\(d\.type==='gallows_updated'\).*refreshPrivateRole\(true\)/);
 });
 
+test('V3.194 P0: compiled voting and nomination implementation survives HTTP poll reduction',()=>{
+ for(const fn of ['function gallowsCurrentStage(){','function renderGallowsWidget(){','async function sendGallowsChoice('])
+   assert.equal(compiled.split(fn).length-1,1,'Compiled Player Web lost '+fn);
+});
+
 test('V3.194: heartbeat and websocket ping do not rebroadcast full room to all players',()=>{
   const worker=readFileSync('src/index.js','utf8');
   const heartbeat=worker.slice(worker.indexOf('async heartbeat(body){'),worker.indexOf('async leave(body){'));
