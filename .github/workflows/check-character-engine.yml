@@ -32,25 +32,28 @@ jobs:
   character-engine:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Tải mã nguồn dự án
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js và bộ nhớ đệm
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install
-      - name: Worker dry run
+      - name: Cài đặt thư viện cần thiết
+        run: npm install
+      - name: Kiểm tra Worker trước khi triển khai
         run: npm run check
-      - name: GM renderer syntax
+      - name: Kiểm tra cú pháp hiển thị GM
         run: |
           node --check server-game/current/app.js
           node --check server-game/current/character-renderer.js
-      - name: Character Engine unit tests
+      - name: Kiểm thử đơn vị Character Engine
         run: node --test tests/character-engine.test.mjs tests/character-renderer.test.mjs tests/character-engine-gm.test.mjs
-      - name: Character rig asset audit
+      - name: Kiểm tra tài nguyên bộ khung nhân vật
         run: |
           python -m pip install --disable-pip-version-check --quiet pillow
           python tools/character-rig-audit.py
-      - name: Character Engine manifest smoke
+      - name: Kiểm tra danh mục Character Engine
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +77,7 @@ jobs:
           if(!Array.isArray(m.characters)||m.characters.length!==42)throw new Error('Expected 42 Character definitions');
           if(!m.characters.every(x=>Array.isArray(x.motions)&&x.motions.includes('walk')&&x.motions.includes('idle')))throw new Error('Shared motion contract incomplete');
           NODE
-      - name: Character visual smoke
+      - name: Kiểm tra hiển thị nhân vật
         shell: bash
         run: |
           set -euo pipefail
@@ -158,7 +161,7 @@ jobs:
           if lab.width < 1200 or lab.height < 650:
               raise SystemExit('LAB_SCREENSHOT_TOO_SMALL')
           PY
-      - name: Upload Character visual
+      - name: Tải lên hình ảnh kiểm thử nhân vật
         uses: actions/upload-artifact@v4
         with:
           name: character-preview
