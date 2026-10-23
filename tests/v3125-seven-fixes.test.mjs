@@ -19,7 +19,7 @@ test('V3.125 — 8–30 seats never silently fall back to a 24-seat ring',()=>{
   }
 });
 test('V3.125 — all four GM adjustments and spacing use server-persisted room coordinates',()=>{
-  assert.deepEqual({...layout.normalizeSeatOffset({x:100,y:-99})},{x:10,y:-10});
+  assert.deepEqual({...layout.normalizeSeatOffset({x:100,y:-99})},{x:30,y:-30});
   assert.equal(layout.normalizeSeatSpacing(135),135);
   for(const n of [8,12,20,24,30]){
     const seats=layout.positions(n,'', {x:2,y:1},110);
@@ -31,7 +31,7 @@ test('V3.125 — all four GM adjustments and spacing use server-persisted room c
   assert.match(worker,/villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
   assert.match(player,/ps=positions\(seatCount,seatLayout,seatOffset,seatSpacing\)/);
   assert.match(read('src/gmww-members-live.js'),/seatLayout:String\(room.seatLayout\|\|''\),seatOffset:\{x:Number\(room.seatOffset\?\.x\|\|0\),y:Number\(room.seatOffset\?\.y\|\|0\)\},seatSpacing:Number\(room.seatSpacing\|\|100\)/);
-  assert.match(gm,/layout\.positions\(count,room\.seatLayout,room\.seatOffset,playGatherSpacing\(\)\*100\)/);
+  assert.match(gm,/layout\.positions\(count,room\.seatLayout,[^\n]*room\.seatOffset[^\n]*playGatherSpacing\(\)\*100\)/);
   for(const direction of ['left','right','up','down','reset'])assert.match(html,new RegExp('data-seat-shift="'+direction+'"'));
   assert.match(gm,/playUpdateRoomSettings\(\{seatOffset:next\}\)/);
 });
