@@ -1047,7 +1047,7 @@
       const data=JSON.parse(match[1]);
       for(const key of ['namespaceCount','previewCount','eligibleCount','deletedCount'])
         if(!Number.isSafeInteger(data[key])||data[key]<0)throw new Error('Báo cáo không hợp lệ');
-      if(data.schema!==1||data.productionProtected!==true)throw new Error('Báo cáo chưa xác minh an toàn Production');
+      if(![1,2].includes(data.schema)||data.productionProtected!==true)throw new Error('Báo cáo chưa xác minh an toàn Production');
       set('gmwwCfNamespaces',data.namespaceCount);
       set('gmwwCfPreviews',data.previewCount);
       set('gmwwCfEligible',data.eligibleCount);
