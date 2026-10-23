@@ -90,7 +90,21 @@ try{
  await gm('/assignments',{matchId:match,matchRevision:1,deliveryVersion:1,assignments,multiAssign:false});
  for(const {page,s} of opened){
   const role=page.locator('#gmwwPlayerPrivateDock [data-private-card="role"]');
-  await role.waitFor({state:'visible',timeout:25000});
+  try{await role.waitFor({state:'visible',timeout:20000})}
+  catch(error){
+    const receipt=await api('/api/rooms/'+code+'/me',{token:s.token}).catch(e=>({error:String(e)}));
+    const client=await page.evaluate(()=>{
+      const dock=document.querySelector('#gmwwPlayerPrivateDock'),button=dock?.querySelector('[data-private-card="role"]'),game=document.querySelector('#game');
+      return {dockHidden:dock?.hidden,deliveryState:dock?.dataset.deliveryState,
+        roleHidden:button?.hidden,roleDisplay:button?getComputedStyle(button).display:null,
+        activeScreen:[...document.querySelectorAll('.screen.active')].map(x=>x.id),
+        scene:game?.dataset.gmwwPlayerScene,privateCardView:game?.dataset.privateCardView}
+    }).catch(e=>({error:String(e)}));
+    throw Error(s.name+' live GM role release failed: '+JSON.stringify({
+      server:{phase:receipt?.room?.phase,matchId:receipt?.room?.matchId,roleId:receipt?.role?.roleId,
+        roleCount:receipt?.deliveryManifest?.roleCount,deliveryVersion:receipt?.room?.deliveryVersion},client,
+      original:String(error)}));
+  }
   await role.click({timeout:10000});
   const face=page.locator('#gmwwPlayerUnifiedCard:not([hidden])');
   await face.waitFor({state:'visible',timeout:10000});
