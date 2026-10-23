@@ -1,4 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
+import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -760,6 +761,20 @@ export class RoomDurableObject extends DurableObject {
     const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
     return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
   }
+  async applyHunterDeathConsequences(meta,rows,now=new Date().toISOString()){
+    const assignments=(await this.ctx.storage.get("assignments"))||[];
+    const history=await this.villageHistoryForMatch(meta,rows);
+    const linked=hunterLinkedDeaths({assignments,interactions:history,
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)});
+    for(const outcome of linked){
+      if(rows.some(r=>String(r.id||"")===outcome.id))continue;
+      const death={...outcome,createdAt:now,night:Math.max(1,Number(outcome.night)||Number(meta.cycleNight)||1)};
+      rows.push(death);await this.ctx.storage.put(this.actionLogKey(death),death);
+      this.broadcast({type:"player_status_changed",loginId:death.loginId,
+        statusId:"dead",active:true,serverTime:Date.now()});
+    }
+    return linked;
+  }
   async villageHistoryForMatch(meta,latest=[]){
     const matchId=String(meta.matchId||"");
     if(!matchId)return [];
@@ -908,8 +923,10 @@ export class RoomDurableObject extends DurableObject {
             type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
             night:Number(meta.cycleNight),source:"gallows",gallowsId:ballot.id,effectActive:true,
             message:"Người chơi đã bị hành quyết trên giàn.",createdAt};
-          rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+          rows.push(fatal);
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
+          await this.applyHunterDeathConsequences(meta,rows,createdAt);
+          await this.ctx.storage.put("interactions",pruneInteractions(rows));
           this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
         }
       }
@@ -918,7 +935,13 @@ export class RoomDurableObject extends DurableObject {
       const rows=await this.ctx.storage.get("interactions")||[];
       const owned=rows.filter(x=>x.gallowsId===ballot.id&&String(x.type)==="dead"&&x.effectActive!==false);
       for(const row of owned){row.effectActive=false;row.expiredAt=new Date(now).toISOString();row.expiredReason="GM_GALLOWS_RESTORE"}
-      if(owned.length){await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      if(owned.length){
+        for(const followup of rows){
+          if(followup.source!=="hunter-death-engine"||!owned.some(x=>x.id===followup.causeDeathId))continue;
+          followup.effectActive=false;followup.expiredAt=new Date(now).toISOString();
+          followup.expiredReason="GM_GALLOWS_RESTORE";
+        }
+        await this.ctx.storage.put("interactions",pruneInteractions(rows));
         this.broadcast({type:"player_revived",loginId:ballot.candidateId,serverTime:now})}
       result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),stage:"ready",
         nominationDeadlineAt:null,nominationStartedAt:null,
@@ -1677,6 +1700,7 @@ export class RoomDurableObject extends DurableObject {
         await this.ctx.storage.delete(storageKey);
       }
     }
+    if(p==="morning")await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
@@ -1911,6 +1935,7 @@ export class RoomDurableObject extends DurableObject {
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
         statusId:log.statusId||log.type,active:true,serverTime:Date.now()});
     }
+    await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
       roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
@@ -2209,7 +2234,9 @@ export class RoomDurableObject extends DurableObject {
       interaction.night=Number(meta.cycleNight);interaction.message="Tác động gây chết sẽ được giải quyết vào sáng hôm sau.";
     }
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
-    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);
+    if(type==="dead"&&!interaction.pendingDeath)await this.applyHunterDeathConsequences(meta,rows,now);
+    await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
     if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});
@@ -2253,6 +2280,7 @@ export class RoomDurableObject extends DurableObject {
       rows.push(fatal);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+fatal.id,fatal);
     }
+    if(assassinOutcome==="dead")await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const logId="ev-"+crypto.randomUUID();
     await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+logId,
