@@ -18,7 +18,7 @@ test('P0: Chrome and Edge receive one parseable live script with a single-tap pr
 });
 
 test('P0: partial movement and WS room-state snapshots do not collapse a full roster',()=>{
- const a=player.indexOf('let gmwwRosterRepairTimer=null;');
+ const a=player.indexOf('let gmwwRosterRepairTimer=null,');
  const b=player.indexOf('async function autoResumeActiveRoom(',a);
  assert.ok(a>=0&&b>a);
  const state={roomCode:'ROOM12',participantId:'member:a',token:'token',players:[
@@ -42,7 +42,7 @@ test('P0: partial movement and WS room-state snapshots do not collapse a full ro
 });
 
 test('P0: a snapshot from another room or without my membership never destroys valid team',()=>{
- const a=player.indexOf('let gmwwRosterRepairTimer=null;'),b=player.indexOf('async function autoResumeActiveRoom(',a);
+ const a=player.indexOf('let gmwwRosterRepairTimer=null,'),b=player.indexOf('async function autoResumeActiveRoom(',a);
  const state={roomCode:'ABCDEF',participantId:'member:a',token:'t',
   players:[{participantId:'member:a'},{participantId:'member:b'}],room:{phase:'running'}};
  const ctx={state,api:async()=>({room:{phase:'lobby'},players:[{participantId:'member:z'}]}),
