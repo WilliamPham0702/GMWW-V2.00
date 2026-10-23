@@ -2997,9 +2997,12 @@ function gmwwPlaceWolfMenuAtFire(menu){
     if(!best||score<best.score)best={...p,score};
   }
   if(!best)return false;
-  const origin=menu.offsetParent?.getBoundingClientRect()||{left:0,top:0};
-  menu.style.setProperty('left',(best.left-origin.left)+'px','important');
-  menu.style.setProperty('top',(best.top-origin.top)+'px','important');
+  const parent=menu.offsetParent,origin=parent?.getBoundingClientRect()||{left:0,top:0},
+    sx=parent?.offsetWidth?origin.width/parent.offsetWidth:1,
+    sy=parent?.offsetHeight?origin.height/parent.offsetHeight:1;
+  // A scaled village or CSS zoom must not move the popup off the calibrated fire.
+  menu.style.setProperty('left',((best.left-origin.left)/(sx||1))+'px','important');
+  menu.style.setProperty('top',((best.top-origin.top)/(sy||1))+'px','important');
   menu.style.setProperty('right','auto','important');
   menu.style.setProperty('bottom','auto','important');
   menu.style.setProperty('transform','none','important');
