@@ -52,6 +52,7 @@ function createVillageLocalCache(base){
 }
 // End village local cache
 const villageSceneDraft={day:null,night:null};
+const villageSceneDraftAnchors={day:null,night:null};
 let villageScenePublished={revision:0,day:null,night:null};
 async function villageSceneFile(file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>12000000)throw Error('Chỉ nhận ảnh PNG/JPEG/WebP tối đa 12 MB');
@@ -112,26 +113,53 @@ function applyGMVillageScene(){
  const loading=document.getElementById('gmVillageBootStatus');if(loading)loading.hidden=true;
 }
 function villageFirePosition(){
- const key=playSceneState.phase==='night'?'night':'day';
- const point=villageScenePublished.fireAnchors?.[key];
- if(point&&[point.x,point.y].every(Number.isFinite))return [point.x,point.y];
+ const key=playSceneState.phase==='night'?'night':'day',point=villageScenePublished.fireAnchors?.[key];
+ if(point&&[point.x,point.y].every(Number.isFinite))return [Math.max(0,Math.min(100,point.x)),Math.max(0,Math.min(100,point.y))];
+ // Old GP2 y=64 was a seat-layout landmark, not the centre of an imported
+ // 100%-stretched picture. On user artwork this made the GM hitbox move down.
+ // Centre is temporary only; each imported image must receive its own marker.
+ if(villageScenePublished[key])return [50,50];
  const fallback=globalThis.GMWW_VILLAGE_LAYOUT.fire;return playMapDisplay(fallback.x,fallback.y);
 }
-function villageCalibrateFire(){
- const world=document.getElementById('playWorld');if(!world||document.getElementById('gmFirePicker'))return;
- const key=playSceneState.phase==='night'?'night':'day',revision=villageScenePublished.revision;
- const picker=document.createElement('div');picker.id='gmFirePicker';
- picker.style.cssText='position:absolute;inset:0;z-index:1000;cursor:crosshair;background:rgba(0,0,0,.08);touch-action:none';
- const cancel=document.createElement('button');cancel.textContent='Chạm chính giữa đống lửa · Hủy';
- cancel.style.cssText='position:absolute;top:12px;left:50%;transform:translateX(-50%);white-space:nowrap';
- cancel.onclick=e=>{e.stopPropagation();picker.remove()};picker.append(cancel);world.append(picker);
+function villageCalibrateFire(requestedPhase){
+ const key=requestedPhase==='night'?'night':requestedPhase==='day'?'day':
+   playSceneState.phase==='night'?'night':'day';
+ if(document.getElementById('gmFirePicker'))return;
+ const image=villageSceneDraft[key]||villageLocalSnapshot?.images?.[key]||null;
+ const world=document.getElementById('playWorld');
+ const current=key===(playSceneState.phase==='night'?'night':'day');
+ const fallback=!image&&current&&world?getComputedStyle(world).backgroundImage:null;
+ if(!image&&(!fallback||fallback==='none')){
+   villageSceneStatus('Chưa có ảnh '+(key==='day'?'Ngày':'Đêm')+' để định vị 🔥.');return;
+ }
+ const draft=!!villageSceneDraft[key],revision=villageScenePublished.revision;
+ const picker=document.createElement('div');picker.id='gmFirePicker';picker.setAttribute('role','dialog');
+ picker.setAttribute('aria-label','Định vị đống lửa nền '+(key==='day'?'Ngày':'Đêm'));
+ picker.style.cssText='position:fixed;inset:0;z-index:2147483000;cursor:crosshair;touch-action:manipulation;background:#071825 center/100% 100% no-repeat';
+ picker.style.backgroundImage=image?'url("'+image+'")':fallback;
+ const tip=document.createElement('div');
+ tip.textContent='🔥 CHẠM CHÍNH GIỮA ĐỐNG LỬA · NỀN '+(key==='day'?'NGÀY':'ĐÊM');
+ tip.style.cssText='position:absolute;top:max(18px,env(safe-area-inset-top));left:10px;right:10px;z-index:2;padding:12px;text-align:center;border:1px solid #e9cb86;border-radius:14px;background:#092b3ce8;color:#ffe5b2;font-size:13px;font-weight:850;pointer-events:none';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='✕ HỦY';
+ cancel.style.cssText='position:absolute;right:12px;bottom:max(86px,env(safe-area-inset-bottom));z-index:3;padding:12px 20px;min-height:44px;border-radius:12px;color:#fff;background:#15465f;border:1px solid #d9be83;font-weight:850';
+ cancel.onclick=e=>{e.stopPropagation();picker.remove()};
+ picker.append(tip,cancel);document.body.append(picker);
  picker.addEventListener('click',async e=>{
+  if(e.target===cancel)return;
   e.preventDefault();e.stopPropagation();
-  const rect=world.getBoundingClientRect(),point={x:Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/rect.height*100))};
+  const rect=picker.getBoundingClientRect();if(!rect.width||!rect.height)return;
+  const point={x:Math.round(Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100))*100)/100,
+    y:Math.round(Math.max(0,Math.min(100,(e.clientY-rect.top)/rect.height*100))*100)/100};
   picker.remove();
+  if(draft){
+    villageSceneDraftAnchors[key]=point;
+    villageSceneStatus('Đã chọn 🔥 nền '+(key==='day'?'Ngày':'Đêm')+' ('+point.x+'%, '+point.y+'%). Nhấn ÁP DỤNG để lưu cùng ảnh.');
+    return;
+  }
   try{
-   const data=await villageSceneRequest('/api/gm/village-scene','PUT',{expectedRevision:revision,fireAnchors:{[key]:point}});
-   await setGMVillageScenePublished(data.scene);renderPlayScene();
+    const data=await villageSceneRequest('/api/gm/village-scene','PUT',{expectedRevision:revision,fireAnchors:{[key]:point}});
+    await setGMVillageScenePublished(data.scene);renderPlayScene();
+    villageSceneStatus('Đã lưu 🔥 nền '+(key==='day'?'Ngày':'Đêm')+' tại '+point.x+'%, '+point.y+'%.');
   }catch(error){playFlashError('Không lưu được vị trí đống lửa: '+error.message)}
  },{once:true});
 }
@@ -171,9 +199,11 @@ function initVillageSceneManager(){
   try{
    villageSceneStatus('Đang tối ưu ảnh '+(key==='day'?'ban ngày':'ban đêm')+'...');
    villageSceneDraft[key]=await villageSceneFile(e.target.files?.[0]);
-   villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Nhấn ÁP DỤNG để đồng bộ.');
+   villageSceneDraftAnchors[key]=null;
+   villageSceneStatus('Ảnh '+(key==='day'?'ban ngày':'ban đêm')+' đã sẵn sàng. Nhấn ĐỊNH VỊ 🔥, sau đó ÁP DỤNG.');
   }catch(error){villageSceneDraft[key]=null;villageSceneStatus(error.message)}
  });
+ for(const key of ['day','night'])document.getElementById(key==='day'?'gmVillageFireDay':'gmVillageFireNight')?.addEventListener('click',()=>villageCalibrateFire(key));
  const publish=document.getElementById('gmVillagePublish');
  publish.addEventListener('click',async()=>{
   if(!villageSceneDraft.day&&!villageSceneDraft.night){villageSceneStatus('Hãy chọn ảnh Ngày hoặc Đêm trước.');return}
@@ -181,10 +211,15 @@ function initVillageSceneManager(){
   publish.disabled=true;villageSceneStatus('Đang áp dụng ảnh làng lên Server...');
   try{
    await villageLocalBoot;
-   const data=await villageSceneRequest('/api/gm/village-scene','PUT',villageSceneDraft);
+   for(const key of ['day','night'])if(villageSceneDraft[key]&&!villageSceneDraftAnchors[key])
+     throw Error('Hãy ĐỊNH VỊ 🔥 trên ảnh '+(key==='day'?'Ngày':'Đêm')+' trước khi ÁP DỤNG.');
+   const fireAnchors=Object.fromEntries(Object.entries(villageSceneDraftAnchors).filter(([key,p])=>!!villageSceneDraft[key]&&!!p));
+   const data=await villageSceneRequest('/api/gm/village-scene','PUT',
+     {...villageSceneDraft,...(Object.keys(fireAnchors).length?{fireAnchors}:{})});
    await setGMVillageScenePublished(data.scene);
    if(Number(villageScenePublished.revision)!==Number(data.scene?.revision))throw Error('Server chưa xác nhận phiên bản mới. Vui lòng kiểm tra lại.');
    villageSceneDraft.day=null;villageSceneDraft.night=null;
+   villageSceneDraftAnchors.day=null;villageSceneDraftAnchors.night=null;
    document.getElementById('gmVillageDay').value='';
    document.getElementById('gmVillageNight').value='';
    villageSceneStatus('Đã áp dụng hình nền mới. Player Web sẽ tự đồng bộ.');
@@ -201,6 +236,7 @@ function initVillageSceneManager(){
    await setGMVillageScenePublished(data.scene);
    if(Number(villageScenePublished.revision)!==Number(data.scene?.revision)||villageScenePublished.day||villageScenePublished.night)throw Error('Server chưa xác nhận khôi phục mặc định.');
    villageSceneDraft.day=null;villageSceneDraft.night=null;
+   villageSceneDraftAnchors.day=null;villageSceneDraftAnchors.night=null;
    document.getElementById('gmVillageDay').value='';
    document.getElementById('gmVillageNight').value='';
    villageSceneStatus('Đã khôi phục bối cảnh mặc định ban đầu. Player Web sẽ tự đồng bộ.');
