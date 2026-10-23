@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install pinned Node test dependencies
+        run: npm ci
+
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
