@@ -3614,7 +3614,7 @@ function renderPlayGatherToolbar(){
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
   if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
-const PLAY_SEAT_PRESET_NAMES={circle:'HÌNH TRÒN',diamond:'HÌNH THOI',rectangle:'CHỮ NHẬT'};
+const PLAY_SEAT_PRESET_NAMES={circle:'VÒNG TRÒN 360°'};
 function closePlaySeatPresetPanel(){
   playSeatPresetOpen=false;
   const panel=document.getElementById('playSeatPresetPanel'),trigger=document.getElementById('playGatherSeatPreset');
@@ -3630,10 +3630,10 @@ function renderPlaySeatPresetPanel(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT,selectedCount=Number(playSceneRuntime.room?.seatCount||0);
   const selectedShape=layout.normalizeSeatLayout(playSceneRuntime.room?.seatLayout),members=playLiveMembers();
   const minimum=Math.max(members.length,...members.map(p=>Number(p?.seatId||0)),0);
-  const exactCount=Math.max(6,Math.min(30,minimum));
-  const counts=[...new Set([exactCount,...layout.seatTemplateCounts])].sort((a,b)=>a-b);
+  // Seat Mau 6,8,...30. Odd-sized existing rooms still display normally.
+  const counts=layout.seatTemplateCounts.filter(n=>n>=minimum);
   const hint=document.getElementById('playSeatPresetAutoHint');
-  if(hint)hint.textContent='Một chu vi quanh đống lửa • Tròn / Thoi / Chữ nhật (cạnh dài hai bên) • Giữ Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
+  if(hint)hint.textContent='Vòng tròn 360° quanh đống lửa • Mẫu 6, 8, 10, …, 30 người • Giữ Seat ID và Character'+(minimum?' • Hiện có '+members.length+' người':'');
   grid.replaceChildren();
   for(const n of counts){
     const shape=layout.recommendedSeatShape(n),selected=n===selectedCount&&selectedShape===shape;
