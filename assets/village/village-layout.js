@@ -122,7 +122,7 @@
     // margin rather than pinning the top row at y=31 (which blocked ↑ at -10).
     // Translate the WHOLE formation to preserve distances and seat identities.
     const offsetX=Math.max(10-minX,Math.min(90-maxX,shift.x));
-    const offsetY=Math.max(12-minY,Math.min(96-maxY,shift.y));
+    const offsetY=Math.max(30-minY,Math.min(96-maxY,shift.y));
     return raw.map((p,i)=>({...clampPoint(p.x+offsetX,p.y+offsetY),ring:0,depth:points[i].depth}));
   }
   // Presentation/transition repair: old rooms can contain members without seats
