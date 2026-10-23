@@ -18,11 +18,16 @@ const sessions=[
  {name:'Edge',loginId:id+'e',channel:'msedge'}
 ];
 const opened=[];
+const errors=[];
 try{
  for(const [i,s] of sessions.entries()){
   await api('/api/members/register',{method:'POST',body:{loginId:s.loginId,displayName:'P0 '+s.name,gameCharacterId:'character-0'+(i+1)}});
   const auth=await api('/api/members/login',{method:'POST',body:{loginId:s.loginId}});
   s.token=auth.token;s.member=auth.member;
+  // Isolate the GM→Web role/vote contract: this test does NOT test roaming.
+  // Auto-walk is independently tested by the 30-player movement suite.
+  const profile=await api('/api/members/profile',{method:'POST',token:s.token,body:{lobbyMotionEnabled:false}});
+  s.member=profile.member;
   await api('/api/rooms/'+code+'/join',{method:'POST',body:{token:s.token}});
  }
  for(const s of sessions){
@@ -80,7 +85,8 @@ try{
     metrics:window.GMWWVillageRenderMetrics||null
   })).catch(error=>({error:String(error)}));
   throw Error(label+' did not show both Chrome and Edge Characters: '+
-   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))||[],browser,iframe}));
+   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))||[],browser,iframe,
+   browserErrors:opened.map(x=>({browser:x.s.name,errors:x.s.errors.slice(-12),privateReads:x.s.privateReads.slice(-12)}))}));
  }
  for(const {page,s} of opened){
   const names=await expectTeam(page,s.name+' lobby');
