@@ -3,7 +3,7 @@ import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -793,7 +793,40 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
-    return {key,ballot:{...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec},eligible};
+    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    // The room's Durable Object is authoritative. Real auto mode advances when
+    // any GM or Player polls state; demos retain their scripted GM-driven clock.
+    const now=Date.now();
+    if(!meta.demo&&String(meta.phase)==="running"&&String(meta.cyclePhase)==="morning"&&current.mode==="auto"){
+      let changed=false;
+      if(current.stage==="nominating"&&now>=Number(current.nominationDeadlineAt||Infinity)){
+        const candidate=gallowsAutomaticNominee(current);
+        if(candidate){const began=gallowsBegin(current,candidate,now);if(began.ok){current=began.value;changed=true}}
+        else{current={...current,stage:"selecting",updatedAt:now};changed=true}
+      }
+      if(current.stage==="voting"&&now>=Number(current.deadlineAt||Infinity)){
+        const decision=gallowsAutomaticOutcome(current),done=gallowsResolve(current,decision,now);
+        if(done.ok){
+          current=done.value;changed=true;
+          if(decision==="dead"){
+            const rows=await this.ctx.storage.get("interactions")||[],loginId=current.candidateId;
+            if(!rows.some(row=>normalizeLoginId(row.loginId)===loginId&&row.effectActive!==false&&
+                String(row.type)==="dead"&&(!row.matchId||String(row.matchId)===String(meta.matchId)))){
+              const createdAt=new Date(now).toISOString(),fatal={id:"ix-"+crypto.randomUUID(),
+                type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
+                night:Number(meta.cycleNight),source:"gallows",gallowsId:current.id,effectActive:true,
+                message:"Người chơi đã bị hành quyết theo kết quả bỏ phiếu tự động.",createdAt};
+              rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+              await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
+              this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+            }
+          }
+        }
+      }
+      if(changed){await this.ctx.storage.put(key,current);
+        this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(current,meta,now),serverTime:now})}
+    }
+    return {key,ballot:current,eligible};
   }
   async gmGallows(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;

@@ -620,21 +620,39 @@ function gmwwRestoreDock(panel,force=false){
   panel.classList.add('gmww-dock-snapped');panel.dataset.dockEdge=saved.edge;
   return true;
 }
+/* Position the menu against the *rendered* campfire marker, not a guessed
+   centre of the village or a hard-coded coordinate for one background.
+   Evaluate above/below/side placements before clamping to the iPhone viewport. */
 function gmwwPlaceWolfMenuAtFire(menu){
   const fire=document.querySelector('.play-village-core .play-core-pearl');
-  if(!menu||!fire||!fire.getClientRects().length)return;
+  if(!menu||menu.hidden||!fire?.getClientRects().length)return false;
   const point=fire.getBoundingClientRect(),width=menu.offsetWidth,height=menu.offsetHeight;
-  if(!width||!height)return;
-  const left=(point.left+point.right-width)/2;
-  let top=point.top-height-10;
-  if(top<12)top=point.bottom+10;
-  const p=battleTargetClampPosition(width,height,left,top);
+  if(!width||!height)return false;
+  const cx=(point.left+point.right)/2,cy=(point.top+point.bottom)/2,gap=8;
+  const candidates=[
+    {left:cx-width/2,top:point.top-height-gap},
+    {left:cx-width/2,top:point.bottom+gap},
+    {left:point.right+gap,top:cy-height/2},
+    {left:point.left-width-gap,top:cy-height/2}
+  ];
+  let best=null;
+  for(const candidate of candidates){
+    const p=battleTargetClampPosition(width,height,candidate.left,candidate.top);
+    const horizontal=Math.max(0,p.left-point.right,point.left-(p.left+width));
+    const vertical=Math.max(0,p.top-point.bottom,point.top-(p.top+height));
+    const overlaps=p.left<point.right&&p.left+width>point.left&&p.top<point.bottom&&p.top+height>point.top;
+    const distortion=Math.hypot(p.left-candidate.left,p.top-candidate.top);
+    const score=Math.hypot(horizontal,vertical)+distortion*1.6+(overlaps?10000:0);
+    if(!best||score<best.score)best={...p,score};
+  }
+  if(!best)return false;
   const origin=menu.offsetParent?.getBoundingClientRect()||{left:0,top:0};
-  menu.style.setProperty('left',(p.left-origin.left)+'px','important');
-  menu.style.setProperty('top',(p.top-origin.top)+'px','important');
+  menu.style.setProperty('left',(best.left-origin.left)+'px','important');
+  menu.style.setProperty('top',(best.top-origin.top)+'px','important');
   menu.style.setProperty('right','auto','important');
   menu.style.setProperty('bottom','auto','important');
   menu.style.setProperty('transform','none','important');
+  return true;
 }
 
 function demoTurnDescription(){
