@@ -145,6 +145,23 @@ async function advancePlayPhase(){
  * choices and submitted through the same server action/turn endpoints. */
 const demoRunner={running:false,paused:false,owner:'',speed:1,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
   completed:new Set(),pending:new Set(),dayDone:new Set(),autoStartedMatch:'',status:'Sẵn sàng — nhấn Chạy Demo',error:''};
+// Native only: prevent Auto-Lock during an active foreground DEMO without camera/polling.
+let demoScreenAwakeSent=null;
+function demoSyncScreenAwake(){
+  const enabled=demoRunner.running===true&&playSceneRuntime.room?.demo===true&&
+    playSceneRuntime.room?.phase==='running'&&playSceneState.step==='battle'&&
+    document.visibilityState!=='hidden';
+  if(enabled===demoScreenAwakeSent)return;
+  const bridge=window.webkit?.messageHandlers?.gmwwScreen;
+  if(!bridge)return;
+  try{bridge.postMessage({action:'setDemoAwake',enabled});demoScreenAwakeSent=enabled}
+  catch(error){console.warn('GMWW_DEMO_SCREEN_AWAKE',error)}
+}
+document.addEventListener('visibilitychange',demoSyncScreenAwake);
+window.addEventListener('pagehide',()=>{
+  try{window.webkit?.messageHandlers?.gmwwScreen?.postMessage({action:'setDemoAwake',enabled:false})}catch(_){}
+  demoScreenAwakeSent=null;
+});
 const demoPick=rows=>rows[Math.floor(Math.random()*rows.length)];
 const demoDelay=()=>250;
 const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:demoRunner.speed,...extra});
@@ -186,6 +203,7 @@ function demoApplyServerControl(control){
   demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
   demoRunner.steps=Number(control.steps)||0;demoRunner.error=control.error||'';
   demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
+  if(typeof demoSyncScreenAwake==='function')demoSyncScreenAwake();
   demoRunner.lastEvent=event||null;
   demoRunner.history=Array.isArray(control.history)?control.history:[];
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
@@ -209,7 +227,7 @@ async function demoStop(reason='manual'){
   const active=demoRunner.running,code=demoRunner.roomCode;
   demoRunner.paused=reason==='manual'&&active;
   demoRunner.status=demoRunner.paused?'Đã tạm dừng':reason==='completed'?'Ván Demo đã kết thúc':'Sẵn sàng — nhấn Chạy Demo';
-  demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
+  demoRunner.running=false;demoRunner.epoch++;demoStopTimer();demoSyncScreenAwake();
   if(!active)return;
   if(playSceneRuntime.demoControl?.engine==='server'&&['room_change','exit_play'].includes(reason)){renderPlayBattle();return}
   try{
@@ -219,6 +237,7 @@ async function demoStop(reason='manual'){
   renderPlayBattle();
 }
 function demoRenderControls(){
+  demoSyncScreenAwake();
   initDemoPanel();demoRenderObserver();demoRenderVisual();
   document.getElementById('battleDemoExpand')?.classList.toggle('is-running',demoRunner.running);
   const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
@@ -437,7 +456,7 @@ async function demoStep(epoch){
     const msg=String(error?.message||error);
     demoRunner.error='Đã dừng: '+msg;
     if(demoRunner.lastEvent?.status==='pending')demoRunner.lastEvent.status='uncertain';
-    demoRunner.running=false;demoRunner.epoch++;demoStopTimer();
+    demoRunner.running=false;demoRunner.epoch++;demoStopTimer();demoSyncScreenAwake();
     // Keep an uncertain request blocked; do not blindly retry with a new receipt ID.
     if(!/DEMO_LEASE_OWNED|DEMO_LEASE_EXPIRED/.test(msg))
       try{await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('stop'))})}catch{}
@@ -1339,6 +1358,7 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
 }
 
 function renderPlayBattle(){
+  demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
