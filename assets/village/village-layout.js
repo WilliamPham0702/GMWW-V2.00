@@ -105,25 +105,49 @@
     const safe=n=>Number.isFinite(Number(n))?Math.max(-30,Math.min(30,Math.round(Number(n)*10)/10)):0;
     return {x:safe(value?.x),y:safe(value?.y)};
   }
-  function positions(count,shape='',offset=null,spacing=100){
-    // NEVER render 24 seats for a 12-player room: seat IDs and template points
-    // must use the same seatCount on GM, Worker and Player Web.
+  function seatFormationBase(count,shape='',spacing=100){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
-    const points=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
-    const shift=normalizeSeatOffset(offset),scale=normalizeSeatSpacing(spacing)/100;
-    if(!shift.x&&!shift.y&&scale===1)return points;
-    // Keep the whole 30-person formation inside the courtyard: independent
-    // per-point clamping piles characters on top of each other at high spacing.
+    const template=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
+    const scale=normalizeSeatSpacing(spacing)/100;
+    // Preserve the historical 2.5D spacing limits and character size.
     const scaleX=Math.max(.94,Math.min(scale,1.06)),scaleY=Math.max(.96,Math.min(scale,1.08));
-    const raw=points.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,y:fire.y+(p.y-fire.y)*scaleY}));
-    const xs=raw.map(p=>p.x),ys=raw.map(p=>p.y);
-    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
-    // Seat formations are GM-adjustable; keep them visible with a 12% courtyard
-    // margin rather than pinning the top row at y=31 (which blocked ↑ at -10).
-    // Translate the WHOLE formation to preserve distances and seat identities.
-    const offsetX=Math.max(10-minX,Math.min(90-maxX,shift.x));
-    const offsetY=Math.max(30-minY,Math.min(96-maxY,shift.y));
-    return raw.map((p,i)=>({...clampPoint(p.x+offsetX,p.y+offsetY),ring:0,depth:points[i].depth}));
+    return template.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,
+      y:fire.y+(p.y-fire.y)*scaleY,ring:0,depth:p.depth}));
+  }
+  function resolveSeatOffset(count,shape='',offset=null,spacing=100){
+    const base=seatFormationBase(count,shape,spacing);
+    const target=normalizeSeatOffset(offset);
+    // A ring is ONE rigid body. Never clamp a single Seat to the fire or
+    // courtyard: that permanently distorts the formation (V3.193 regression).
+    const valid=(x,y)=>base.every(p=>inside(p.x+x,p.y+y));
+    if(!target.x&&!target.y)return{x:0,y:0};
+    // The requested vector can pass through the fire even when its endpoint
+    // looks legal. Follow the safe continuous segment from the default centre.
+    const steps=Math.max(1,Math.ceil(Math.hypot(target.x,target.y)*10));
+    let low=0,high=1,hit=false;
+    for(let i=1;i<=steps;i++){
+      const t=i/steps;
+      if(valid(target.x*t,target.y*t)){low=t;continue}
+      high=t;hit=true;break;
+    }
+    if(!hit)return target;
+    for(let i=0;i<12;i++){
+      const mid=(low+high)/2;
+      if(valid(target.x*mid,target.y*mid))low=mid;else high=mid;
+    }
+    // Truncate TOWARD zero: rounding away from the safe origin could move
+    // a Seat back into the forbidden fire. The GM and Server store this exact
+    // effective offset so arrows, drag, refresh and Player Web agree.
+    const safe=n=>Math.trunc((n+(n<0?1e-9:-1e-9))*10)/10;
+    let x=safe(target.x*low),y=safe(target.y*low);
+    while(!valid(x,y)&&(x||y)){x=safe(x*.99);y=safe(y*.99)}
+    return{x,y};
+  }
+  function positions(count,shape='',offset=null,spacing=100){
+    const base=seatFormationBase(count,shape,spacing);
+    const shift=resolveSeatOffset(count,shape,offset,spacing);
+    // Every Seat has the SAME translation vector; never call clampPoint here.
+    return base.map(p=>({...p,x:p.x+shift.x,y:p.y+shift.y}));
   }
   // Presentation/transition repair: old rooms can contain members without seats
   // even after role delivery. Keep every valid seat ID and deterministically
@@ -219,5 +243,5 @@
     }
     return clampPoint(b.x,b.y);
   }
-  root.GMWW_VILLAGE_LAYOUT=Object.freeze({scene,fire,polygon,inside,clampPoint,positions,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
+  root.GMWW_VILLAGE_LAYOUT=Object.freeze({scene,fire,polygon,inside,clampPoint,positions,resolveSeatOffset,normalizeSeatOffset,normalizeSeatSpacing,seatTemplatePositions,seatTemplateCounts,seatTemplateShapes,normalizeSeatLayout,recommendedSeatShape,projectedSeatIds,spawn,fitMode,rect,toScreen,fromScreen,route,interpolate});
 })(globalThis);
