@@ -44,8 +44,8 @@ test('GM and Player Web receive synchronized layout; Character size and scene pr
   assert.match(source,/playUpdateRoomSettings\(\{seatCount:count,seatLayout:shape\}\)/);
  }
  assert.ok(html.includes('village-layout.js?v='+version+'-seat-circle-408'));
- assert.ok(player.includes('seat=3191-circle408'));
- assert.match(read('assets/village/index.html'),/seatfix=v3191-circle408/);
+ assert.ok(player.includes('seat=3195-rigid'));
+ assert.match(read('assets/village/index.html'),/seatfix=v3195-rigid/);
  assert.ok(worker.includes('VERSION="V'+version+'"'));
  assert.match(worker,/const locations=villageLayout\.positions\(requested,seatLayout,seatOffset,seatSpacing\)/);
  assert.match(read('server-game/current/style.css'),/body\.play-immersive \.play-player-avatar\{width:56px!important;height:74px!important\}/);
