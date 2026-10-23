@@ -313,7 +313,7 @@ export async function runMaintenance({
     NO_BRANCH_OR_PR_UNVERIFIED: "Không tìm thấy nhánh và PR; cần xác minh thủ công"
   };
   const auditDetails = audit.length ? audit.map(entry => {
-    const safeName = entry.name.replace(/[\\r\\n\\x60|]/g, "_");
+    const safeName = entry.name.replace(/[^A-Za-z0-9_.\/-]/g, "_");
     const branch = entry.branchExists === null ? "chưa thể kiểm tra" :
       entry.branchExists ? "còn tồn tại" : "không tìm thấy";
     return "- **" + safeName + "**: " +
@@ -325,15 +325,15 @@ export async function runMaintenance({
       "; deployment: " + entry.deploymentStatus +
       (entry.latestDeploymentAt ? " (" + entry.latestDeploymentAt + ")" : "") +
       "; **quyết định: GIỮ LẠI**";
-  }).join("\\n") : "Không có Preview chưa đối chiếu.";
+  }).join("\n") : "Không có Preview chưa đối chiếu.";
   const markerStart = "<!-- GMWW_CF_STATUS_START -->";
   const markerEnd = "<!-- GMWW_CF_STATUS_END -->";
   const body = "# GMWW Cloudflare Maintenance\n\n" +
     "Thông tin tổng hợp, cập nhật qua GitHub Actions có xác thực. " +
     "Không chứa dữ liệu game hoặc thông tin bí mật.\n\n" +
     markerStart + "\n" + JSON.stringify(status) + "\n" + markerEnd + "\n\n" +
-    "### Chi tiết Preview chưa đối chiếu (chỉ kiểm toán, không tự xóa)\\n\\n" +
-    auditDetails + "\\n\\n" +
+    "### Chi tiết Preview chưa đối chiếu (chỉ kiểm toán, không tự xóa)\n\n" +
+    auditDetails + "\n\n" +
     "Nhật ký chi tiết: [GitHub Actions](" +
     "https://github.com/" + REPO + "/actions/workflows/cloudflare-maintenance.yml).\n";
   await gh("/issues/" + STATUS_ISSUE, "PATCH", { body });
@@ -348,8 +348,8 @@ export async function runMaintenance({
       " | Chưa đối chiếu: " + plan.unlinked.length +
       " | Bỏ qua: " + skipped.length + "\n" +
       "- Đã kiểm toán từng Preview: " + audit.length +
-      " | Lỗi xác minh API: " + auditFailures + "\\n" +
-      "- Nhóm chưa đối chiếu: " + JSON.stringify(auditReasons) + "\\n" +
+      " | Lỗi xác minh API: " + auditFailures + "\n" +
+      "- Nhóm chưa đối chiếu: " + JSON.stringify(auditReasons) + "\n" +
       "- Production: không thay đổi binding\n";
     await writeFile(env.GITHUB_STEP_SUMMARY, summary, { flag: "a" });
   }
