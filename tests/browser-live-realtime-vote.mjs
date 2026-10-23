@@ -33,6 +33,15 @@ try{
     localStorage.setItem('gmww_token',data.token);
     localStorage.setItem('gmww_member',JSON.stringify(data.member));
     localStorage.setItem('gmww_active_room_v4',JSON.stringify({roomCode:data.roomCode,participantId:'member:'+data.loginId,savedAt:Date.now()}));
+   }else if(location.pathname.startsWith('/village/')){
+    // Only test instrumentation: read public messages inside the real iframe.
+    window.__p0RoomFrames=[];
+    window.addEventListener('message',event=>{
+      if(event.origin===location.origin&&event.data?.type==='gmww:village-state'){
+        window.__p0RoomFrames.push({at:Date.now(),players:(event.data.players||[]).map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))});
+        if(window.__p0RoomFrames.length>8)window.__p0RoomFrames.shift();
+      }
+    },true);
    }
   },{token:s.token,member:s.member,roomCode:code,loginId:s.loginId});
   const page=await context.newPage();
@@ -58,8 +67,15 @@ try{
    scene:document.querySelector('#gmwwVillageFrame')?.getAttribute('src')||'',
    activeScreens:[...document.querySelectorAll('.screen.active')].map(el=>el.id)
   })).catch(error=>({error:String(error)}));
+  const iframe=await page.frameLocator('#gmwwVillageFrame').locator('html').evaluate(el=>({
+    lastFrames:window.__p0RoomFrames||[],
+    rendered:[...document.querySelectorAll('button.player')].map(b=>({name:b.querySelector('.name-text')?.textContent,classes:b.className,seatId:b.dataset.seatId})),
+    roster:[...document.querySelectorAll('#roster span')].map(x=>x.textContent),
+    count:document.querySelector('#count')?.textContent,
+    metrics:window.GMWWVillageRenderMetrics||null
+  })).catch(error=>({error:String(error)}));
   throw Error(label+' did not show both Chrome and Edge Characters: '+
-   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName}))||[],browser}));
+   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))||[],browser,iframe}));
  }
  for(const {page,s} of opened){
   const names=await expectTeam(page,s.name+' lobby');
