@@ -5039,7 +5039,7 @@ function battleGallowsRender(phase){
       String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi'));
     nominationStats.innerHTML='<b>🏴‍☠️ ĐỀ CỬ: '+tallyCount+'/'+voterTotal+' người đã chọn</b>'+
       (stage==='ready'?'<small>Chưa mở bình chọn trên Player Web.</small>':
-        '<div class="battle-gallows-tally-list">'+sorted.map(m=>
+        '<div class="battle-gallows-tally-list">'+sorted.slice(0,3).map(m=>
         '<div><span>'+playEsc(m.displayName||m.loginId)+'</span><b>'+String(totals.get(m.loginId)||0)+' · '+Math.round(100*(totals.get(m.loginId)||0)/nominationEligible)+'%</b></div>').join('')+'</div>')+
       (mode==='auto'&&stage==='selecting'?'<small>Hòa hoặc chưa có đề cử: GM chọn người lên giàn.</small>':'');
   }
