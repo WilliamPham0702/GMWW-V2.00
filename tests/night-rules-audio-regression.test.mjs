@@ -16,7 +16,7 @@ function harness(actionId='action_seer',roleId='role_seer'){
  const data=new Map([['assignments',assignments],['players',Object.fromEntries(ids.map((loginId,i)=>['member:'+loginId,{loginId,seatId:i+1}]))],['interactions',[]]]);
  for(const a of assignments)data.set('role:'+a.loginId,{...a,roleCard:{factionId:a.loginId==='wolf'?'wolf':'village',flags:{nightImmune:a.loginId==='immune'},functions:[{actionId,usageMode:'eachNight',usageCount:1}]}});
  const methods=cut(worker,'  async gmBattleAction(', '  async gmBattleUndo(')+cut(worker,'  async executeGmInteraction(', '  async playerInteractionRespond(');
- const Room=vm.runInNewContext('(class {'+methods+'})',{...nightRules,...policy,isBattleActorBlocked,normalizeLoginId:x=>String(x||'').replace(/^member:/,''),STATUS_DEFS:{},STATUS_VISUAL_IDS:new Set(),pruneInteractions:x=>x,crypto:webcrypto,Response,Date,j:(d,status=200)=>Response.json(d,{status})});
+ const Room=vm.runInNewContext('(class {'+methods+'})',{...nightRules,...policy,isBattleActorBlocked,normalizeLoginId:x=>String(x||'').replace(/^member:/,''),STATUS_DEFS:{},STATUS_VISUAL_IDS:new Set(),pruneInteractions:x=>x,publicRoom:x=>x,publicPlayer:x=>x,crypto:webcrypto,Response,Date,j:(d,status=200)=>Response.json(d,{status})});
  const room=new Room();room.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>data.set(k,structuredClone(v)),delete:async k=>data.delete(k)}};
  room.gmAuthorized=async()=>({ok:true,meta});room.broadcast=()=>{};
  room.getNightRuntime=async()=>({cursor:0,queue:[{id:'turn',kind:'role',roleId,loginIds:['seer']}]});
