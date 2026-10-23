@@ -290,7 +290,7 @@ function currentLobbyMotionPlayer(){return state.roomCode?currentRoomPlayer():cu
 function lobbyMotionEligible(){
   if(!state.member||!lobbyMotionEnabled()||document.hidden||state.lobbyMotionPaused||Date.now()<Number(state.lobbyManualUntil||0))return false;
   const p=currentLobbyMotionPlayer();if(!p||p.movementStatus==='moving'&&p.moveTargetSeatId)return false;
-  if(state.roomCode){const phase=String(state.room?.phase||'lobby').toLowerCase();return ['lobby','waiting','role_delivery'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)}
+  if(state.roomCode){const phase=String(state.room?.phase||'lobby').toLowerCase();return ['lobby','waiting'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)}
   return true
 }
 function lobbyMotionHash(v){let h=2166136261;for(const ch of String(v||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
