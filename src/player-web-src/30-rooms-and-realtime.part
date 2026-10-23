@@ -136,6 +136,7 @@ function gallowsWidget(){
   let el=document.getElementById('gmwwGallowsPlayer');if(el)return el;
   const st=document.createElement('style');st.id='gmwwGallowsPlayerCss';
   st.textContent='#gmwwGallowsPlayer{position:fixed;z-index:990;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,440px);max-height:58dvh;overflow:auto;padding:13px;border-radius:17px;border:1px solid #ace3e2;background:#103344ed;box-shadow:0 10px 40px #0007;color:#effcff;display:grid;gap:8px}#gmwwGallowsPlayer[hidden]{display:none!important}#gmwwGallowsPlayer h3{margin:0;font-size:17px;color:#ffda92}#gmwwGallowsPlayer button,#gmwwGallowsPlayer select{min-height:38px;border-radius:9px;border:1px solid #99cfda;background:#18516b;color:#fff;padding:7px;font-weight:800}#gmwwGallowsPlayer button:disabled{opacity:.38}#gmwwGallowsChoices{display:grid;grid-template-columns:1fr 1fr;gap:9px}#gmwwGallowsVotes{max-height:18dvh;overflow:auto;font-size:12px;line-height:1.7}#gmwwGallowsVotes div{display:flex;justify-content:space-between;border-bottom:1px solid #d7ffff33}';
+  st.textContent+='#gmwwGallowsPublicStage{flex:0 0 100%;text-align:center;font-size:12px;color:#ffe3ae;line-height:1.4}#gmwwGallowsDock{flex-wrap:wrap;max-width:96vw}';
   st.textContent+='#gmwwGallowsDock{position:fixed;z-index:989;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:9px;align-items:center;justify-content:center;padding:8px 10px;background:#103344ee;border:1px solid #9edcde;border-radius:16px;box-shadow:0 7px 22px #0008}#gmwwGallowsDock[hidden]{display:none!important}#gmwwGallowsDock button{min-height:45px;min-width:58px;border:1px solid #a4ced8;border-radius:11px;background:#16556b;color:#fff;font-weight:850;font-size:15px}#gmwwGallowsDock button:disabled{opacity:.42}#gmwwGallowsPlayer{bottom:max(80px,calc(env(safe-area-inset-bottom) + 78px))}';
   document.head.append(st);
   el=document.createElement('section');el.id='gmwwGallowsPlayer';el.hidden=true;
@@ -151,7 +152,8 @@ function gallowsDock(){
   let dock=document.getElementById('gmwwGallowsDock');if(dock)return dock;
   dock=document.createElement('section');dock.id='gmwwGallowsDock';dock.hidden=true;
   dock.setAttribute('aria-label','Menu Lên Giàn trên Player Web');
-  dock.innerHTML='<button type="button" id="gmwwGallowsOpenNomination" title="Kéo cờ 🏴‍☠️ trong làng hoặc mở danh sách">🏴‍☠️ ĐỀ CỬ</button>'+
+  dock.innerHTML='<strong id="gmwwGallowsPublicStage" role="status" aria-live="polite"></strong>'+ 
+    '<button type="button" id="gmwwGallowsOpenNomination" title="Kéo cờ 🏴‍☠️ trong làng hoặc mở danh sách">🏴‍☠️ ĐỀ CỬ</button>'+
     '<button type="button" data-gallows-vote="👍" aria-label="Bỏ phiếu cứu">👍</button>'+
     '<button type="button" data-gallows-vote="👎" aria-label="Bỏ phiếu giết">👎</button>';
   document.body.append(dock);
@@ -195,7 +197,15 @@ function renderGallowsWidget(){
   const eligible=Array.isArray(g.eligible)?g.eligible:[],
     canNominate=eligible.includes(me)&&stage==='nominating'&&!blockedNomination&&!g.nominations?.[me],
     canVote=eligible.includes(me)&&me!==g.candidateId&&stage==='voting'&&!blockedVote&&!g.votes?.[me];
-  dock.hidden=!(canNominate||canVote);
+  dock.hidden=!(canNominate||canVote||['voting','closed','resolved'].includes(stage));
+  const candidate=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
+  const name=String(candidate?.displayName||g.candidateId||'').slice(0,48),t=g.voteTotals||{save:0,kill:0,cast:0,eligible:0};
+  const status=dock.querySelector('#gmwwGallowsPublicStage');
+  if(status)status.textContent=stage==='nominating'?'🏴‍☠️ CHỌN NGƯỜI LÊN GIÀN':
+    stage==='voting'?'⚖️ BỎ PHIẾU CHO '+name+' · '+t.cast+'/'+t.eligible:
+    stage==='closed'||stage==='resolved'?
+      '⚖️ '+name+' · 👍 '+t.save+' 👎 '+t.kill+' · '+
+      (stage==='resolved'?(g.outcome==='dead'?'KẾT LUẬN: CHẾT':'KẾT LUẬN: SỐNG'):'ĐANG CHỐT KẾT QUẢ'):'';
   const open=dock.querySelector('#gmwwGallowsOpenNomination');
   open.hidden=!canNominate;
   dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.hidden=!canVote;b.disabled=!canVote});
