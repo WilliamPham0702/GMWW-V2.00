@@ -925,7 +925,7 @@ export class RoomDurableObject extends DurableObject {
             message:"Người chơi đã bị hành quyết trên giàn.",createdAt};
           rows.push(fatal);
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
-          await this.applyHunterDeathConsequences(meta,rows,createdAt);
+          if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,createdAt);
           await this.ctx.storage.put("interactions",pruneInteractions(rows));
           this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
         }
@@ -1700,7 +1700,7 @@ export class RoomDurableObject extends DurableObject {
         await this.ctx.storage.delete(storageKey);
       }
     }
-    if(p==="morning")await this.applyHunterDeathConsequences(meta,rows,now);
+    if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
     if(nightRuntime){meta.currentNightTurnId=nightRuntime.currentId;meta.updatedAt=now;await this.ctx.storage.put("meta",meta)}
@@ -1935,7 +1935,7 @@ export class RoomDurableObject extends DurableObject {
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
         statusId:log.statusId||log.type,active:true,serverTime:Date.now()});
     }
-    await this.applyHunterDeathConsequences(meta,interactions,time);
+    if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
       roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
@@ -2235,7 +2235,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);
-    if(type==="dead"&&!interaction.pendingDeath)await this.applyHunterDeathConsequences(meta,rows,now);
+    if(type==="dead"&&!interaction.pendingDeath&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
@@ -2280,7 +2280,7 @@ export class RoomDurableObject extends DurableObject {
       rows.push(fatal);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+fatal.id,fatal);
     }
-    if(assassinOutcome==="dead")await this.applyHunterDeathConsequences(meta,rows,now);
+    if(assassinOutcome==="dead"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const logId="ev-"+crypto.randomUUID();
     await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+logId,
