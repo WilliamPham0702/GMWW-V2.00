@@ -12,6 +12,7 @@
 3. Ngừng di chuyển ngẫu nhiên khi đã phát Vai Trò; từ lúc đó Server cũng không nhận thêm move mới. Điều này giảm lượng request hoàn tất move 409 và tránh cạnh tranh giữa cập nhật di chuyển với cập nhật Vai Trò.
 4. Kịch bản Chrome/Edge mô phỏng phát vai, nhận Artifact, đề cử, phiếu 👍/👎 và reload trong điều kiện nhân vật đứng yên để kiểm tra chính xác luồng đồng bộ; kiểm thử stress 30 người vẫn riêng.
 5. Thêm hồi quy kiểm tra JavaScript sau ghép, snapshot public, pha phát vai và quy tắc ngừng di chuyển.
+6. Khi phản hồi `/me` đã có Vai Trò/Artifact nhưng luồng áp dụng UI thông thường bị kẹt ở `lobby`, dùng cơ chế dự phòng có xác thực theo đúng tài khoản và phòng hiện tại để cập nhật `state.room`, Vai Trò, Artifact, hiển thị lá và chuyển giao diện ngay. Không phát dữ liệu cá nhân qua public roster.
 
 ## Điều kiện nghiệm thu / phát hành
 - Cả Chrome và Edge hiện đủ thành viên không cần refresh và ngay sau join, kể cả qua lượt phát vai.
