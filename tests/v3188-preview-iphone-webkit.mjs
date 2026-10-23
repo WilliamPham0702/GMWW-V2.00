@@ -58,10 +58,9 @@ try{
   assert.equal(folded.expanded,'false','Screen reader receives collapsed state');
   assert.ok(folded.w<=53&&folded.h<=52,'Folded observer occupies just the 📗 tile: '+JSON.stringify(folded));
   assert.ok(folded.buttonW>=43&&folded.buttonH>=43,'Book control keeps an iPhone-sized touch target');
-  await page.evaluate(()=>{
-    document.getElementById('battleDemoCollapse').dataset.ready='';
-    v3188.initDemoPanel();
-  });
+  // Initialization is intentionally idempotent: do not forge a fresh
+  // element by deleting its event-listener guard (which duplicates clicks).
+  await page.evaluate(()=>v3188.initDemoPanel());
   assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),true,'Book collapse survives panel reinit');
   await book.click();
   assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),false,'Book restores event history');
