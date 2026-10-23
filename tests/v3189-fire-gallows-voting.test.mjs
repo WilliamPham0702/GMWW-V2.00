@@ -32,16 +32,17 @@ test('nomination is one vote per eligible living member; cannot choose own chara
  assert.equal(gallowsNominate(a.value,'player1','player3').ok,false);
  a=gallowsSetRestriction(a.value,'player1','nomination',true);assert.deepEqual(gallowsNominationTotals(a.value),[]);
 });
-test('execution voting excludes nominated character, banned or dead members',()=>{
+test('execution voting includes accused if eligible, but removes banned votes',()=>{
  const g={...seed(),stage:'voting',candidateId:'player4',votes:{
-    player1:'👍',player2:'👎',player3:'👎',player4:'👎',player5:'👍',player6:'👎'}};
+    player1:'👍',player2:'👎',player3:'👎',player4:'👍',player5:'👍',player6:'👎'}};
  g.blockedVotes=['player6'];
  const totals=gallowsVoteTotals(g);
- assert.deepEqual(totals,{save:2,kill:2,cast:4,eligible:10});
- assert.equal(gallowsAutomaticOutcome(g),'alive','tie must save accused');
- assert.equal(gallowsCast(g,'player4','👎').ok,false,'candidate cannot vote on own execution');
+ assert.deepEqual(totals,{save:3,kill:2,cast:5,eligible:11});
+ assert.equal(gallowsAutomaticOutcome(g),'alive','save votes exceed kill votes');
+ assert.equal(gallowsCast(g,'player4','👍').ok,true,'accused can vote under existing GMWW rules');
  assert.equal(gallowsCast(g,'player6','👎').ok,false,'banned voter');
- g.votes.player7='👎';assert.equal(gallowsAutomaticOutcome(g),'dead');
+ g.votes.player7='👎';assert.equal(gallowsAutomaticOutcome(g),'alive','tie must save accused');
+ g.votes.player8='👎';assert.equal(gallowsAutomaticOutcome(g),'dead');
 });
 test('GM mode never accepts web votes, and mode switch clears old election receipts',()=>{
  let g=seed();g.nominations={player1:'player3'};
