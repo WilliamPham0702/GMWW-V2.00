@@ -34,10 +34,6 @@ try{
     localStorage.setItem('gmww_member',JSON.stringify(data.member));
     localStorage.setItem('gmww_active_room_v4',JSON.stringify({roomCode:data.roomCode,participantId:'member:'+data.loginId,savedAt:Date.now()}));
    }
-   window.addEventListener('message',event=>{
-    if(event.data?.type==='gmww:village-state'&&Array.isArray(event.data.players))
-     window.__gmwwCiVisiblePlayers=event.data.players.map(p=>p.loginId||p.participantId||p.displayName);
-   },true);
   },{token:s.token,member:s.member,roomCode:code,loginId:s.loginId});
   const page=await context.newPage();
   s.errors=[];page.on('pageerror',error=>s.errors.push(error.message));
@@ -45,13 +41,21 @@ try{
   await page.locator('#gmwwVillageFrame').waitFor({state:'attached',timeout:25000});
   opened.push({browser,context,page,s});
  }
- const roster=async(page)=>page.evaluate(()=>{
-   const frame=document.querySelector('#gmwwVillageFrame')?.contentWindow;
-   return frame?.__gmwwCiVisiblePlayers||[];
- });
+ // The iframe paints real Character nodes: verify the visible team, not an
+ // instrumentation message which may be installed after the first frame update.
+ const roster=page=>page.frameLocator('#gmwwVillageFrame').locator('button.player:not(.gm) .name-text').allInnerTexts();
+ async function expectTeam(page,label,timeout=25000){
+  let names=[];
+  for(let attempt=0;attempt<Math.ceil(timeout/250);attempt++){
+    names=await roster(page);
+    if(names.includes('P0 Chrome')&&names.includes('P0 Edge'))return names;
+    await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  throw Error(label+' did not show both Chrome and Edge Characters: '+JSON.stringify(names));
+ }
  for(const {page,s} of opened){
-  await page.waitForFunction(()=>document.querySelector('#gmwwVillageFrame')?.contentWindow?.__gmwwCiVisiblePlayers?.length>=2,null,{timeout:25000});
-  assert.equal((await roster(page)).length,2,s.name+' lobby must show both players');
+  const names=await expectTeam(page,s.name+' lobby');
+  assert.equal(names.length,2,s.name+' lobby must show both players');
  }
  const match='p0-match-'+id;
  const assignments=sessions.map((s,i)=>({loginId:s.loginId,roleId:'role-p0-'+i,roleName:'Vai '+s.name,
@@ -108,7 +112,7 @@ try{
  for(const {page,s} of opened){
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('#gmwwPlayerPrivateDock [data-private-card="role"]').waitFor({state:'visible',timeout:22000});
-  await page.waitForFunction(()=>document.querySelector('#gmwwVillageFrame')?.contentWindow?.__gmwwCiVisiblePlayers?.length>=2,null,{timeout:22000});
+  await expectTeam(page,s.name+' reload',22000);
   assert.equal((await roster(page)).length,2,s.name+' roster survives refresh');
  }
  console.log(JSON.stringify({success:true,case:'GM release -> two live browsers -> nomination -> two votes -> refresh',browsers:sessions.map(s=>s.name)}));
