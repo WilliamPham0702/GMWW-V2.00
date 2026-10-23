@@ -487,6 +487,10 @@ function gmwwApplyRoster(rows,origin='http'){
  offlineReplace("if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt)return;",
    "if(seq!==gmwwPublicPollSequence||roomCode!==state.roomCode||participantId!==state.participantId||gmwwLastRoomBroadcastAt>startedAt){if(roomCode===state.roomCode&&participantId===state.participantId)void refreshPrivateRole(true);return;}");
 
+ // A late/duplicate resume must NOT erase an already completed team roster.
+ // Only a genuine switch to another room should begin a new self-only roster.
+ offlineReplace("state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];gmwwAcknowledgePrivateDelivery(d);",
+ "const gmwwWasSameRoom=state.roomCode===code;state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=gmwwWasSameRoom?gmwwApplyRoster([d.player],'movement'):[d.player];gmwwAcknowledgePrivateDelivery(d);");
  // An Edge tab can miss the first complete snapshot while another tab is
  // already in the room. A single-player projection therefore requires a
  // low-frequency independent public reconcile, even if a poll is superseded by WS.
