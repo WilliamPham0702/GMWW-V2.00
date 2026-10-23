@@ -3,7 +3,7 @@ import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -801,12 +801,18 @@ export class RoomDurableObject extends DurableObject {
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
+    // An Artifact's vote ban is server-enforced and cannot be removed via GM toggle.
+    // Restrict to this calendar/game day; previous nights never leak into new voting.
+    const artifactVoteBans=[...new Set(interactions.filter(row=>row?.effectActive!==false&&
+      row?.artifactId&&String(row?.type)==='status'&&String(row?.statusId)==='vote_ban'&&
+      (!row.matchId||String(row.matchId)===String(meta.matchId))&&
+      Number(row.night)===Number(meta.cycleNight)).map(row=>normalizeLoginId(row.loginId)).filter(Boolean))];
     // Freeze the voter roster after resolution. An automatic execution must not
     // retroactively remove the condemned player's own valid ballot or erase
     // nominations for them from the final scoreboard.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -867,7 +873,13 @@ export class RoomDurableObject extends DurableObject {
     }else if(command==="manual_vote"){
       result=gallowsManualVote(ballot,target,body?.choice===null?null:String(body?.choice||""),now);
     }else if(command==="resolve"){
-      result=gallowsResolve(ballot,String(body?.outcome||""),now);
+      // GM manual verdict: no nomination clock, no public ballot, no waiting.
+      // In automatic mode only the existing authorized DEMO driver may resolve.
+      if(gallowsMode(ballot)==='auto'&&!(meta.demo&&body?.source==='demo'))
+        return j({ok:false,error:'AUTO_VERDICT_SERVER_ONLY'},403);
+      result=gallowsMode(ballot)==='gm'?
+        gallowsManualResolve(ballot,target,String(body?.outcome||''),now):
+        gallowsResolve(ballot,String(body?.outcome||''),now);
       if(result.ok&&result.value.outcome==="dead"){
         const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
         if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&
@@ -1845,6 +1857,10 @@ export class RoomDurableObject extends DurableObject {
       }else if(/expel|exile|duoi/.test(terms)){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
+      }else if(/(?:ban|block|disable|forbid|cam)[_-]?(?:vote|voting|bo[_-]?phieu)|(?:vote|voting)[_-]?(?:ban|block)|no[_-]?vote/.test(terms)||
+          /cấm\s*(?:bỏ\s*)?phiếu|cấm\s*vote/i.test(String(fn.name||fn.label||''))){
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"status",statusId:"vote_ban"});
+        message="Artifact đã cấm bỏ phiếu Lên Giàn trong ngày hiện tại.";
       }else if(/freeze|frozen|dong_bang/.test(terms)){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"frozen"});
         message="Artifact đã thực hiện Đóng Băng.";
@@ -1860,13 +1876,13 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="revived")continue;
       if(effect.type!=="effect_notice"&&affected(effect.loginId,effect.type))continue;
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
-        loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
+        ...(effect.statusId?{statusId:effect.statusId}:{}),loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time};
       interactions.push(log);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+log.id,log);
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
-        statusId:log.type,active:true,serverTime:Date.now()});
+        statusId:log.statusId||log.type,active:true,serverTime:Date.now()});
     }
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
