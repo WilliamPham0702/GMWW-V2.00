@@ -2509,7 +2509,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async playerMove(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
-    const phase=String(meta.phase||"lobby").toLowerCase();if(meta.seatsLocked)return j({ok:false,error:"SEATS_LOCKED",message:"Ghế đã được GM khóa."},409);if(!["lobby","waiting","role_delivery"].includes(phase))return j({ok:false,error:"MOVE_LOCKED_IN_MATCH",message:"Không thể di chuyển chỗ ngồi khi ván đang chạy."},409);
+    const phase=String(meta.phase||"lobby").toLowerCase();if(meta.seatsLocked)return j({ok:false,error:"SEATS_LOCKED",message:"Ghế đã được GM khóa."},409);if(!["lobby","waiting"].includes(phase))return j({ok:false,error:"MOVE_LOCKED_IN_MATCH",message:"Đã phát Vai Trò hoặc vào ván: dừng di chuyển tự động để bảo đảm đồng bộ."},409);
 
     const id="member:"+loginId,players=(await this.ctx.storage.get("players"))||{},p=players[id];if(!p)return j({ok:false,error:"PLAYER_NOT_IN_ROOM"},404);
     if(!normalizeGameCharacterId(p.gameCharacterId))return j({ok:false,error:"ACCOUNT_CHARACTER_REQUIRED"},409);
