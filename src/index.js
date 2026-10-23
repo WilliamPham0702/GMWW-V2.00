@@ -788,11 +788,16 @@ export class RoomDurableObject extends DurableObject {
       nominations:{},votes:{},blocked:[],blockedNomination:[],blockedVotes:[],mode:"auto",eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
-    const eligible=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
+    const aliveNow=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
       .map(p=>normalizeLoginId(p.loginId)).filter(loginId=>!interactions.some(row=>
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
         (!row?.matchId||String(row.matchId)===String(meta.matchId))&&
         ["dead","expelled"].includes(String(row.type))));
+    // Freeze the voter roster after resolution. An automatic execution must not
+    // retroactively remove the condemned player's own valid ballot or erase
+    // nominations for them from the final scoreboard.
+    const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
+      ballot.eligible:aliveNow;
     let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:gallowsBlockedVotes(ballot),nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
