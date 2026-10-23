@@ -68,7 +68,9 @@ try{
    }
    if(state.winProposal){finished=true;break}
   }
-  assert.ok(observedVotes,'server casts actual gallows votes without browser');assert.ok(finished,'server resolves GM-modified votes and pauses on winner');
+  assert.ok(observedVotes,'server casts actual gallows votes without browser');
+  assert.ok(manual,'GM can directly resolve after switching modes');
+  assert.ok(finished,'direct GM verdict kills the final wolf and produces a winner');
   assert.deepEqual(accountSnapshot((await req('/api/gm/members')).members),before);
  }finally{await day('/delete',{}).catch(()=>{})}
 
