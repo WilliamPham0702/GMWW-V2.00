@@ -495,7 +495,7 @@ function gmwwApplyRoster(rows,origin='http'){
  // already in the room. A single-player projection therefore requires a
  // low-frequency independent public reconcile, even if a poll is superseded by WS.
  offlineReplace("function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}",
- "function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState();if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId)},5000)}");
+ "function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible'){pollRoomState();if(!state.role||!playerScenePolicy(state.room).rolesReleased)void refreshPrivateRole(true)}if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId)},5000)}");
 
  // P0: movement streams are NOT a room-phase revision.
  // A continuous stream of move/move-complete events previously starved /me
