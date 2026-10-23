@@ -21,6 +21,7 @@ on:
       - "tests/night-timeline-iphone-webkit.mjs"
       - "tests/v3188-preview-iphone-webkit.mjs"
       - "tests/v3189-pirate-fire-webkit.mjs"
+      - "tests/v3190-fire-image-calibration-webkit.mjs"
       - "tests/demo-room-cross-origin-webkit.mjs"
       - "tests/demo-server-autonomous-e2e.mjs"
       - "server-game/current/battle-controls.js"
@@ -105,6 +106,8 @@ jobs:
         run: node tests/v3188-preview-iphone-webkit.mjs
       - name: Verify pirate nomination and calibrated fire popup in iPhone WebKit
         run: node tests/v3189-pirate-fire-webkit.mjs
+      - name: Verify calibrated Day/Night campfire with real iPhone WebKit touches
+        run: node tests/v3190-fire-image-calibration-webkit.mjs
       - name: Check night timeline on iPhone-sized WebKit
         run: node tests/night-timeline-iphone-webkit.mjs
       - name: Exercise private card UI with Chrome, Edge and WebKit
