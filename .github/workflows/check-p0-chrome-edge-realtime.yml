@@ -1,0 +1,55 @@
+name: Check P0 Chrome Edge Realtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "assets/village/**"
+      - "tests/browser-live-realtime-vote.mjs"
+      - ".github/workflows/check-p0-chrome-edge-realtime.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-p0-chrome-edge-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  chrome-edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Cài Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cài thư viện dự án
+        run: npm ci
+      - name: Cài Playwright không cài lại hệ điều hành WebKit
+        run: npm install --no-save playwright@1.58.2
+      - name: Kiểm thử realtime thực tế Chrome và Edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-p0-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true; tail -80 /tmp/gmww-p0-worker.log || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8787/api/health > /tmp/gmww-p0-health.json; then break; fi
+            sleep 1
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/gmww-p0-health.json
+          node tests/browser-live-realtime-vote.mjs
+      - name: Đính kèm ảnh lỗi Chrome Edge
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-p0-chrome-edge-diagnostics
+          path: /tmp/gmww-player-cards-p0-*.png
+          if-no-files-found: ignore
