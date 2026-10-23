@@ -45,7 +45,8 @@ try{
    }
   },{token:s.token,member:s.member,roomCode:code,loginId:s.loginId});
   const page=await context.newPage();
-  s.errors=[];s.privateReads=[];page.on('pageerror',error=>s.errors.push(error.message));
+  s.errors=[];s.privateReads=[];page.on('pageerror',error=>{s.errors.push(error.message);console.error(s.name+' PAGE ERROR: '+error.stack)});
+  page.on('console',msg=>{if(['warning','error'].includes(msg.type())&&msg.text().includes('[GMWW'))console.error(s.name+' '+msg.text())});
   page.on('requestfailed',req=>{if(req.url().includes('/api/rooms/'))s.privateReads.push({event:'requestfailed',url:new URL(req.url()).pathname,error:req.failure()?.errorText})});
   page.on('response',res=>{if(res.url().includes('/api/rooms/')&&res.url().endsWith('/me')){
     s.privateReads.push({event:'private-me',status:res.status(),url:new URL(res.url()).pathname,at:Date.now()});
@@ -80,7 +81,7 @@ try{
     metrics:window.GMWWVillageRenderMetrics||null
   })).catch(error=>({error:String(error)}));
   throw Error(label+' did not show both Chrome and Edge Characters: '+
-   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))||[],browser,iframe}));
+   JSON.stringify({errors:opened.find(x=>x.page===page)?.s.errors,rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName,seatId:p.seatId,kind:p.kind}))||[],browser,iframe}));
  }
  for(const {page,s} of opened){
   const names=await expectTeam(page,s.name+' lobby');
