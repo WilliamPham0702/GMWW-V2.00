@@ -51,7 +51,15 @@ try{
     if(names.includes('P0 Chrome')&&names.includes('P0 Edge'))return names;
     await new Promise(resolve=>setTimeout(resolve,250));
   }
-  throw Error(label+' did not show both Chrome and Edge Characters: '+JSON.stringify(names));
+  const live=await api('/api/rooms/'+code).catch(error=>({error:String(error)}));
+  const browser=await page.evaluate(()=>({
+   url:location.href,
+   visible:document.visibilityState,
+   scene:document.querySelector('#gmwwVillageFrame')?.getAttribute('src')||'',
+   activeScreens:[...document.querySelectorAll('.screen.active')].map(el=>el.id)
+  })).catch(error=>({error:String(error)}));
+  throw Error(label+' did not show both Chrome and Edge Characters: '+
+   JSON.stringify({rendered:names,server:live?.players?.map(p=>({id:p.participantId,name:p.displayName}))||[],browser}));
  }
  for(const {page,s} of opened){
   const names=await expectTeam(page,s.name+' lobby');
