@@ -365,7 +365,7 @@ function playGatherSpacing(){
 }
 function playSeatPositions(count){
   const room=playSceneRuntime.room||{},layout=globalThis.GMWW_VILLAGE_LAYOUT;
-  return layout.positions(count,room.seatLayout,playSeatOffsetPreview??room.seatOffset,playGatherSpacing()*100).map(p=>[p.x,p.y]);
+  return layout.positions(count,room.seatLayout,typeof playSeatOffsetPreview==='undefined'?room.seatOffset:(playSeatOffsetPreview??room.seatOffset),playGatherSpacing()*100).map(p=>[p.x,p.y]);
 }
 function playEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
 function playActiveCharacterId(gameCharacterId){const id=String(gameCharacterId||'');return /^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(id)?id:'character-01'}
