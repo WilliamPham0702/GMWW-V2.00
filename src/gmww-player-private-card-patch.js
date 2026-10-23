@@ -496,6 +496,37 @@ function gmwwApplyRoster(rows,origin='http'){
  // low-frequency independent public reconcile, even if a poll is superseded by WS.
  offlineReplace("function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState()},5000)}",
  "function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')pollRoomState();if((state.players||[]).length<=1)void gmwwRefreshPublicRoster(state.roomCode,state.participantId)},5000)}");
+
+ // P0: movement streams are NOT a room-phase revision.
+ // A continuous stream of move/move-complete events previously starved /me
+ // and public HTTP updates just as the GM delivered roles.
+ offlineReplace("if(['room_state','player_move','player_move_complete'].includes(d.type))gmwwLastRoomBroadcastAt=Date.now();",
+   "if(d.type==='room_state')gmwwLastRoomBroadcastAt=Date.now();");
+ const PRIVATE_PHASE_ADVANCE=String.raw`
+function gmwwShouldAdvancePrivatePhase(next){
+  if(!next)return false;
+  const room=state.room||{},order={lobby:0,waiting:0,role_delivery:1,running:2,started:2,playing:2,game:2,ended:3};
+  const previous=order[String(room.phase||'lobby').toLowerCase()]??-1;
+  const incoming=order[String(next.phase||'lobby').toLowerCase()]??-1;
+  if(incoming<=previous)return false;
+  if(room.matchId&&next.matchId&&String(room.matchId)!==String(next.matchId))return false;
+  return true;
+}
+`;
+ offlineReplace("async function refreshPrivateRole(force=false){",
+   PRIVATE_PHASE_ADVANCE+"\nasync function refreshPrivateRole(force=false){");
+ // Keep both private receipt assignments in sync; never downgrade a newer
+ // phase, but accept a forward GM phase transition even if a movement WS
+ // arrived while /me was in flight.
+ const phaseReceiptBegin=output.indexOf('async function refreshPrivateRole(force=false){');
+ const phaseReceiptEnd=output.indexOf('async function ensureRoleGameView(',phaseReceiptBegin);
+ if(phaseReceiptBegin<0||phaseReceiptEnd<phaseReceiptBegin)throw new Error('Private role phase-fence insertion drift');
+ const phaseReceipt=output.slice(phaseReceiptBegin,phaseReceiptEnd);
+ const oldPhaseGuard="if(d?.room&&Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt)state.room=d.room;";
+ const newPhaseGuard="if(d?.room&&(Number(d.__gmwwFetchedAt||0)>=gmwwLastRoomBroadcastAt||gmwwShouldAdvancePrivatePhase(d.room)))state.room=d.room;";
+ if(phaseReceipt.split(oldPhaseGuard).length!==3)throw new Error('Private role phase-fence expected 2 room updates');
+ output=output.slice(0,phaseReceiptBegin)+phaseReceipt.replaceAll(oldPhaseGuard,newPhaseGuard)+output.slice(phaseReceiptEnd);
+
  // First click should OPEN the chosen card in Chrome and Edge, even if
  // the chosen card happened to be behind the other card in the deck.
  offlineReplace("      if(state.artifact&&gmwwDeckPreferredTop!==kind){\n        gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);return;\n      }\n      gmwwPendingPrivateCardTap='';gmwwDeckBringToFront(kind);openPrivateCardViewer(kind);",
