@@ -40,10 +40,6 @@ test('official V3.196 release evidence updates the Server download library witho
  assert.equal(ipa.size,proof.size);
 });
 
-test('GMWW V3.197 runtime advertises the verified V3.196 IPA without raising minimum shell',()=>{
- const fs=requireNotNeeded();
-});
-
 test('GMWW V3.197 runtime advertises the verified V3.196 IPA without raising minimum shell',async()=>{
  const fs=await import('node:fs');
  const record=JSON.parse(fs.readFileSync('update-system/published-ipa.json','utf8'));
