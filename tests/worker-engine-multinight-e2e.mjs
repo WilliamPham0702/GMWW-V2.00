@@ -113,9 +113,10 @@ try{
  await jump('alpha');assert.equal((await action('alpha','effect_notice','inspect',['guard'])).error,'ACTOR_CANNOT_ACT');
  await jump('guard');assert.equal((await action('guard','effect_notice','inspect',['seer'])).error,'ACTOR_CANNOT_ACT');
  await jump('seer');ok(await action('seer','effect_notice','inspect',['guard']));
- // Direct kill + revive, only one witch action per night, undo restores that limit.
+ // Night kill stays pending until dawn; undo restores both intent and usage.
  await jump('witch');const killed=ok(await action('witch','dead','action_witch_kill',['victim']));
- assert.equal((await me('victim')).effects.some(x=>x.type==='dead'),true);
+ assert.equal((await me('victim')).effects.some(x=>x.type==='dead'),false,'poison must not kill before dawn');
+ assert.equal(killed.results[0].interaction.pendingDeath,true);
  assert.equal((await action('witch','revive','action_revive',['alpha'])).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
  ok(await gm('/battle-undo',{undoToken:killed.undoToken}));
  assert.equal((await me('victim')).effects.some(x=>x.type==='dead'),false);
@@ -127,6 +128,8 @@ try{
  await jump('witch');
  assert.equal((await action('witch','revive','action_revive',['victim'])).error,'ACTION_GAME_LIMIT_REACHED');
  ok(await action('witch','dead','action_witch_kill',['victim']));
+ assert.equal((await me('victim')).effects.some(x=>x.type==='dead'),false,'night-three poison is also deferred');
+ await jump('victim');ok(await action('victim','effect_notice','inspect',['seer']));
  await jump('wolf');ok(await action('wolf','effect_notice','action_wolf_bite',['witch']));
  await cycle('morning',3);s=await state();
  assert.equal(active(s,'witch','dead').length,1,'night-one protection cannot leak to night three');
