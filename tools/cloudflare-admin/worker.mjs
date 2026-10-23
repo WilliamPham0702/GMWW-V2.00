@@ -133,7 +133,7 @@ async function handler(request,env){
     if(!match)return failure("Chưa có báo cáo bảo trì được xác minh",503);
     const raw=JSON.parse(match[1]);
     const num=k=>Number.isSafeInteger(raw[k])&&raw[k]>=0?raw[k]:null;
-    if(raw.schema!==1||num("namespaceCount")===null||num("previewCount")===null||raw.productionProtected!==true)
+    if(![1,2].includes(raw.schema)||num("namespaceCount")===null||num("previewCount")===null||raw.productionProtected!==true)
       return failure("Báo cáo bảo trì chưa đạt điều kiện xác minh",503);
     return json({namespaceCount:num("namespaceCount"),previewCount:num("previewCount"),
       eligibleCount:num("eligibleCount"),protectedCount:num("protectedCount"),unlinkedCount:num("unlinkedCount"),
