@@ -63,8 +63,8 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),voteTotals:gallowsVoteTotals(ballot)};
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
-  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
+  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
   if(gallowsBlockedNomination(ballot).includes(voter))return {ok:false,error:'NOMINATION_BANNED'};
   if(ballot.nominations?.[voter])return {ok:false,error:'NOMINATION_ALREADY_USED'};
   return {ok:true,value:{...ballot,nominations:{...ballot.nominations,[voter]:target},updatedAt:now}};
