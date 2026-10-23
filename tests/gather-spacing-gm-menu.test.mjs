@@ -5,7 +5,7 @@ test('Gathering spacing slider supports 70–135%, synchronizes to server and up
  assert.match(app,/playUpdateRoomSettings\(\{seatSpacing:value\}\)/);
  assert.match(app,/input\.addEventListener\('input'/);
  assert.match(app,/renderPlayPlayers\(\)/);
- assert.match(app,/layout\.positions\(count,room.seatLayout,room.seatOffset,playGatherSpacing\(\)\*100\)/);
+ assert.match(app,/layout\.positions\(count,room.seatLayout,[^\n]*room.seatOffset[^\n]*playGatherSpacing\(\)\*100\)/);
 });
 test('GM info box is removed and top two audio/auto controls spread evenly',()=>{
  assert.doesNotMatch(html,/id="battleInfoToggle"/);
