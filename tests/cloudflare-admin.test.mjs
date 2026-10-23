@@ -67,10 +67,10 @@ test("public health excludes secrets; API fails closed if not configured",async(
  assert.match(await page.text(),/Quản lý Cloudflare|GMWW Cloudflare/);
 });
 
-test("public status mirrors only the already-public aggregate maintenance report",async()=>{
+for (const schema of [1,2]) test(`public status mirrors verified aggregate maintenance report schema ${schema}`,async()=>{
  const original=globalThis.fetch;
  try{
-  const published={schema:1,namespaceCount:18,previewCount:17,eligibleCount:0,protectedCount:5,unlinkedCount:12,
+  const published={schema,namespaceCount:18,previewCount:17,eligibleCount:0,protectedCount:5,unlinkedCount:12,
    updatedAt:"2026-10-18T14:45:02.705Z",mode:"cleanup",productionProtected:true};
   globalThis.fetch=async()=>new Response(JSON.stringify({body:
    "<!-- GMWW_CF_STATUS_START -->\n"+JSON.stringify(published)+"\n<!-- GMWW_CF_STATUS_END -->"}),{status:200});
@@ -86,9 +86,20 @@ test("public status mirrors only the already-public aggregate maintenance report
 test("public status rejects reports without explicit production protection",async()=>{
  const original=globalThis.fetch;
  try{
-  const body=JSON.stringify({schema:1,namespaceCount:18,previewCount:17,productionProtected:false});
+  const body=JSON.stringify({schema:2,namespaceCount:18,previewCount:17,productionProtected:false});
   globalThis.fetch=async()=>new Response(JSON.stringify({body:"<!-- GMWW_CF_STATUS_START -->\n"+body+"\n<!-- GMWW_CF_STATUS_END -->"}),{status:200});
   const r=await worker.fetch(new Request("https://admin.test/api/public-status"),{});
   assert.equal(r.status,503);
+ }finally{globalThis.fetch=original}
+});
+
+for(const schema of [0,3]) test(`public status rejects unknown report schema ${schema}`,async()=>{
+ const original=globalThis.fetch;
+ try{
+  const published={schema,namespaceCount:18,previewCount:17,productionProtected:true};
+  globalThis.fetch=async()=>new Response(JSON.stringify({body:
+   "<!-- GMWW_CF_STATUS_START -->\\n"+JSON.stringify(published)+"\\n<!-- GMWW_CF_STATUS_END -->"}),{status:200});
+  const response=await worker.fetch(new Request("https://admin.test/api/public-status"),{});
+  assert.equal(response.status,503);
  }finally{globalThis.fetch=original}
 });
