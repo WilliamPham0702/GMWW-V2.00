@@ -300,7 +300,15 @@ async function gmwwVerifyMemberBeforeRemoval(){
  const poll=result.slice(pollStart,pollEnd);
  const privateBlock=poll.indexOf("  if(!state.token)return;\n  try{");
  if(privateBlock<0)throw new Error('Private receipt inside public-room poll changed');
- result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+"  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+result.slice(pollEnd);
+ // The poll section ALSO contains gallowsCurrentStage, the voting dock,
+ // renderGallowsWidget and sendGallowsChoice. Previous slicing silently deleted
+ // every one of them, then websocket/private receipt called an undefined renderer.
+ // Replace ONLY the old private /me tail of pollRoomState; retain the voting UI.
+ const votingHelpers=poll.indexOf("\nfunction gallowsCurrentStage(){",privateBlock);
+ if(votingHelpers<0)throw new Error('GMWW public poll lost Lên Giàn helpers');
+ result=result.slice(0,pollStart)+poll.slice(0,privateBlock)+
+   "  if(!state.token)return;\n  await refreshPrivateRole(true);\n}\n"+
+   poll.slice(votingHelpers)+result.slice(pollEnd);
  // Browser restore must carry the Artifact expectation, not only the role.
  replaceReceipt("state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];",
    "state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];gmwwAcknowledgePrivateDelivery(d);");
