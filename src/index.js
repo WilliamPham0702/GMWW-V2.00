@@ -1874,7 +1874,12 @@ export class RoomDurableObject extends DurableObject {
     for(const effect of changes){
       if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
       if(effect.kind==="revived")continue;
-      if(effect.type!=="effect_notice"&&affected(effect.loginId,effect.type))continue;
+      // Multiple distinct status IDs may coexist (e.g. Mute and Artifact vote ban).
+      const sameStatus=effect.type==="status"&&interactions.some(row=>
+        sameMatch(row)&&normalizeLoginId(row.loginId)===effect.loginId&&
+        row.effectActive!==false&&row.type==="status"&&row.statusId===effect.statusId&&
+        Number(row.night)===day);
+      if(effect.type!=="effect_notice"&&(effect.type==="status"?sameStatus:affected(effect.loginId,effect.type)))continue;
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
         ...(effect.statusId?{statusId:effect.statusId}:{}),loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
