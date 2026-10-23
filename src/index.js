@@ -1725,7 +1725,7 @@ export class RoomDurableObject extends DurableObject {
       !String(actionId).toLowerCase().includes("revive")))
       return j({ok:false,error:"DAY_TARGET_NOT_ELIGIBLE"},409);
     // Validate resurrection before reserving a day-artifact activation.
-    if(artifactId&&/revive|hoi_sinh/.test([actionId,...(fn.effectIds||[])].join(" ").toLowerCase())&&
+    if(artifactId&&/revive|hoi_sinh/.test([actionId,...(Array.isArray(fn.effectIds)?fn.effectIds:[])].join(" ").toLowerCase())&&
       !targets.some(id=>!affected(id,"expelled")&&affected(id,"dead")))
       return j({ok:false,error:"DAY_REVIVE_TARGET_NOT_DEAD",message:"Chưa có người chết hợp lệ để hồi sinh."},409);
     const usageKey="dayRoleUsage:"+matchId,
