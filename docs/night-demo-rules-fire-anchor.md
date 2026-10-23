@@ -4,7 +4,7 @@
 - DEMO: Phù Thủy không dùng bình Giết đêm 1; từ đêm 2 giữ lựa chọn hợp lệ. Bảo Vệ ưu tiên bản thân nếu luật cho phép.
 - Yêu tinh DEMO chỉ chọn Trái/Phải; lịch sử lấy người nhận vết cắn thực tế từ kết quả server.
 - DEMO phát audio hành động theo mã hành động; chống phát lại kết quả soi do phản hồi lặp/đảo thứ tự. Dừng nguồn audio cũ khi phát nguồn mới, kể cả WebAudio và giọng đọc.
-- Hồi sinh bị vô hiệu hóa khi chưa có người chết (hành động vai trò ban đêm và nút can thiệp GM).
+- Hồi sinh bị vô hiệu hóa khi chưa có người chết (hành động vai trò ban đêm và nút can thiệp GM); API server từ chối hồi sinh người còn sống trước khi tính lượt Artifact, kể cả Artifact ban ngày.
 - Menu GM có **Đặt vị trí đống lửa**: chạm chính giữa lửa trên hình đang dùng. Lưu tọa độ phần trăm riêng Ngày/Đêm, đồng bộ và lưu local cùng ảnh. Thay ảnh sẽ bỏ điểm cũ của ảnh đó; khôi phục mặc định bỏ cả hai điểm. Từ chối lưu nếu hình nền đã đổi trong lúc chọn.
 
 ## Kiểm tra
