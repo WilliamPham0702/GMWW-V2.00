@@ -2,6 +2,7 @@
 // It reuses the real game handlers and the same pure targeting rules as GM Web.
 import '../server-game/current/battle-controls.js';
 import {checkBattleRoleActionUsage} from './gmww-battle-action-policy.js';
+import {appendDemoHistory} from './gmww-demo-history.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
@@ -72,7 +73,11 @@ async function observe(room,meta,lease,action,actorId='',targets=[],status='acce
  const players=await room.ctx.storage.get('players')||{},name=id=>players['member:'+id]?.displayName||id;
  const runtime=meta.cyclePhase==='night'?await room.getNightRuntime(meta,meta.cycleNight,false):null,turn=runtime?.queue?.[runtime.cursor];
  const event={id:'demo-'+crypto.randomUUID(),matchId:meta.matchId,cycleKey:meta.cycleKey,turnId:turn?.id||'day',turn:(meta.cyclePhase==='night'?'Đêm ':'Ngày ')+meta.cycleNight+(turn?' · Lượt '+(runtime.cursor+1)+'/'+runtime.queue.length+' · '+turn.label:''),action,actor:name(actorId),targets:targets.map(name),actorId,targetIds:targets,status,at:Date.now(),...extra};
- lease.lastEvent=event;await room.ctx.storage.put('demoLease',lease);const {revelation,...publicEvent}=event;room.broadcast({type:'demo_event',demoEvent:publicEvent,serverTime:Date.now()});
+ lease.lastEvent=event;
+ // Keep the accepted/skipped DEMO event ledger on the Server across GM reloads.
+ // The existing MAX_STEPS limit bounds storage while retaining the full DEMO run.
+ lease.history=appendDemoHistory(lease.history,event);
+ await room.ctx.storage.put('demoLease',lease);const {revelation,...publicEvent}=event;room.broadcast({type:'demo_event',demoEvent:publicEvent,serverTime:Date.now()});
 }
 async function checked(response){const data=await response.json();if(!response.ok||!data.ok){const e=new Error(data.message||data.error||'DEMO_ACTION_FAILED');e.code=data.detail||data.error;throw e}return data}
 async function ballotAction(room,body){

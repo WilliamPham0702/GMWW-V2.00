@@ -6822,3 +6822,110 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDetails:not(.gm
 #start #playWorld.has-custom-scene > .play-island-front,
 #start #playWorld.has-custom-scene > .play-water-ripple{display:none!important}
 #start #playWorld.has-custom-scene::after{content:none!important;display:none!important}
+
+
+/* V3.187 — Compact DEMO event history and translucent, readable village bulletin.
+   Presentation only: no changes to GM actions, roles, audio, seat layout or game clocks. */
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver{
+  box-sizing:border-box!important;
+  min-height:94px;max-height:min(36dvh,310px)!important;overflow-y:auto!important;
+  padding:9px 12px 11px!important;border-radius:16px!important;
+  background:rgba(6,37,51,.40)!important;
+  border:1px solid rgba(186,233,239,.34)!important;
+  box-shadow:0 8px 22px rgba(0,16,28,.20)!important;
+  backdrop-filter:blur(10px) saturate(113%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(113%)!important;
+  overscroll-behavior:contain;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver>header strong{
+  font-size:12px!important;line-height:1.35!important;letter-spacing:.01em;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver #battleDemoEventTurn{
+  margin-top:3px!important;color:#d9e8e9;font-size:10px!important;letter-spacing:.04em;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver #battleDemoEvent{
+  margin:5px 0!important;padding:7px 9px!important;border-radius:9px!important;
+  font-size:12px!important;line-height:1.45!important;
+  border:1px solid rgba(179,225,230,.24);overflow-wrap:anywhere;
+}
+#start #playShell[data-step="battle"] #battleDemoObserver[data-result-tone="negative"] #battleDemoEvent{
+  background:rgba(119,31,42,.43)!important;border-color:rgba(255,134,146,.48)!important;
+}
+#start #playShell[data-step="battle"] #battleDemoObserver[data-result-tone="positive"] #battleDemoEvent{
+  background:rgba(26,101,65,.37)!important;border-color:rgba(139,219,164,.42)!important;
+}
+#start #playShell[data-step="battle"] #battleDemoObserver[data-result-tone="neutral"] #battleDemoEvent{
+  background:rgba(19,61,74,.20)!important;color:#d2e5e7!important;
+}
+#start #playShell[data-step="battle"] #battleDemoHistory[hidden]{display:none!important}
+#start #playShell[data-step="battle"] #battleDemoHistory{
+  margin-top:5px;padding-top:5px;border-top:1px solid rgba(183,233,236,.19);
+}
+#start #playShell[data-step="battle"] #battleDemoHistory>summary{
+  list-style:none;cursor:pointer;font-size:11px;font-weight:700;color:#d3e8e8;
+  padding:6px 2px;touch-action:manipulation;
+}
+#start #playShell[data-step="battle"] #battleDemoHistory>summary::-webkit-details-marker{display:none}
+#start #playShell[data-step="battle"] #battleDemoHistory>summary::after{content:'⌄';float:right}
+#start #playShell[data-step="battle"] #battleDemoHistory[open]>summary::after{content:'⌃'}
+#start #playShell[data-step="battle"] #battleDemoHistoryList{
+  list-style:none;margin:4px 0 0;padding:0;max-height:min(19dvh,150px);
+  overflow-y:auto;overscroll-behavior:contain;
+}
+#start #playShell[data-step="battle"] #battleDemoHistoryList>li{
+  display:grid;gap:2px;padding:6px 4px;border-top:1px solid rgba(185,228,232,.13);
+  font-size:11px;line-height:1.4;color:#deedef;
+}
+#start #playShell[data-step="battle"] #battleDemoHistoryList>li small{
+  display:block;font-size:10px;color:#b6d8dc;
+}
+#start #playShell[data-step="battle"] #battleDemoHistoryList>li.is-critical{color:#ffc1c4}
+body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{
+  max-height:min(54dvh,460px)!important;padding:11px 13px 12px!important;
+  border-radius:16px!important;background:rgba(7,43,57,.43)!important;
+  border:1px solid rgba(194,233,235,.34)!important;
+  box-shadow:0 12px 30px rgba(0,13,26,.23)!important;
+  backdrop-filter:blur(11px) saturate(112%)!important;
+  -webkit-backdrop-filter:blur(11px) saturate(112%)!important;
+}
+#start #playShell[data-step="battle"] #battleMorningReport>header{
+  min-height:34px!important;font-size:12px!important;letter-spacing:.04em;
+  border-bottom:1px solid rgba(186,228,231,.20);margin-bottom:7px;
+}
+#start #playShell[data-step="battle"] #battleMorningReport>header>button{
+  min-height:32px;min-width:36px;background:rgba(27,74,82,.30);border-color:rgba(196,232,238,.33);
+}
+#start #playShell[data-step="battle"] #battleMorningList .battle-morning-summary{
+  padding:5px 1px 8px;margin:0!important;color:#f5e0aa;
+  font-size:12px!important;font-weight:750;letter-spacing:.01em;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line{
+  margin:3px 0!important;padding:7px 9px!important;border-radius:9px!important;
+  background:rgba(10,50,62,.18)!important;border:1px solid rgba(185,224,226,.15);
+  color:#e3f0ee!important;font-size:12px!important;line-height:1.5!important;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line strong,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line strong{
+  color:#f9e3b9!important;font-weight:750!important;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-critical,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-critical{
+  background:rgba(127,32,41,.23)!important;
+  border:1px solid rgba(237,125,135,.24)!important;border-left:2px solid rgba(255,120,127,.72)!important;
+  color:#ffd1d1!important;padding:7px 9px!important;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-critical strong,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-critical strong{
+  color:#ffb7b7!important;font-weight:800!important;
+}
+#start #playShell[data-step="battle"] #battleVillageHistory{
+  border-top:1px solid rgba(198,237,237,.20);margin-top:8px;
+}
+#start #playShell[data-step="battle"] #battleVillageHistory>summary{
+  padding:10px 2px!important;font-size:11px!important;color:#d7eced;
+}
+@media(max-width:390px){
+  body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver{max-height:32dvh!important}
+  body.play-immersive #start #playShell[data-step="battle"] #battleMorningReport{max-height:50dvh!important}
+}

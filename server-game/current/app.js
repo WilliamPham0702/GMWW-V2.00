@@ -2919,16 +2919,45 @@ function demoRenderObserver(){
   panel.hidden=day||!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
   if(panel.hidden)return;
   const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
-  const event=demoRunner.lastEvent?.matchId===String(playSceneRuntime.room?.matchId||'')?demoRunner.lastEvent:null;
+  const matchId=String(playSceneRuntime.room?.matchId||''),night=Math.max(1,Number(playSceneState.night)||1);
+  const belongsToNight=event=>event&&String(event.matchId||'')===matchId&&
+    (String(event.turn||'')==='Đêm '+night||String(event.turn||'').startsWith('Đêm '+night+' '));
+  const records=(Array.isArray(demoRunner.history)?demoRunner.history:[])
+    .filter(belongsToNight).slice().sort((a,b)=>Number(a.at||0)-Number(b.at||0));
+  const last=belongsToNight(demoRunner.lastEvent)?demoRunner.lastEvent:null;
+  const event=last||records[records.length-1]||null;
+  const others=records.filter(row=>!event||String(row.id)!==String(event.id)).reverse();
+  const actionText=row=>{
+    const actor=row?.actorId?demoActorIdentity(row.actorId):String(row?.actor||'Hệ thống');
+    const targets=row?.targetIds?.length?row.targetIds.map(demoActorIdentity):row?.targets||[];
+    const action=demoActionLabel(row);
+    const verb=row?.status==='pending'?'Đang thực hiện: ':row?.status==='skipped'?'Bỏ qua: ':'';
+    return verb+actor+' đã thực hiện hành động ('+action+')'+(targets.length?' đến '+targets.join(', '):'');
+  };
   set('battleDemoTurn',(demoRunner.running?'Đang chạy':demoRunner.paused?'Tạm dừng':'Đã dừng')+' · '+demoTurnDescription());
-  set('battleDemoEventTurn',event?'Hành động · '+String(event.turn||''):'');
-  const actor=event?.actorId?demoActorIdentity(event.actorId):String(event?.actor||'Vai Trò (người chơi)');
-  const targets=event?.targetIds?.length?event.targetIds.map(demoActorIdentity):event?.targets||[];
-  const action=demoActionLabel(event);
-  const msg=event?(event.status==='pending'?'Đang thực hiện: ':event.status==='skipped'?'Bỏ qua: ':'')+
-    actor+' đã thực hiện hành động ('+action+')'+(targets.length?' đến '+targets.join(', '):''):'Chưa có hành động trong ván này.';
-  set('battleDemoEvent',msg);
-  panel.dataset.resultTone=/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(action)?'negative':'positive';
+  set('battleDemoEventTurn',event?'MỚI NHẤT · '+String(event.turn||''):'');
+  set('battleDemoEvent',event?actionText(event):'Chưa có hành động được xác nhận trong đêm này.');
+  const action=event?demoActionLabel(event):'';
+  panel.dataset.resultTone=!event?'neutral':/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(action)?'negative':'positive';
+  const history=document.getElementById('battleDemoHistory');
+  const list=document.getElementById('battleDemoHistoryList');
+  const label=document.getElementById('battleDemoHistoryCount');
+  if(history&&list){
+    history.hidden=others.length===0;
+    if(label)label.textContent='LỊCH SỬ ĐÊM '+night+' · '+others.length+' hành động trước';
+    // Replace only when the Server ledger changes; keep the user's open/scroll state.
+    const signature=matchId+':'+night+':'+others.map(row=>String(row.id||'')+':'+String(row.status||'')).join('|');
+    if(typeof list.replaceChildren==='function'&&typeof document.createElement==='function'&&list.dataset.signature!==signature){
+      list.dataset.signature=signature;list.replaceChildren();
+      for(const row of others){
+        const item=document.createElement('li'),turn=document.createElement('small'),detail=document.createElement('span');
+        turn.textContent=String(row.turn||'').replace(/^Đêm \d+\s*·\s*/,'');
+        detail.textContent=actionText(row);
+        if(/cắn|giết|đầu độc|đóng băng|trục xuất|bị đuổi|chết|câm|nhiễm|phạt/i.test(demoActionLabel(row)))item.classList.add('is-critical');
+        item.append(turn,detail);list.append(item);
+      }
+    }
+  }
   set('battleDemoObserverError',demoRunner.error||'');
 }
 function demoNightPlanKey(t){return [playSceneRuntime.room?.matchId,playSceneRuntime.room?.cycleKey,t.id].join(':')}
@@ -3801,6 +3830,7 @@ function demoApplyServerControl(control){
   demoRunner.steps=Number(control.steps)||0;demoRunner.error=control.error||'';
   demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
   demoRunner.lastEvent=event||null;
+  demoRunner.history=Array.isArray(control.history)?control.history:[];
   demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
   if(feedback){
     if(event.revelation?.message&&event.revelation?.actionId){
@@ -4453,9 +4483,11 @@ function battleMorningShow(){
   const appendRows=(host,notices)=>{
     for(const row of notices){
       const line=document.createElement('p'),name=document.createElement('strong');
-      if(row.negative)line.classList.add('is-critical');
+      line.className='battle-morning-line'+(row.negative?' is-critical':'');
       name.textContent=row.name+' ('+row.role+')';
-      const sentence=row.negative?' đã bị ('+row.label.replace(/^đã (?:bị |được )?/,'')+')':' '+row.label;
+      const action=String(row.label||'').trim();
+      const sentence=row.negative&&action.startsWith('đã bị ')?' đã bị ('+action.slice(6)+')':
+        row.negative&&!action.startsWith('đã ')?' đã bị ('+action+')':' '+action;
       line.append(name,document.createTextNode(sentence+(row.actor?' bởi '+row.actor:'')+'.'));
       host.append(line);
     }
@@ -4463,8 +4495,9 @@ function battleMorningShow(){
   if(battleState.morningSig!==signature){
     battleState.morningSig=signature;body.replaceChildren();
     const summary=document.createElement('p');
-    summary.textContent=deaths?'Đêm qua làng chúng ta có '+deaths+' người chết.':
-      rows.length?'Thông cáo các tác động đêm qua:':'Đêm qua không ghi nhận tác động.';
+    summary.className='battle-morning-summary';
+    summary.textContent='ĐÊM '+currentNight+' · '+(deaths?'Làng có '+deaths+' người chết':
+      rows.length?'Các tác động được ghi nhận':'Không ghi nhận tác động');
     body.append(summary);appendRows(body,rows);
     if(history){
       history.replaceChildren();
