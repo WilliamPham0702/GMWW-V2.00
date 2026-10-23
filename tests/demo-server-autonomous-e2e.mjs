@@ -35,7 +35,7 @@ try{
   votes ||= Object.keys(s.gallows?.votes||{}).length>0;
   if(s.winProposal){winner=true;assert.equal(s.room.phase,'running','GM still confirms completion');let stopped=s,untilStop=Date.now()+5000;while(stopped.demoControl.running&&Date.now()<untilStop){await wait(150);stopped=await gm('')}assert.equal(stopped.demoControl.running,false,'server must stop DEMO within 5 seconds after confirmed winner');break}
  }
- assert.ok(actions.includes('action_wolf_bite'),'wolf bite via real handler');assert.ok(actions.includes('action_seer'),'mandatory seer');assert.ok(actions.includes('action_protect'),'mandatory guard');// Witch kill is intentionally optional: the demo never uses it on night one.assert.ok(winner,'autonomous game reaches winner');
+ assert.ok(actions.includes('action_wolf_bite'),'wolf bite via real handler');assert.ok(actions.includes('action_seer'),'mandatory seer');assert.ok(actions.includes('action_protect'),'mandatory guard');/* Witch kill is optional; night-one use is forbidden. */assert.ok(winner,'autonomous game reaches winner');
  const end=await gm('/end',{matchId,winnerFaction:(await gm('')).winProposal.winnerFaction});assert.equal(end.ok,true);
  assert.deepEqual(accountSnapshot((await req('/api/gm/members')).members),before,'Demo never changes member stats/history/presence');
  assert.ok(!(await req('/api/rooms')).rooms.some(r=>r.code===code));
