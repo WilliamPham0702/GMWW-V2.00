@@ -36,7 +36,8 @@ test('Seat formation moves above prior Y -10 limit without altering seat IDs or 
   const initial=layout.positions(8,'circle',{x:0,y:-10},135);
   const raised=layout.positions(8,'circle',{x:0,y:-11},135);
   assert.equal(initial.length,8);assert.equal(raised.length,8);
-  assert.ok(raised.some((p,i)=>p.y<initial[i].y),'Arrow ↑ must move seat positions up at 135%');
+  assert.ok(raised.every((p,i)=>Math.abs((p.y-initial[i].y)-(raised[0].y-initial[0].y))<1e-8),
+    '↑ must never move one Seat independently at 135%');
 });
 test('GM drag UI, canonical script and browser bundle implement synchronized preview and single Server commit',()=>{
   const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
@@ -44,7 +45,7 @@ test('GM drag UI, canonical script and browser bundle implement synchronized pre
   for(const code of [source,bundle]){
     assert.match(code,/playSeatOffsetPreview/);
     assert.match(code,/world\.addEventListener\('pointermove'/);
-    assert.match(code,/pointerup',stop/);
+    assert.match(code,/pointerup',event=>\{void finish\(event,false\)\}/);
     assert.match(code,/playUpdateRoomSettings\(\{seatOffset:next\}\)/);
   }
 });
