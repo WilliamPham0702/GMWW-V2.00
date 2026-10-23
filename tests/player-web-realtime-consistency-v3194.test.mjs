@@ -17,7 +17,7 @@ test('V3.194: deployed Player Web remains valid JavaScript with stable realtime 
 });
 
 test('V3.194: joining or restoring a room requests the full public roster',()=>{
-  const start=compiled.indexOf('let gmwwRosterRepairTimer=null;');
+  const start=compiled.indexOf('let gmwwRosterRepairTimer=null,');
   const end=compiled.indexOf('async function autoResumeActiveRoom(',start);
   assert.ok(start>=0&&end>start);
   const code=compiled.slice(start,end);
@@ -34,7 +34,7 @@ test('V3.194: joining or restoring a room requests the full public roster',()=>{
 });
 
 test('V3.194: incomplete public snapshot never erases a valid roster',async()=>{
-  const start=compiled.indexOf('let gmwwRosterRepairTimer=null;');
+  const start=compiled.indexOf('let gmwwRosterRepairTimer=null,');
   const end=compiled.indexOf('async function autoResumeActiveRoom(',start);
   const state={roomCode:'ABCDEF',participantId:'member:a',players:[{participantId:'member:a'},{participantId:'member:b'}],room:{phase:'running'}};
   const ctx={state,gmwwLastRoomBroadcastAt:0,renderRooms:()=>{},syncVillageFrame:()=>{},gmwwVerifyMemberBeforeRemoval:async()=>false,setTimeout:()=>1,api:async()=>({players:[{participantId:'member:z'}]}),encodeURIComponent,console};
