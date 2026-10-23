@@ -3410,7 +3410,7 @@ function renderPlayPlayers(){
     seatCount,previewNew,seating,playSceneState.roomMode,playSceneState.seatMoveMode,
     // A template switch must invalidate the DOM even if seat IDs are unchanged.
     globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatLayout(playSceneRuntime.room?.seatLayout),
-    playSceneRuntime.room?.seatOffset,playGatherSpacing(),
+    playSceneRuntime.room?.seatOffset,playSeatOffsetPreview,playGatherSpacing(),
     (playSceneRuntime.assignments?.length?playSceneRuntime.assignments:playSceneState.assignmentsPreview||[])
       .map(a=>[a.loginId,a.roleId,a.roleName,a.artifactId]),
     !!gmwwGmPresenceState?.online,gmwwGmPresenceState?.sessionId||'',
@@ -3507,40 +3507,7 @@ function renderPlayPlayers(){
     }else if(seating){
       el.onclick=async()=>openPlaySeatAssignSheet(seatId)
     }
-    // GM may drag an occupied Seat onto another before locking the layout.
-    // Pointer Events support iPhone touch as well as desktop mouse/pen.
-    if(seating&&m&&seatId&&!playSceneRuntime.room?.seatsLocked){
-      let drag=null;
-      el.style.touchAction='none';
-      el.addEventListener('pointerdown',event=>{
-        if(event.pointerType==='mouse'&&event.button!==0)return;
-        if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked)return;
-        drag={id:event.pointerId,x:event.clientX,y:event.clientY,sourceSeat:seatId,sourceId:String(m.loginId||''),moved:false};
-        el.setPointerCapture?.(event.pointerId);
-      });
-      el.addEventListener('pointermove',event=>{
-        if(!drag||event.pointerId!==drag.id)return;
-        if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>12){
-          drag.moved=true;el.classList.add('is-seat-dragging');
-        }
-      });
-      el.addEventListener('pointerup',async event=>{
-        if(!drag||event.pointerId!==drag.id)return;
-        const gesture=drag;drag=null;el.classList.remove('is-seat-dragging');
-        if(!gesture.moved)return;
-        event.preventDefault();event.stopPropagation();
-        playSceneRuntime.ignoreSeatClickUntil=Date.now()+500;
-        if(playSceneRuntime.busy||playSceneRuntime.room?.seatsLocked||playSceneState.step!=='seats')return;
-        const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest?.('[data-seat-id][data-play-player-id]');
-        const targetSeat=Number(hit?.dataset.seatId||0);
-        if(!hit||!targetSeat||targetSeat===gesture.sourceSeat||!hit.dataset.playPlayerId)return;
-        const source=playLiveMembers().find(p=>String(p.loginId)===gesture.sourceId);
-        if(!source||Number(source.seatId)!==gesture.sourceSeat)return;
-        playSceneState.activePlayerId=gesture.sourceId;
-        await updateSelectedPlayerSeat({seatId:targetSeat,swap:true});
-      });
-      el.addEventListener('pointercancel',()=>{drag=null;el.classList.remove('is-seat-dragging')});
-    }
+    // A Seat is NEVER draggable by itself: only world-level rigid-ring drag.
     ring.appendChild(el)
   };
   if(seating){
@@ -3716,7 +3683,11 @@ function initPlayGatherSpacing(){
 }
 function initPlaySeatOffsetControls(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playSeatOffsetValue');
-  const offset=()=>layout.normalizeSeatOffset(playSeatOffsetPreview??playSceneRuntime.room?.seatOffset);
+  const current=()=>playSeatOffsetPreview??playSceneRuntime.room?.seatOffset;
+  const safe=offset=>layout.resolveSeatOffset(playSeatStats().seatCount,
+    playSceneRuntime.room?.seatLayout,offset,
+    playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing??100);
+  const offset=()=>safe(current());
   const refresh=()=>{const value=offset();if(output)output.textContent='X '+value.x+' · Y '+value.y};
   refresh();
   const adjustable=()=>playSceneState.step==='seats'&&playSceneState.phase==='lobby'&&
@@ -3727,25 +3698,35 @@ function initPlaySeatOffsetControls(){
     button.dataset.bound='1';
     button.addEventListener('click',async()=>{
       if(!adjustable())return;
-      const current=offset(),direction=String(button.dataset.seatShift),
-        delta={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1],reset:[-current.x,-current.y]}[direction];
+      const value=offset(),direction=String(button.dataset.seatShift);
+      if(direction==='reset'){
+        // Restore the complete ORIGINAL ring, not only a temporary preview.
+        // Reset spacing with the common offset, never Seat IDs/count/members.
+        playSeatOffsetPreview={x:0,y:0};playSeatSpacingPreview=100;
+        refresh();renderPlayPlayers();
+        try{await playUpdateRoomSettings({seatOffset:{x:0,y:0},seatSpacing:100})}
+        finally{playSeatOffsetPreview=null;playSeatSpacingPreview=null;refresh();renderPlayScene()}
+        return;
+      }
+      const delta={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]}[direction];
       if(!delta)return;
-      const next=layout.normalizeSeatOffset({x:current.x+delta[0],y:current.y+delta[1]});
-      if(next.x===current.x&&next.y===current.y)return;
-      await playUpdateRoomSettings({seatOffset:next});
+      const next=safe({x:value.x+delta[0],y:value.y+delta[1]});
+      if(next.x===value.x&&next.y===value.y)return;
+      playSeatOffsetPreview=next;refresh();renderPlayPlayers();
+      try{await playUpdateRoomSettings({seatOffset:next})}
+      finally{playSeatOffsetPreview=null;refresh();renderPlayScene()}
     });
   }
-  // Drag any free courtyard space on iPhone to reposition the entire formation.
-  // Preview is local; only pointerup writes one persistent seatOffset to Server.
-  const world=document.getElementById('playWorld');
-  if(!world)return;
+  // Drag ANY Seat or free courtyard to move the whole ring. No per-Seat drag,
+  // no seat swap by dragging, no individual transform or coordinate persistence.
+  const world=document.getElementById('playWorld');if(!world)return;
   world.classList.toggle('is-seat-drag-enabled',adjustable());
   if(world.dataset.seatDragBound)return;
   world.dataset.seatDragBound='1';
-  let gesture=null,suppressClick=false;
+  let gesture=null,suppressClick=false,committing=false;
   world.addEventListener('pointerdown',event=>{
-    if(!adjustable()||(event.button!=null&&event.button!==0)||
-       event.target?.closest?.('button:not(.play-player-token), input, select, textarea'))return;
+    if(!adjustable()||committing||(event.button!=null&&event.button!==0)||
+      event.target?.closest?.('button:not(.play-player-token), input, select, textarea, a, summary'))return;
     gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
     try{world.setPointerCapture(event.pointerId)}catch{}
   });
@@ -3755,25 +3736,33 @@ function initPlaySeatOffsetControls(){
     if(!gesture.dragged&&Math.hypot(dx,dy)<6)return;
     gesture.dragged=true;
     const bounds=world.getBoundingClientRect();
-    playSeatOffsetPreview=layout.normalizeSeatOffset({
+    playSeatOffsetPreview=safe({
       x:gesture.offset.x+dx/Math.max(1,bounds.width)*100,
       y:gesture.offset.y+dy/Math.max(1,bounds.height)*100
     });
     refresh();renderPlayPlayers();event.preventDefault();
   },{passive:false});
-  const stop=event=>{
+  const finish=async(event,cancelled)=>{
     if(!gesture||event.pointerId!==gesture.id)return;
-    const moved=gesture.dragged,next=playSeatOffsetPreview;
+    const initial=gesture.offset,moved=gesture.dragged;
+    const next=playSeatOffsetPreview;
     gesture=null;try{world.releasePointerCapture(event.pointerId)}catch{}
     if(!moved)return;
     suppressClick=true;
-    playSeatOffsetPreview=null;refresh();
-    if(next)void playUpdateRoomSettings({seatOffset:next});
+    playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
+    if(cancelled||!next||!adjustable()||
+       (initial.x===next.x&&initial.y===next.y)){
+      playSeatOffsetPreview=null;refresh();renderPlayPlayers();return;
+    }
+    committing=true;
+    try{await playUpdateRoomSettings({seatOffset:next})}
+    finally{committing=false;playSeatOffsetPreview=null;refresh();renderPlayScene()}
   };
-  world.addEventListener('pointerup',stop);
-  world.addEventListener('pointercancel',stop);
+  world.addEventListener('pointerup',event=>{void finish(event,false)});
+  world.addEventListener('pointercancel',event=>{void finish(event,true)});
   world.addEventListener('click',event=>{
-    if(!suppressClick)return;suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
+    if(!suppressClick)return;
+    suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
   },true);
 }
 function renderPlayGatherToolbar(){
