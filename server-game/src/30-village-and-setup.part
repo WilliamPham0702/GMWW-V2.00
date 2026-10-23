@@ -24,6 +24,7 @@ const STATUS_UI={
   marked:{label:'Bị đánh dấu',icon:'🎯',blocks:false,chip:'Đánh dấu',duration:'Đến sáng sau'},
   infected:{label:'Bị nhiễm bệnh',icon:'🦠',blocks:false,chip:'Nhiễm bệnh',duration:'Đến khi gỡ'},
   mute:{label:'Bị câm',icon:'🤐',blocks:false,chip:'Câm',duration:'Đến khi gỡ'},
+  vote_ban:{label:'Artifact cấm bỏ phiếu',icon:'🎴',blocks:false,chip:'Cấm Vote',duration:'Đến hết ngày'},
   disabled_permanent:{label:'Mất năng lực vĩnh viễn',icon:'⛔',blocks:true,chip:'Vĩnh viễn',duration:'Đến khi gỡ'},
   disabled_2n:{label:'Mất năng lực 2 đêm',icon:'⏳',blocks:true,chip:'2 đêm',duration:'2 đêm'}
 };

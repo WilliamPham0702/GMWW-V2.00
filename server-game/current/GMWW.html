@@ -282,15 +282,17 @@
             <button type="button" data-gallows-mode="auto" aria-pressed="true">TỰ ĐỘNG</button>
             <button type="button" data-gallows-mode="gm" aria-pressed="false">GM THỦ CÔNG</button>
           </div>
+          <div id="battleGallowsAutomatic" aria-label="Tự động Lên Giàn">
           <div class="battle-gallows-actions battle-gallows-primary" aria-label="Điều khiển giai đoạn">
             <button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button>
             <button type="button" data-gallows-command="begin">BẮT ĐẦU BỎ PHIẾU</button>
           </div>
           <div id="battleGallowsNominationStats" aria-label="Thống kê đề cử theo người" aria-live="polite"></div>
+          </div>
           <label for="battleGallowsCandidate">Người lên giàn</label>
           <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
-          <details id="battleGallowsBanDetails" class="battle-gallows-ban-details">
-            <summary>⚙ QUẢN LÝ CẤM CHỌN / CẤM BỎ PHIẾU <span id="battleGallowsBansCount"></span></summary>
+          <details id="battleGallowsBanDetails" class="battle-gallows-ban-details" open>
+            <summary>☷ DANH SÁCH THÀNH VIÊN · CẤM CHỌN / VOTE <span id="battleGallowsBansCount"></span></summary>
             <div id="battleGallowsMembers" role="list" aria-label="Quản lý cấm đề cử và cấm bỏ phiếu"></div>
           </details>
           <div class="battle-gallows-actions battle-gallows-result-actions" aria-label="GM chốt kết quả">

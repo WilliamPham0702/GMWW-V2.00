@@ -7020,3 +7020,49 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsPanel [data-gallows-command][hidden]{display:none!important}
 #battleGallowsPanel #battleGallowsVotes{max-height:130px;overflow-y:auto;margin-top:7px}
 #battleGallowsPanel #battleGallowsResult{font-size:12px;line-height:1.5}
+
+
+/* V3.192 candidate: two distinct gallows modes on narrow iPhone screens. */
+#battleGallowsPanel #battleGallowsAutomatic[hidden],
+#battleGallowsPanel #battleGallowsVotes[hidden],
+#battleGallowsPanel #battleGallowsClock[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+  max-height:min(60dvh,480px)!important;max-width:min(340px,calc(100vw - 20px))!important
+}
+#battleGallowsPanel .battle-gallows-mode button{min-height:42px;font-size:11px}
+#battleGallowsPanel .battle-gallows-mode button[aria-pressed="true"]{
+  background:rgba(15,114,103,.88)!important;border-color:#edd89c!important
+}
+#battleGallowsPanel .battle-gallows-result-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px
+}
+#battleGallowsPanel .battle-gallows-result-actions [data-gallows-command="resolve"]{
+  min-height:43px;font-size:12px
+}
+#battleGallowsPanel .battle-gallows-result-actions [data-outcome="alive"]{
+  background:rgba(9,107,67,.88);border-color:#77dca6
+}
+#battleGallowsPanel .battle-gallows-result-actions [data-outcome="dead"]{
+  background:rgba(129,34,40,.88);border-color:#ea9999
+}
+#battleGallowsPanel .battle-gallows-result-actions [data-gallows-command="restore"]{
+  grid-column:1 / -1;min-height:39px
+}
+#battleGallowsMembers .battle-gallows-member{grid-template-columns:minmax(66px,1fr) auto auto;gap:4px}
+#battleGallowsMembers .battle-gallows-member-name{display:flex;flex-direction:column;min-width:0;gap:2px}
+#battleGallowsMembers .battle-gallows-member-name strong{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px
+}
+#battleGallowsMembers .battle-gallows-member-name small{font-size:10px;color:#d3e7e6}
+#battleGallowsMembers .battle-gallows-member-name .gallows-artifact-status{
+  color:#f6dc96;white-space:normal;overflow-wrap:anywhere;font-size:9px
+}
+#battleGallowsMembers .battle-gallows-member button{min-height:37px;font-size:9px;padding:4px}
+#battleGallowsMembers .battle-gallows-member button:disabled[aria-pressed="true"]{
+  opacity:.9;background:rgba(131,91,31,.78);border-color:#f3d78b
+}
+#battleGallowsPanel .battle-gallows-ban-details #battleGallowsMembers{max-height:176px}
+@media(max-width:375px){
+ #battleGallowsPanel .battle-gallows-mode button{font-size:10px}
+ #battleGallowsMembers .battle-gallows-member button{font-size:8px;padding:4px 3px}
+}
