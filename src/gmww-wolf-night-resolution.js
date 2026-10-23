@@ -42,6 +42,14 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     new Set(seated.map(x=>x.seatId)).size!==seated.length||
     bites.some(id=>!seated.some(x=>x.loginId===id))))
     return {ok:false,error:'SEAT_ORDER_UNAVAILABLE',victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length};
+  // A Maiden who confirmed a house visit is physically away from her own
+  // house when wolves bite. The visited house is resolved separately at dawn.
+  // Ignore undone, cross-match, cross-night and forged non-Maiden visit rows.
+  const visitingMaidens=new Set(actions.filter(row=>row.actionId==='action_visit_house'&&
+    row.undone!==true&&login(row.actorId)!==login(row.loginId)&&
+    byLogin.has(login(row.actorId))&&byLogin.has(login(row.loginId))&&
+    assignments.some(a=>login(a.loginId)===login(row.actorId)&&a.roleId==='role_maiden'))
+    .map(row=>login(row.actorId)));
   const protectedTargets=[],transfers=[],victims=[],attacked=[];
   for(const origin of bites){
     if(!byLogin.has(origin))continue;
@@ -53,7 +61,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=seated[next].loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||isNightImmune(assignments,target);
+    const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&

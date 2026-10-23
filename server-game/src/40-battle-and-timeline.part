@@ -992,7 +992,7 @@ function gmwwMenuSnap(rect,threshold=32){
     const left=Math.max(8,Math.min(innerWidth-width-8,menu.left+(menu.width-width)/2));
     const rawTop=above?menu.top-5-rect.height:menu.bottom+5;
     const top=Math.max(8,Math.min(Math.max(8,innerHeight-rect.height-8),rawTop));
-    best={left,top,width,distance:gap,edge:above?'bottom':'top'};
+    best={left,top,width,distance:gap,edge:above?'bottom':'top',anchorId:id};
   }
   return best;
 }
@@ -1006,6 +1006,7 @@ function battleBindAuxiliaryDrag(panelId,handleSelector){
     if(panel.hidden||e.target.closest('button,a,input,select,textarea')||(e.button!==0&&e.pointerType!=='touch'))return;
     const r=panel.getBoundingClientRect();
     drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,left:r.left,top:r.top};
+    panel.dataset.gmwwUserMoved='1';
     try{handle.setPointerCapture(e.pointerId)}catch{}
     e.preventDefault();
   });
@@ -1033,11 +1034,15 @@ function battleBindAuxiliaryDrag(panelId,handleSelector){
       panel.classList.add('gmww-dock-snapped');
       panel.dataset.dockEdge=snap.edge;
     }else{panel.classList.remove('gmww-dock-snapped');panel.style.removeProperty('--gmww-dock-width');delete panel.dataset.dockEdge}
+    panel.dataset.gmwwDockApplied='1';
+    if(e.type==='pointerup')gmwwSaveDock(panel,snap);
     drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}
   };
   handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
   const keepVisible=()=>{
-    if(panel.hidden||!panel.style.left)return;
+    if(panel.hidden)return;
+    if(panel.classList.contains('gmww-dock-snapped')&&gmwwRestoreDock(panel,true))return;
+    if(!panel.style.left)return;
     const r=panel.getBoundingClientRect(),p=battleTargetClampPosition(r.width,r.height,r.left,r.top);
     panel.style.setProperty('left',p.left+'px','important');panel.style.setProperty('top',p.top+'px','important');
   };
@@ -1416,7 +1421,19 @@ function renderPlayBattle(){
     next.title=title;next.setAttribute('aria-label',title);const label=next.querySelector('b');if(label)label.textContent='Ngày '+night+'>';
   }
   const wolfMenu=document.getElementById('battleWolfMenu');
-  if(wolfMenu)wolfMenu.hidden=!battleState.wolfOpen;
+  if(wolfMenu){
+    wolfMenu.hidden=!battleState.wolfOpen;
+    if(!wolfMenu.hidden){
+      const sceneKey=[playSceneRuntime.room?.matchId||'',phase,night].join(':');
+      if(wolfMenu.dataset.gmwwSceneKey!==sceneKey){
+        wolfMenu.dataset.gmwwSceneKey=sceneKey;
+        wolfMenu.dataset.gmwwDockApplied='';wolfMenu.dataset.gmwwFirePlaced='';delete wolfMenu.dataset.gmwwUserMoved;
+      }
+      if(!gmwwRestoreDock(wolfMenu)&&wolfMenu.dataset.gmwwUserMoved!=='1'&&wolfMenu.dataset.gmwwFirePlaced!==sceneKey){
+        gmwwPlaceWolfMenuAtFire(wolfMenu);wolfMenu.dataset.gmwwFirePlaced=sceneKey;
+      }
+    }
+  }
   battleSyncLabelVisibility();
   
   const clockMenu=document.getElementById('battleClockPopover'),clockToggle=document.getElementById('battleClockButton');
@@ -1428,6 +1445,10 @@ function renderPlayBattle(){
   const auto=document.getElementById('battleGMAuto'),audio=document.getElementById('battleGMAudio');
   if(auto){auto.setAttribute('aria-pressed',String(playSceneState.autoGM));auto.setAttribute('aria-label',playSceneState.autoGM?'Auto GM đang bật':'Auto GM đang tắt');auto.title=playSceneState.autoGM?'Auto GM BẬT':'Auto GM TẮT';auto.classList.toggle('is-off',!playSceneState.autoGM)}
   demoRenderControls();
+  for(const overlayId of ['battleDemoObserver','battleMorningReport','battleGallowsPanel','battleDetails']){
+    const overlay=document.getElementById(overlayId);
+    if(overlay&&!overlay.hidden)gmwwRestoreDock(overlay);
+  }
   if(audio){audio.textContent=(playAudioMuted()?'🔇 Audio TẮT':'🔊 Audio');audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.classList.toggle('is-off',playAudioMuted())}
   const haptic=document.getElementById('battleGMHaptic');if(haptic){haptic.textContent=gmHapticEnabled()?'📳 Rung BẬT':'📴 Rung TẮT';haptic.setAttribute('aria-pressed',String(gmHapticEnabled()))}
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
