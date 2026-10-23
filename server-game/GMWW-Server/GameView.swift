@@ -21,6 +21,7 @@ struct GameWebView: UIViewRepresentable {
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.userContentController.add(context.coordinator, name: "gmwwUpdater")
         config.userContentController.add(context.coordinator, name: "gmwwHaptic")
+        config.userContentController.add(context.coordinator, name: "gmwwScreen")
 
         let shellVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
         let escapedVersion = shellVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
@@ -40,6 +41,7 @@ struct GameWebView: UIViewRepresentable {
         web.isOpaque = false
         web.backgroundColor = .black
         context.coordinator.webView = web
+        context.coordinator.observeAppState()
         context.coordinator.loadInitialRuntime(in: web)
         return web
     }
@@ -49,11 +51,41 @@ struct GameWebView: UIViewRepresentable {
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "gmwwUpdater")
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "gmwwHaptic")
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "gmwwScreen")
+        coordinator.stopObservingAppState()
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         weak var webView: WKWebView?
         private let activeRuntimeKey = "GMWWActiveRuntimeVersion"
+        private var demoAwakeRequested = false
+
+        // Keep the display awake only while DEMO is actively playing in the foreground.
+        func observeAppState() {
+            NotificationCenter.default.addObserver(self, selector: #selector(appWillResignActive(_:)),
+                                                   name: UIApplication.willResignActiveNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(appDidBecomeActive(_:)),
+                                                   name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+
+        func stopObservingAppState() {
+            NotificationCenter.default.removeObserver(self)
+            demoAwakeRequested = false
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+
+        private func syncIdleTimer() {
+            UIApplication.shared.isIdleTimerDisabled =
+                demoAwakeRequested && UIApplication.shared.applicationState == .active
+        }
+
+        @objc private func appWillResignActive(_ notification: Notification) {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+
+        @objc private func appDidBecomeActive(_ notification: Notification) {
+            syncIdleTimer()
+        }
 
         private struct RuntimeFile: Decodable {
             let path: String
@@ -256,6 +288,17 @@ struct GameWebView: UIViewRepresentable {
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "gmwwScreen" {
+                guard message.frameInfo.isMainFrame,
+                      let body = message.body as? [String: Any],
+                      body["action"] as? String == "setDemoAwake",
+                      let enabled = body["enabled"] as? Bool else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.demoAwakeRequested = enabled
+                    self?.syncIdleTimer()
+                }
+                return
+            }
             if message.name == "gmwwHaptic" {
                 guard message.frameInfo.isMainFrame,
                       let body = message.body as? [String: Any],
@@ -295,6 +338,16 @@ struct GameWebView: UIViewRepresentable {
             default:
                 sendResult(["ok": false, "action": action, "error": "Hành động cập nhật không được hỗ trợ."], to: webView)
             }
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            demoAwakeRequested = false
+            syncIdleTimer()
+        }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            demoAwakeRequested = false
+            syncIdleTimer()
         }
 
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
