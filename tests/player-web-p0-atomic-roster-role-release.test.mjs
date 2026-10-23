@@ -25,7 +25,7 @@ test('P0 role release advances even if WS movement and HTTP response interleave'
  assert.match(compiled,/if\(!state\.role\|\|!playerScenePolicy\(state\.room\)\.rolesReleased\)void refreshPrivateRole\(true\)/);
 });
 test('P0 no roaming move storm after GM starts delivering cards',()=>{
- assert.match(village,/return \['lobby','waiting'\]\.includes\(phase\)/);
+ assert.match(compiled,/return \['lobby','waiting'\]\.includes\(phase\)/);
  const p=worker.slice(worker.indexOf('async playerMove(body){'),worker.indexOf('async playerMoveComplete(body){'));
  assert.match(p,/if\(!\["lobby","waiting"\]\.includes\(phase\)\)/);
 });
