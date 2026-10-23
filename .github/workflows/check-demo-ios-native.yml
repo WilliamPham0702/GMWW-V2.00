@@ -1,0 +1,32 @@
+name: Check DEMO iOS Native Shell
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/GMWW-Server/GameView.swift"
+      - "server-game/GMWW-Server/GMWW_ServerApp.swift"
+      - ".github/workflows/check-demo-ios-native.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-typecheck:
+    name: Type-check iOS shell (no IPA publishing)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compile-check Swift code for iPhone Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          xcrun swiftc -typecheck \
+            -sdk "$SDK" \
+            -target arm64-apple-ios16.0-simulator \
+            -module-name GMWWServer \
+            server-game/GMWW-Server/GMWW_ServerApp.swift \
+            server-game/GMWW-Server/GameView.swift
