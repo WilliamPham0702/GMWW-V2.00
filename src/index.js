@@ -594,6 +594,14 @@ export class RoomDurableObject extends DurableObject {
     if(body.expectedRevision!=null&&Number(body.expectedRevision)!==Number(previousRaw.revision))return j({ok:false,error:"SCENE_CHANGED",message:"Hình nền đã thay đổi. Hãy chọn lại vị trí đống lửa."},409);
     const previous=await this.sceneNormalizeRecord(previousRaw);
     const revision=previous.revision+1;
+    if(body.fireAnchors&&!body.day&&!body.night){
+      // Landmark edits are metadata-only: never re-upload images, reset players,
+      // or invalidate the locally cached Day/Night bitmap.
+      const next={...previous,revision,updatedAt:new Date().toISOString(),
+        fireAnchors:{...previous.fireAnchors,...body.fireAnchors}};
+      await this.ctx.storage.put("globalSetting:villageScene",next);
+      return j({ok:true,scene:this.scenePublicRecord(next)});
+    }
     const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0,fireAnchors:{...previous.fireAnchors}};
     for(const key of ["day","night"]){
       if(body[key])delete next.fireAnchors[key];

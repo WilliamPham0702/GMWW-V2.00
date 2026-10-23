@@ -435,6 +435,11 @@
             <p>Chọn ảnh Ngày/Đêm mới, nhấn ÁP DỤNG để thay ảnh tương ứng trên Server GM và Player Web. KHÔI PHỤC MẶC ĐỊNH sẽ trả cả hai về bối cảnh gốc.</p>
             <label>Ảnh ban ngày <input id="gmVillageDay" type="file" accept="image/png,image/jpeg,image/webp"></label>
             <label>Ảnh ban đêm <input id="gmVillageNight" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <div class="button-row" role="group" aria-label="Định vị riêng đống lửa cho từng ảnh">
+              <button type="button" id="gmVillageFireDay">🔥 ĐỊNH VỊ NỀN NGÀY</button>
+              <button type="button" id="gmVillageFireNight">🔥 ĐỊNH VỊ NỀN ĐÊM</button>
+            </div>
+            <p>Chạm đúng giữa đống lửa trên từng ảnh để menu GM bám chính xác. Tọa độ được lưu theo ảnh; khi thay ảnh phải định vị lại. Không tải lại ảnh khi chỉ sửa tọa độ.</p>
             <div class="button-row"><button type="button" id="gmVillagePublish" class="primary">ÁP DỤNG</button><button type="button" id="gmVillageRollback">KHÔI PHỤC MẶC ĐỊNH</button></div>
             <p id="gmVillageStatus" role="status">Chưa tải cấu hình.</p>
           </section>
