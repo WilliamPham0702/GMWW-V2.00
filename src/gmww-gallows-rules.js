@@ -39,9 +39,9 @@ export function gallowsAutomaticNominee(ballot){
 }
 export function gallowsVoteTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
-  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&!blocked.has(voter)&&voter!==ballot?.candidateId&&['👍','👎'].includes(choice));
+  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&!blocked.has(voter)&&['👍','👎'].includes(choice));
   return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length,cast:votes.length,
-    eligible:[...eligible].filter(id=>!blocked.has(id)&&id!==ballot?.candidateId).length};
+    eligible:[...eligible].filter(id=>!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
   const tally=gallowsVoteTotals(ballot);
@@ -77,7 +77,7 @@ export function gallowsCast(ballot,voter,choice,now=Date.now()){
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
   if(ballot.stage!=='voting'||now>=ballot.deadlineAt)return {ok:false,error:'VOTE_DEADLINE_PASSED'};
   if(gallowsBlockedVotes(ballot).includes(voter))return {ok:false,error:'VOTER_BANNED'};
-  if(!(ballot.eligible||[]).includes(voter)||voter===ballot.candidateId)return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
+  if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(ballot.votes?.[voter])return ballot.votes[voter]===choice?{ok:true,idempotent:true,value:ballot}:{ok:false,error:'VOTE_ALREADY_USED'};
   return {ok:true,value:{...ballot,votes:{...(ballot.votes||{}),[voter]:choice},updatedAt:now}};
 }
@@ -105,7 +105,7 @@ export function gallowsSetMode(ballot,mode,now=Date.now()){
 export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
   if(gallowsMode(ballot)!=='gm'||!['voting','closed'].includes(gallowsStage(ballot,now)))
     return {ok:false,error:'GM_MANUAL_MODE_REQUIRED'};
-  if(!validId(voter)||!(ballot.eligible||[]).includes(voter)||voter===ballot.candidateId||gallowsBlockedVotes(ballot).includes(voter))
+  if(!validId(voter)||!(ballot.eligible||[]).includes(voter)||gallowsBlockedVotes(ballot).includes(voter))
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
   const votes={...(ballot.votes||{})};
