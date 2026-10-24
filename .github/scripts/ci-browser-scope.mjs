@@ -91,6 +91,8 @@ const dualPaths=new Set([
   'assets/village/arena-3d/casting-choreography.mjs',
   'assets/village/arena-3d/coastal-village.mjs',
   'tests/arena3d-coastal-village.test.mjs',
+  'tests/arena3d-ritual-walk.test.mjs',
+  'docs/releases/GMWW-ARENA3D-RITUAL-WALK-2026-10-24.md',
   'docs/releases/GMWW-ARENA3D-COASTAL-2026-10-24.md',
   'docs/releases/GMWW-ARENA3D-TURN-CAST-2026-10-24.md',
   'docs/releases/GMWW-ARENA3D-PHASE4-2026-10-24.md',
