@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   gallowsSetDuration,gallowsCloseNomination,gallowsOpen,gallowsNominate,
-  gallowsStage,gallowsCast,gallowsManualResolve,gallowsAutomaticNominee
+  gallowsStage,gallowsCast,gallowsManualResolve,gallowsAutomaticNominee,gallowsBegin
 } from '../src/gmww-gallows-rules.js';
 
 const fixture=()=>({
@@ -27,16 +27,19 @@ test('Gallows page: 60-second defaults, save on blur, stage-specific locking',()
  assert.equal(gallowsSetDuration(state,'vote',40,2000).value.voteDurationSec,40);
 });
 
-test('Early chốt đề cử auto-selects sole leader, blocks late nominations and opens vote',()=>{
+test('Chốt đề cử auto-selects sole leader but only MỞ BỎ PHIẾU starts voting',()=>{
  let b=gallowsOpen(fixture(),1000).value;
  b=gallowsNominate(b,'alice','bob',2000).value;
  const next=gallowsCloseNomination(b,3000);
- assert.equal(next.ok,true);assert.equal(next.value.stage,'voting');
+ assert.equal(next.ok,true);assert.equal(next.value.stage,'selecting');
  assert.equal(next.value.candidateId,'bob');
- assert.equal(next.value.deadlineAt,63000);
+ assert.equal(next.value.deadlineAt,undefined,'Chốt đề cử không tự mở bỏ phiếu');
  assert.equal(gallowsNominate(next.value,'carol','bob',3001).error,'NOMINATION_CLOSED');
- assert.equal(gallowsStage(next.value,3001),'voting');
- assert.equal(gallowsCast(next.value,'david','👍',3002).ok,true);
+ assert.equal(gallowsStage(next.value,3001),'selecting');
+ const opened=gallowsBegin(next.value,'bob',3002);
+ assert.equal(opened.ok,true);assert.equal(opened.value.stage,'voting');
+ assert.equal(opened.value.deadlineAt,63002);
+ assert.equal(gallowsCast(opened.value,'david','👍',3003).ok,true);
 });
 
 test('Tied nominations require GM selection; no random candidate and no late submission',()=>{
