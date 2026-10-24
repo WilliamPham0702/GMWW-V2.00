@@ -4,7 +4,7 @@ import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -824,9 +824,8 @@ export class RoomDurableObject extends DurableObject {
   async gallowsState(meta){
     const key="gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||"");
     const stored=await this.ctx.storage.get(key);
-    const cfg=(await this.ctx.storage.get("gameConfig"))||{};
-    const nominationDurationSec=gallowsDurationSec(cfg?.timing?.gallowsNominationSec),
-      voteDurationSec=gallowsDurationSec(cfg?.timing?.gallowsVoteSec);
+    // New Gallows ballots own both timers; pre-match game templates no longer set them.
+    const nominationDurationSec=60,voteDurationSec=60;
     const ballot=stored&&stored.matchId===String(meta.matchId||"")&&stored.cycleKey===String(meta.cycleKey||"")?stored:{
       id:"gallows-"+crypto.randomUUID(),matchId:String(meta.matchId||""),cycleKey:String(meta.cycleKey||""),
       day:Number(meta.cycleNight||0),stage:"ready",candidateId:null,
@@ -897,7 +896,11 @@ export class RoomDurableObject extends DurableObject {
       const c=await this.ctx.storage.get("demoClock");if(c&&projectDemoClock(c,now).remainingMs>0)return j({ok:false,error:"DEMO_TIMER_RUNNING"},409);
     }
     let result;
-    if(command==="open"){
+    if(command==="set_duration"){
+      result=gallowsSetDuration(ballot,String(body?.kind||""),body?.seconds,now);
+    }else if(command==="close_nomination"){
+      result=gallowsCloseNomination(ballot,now);
+    }else if(command==="open"){
       result=gallowsOpen(ballot,now);
     }else if(command==="begin"){
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
@@ -913,14 +916,18 @@ export class RoomDurableObject extends DurableObject {
       result=gallowsSetMode(ballot,String(body?.mode||""),now);
     }else if(command==="manual_vote"){
       result=gallowsManualVote(ballot,target,body?.choice===null?null:String(body?.choice||""),now);
-    }else if(command==="resolve"){
+    }else if(command==="resolve"||command==="close_vote"){
       // GM manual verdict: no nomination clock, no public ballot, no waiting.
       // In automatic mode only the existing authorized DEMO driver may resolve.
-      if(gallowsMode(ballot)==='auto'&&!(meta.demo&&body?.source==='demo'))
+      if(command==='close_vote'&&(gallowsMode(ballot)!=='auto'||!['voting','closed'].includes(ballot.stage)))
+        return j({ok:false,error:'VOTING_NOT_OPEN'},409);
+      if(command==='resolve'&&gallowsMode(ballot)==='auto'&&!(meta.demo&&body?.source==='demo'))
         return j({ok:false,error:'AUTO_VERDICT_SERVER_ONLY'},403);
-      result=gallowsMode(ballot)==='gm'?
-        gallowsManualResolve(ballot,target,String(body?.outcome||''),now):
-        gallowsResolve(ballot,String(body?.outcome||''),now);
+      result=command==='close_vote'?
+        gallowsResolve({...ballot,stage:'closed',deadlineAt:now},gallowsAutomaticOutcome(ballot),now):
+        gallowsMode(ballot)==='gm'?
+          gallowsManualResolve(ballot,target,String(body?.outcome||''),now):
+          gallowsResolve(ballot,String(body?.outcome||''),now);
       if(result.ok&&result.value.outcome==="dead"){
         const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
         if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&
