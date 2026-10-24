@@ -36,7 +36,21 @@ export function projectGmOnlyVisuals(interactions,{matchId,cycleKey,now=Date.now
 // Staging Core V2 currently broadcasts a generic confirmation with raw night targets.
 // Keep the fact of a confirmation without its private targets for public WebSocket viewers.
 export function redactStagingPublicBroadcast(payload){
-  if(!payload||typeof payload!=='object'||payload.type!=='battle_action_confirmed')return payload;
-  const {targets,targetIds,revealTargetIds,revealTargetId,actorId,roleName,roleId,artifactId,...safe}=payload;
-  return safe;
+  if(!payload||typeof payload!=='object')return payload;
+  // V2 night_turn and room_cycle contain runtime queues/role assignments. These
+  // broadcasts go to ALL Player Web sockets, not only GM — never leak runtime.
+  if(payload.type==='night_turn'){
+    const {runtime,nightRuntime,queue,recognitionIds,roles,loginIds,...safe}=payload;
+    return safe;
+  }
+  if(payload.type==='room_cycle'){
+    const {runtime,nightRuntime,queue,recognitionIds,roles,loginIds,...safe}=payload;
+    return safe;
+  }
+  if(['battle_action_confirmed','battle_action_undone','battle_action_reverted'].includes(payload.type)){
+    const {targets,targetIds,revealTargetIds,revealTargetId,actorId,roleName,roleId,
+      artifactId,loginId,actionId,actionNonce,...safe}=payload;
+    return safe;
+  }
+  return payload;
 }
