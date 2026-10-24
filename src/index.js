@@ -856,9 +856,8 @@ export class RoomDurableObject extends DurableObject {
     if(!meta.demo&&String(meta.phase)==="running"&&String(meta.cyclePhase)==="morning"&&current.mode==="auto"){
       let changed=false;
       if(current.stage==="nominating"&&now>=Number(current.nominationDeadlineAt||Infinity)){
-        const candidate=gallowsAutomaticNominee(current);
-        if(candidate){const began=gallowsBegin(current,candidate,now);if(began.ok){current=began.value;changed=true}}
-        else{current={...current,stage:"selecting",updatedAt:now};changed=true}
+        const closed=gallowsCloseNomination(current,now);
+        if(closed.ok){current=closed.value;changed=true}
       }
       if(current.stage==="voting"&&now>=Number(current.deadlineAt||Infinity)){
         const decision=gallowsAutomaticOutcome(current),done=gallowsResolve(current,decision,now);
