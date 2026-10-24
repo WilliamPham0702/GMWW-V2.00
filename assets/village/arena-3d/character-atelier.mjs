@@ -3,7 +3,7 @@
 // No player role, faction, secret target, account token or game rule is stored here.
 export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v6-sea-art';
 import {characterArtProfile,accessoryPartVisible,characterMotionFrame,CHARACTER_ART_VERSION} from './character-art-direction.mjs';
-import {expressionFrame,STAGE7_VERSION} from './stage7-expression-motion.mjs';
+import {expressionFrame,renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
 const MAX=30,TAU=Math.PI*2;
