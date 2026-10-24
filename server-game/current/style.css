@@ -5525,6 +5525,8 @@ body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not
   display:flex;align-items:center;justify-content:space-between;gap:5px;
   padding:4px 3px;min-width:0;color:#b8e9ed;font-size:9px;font-weight:800
 }
+.play-seat-shift-controls>.play-gather-spacing{flex:1 1 auto;min-width:0;padding:4px 5px}
+.play-seat-shift-controls>.play-gather-spacing input{min-width:60px}
 .play-seat-shift-controls>span{flex:0 1 auto;white-space:nowrap}
 .play-seat-shift-buttons{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
 .play-seat-shift-buttons>button{
@@ -5534,7 +5536,7 @@ body.play-immersive #start #playPlayerRing .play-player-token:not(.is-empty):not
 }
 .play-seat-shift-buttons>button:disabled{opacity:.45}
 #playSeatOffsetValue{font-size:9px;white-space:nowrap;font-variant-numeric:tabular-nums}
-@media(max-width:390px){.play-seat-shift-controls{flex-wrap:wrap;justify-content:center}.play-seat-shift-controls>span{width:100%;text-align:center}}
+@media(max-width:390px){.play-seat-shift-controls{flex-wrap:nowrap;justify-content:space-between}}
 /* Deprecated V2.46 freeze letters generated an unwanted SECOND visual layer.
    Frozen orbit ❄️ from the shared approved renderer is now the only symbol. */
 #start .play-player-token.is-frozen .play-player-avatar::before,
