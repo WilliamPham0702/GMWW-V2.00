@@ -49,8 +49,8 @@ test('Lobby HUD is absent before start; only game shows day/night controls',()=>
   assert.match(live,/#game\[data-gmww-player-scene="lobby"\] #gmwwGameViewTabs\{display:none!important\}/);
   assert.match(scene,/classList\.toggle\("player-prep",room\.playerSceneMode==="lobby"\)/);
   assert.match(css,/html\.embedded body\.player-prep \.hud\{display:none!important\}/);
-  assert.match(html,/village\.mjs\?v=fire3101/);
-  assert.match(live,/iframe\.src='\/village\/\?embed=1&v=303'/);
+  assert.match(html,/village\.mjs\?v=fire3201/);
+  assert.match(live,/iframe\.src='\/village\/\?embed=1&v=3201'/);
 });
 
 test('Simplified player lobby uses existing info boxes, hides unoccupied leaves and extra exit buttons',()=>{
