@@ -1,5 +1,16 @@
 name: Check Lên Giàn theo đúng phạm vi
 on:
+  # Chỉ chạy CI Lên Giàn khi merge Runtime V3.204 vào main.
+  push:
+    branches: [main]
+    paths:
+      - "server-game/current/GMWW.html"
+      - "server-game/current/style.css"
+      - "server-game/current/app.js"
+      - "server-game/src/30-village-and-setup.part"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "src/gmww-gallows-rules.js"
+      - "tests/gallows-*.test.mjs"
   pull_request:
     paths:
       - "src/gmww-gallows-rules.js"
