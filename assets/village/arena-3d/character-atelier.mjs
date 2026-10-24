@@ -1,19 +1,13 @@
 // Arena 3D v3: compact 3D chibi characters. Technical procedural art, no texture downloads.
 // All 6–30 actors share InstancedMesh geometries/materials; status/VFX are projections.
 // No player role, faction, secret target, account token or game rule is stored here.
-export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v5-casting';
+export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v6-sea-art';
+import {characterArtProfile,accessoryPartVisible,characterMotionFrame,CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
 const MAX=30,TAU=Math.PI*2;
-const PALETTE=['#22b6b0','#60b9d9','#f5b769','#d9a4f0','#9bcf79','#ffa6b6','#8ca9ea','#f2cd83'];
-const HAIR=['#1b6477','#31546e','#68456c','#bb7b53','#486652','#54588b','#774b4f','#a3698e'];
-const SKIN=['#fbd8b8','#f5c8a7','#eab58e','#f8d2ba'];
-const ACCENT=['#e9f8ed','#ffdf95','#94f7f1','#cfb8fb','#ffd2e1'];
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
-function numberOf(id){const value=Number(String(id||'').match(/(\d+)$/)?.[1]);return Number.isFinite(value)&&value>0?value-1:0}
-function color(i,series){return series[((i%series.length)+series.length)%series.length]}
-export function atelierPalette(characterId){const i=numberOf(characterId);const style=Math.floor(i/8)%5;
-  return {cloth:color(i,PALETTE),hair:color(Math.floor(i/2)+i,HAIR),skin:color(i,SKIN),accessory:color(style,ACCENT),style};}
+export const atelierPalette=characterArtProfile;
 export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   const limit=clamp(Math.trunc(capacity)||MAX,1,MAX),root=new THREE.Group();
   root.name='arena-chibi-atelier';scene.add(root);
@@ -42,6 +36,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     ['shoeR',sphere,'shoe',[.16,.105,.08],[.16,.11,.23]],
     ['pearl',sphere,'shine',[0,1.71,.06],[.09,.09,.08]],
     ['shell',sphere,'shine',[0,.88,.265],[.13,.085,.046]],
+    ['waistSash',sphere,'trim',[0,.78,.045],[.37,.073,.28]],
+    ['shellCrown',sphere,'accessory',[0,1.79,-.02],[.20,.09,.22]],
     // Five silhouette variants cycle over forty IDs: hairpin, ribbon, cloak.
     ['shellpin',sphere,'accessory',[.29,1.68,.12],[.15,.13,.075]],
     ['ribbon',sphere,'accessory',[-.39,1.53,-.03],[.20,.11,.13]],
@@ -97,7 +93,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         circle=seatLayout==='circle'&&Number.isInteger(seat)&&seat>0&&seat<=count,
         seatX=circle?Math.cos(theta)*radius:(Number.isFinite(x)?x:Math.cos(theta)*radius),
         seatZ=circle?Math.sin(theta)*radius*.89:(Number.isFinite(z)?z:Math.sin(theta)*radius*.89);
-      const actor={id,index:i,position:{x:seatX,z:seatZ},
+      const actor={id,index:i,look:style,position:{x:seatX,z:seatZ},
         characterId:source.characterId,style:style.style,yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
         approach:approachPoint({x:seatX,z:seatZ}),travel:previous.get(id)?.travel||null,
         standAt:previous.get(id)?.standAt||0,standUntil:previous.get(id)?.standUntil||0,
@@ -108,9 +104,9 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       actors.push(actor);byId.set(id,actor);
       for(const part of meshes){
         const hex=part.kind==='seat'?'#b99167':part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:part.kind==='accessory'?style.accessory:
-          part.kind==='skin'?style.skin:part.kind==='eye'?'#19273c':
+          part.kind==='skin'?style.skin:part.kind==='trim'?style.trim:part.kind==='eye'?'#19273c':
           part.kind==='shoe'?'#35526a':part.kind==='blush'?'#ed9b98':'#fff4d5';
-        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat'&&part.kind!=='blush')throw Error('UNKNOWN_ATELIER_MATERIAL');
+        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat'&&part.kind!=='blush'&&part.kind!=='trim')throw Error('UNKNOWN_ATELIER_MATERIAL');
         part.mesh.setColorAt(i,colorTemp.set(hex));
       }
     }
@@ -212,35 +208,31 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const pose=choreographyPose(actor,time,{lowMotion:reducedMotion});
       const walkPos=renderWalkPosition(actor.position,actor.approach,actor.travel,
         reducedMotion?time+WALK_TIMING.approachMs:time);
+      const motion=characterMotionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),standing:Boolean(pose.stand),reducedMotion});
       base.set(walkPos.x,0,walkPos.z);
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
       for(const part of meshes){
         let [x,y,z]=part.offset,[sx,sy,sz]=part.size;
-        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
+        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce+motion.breath;x+=motion.headTilt+(gesturing?.024*Math.sin(time*.016):0)}
+        if(part.name==='head')sx*=actor.look.headScale;
+        if(part.name==='hair'||part.name==='fringe'||part.name==='hairTail')sy*=actor.look.hairHeight;
+        if(part.name.startsWith('eye')){sx*=actor.look.eyeScale;sy*=actor.look.eyeScale}
+        if(part.name==='tunic'||part.name==='waistSash')sx*=actor.look.outfitWidth;
+        if(part.name==='skirt')sy*=actor.look.skirtLength;
+        if(part.name==='cape'){z-=motion.capeSway;sy*=1+Math.abs(motion.capeSway)}
+        if(part.name==='tunic'||part.name==='skirt')x+=motion.robeSway;
         if(part.name==='armL'||part.name==='armR'){
           if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
           else if(gesturing&&actor.gesture==='cheer')y+=.25+.09*Math.sin(time*.016);
-          else y+=gesturing?.10*Math.sin(time*.015):moving?.06*Math.sin(time*.009+actor.index):0;
+          else y+=motion.armLift;
         }
         if(gesturing&&actor.gesture==='nod'&&(part.name==='head'||part.name==='hair'||part.name.startsWith('eye')))y-=.055*Math.sin(time*.017);
-        if(part.name==='shellpin'){
-          if(actor.style%5===1||actor.style%5===4)sx*=1.15;
-          else sx=sy=sz=.00001;
-        }
-        if(part.name==='ribbon'){
-          if(actor.style%5===0||actor.style%5===3)sz*=1.15;
-          else sx=sy=sz=.00001;
-        }
-        if(part.name==='hairTail'){
-          if(actor.style%5!==1&&actor.style%5!==3)sx=sy=sz=.00001;
-        }
-        if(part.name==='cape'){
-          if(actor.style%5===2||actor.style%5===4)sy*=1.12;
-          else sx=sy=sz=.00001;
-        }
-        if(part.name==='shoeL'||part.name==='shoeR')y+=moving?.05*Math.abs(Math.sin(time*.014+actor.index)):0;
+        if(!accessoryPartVisible(part.name,actor.look))sx=sy=sz=.00001;
+        if(part.name==='shellpin'&&actor.look.badgeSide==='left')x=-Math.abs(x);
+        if(part.name==='shellCrown')sy*=actor.look.hairHeight;
+        if(part.name==='shoeL'||part.name==='shoeR')y+=motion.step;
         if(part.name!=='stool'){
           y*=.69+.31*pose.stand;
           if(part.name==='skirt'||part.name==='tunic')sy*=.90+.1*pose.stand;
@@ -306,6 +298,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     actors.length=0;byId.clear();
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,draw,pick,dispose,
+    artVersion:CHARACTER_ART_VERSION,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
