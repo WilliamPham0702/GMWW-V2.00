@@ -47,7 +47,7 @@ export function createArenaSpellVfx(THREE,root){
     glow.visible=false;pearls.count=0;
   }
   function update({type,from,to,start,end},now){
-    if(!SPELL_KIN.includes(type)||!from||!to||!Number.isFinite(start)||!Number.isFinite(end)||
+    if(!SPELL_KINDS.includes(type)||!from||!to||!Number.isFinite(start)||!Number.isFinite(end)||
       now<start||now>=end){
       clear();return false;
     }
