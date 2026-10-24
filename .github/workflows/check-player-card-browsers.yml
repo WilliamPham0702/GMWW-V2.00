@@ -121,6 +121,22 @@ jobs:
           node-version: 22
       - name: Kiểm thử đúng luồng kết thúc và tạo ván tiếp theo
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
+  ci-policy-test:
+    needs: scope
+    if: needs.scope.outputs.mode == 'ci-policy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chỉ kiểm thử logic phân phạm vi CI
+        run: node --test tests/ci-browser-scope.test.mjs
+  # Lên Giàn đã có workflow Check Lên Giàn theo đúng phạm vi.
+  # Không chạy browser-test khi mode=gallows: tuyệt đối không chặn task bằng Card/Seat/Home/OTA.
   browser-test:
     needs: scope
     if: needs.scope.outputs.mode == 'full'
