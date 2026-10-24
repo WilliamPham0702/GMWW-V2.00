@@ -7246,3 +7246,27 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
    grid-template-columns:19px minmax(62px,1fr) 42px 49px 49px!important
  }
 }
+
+/* V3.205: compact Gallows toolbar without clock collision on Safari/iPhone. */
+#battleGallowsPanel .gallows-mode-toolbar{
+ display:grid!important;grid-template-columns:minmax(106px,28%) minmax(62px,72px) minmax(57px,66px) minmax(76px,1fr)!important;
+ gap:5px!important;align-items:center!important;width:100%;box-sizing:border-box
+}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{
+ width:100%;min-width:0!important;min-height:36px!important;padding:5px 4px!important;white-space:nowrap;font-size:10px!important
+}
+#battleGallowsPanel .gallows-mode-toolbar label{display:grid!important;min-width:0!important;gap:1px;text-align:center;line-height:1.1}
+#battleGallowsPanel .gallows-mode-toolbar input{box-sizing:border-box;width:100%!important;height:31px!important;min-width:0!important}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsClock{font-size:15px!important;letter-spacing:-.05em;min-width:0!important;white-space:nowrap}
+#battleGallowsPanel .gallows-mode-toolbar [data-gallows-command="restore"]{
+ min-width:0!important;max-width:100%!important;white-space:normal;font-size:9px!important;line-height:1.2;padding:4px 2px!important
+}
+/* Purely GM-local visibility: dead members stay in room/game data and Player Web. */
+#playShell.gmww-hide-dead-players #playPlayerRing .play-player-token.is-dead{display:none!important}
+@media(max-width:370px){
+ #battleGallowsPanel .gallows-mode-toolbar{
+ grid-template-columns:minmax(92px,29%) minmax(52px,65px) minmax(53px,60px) minmax(65px,1fr)!important;
+ gap:3px!important
+ }
+ #battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{font-size:9px!important}
+}
