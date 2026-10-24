@@ -79,7 +79,7 @@ test('Configuring a distinct new match clears only live winner metadata, not ros
   const entries=new Map([['meta',meta],['players',players],['matchCompletion:old-match',lastResult]]);
   const Room=vm.runInNewContext('(class {'+config+'})',{
     j:(body,status=200)=>Response.json(body,{status}),
-    sanitizeGameConfig:x=>x,publicRoom:x=>({...x}),publicPlayer:x=>({...x})
+    sanitizeGameConfig:x=>x,validImageDataUrl:()=>false,publicRoom:x=>({...x}),publicPlayer:x=>({...x})
   });
   const instance=new Room();
   instance.gmAuthorized=async()=>({ok:true,meta:entries.get('meta')});
