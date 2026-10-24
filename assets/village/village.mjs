@@ -177,50 +177,71 @@ if(game){
      can hit a Character. The parent sends a signed member request to the DO. */
   function syncPirateNominationFlag(){
     if(!embedded)return;
-    let button=document.getElementById('gmwwPirateNominate');
-    if(!button){
-      button=document.createElement('button');button.id='gmwwPirateNominate';button.type='button';
-      button.textContent='🏴‍☠️';button.setAttribute('aria-label','Kéo lá cờ lên người muốn đề cử, hoặc chạm hai lần để mở danh sách');
-      button.title='Kéo vào Character · chạm hai lần xem danh sách';
-      button.style.cssText='position:fixed;right:14px;bottom:max(92px,calc(env(safe-area-inset-bottom) + 92px));z-index:1005;width:58px;height:58px;border-radius:16px;border:2px solid #ffde92;background:#103749e8;box-shadow:0 6px 20px #0008;color:#fff;font-size:30px;touch-action:none;user-select:none';
-      document.body.append(button);
-      let gesture=null,lastTap=0,ghost=null;
-      const cleanup=()=>{ghost?.remove();ghost=null;gesture=null};
-      button.addEventListener('pointerdown',e=>{
+    let flag=document.getElementById('gmwwPirateNominate');
+    if(!flag){
+      flag=document.createElement('button');flag.id='gmwwPirateNominate';flag.type='button';
+      flag.setAttribute('aria-label','Cờ hải tặc đỏ: kéo vào người muốn đề cử hoặc chạm hai lần để chọn từ danh sách');
+      flag.title='Kéo lá cờ đỏ lên Character · chạm hai lần mở danh sách';
+      flag.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true"><path d="M13 6V59" stroke="#f5dcb2" stroke-width="4" stroke-linecap="round"/><path d="M16 9Q35 4 56 13L50 27Q36 22 16 28Z" fill="#e73543" stroke="#ffe5b5" stroke-width="2.2"/><circle cx="35" cy="16" r="5.1" fill="white"/><circle cx="33.3" cy="16" r="1.1" fill="#ae1c31"/><circle cx="36.7" cy="16" r="1.1" fill="#ae1c31"/><path d="M32 21L38 21M28 24L43 11M29 11L43 24" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>';
+      flag.style.cssText='position:fixed;z-index:1008;width:clamp(42px,11vw,64px);height:clamp(42px,11vw,64px);padding:0;background:transparent;border:0;box-shadow:none;filter:drop-shadow(0 4px 5px #000b);touch-action:none;user-select:none;cursor:grab;transform:translate(-50%,-50%)';
+      flag.hidden=true;document.body.append(flag);
+      const atFire=()=>{
+        const point=screenPoint(layout.fire),r=stageElement.getBoundingClientRect();
+        flag.style.left=Math.round(r.left+r.width*point.x/100)+'px';
+        flag.style.top=Math.round(r.top+r.height*point.y/100)+'px';
+      };
+      flag.gmwwAtFire=atFire;
+      let gesture=null,lastTap=0;
+      flag.addEventListener('pointerdown',e=>{
         if(!setupState.gallowsCanNominate||e.button>0)return;
-        gesture={id:e.pointerId,x:e.clientX,y:e.clientY};
-        try{button.setPointerCapture(e.pointerId)}catch{}
+        const r=flag.getBoundingClientRect();
+        gesture={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left+r.width/2,top:r.top+r.height/2,dragged:false};
+        try{flag.setPointerCapture(e.pointerId)}catch{}
         e.preventDefault();
       });
-      button.addEventListener('pointermove',e=>{
+      flag.addEventListener('pointermove',e=>{
         if(!gesture||gesture.id!==e.pointerId)return;
-        if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<14)return;
-        if(!ghost){ghost=document.createElement('span');ghost.textContent='🏴‍☠️';
-          ghost.style.cssText='position:fixed;z-index:1010;pointer-events:none;font-size:36px;filter:drop-shadow(0 3px 6px #000);transform:translate(-50%,-50%)';
-          document.body.append(ghost)}
-        ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+        const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+        if(!gesture.dragged&&Math.hypot(dx,dy)<11)return;
+        gesture.dragged=true;
+        flag.style.left=Math.max(23,Math.min(window.innerWidth-23,gesture.left+dx))+'px';
+        flag.style.top=Math.max(23,Math.min(window.innerHeight-23,gesture.top+dy))+'px';
       });
-      button.addEventListener('pointerup',e=>{
+      flag.addEventListener('pointerup',e=>{
         if(!gesture||gesture.id!==e.pointerId)return;
-        const distance=Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y);
-        if(distance>=20){
-          const target=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.player[data-player-id]');
+        const dragged=gesture.dragged;gesture=null;
+        if(dragged){
+          // Ignore the foreground flag itself when detecting the dropped Character.
+          flag.style.pointerEvents='none';
+          const node=document.elementFromPoint(e.clientX,e.clientY);
+          flag.style.pointerEvents='';
+          const target=node?.closest?.('.player[data-player-id]');
           const id=String(target?.dataset.playerId||'');
           if(id&&id!==String(setupState.viewerParticipantId||'')&&id!=='gm'&&!target?.classList.contains('gmww-sv-dead'))
             try{window.parent.postMessage({type:'gmww:gallows-drag-nominate',participantId:id},window.location.origin)}catch{}
           lastTap=0;
         }else{
           const now=Date.now();
-          if(now-lastTap<450){lastTap=0;try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{}}
-          else lastTap=now;
+          if(now-lastTap<450){
+            lastTap=0;
+            try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{}
+          }else lastTap=now;
         }
-        cleanup();e.preventDefault();
+        e.preventDefault();
       });
-      button.addEventListener('pointercancel',cleanup);
-      button.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){
-        try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{};e.preventDefault()}});
+      flag.addEventListener('pointercancel',()=>{gesture=null});
+      flag.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){
+        try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{}
+        e.preventDefault();
+      }});
     }
-    button.hidden=!setupState.gallowsCanNominate;
+    const visible=!!setupState.gallowsCanNominate;
+    if(visible&&flag.hidden!==false)flag.gmwwAtFire?.();
+    if(!visible)flag.dataset.resetAtFire='1';
+    if(visible&&flag.dataset.resetAtFire==='1'){
+      flag.gmwwAtFire?.();delete flag.dataset.resetAtFire;
+    }
+    flag.hidden=!visible;
   }
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");

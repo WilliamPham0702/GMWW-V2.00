@@ -58,7 +58,7 @@ test('built Player Web has pirate drag and accessible double-tap listing, GM con
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  for(const required of ['gmwwPirateNominate','pointermove','gmww:gallows-open-nominations','gmww:gallows-drag-nominate'])assert.ok(frame.includes(required));
  assert.ok(host.includes('gallows-open-nominations'));
- assert.ok(player.includes('gmwwGallowsOpenNomination')&&player.includes('data-gallows-vote="👍"')&&player.includes('data-gallows-vote="👎"'));
+ assert.ok(player.includes('gmwwGallowsGrid')&&player.includes('gmwwGallowsReset')&&player.includes('data-gallows-vote="👍"')&&player.includes('data-gallows-vote="👎"'));
  assert.ok(html.indexOf('data-gallows-command="open"')<html.indexOf('id="battleGallowsCandidate"'));
  assert.ok(html.includes('battleGallowsBanDetails'));
  assert.ok(gm.includes('battleGallowsSelectedCount')&&gm.includes('battleGallowsVotedCount'));

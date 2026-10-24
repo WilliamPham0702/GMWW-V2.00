@@ -18,27 +18,27 @@ test('V3.202 increases beyond Production V3.200; same-version changed bytes reje
  assert.throws(()=>verifyOtaVersionAdvance(make('3.200','b'.repeat(64)),{releaseVersion:'3.200',source:'verified-live-health-fallback'},['server-game/current/app.js']),/does not advance/);
 });
 
-test('V3.204 leaves native shell V3.110 and already-published IPA V3.200 unchanged',()=>{
+test('V3.205 leaves native shell V3.110 and already-published IPA V3.200 unchanged',()=>{
  const notes=read('.github/scripts/prepare-update-channel.mjs');
  const worker=read('src/index.js'),html=read('server-game/current/GMWW.html');
  const proof=JSON.parse(read('update-system/published-ipa.json'));
- assert.match(notes,/releaseNotes:\["V3\.204: Lên Giàn/);
+ assert.match(notes,/releaseNotes:\["V3\.205: Trang Lên Giàn/);
  assert.match(notes,/V3\.200: PR #457/);
  assert.match(notes,/không đổi seat/);
- assert.match(worker,/VERSION="V3\.204",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3204"/);
- assert.match(html,/<title>GMWW V3\.204<\/title>/);
+ assert.match(worker,/VERSION="V3\.205",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3205"/);
+ assert.match(html,/<title>GMWW V3\.205<\/title>/);
  assert.equal(proof.version,'3.200');
  assert.equal(proof.sha256,'974cefca2dbff129d0f6c4bf50505f883814a9b9813b08199238f8bb4a2f4aa6');
 });
 
-test('V3.204 CI builds SHA-256 from actual Runtime bytes without deploying Production',()=>{
+test('V3.205 CI builds SHA-256 from actual Runtime bytes without deploying Production',()=>{
  const workflow=read('.github/workflows/prepare-runtime-v3202-candidate.yml');
  const verify=read('.github/scripts/verify-prepared-runtime.mjs');
- assert.match(workflow,/GMWW V3\.204 OTA Candidate SHA-256/);
+ assert.match(workflow,/GMWW V3\.205 OTA Candidate SHA-256/);
  assert.match(workflow,/prepare-update-channel\.mjs runtime/);
- assert.match(workflow,/verify-prepared-runtime\.mjs 3\.204/);
+ assert.match(workflow,/verify-prepared-runtime\.mjs 3\.205/);
  assert.match(workflow,/verify-ota-version-advance\.mjs/);
- assert.match(workflow,/GMWW-V3\.204-OTA-CANDIDATE-SHA256-NO-DEPLOY/);
+ assert.match(workflow,/GMWW-V3\.205-OTA-CANDIDATE-SHA256-NO-DEPLOY/);
  assert.doesNotMatch(workflow,/\bwrangler deploy\b|\bgh release create\b|\bworkflow_dispatch\b/);
  assert.match(verify,/createHash\('sha256'\)/);
 });

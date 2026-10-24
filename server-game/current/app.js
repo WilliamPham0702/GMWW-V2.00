@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.204';
+const VERSION='3.205';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5619,12 +5619,20 @@ function battleToggleDetails(force){
 const GMWW_GM_LABEL_KEY='gmww_gm_label_visibility_v1';
 const gmLabelVisibility=(()=>{
   try{const saved=JSON.parse(localStorage.getItem(GMWW_GM_LABEL_KEY)||'{}');
-    return {artifact:saved.artifact!==false,role:saved.role!==false,player:saved.player!==false};
-  }catch{return {artifact:true,role:true,player:true}}
+    return {artifact:saved.artifact!==false,role:saved.role!==false,player:saved.player!==false,dead:saved.dead!==false};
+  }catch{return {artifact:true,role:true,player:true,dead:true}}
 })();
 function battleSyncLabelVisibility(){
   const shell=document.getElementById('playShell');
-  if(shell)for(const kind of ['artifact','role','player'])shell.classList.toggle('gmww-hide-'+kind+'-label',!gmLabelVisibility[kind]);
+  if(shell){for(const kind of ['artifact','role','player'])shell.classList.toggle('gmww-hide-'+kind+'-label',!gmLabelVisibility[kind]);
+    shell.classList.toggle('gmww-hide-dead-players',!gmLabelVisibility.dead);
+  }
+  const deadToggle=document.getElementById('battleShowDead');
+  if(deadToggle){deadToggle.setAttribute('aria-pressed',String(gmLabelVisibility.dead));
+    deadToggle.textContent=gmLabelVisibility.dead?'☠️ Hiện người chết':'☠️ Ẩn người chết';
+    deadToggle.setAttribute('aria-label','Người chơi đã chết: '+(gmLabelVisibility.dead?'Đang hiện':'Đang ẩn'));
+    deadToggle.classList.toggle('is-off',!gmLabelVisibility.dead);
+  }
   for(const [kind,id,label] of [['artifact','battleLabelArtifact','Artifact'],['role','battleLabelRole','Vai Trò'],['player','battleLabelPlayer','Người Chơi']]){
     const button=document.getElementById(id);if(!button)continue;
     const enabled=gmLabelVisibility[kind];
@@ -6040,7 +6048,7 @@ function initBattleControls(){
   document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{
     setGmHapticEnabled(!gmHapticEnabled());renderPlayBattle();
   });
-  for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player']])
+  for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player'],['battleShowDead','dead']])
     document.getElementById(id)?.addEventListener('click',()=>battleToggleLabelVisibility(kind));
   battleSyncLabelVisibility();
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});

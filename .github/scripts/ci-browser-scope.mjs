@@ -150,6 +150,37 @@ const gallowsOnlyPaths=new Set([
   'tests/v3202-ota-release-gates.test.mjs',
   'tests/v3202-runtime-integrity.test.mjs'
 ]);
+// V3.205: whitelist only the Gallows/red-flag/GM visibility patch and
+// essential Runtime version/OTA guards. Any unrelated file falls back to full.
+const gallowsVisual205=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/scripts/prepare-update-channel.mjs',
+  'docs/releases/GMWW-V3.205-gallows-pirate-flag-20261024.md',
+  'package.json','package-lock.json','src/index.js',
+  'server-game/current/GMWW.html','server-game/current/style.css','server-game/current/app.js',
+  'server-game/src/00-core-and-library.part','server-game/src/40-battle-and-timeline.part',
+  'src/player-web-src/30-rooms-and-realtime.part','src/gmww-members-live.js',
+  'assets/village/village.mjs',
+  'tests/gallows-pirate-ui-v3205.test.mjs',
+  'tests/v3189-fire-gallows-voting.test.mjs',
+  'tests/v3202-runtime-integrity.test.mjs',
+  'tests/v3202-ota-release-gates.test.mjs',
+  'tests/v3196-native-runtime-release-gates.test.mjs',
+  'tests/native-ipa-release-gate.test.mjs',
+  'tests/published-ipa.test.mjs',
+  'tests/ci-browser-scope.test.mjs'
+]);
+function isGallowsVisual205Scope(changes){
+  const names=new Set(changes.map(x=>x.path));
+  return names.has('assets/village/village.mjs')&&
+    names.has('src/player-web-src/30-rooms-and-realtime.part')&&
+    names.has('tests/gallows-pirate-ui-v3205.test.mjs')&&
+    names.has('server-game/current/GMWW.html')&&
+    changes.every(x=>gallowsVisual205.has(x.path)&&['M','A'].includes(x.status));
+}
 function isGallowsScope(changes){
   const names=new Set(changes.map(x=>x.path));
   return names.has('.github/workflows/check-gallows-redesign.yml')&&
@@ -177,7 +208,7 @@ function isPolicyScope(changes){
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isPolicyScope(changes))return 'ci-policy';
-  if(isGallowsScope(changes))return 'gallows';
+  if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
   for(const {path,before,after,status} of changes){
@@ -213,7 +244,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
-      if(isGallowsScope(changes))return{mode:'gallows',reason:'Verified main Lên Giàn-only release: '+changes.map(c=>c.path).join(', ')};
+      if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return{mode:'gallows',reason:'Verified main Lên Giàn-only release: '+changes.map(c=>c.path).join(', ')};
     }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
     return{mode:'full',reason:'Main contains changes outside the verified scoped lists'};
   }

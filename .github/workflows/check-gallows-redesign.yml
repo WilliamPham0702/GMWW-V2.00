@@ -1,6 +1,6 @@
 name: Check Lên Giàn theo đúng phạm vi
 on:
-  # Chỉ chạy CI Lên Giàn khi merge Runtime V3.204 vào main.
+  # CI chỉ phần Lên Giàn, GM menu chết và Player Web cờ đỏ.
   push:
     branches: [main]
     paths:
@@ -11,11 +11,15 @@ on:
       - "server-game/src/40-battle-and-timeline.part"
       - "src/gmww-gallows-rules.js"
       - "tests/gallows-*.test.mjs"
+      - "assets/village/village.mjs"
+      - "src/player-web-src/30-rooms-and-realtime.part"
+      - "src/gmww-members-live.js"
   pull_request:
     paths:
       - "src/gmww-gallows-rules.js"
       - "src/index.js"
       - "src/player-web-src/20-village-and-profile.part"
+      - "src/player-web-src/30-rooms-and-realtime.part"
       - "src/gmww-members-live.js"
       - "assets/village/village.mjs"
       - "assets/village/village.css"
@@ -61,7 +65,7 @@ jobs:
           node --check assets/village/scene-manager.mjs
       - name: Kiem tra thong ke, han che, ket luan va API Web
         run: |
-          node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs
+          node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gallows-pirate-ui-v3205.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs
       - name: Kiem tra 6 source GM khop ban app da dong goi
         run: node --test tests/gmww-gm-app-source-modules.test.mjs
       - name: Kiem tra source Player Web dong bo compiled runtime
