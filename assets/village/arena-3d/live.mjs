@@ -105,7 +105,7 @@ function showBallot(x){
 }
 async function guarded(label,work){try{notice(label+' ...');await work();}catch(error){notice(label+': '+String(error.message||error));}}
 $('create').onclick=()=>guarded('Tạo phòng STAGING',async()=>{
-  if(feed)feed.close();feed=null;gmToken='';enableGm();
+  if(feed)feed.close();feed=null;gmToken='';seeded=[];enableGm();
   const d=await json('/api/rooms',{method:'POST',body:{roomName:'Arena 3D STAGING '+rosterSize,roomMode:'online',seatCount:rosterSize,seatMoveMode:'instant'}});
   gmToken=d.gmToken;await attach(d.roomCode);
 });
