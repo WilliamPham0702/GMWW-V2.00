@@ -6,6 +6,7 @@ import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
+import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -19,7 +20,29 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
-  onAction:(id,candidate)=>{if(id==='vote'&&candidate)chosenCandidate=candidate;$(id)?.click()},
+  onAction:(id,...args)=>{
+    if(id==='nextTurn')return void guarded('Chuyển lượt đêm theo Core',async()=>{
+      const turnId=args[0];if(!turnId)throw Error('Core chưa cấp lượt đêm');
+      await gm('turn',{action:'next',source:'gm',expectedTurnId:turnId});
+      await feed?.refresh();await refreshPrivateGmEffects();
+    });
+    if(id==='roleTrial')return void guarded('Thử diễn hoạt vai trò qua Core',async()=>{
+      const [turnId,actorId,roleId,targetId]=args;
+      const action=stagingRoleAction(roleId);
+      if(!turnId||!actorId?.startsWith('member:')||!targetId?.startsWith('member:')||!action)
+        throw Error('Thiếu lượt/nhân vật/mục tiêu hợp lệ');
+      if(!current?.room.matchId||current.room.cyclePhase!=='night')throw Error('Lượt không thuộc đêm hiện tại');
+      const response=await gm('battle-action',{
+        matchId:current.room.matchId,cycleKey:current.room.cycleKey,turnId,
+        actorId:actorId.slice(7),targetIds:[targetId.slice(7)],
+        type:action.type,actionId:action.actionId,
+        clientEventId:'arena-trial-'+crypto.randomUUID()});
+      await refreshPrivateGmEffects();
+      notice(response?.ok?'Core xác nhận lượt thử của '+roleId+'; phép được phát theo quyền GM.':'Core chưa xác nhận.');
+    });
+    if(id==='vote'&&args[0])chosenCandidate=args[0];
+    $(id)?.click();
+  },
   onToggleQuality:value=>{lowPower=value;field.setLowPower(lowPower);village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
 });
 let chosenCandidate=null;
@@ -81,6 +104,7 @@ async function refreshPrivateGmEffects(){
       field.setServerEffects(data.effects);
       visibleGmEffects=data.effects.length;
       field.setCastingTurn(data.casting||null);
+      dashboard.setNightControl(data.nightControl||null);
       document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
   }catch{}
@@ -100,7 +124,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){if(!gmToken){field.setCastingTurn(null);document.body.dataset.gmwwGmTurnActive='false';}
+function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
@@ -187,12 +211,9 @@ $('deal').onclick=()=>guarded('Phát Vai thử bằng Core V2',async()=>{
   const people=(feed?.state.current?.players||[]).filter(p=>p.id.startsWith('member:'));
   if(!people.length)throw Error('Chưa có thành viên nào trong phòng');
   const matchId='arena-'+crypto.randomUUID();
-  const cfg={id:'arena-stage',name:'Ma Sói thử nghiệm Arena',playerCount:people.length,
-    roles:[{roleId:'stage-villager',roleName:'Dân Làng',faction:'village',count:people.length}],
-    artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:300,gallowsNominationSec:50,gallowsVoteSec:50}};
+  const cfg=createArenaTrialConfig(people.length);
   await gm('config',{gameConfig:cfg,matchId,matchRevision:1});
-  await gm('assignments',{assignments:people.map(p=>({loginId:p.id.slice(7),roleId:'stage-villager',roleName:'Dân Làng',faction:'village',
-    roleCard:{name:'Dân Làng',faction:'village',information:'Bản thử nghiệm phân vai'}})),matchId});
+  await gm('assignments',{assignments:createArenaTrialAssignments(people.map(p=>p.id.slice(7)),matchId),matchId});
   await feed?.refresh();notice('Core V2 đã Phát Vai tới '+people.length+' thành viên. Người xem 3D không nhận thẻ vai riêng.');
 });
 $('start').onclick=()=>guarded('Vào Trận',async()=>{
@@ -204,7 +225,7 @@ async function cycle(phase){const room=feed?.state.current?.room;
   if(room?.phase!=='running')throw Error('Phải vào trận trước khi chuyển ngày/đêm');
   const n=Math.max(1,Number(room.cycleNight||1));
   await gm('cycle',{phase,night:n,cycleKey:phase+'-'+n,source:'gm'});
-  await feed?.refresh();
+  await feed?.refresh();await refreshPrivateGmEffects();
 }
 $('night').onclick=()=>guarded('Chuyển Đêm',()=>cycle('night'));
 $('day').onclick=()=>guarded('Chuyển Ngày',()=>cycle('morning'));
