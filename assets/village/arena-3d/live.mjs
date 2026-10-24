@@ -3,12 +3,16 @@
 import * as THREE from '../../characters/v5/vendor/three.module.min.js';
 import {rendererCommands,createPublicRendererFrame} from '../dual-renderer-core.mjs';
 import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
+import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
-render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
 const camera=new THREE.PerspectiveCamera(42,1,.1,90);
 let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code='',gmToken='',feed=null,current=null;
-let actors=new Map(),resources=[],lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true;
+const field=createArenaCharacterField(THREE,scene);
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+field.setReducedMotion(reducedMotion);
+let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0;
 const floor=new THREE.Mesh(new THREE.CylinderGeometry(11.2,11.2,.25,64),new THREE.MeshStandardMaterial({color:'#e8cc99'}));
 floor.position.y=-.2;scene.add(floor);
 const rim=new THREE.Mesh(new THREE.TorusGeometry(10.15,.4,7,64),new THREE.MeshStandardMaterial({color:'#459c7f'}));rim.rotation.x=Math.PI/2;scene.add(rim);
@@ -17,39 +21,15 @@ fire.position.set(0,.55,1.8);scene.add(fire);
 const sunlight=new THREE.DirectionalLight(0xffffff,2.3);sunlight.position.set(-8,12,6);scene.add(sunlight);
 scene.add(new THREE.AmbientLight(0xc2edfd,1.7));
 const pointlight=new THREE.PointLight(0xffa442,12,8);pointlight.position.set(0,1.2,1.8);scene.add(pointlight);
-const mat=n=>new THREE.MeshStandardMaterial({color:['#1d8493','#b18fdb','#ddab4d','#df8479','#52a486','#4385bd'][n%6],roughness:.74});
-const skin=new THREE.MeshStandardMaterial({color:'#f6d3b2'});
-const eye=new THREE.MeshStandardMaterial({color:'#111d2b'});
-const cap=new THREE.CapsuleGeometry(.26,.48,4,8),head=new THREE.SphereGeometry(.28,12,8),dot=new THREE.SphereGeometry(.03,6,4);
-function makeActor(p,index){
-  const g=new THREE.Group(),shirt=mat(index);
-  const body=new THREE.Mesh(cap,shirt);body.position.y=.48;g.add(body);
-  const face=new THREE.Mesh(head,skin);face.position.y=1.12;g.add(face);
-  for(const x of [-.09,.09]){const o=new THREE.Mesh(dot,eye);o.position.set(x,1.13,.26);g.add(o);}
-  scene.add(g);actors.set(p.id,{g,body,shirt,id:p.id});return g;
-}
-function resetActors(){
-  for(const v of actors.values()){scene.remove(v.g);v.shirt.dispose();}
-  actors.clear();
-}
+// Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
-  current=frame;synthetic=frame.room.code==='SYNTH';const items=rendererCommands(frame,'3d').players;
-  const ids=new Set(items.map(x=>x.id));
-  for(const [id,v] of actors)if(!ids.has(id)){scene.remove(v.g);v.shirt.dispose();actors.delete(id);}
-  items.forEach((p,i)=>{
-    const actor=actors.get(p.id)||{g:makeActor(p,i)};
-    const v=actors.get(p.id),angle=-Math.PI/2+Math.PI*2*i/Math.max(1,items.length);
-    // Seat is an authoritative identity. A missing position gets a deterministic visual fallback.
-    const x=p.position?.x??Math.cos(angle)*6.5,z=p.position?.z??Math.sin(angle)*4.8;
-    v.g.position.set(x,0,z);
-    const tags=p.statusTags||[];
-    const dead=tags.some(t=>['dead','expelled'].includes(t.statusId));
-    v.shirt.color.set(dead?'#666b74':['#1d8493','#b18fdb','#ddab4d','#df8479','#52a486','#4385bd'][i%6]);
-    const protectedTag=tags.some(t=>t.statusId==='protected');
-    v.shirt.emissive.set(protectedTag?'#23d0d8':dead?'#4b232c':'#000000');
-    v.shirt.emissiveIntensity=protectedTag?.9:dead?.5:0;
-    v.g.rotation.y=focusId===p.id?v.g.rotation.y:0;
-  });
+  const previousMatch=current?.room.matchId,previousCycle=current?.room.cycleKey;
+  current=frame;synthetic=frame.room.code==='SYNTH';
+  const items=rendererCommands(frame,'3d').players;
+  field.setActors(items);
+  if(previousMatch!==undefined&&(previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey)){
+    field.clearEffects();visibleGmEffects=0;
+  }
   const phase=frame.room.phase||'lobby',cycle=frame.room.cyclePhase||'';
   const night=cycle==='night';
   scene.background=new THREE.Color(night?'#10243b':'#85cddd');
@@ -61,6 +41,8 @@ function drawFrame(frame){
   document.body.dataset.gmwwLiveCount=String(items.length);
   document.body.dataset.gmwwLivePhase=String(phase);
   document.body.dataset.gmwwLiveCycle=String(cycle);
+  document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
+  document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
 }
 function demo(n){
   const players=Array.from({length:n},(_,i)=>{
@@ -71,6 +53,24 @@ function demo(n){
   drawFrame(createPublicRendererFrame({room:{code:'SYNTH',phase:'lobby',seatCount:n},players}));
 }
 function notice(s){$('log').textContent=String(s);}
+async function refreshPrivateGmEffects(){
+  if(!gmToken||!code||!current?.room.matchId||current.room.phase!=='running')return;
+  try{
+    const response=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gm-visuals',{
+      headers:{authorization:'Bearer '+gmToken},cache:'no-store'
+    });
+    if(!response.ok)return;
+    const data=await response.json();
+    if(String(data.matchId)!==String(current.room.matchId)||String(data.cycleKey)!==String(current.room.cycleKey))return;
+    if(Array.isArray(data.effects)){
+      field.setServerEffects(data.effects);
+      visibleGmEffects=data.effects.length;
+    }
+  }catch{}
+}
+// Polling is GM-only. A regular Player Web/anonymous viewer never requests this endpoint.
+setInterval(()=>{if(!document.hidden&&gmToken)void refreshPrivateGmEffects()},3000);
+
 async function json(url,{method='GET',body,gm=false,token}={}){
   const headers={accept:'application/json'};
   if(body)headers['content-type']='application/json';
@@ -91,7 +91,7 @@ async function attach(room){
   $('joinlink').href='/join/'+encodeURIComponent(code);
   const query=new URL(location.href);query.searchParams.set('room',code);history.replaceState(null,'',query);
   drawFrame(createPublicRendererFrame(state));
-  feed=connectStagingRoom({roomCode:code,onFrame:drawFrame,
+  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{drawFrame(frame);if(gmToken)void refreshPrivateGmEffects();},
     onGallows:updated=>{ballot=updated;showBallot(updated);},onStatus:s=>$('connection').textContent=s,
     onError:e=>notice('Lỗi kết nối '+String(e.message||e))});
   notice('Đã kết nối phòng thật '+code+' trên Core V2 STAGING. Mở Player Web 2D tại liên kết phía trên.');
@@ -100,6 +100,7 @@ async function attach(room){
 function showBallot(x){
   if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
+  if(x.candidateId)field.interact('member:'+x.candidateId,{effect:'vote',durationMs:1300});
   $('ballot').textContent='Lên Giàn '+x.stage+' · '+(x.candidateId||'chưa chọn')+
     ' · '+scores+' · 👍 '+x.save+' / 👎 '+x.kill+(x.outcome?' · '+x.outcome:'');
   document.body.dataset.gmwwLiveBallot=x.stage;
@@ -205,27 +206,33 @@ canvas.addEventListener('pointerup',e=>{
   if(!drag.moved){
     const r=canvas.getBoundingClientRect(),ray=new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
-    const hit=ray.intersectObjects([...actors.values()].map(x=>x.g),true)[0];
-    if(hit){let obj=hit.object;while(obj.parent&&obj.parent!==scene)obj=obj.parent;
-      const entry=[...actors.values()].find(x=>x.g===obj);
-      if(entry){focusId=entry.id;entry.g.rotation.y+=Math.PI/2;notice(entry.id+' xoay 90° — tiếp tục chạm để quay 360°.')}}
+    const id=field.pick(ray);
+    if(id){focusId=id;field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
   }
   drag=null;
 });
 canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.min(32,radius+Math.sign(e.deltaY)))},{passive:false});
-window.__GMWW_ARENA_STAGE_READONLY=()=>({count:actors.size,room:current?.room.code||null,phase:current?.room.phase||null,
+window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
-  ballot:ballot?.stage||null});
+  ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
+  drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
+  pixelRatio:render.getPixelRatio(),reducedMotion});
+// Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
-  resize();
-  camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
-    Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
-  camera.lookAt(0,0,1.2);
-  fire.scale.y=.94+.07*Math.sin(now/280);
-  render.render(scene,camera);frames++;
-  if(now-fpsAt>=1000){fps=Math.round(frames*1000/(now-fpsAt));frames=0;fpsAt=now;
-    $('hud').textContent=actors.size+' Character · '+fps+' FPS · '+render.info.render.calls+' draw calls';
+  if(!document.hidden&&now-lastPaint>=1000/(reducedMotion?20:30)){
+    lastPaint=now;resize();
+    camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
+      Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
+    camera.lookAt(0,0,1.2);
+    if(!reducedMotion)fire.scale.y=.94+.06*Math.sin(now/280);
+    field.draw(now);
+    render.render(scene,camera);frames++;
+  }
+  if(now-fpsAt>=1000){
+    fps=Math.round(frames*1000/(now-fpsAt));frames=0;fpsAt=now;
+    $('hud').textContent=field.actorCount+' Character · '+fps+' FPS · '+render.info.render.calls+' draw calls';
     document.body.dataset.gmwwStageFps=String(fps);
+    document.body.dataset.gmwwDrawCalls=String(render.info.render.calls);
   }
   requestAnimationFrame(loop);
 }
