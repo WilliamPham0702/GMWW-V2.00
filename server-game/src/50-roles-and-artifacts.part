@@ -488,8 +488,19 @@ function renderPlayCompletion(){
   const abort=document.getElementById('playCompletionAbort');if(abort)abort.hidden=s.completed;
   for(const b of document.querySelectorAll('[data-completion-next]'))b.disabled=s.busy;
 }
+function playCompletionIsCurrentResult(room){
+  const phase=String(room?.phase||'').toLowerCase();
+  const matchId=String(room?.matchId||''),endedMatchId=String(room?.lastEndedMatchId||'');
+  return ['lobby','ended'].includes(phase)&&!!room?.endedAt&&!!room?.winnerFaction&&
+    !!matchId&&matchId===endedMatchId&&
+    !['game','roles','deal'].includes(String(room?.gmStage||'').toLowerCase());
+}
 async function openPlayCompletionSheet(){
   if(!isLivePlayRoom())return;
+  const currentRoom=playSceneRuntime.room||{};
+  if(String(currentRoom.phase||'').toLowerCase()!=='running'&&!playCompletionIsCurrentResult(currentRoom)){
+    await openPlayEndSheet();return;
+  }
   const room=playSceneRuntime.room||{},s=playCompletionState,key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
   if(s.key!==key){
     s.key=key;s.roomCode=String(playSceneState.roomCode);s.matchId=String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
@@ -505,8 +516,13 @@ async function openPlayCompletionSheet(){
 function closePlayCompletionSheet(){playCompletionState.dismissed=playCompletionState.key;document.getElementById('playMatchCompletionSheet')?.classList.add('hidden')}
 async function playWatchCompletion(data){
   const room=data?.room;if(!room)return;
+  const running=String(room.phase||'').toLowerCase()==='running',completed=playCompletionIsCurrentResult(room);
+  // A new match must never inherit the previous match's winner overlay.
+  if(!running&&!completed){document.getElementById('playMatchCompletionSheet')?.classList.add('hidden');return}
+  // Finished results remain readable on demand, but never pop up on room re-entry.
+  if(!running||!data.winProposal)return; // Running GM may still choose a winner manually.
   const key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
-  if((data.winProposal||room.endedAt&&room.winnerFaction)&&playCompletionState.key!==key&&playCompletionState.dismissed!==key)
+  if(playCompletionState.key!==key&&playCompletionState.dismissed!==key)
     await openPlayCompletionSheet();
 }
 async function confirmPlayCompletion(){
