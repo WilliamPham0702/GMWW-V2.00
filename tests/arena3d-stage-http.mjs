@@ -27,6 +27,16 @@ const created=await json('/api/rooms',{roomName:'Arena 3D E2E '+suffix,roomMode:
 const code=created.roomCode,gmToken=created.gmToken;
 assert.ok(/^[A-Z0-9]+$/.test(code)&&gmToken);
 const path='/api/gm/rooms/'+code+'/';
+const gmEffectsPath='/api/arena-staging/rooms/'+code+'/gm-visuals';
+const anonymousEffectResponse=await fetch(base+gmEffectsPath);
+assert.equal(anonymousEffectResponse.status,401,'anonymous viewer must be denied private GM effects');
+const forgedEffectResponse=await fetch(base+gmEffectsPath,{headers:{Authorization:'Bearer FORGED-GM'}});
+assert.equal(forgedEffectResponse.status,401,'forged GM token must be denied');
+const allowedEffectResponse=await fetch(base+gmEffectsPath,{headers:{Authorization:'Bearer '+gmToken}});
+assert.equal(allowedEffectResponse.status,200,'authorized GM allowed');
+const gmEffects=await allowedEffectResponse.json();
+assert.ok(gmEffects.ok&&Array.isArray(gmEffects.effects));
+
 const members=[];
 for(let i=0;i<6;i++){
   const loginId='arst'+suffix+'p'+String(i+1);
@@ -59,6 +69,13 @@ const pubStr=JSON.stringify(afterDeal);
 assert.ok(!pubStr.includes('Vai thử nghiệm nội bộ'),'public room does not leak Role text');
 await json(path+'start',{matchId},gmToken);
 const night=await json(path+'cycle',{phase:'night',night:1,cycleKey:'night-1'},gmToken);
+const duringNight=await fetch(base+gmEffectsPath,{headers:{Authorization:'Bearer '+gmToken}});
+assert.equal(duringNight.status,200);
+const privateNightPayload=await duringNight.json();
+assert.equal(privateNightPayload.matchId,matchId);
+assert.ok(Array.isArray(privateNightPayload.effects));
+const nightPublic=await json('/api/rooms/'+code);
+assert.ok(!JSON.stringify(nightPublic).includes('Vai thử nghiệm nội bộ'),'night public state does not contain secret role cards');
 assert.equal(night.phase,'night');
 const morning=await json(path+'cycle',{phase:'morning',night:1,cycleKey:'morning-1'},gmToken);
 assert.equal(morning.phase,'morning');
@@ -105,7 +122,7 @@ for(let i=0;i<30;i++){
 }
 writeFileSync('/tmp/gmww-arena3d-stage-room30.txt',bigCode+'\n');
 writeFileSync('/tmp/gmww-arena3d-stage-room.txt',code+'\n');
-console.log('PASS: Core staging REAL 6-member game, seat, lock, role release, running night/day, nomination, 👍/👎 votes and private-ballot-safe replay.');
+console.log('PASS: Core staging REAL 6-member game, seat, lock, role release, GM-only private effects (401/200), running night/day, nomination, 👍/👎 and voter-safe replay.');
 console.log('ACCEPTANCE_PREVIEW='+base+'/village/arena-3d/live.html?room='+code);
 console.log('PLAYER_WEB='+base+'/join/'+code);
 console.log('ACCEPTANCE_30='+base+'/village/arena-3d/live.html?room='+bigCode);
