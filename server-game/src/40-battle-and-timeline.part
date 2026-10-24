@@ -1932,6 +1932,8 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
+    const audio=event.target.closest('[data-gallows-audio-target]');
+    if(audio){void battleOpenGallowsAudioUpload(audio.dataset.gallowsAudioTarget);return}
     const mode=event.target.closest('[data-gallows-mode]');
     if(mode){void battleGallowsCommand('mode','','',{mode:mode.dataset.gallowsMode});return}
     const block=event.target.closest('[data-gallows-kind]');
