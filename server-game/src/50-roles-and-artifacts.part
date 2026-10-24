@@ -519,7 +519,8 @@ async function playWatchCompletion(data){
   const running=String(room.phase||'').toLowerCase()==='running',completed=playCompletionIsCurrentResult(room);
   // A new match must never inherit the previous match's winner overlay.
   if(!running&&!completed){document.getElementById('playMatchCompletionSheet')?.classList.add('hidden');return}
-  if(!completed&&!data.winProposal)return; // Running GM may still choose a winner manually.
+  // Finished results remain readable on demand, but never pop up on room re-entry.
+  if(!running||!data.winProposal)return; // Running GM may still choose a winner manually.
   const key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
   if(playCompletionState.key!==key&&playCompletionState.dismissed!==key)
     await openPlayCompletionSheet();
