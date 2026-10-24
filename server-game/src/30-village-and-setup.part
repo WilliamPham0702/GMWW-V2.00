@@ -462,6 +462,13 @@ function connectPlaySocket(){
   ws.onmessage=e=>{try{
     const d=JSON.parse(e.data||'{}');
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
+    if(d.type==='gallows_updated'&&String(playSceneState.roomCode)===code){
+      if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+      playSceneRuntime.gallows=d.gallows||null;
+      battleState.gallowsClosedShown=false;
+      if(playSceneState.step==='battle'&&playSceneState.phase==='day')battleGallowsRender('day');
+      return;
+    }
     const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
     if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
     if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
