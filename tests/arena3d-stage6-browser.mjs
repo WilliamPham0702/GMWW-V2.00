@@ -31,8 +31,9 @@ try{
     await page.locator('[data-fx="'+kind+'"]').click();
     await page.waitForFunction(m=>window.__GMWW_ARENA_STAGE_READONLY?.().ritualMotif===m,motif,{timeout:9000});
     await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:10000});
-    const state=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
-    assert.equal(state.spellVfx,kind,'distinct authorized preview ritual '+kind);
+    // The "casting" signal is synchronous; WebGL VFX appears on the next frame.
+    await page.waitForFunction(k=>window.__GMWW_ARENA_STAGE_READONLY?.().spellVfx===k,
+      kind,{timeout:9000});
   }
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='returning',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:12000});
