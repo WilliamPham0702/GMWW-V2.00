@@ -7105,3 +7105,41 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsPanel .battle-gallows-audio-target code{flex:1;min-width:0}
 #battleGallowsPanel .battle-gallows-audio-target button{flex:none;min-height:30px;font-size:10px;padding:3px 7px}
 #audioGrid .gallows-audio-upload-target{outline:2px solid #f3d38d;outline-offset:2px;background:rgba(16,108,127,.22)}
+
+/* GMWW V3.201 · Lên Giàn: suspended selected Character above phase-specific 🔥.
+   Reconciled from authoritative gallows snapshot; real Seat never moves. */
+#start .play-player-ring.has-gallows-hanging{z-index:8!important;overflow:visible!important}
+#start .play-player-token.gmww-gallows-hanging{
+  z-index:950!important;pointer-events:none!important;
+  transition:left .72s cubic-bezier(.2,.85,.28,1),top .72s cubic-bezier(.2,.85,.28,1)!important;
+  filter:drop-shadow(0 8px 10px rgba(1,39,57,.53));
+}
+#start .play-player-token.gmww-gallows-hanging .play-player-avatar{
+  position:relative;transform-origin:50% 5%;
+  animation:gmww-gm-gallows-struggle 1.42s ease-in-out infinite!important;
+  will-change:transform;
+}
+#start .play-player-token.gmww-gallows-hanging .play-player-avatar::before{
+  content:'';position:absolute;z-index:5;left:50%;top:-46px;width:3px;height:54px;
+  border-radius:3px;transform:translateX(-50%);
+  background:repeating-linear-gradient(175deg,#efdaa3 0 5px,#98754f 6px 10px);
+  box-shadow:0 0 7px #0c344588;pointer-events:none;
+}
+#start .play-player-token.gmww-gallows-hanging::after{
+  content:'⚖ LÊN GIÀN';position:absolute;top:-76px;left:50%;transform:translateX(-50%);
+  background:#113a49eb;border:1px solid #ecd6a2;border-radius:30px;padding:4px 8px;
+  font:850 10px/1.2 system-ui,sans-serif;letter-spacing:.06em;white-space:nowrap;
+  box-shadow:0 3px 8px #0008;color:#fff5d9;pointer-events:none;z-index:5;
+}
+@keyframes gmww-gm-gallows-struggle{
+  0%,100%{transform:translateY(1px) rotate(-6deg)}
+  21%{transform:translateY(-5px) rotate(9deg)}
+  39%{transform:translateY(3px) rotate(-10deg)}
+  62%{transform:translateY(-3px) rotate(6deg)}
+  81%{transform:translateY(2px) rotate(-4deg)}
+}
+@media(prefers-reduced-motion:reduce){
+  #start .play-player-token.gmww-gallows-hanging,
+  #start .play-player-token.gmww-gallows-hanging .play-player-avatar{
+    animation:none!important;transition:none!important}
+}
