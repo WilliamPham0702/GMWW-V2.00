@@ -3018,7 +3018,7 @@ function gmwwPlaceWolfMenuAtFire(menu){
   // Synchronise the fire hitbox with the CURRENT Day/Night image first, so
   // neither the popup nor the tap target can stay at the previous phase's fire.
   const core=fire.closest('.play-village-core');
-  if(core){
+  if(core&&typeof villageFirePosition==='function'){
     const [x,y]=villageFirePosition();
     core.style.left=x+'%';
     core.style.top=y+'%';
