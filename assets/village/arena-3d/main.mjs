@@ -64,13 +64,14 @@ function refreshActors(){
 }
 function showMessage(message){notice.textContent=message;}
 function setNight(value){
-  night=value;scene.background=new THREE.Color(night?'#091e38':'#80cadb');
+  night=value;document.body.dataset.gmwwArenaTime=night?'night':'day';scene.background=new THREE.Color(night?'#091e38':'#80cadb');
   ground.material.color.set(night?'#827b75':'#e9ca94');
   sunlight.intensity=night?0.35:2.3;firelight.intensity=night?26:16;
   document.querySelector('#day').setAttribute('aria-pressed',String(!night));
   document.querySelector('#night').setAttribute('aria-pressed',String(night));
 }
 function showPublicEffect(kind){
+  document.body.dataset.gmwwArenaEvent=kind;
   if(!selected)return;
   const projected=projectAuthorizedVisualEvents([
     {eventId:'preview-'+kind,matchId:'demo-1',kind,visibility:'public',released:true,targetId:selected.id,label:kind==='protect'?'Bảo vệ':'Bỏ phiếu'}
@@ -81,7 +82,8 @@ function showPublicEffect(kind){
   material.emissiveIntensity=0.65;
   showMessage(projected[0].label+' — '+selected.id+' (sự kiện công khai giả lập).');
 }
-function resetEffects(){for(const actor of actors){actor.group.children[0].material.emissive.set('#000000');actor.group.children[0].material.emissiveIntensity=0;}showMessage('Đã đặt lại hiệu ứng hiển thị.');}
+function resetEffects(){
+  document.body.dataset.gmwwArenaEvent='none';for(const actor of actors){actor.group.children[0].material.emissive.set('#000000');actor.group.children[0].material.emissiveIntensity=0;}showMessage('Đã đặt lại hiệu ứng hiển thị.');}
 function orbitCamera(){
   camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,Math.cos(azimuth)*Math.cos(elevation)*radius+1.4);
   camera.lookAt(0,0,1.4);
@@ -122,6 +124,15 @@ document.querySelector('#effect-protect').addEventListener('click',()=>showPubli
 document.querySelector('#effect-vote').addEventListener('click',()=>showPublicEffect('vote'));
 document.querySelector('#effect-reset').addEventListener('click',resetEffects);
 let frames=0,last=performance.now(),fps=0;
+// Read-only synthetic diagnostics for browser acceptance; never expose live room state.
+window.__GMWW_ARENA_DIAGNOSTICS=()=>{
+  const actor=actors[0],p=actor?.group.position.clone().add(new THREE.Vector3(0,0.9,0)).project(camera);
+  const rect=canvas.getBoundingClientRect();
+  return {actorCount:actors.length,fps,drawcalls:renderer.info.render.calls,
+    azimuth,selectedYaw:selected?.group.rotation.y??null,
+    firstActorPoint:p?{x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2}:null,
+    time:night?'night':'day',webgl:renderer.capabilities.isWebGL2?'webgl2':'webgl'};
+};
 function render(now){
   if(!document.hidden){
     resize();orbitCamera();
