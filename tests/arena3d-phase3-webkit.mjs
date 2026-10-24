@@ -17,6 +17,10 @@ try{
   assert.ok(six.drawCalls>0&&six.drawCalls<=55,'instanced chibi budget');
   await page.locator('[data-fx="shield"]').click();
   assert.match(await page.locator('#log').innerText(),/Mẫu.*Bảo vệ/);
+  await page.locator('#sample-daynight').click();
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).sky,'night');
+  await page.locator('#sample-daynight').click();
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).sky,'day');
   await page.locator('#sample-cast').click();
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='standing',null,{timeout:7000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:10000});
