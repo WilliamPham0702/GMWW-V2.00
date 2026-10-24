@@ -6,6 +6,7 @@
 - Trình bày rõ hướng dẫn **QUÉT PREVIEW → DỌN THỦ CÔNG** qua GitHub Actions của chủ dự án; xác nhận trước khi rời ứng dụng; hiển thị **BÁO CÁO CŨ** nếu kết quả >24 giờ.
 - Ghi rõ giữ lại Preview còn nhánh/PR chưa kiểm toán, namespace có dữ liệu, Production, phòng/lịch sử, backup và hệ thống khác.
 - Giữ lịch bảo trì 09:00 sáng (VN) và giới hạn 10 Preview/lượt, không thêm quyền xóa vào iPhone/Player Web.
+- Trong bước đóng gói IPA, tự chuyển đường dẫn báo cáo Cloudflare của Server (`/admin/cloudflare/index.html`) thành HTTPS đầy đủ; tránh WebView iPhone hiểu nhầm đường dẫn gốc local. Không thay đổi đường dẫn trên Production Web.
 
 ## Bảo toàn
 - Không đổi Worker, Durable Object binding/schema, dữ liệu, room, game rules, IPA hay OTA.
