@@ -38,7 +38,7 @@ test('Timing panels are collapsed by default, with all timing inputs intact',()=
 
 test('GM battle characters use paused idle, never walk, run, sit, or schedule movement',()=>{
  assert.match(gmMotion,/const battleStatic=playSceneState\.step==='battle'/);
- assert.match(gmMotion,/paused:effect==='dead'\|\|battleStatic/);
+ assert.match(gmMotion,/paused:effect==='dead'\|\|\(battleStatic&&!hanging\)/);
  assert.match(gmMotion,/function playSeatMovementActive\(member\)\{[\s\S]*?if\(playSceneState\.step==='battle'\)return false/);
  assert.match(gmMotion,/function syncPlayMovementTicker\(\)\{[\s\S]*?if\(playSceneState\.step==='battle'\)\{stopPlayMovementTicker\(\);return\}/);
  assert.match(shared,/root\._gmwwPaused=command\.paused===true\|\|command\.state==='dead'/);
@@ -50,7 +50,7 @@ test('Player Web battle state cancels walking and rig animation while preserving
  assert.match(village,/if\(battleStatic\)\{visualFallbackMoves\.clear\(\);visualLastPaintedPositions\.clear\(\);return incoming\}/);
  assert.match(village,/if\(!battleStatic&&villageMotionNeedsFrame\(all\)/);
  assert.match(village,/if\(document\.hidden\|\|battleStatic\)return/);
- assert.match(playerCss,/body\.player-battle \.player \.portrait\.game-character/);
+ assert.match(playerCss,/body\.player-battle \.player:not\(\.gmww-gallows-hanging\) \.portrait\.game-character/);
  assert.match(playerCss,/animation:none!important/);
  assert.doesNotMatch(playerCss,/player-battle.*gmww-sv-overlay/);
 });
