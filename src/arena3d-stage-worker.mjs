@@ -2,6 +2,7 @@
 // No change to production Worker, no cross-Worker service binding.
 import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
+import {projectGmOnlyVisuals} from './arena3d-visual-effect-policy.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -14,8 +15,29 @@ function aggregateGallowsOnly(raw){
     outcome:raw.outcome||null};
 }
 export class RoomDurableObject extends GameRoomDurableObject{
+  broadcast(payload){
+    // Core V2's generic night confirmation includes raw private target IDs.
+    // Stage subscribers receive a confirmation without those IDs.
+    if(payload?.type==='battle_action_confirmed'){
+      const {targets,revealTargetIds,targetIds,...safe}=payload;
+      return super.broadcast(safe);
+    }
+    return super.broadcast(payload);
+  }
   async fetch(request){
-    if(new URL(request.url).pathname!=='/arena/public-gallows')return super.fetch(request);
+    const path=new URL(request.url).pathname;
+    if(path==='/arena/gm-visuals'){
+      if(request.method!=='GET')return new Response('Method not allowed',{status:405});
+      const auth=await this.gmAuthorized(request);
+      if(!auth.ok)return auth.response;
+      const meta=auth.meta;
+      if(meta.phase!=='running')return Response.json({ok:true,matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),effects:[]},{headers:{'cache-control':'no-store'}});
+      const rows=await this.ctx.storage.get('interactions')||[];
+      return Response.json({ok:true,matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),
+        effects:projectGmOnlyVisuals(rows,{matchId:meta.matchId,cycleKey:meta.cycleKey})},
+        {headers:{'cache-control':'no-store'}});
+    }
+    if(path!=='/arena/public-gallows')return super.fetch(request);
     if(request.method!=='GET')return new Response('Method not allowed',{status:405});
     const meta=await this.ctx.storage.get('meta');
     if(!meta)return Response.json({ok:false,error:'ROOM_NOT_FOUND'},{status:404});
@@ -44,6 +66,15 @@ export default {
     if(publicGallows&&request.method==='GET'){
       const roomCode=publicGallows[1].toUpperCase();
       return env.ROOMS.get(env.ROOMS.idFromName(roomCode)).fetch('https://room.internal/arena/public-gallows');
+    }
+    // Only Core V2 gmAuthorized may grant temporary secret visual overlays.
+    const gmFx=url.pathname.match(/^\/api\/arena-staging\/rooms\/([A-Za-z0-9]{4,12})\/gm-visuals$/);
+    if(gmFx&&request.method==='GET'){
+      const code=gmFx[1].toUpperCase();
+      return env.ROOMS.get(env.ROOMS.idFromName(code)).fetch(
+        new Request('https://room.internal/arena/gm-visuals',{
+          headers:{authorization:request.headers.get('authorization')||''}
+        }));
     }
     // Never expose Runtime/IPA release/update endpoints from the staging worker.
     if(url.pathname.startsWith('/api/update')||url.pathname.startsWith('/updates/')){
