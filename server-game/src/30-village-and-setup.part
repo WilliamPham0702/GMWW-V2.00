@@ -627,6 +627,16 @@ function gmwwRestoreDock(panel,force=false){
 function gmwwPlaceWolfMenuAtFire(menu){
   const fire=document.querySelector('.play-village-core .play-core-pearl');
   if(!menu||menu.hidden||!fire?.getClientRects().length)return false;
+  // This menu also opens from renderPlayBattle(), outside renderPlayScene().
+  // Synchronise the fire hitbox with the CURRENT Day/Night image first, so
+  // neither the popup nor the tap target can stay at the previous phase's fire.
+  const core=fire.closest('.play-village-core');
+  if(core){
+    const [x,y]=villageFirePosition();
+    core.style.left=x+'%';
+    core.style.top=y+'%';
+    core.dataset.gmwwFirePhase=playSceneState.phase==='night'?'night':'day';
+  }
   const point=fire.getBoundingClientRect(),width=menu.offsetWidth,height=menu.offsetHeight;
   if(!width||!height)return false;
   const cx=(point.left+point.right)/2,cy=(point.top+point.bottom)/2,gap=8;
