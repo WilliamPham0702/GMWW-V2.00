@@ -5126,9 +5126,11 @@ function battleGallowsRender(phase){
   if(modeSummary)modeSummary.textContent='CHẾ ĐỘ: '+(mode==='gm'?'GM THỦ CÔNG':'TỰ ĐỘNG')+' ▾';
   const select=document.getElementById('battleGallowsCandidate'),prev=select?.value||'';
   if(select){
-    const options=members.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
+    const options=(mode==='gm'&&stage==='ready'?'<option value="">— Chọn người lên giàn —</option>':'')+
+      members.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
     if(select.innerHTML!==options)select.innerHTML=options;
     if(g.candidateId&&members.some(m=>m.loginId===g.candidateId))select.value=g.candidateId;
+    else if(mode==='gm'&&stage==='ready')select.value='';
     else if(members.some(m=>m.loginId===prev))select.value=prev;
     select.disabled=battleState.gallowsBusy||stage==='resolved'||(mode==='auto'&&!['nominating','selecting'].includes(stage));
   }
@@ -5843,6 +5845,12 @@ function initBattleControls(){
     }
     const btn=event.target.closest('[data-gallows-command]');if(!btn||btn.disabled)return;
     void battleGallowsCommand(btn.dataset.gallowsCommand,document.getElementById('battleGallowsCandidate')?.value||'',btn.dataset.outcome||'');
+  });
+  document.getElementById('battleGallowsCandidate')?.addEventListener('change',event=>{
+    // Manual candidate becomes suspended ONLY after GM selects them explicitly.
+    const id=String(event.target.value||''),g=playSceneRuntime.gallows;
+    if(g?.mode==='gm'&&id&&id!==g.candidateId&&playSceneState.phase==='day')
+      void battleGallowsCommand('hang',id);
   });
   battleBindAuxiliaryDrag('battleDetails','.play-battle-turn');
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
