@@ -24,7 +24,7 @@ export function createArenaSpellVfx(THREE,root){
   });
   const rings=[new THREE.Mesh(ringGeometry,common()),
     new THREE.Mesh(glyphGeometry,common())];
-  for(const [index,ring] of rings){
+  for(const [index,ring] of rings.entries()){
     ring.visible=false;ring.frustumCulled=false;ring.rotation.x=-Math.PI/2;
     ring.name=index?'arena-spell-caster-ring':'arena-spell-target-ring';
     group.add(ring);
