@@ -129,6 +129,9 @@ jobs:
             await page.goto('https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room='+code,{waitUntil:'domcontentloaded',timeout:50000});
             await page.waitForFunction(c=>document.body.dataset.gmwwLiveCount==='6'&&window.__GMWW_ARENA_STAGE_READONLY?.().room===c,code,{timeout:40000});
             await page.waitForFunction(()=>Number(document.body.dataset.gmwwStageFps)>0,null,{timeout:40000});
+            // Gallows is loaded in a separate request after the public room frame.
+            // Wait for the authoritative ballot stage before asserting its value.
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',null,{timeout:40000});
             const d=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
             assert.equal(d.count,6);
             assert.equal(d.cyclePhase,'morning');
