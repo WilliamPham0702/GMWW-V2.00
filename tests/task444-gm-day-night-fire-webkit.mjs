@@ -42,38 +42,25 @@ try {
    phase:p=>{playSceneState.phase=p},anchor:p=>{villageScenePublished.fireAnchors[playSceneState.phase]=p}};
  `});
  for(const [phase,x,y] of [['day',25,38],['night',75,63],['day',25,38],['night',90,81],['day',12,17]]){
-  const state=await page.evaluate((phase)=>{
+  await page.evaluate(({phase,x,y})=>{
    window.__task444.phase(phase);
-   if(phase==='night'&&window.__task444.changedNight){
-     window.__task444.anchor({x:90,y:81})
-   }
+   window.__task444.anchor({x,y});
+  },{phase,x,y});
+  const state=await page.evaluate(()=>{
    const menu=document.querySelector('#battleWolfMenu');
-   if(!window.__task444.place())throw Error('Menu not placed for '+phase);
+   if(!window.__task444.place())throw Error('GM menu was not placed');
    const fire=document.querySelector('.play-core-pearl').getBoundingClientRect(),m=menu.getBoundingClientRect();
    const hit=m.left<fire.right&&m.right>fire.left&&m.top<fire.bottom&&m.bottom>fire.top;
    const dx=Math.max(0,m.left-fire.right,fire.left-m.right),dy=Math.max(0,m.top-fire.bottom,fire.top-m.bottom);
-   return {phase,fire:{x:(fire.left+fire.right)/2,y:(fire.top+fire.bottom)/2},menu:{x:m.left,y:m.top},
-     marker:document.querySelector('.play-village-core').dataset.gmwwFirePhase,
-     hit,gap:Math.hypot(dx,dy),within:m.left>=0&&m.top>=0&&m.right<=innerWidth+1&&m.bottom<=innerHeight+1}
-  },phase);
-  // The sequence exercises immediate Day↔Night switches, using the real rendered fire element.
+   return {fire:{x:(fire.left+fire.right)/2,y:(fire.top+fire.bottom)/2},marker:document.querySelector('.play-village-core').dataset.gmwwFirePhase,
+    hit,gap:Math.hypot(dx,dy),within:m.left>=0&&m.top>=0&&m.right<=innerWidth+1&&m.bottom<=innerHeight+1}
+  });
   assert.equal(state.marker,phase);
-  assert.equal(state.hit,false,'menu must not cover the fire tap target: '+JSON.stringify(state));
-  assert.ok(state.gap<45,'menu must stay beside that fire: '+JSON.stringify(state));
-  assert.equal(state.within,true,'menu must stay within the iPhone viewport');
-  if(phase==='day'&&x===25)assert.ok(Math.abs(state.fire.x-97.5)<1);
-  if(phase==='night'&&x===75)assert.ok(Math.abs(state.fire.x-292.5)<1);
-  if(phase==='day'&&x===12)assert.ok(Math.abs(state.fire.x-46.8)<1);
-  // Change the anchors only between complete placement operations.
-  if(phase==='day'&&x===25&&y===38){
-   await page.evaluate(()=>{if(window.__task444.changedNight)return;window.__task444.changedNight=true});
-  }
-  if(phase==='night'&&x===90){
-   await page.evaluate(()=>window.__task444.anchor({x:90,y:81}));
-  }
-  if(phase==='day'&&x===12){
-   await page.evaluate(()=>window.__task444.anchor({x:12,y:17}));
-  }
+  assert.ok(Math.abs(state.fire.x-x*3.9)<1,'fire X must match current picture');
+  assert.ok(Math.abs(state.fire.y-y*8.44)<1.5,'fire Y must match current picture');
+  assert.equal(state.hit,false,'GM menu must not cover Day or Night fire hitbox: '+JSON.stringify(state));
+  assert.ok(state.gap<45,'GM menu must stay beside current fire: '+JSON.stringify(state));
+  assert.equal(state.within,true,'GM menu must stay inside iPhone viewport');
  }
  console.log('PASS Task #444: Day/Night GM menu follows actual clickable fire marker on iPhone');
 } finally {await browser.close()}
