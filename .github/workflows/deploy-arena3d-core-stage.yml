@@ -114,9 +114,13 @@ jobs:
             const bigCode=readFileSync('/tmp/gmww-arena3d-stage-room30.txt','utf8').trim();
             await page.goto('https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room='+bigCode,{waitUntil:'domcontentloaded',timeout:50000});
             await page.waitForFunction(c=>document.body.dataset.gmwwLiveCount==='30'&&window.__GMWW_ARENA_STAGE_READONLY?.().room===c,bigCode,{timeout:40000});
+            await page.waitForFunction(()=>Number(document.body.dataset.gmwwStageFps)>0,null,{timeout:40000});
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().connected==='connected',null,{timeout:40000});
             const big=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
             assert.equal(big.count,30);
             assert.equal(big.phase,'lobby');
+            assert.ok(big.fps>0,'30 real players must actually render FPS');
+            assert.equal(big.connected,'connected');
             await page.screenshot({path:'/tmp/arena3d-core-staging-30-iphone390.png'});
             console.log('PASS REAL Core -> 3D browser 30:',JSON.stringify(big));
           }finally{await b.close();}
