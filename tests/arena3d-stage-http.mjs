@@ -6,7 +6,7 @@ const base='https://gmww-arena3d-core-staging.williampham0702.workers.dev';
 assert.match(new URL(base).hostname,/^gmww-arena3d-core-staging\.[^.]+\.workers\.dev$/);
 const suffix=Math.random().toString(36).slice(2,8);
 const json=async(path,body,gmToken)=>{
-  const r=await fetch(base+path,{method:body===undefined?'GET':'POST',headers:{accept:'application/json',
+  const r=await fetch(base+path,{signal:AbortSignal.timeout(20000),method:body===undefined?'GET':'POST',headers:{accept:'application/json',
     ...(body===undefined?{}:{'content-type':'application/json'}),
     ...(gmToken?{Authorization:'Bearer '+gmToken}:{})},
     ...(body===undefined?{}:{body:JSON.stringify(body)})});
