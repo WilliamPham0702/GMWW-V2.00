@@ -24,7 +24,24 @@ permissions:
   contents: write
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - name: Tải mã nguồn để xác định phạm vi
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Chỉ nhận các task có thay đổi Native IPA
+        id: select
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
   build:
+    needs: scope
+    if: needs.scope.outputs.mode != 'dual-renderer'
     runs-on: macos-latest
     steps:
       - name: Checkout
