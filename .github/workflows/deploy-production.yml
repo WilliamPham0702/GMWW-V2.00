@@ -16,11 +16,54 @@ permissions:
   actions: read
 
 jobs:
-  deploy:
+  # CI-only merge cannot auto-deploy Production.
+  deploy-scope:
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.scope.outputs.should_deploy }}
+    steps:
+      - name: Lấy đúng commit đã hoàn tất CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - name: Chặn auto-deploy khi commit chỉ sửa CI
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD^1 HEAD > /tmp/gmww-production-change-scope.txt
+          SHOULD_DEPLOY=false
+          if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
+          while IFS= read -r FILE; do
+            case "$FILE" in
+              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|tests/ci-browser-scope.test.mjs)
+                ;;
+              *)
+                SHOULD_DEPLOY=true
+                ;;
+            esac
+          done < /tmp/gmww-production-change-scope.txt
+          echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
+          if [ "$SHOULD_DEPLOY" = false ]; then
+            echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Có thay đổi ngoài CI: tiếp tục các chốt phát hành Production hiện có" >> "$GITHUB_STEP_SUMMARY"
+          fi
+  deploy:
+    needs: deploy-scope
+    if: >
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        (needs.deploy-scope.result == 'success' &&
+         needs.deploy-scope.outputs.should_deploy == 'true' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'main')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Xác định phiên bản đã kiểm thử

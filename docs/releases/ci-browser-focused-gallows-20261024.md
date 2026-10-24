@@ -17,3 +17,7 @@ Task Treo Giàn PR #463 kích hoạt `Check Player Card Browsers` chạy toàn b
 ## An toàn
 Chỉ thay CI, không đổi gameplay GMWW, không merge Production, không deploy IPA/OTA, không thay phòng, dữ liệu hay Durable Objects.
 Rollback: revert PR CI này nếu lựa chọn phạm vi sai.
+
+## Bảo vệ Production khi merge CI-only
+- Main hiện tự chạy `Deploy Production` sau khi `Check Player Web Worker` SUCCESS. Thêm job `deploy-scope` so commit main với cha thứ nhất; nếu chỉ thay chính sách/kiểm thử/tài liệu CI PR #466 thì job `deploy` bị SKIPPED, không chạy `wrangler deploy`.
+- Nếu có file mã gameplay/Worker hoặc bất kỳ file lạ thì giữ các kiểm soát deploy bình thường. Kích hoạt `workflow_dispatch` thủ công không thay đổi.

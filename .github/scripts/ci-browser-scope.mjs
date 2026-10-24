@@ -156,6 +156,7 @@ function isGallowsScope(changes){
 const policyPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/ci-browser-focused-gallows-20261024.md'
 ]);

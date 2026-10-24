@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
@@ -105,9 +106,18 @@ test('Đổi riêng quy tắc CI chỉ kiểm tra unit của bộ chọn, không
  const c=[
   modified('.github/scripts/ci-browser-scope.mjs','old','new'),
   modified('.github/workflows/check-player-card-browsers.yml','old','new'),
+  modified('.github/workflows/deploy-production.yml','old','new'),
   modified('tests/ci-browser-scope.test.mjs','old','new'),
   {path:'docs/releases/ci-browser-focused-gallows-20261024.md',status:'A'}
  ];
  assert.equal(classifyBrowserScope(c),'ci-policy');
  assert.equal(classifyBrowserScope([...c,modified('src/index.js','x','y')]),'full');
+});
+
+test('CI-only merge phải chặn auto-deploy Production',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  assert.match(workflow,/deploy-scope:/);
+  assert.match(workflow,/needs\.deploy-scope\.outputs\.should_deploy == 'true'/);
+  assert.match(workflow,/\.github\/workflows\/deploy-production\.yml/);
+  assert.match(workflow,/CHỈ CI: BỎ QUA DEPLOY PRODUCTION/);
 });
