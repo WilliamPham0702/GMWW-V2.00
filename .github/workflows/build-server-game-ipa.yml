@@ -11,7 +11,7 @@ on:
       - "server-game/current/**"
       - "server-game/src/**"
       - ".github/scripts/**"
-      - "tests/**"
+      # Tests-only PRs are checked by Worker CI; they cannot alter Native IPA bytes.
       - ".github/workflows/build-server-game-ipa.yml"
   push:
     branches: [main]

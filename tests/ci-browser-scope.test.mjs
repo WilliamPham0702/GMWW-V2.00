@@ -62,3 +62,22 @@ test('Completion-only documentation and focused tests do not run unrelated brows
     {path:'docs/releases/pr-test.md',status:'A',before:null,after:'# Changed'}
   ]),'postgame');
 });
+
+test('P0 atomic roster and role recovery changes select focused Chrome/Edge checks, not 30 seats',()=>{
+  const workerBefore='top\\n  async playerMove(body){old move}\\n  async playerMoveComplete(body){}\\n  async join(body){old join}\\n  async ready(body){}\\ntail';
+  const workerAfter=workerBefore.replace('old move','new move').replace('old join','new join');
+  const patcherBefore='top\\n // First click should OPEN the chosen card in Chrome and Edge\\nend';
+  const patcherAfter=patcherBefore.replace(' // First click should OPEN',
+    ' // Join now returns a public, privacy-safe room snapshot atomically with the\\n new private recovery code\\n // First click should OPEN');
+  assert.equal(classifyBrowserScope([
+    modified('src/index.js',workerBefore,workerAfter),
+    modified('src/gmww-player-private-card-patch.js',patcherBefore,patcherAfter),
+    modified('tests/browser-live-realtime-vote.mjs','old test','new test'),
+    {status:'A',path:'tests/player-web-p0-atomic-roster-role-release.test.mjs',after:'new test',before:null},
+    {status:'A',path:'docs/releases/player-web-p0-atomic-roster-v3196-20261024.md',after:'# notes',before:null}
+  ]),'p0-roster');
+  assert.equal(classifyBrowserScope([modified('src/index.js',workerBefore,workerAfter+'\\nnew global route')]),'full');
+  assert.equal(classifyBrowserScope([modified('src/gmww-player-private-card-patch.js',patcherBefore,
+    patcherAfter+'\\nnew unrelated view')]),'full');
+  assert.equal(classifyBrowserScope([{status:'A',path:'src/player-web-src/dangerous.js',after:'new',before:null}]),'full');
+});

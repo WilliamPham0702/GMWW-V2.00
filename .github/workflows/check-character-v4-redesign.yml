@@ -31,6 +31,7 @@ on:
       - 'src/index.js'
       - 'docs/character-v4-redesign.md'
       - 'tests/character-v4-manifest.test.mjs'
+      - '.github/scripts/ci-browser-scope.mjs'
       - '.github/workflows/check-character-v4-redesign.yml'
   workflow_dispatch:
 
@@ -39,7 +40,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - name: Tải mã nguồn xác định phần bị thay đổi
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Phân loại phạm vi kiểm thử
+        id: select
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
   contract:
+    needs: scope
+    if: needs.scope.outputs.mode == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
