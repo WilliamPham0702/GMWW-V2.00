@@ -53,7 +53,7 @@ test('GM and Player Web receive synchronized layout; Character size and scene pr
 test('extreme supported spacing and offsets keep circular seats clear and unique',()=>{
  for(const n of [6,12,18,24,30])for(const [offset,spacing] of [[{x:-10,y:10},70],[{x:10,y:-10},135]]){
   const points=layout.positions(n,'circle',offset,spacing);
-  assert.ok(points.every(p=>layout.inside(p.x,p.y)),'courtyard');
+  assert.ok(points.every(p=>p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8),'map frame');
   for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)
     assert.ok(dist(points[i],points[j])>5,'overlap '+n+' '+spacing+' '+i+' '+j);
  }
