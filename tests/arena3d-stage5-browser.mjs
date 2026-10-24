@@ -22,6 +22,12 @@ try{
     assert.ok(data.drawCalls>0&&data.drawCalls<=55,'fixed instanced scene budget at '+n);
     assert.equal(data.autoQualityEnabled,true);
     samples.push({characters:n,softwareFps:data.fps,drawCalls:data.drawCalls,pixelRatio:data.pixelRatio});
+    // Stand -> step out -> cast -> return -> sit works for each roster size.
+    await page.locator('#sample-cast').click();
+    await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='standing',null,{timeout:10000});
+    await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:12000});
+    await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='returning',null,{timeout:12000});
+    await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:12000});
   }
   await page.locator('#quality-auto').click();
   assert.equal((await stats()).autoQualityEnabled,false);
