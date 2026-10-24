@@ -66,7 +66,7 @@ jobs:
       - name: Kiem tra thong ke, han che, ket luan va API Web
         run: |
           node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gallows-pirate-ui-v3205.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs
-      - name: Kiem tra dung 4 loi DEMO: Sat Thu, soi xet, audio, quyen vote
+      - name: "Kiem tra dung 4 loi DEMO - Sat Thu, soi xet, audio, quyen vote"
         run: node --test tests/demo-assassin-gallows-divination.test.mjs
       - name: Kiem tra 6 source GM khop ban app da dong goi
         run: node --test tests/gmww-gm-app-source-modules.test.mjs
