@@ -914,7 +914,21 @@ function battlePresentRevelation(actionId,revelation){
   if(!revelation?.message)return;
   battleShowResultPopup('',String(revelation.message||''),true);
   const cue=battleDivinationSystemAudioCue(actionId,revelation);
-  if(actionId==='action_aura_read'){
+  if(actionId==='action_compare_faction'){
+    // Linked verdict clip, then only the opening 3–5 seconds of each selected
+    // role's already-linked wake-up audio. This is GM-only private information.
+    const names=(Array.isArray(revelation.targets)?revelation.targets:[])
+      .filter(t=>t?.roleId&&t?.roleName).slice(0,2);
+    const next=i=>{
+      if(i>=names.length)return;
+      const target=names[i];
+      void battlePlayConfiguredAudio('cards',target.roleId,target.roleName,false,()=>next(i+1),4);
+    };
+    if(names.length===2){
+      if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>next(0));
+      else next(0);
+    }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+  }else if(actionId==='action_aura_read'){
     const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
     if(!playAudioMuted()&&roleName){
       if(cue&&battleFindAudio('system',cue,revelation.message))
