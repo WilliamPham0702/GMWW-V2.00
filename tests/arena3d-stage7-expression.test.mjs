@@ -30,3 +30,9 @@ test('GĐ7 renderer imports the actual quality budget dependency',()=>{
  assert.match(src,/setQualityFps/);
  assert.match(src,/animationHz=renderQualityBudget/);
 });
+
+test('GĐ7 measured FPS is connected to animation throttle',()=>{
+ const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+ assert.match(live,/field\.setQualityFps\(fps\)/);
+ assert.match(live,/document\.body\.dataset\.gmwwStage7=STAGE7_VERSION/);
+});
