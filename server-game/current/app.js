@@ -43,7 +43,7 @@ function createVillageLocalCache(base){
   async prepare(record,previous){
    const images={};
    await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
-   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{}},images};
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{},gallowsAnchors:record.gallowsAnchors||{}},images};
    if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
    return next;
   },
@@ -121,6 +121,12 @@ function villageFirePosition(){
  if(villageScenePublished[key])return [50,50];
  const fallback=globalThis.GMWW_VILLAGE_LAYOUT.fire;return playMapDisplay(fallback.x,fallback.y);
 }
+// Hanging is a separate scene landmark; Seat locations and fire-menu anchor are unchanged.
+function villageGallowsPosition(){
+ const key=playSceneState.phase==='night'?'night':'day',point=villageScenePublished.gallowsAnchors?.[key];
+ if(point&&[point.x,point.y].every(Number.isFinite))return [Math.max(0,Math.min(100,point.x)),Math.max(0,Math.min(100,point.y))];
+ const fire=villageFirePosition();return [fire[0],Math.max(0,fire[1]-15)];
+}
 function villageCalibrateFire(requestedPhase){
  const key=requestedPhase==='night'?'night':requestedPhase==='day'?'day':
    playSceneState.phase==='night'?'night':'day';
@@ -161,6 +167,43 @@ function villageCalibrateFire(requestedPhase){
     await setGMVillageScenePublished(data.scene);renderPlayScene();
     villageSceneStatus('Đã lưu 🔥 nền '+(key==='day'?'Ngày':'Đêm')+' tại '+point.x+'%, '+point.y+'%.');
   }catch(error){playFlashError('Không lưu được vị trí đống lửa: '+error.message)}
+ },{once:true});
+}
+// Same fullscreen touch picker as the GM fire marker, but saved independently.
+function villageCalibrateGallows(requestedPhase='day'){
+ const key=requestedPhase==='night'?'night':'day';
+ if(document.getElementById('gmGallowsPicker')||document.getElementById('gmFirePicker'))return;
+ const world=document.getElementById('playWorld'),image=villageLocalSnapshot?.images?.[key]||null;
+ const picker=document.createElement('div');picker.id='gmGallowsPicker';picker.setAttribute('role','dialog');
+ picker.setAttribute('aria-label','Đặt vị trí treo Lên Giàn trên nền '+(key==='day'?'Ngày':'Đêm'));
+ picker.style.cssText='position:fixed;inset:0;z-index:2147483000;cursor:crosshair;touch-action:manipulation;background:rgba(2,20,31,.16) center/100% 100% no-repeat';
+ if(image)picker.style.backgroundImage='url("'+image+'")';
+ else if(world){
+   const style=getComputedStyle(world),pseudo=getComputedStyle(world,'::before');
+   const background=style.backgroundImage!=='none'?style.backgroundImage:pseudo.backgroundImage;
+   if(background&&background!=='none')picker.style.backgroundImage=background;
+ }
+ const tip=document.createElement('div');tip.textContent='⚖ CHẠM ĐÚNG VỊ TRÍ MUỐN TREO NHÂN VẬT · NỀN '+(key==='day'?'NGÀY':'ĐÊM');
+ tip.style.cssText='position:absolute;top:max(18px,env(safe-area-inset-top));left:10px;right:10px;z-index:2;padding:12px;text-align:center;border:1px solid #e9cb86;border-radius:14px;background:#092b3ce8;color:#ffe5b2;font-size:13px;font-weight:850;pointer-events:none';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='✕ HỦY';
+ cancel.style.cssText='position:absolute;right:12px;bottom:max(86px,env(safe-area-inset-bottom));z-index:3;padding:12px 20px;min-height:44px;border-radius:12px;color:#fff;background:#15465f;border:1px solid #d9be83;font-weight:850';
+ cancel.onclick=e=>{e.stopPropagation();picker.remove()};
+ picker.append(tip,cancel);document.body.append(picker);
+ picker.addEventListener('click',async e=>{
+   if(e.target===cancel)return;e.preventDefault();e.stopPropagation();
+   const rect=picker.getBoundingClientRect();if(!rect.width||!rect.height)return;
+   const point={x:Math.round(Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100))*100)/100,
+     y:Math.round(Math.max(0,Math.min(100,(e.clientY-rect.top)/rect.height*100))*100)/100};
+   picker.remove();
+   try{
+     await villageLocalBoot;
+     const latest=await refreshVillageScenePublished();
+     const data=await villageSceneRequest('/api/gm/village-scene','PUT',
+       {expectedRevision:latest.scene.revision,gallowsAnchors:{[key]:point}});
+     await setGMVillageScenePublished(data.scene);
+     renderPlayScene();
+     villageSceneStatus('Đã lưu vị trí treo Lên Giàn. Player Web tự đồng bộ.');
+   }catch(error){playFlashError('Không lưu được vị trí treo: '+error.message)}
  },{once:true});
 }
 function preloadGMVillageScene(src){
@@ -2775,10 +2818,10 @@ const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARA
 function playCharacterSitting(member,now=playNow()){return Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now)}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId),seatedUrl='';return playCharacterSitting(member,now)&&seatedUrl?seatedUrl:playCharacterFrameUrl(id,frame,direction)}
 function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive'}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const battleStatic=playSceneState.step==='battle',state=!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'||battleStatic}}
+function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const battleStatic=playSceneState.step==='battle',state=hanging?'walking':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'||(battleStatic&&!hanging)}}
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
 function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const id=playActiveCharacterId(member?.gameCharacterId),api=window.GMWW_SHARED_MOTION;if(!api?.supports(id))return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,sitting,effect}),assetBase:location.protocol==='file:'?new URL('.',document.baseURI).href:GMWW_SERVER_BASE});return true}
-function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect}))||false}
+function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging}))||false}
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
@@ -3424,7 +3467,7 @@ function playGallowsHangingCandidateId(){
 }
 function syncPlayGallowsHanging(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
-  const accused=playGallowsHangingCandidateId(),fire=accused?villageFirePosition():null;
+  const accused=playGallowsHangingCandidateId(),fire=accused?villageGallowsPosition():null;
   ring.classList.toggle('has-gallows-hanging',!!accused);
   for(const token of ring.querySelectorAll('[data-play-player-id]')){
     const id=String(token.dataset.playPlayerId||''),active=!!(accused&&fire&&id===accused&&!token.classList.contains('is-dead')&&!token.classList.contains('is-expelled'));
@@ -3438,7 +3481,7 @@ function syncPlayGallowsHanging(){
       }
       token.classList.add('gmww-gallows-hanging');
       token.style.left=Math.max(10,Math.min(90,Number(fire[0])))+'%';
-      token.style.top=Math.max(13,Math.min(80,Number(fire[1])-15))+'%';
+      token.style.top=Math.max(5,Math.min(90,Number(fire[1])))+'%';
       token.style.zIndex='950';
       token.setAttribute('aria-label',(token.dataset.gallowsOriginAria||id)+' · Đang treo Lên Giàn');
     }else if(was){
@@ -3448,6 +3491,11 @@ function syncPlayGallowsHanging(){
       token.style.zIndex=token.dataset.gallowsOriginDepth||'10';
       token.setAttribute('aria-label',token.dataset.gallowsOriginAria||id);
       for(const key of ['gallowsOriginLeft','gallowsOriginTop','gallowsOriginDepth','gallowsOriginAria'])delete token.dataset[key];
+    }
+    // The existing Character rig plays the exact Walk animation while suspended.
+    // It never updates Seat/room positions; returning to the Seat restores Idle.
+    if(active||was){const member=playVillageMembers().find(m=>String(m.loginId||m.participantId||'')===id);
+      if(member)playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{hanging:active,effect:playPlayerEffect(id)});
     }
   }
 }
@@ -5901,6 +5949,7 @@ function initBattleControls(){
     }
   });
   document.getElementById('battleGMFireAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateFire()});
+  document.getElementById('battleGMGallowsAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateGallows('day')});
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});
