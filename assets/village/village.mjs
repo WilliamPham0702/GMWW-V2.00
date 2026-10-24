@@ -265,7 +265,12 @@ if(game){
       };
       const syncSelected=()=>{
         if(gesture?.dragged)return;
+        if(!setupState.gallowsCanNominate){
+          pendingId='';highlight(null);controls.hidden=true;hint.hidden=true;return;
+        }
+        const previousPending=pendingId;
         pendingId=String(setupState.gallowsSelectedId||'');
+        if(previousPending&&!pendingId)atFire();
         const node=[...document.querySelectorAll('#players .player[data-player-id]')].find(p=>playerId(p)===pendingId&&eligibleNode(p));
         if(node){
           const r=node.getBoundingClientRect();
