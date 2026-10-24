@@ -65,7 +65,7 @@ jobs:
         run: node --test tests/player-web-p0-atomic-roster-role-release.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
       - name: Kiểm thử trực tiếp hợp đồng Core chung 2D/3D và phân quyền
         if: steps.scope.outputs.mode == 'dual-renderer'
-        run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
+        run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
         if: steps.scope.outputs.mode == 'full'
         shell: bash
