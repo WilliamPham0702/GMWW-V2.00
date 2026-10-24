@@ -188,6 +188,11 @@ for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()
   else notice('Đã chọn '+rosterSize+' ghế cho phòng MỚI. Phòng hiện tại giữ số Seat Core đã cấp; tạo phòng mới để thử.');
 };
 document.querySelector('[data-roster="6"]').classList.add('active');
+for(const b of document.querySelectorAll('[data-fx]'))b.addEventListener('click',()=>{
+  if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
+  const id=field.actors[0]?.id;
+  if(id){field.interact(id,{effect:b.dataset.fx,durationMs:3000});notice('Mẫu '+b.textContent+' cho Character 1 — không phát sự kiện vào game.');}
+});
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;
   if(key!==lastResize){lastResize=key;render.setSize(Math.max(1,rect.width),Math.max(1,rect.height),false);
