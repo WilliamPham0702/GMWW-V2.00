@@ -11,6 +11,9 @@ const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
 const camera=new THREE.PerspectiveCamera(42,1,.1,90);
 let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code='',gmToken='',feed=null,current=null;
+let followCaster=true,pinchDistance=0;
+const trackedPointers=new Map(),cameraAim=new THREE.Vector3(0,0,1.2),
+  desiredAim=new THREE.Vector3(0,0,1.2);
 const field=createArenaCharacterField(THREE,scene);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
@@ -20,6 +23,15 @@ const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focus
   onToggleQuality:value=>{lowPower=value;village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
 });
 let chosenCandidate=null;
+$('camera-follow').onclick=()=>{
+  followCaster=!followCaster;
+  $('camera-follow').textContent='🎥 Theo lượt: '+(followCaster?'Bật':'Tắt');
+};
+$('camera-reset').onclick=()=>{
+  orbit=.5;elevation=.75;radius=20;
+  cameraAim.set(0,0,1.2);followCaster=true;
+  $('camera-follow').textContent='🎥 Theo lượt: Bật';
+};
 const village=createCoastalVillage(THREE,scene);
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
@@ -261,8 +273,26 @@ function resize(){
   if(key!==lastResize){lastResize=key;render.setSize(Math.max(1,rect.width),Math.max(1,rect.height),false);
     camera.aspect=Math.max(1,rect.width)/Math.max(1,rect.height);camera.updateProjectionMatrix()}
 }
-canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,moved:false};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerdown',e=>{
+  trackedPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(trackedPointers.size>=2){
+    const [p1,p2]=[...trackedPointers.values()];
+    pinchDistance=Math.max(1,Math.hypot(p1.x-p2.x,p1.y-p2.y));
+    drag=null;
+  }else{
+    drag={x:e.clientX,y:e.clientY,moved:false};
+  }
+  canvas.setPointerCapture(e.pointerId);
+});
 canvas.addEventListener('pointermove',e=>{
+  if(!trackedPointers.has(e.pointerId))return;
+  trackedPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(trackedPointers.size>=2){
+    const [p1,p2]=[...trackedPointers.values()];
+    const distance=Math.max(1,Math.hypot(p1.x-p2.x,p1.y-p2.y));
+    if(pinchDistance>0)radius=Math.max(10,Math.min(34,radius*pinchDistance/distance));
+    pinchDistance=distance;return;
+  }
   if(!drag)return;
   const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
   if(Math.abs(dx)+Math.abs(dy)>2)drag.moved=true;
@@ -270,7 +300,9 @@ canvas.addEventListener('pointermove',e=>{
   drag.x=e.clientX;drag.y=e.clientY;
 });
 canvas.addEventListener('pointerup',e=>{
-  if(!drag)return;
+  const wasMulti=trackedPointers.size>1;
+  trackedPointers.delete(e.pointerId);
+  if(wasMulti||!drag){drag=null;return}
   if(!drag.moved){
     const r=canvas.getBoundingClientRect(),ray=new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
@@ -279,11 +311,16 @@ canvas.addEventListener('pointerup',e=>{
   }
   drag=null;
 });
+canvas.addEventListener('pointercancel',e=>{
+  trackedPointers.delete(e.pointerId);drag=null;pinchDistance=0;
+});
 canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.min(32,radius+Math.sign(e.deltaY)))},{passive:false});
 window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
   gmConsole:document.body.dataset.gmwwGmConsole,lowPower,selectedId:dashboard.selectedId,
+  followCaster,activeCaster:gmToken||synthetic?field.activeCaster:null,cameraRadius:radius,
+  activeCasterWorld:gmToken||synthetic?field.activeCasterWorld:null,
   village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
   drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
@@ -293,7 +330,11 @@ function loop(now){
     lastPaint=now;resize();
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
       Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
-    camera.lookAt(0,0,1.2);
+    const caster=followCaster?field.activeCasterWorld:null;
+    desiredAim.set(caster?Math.max(-3.7,Math.min(3.7,caster.x*.37)):0,
+      0,caster?1.2+Math.max(-3.2,Math.min(3.2,(caster.z-1.2)*.37)):1.2);
+    cameraAim.lerp(desiredAim,reducedMotion?.35:.12);
+    camera.lookAt(cameraAim);
     if(!reducedMotion)village.animate(now);
     field.draw(now);
     render.render(scene,camera);frames++;
