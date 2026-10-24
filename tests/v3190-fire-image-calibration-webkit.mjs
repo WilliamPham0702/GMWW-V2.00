@@ -12,7 +12,8 @@ const end=gm.indexOf('function preloadGMVillageScene(src){',start);
 assert.ok(start>=0&&end>start,'Read calibrated fire functions from shipped GM runtime');
 assert.ok(html.includes('id="gmVillageFireDay"')&&html.includes('id="gmVillageFireNight"'));
 assert.ok(css.includes('background-size:100% 100%!important'));
-assert.ok(engine.includes('if(body.fireAnchors&&!body.day&&!body.night)'),'anchor-only Server save keeps existing image bytes');
+assert.match(engine,/if\(\(body\.fireAnchors\|\|body\.gallowsAnchors\)\&\&!body\.day\&\&!body\.night\)/,'fire/gallows anchor-only saves preserve existing image bytes');
+assert.match(engine,/gallowsAnchors:\{\.\.\.previous\.gallowsAnchors,\.\.\.body\.gallowsAnchors\}/,'gallows position persists as a separate landmark');
 const src=gm.slice(start,end);
 const browser=await webkit.launch({headless:true});
 try{
