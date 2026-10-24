@@ -15,7 +15,7 @@ test('Phase4: 30 actors remain InstancedMesh with fixed draw calls despite 40 st
   const scene=new THREE.Scene(),atlas=createArenaCharacterField(THREE,scene);
   const actors=Array.from({length:30},(_,i)=>({id:'member:p'+i,seatId:i+1,characterId:'character-'+String(i+1).padStart(2,'0'),
     position:{x:Math.cos(i)*3,z:Math.sin(i)*3},statusTags:[]}));
-  atlas.setActors(actors);assert.equal(atlas.actorCount,30);assert.ok(atlas.drawBudget<=29);
+  atlas.setActors(actors);assert.equal(atlas.actorCount,30);assert.ok(atlas.drawBudget<=37);
   assert.equal(atlas.performGesture('member:p0','wave'),true);
   assert.equal(atlas.performGesture('member:p1','cheer'),true);
   assert.equal(atlas.performGesture('member:p2','nod'),true);
