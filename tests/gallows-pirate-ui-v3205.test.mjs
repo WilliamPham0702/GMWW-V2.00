@@ -18,12 +18,13 @@ test('Player village shows ONLY one red pirate flag anchored at fire during nomi
  const village=read('assets/village/village.mjs');
  const player=read('src/player-web-src/30-rooms-and-realtime.part');
  assert.match(village,/flag\.id='gmwwPirateNominate'/);
- assert.match(village,/fill="#e73543"/);
+ assert.match(village,/fill="#eb3047"/);
  assert.match(village,/const point=screenPoint\(layout\.fire\)/);
  assert.match(village,/flag\.hidden=!visible/);
- assert.match(village,/flag\.style\.pointerEvents='none'/);
- assert.match(village,/document\.elementFromPoint\(e\.clientX,e\.clientY\)/);
- assert.match(village,/gmww:gallows-drag-nominate/);
+ assert.match(village,/snapCandidate\(x,y\)/);
+ assert.match(village,/gmww:gallows-preview-nominate/);
+ assert.match(village,/gmww:gallows-confirm-nominate/);
+ assert.match(village,/gmww:gallows-reset-nominate/);
  assert.match(village,/gmww:gallows-open-nominations/);
  assert.match(player,/dock\.hidden=!\(\['voting','closed','resolved'\]\.includes\(stage\)\)/);
  assert.doesNotMatch(player,/id="gmwwGallowsOpenNomination"/);

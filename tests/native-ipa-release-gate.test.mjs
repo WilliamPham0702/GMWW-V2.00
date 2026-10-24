@@ -22,10 +22,10 @@ test('Swift/Xcode edits classify native; plain web changes classify runtime',()=
   assert.equal(classify(['tests/native-ipa-release-gate.test.mjs']),'server_only');
 });
 
-test('V3.205 supports an older shell without falsely announcing an IPA release',()=>{
+test('V3.206 supports an older shell without falsely announcing an IPA release',()=>{
   assert.match(channel,/if\(version!==shell&&\(releaseType==='server_only'\|\|releaseType==='native'\)\) releaseType='runtime'/);
   assert.match(channel,/shellVersion:shell/);
-  assert.match(channel,/releaseNotes:\["V3\.205:/);
+  assert.match(channel,/releaseNotes:\["V3\.206:/);
   assert.match(channel,/sha256:sha\(/);
 });
 

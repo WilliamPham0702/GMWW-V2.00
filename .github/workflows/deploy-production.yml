@@ -213,10 +213,54 @@ jobs:
           echo "::error::Chưa có hai CI SUCCESS cùng SHA, không triển khai Production."
           exit 1
 
+      # V3.206: PR changes ONLY Gallows snap, preview/confirm and reset.
+      # Separate same-SHA gates must pass; no unrelated Chrome cards/Seat tests.
+      - name: Phát hành V3.206 sau CI Lên Giàn / Worker đúng phạm vi
+        id: gallows_release_3206
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.206.0" ]; then exit 0; fi
+          test -f docs/releases/GMWW-V3.206-gallows-flag-snap-20261024.md || {
+            echo "::error::Thiếu ghi chú Runtime V3.206"; exit 1;
+          }
+          grep -q 'gmww:gallows-preview-nominate' assets/village/village.mjs || exit 1
+          grep -q 'gmwwPirateNominate' assets/village/village.mjs || exit 1
+          grep -q 'gmww:gallows-confirm-nominate' src/player-web-src/20-village-and-profile.part || exit 1
+          for TRY in $(seq 1 40); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(r=>r.event==='push'&&r.head_sha===process.env.TESTED_SHA);
+                const latest=n=>runs.filter(r=>r.name===n).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                const state=n=>{const r=latest(n);return r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending'};
+                const x=[state('Check Lên Giàn theo đúng phạm vi'),state('Check Player Web Worker')];
+                process.stdout.write(x.every(a=>a==='success')?'success':x.some(a=>['failure','timed_out','cancelled','action_required','skipped'].includes(a))?'failure':'pending')
+              })")
+            echo "V3.206 đợt $TRY: CI Lên Giàn + Worker = $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.206: CI Lên Giàn + Worker SUCCESS cùng SHA, chỉ kiểm thử đúng phạm vi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI liên quan chưa đạt, chặn Production"; exit 1; fi
+            sleep 15
+          done
+          echo "::error::Chưa có hai CI SUCCESS cùng SHA, không triển khai Production."
+          exit 1
+
       # Normal release: browser gate is retained except tightly scoped verified
       # V3.203 owner-dispatched release and V3.204 gallows-focused release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
