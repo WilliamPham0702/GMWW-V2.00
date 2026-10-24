@@ -479,14 +479,14 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* V3.163 battle-only low-power presentation. The approved Character40 renderer
    and its rollback bytes are untouched; this applies only inside live battle. */
-body.player-battle .player .portrait.game-character,
-body.player-battle .player .portrait.game-character .gmww-character-renderer,
-body.player-battle .player .portrait.game-character .gmww-segmented-rig,
-body.player-battle .player .portrait.game-character .gmww-segmented-rig *,
-body.player-battle .player .portrait.game-character img[data-walk-character]{
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-character-renderer,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig *,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character img[data-walk-character]{
   animation:none!important;transition:none!important;will-change:auto!important;
 }
-body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig *{
   transform:none!important;
 }
 
