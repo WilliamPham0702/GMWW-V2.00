@@ -23,3 +23,10 @@ test('GĐ7 no private role or gameplay authority in cosmetic layer',()=>{
  const src=readFileSync('assets/village/arena-3d/stage7-expression-motion.mjs','utf8');
  for(const forbidden of ['gmToken','roleName','faction','secretTarget','fetch(','localStorage'])assert.ok(!src.includes(forbidden));
 });
+
+test('GĐ7 renderer imports the actual quality budget dependency',()=>{
+ const src=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+ assert.match(src,/import\s*\{[^}]*renderQualityBudget[^}]*\}\s*from\s*['"]\.\/stage7-expression-motion\.mjs['"]/);
+ assert.match(src,/setQualityFps/);
+ assert.match(src,/animationHz=renderQualityBudget/);
+});
