@@ -64,7 +64,35 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx wrangler deploy --config wrangler.arena3d-stage7-staging.jsonc
+          export DEPLOY_STARTED_MS="$(node -p 'Date.now()')"
+          set +e
+          npx wrangler deploy --config wrangler.arena3d-stage7-staging.jsonc 2>&1 | tee /tmp/arena3d-stage7-wrangler.log
+          WRANGLER_EXIT=${PIPESTATUS[0]}
+          set -e
+          if [ "$WRANGLER_EXIT" -ne 0 ] && ! grep -q 'code: 10007' /tmp/arena3d-stage7-wrangler.log; then
+            echo "Wrangler thất bại trước khi có xác nhận Cloudflare"
+            exit "$WRANGLER_EXIT"
+          fi
+          CF_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-arena3d-stage7-staging"
+          curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$CF_URL/deployments" > /tmp/arena3d-stage7-deployments.json
+          node -e '
+            const data=require("/tmp/arena3d-stage7-deployments.json");
+            const item=data.result?.deployments?.[0];
+            const started=Number(process.env.DEPLOY_STARTED_MS);
+            if(!data.success||!item||Date.parse(item.created_on)<started-10000||
+              !item.versions?.some(v=>v.percentage===100))
+              throw Error("Cloudflare chưa xác nhận triển khai Worker GĐ7 mới nhất");
+            console.log("Cloudflare đã xác nhận version GĐ7:",item.versions[0].version_id);
+          '
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"enabled":true,"previews_enabled":false}' "$CF_URL/subdomain" > /tmp/arena3d-stage7-subdomain.json
+          node -e '
+            const data=require("/tmp/arena3d-stage7-subdomain.json");
+            if(!data.success||data.result?.enabled!==true)
+              throw Error("Chưa bật được workers.dev cho riêng GĐ7");
+            console.log("workers.dev GĐ7 đã bật; Production và GĐ6 không thay đổi");
+          '
       - name: "Chuẩn bị trình duyệt Chrome và WebKit giả lập iPhone"
         run: |
           npm install --no-save playwright@1.58.2
