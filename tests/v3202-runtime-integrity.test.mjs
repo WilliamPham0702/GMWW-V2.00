@@ -4,19 +4,19 @@ import fs from 'node:fs';
 import {compareReleaseVersions,verifyOtaVersionAdvance} from '../.github/scripts/verify-ota-version-advance.mjs';
 const read=p=>fs.readFileSync(p,'utf8');
 
-test('V3.203 nhất quán phiên bản, shell và release notes tiếng Việt',()=>{
+test('V3.204 nhất quán phiên bản, shell và release notes tiếng Việt',()=>{
   const worker=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
   const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
   const prep=read('.github/scripts/prepare-update-channel.mjs');
-  assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3203"/);
+  assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3204"/);
   assert.match(app,/const VERSION='3\.203';/);
   assert.match(html,/<title>GMWW V3\.203<\/title>/);
-  assert.equal(pkg.version,'3.203.0');
-  assert.equal(lock.version,'3.203.0');
-  assert.equal(lock.packages[''].version,'3.203.0');
+  assert.equal(pkg.version,'3.204.0');
+  assert.equal(lock.version,'3.204.0');
+  assert.equal(lock.packages[''].version,'3.204.0');
   assert.match(prep,/releaseNotes:\["V3\.203:/);
   for(const pr of ['#443','#445','#447','#449'])assert.ok(prep.includes(pr),'Thiếu ghi chú PR '+pr);
-  assert.equal(compareReleaseVersions('3.203','3.200'),1);
+  assert.equal(compareReleaseVersions('3.204','3.200'),1);
 });
 
 test('Chặn byte Runtime chưa tăng version dù PR cuối chỉ sửa CI',()=>{
