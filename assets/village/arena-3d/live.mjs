@@ -7,6 +7,7 @@ import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-ateli
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
+import {arenaSceneSignature,createArenaAdaptiveQuality} from './render-optimization.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -19,6 +20,19 @@ const field=createArenaCharacterField(THREE,scene);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
+let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
+const qualityController=createArenaAdaptiveQuality();
+function applyQuality(){
+  const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
+  if(next===lowPower)return;
+  lowPower=next;field.setLowPower(next);village.setQuality(next);
+  render.setPixelRatio(Math.min(devicePixelRatio||1,next?.78:(innerWidth<460?1.15:1.35)));
+  lastResize='';
+}
+function updateAutoQualityButton(){
+  const btn=$('quality-auto');btn.textContent='⚡ Tối ưu tự động: '+(autoQualityEnabled?'Bật':'Tắt');
+  btn.setAttribute('aria-pressed',String(autoQualityEnabled));
+}
 const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
   onAction:(id,...args)=>{
     if(id==='nextTurn')return void guarded('Chuyển lượt đêm theo Core',async()=>{
@@ -43,9 +57,18 @@ const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focus
     if(id==='vote'&&args[0])chosenCandidate=args[0];
     $(id)?.click();
   },
-  onToggleQuality:value=>{lowPower=value;field.setLowPower(lowPower);village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
+  onToggleQuality:value=>{
+    // An explicit GM choice takes priority until the viewer enables Auto again.
+    autoQualityEnabled=false;manualLowPower=value===true;adaptiveLowPower=false;
+    qualityController.reset();applyQuality();updateAutoQualityButton();
+  }
 });
 let chosenCandidate=null;
+$('quality-auto').onclick=()=>{
+  autoQualityEnabled=!autoQualityEnabled;manualLowPower=false;adaptiveLowPower=false;
+  qualityController.reset();applyQuality();updateAutoQualityButton();
+};
+updateAutoQualityButton();
 $('camera-follow').onclick=()=>{
   followCaster=!followCaster;
   $('camera-follow').textContent='🎥 Theo lượt: '+(followCaster?'Bật':'Tắt');
@@ -64,7 +87,14 @@ function drawFrame(frame){
   current=frame;synthetic=frame.room.code==='SYNTH';
   if(changedRoom||frame.room.phase!=='running')field.setCastingTurn(null);
   const items=rendererCommands(frame,'3d').players;
-  field.setActors(items,{seatCount:frame.room.seatCount,seatLayout:frame.room.seatLayout});
+  // HTTP polling and WebSocket often repeat an identical public roster.
+  // Keep existing animation instances, gestures and GPU buffers in that case.
+  const nextSignature=arenaSceneSignature(frame.room,items);
+  if(nextSignature!==sceneSignature){
+    field.setActors(items,{seatCount:frame.room.seatCount,seatLayout:frame.room.seatLayout});
+    sceneSignature=nextSignature;sceneRebuilds++;
+    document.body.dataset.gmwwArenaSceneRebuilds=String(sceneRebuilds);
+  }
   dashboard.setState(frame);
   if(previousMatch!==undefined&&(previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey)){
     field.clearEffects();visibleGmEffects=0;
@@ -343,7 +373,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.m
 window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
-  gmConsole:document.body.dataset.gmwwGmConsole,lowPower,selectedId:dashboard.selectedId,
+  gmConsole:document.body.dataset.gmwwGmConsole,lowPower,autoQualityEnabled,sceneRebuilds,selectedId:dashboard.selectedId,
   followCaster,activeCaster:gmToken||synthetic?field.activeCaster:null,cameraRadius:radius,
   activeCasterWorld:gmToken||synthetic?field.activeCasterWorld:null,
   village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
@@ -353,6 +383,10 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
+  const adaptive=qualityController.observe(now,!document.hidden);
+  if(autoQualityEnabled&&adaptive!==adaptiveLowPower){
+    adaptiveLowPower=adaptive;applyQuality();
+  }
   if(!document.hidden&&now-lastPaint>=1000/(reducedMotion||lowPower?20:30)){
     lastPaint=now;resize();
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
@@ -371,6 +405,7 @@ function loop(now){
     $('hud').textContent=field.actorCount+' Character · '+fps+' FPS · '+render.info.render.calls+' draw calls';
     document.body.dataset.gmwwStageFps=String(fps);
     document.body.dataset.gmwwDrawCalls=String(render.info.render.calls);
+    document.body.dataset.gmwwQualityMode=lowPower?'saving':'smooth';
   }
   requestAnimationFrame(loop);
 }
