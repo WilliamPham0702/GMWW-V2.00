@@ -81,3 +81,35 @@ test('Manual GM outcome remains direct while Auto keeps Player Web authoritative
  assert.equal(manual.ok,true);assert.equal(manual.value.outcome,'alive');
  assert.equal(gallowsManualResolve(fixture(),'bob','dead',1000).ok,false);
 });
+
+test('Server rejects nominations from people outside the living eligible roster',()=>{
+ const opened=gallowsOpen(fixture(),1000).value;
+ const blocked=gallowsNominate(opened,'outsider','bob',1500);
+ assert.equal(blocked.ok,false);
+ assert.deepEqual(opened.nominations,{});
+ assert.equal(gallowsNominate(opened,'alice','bob',1500).ok,true);
+});
+
+test('After Chốt đề cử, only the unique top nominee or a tied top nominee can be voted',()=>{
+ let b=gallowsOpen(fixture(),1000).value;
+ b=gallowsNominate(b,'alice','bob',1100).value;
+ b=gallowsNominate(b,'david','bob',1200).value;
+ b=gallowsNominate(b,'bob','carol',1300).value;
+ const closed=gallowsCloseNomination(b,1400).value;
+ assert.equal(closed.candidateId,'bob');
+ assert.equal(gallowsBegin(closed,'carol',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
+ assert.equal(gallowsBegin(closed,'bob',1500).ok,true);
+ const open2=gallowsOpen(fixture(),1000).value;
+ const tie=gallowsCloseNomination(gallowsNominate(
+   gallowsNominate(open2,'alice','bob',1100).value,'david','carol',1200).value,1400).value;
+ assert.equal(gallowsBegin(tie,'alice',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
+ assert.equal(gallowsBegin(tie,'bob',1500).ok,true);
+ assert.equal(gallowsBegin(tie,'carol',1500).ok,true);
+});
+
+test('GM only enables Mở bỏ phiếu after Chốt đề cử; stale select cannot override leader',()=>{
+ const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+ assert.match(gm,/command==='begin'&&\(!selecting/);
+ assert.match(gm,/dataset\.gallowsCommand==='begin'\?\(lead\|\|selected\)/);
+ assert.match(gm,/allowed=topVotes>0\?ordered\.filter/);
+});
