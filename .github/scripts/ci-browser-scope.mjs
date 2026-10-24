@@ -56,9 +56,27 @@ function isP0Scope(changes){
   return containsP0;
 }
 
+// Isolate Arena research so the PR does not test unrelated cards, seats, DEMO or IPA.
+const dualPaths=new Set([
+  'assets/village/dual-renderer-core.mjs',
+  'assets/village/arena-3d/index.html',
+  'assets/village/arena-3d/main.mjs',
+  'src/gmww-dual-renderer-projection.js',
+  'tests/dual-renderer-contract.test.mjs',
+  'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isDualRendererScope(changes){
+  return changes.some(c=>c.path==='src/gmww-dual-renderer-projection.js')&&
+    changes.every(c=>dualPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isP0Scope(changes))return 'p0-roster';
+  if(isDualRendererScope(changes))return 'dual-renderer';
   for(const {path,before,after,status} of changes){
     if(!path||!['M','A'].includes(status))return 'full';
     if(notesPath.test(path)||testPath.test(path))continue;
@@ -101,8 +119,9 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
+  if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(result.mode!=='dual-renderer')console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
