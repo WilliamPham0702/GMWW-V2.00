@@ -1,0 +1,118 @@
+name: Deploy Arena 3D Preview (isolated)
+
+on:
+  push:
+    branches: ["feature/arena-3d-dual-renderer"]
+    paths:
+      - "assets/village/arena-3d/index.html"
+      - "assets/village/arena-3d/main.mjs"
+      - "assets/village/arena-3d/preview-worker.mjs"
+      - "assets/village/arena-3d/build-preview.mjs"
+      - "assets/village/dual-renderer-core.mjs"
+      - "wrangler.arena3d-preview.jsonc"
+      - "tests/arena3d-preview.test.mjs"
+      - "tests/arena3d-preview-browser.mjs"
+      - ".github/workflows/deploy-arena3d-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-arena3d-preview-only
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Kiểm tra dữ liệu mô phỏng, camera, hiệu ứng và WebGL
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Tải nhánh nghiên cứu (không phải Production)
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cài đặt thư viện theo khóa
+        run: npm ci
+      - name: Kiểm tra cú pháp và quyền xem
+        run: |
+          node --check assets/village/arena-3d/preview-worker.mjs
+          node --check assets/village/arena-3d/build-preview.mjs
+          node --check assets/village/arena-3d/main.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs
+      - name: Kiểm tra tệp Cloudflare Preview, tuyệt đối không sử dụng DO Production
+        run: |
+          set -euo pipefail
+          node assets/village/arena-3d/build-preview.mjs
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=JSON.parse(fs.readFileSync('wrangler.arena3d-preview.jsonc','utf8'));
+          if(c.name!=='gmww-arena3d-preview'||c.main!=='assets/village/arena-3d/preview-worker.mjs')throw Error('Worker Preview name/entry invalid');
+          if(JSON.stringify(c).match(/durable_objects|kv_namespaces|r2_buckets|d1_databases|routes|\.workers\.dev\/api\/rooms/))throw Error('Forbidden Production/stored-data binding');
+          if(c.assets?.directory!=='./.arena3d-preview-assets'||c.assets?.run_worker_first!==true)throw Error('Preview asset binding invalid');
+          NODE
+          npx wrangler deploy --config wrangler.arena3d-preview.jsonc --dry-run
+      - name: Cài công cụ browser chỉ để kiểm thử Arena 3D
+        run: npm install --no-save playwright@1.58.2
+      - name: Chrome màn hình iPhone giả lập, 6-30 Character, xoay, camera, hiệu ứng, FPS
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tests/arena3d-preview-browser.mjs
+      - name: Lưu ảnh chụp kiểm thử Arena 3D
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arena3d-preview-chromium-390
+          path: /tmp/gmww-arena3d-chromium-390.png
+          if-no-files-found: ignore
+
+  deploy-preview:
+    name: Đăng bản thử nghiệm lên Worker riêng, không ảnh hưởng V2
+    if: github.ref == 'refs/heads/feature/arena-3d-dual-renderer' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Chỉ đóng gói 5 asset của Arena 3D
+        run: node assets/village/arena-3d/build-preview.mjs
+      - name: Triển khai Cloudflare Worker độc lập
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.arena3d-preview.jsonc
+      - name: Xác nhận URL Preview thực tế, 5 asset, quyền truy cập API game và SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-arena3d-preview.williampham0702.workers.dev"
+          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 "$BASE/api/health" > /tmp/arena-health.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const health=JSON.parse(fs.readFileSync('/tmp/arena-health.json','utf8'));
+          if(!health.ok||health.service!=='gmww-arena3d-preview'||health.durableObjects!==false||health.liveGameModified!==false)throw Error('Preview health isolation invalid');
+          console.log('HEALTH PASS: Preview is not GMWW Production, no Durable Objects.');
+          NODE
+          for FILE in             village/arena-3d/index.html             village/arena-3d/main.mjs             village/dual-renderer-core.mjs             characters/v5/vendor/three.module.min.js             characters/v5/vendor/three.core.min.js; do
+            curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 "$BASE/$FILE" > /tmp/arena-downloaded
+            test -s /tmp/arena-downloaded
+            test "$(sha256sum ".arena3d-preview-assets/$FILE" | cut -d' ' -f1)" = "$(sha256sum /tmp/arena-downloaded | cut -d' ' -f1)"
+            echo "PASS SHA256 $FILE"
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/rooms/ABCD")" = "404"
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/updates/latest.json")" = "404"
+          echo "Arena 3D Preview VERIFIED: $BASE/village/arena-3d/"
+          echo "Đường dẫn Preview: $BASE/village/arena-3d/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Chỉ dữ liệu mô phỏng, không sửa Production hoặc IPA." >> "$GITHUB_STEP_SUMMARY"

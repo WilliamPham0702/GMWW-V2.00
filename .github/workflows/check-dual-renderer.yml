@@ -1,0 +1,52 @@
+name: Check Dual Renderer Architecture
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gmww-dual-renderer-projection.js"
+      - "assets/village/dual-renderer-core.mjs"
+      - "assets/village/arena-3d/**"
+      - "tests/dual-renderer-contract.test.mjs"
+      - "docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md"
+      - ".github/workflows/check-dual-renderer.yml"
+      - ".github/scripts/ci-browser-scope.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-contract:
+    name: Xác nhận Core chung, quyền xem, dữ liệu 2D/3D
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Kiểm tra nhánh nghiên cứu có theo kịp main
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "$PR_HEAD_SHA" --quiet
+            git checkout --detach "$PR_HEAD_SHA"
+          fi
+          BEHIND=$(git rev-list --count HEAD..origin/main)
+          echo "Main đi trước nhánh nghiên cứu: $BEHIND commit"
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "::warning::Nhánh Arena 3D đang sau main $BEHIND commit; đồng bộ main vào feature và kiểm tra conflict trước nghiệm thu."
+          fi
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kiểm tra cú pháp module Dual Renderer
+        run: |
+          node --check assets/village/dual-renderer-core.mjs
+          node --check src/gmww-dual-renderer-projection.js
+          node --check assets/village/arena-3d/main.mjs
+      - name: Kiểm thử tương thích và phân quyền trực tiếp
+        run: node --test tests/dual-renderer-contract.test.mjs tests/ci-browser-scope.test.mjs

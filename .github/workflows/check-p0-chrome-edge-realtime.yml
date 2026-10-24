@@ -37,7 +37,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   chrome-edge:
     needs: scope
-    if: needs.scope.outputs.mode != 'postgame'
+    if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'p0-roster'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

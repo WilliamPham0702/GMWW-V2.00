@@ -1,0 +1,193 @@
+name: Deploy Arena 3D Core V2 STAGING (isolated)
+
+on:
+  push:
+    branches: ["feature/arena-3d-dual-renderer"]
+    paths:
+      - "src/arena3d-stage-worker.mjs"
+      - "src/arena3d-visual-effect-policy.mjs"
+      - "src/index.js"
+      - "src/gmww-dual-renderer-projection.js"
+      - "assets/village/arena-3d/live.*"
+      - "assets/village/arena-3d/room-realtime.mjs"
+      - "assets/village/arena-3d/character-atelier.mjs"
+      - "assets/village/arena-3d/arena-acceptance-scenario.mjs"
+      - "assets/village/arena-3d/spell-vfx.mjs"
+      - "assets/village/arena-3d/casting-choreography.mjs"
+      - "assets/village/arena-3d/coastal-village.mjs"
+      - "assets/village/arena-3d/gm-dashboard.mjs"
+      - "assets/village/dual-renderer-core.mjs"
+      - "wrangler.arena3d-core-stage.jsonc"
+      - "tests/arena3d-phase2-contract.test.mjs"
+      - "tests/arena3d-phase3.test.mjs"
+      - "tests/arena3d-spell-vfx.test.mjs"
+      - "tests/arena3d-phase4.test.mjs"
+      - "tests/arena3d-role-scenario.test.mjs"
+      - "tests/arena3d-casting.test.mjs"
+      - "tests/arena3d-ritual-walk.test.mjs"
+      - "tests/arena3d-coastal-village.test.mjs"
+      - "tests/arena3d-phase4-browser.mjs"
+      - "tests/arena3d-phase3-webkit.mjs"
+      - "tests/arena3d-stage-http.mjs"
+      - "docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-PHASE4-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-TURN-CAST-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-COASTAL-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-RITUAL-WALK-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-SPELL-ART-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-BATCH-ACCEPTANCE-2026-10-24.md"
+      - ".github/workflows/deploy-arena3d-core-stage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: gmww-arena3d-core-staging
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Kiểm tra hợp đồng 2D/3D, quyền xem và Worker độc lập
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Chỉ kiểm thử dữ liệu, phân quyền, đồng bộ và giao diện Arena
+        run: |
+          node --check src/arena3d-stage-worker.mjs
+          node --check assets/village/arena-3d/live.mjs
+          node --check assets/village/arena-3d/room-realtime.mjs
+          node --check assets/village/arena-3d/character-atelier.mjs
+          node --check assets/village/arena-3d/spell-vfx.mjs
+          node --check assets/village/arena-3d/gm-dashboard.mjs
+          node --check assets/village/arena-3d/arena-acceptance-scenario.mjs
+          node --check assets/village/arena-3d/casting-choreography.mjs
+          node --check assets/village/arena-3d/coastal-village.mjs
+          node --check src/arena3d-visual-effect-policy.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs
+      - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=JSON.parse(fs.readFileSync('wrangler.arena3d-core-stage.jsonc'));
+          if(c.name!=='gmww-arena3d-core-staging'||c.main!=='src/arena3d-stage-worker.mjs')throw Error('Invalid Core staging entry');
+          if(JSON.stringify(c).includes('gmww-v2-00_RoomDurableObject'))throw Error('Production namespace must NOT be referenced');
+          if(c.durable_objects?.bindings?.length!==1||c.durable_objects.bindings[0].class_name!=='RoomDurableObject')throw Error('Staging namespace missing');
+          if(c.routes||c.services||c.env)throw Error('Unexpected worker routes, cross-worker service or environment bindings');
+          console.log('Staging Worker own DO namespace config PASS.');
+          NODE
+          npx wrangler deploy --config wrangler.arena3d-core-stage.jsonc --dry-run
+
+  deploy-stage:
+    name: Triển khai Core V2 Staging, kiểm chứng phòng/vai/vote, không Production
+    if: github.ref == 'refs/heads/feature/arena-3d-dual-renderer' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deploy Worker STAGING riêng, namespace phòng riêng
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.arena3d-core-stage.jsonc
+      - name: Kiểm chứng Core qua HTTPS - room, 4 vai thật, turn/cast, Ngày/Đêm, đề cử
+        run: node tests/arena3d-stage-http.mjs
+      - name: Kiểm chứng UI 3D với phòng Core trong Chromium 390px
+        run: |
+          npm install --no-save playwright@1.58.2
+          node --input-type=module <<'NODE'
+          import {readFileSync} from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {chromium} from 'playwright';
+          const code=readFileSync('/tmp/gmww-arena3d-stage-room.txt','utf8').trim();
+          const b=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+            args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+          try{
+            const page=await b.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room='+code,{waitUntil:'domcontentloaded',timeout:50000});
+            await page.waitForFunction(c=>document.body.dataset.gmwwLiveCount==='6'&&window.__GMWW_ARENA_STAGE_READONLY?.().room===c,code,{timeout:40000});
+            await page.waitForFunction(()=>Number(document.body.dataset.gmwwStageFps)>0,null,{timeout:40000});
+            const d=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+            assert.equal(d.count,6);
+            assert.equal(d.cyclePhase,'morning');
+            assert.equal(d.phase,'running');
+            assert.equal(d.ballot,'voting');
+            assert.ok(d.atelier?.startsWith('arena-chibi-instanced'),'3D chibi model must be live');
+            assert.ok(d.drawCalls>0&&d.drawCalls<=55,'6 actors use instanced fixed draw budget');
+            assert.ok(d.drawBudget<=37);
+            assert.ok(d.fps>0);
+            assert.equal(d.sky,'day');
+            assert.equal(d.village,'coastal-day-night-v1');
+            assert.ok(d.sceneryDrawBudget<=18);
+            // Page refresh must rehydrate the public gallows tally from real DO storage.
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting'&&document.body.dataset.gmwwLiveCount==='6',{timeout:30000});
+            // Brief network cut + explicit resync exercises WebSocket/HTTP fallback.
+            await page.context().setOffline(true);
+            await new Promise(resolve=>setTimeout(resolve,650));
+            await page.context().setOffline(false);
+            await page.locator('#refresh').click();
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting'&&document.body.dataset.gmwwLiveCount==='6',{timeout:30000});
+            assert.deepEqual(errors,[]);
+            await page.screenshot({path:'/tmp/arena3d-core-staging-iphone390.png'});
+            console.log('PASS REAL Core -> 3D browser 6:',JSON.stringify(d));
+            const bigCode=readFileSync('/tmp/gmww-arena3d-stage-room30.txt','utf8').trim();
+            await page.goto('https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room='+bigCode,{waitUntil:'domcontentloaded',timeout:50000});
+            await page.waitForFunction(c=>document.body.dataset.gmwwLiveCount==='30'&&window.__GMWW_ARENA_STAGE_READONLY?.().room===c,bigCode,{timeout:40000});
+            await page.waitForFunction(()=>Number(document.body.dataset.gmwwStageFps)>0,null,{timeout:40000});
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().connected==='connected',null,{timeout:40000});
+            const big=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+            assert.equal(big.count,30);
+            assert.equal(big.phase,'lobby');
+            assert.ok(big.fps>0,'30 real players must actually render FPS');
+            assert.equal(big.connected,'connected');
+            assert.equal(big.village,'coastal-day-night-v1');
+            assert.ok(big.drawCalls>0&&big.drawCalls<=55,'30 actors share geometry and draw calls');
+            assert.ok(big.pixelRatio<=1.35,'iPhone viewport DPR must be battery limited');
+            assert.equal(big.privateOverlayCount,0,'anonymous browser has no GM overlays');
+            await page.screenshot({path:'/tmp/arena3d-core-staging-30-iphone390.png'});
+            console.log('PASS REAL Core -> 3D browser 30:',JSON.stringify(big));
+          }finally{await b.close();}
+          NODE
+      - name: Điều hành GM 3D trên Core thật — 6 Seat, Phát Vai, Ngày/Đêm, Lên Giàn, chế độ pin
+        run: node tests/arena3d-phase4-browser.mjs
+      - name: Kiểm thử Safari WebKit trên màn hình iPhone mô phỏng (không phải iPhone vật lý)
+        run: |
+          npx playwright install --with-deps webkit
+          node tests/arena3d-phase3-webkit.mjs
+      - name: Ghi kết quả Preview staging vào Summary
+        run: |
+          CODE=$(cat /tmp/gmww-arena3d-stage-room.txt)
+          echo "### GMWW Arena 3D Core STAGING" >> "$GITHUB_STEP_SUMMARY"
+          echo "Trang 3D: https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room=$CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Player Web 2D: https://gmww-arena3d-core-staging.williampham0702.workers.dev/join/$CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Phòng 30 người: https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room=$(cat /tmp/gmww-arena3d-stage-room30.txt)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Core riêng, phòng riêng, không merge/Production/IPA. FPS trình duyệt mô phỏng." >> "$GITHUB_STEP_SUMMARY"
+      - name: Ảnh kiểm chứng (chỉ khi có)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arena3d-core-stage-chromium
+          path: |
+            /tmp/arena3d-core-staging-iphone390.png
+            /tmp/arena3d-core-staging-30-iphone390.png
+            /tmp/arena3d-phase3-webkit.png
+            /tmp/gmww-arena3d-gm-phase4-390.png
+            /tmp/gmww-arena3d-real-guard-spell-390.png
+          if-no-files-found: ignore

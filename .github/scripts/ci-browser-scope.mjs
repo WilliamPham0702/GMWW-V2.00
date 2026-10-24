@@ -56,9 +56,68 @@ function isP0Scope(changes){
   return containsP0;
 }
 
+// Isolate Arena research so the PR does not test unrelated cards, seats, DEMO or IPA.
+const dualPaths=new Set([
+  'assets/village/dual-renderer-core.mjs',
+  'assets/village/arena-3d/index.html',
+  'assets/village/arena-3d/main.mjs',
+  'src/gmww-dual-renderer-projection.js',
+  'tests/dual-renderer-contract.test.mjs',
+  'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
+  '.github/workflows/check-dual-renderer.yml',
+  'wrangler.arena3d-preview.jsonc',
+  'assets/village/arena-3d/preview-worker.mjs',
+  'assets/village/arena-3d/build-preview.mjs',
+  'tests/arena3d-preview.test.mjs',
+  'tests/arena3d-preview-browser.mjs',
+  'docs/releases/GMWW-ARENA3D-PREVIEW-2026-10-24.md',
+  '.github/workflows/deploy-arena3d-preview.yml',
+  'src/arena3d-stage-worker.mjs',
+  'wrangler.arena3d-core-stage.jsonc',
+  'assets/village/arena-3d/live.html',
+  'assets/village/arena-3d/live.mjs',
+  'assets/village/arena-3d/room-realtime.mjs',
+  'tests/arena3d-phase2-contract.test.mjs',
+  'tests/arena3d-stage-http.mjs',
+  '.github/workflows/deploy-arena3d-core-stage.yml',
+  'docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md',
+  'assets/village/arena-3d/character-atelier.mjs',
+  'src/arena3d-visual-effect-policy.mjs',
+  'tests/arena3d-phase3.test.mjs',
+  'tests/arena3d-spell-vfx.test.mjs',
+  'assets/village/arena-3d/spell-vfx.mjs',
+  'docs/releases/GMWW-ARENA3D-SPELL-ART-2026-10-24.md',
+  'assets/village/arena-3d/gm-dashboard.mjs',
+  'tests/arena3d-phase4.test.mjs',
+  'tests/arena3d-role-scenario.test.mjs',
+  'assets/village/arena-3d/arena-acceptance-scenario.mjs',
+  'docs/releases/GMWW-ARENA3D-BATCH-ACCEPTANCE-2026-10-24.md',
+  'tests/arena3d-phase4-browser.mjs',
+  'tests/arena3d-casting.test.mjs',
+  'assets/village/arena-3d/casting-choreography.mjs',
+  'assets/village/arena-3d/coastal-village.mjs',
+  'tests/arena3d-coastal-village.test.mjs',
+  'tests/arena3d-ritual-walk.test.mjs',
+  'docs/releases/GMWW-ARENA3D-RITUAL-WALK-2026-10-24.md',
+  'docs/releases/GMWW-ARENA3D-COASTAL-2026-10-24.md',
+  'docs/releases/GMWW-ARENA3D-TURN-CAST-2026-10-24.md',
+  'docs/releases/GMWW-ARENA3D-PHASE4-2026-10-24.md',
+  'tests/arena3d-phase3-webkit.mjs',
+  'docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-p0-chrome-edge-realtime.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isDualRendererScope(changes){
+  return changes.some(c=>c.path==='src/gmww-dual-renderer-projection.js')&&
+    changes.every(c=>dualPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isP0Scope(changes))return 'p0-roster';
+  if(isDualRendererScope(changes))return 'dual-renderer';
   for(const {path,before,after,status} of changes){
     if(!path||!['M','A'].includes(status))return 'full';
     if(notesPath.test(path)||testPath.test(path))continue;
@@ -101,8 +160,9 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
+  if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(result.mode!=='dual-renderer')console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
