@@ -42,6 +42,30 @@ try{
   await page.locator('#night').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night'&&window.__GMWW_ARENA_STAGE_READONLY?.().sky==='night',null,{timeout:25000});
   await page.screenshot({path:'/tmp/gmww-arena3d-coastal-night-390.png'});
+  // FULL UI: GM picks actual Seat 6 target and walks real Core night turns
+  // until Guard's assigned owner can execute their own effect (no local fake).
+  await page.getByRole('tab',{name:'Phòng'}).click();
+  await page.locator('.gm-seat-grid button[data-seat-id="6"]').click();
+  await page.getByRole('tab',{name:'Lượt Đêm'}).click();
+  let verifiedSpell=false;
+  for(let attempt=0;attempt<15;attempt++){
+    const notice=page.locator('#gm-console .gm-console-vote');
+    await notice.waitFor({timeout:18000});
+    const trial=page.getByRole('button',{name:/Thử .*Bảo Vệ/});
+    if(await trial.count()){
+      await trial.click();
+      await page.waitForFunction(()=>document.querySelector('#log')?.textContent?.includes('Core xác nhận lượt thử'),null,{timeout:15000});
+      await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().spellVfx==='shield',null,{timeout:12000});
+      await page.screenshot({path:'/tmp/gmww-arena3d-real-guard-spell-390.png'});
+      verifiedSpell=true;break;
+    }
+    const previous=await notice.innerText();
+    await page.getByRole('button',{name:'Sang lượt tiếp theo'}).click();
+    await page.waitForFunction(previous=>
+      document.querySelector('#gm-console .gm-console-vote')?.textContent!==previous,
+      previous,{timeout:18000});
+  }
+  assert.equal(verifiedSpell,true,'GM browser must perform real Core-backed Guard action and 3D shield animation');
   await page.locator('#day').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning'&&window.__GMWW_ARENA_STAGE_READONLY?.().sky==='day',null,{timeout:25000});
   await page.screenshot({path:'/tmp/gmww-arena3d-coastal-day-390.png'});
