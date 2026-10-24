@@ -20,7 +20,7 @@ field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
   onAction:(id,candidate)=>{if(id==='vote'&&candidate)chosenCandidate=candidate;$(id)?.click()},
-  onToggleQuality:value=>{lowPower=value;village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
+  onToggleQuality:value=>{lowPower=value;field.setLowPower(lowPower);village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
 });
 let chosenCandidate=null;
 $('camera-follow').onclick=()=>{
@@ -327,6 +327,8 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   activeCasterWorld:gmToken||synthetic?field.activeCasterWorld:null,
   village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
   drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
+  spellVfx:gmToken||synthetic?field.spellVfxKind:null,
+  spellPearls:gmToken||synthetic?field.spellVfxPearls:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
