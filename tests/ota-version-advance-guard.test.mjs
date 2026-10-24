@@ -69,3 +69,22 @@ test('Same-version repair rejects unverified inventory and any shell mismatch',(
  deployed.runtime.files[0].sha256='invalid';
  assert.throws(()=>verifyOtaVersionAdvance(current,deployed,['server-game/current/app.js']),/does not advance/);
 });
+
+test('Cumulative Runtime SHA drift cannot hide behind final CI-only merge',()=>{
+  const deployed=manifest('3.197');
+  const candidate=structuredClone(deployed);
+  candidate.runtime.files[0].sha256='b'.repeat(64);
+  assert.throws(()=>verifyOtaVersionAdvance(candidate,deployed,['tests/ci-browser-scope.test.mjs']),/does not advance beyond Production/);
+  const bumped=manifest('3.198');
+  bumped.runtime.files[0].sha256='b'.repeat(64);
+  const result=verifyOtaVersionAdvance(bumped,deployed,['tests/ci-browser-scope.test.mjs']);
+  assert.equal(result.runtimeChanged,true);
+  assert.equal(result.candidateVersion,'3.198');
+});
+
+test('Identical SHA inventory is harmless even if ordered differently',()=>{
+  const m=manifest('3.197');
+  const candidate=structuredClone(m);
+  candidate.runtime.files.reverse();
+  assert.equal(verifyOtaVersionAdvance(candidate,m,['tests/ci-browser-scope.test.mjs']).runtimeChanged,false);
+});

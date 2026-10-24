@@ -1,0 +1,67 @@
+name: GMWW V3.198 OTA Candidate SHA-256
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/current/app.js"
+      - "server-game/current/GMWW.html"
+      - "src/index.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/scripts/prepare-update-channel.mjs"
+      - ".github/scripts/verify-prepared-runtime.mjs"
+      - ".github/workflows/prepare-runtime-v3198-candidate.yml"
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Lấy mã nguồn từ PR, không chạm Production
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cài thư viện theo phiên bản cố định
+        run: npm ci
+      - name: Khôi phục bộ ảnh nguyên bản và kiểm tra SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="/tmp/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED  $ARCHIVE" | sha256sum --check
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+      - name: Kiểm thử trực tiếp phiên bản và guard OTA liên quan
+        run: |
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ota-version-advance-guard.test.mjs tests/v3120-ota-health-fallback-preflight.test.mjs tests/v3196-native-runtime-release-gates.test.mjs tests/v3198-runtime-integrity.test.mjs
+      - name: Đóng gói manifest từ bytes Runtime thật
+        run: node .github/scripts/prepare-update-channel.mjs runtime
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.198
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.198
+      - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-V3.198-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          path: |
+            out/gmww-runtime-v3.198-sha256.json
+            assets/updates/latest.json
+            assets/updates/runtime/V3.198/manifest.json
+            assets/updates/runtime/V3.198/manifest-runtime-3198.json
+          if-no-files-found: error
+          retention-days: 14
