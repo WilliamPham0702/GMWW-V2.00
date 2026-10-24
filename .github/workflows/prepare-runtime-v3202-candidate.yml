@@ -1,4 +1,4 @@
-name: GMWW V3.203 OTA Candidate SHA-256
+name: GMWW V3.204 OTA Candidate SHA-256
 on:
   pull_request:
     branches: [main]
@@ -50,42 +50,42 @@ jobs:
       - name: Kiểm thử trực tiếp phiên bản và guard OTA liên quan
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          node --test tests/ota-version-advance-guard.test.mjs tests/v3120-ota-health-fallback-preflight.test.mjs tests/v3196-native-runtime-release-gates.test.mjs tests/v3203-runtime-integrity.test.mjs
+          node --test tests/ota-version-advance-guard.test.mjs tests/v3120-ota-health-fallback-preflight.test.mjs tests/v3196-native-runtime-release-gates.test.mjs tests/v3204-runtime-integrity.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
-      - name: Kiểm chứng SHA-256 từng file và manifest V3.203
-        run: node .github/scripts/verify-prepared-runtime.mjs 3.203
-      - name: Kiểm tra V3.203 lớn hơn bản đang chạy, chặn trùng phiên bản
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.204
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.204
+      - name: Kiểm tra V3.204 lớn hơn bản đang chạy, chặn trùng phiên bản
         shell: bash
         run: |
           set -euo pipefail
           ROOT="https://gmww-v2-00.williampham0702.workers.dev"
-          LIVE="/tmp/gmww-3203-production-baseline.json"
+          LIVE="/tmp/gmww-3204-production-baseline.json"
           if ! curl --fail --silent --show-error --location --retry 3 \
               --connect-timeout 8 --max-time 25 "$ROOT/api/update/manifest" -o "$LIVE"; then
             # Health only supplies a version floor; it never grants same-version OTA repairs.
             curl --fail --silent --show-error --location --retry 3 \
-              --connect-timeout 8 --max-time 25 "$ROOT/api/health" -o /tmp/gmww-3203-health.json
+              --connect-timeout 8 --max-time 25 "$ROOT/api/health" -o /tmp/gmww-3204-health.json
             node --input-type=module -e '
               import fs from "node:fs";
-              const health=JSON.parse(fs.readFileSync("/tmp/gmww-3203-health.json","utf8"));
+              const health=JSON.parse(fs.readFileSync("/tmp/gmww-3204-health.json","utf8"));
               if(health.project!=="GMWW-V2.00"||health.status!=="online")throw Error("Không xác minh được Production");
               const version=String(health.runtimeVersion||health.version||"").replace(/^V/i,"");
               if(!/^\d+\.\d+(?:\.\d+)?$/.test(version))throw Error("Production không có phiên bản hợp lệ");
               fs.writeFileSync(process.argv[1],JSON.stringify({releaseVersion:version,source:"verified-live-health-fallback"}));
             ' "$LIVE"
           fi
-          printf '%s\n' 'server-game/current/app.js' > /tmp/gmww-3203-changed-files.txt
+          printf '%s\n' 'server-game/current/app.js' > /tmp/gmww-3204-changed-files.txt
           node .github/scripts/verify-ota-version-advance.mjs \
-            assets/updates/latest.json "$LIVE" /tmp/gmww-3203-changed-files.txt
+            assets/updates/latest.json "$LIVE" /tmp/gmww-3204-changed-files.txt
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V3.203-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          name: GMWW-V3.204-OTA-CANDIDATE-SHA256-NO-DEPLOY
           path: |
-            out/gmww-runtime-v3.203-sha256.json
+            out/gmww-runtime-v3.204-sha256.json
             assets/updates/latest.json
-            assets/updates/runtime/V3.203/manifest.json
-            assets/updates/runtime/V3.203/manifest-runtime-3203.json
+            assets/updates/runtime/V3.204/manifest.json
+            assets/updates/runtime/V3.204/manifest-runtime-3204.json
           if-no-files-found: error
           retention-days: 14

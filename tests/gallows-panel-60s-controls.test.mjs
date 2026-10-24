@@ -52,16 +52,25 @@ test('Tied nominations require GM selection; no random candidate and no late sub
  assert.equal(gallowsNominate(closed.value,'carol','bob',1400).error,'NOMINATION_CLOSED');
 });
 
-test('Markup: max ten list rows with scroll, ranking, two clocks, mode switch and no setup/audio links',()=>{
+test('Markup: four ordered sections, shared timer, real-time GM counts and visible bans',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const css=fs.readFileSync('server-game/current/style.css','utf8');
  const gm=fs.readFileSync('server-game/current/app.js','utf8');
  const worker=fs.readFileSync('src/index.js','utf8');
  const audios=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
- for(const id of ['battleGallowsMembers','battleGallowsModeToggle','battleGallowsNominationSeconds',
-   'battleGallowsVoteSeconds','battleGallowsInfo','battleGallowsManualConclusion'])
+ for(const id of ['battleGallowsMembers','battleGallowsModeToggle','battleGallowsSeconds',
+   'battleGallowsClock','battleGallowsSelectedCount','battleGallowsVotedCount',
+   'battleGallowsNominations','battleGallowsInfo','battleGallowsManualConclusion'])
    assert.ok(html.includes('id="'+id+'"'),'missing '+id);
  assert.ok(css.includes('max-height:380px!important'),'ten-row scroller absent');
+ assert.ok(html.indexOf('id="battleGallowsModeDetails"')<html.indexOf('id="battleGallowsBanDetails"'));
+ assert.ok(html.indexOf('id="battleGallowsBanDetails"')<html.indexOf('id="battleGallowsAutomatic"'));
+ assert.ok(html.indexOf('id="battleGallowsAutomatic"')<html.indexOf('id="battleGallowsSummary"'));
+ assert.match(html,/data-gallows-command="open">MỞ ĐỀ CỬ<\/button>\s*<button[^>]*data-gallows-command="close_stage"[^>]*>CHỐT<\/button>\s*<button[^>]*data-gallows-command="begin">MỞ VOTE/);
+ assert.doesNotMatch(html,/id="battleGallowsVoteSeconds"|id="battleGallowsNominationSeconds"/);
+ assert.match(gm,/d\.type==='gallows_updated'/);
+ assert.match(gm,/audio_system_gallows_day_long/);
+ assert.match(css,/grid-template-columns:22px minmax\(70px,1fr\) 49px 55px 55px/);
  assert.match(gm,/ordered=\[\.\.\.members\]\.sort/);
  assert.match(gm,/localeCompare\(String\(b.displayName\|\|b.loginId\),'vi'\)/);
  assert.match(gm,/data-gallows-pick/);
@@ -110,7 +119,7 @@ test('After Chốt đề cử, only the unique top nominee or a tied top nominee
 test('GM only enables Mở bỏ phiếu after Chốt đề cử; stale select cannot override leader',()=>{
  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
  assert.match(gm,/command==='begin'&&\(!selecting/);
- assert.match(gm,/dataset\.gallowsCommand==='begin'\?\(lead\|\|selected\)/);
+ assert.match(gm,/command==='begin'\?\(lead\|\|selected\)/);
  assert.match(gm,/allowed=topVotes>0\?ordered\.filter/);
 });
 
@@ -130,4 +139,37 @@ test('Cấm đề cử sau Chốt cập nhật ứng viên treo, không giữ ng
  const final=gallowsSetRestriction(restricted.value,'david','nomination',true,1450).value;
  assert.equal(final.candidateId,'carol','Khi chỉ Carol còn phiếu, chuyển người lên giàn đúng');
  assert.equal(gallowsBegin(final,'bob',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
+});
+
+test('Một thời gian chung cho đề cử và vote, không chỉnh giữa phiên',()=>{
+ const before=fixture();
+ const changed=gallowsSetDuration(before,'both',42,1000);
+ assert.equal(changed.ok,true);
+ assert.equal(changed.value.nominationDurationSec,42);
+ assert.equal(changed.value.voteDurationSec,42);
+ const nom=gallowsOpen(changed.value,1000);
+ assert.equal(nom.value.nominationDeadlineAt,43000);
+ assert.equal(gallowsSetDuration(nom.value,'both',12,2000).error,'GALLOWS_TIMER_LOCKED');
+ const vote=gallowsBegin(gallowsCloseNomination(nom.value,3000).value,'bob',3001);
+ assert.equal(vote.value.deadlineAt,45001);
+});
+
+test('Realtime + Cấm Chọn / Cấm Vote dùng quyền Server, không chờ Chốt',()=>{
+ let b=gallowsOpen(fixture(),1000).value;
+ b=gallowsNominate(b,'alice','bob',1010).value;
+ assert.equal(b.nominations.alice,'bob');
+ const blocked=gallowsSetRestriction(b,'alice','nomination',true,1011);
+ assert.equal(blocked.ok,true);
+ assert.equal(blocked.value.nominations.alice,undefined);
+ assert.equal(gallowsNominate(blocked.value,'alice','bob',1012).error,'NOMINATION_BANNED');
+ const voteBlock=gallowsSetRestriction(blocked.value,'carol','vote',true,1013);
+ assert.equal(voteBlock.ok,true);
+ assert.ok(voteBlock.value.blockedVotes.includes('carol'));
+ const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+ const socket=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+ assert.match(socket,/d\.type==='gallows_updated'/);
+ assert.match(gm,/data-gallows-kind="nomination"/);
+ assert.match(gm,/data-gallows-kind="vote"/);
+ assert.match(gm,/battleGallowsSelectedCount/);
+ assert.match(gm,/battleGallowsVotedCount/);
 });
