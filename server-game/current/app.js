@@ -2618,7 +2618,18 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     return true;
   }catch(_){return false}
 }
-async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+async async function battleOpenGallowsAudioUpload(id){
+  const allowed=['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
+  if(!allowed.includes(id))return;
+  document.querySelector('.nav[data-page="library"]')?.click();
+  document.querySelector('.libtab[data-lib="audio"]')?.click();
+  document.querySelector('#audioKindSeg [data-audio-kind="system"]')?.click();
+  await renderAudio();
+  const row=[...document.querySelectorAll('#audioGrid [data-audio-id]')].find(x=>x.dataset.audioId===id);
+  row?.scrollIntoView({block:'center'});
+  row?.classList.add('gallows-audio-upload-target');
+}
+function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
   const key=kind+':'+(row?.id||targetId||name),now=Date.now();
@@ -5774,6 +5785,8 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
+    const audio=event.target.closest('[data-gallows-audio-target]');
+    if(audio){void battleOpenGallowsAudioUpload(audio.dataset.gallowsAudioTarget);return}
     const mode=event.target.closest('[data-gallows-mode]');
     if(mode){void battleGallowsCommand('mode','','',{mode:mode.dataset.gallowsMode});return}
     const block=event.target.closest('[data-gallows-kind]');
