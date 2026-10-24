@@ -1200,8 +1200,10 @@ function battleGallowsTick(){
     return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
   };
   const stage=String(g?.stage||'ready');
-  const nom=remain(g?.nominationDeadlineAt,g?.nominationDurationSec,stage==='nominating');
-  const vote=remain(g?.deadlineAt,g?.voteDurationSec,stage==='voting');
+  const nom=['ready','nominating'].includes(stage)?
+    remain(g?.nominationDeadlineAt,g?.nominationDurationSec,stage==='nominating'):'00:00';
+  const vote=['ready','nominating','selecting','voting'].includes(stage)?
+    remain(g?.deadlineAt,g?.voteDurationSec,stage==='voting'):'00:00';
   const nominateClock=document.getElementById('battleGallowsNominationClock');
   const voteClock=document.getElementById('battleGallowsVoteClock');
   if(nominateClock)nominateClock.textContent=nom;
