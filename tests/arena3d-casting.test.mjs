@@ -22,7 +22,8 @@ test('Only server-verified GM and same match/cycle may see a night caster or tar
   assert.equal(stageCastingCue({...cue,actorIds:[],turnId:'role-1'},now),null);
   const expired=stageCastingCue({...cue,actorIds:['member:witch'],expiresAt:now-1},now);
   assert.equal(expired.cast,null);
-  const malicious=stageCastingCue({...cue,actorIds:['member:witch','member:../secret'],
+  const malicious=stageCastingCue({matchId:'m1',cycleKey:'night-1',phase:'night',turnId:'witch-1',
+    kind:'attack',createdAt:now,expiresAt:now+4500,actorIds:['member:witch','member:../secret'],
     targetIds:['member:victim','member:a\nb']},now);
   assert.deepEqual(malicious.actorIds,['member:witch']);assert.deepEqual(malicious.cast.targetIds,['member:victim']);
 });
