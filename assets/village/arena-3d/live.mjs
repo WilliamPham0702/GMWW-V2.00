@@ -113,37 +113,48 @@ $('create').onclick=()=>guarded('Tạo phòng STAGING',async()=>{
 $('connect').onclick=()=>guarded('Kết nối phòng',()=>{gmToken='';enableGm();return attach($('room').value)});
 $('refresh').onclick=()=>guarded('Đồng bộ lại',async()=>{if(feed)await feed.refresh();else if(code)await attach(code);});
 let seeded=[];
-$('seed').onclick=()=>guarded('Thêm thành viên thử',async()=>{
+$('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
   if(!code||!gmToken)throw Error('Hãy tạo phòng trước');
-  const room=feed?.state.current?.room;
+  await feed?.refresh();
+  const room=feed?.state.current?.room,players=feed?.state.current?.players||[];
   if(room?.seatsLocked||room?.phase==='running')throw Error('Phòng đã vào trận');
-  let n=Math.min(rosterSize,30),added=0;
-  for(let i=0;i<n;i++){
-    const loginId='ar'+code.toLowerCase()+'p'+String(i+1).padStart(2,'0');
+  const n=Math.min(Number(room?.seatCount)||rosterSize,30),used=new Set(players.map(x=>x.seatId).filter(Boolean));
+  const free=Array.from({length:n},(_,i)=>i+1).filter(seat=>!used.has(seat));
+  // A real Player Web member may have joined without picking a seat yet:
+  // seat these existing people FIRST so creating fake users never crowds them out.
+  for(const p of players.filter(x=>!x.seatId)){
+    const seatId=free.shift();if(!seatId)throw Error('Không đủ Seat cho thành viên hiện tại');
+    await gm('seat',{participantId:p.id,seatId});
+  }
+  let added=0;
+  for(const seatId of free){
+    const loginId='ar'+code.toLowerCase()+'p'+String(seatId).padStart(2,'0');
     if(seeded.some(x=>x.loginId===loginId))continue;
-    notice('Đăng ký thành viên thử '+(i+1)+'/'+n);
+    notice('Đăng ký người thử ở Seat '+seatId+'/'+n);
     const account=await json('/api/members/register',{method:'POST',body:{
-      loginId,displayName:'Arena '+code+' '+(i+1),gameCharacterId:'character-'+String(i+1).padStart(2,'0')
+      loginId,displayName:'Arena '+code+' '+seatId,gameCharacterId:'character-'+String(seatId).padStart(2,'0')
     }});
     const joined=await json(roomUrl('/join'),{method:'POST',body:{token:account.token}});
     const participantId=joined.player?.participantId;
     if(!participantId)throw Error('Thiếu participantId từ Core');
     seeded.push({loginId,participantId,token:account.token});
-    await gm('seat',{participantId,seatId:i+1});added++;
+    await gm('seat',{participantId,seatId});added++;
   }
-  await feed?.refresh();notice('Đã thêm '+added+' thành viên vào phòng Core staging; các phiên có thể tự hết hạn theo luật của V2.');
+  await feed?.refresh();notice('Đã bổ sung '+added+' người thử; người đang tham gia Player Web được giữ nguyên và ưu tiên Seat.');
 });
 $('lock').onclick=()=>guarded('Khóa Seat',async()=>{await gm('seat-lock',{locked:true});await feed?.refresh()});
 $('deal').onclick=()=>guarded('Phát Vai thử bằng Core V2',async()=>{
-  if(!seeded.length)throw Error('Phải tạo thành viên thử trước khi Phát Vai');
+  await feed?.refresh();
+  const people=(feed?.state.current?.players||[]).filter(p=>p.id.startsWith('member:'));
+  if(!people.length)throw Error('Chưa có thành viên nào trong phòng');
   const matchId='arena-'+crypto.randomUUID();
-  const cfg={id:'arena-stage',name:'Ma Sói thử nghiệm Arena',playerCount:seeded.length,
-    roles:[{roleId:'stage-villager',roleName:'Dân Làng',faction:'village',count:seeded.length}],
+  const cfg={id:'arena-stage',name:'Ma Sói thử nghiệm Arena',playerCount:people.length,
+    roles:[{roleId:'stage-villager',roleName:'Dân Làng',faction:'village',count:people.length}],
     artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:300,gallowsNominationSec:50,gallowsVoteSec:50}};
   await gm('config',{gameConfig:cfg,matchId,matchRevision:1});
-  await gm('assignments',{assignments:seeded.map(x=>({loginId:x.loginId,roleId:'stage-villager',roleName:'Dân Làng',faction:'village',
+  await gm('assignments',{assignments:people.map(p=>({loginId:p.id.slice(7),roleId:'stage-villager',roleName:'Dân Làng',faction:'village',
     roleCard:{name:'Dân Làng',faction:'village',information:'Bản thử nghiệm phân vai'}})),matchId});
-  await feed?.refresh();notice('Core V2 đã nhận phát vai thử. Thông tin vai không được phát cho người xem Arena 3D.');
+  await feed?.refresh();notice('Core V2 đã Phát Vai tới '+people.length+' thành viên. Người xem 3D không nhận thẻ vai riêng.');
 });
 $('start').onclick=()=>guarded('Vào Trận',async()=>{
   const room=feed?.state.current?.room;
@@ -164,9 +175,10 @@ $('nominate').onclick=()=>guarded('Mở đề cử',async()=>{
   await feed?.refresh();notice('Đã phát động đề cử bằng Core; xem kết quả đồng bộ trên Player Web thử nghiệm.');
 });
 $('vote').onclick=()=>guarded('Bắt đầu bỏ phiếu',async()=>{
-  if(!seeded.length)throw Error('Chưa có người chơi');
-  await gm('gallows',{command:'begin',targetId:seeded[0].loginId});
-  await feed?.refresh();notice('Đã đưa '+seeded[0].loginId+' lên giàn trong Core V2 staging.');
+  const candidate=(feed?.state.current?.players||[]).find(p=>p.id.startsWith('member:'))?.id.slice(7);
+  if(!candidate)throw Error('Chưa có thành viên hợp lệ');
+  await gm('gallows',{command:'begin',targetId:candidate});
+  await feed?.refresh();notice('Đã đưa '+candidate+' lên giàn trong Core V2 staging.');
 });
 for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()=>{
   rosterSize=Number(button.dataset.roster);
