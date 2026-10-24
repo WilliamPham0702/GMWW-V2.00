@@ -32,6 +32,18 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
     if(latest&&!shouldAcceptRendererFrame(latest,next))return;
     latest=next;onFrame(next);
   };
+  async function reloadPublicBallot(){
+    if(!latest||latest.room.cyclePhase!=='morning'){ballot=null;onGallows?.(null);return;}
+    try {
+      const response=await fetchImpl('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gallows',{cache:'no-store'});
+      if(!response.ok)throw new Error('GALLOWS_HTTP_'+response.status);
+      const d=await response.json();
+      if(stopped||!latest||!d?.ok||String(d.matchId)!==String(latest.room.matchId))return;
+      if(String(d.cycleKey)!==String(latest.room.cycleKey||''))return;
+      const next=publicGallowsScene(d.gallows,{cyclePhase:latest.room.cyclePhase});
+      ballot=next;onGallows?.(next);
+    }catch(error){if(!stopped)onError?.(error)}
+  }
   const handle=packet=>{
     if(packet?.type==='room_state')apply(packet);
     // Authorized public projection ONLY. No private receipts / role assignment.
@@ -47,7 +59,7 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
       const response=await fetchImpl('/api/rooms/'+encodeURIComponent(code),{signal:abort.signal,cache:'no-store'});
       if(!response.ok)throw new Error('ROOM_HTTP_'+response.status);
       const data=await response.json();
-      if(!stopped&&current===generation)apply(data);
+      if(!stopped&&current===generation){apply(data);await reloadPublicBallot();}
     }catch(error){if(!stopped&&error.name!=='AbortError')onError?.(error);}
   }
   function connect(){
