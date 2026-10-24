@@ -25,7 +25,8 @@ try{
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized',{timeout:25000});
   assert.equal(new URL(page.url()).searchParams.has('gmToken'),false);
   await page.locator('#seed').click();
-  await page.waitForFunction(()=>document.body.dataset.gmwwLiveCount==='6',{timeout:35000});
+  await page.waitForFunction(()=>document.body.dataset.gmwwLiveCount==='6',null,{timeout:35000});
+  await page.waitForFunction(()=>document.getElementById('log')?.textContent?.includes('Đã bổ sung'),null,{timeout:35000});
   await page.getByRole('tab',{name:'Phòng'}).click();
   const first=page.locator('.gm-seat-grid button[data-seat-id="1"]');
   await first.waitFor({timeout:15000});
@@ -33,7 +34,7 @@ try{
   s=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
   assert.ok(s.selectedId?.startsWith('member:'));
   await page.locator('#lock').click();
-  await page.waitForFunction(()=>document.getElementById('log')?.textContent?.includes('Khóa Seat')&&!document.getElementById('log')?.textContent?.includes('...'),null,{timeout:20000});
+  await page.waitForFunction(()=>document.getElementById('log')?.textContent?.includes('Đã khóa Seat'),null,{timeout:20000});
   await page.locator('#deal').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',{timeout:30000});
   await page.locator('#start').click();
