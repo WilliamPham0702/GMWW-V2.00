@@ -160,7 +160,6 @@ jobs:
       - name: Điều hành GM 3D trên Core thật — 6 Seat, Phát Vai, Ngày/Đêm, Lên Giàn, chế độ pin
         run: node tests/arena3d-phase4-browser.mjs
       - name: Kiểm thử Safari WebKit trên màn hình iPhone mô phỏng (không phải iPhone vật lý)
-        continue-on-error: true
         run: |
           npx playwright install --with-deps webkit
           node tests/arena3d-phase3-webkit.mjs
