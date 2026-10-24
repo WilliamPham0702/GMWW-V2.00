@@ -2,6 +2,7 @@
 // The returned room URL is safe (public DTO only); GM token never printed/stored.
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
+import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from '../assets/village/arena-3d/arena-acceptance-scenario.mjs';
 const base='https://gmww-arena3d-core-staging.williampham0702.workers.dev';
 assert.match(new URL(base).hostname,/^gmww-arena3d-core-staging\.[^.]+\.workers\.dev$/);
 const suffix=Math.random().toString(36).slice(2,8);
@@ -56,12 +57,9 @@ assert.ok(!JSON.stringify(pub).includes(gmToken),'GM token must not leak in publ
 await json(path+'seat-lock',{locked:true},gmToken);
 const matchId='arena-e2e-'+suffix;
 await json(path+'config',{matchId,matchRevision:1,
-  gameConfig:{id:'arena-phase2-e2e',name:'Làng Ma Sói Arena Thử Nghiệm',playerCount:6,
-    roles:[{roleId:'villager-stage',roleName:'Dân Làng',faction:'village',count:6}],
-    artifactsEnabled:false,timing:{autoAdvance:false,villageDiscussionSec:300,gallowsNominationSec:60,gallowsVoteSec:60}}},gmToken);
-const dealt=await json(path+'assignments',{matchId,assignments:members.map(m=>({
-  loginId:m.loginId,roleId:'villager-stage',roleName:'Dân Làng',faction:'village',
-  roleCard:{name:'Dân Làng',faction:'village',information:'Vai thử nghiệm nội bộ'}}))},gmToken);
+  gameConfig:createArenaTrialConfig(6)},gmToken);
+const dealt=await json(path+'assignments',{matchId,
+  assignments:createArenaTrialAssignments(members.map(m=>m.loginId),matchId)},gmToken);
 const afterDeal=await json('/api/rooms/'+code);
 assert.equal(afterDeal.room.phase,'role_delivery');
 assert.equal(afterDeal.players.length,6);
@@ -74,6 +72,50 @@ assert.equal(duringNight.status,200);
 const privateNightPayload=await duringNight.json();
 assert.equal(privateNightPayload.matchId,matchId);
 assert.ok(Array.isArray(privateNightPayload.effects));
+assert.ok(privateNightPayload.nightControl,'GM night controls must come from Core');
+const allowedKinds=new Set(),seenRoleIds=new Set();
+for(let i=0;i<18;i++){
+  const state=await json(gmEffectsPath,undefined,gmToken);
+  const turn=state.nightControl;
+  if(turn?.complete||!turn?.turnId)break;
+  const roles=turn.roles?.length?turn.roles:[{roleId:turn.roleId,actorIds:turn.actorIds}];
+  const roleRow=roles.find(x=>stagingRoleAction(x.roleId)&&x.actorIds?.length);
+  if(roleRow&&!seenRoleIds.has(roleRow.roleId)){
+    const act=stagingRoleAction(roleRow.roleId);
+    const actorId=roleRow.actorIds[0].slice(7),targetId=members[5].loginId;
+    const event={
+      matchId,cycleKey:'night-1',turnId:turn.turnId,actorId,
+      targetIds:[targetId],actionId:act.actionId,type:act.type,
+      clientEventId:'arena-e2e-'+suffix+'-'+i
+    };
+    const anonymous=await fetch(base+path+'battle-action',{method:'POST',
+      headers:{'content-type':'application/json'},body:JSON.stringify(event)});
+    assert.equal(anonymous.status,401,'Player cannot act as GM');
+    const wrong=await fetch(base+path+'battle-action',{method:'POST',
+      headers:{'content-type':'application/json',Authorization:'Bearer '+gmToken},
+      body:JSON.stringify({...event,actorId:members[5].loginId,
+        clientEventId:'arena-forged-'+suffix+'-'+i})});
+    assert.equal(wrong.status,403,'GM cannot forge another role actor for this turn');
+    const action=await json(path+'battle-action',event,gmToken);
+    assert.ok(action.ok===true,'Core must accept real role action '+roleRow.roleId);
+    const verified=await json(gmEffectsPath,undefined,gmToken);
+    assert.equal(verified.casting?.cast?.actorId,'member:'+actorId);
+    assert.equal(verified.casting?.cast?.kind,act.kind);
+    assert.deepEqual(verified.casting.cast.targetIds,['member:'+targetId]);
+    const publicState=await json('/api/rooms/'+code);
+    const publicText=JSON.stringify(publicState);
+    assert.ok(!publicText.includes('arena-e2e-'+suffix+'-'+i),'no private GM receipt in room DTO');
+    assert.ok(!publicText.includes('action_witch_save'),'no private spell name in room DTO');
+    seenRoleIds.add(roleRow.roleId);allowedKinds.add(act.kind);
+  }
+  if(seenRoleIds.size===4)break;
+  await json(path+'turn',{action:'next',expectedTurnId:turn.turnId,source:'gm'},gmToken);
+}
+assert.deepEqual([...seenRoleIds].sort(),['role_guard','role_prophet','role_witch','role_wolf'].sort(),
+  'Core must exercise four actual distinct assigned role turns, not local demo only');
+assert.deepEqual([...allowedKinds].sort(),['shield','inspect','heal','attack'].sort());
+console.log('PASS: REAL STAGING ROLE CAST x4, forged owner rejected and GM cue scoped.');
+
 const nightPublic=await json('/api/rooms/'+code);
 assert.ok(!JSON.stringify(nightPublic).includes('Vai thử nghiệm nội bộ'),'night public state does not contain secret role cards');
 assert.equal(night.phase,'night');
