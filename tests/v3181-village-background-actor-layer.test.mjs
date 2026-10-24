@@ -27,7 +27,7 @@ test('GM uses an image background behind its unchanged Character/Seat ring',()=>
 test('iPhone caches reload corrected styles without touching gameplay sources',()=>{
  const player=read('assets/village/index.html');
  const server=read('server-game/current/GMWW.html');
- assert.match(player,/village\.css\?v=303&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1/);
+ assert.match(player,/village\.css\?v=3201&amp;status=freeze1&amp;visual=v3139&amp;layer=fix1/);
  assert.match(player,/village-art\.css\?v=gp2-25d-direct-scene-v3185/);
  const runtime=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  assert.ok(server.includes('style.css?v='+runtime+'-compact-room-mobile2-village-scene-align-1-actor-layer-fix1'));
