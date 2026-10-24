@@ -61,6 +61,6 @@ test('built Player Web has pirate drag and accessible double-tap listing, GM con
  assert.ok(player.includes('gmwwGallowsOpenNomination')&&player.includes('data-gallows-vote="👍"')&&player.includes('data-gallows-vote="👎"'));
  assert.ok(html.indexOf('data-gallows-command="open"')<html.indexOf('id="battleGallowsCandidate"'));
  assert.ok(html.includes('battleGallowsBanDetails'));
- assert.ok(gm.includes('battleGallowsNominationStats'));
+ assert.ok(gm.includes('battleGallowsSelectedCount')&&gm.includes('battleGallowsVotedCount'));
  assert.ok(fs.readFileSync('src/index.js','utf8').includes('gallowsAutomaticOutcome'));
 });
