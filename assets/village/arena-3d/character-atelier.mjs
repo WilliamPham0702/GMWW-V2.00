@@ -3,6 +3,7 @@
 // No player role, faction, secret target, account token or game rule is stored here.
 export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v6-sea-art';
 import {characterArtProfile,accessoryPartVisible,characterMotionFrame,CHARACTER_ART_VERSION} from './character-art-direction.mjs';
+import {expressionFrame,renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
 const MAX=30,TAU=Math.PI*2;
@@ -78,7 +79,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   let activeBeam=null;
   const spellVfx=createArenaSpellVfx(THREE,root);
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
-  let reducedMotion=false,lastDraw=-1,updates=0;
+  let reducedMotion=false,lastDraw=-1,updates=0,qualityFps=60,qualityLowPower=false;
   function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
     const previous=new Map(byId);actors.length=0;byId.clear();const used=new Set();
     for(const source of (Array.isArray(players)?players:[])){
@@ -194,9 +195,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true;spellVfx.setReducedMotion(reducedMotion)}
-  function setLowPower(value){spellVfx.setLowPower(value===true)}
+  function setLowPower(value){qualityLowPower=value===true;spellVfx.setLowPower(qualityLowPower)}
+  function setQualityFps(value){if(Number.isFinite(value)&&value>0)qualityFps=value}
   function draw(time,force=false){
-    if(!force&&time-lastDraw<1000/(reducedMotion?12:30))return false;
+    const animationHz=renderQualityBudget({characters:actors.length,fps:qualityFps,lowPower:qualityLowPower,reducedMotion}).animationHz;
+    if(!force&&time-lastDraw<1000/animationHz)return false;
     const dt=lastDraw<0?0:Math.min(60,time-lastDraw);lastDraw=time;
     for(const actor of actors){
       actor.yaw+=clamp(actor.targetYaw-actor.yaw,-dt*.009,dt*.009);
@@ -209,6 +212,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const walkPos=renderWalkPosition(actor.position,actor.approach,actor.travel,
         reducedMotion?time+WALK_TIMING.approachMs:time);
       const motion=characterMotionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),standing:Boolean(pose.stand),reducedMotion});
+      const expression=expressionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),reducedMotion});
       base.set(walkPos.x,0,walkPos.z);
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
@@ -218,10 +222,14 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce+motion.breath;x+=motion.headTilt+(gesturing?.024*Math.sin(time*.016):0)}
         if(part.name==='head')sx*=actor.look.headScale;
         if(part.name==='hair'||part.name==='fringe'||part.name==='hairTail')sy*=actor.look.hairHeight;
-        if(part.name.startsWith('eye')){sx*=actor.look.eyeScale;sy*=actor.look.eyeScale}
+        if(part.name.startsWith('eye')){sx*=actor.look.eyeScale;sy*=actor.look.eyeScale*(1-.87*expression.blink);x+=expression.eyeFocus*.05}
         if(part.name==='tunic'||part.name==='waistSash')sx*=actor.look.outfitWidth;
         if(part.name==='skirt')sy*=actor.look.skirtLength;
         if(part.name==='cape'){z-=motion.capeSway;sy*=1+Math.abs(motion.capeSway)}
+        if(part.name==='hair'||part.name==='fringe'||part.name==='hairTail')x+=expression.hairSway;
+        if(part.name==='armL'||part.name==='armR')z+=expression.sleeveSway;
+        if(part.name==='head')y+=expression.headNod;
+        if(part.name==='cheekL'||part.name==='cheekR')y+=expression.cheekLift;
         if(part.name==='tunic'||part.name==='skirt')x+=motion.robeSway;
         if(part.name==='armL'||part.name==='armR'){
           if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
@@ -297,8 +305,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     spellBeam.geometry.dispose();spellBeam.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,draw,pick,dispose,
-    artVersion:CHARACTER_ART_VERSION,
+  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
+    artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
