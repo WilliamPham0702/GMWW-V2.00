@@ -23,6 +23,9 @@ try{
   await api('/api/members/register',{method:'POST',body:{loginId:s.loginId,displayName:'P0 '+s.name,gameCharacterId:'character-0'+(i+1)}});
   const auth=await api('/api/members/login',{method:'POST',body:{loginId:s.loginId}});
   s.token=auth.token;s.member=auth.member;
+  // This test verifies room/Role/Artifact/vote sync, not unrelated roaming motion.
+  const profile=await api('/api/members/profile',{method:'POST',token:s.token,body:{lobbyMotionEnabled:false}});
+  s.member=profile.member;
   await api('/api/rooms/'+code+'/join',{method:'POST',body:{token:s.token}});
  }
  for(const s of sessions){
