@@ -37,7 +37,24 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
 
   const changed = (Array.isArray(changedFiles) ? changedFiles : [])
     .map(path => String(path || '').trim()).filter(path=>path && !isV562IsolatedPreviewAsset(path));
-  const runtimeChanged = changed.some(path => runtimeSourcePatterns.some(pattern => pattern.test(path)));
+  // Compare published SHA-256 inventories, not only filenames of the final merge.
+  // Several merged PRs may contribute changed Runtime bytes to a single deploy.
+  const immutableInventory = manifest => {
+    const files = manifest?.runtime?.files;
+    if(manifest?.releaseType !== 'runtime' || !Array.isArray(files) || files.length === 0)return null;
+    const hashes = new Map();
+    for(const file of files){
+      if(typeof file?.path !== 'string' || !file.path ||
+         !/^[a-f0-9]{64}$/i.test(String(file.sha256||'')) || hashes.has(file.path))return null;
+      hashes.set(file.path, file.sha256.toLowerCase());
+    }
+    return JSON.stringify([...hashes.entries()].sort(([a],[b]) => a.localeCompare(b)));
+  };
+  const candidateInventory = immutableInventory(candidate);
+  const liveInventory = immutableInventory(deployed);
+  const cumulativeRuntimeChanged = candidateInventory !== null && liveInventory !== null && candidateInventory !== liveInventory;
+  const runtimeChanged = cumulativeRuntimeChanged ||
+    changed.some(path => runtimeSourcePatterns.some(pattern => pattern.test(path)));
 
   if (runtimeChanged) {
     const advance = compareReleaseVersions(candidate.releaseVersion, deployed.releaseVersion);
