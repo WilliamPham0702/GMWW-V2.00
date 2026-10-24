@@ -43,7 +43,7 @@ function createVillageLocalCache(base){
   async prepare(record,previous){
    const images={};
    await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
-   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{}},images};
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{},gallowsAnchors:record.gallowsAnchors||{}},images};
    if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
    return next;
   },
@@ -121,6 +121,12 @@ function villageFirePosition(){
  if(villageScenePublished[key])return [50,50];
  const fallback=globalThis.GMWW_VILLAGE_LAYOUT.fire;return playMapDisplay(fallback.x,fallback.y);
 }
+// Hanging is a separate scene landmark; Seat locations and fire-menu anchor are unchanged.
+function villageGallowsPosition(){
+ const key=playSceneState.phase==='night'?'night':'day',point=villageScenePublished.gallowsAnchors?.[key];
+ if(point&&[point.x,point.y].every(Number.isFinite))return [Math.max(0,Math.min(100,point.x)),Math.max(0,Math.min(100,point.y))];
+ const fire=villageFirePosition();return [fire[0],Math.max(0,fire[1]-15)];
+}
 function villageCalibrateFire(requestedPhase){
  const key=requestedPhase==='night'?'night':requestedPhase==='day'?'day':
    playSceneState.phase==='night'?'night':'day';
@@ -161,6 +167,43 @@ function villageCalibrateFire(requestedPhase){
     await setGMVillageScenePublished(data.scene);renderPlayScene();
     villageSceneStatus('Đã lưu 🔥 nền '+(key==='day'?'Ngày':'Đêm')+' tại '+point.x+'%, '+point.y+'%.');
   }catch(error){playFlashError('Không lưu được vị trí đống lửa: '+error.message)}
+ },{once:true});
+}
+// Same fullscreen touch picker as the GM fire marker, but saved independently.
+function villageCalibrateGallows(requestedPhase='day'){
+ const key=requestedPhase==='night'?'night':'day';
+ if(document.getElementById('gmGallowsPicker')||document.getElementById('gmFirePicker'))return;
+ const world=document.getElementById('playWorld'),image=villageLocalSnapshot?.images?.[key]||null;
+ const picker=document.createElement('div');picker.id='gmGallowsPicker';picker.setAttribute('role','dialog');
+ picker.setAttribute('aria-label','Đặt vị trí treo Lên Giàn trên nền '+(key==='day'?'Ngày':'Đêm'));
+ picker.style.cssText='position:fixed;inset:0;z-index:2147483000;cursor:crosshair;touch-action:manipulation;background:rgba(2,20,31,.16) center/100% 100% no-repeat';
+ if(image)picker.style.backgroundImage='url("'+image+'")';
+ else if(world){
+   const style=getComputedStyle(world),pseudo=getComputedStyle(world,'::before');
+   const background=style.backgroundImage!=='none'?style.backgroundImage:pseudo.backgroundImage;
+   if(background&&background!=='none')picker.style.backgroundImage=background;
+ }
+ const tip=document.createElement('div');tip.textContent='⚖ CHẠM ĐÚNG VỊ TRÍ MUỐN TREO NHÂN VẬT · NỀN '+(key==='day'?'NGÀY':'ĐÊM');
+ tip.style.cssText='position:absolute;top:max(18px,env(safe-area-inset-top));left:10px;right:10px;z-index:2;padding:12px;text-align:center;border:1px solid #e9cb86;border-radius:14px;background:#092b3ce8;color:#ffe5b2;font-size:13px;font-weight:850;pointer-events:none';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='✕ HỦY';
+ cancel.style.cssText='position:absolute;right:12px;bottom:max(86px,env(safe-area-inset-bottom));z-index:3;padding:12px 20px;min-height:44px;border-radius:12px;color:#fff;background:#15465f;border:1px solid #d9be83;font-weight:850';
+ cancel.onclick=e=>{e.stopPropagation();picker.remove()};
+ picker.append(tip,cancel);document.body.append(picker);
+ picker.addEventListener('click',async e=>{
+   if(e.target===cancel)return;e.preventDefault();e.stopPropagation();
+   const rect=picker.getBoundingClientRect();if(!rect.width||!rect.height)return;
+   const point={x:Math.round(Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100))*100)/100,
+     y:Math.round(Math.max(0,Math.min(100,(e.clientY-rect.top)/rect.height*100))*100)/100};
+   picker.remove();
+   try{
+     await villageLocalBoot;
+     const latest=await refreshVillageScenePublished();
+     const data=await villageSceneRequest('/api/gm/village-scene','PUT',
+       {expectedRevision:latest.scene.revision,gallowsAnchors:{[key]:point}});
+     await setGMVillageScenePublished(data.scene);
+     renderPlayScene();
+     playFlashMessage?.('Đã lưu vị trí treo Lên Giàn, đồng bộ Player Web.');
+   }catch(error){playFlashError('Không lưu được vị trí treo: '+error.message)}
  },{once:true});
 }
 function preloadGMVillageScene(src){
