@@ -1379,7 +1379,11 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     const data=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,targetId,outcome,...extras})});
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
-    if(['resolve','restore'].includes(command))gmHapticFeedback();
+    // Only play a cue after the Server confirms the phase transition.
+    const cues={open:'audio_system_gallows_day_long',close_nomination:'audio_system_gallows_nomination_result',
+      begin:'audio_system_gallows_open_vote'};
+    if(cues[command])void battlePlayConfiguredAudio('system',cues[command],'');
+    if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);
   }catch(err){playFlashError('Lên Giàn: '+String(err?.message||err))}
