@@ -1,0 +1,57 @@
+// Browser smoke: isolated Core STAGING only. Test GM UI actions, never Production/IPA.
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const base='https://gmww-arena3d-core-staging.williampham0702.workers.dev';
+assert.match(new URL(base).host,/^gmww-arena3d-core-staging\.[^.]+\.workers\.dev$/);
+const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+  args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{
+  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+  const errors=[];page.on('pageerror',e=>errors.push(String(e.message)));
+  await page.goto(base+'/village/arena-3d/live.html',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='read-only');
+  await page.getByRole('tab',{name:'Hiệu năng'}).click();
+  await page.getByRole('button',{name:'Tiết kiệm pin'}).click();
+  let s=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+  assert.equal(s.lowPower,true);assert.ok(s.pixelRatio<1.2);
+  await page.getByRole('button',{name:'Mượt'}).click();
+  await page.locator('#create').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized',{timeout:25000});
+  const code=await page.locator('#room').inputValue();
+  assert.match(code,/^[A-Z0-9]{4,12}$/);
+  await page.locator('#connect').click(); // viewer mode in same room
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='read-only');
+  await page.locator('#gm-restore').click(); // token remains ONLY in password input, never localStorage
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized',{timeout:25000});
+  assert.equal(new URL(page.url()).searchParams.has('gmToken'),false);
+  await page.locator('#seed').click();
+  await page.waitForFunction(()=>document.body.dataset.gmwwLiveCount==='6',{timeout:35000});
+  await page.getByRole('tab',{name:'Phòng'}).click();
+  const first=page.locator('.gm-seat-grid button[data-seat-id="1"]');
+  await first.waitFor({timeout:15000});
+  await first.click();
+  s=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+  assert.ok(s.selectedId?.startsWith('member:'));
+  await page.locator('#lock').click();
+  await page.waitForFunction(()=>document.getElementById('log')?.textContent?.includes('Khóa Seat')&&!document.getElementById('log')?.textContent?.includes('...'),null,{timeout:20000});
+  await page.locator('#deal').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',{timeout:30000});
+  await page.locator('#start').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='running',{timeout:25000});
+  await page.locator('#night').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night',{timeout:25000});
+  await page.locator('#day').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',{timeout:25000});
+  await page.locator('#nominate').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='nominating',{timeout:30000});
+  await page.getByRole('tab',{name:'Lên Giàn'}).click();
+  assert.ok(await page.locator('.gm-console-vote').count()>0);
+  await page.getByRole('button',{name:'Bỏ phiếu cho Seat đã chọn'}).click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',{timeout:30000});
+  s=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+  assert.equal(s.room,code);assert.equal(s.gmConsole,'authorized');
+  assert.ok(s.drawCalls>0&&s.drawCalls<=32);
+  assert.deepEqual(errors,[],'GM dashboard browser has no script errors');
+  await page.screenshot({path:'/tmp/gmww-arena3d-gm-phase4-390.png'});
+  console.log('PASS: Phase4 real Core GM dashboard with seat select, authorized GM token restore, battery mode, role deal, night/day, gallows',JSON.stringify({room:code,phase:s.phase,cycle:s.cyclePhase,drawCalls:s.drawCalls,fps:s.fps,model:s.atelier}));
+}finally{await browser.close()}
