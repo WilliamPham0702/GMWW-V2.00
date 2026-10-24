@@ -17,3 +17,12 @@
 
 ## Bảo toàn
 PR #469 Draft dựa trên PR #467; không tự merge, không deploy Production và không cập nhật game 2D, phòng chơi, dữ liệu, Runtime, OTA hay IPA. STAGING Giai đoạn 6 giữ nguyên.
+
+## Kết quả phát hành STAGING GĐ7 — 24/10/2026
+- Job phát hành nghiên cứu: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40112119550 — **SUCCESS** ở cả kiểm thử mã nguồn, triển khai Cloudflare và smoke Chrome/WebKit.
+- Worker độc lập: `gmww-arena3d-stage7-staging`; Cloudflare xác nhận version `ca453263-2a51-490a-be7c-72ffbb7ea6f6` nhận 100% lưu lượng tại Worker này; workers.dev đã bật.
+- Preview: https://gmww-arena3d-stage7-staging.williampham0702.workers.dev/village/arena-3d/live.html
+- Bài smoke thực hiện lần lượt 6/12/20/30 Character, render 46 draw calls, không có lỗi JavaScript, một chuỗi animation phép hoàn chỉnh; thử trên Chrome và WebKit giả lập màn hình iPhone.
+- FPS môi trường CI giả lập: Chrome 16, WebKit 8; **không đại diện FPS trên iPhone thật và chưa được xem là nghiệm thu hiệu năng**. Phải kiểm thử pin/nhiệt/độ mượt trên iPhone thật trước khi xác nhận hoàn tất GĐ7.
+- Khắc phục tình huống Wrangler 4.145.0 báo mã 10007 sau khi tải Worker thành công: job phải xác minh deployment mới qua API Cloudflare và bật workers.dev cho đúng Worker trước khi smoke; không coi bản deploy thành công nếu thiếu xác nhận.
+- STAGING GĐ6 vẫn riêng biệt; PR #469 tiếp tục Draft; **chưa merge hay deploy Production**.
