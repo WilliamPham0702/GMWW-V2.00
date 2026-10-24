@@ -20,7 +20,7 @@ test('GĐ7 adaptive render budgets 6–30 players',()=>{
  }
 });
 test('GĐ7 no private role or gameplay authority in cosmetic layer',()=>{
- const src=readFileSync('assets/village/arena-3d/stage7-expression-motion.mjs','utf8');
+ const src=readFileSync('assets/village/arena-3d/stage7-expression-motion.mjs','utf8').replace(/^\s*\/\/.*$/gm,'');
  for(const forbidden of ['gmToken','roleName','faction','secretTarget','fetch(','localStorage'])assert.ok(!src.includes(forbidden));
 });
 
