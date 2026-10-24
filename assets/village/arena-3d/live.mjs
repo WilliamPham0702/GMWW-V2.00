@@ -98,6 +98,7 @@ async function attach(room){
   enableGm();
 }
 function showBallot(x){
+  if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
   $('ballot').textContent='Lên Giàn '+x.stage+' · '+(x.candidateId||'chưa chọn')+
     ' · '+scores+' · 👍 '+x.save+' / 👎 '+x.kill+(x.outcome?' · '+x.outcome:'');
