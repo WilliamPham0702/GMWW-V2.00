@@ -436,7 +436,7 @@ function ensureVillageGameView(){
   let shell=$('#gmwwVillageShell');
   if(!shell){
     shell=document.createElement('div');shell.id='gmwwVillageShell';shell.className='gmww-game-pane';
-    const iframe=document.createElement('iframe');iframe.id='gmwwVillageFrame';iframe.title='Ngôi làng GMWW';iframe.loading='eager';iframe.referrerPolicy='same-origin';iframe.src='/village/?embed=1&v=303';
+    const iframe=document.createElement('iframe');iframe.id='gmwwVillageFrame';iframe.title='Ngôi làng GMWW';iframe.loading='eager';iframe.referrerPolicy='same-origin';iframe.src='/village/?embed=1&v=3201';
     shell.appendChild(iframe);roleStage.parentNode.insertBefore(shell,roleStage);
     iframe.addEventListener('load',()=>syncVillageFrame(true),{passive:true});
   }
