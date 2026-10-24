@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-const version=String(process.argv[2]||'3.199');
+const version=String(process.argv[2]||'3.200');
 const root=path.join('assets','updates','runtime','V'+version);
 const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 if(manifest.releaseVersion!==version||manifest.runtimeVersion!==version||manifest.releaseType!=='runtime')
