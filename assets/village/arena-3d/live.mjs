@@ -72,6 +72,8 @@ async function refreshPrivateGmEffects(){
     if(Array.isArray(data.effects)){
       field.setServerEffects(data.effects);
       visibleGmEffects=data.effects.length;
+      field.setCastingTurn(data.casting||null);
+      document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
   }catch{}
 }
@@ -90,7 +92,8 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
+function enableGm(){if(!gmToken){field.setCastingTurn(null);document.body.dataset.gmwwGmTurnActive='false';}
+  for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
   if(feed)feed.close();
@@ -217,6 +220,33 @@ for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()
   else notice('Đã chọn '+rosterSize+' ghế cho phòng MỚI. Phòng hiện tại giữ số Seat Core đã cấp; tạo phòng mới để thử.');
 };
 document.querySelector('[data-roster="6"]').classList.add('active');
+let syntheticCastSeq=0;
+$('sample-cast').onclick=()=>{
+  if(!synthetic){notice('Khi vào phòng thật, chỉ Core mới quyết định lượt và nhân vật được làm phép.');return;}
+  syntheticCastSeq++;
+  const token=syntheticCastSeq;
+  const people=field.actors;
+  if(!people.length)return;
+  const index=(syntheticCastSeq-1)%people.length,actorId=people[index].id;
+  const kind=['shield','inspect','heal','attack','vote'][index%5];
+  const targetId=people[(index+2)%people.length].id;
+  const now=Date.now();
+  const cue={turnId:'synthetic-'+token,actorIds:[actorId],
+    cast:{actorId,targetIds:[targetId],kind,startedAt:now+900,expiresAt:now+4000}};
+  field.setCastingTurn({turnId:cue.turnId,actorIds:cue.actorIds});
+  document.body.dataset.gmwwSyntheticCasting='standing';
+  notice('Lượt mẫu '+(index+1)+': Character '+(index+1)+' đứng lên chuẩn bị thi triển.');
+  setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
+    field.setCastingTurn(cue);
+    document.body.dataset.gmwwSyntheticCasting='casting';
+    notice('Character '+(index+1)+' thi triển '+kind+' về Character '+((index+2)%people.length+1)+'.');
+  },900);
+  setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
+    field.setCastingTurn(null);
+    document.body.dataset.gmwwSyntheticCasting='seated';
+    notice('Nhân vật đã ngồi xuống. Nhấn tiếp để thử lượt người kế tiếp.');
+  },4500);
+};
 for(const b of document.querySelectorAll('[data-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
   const id=field.actors[0]?.id;
