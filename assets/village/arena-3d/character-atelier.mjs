@@ -106,6 +106,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       target.effects.set(effect.kind,Number.isFinite(expires)?Math.min(performance.now()+3500,Math.max(performance.now()+200,performance.now()+expires-Date.now())):performance.now()+1800);
     }
   }
+  function clearEffects(){for(const actor of actors)actor.effects.clear()}
   function setReducedMotion(value){reducedMotion=value===true}
   function draw(time,force=false){
     if(!force&&time-lastDraw<1000/(reducedMotion?12:30))return false;
@@ -155,7 +156,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,interact,setServerEffects,setReducedMotion,draw,pick,dispose,
+  return {setActors,turnActor,interact,setServerEffects,clearEffects,setReducedMotion,draw,pick,dispose,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length},
     get actors(){return actors.map(a=>({id:a.id,position:a.position,yaw:a.yaw,statusIds:[...a.statusIds]}))}};
 }
