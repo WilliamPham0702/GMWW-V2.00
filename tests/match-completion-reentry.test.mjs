@@ -98,8 +98,9 @@ test('Configuring a distinct new match clears only live winner metadata, not ros
   assert.equal(res.status,200);
   const data=await res.json();
   assert.equal(data.room.matchId,'new-match');
-  for(const key of ['endedAt','winnerFaction','winnerLabel','reopenAt','lastEndedMatchId'])
+  for(const key of ['endedAt','winnerFaction','winnerLabel','lastEndedMatchId'])
     assert.equal(data.room[key],null,key);
+  assert.equal(entries.get('meta').reopenAt,null,'private reopen marker must be cleared in storage');
   assert.equal(data.room.resultVersion,0);
   assert.deepEqual(entries.get('matchCompletion:old-match'),lastResult);
   assert.deepEqual(entries.get('players'),players);
