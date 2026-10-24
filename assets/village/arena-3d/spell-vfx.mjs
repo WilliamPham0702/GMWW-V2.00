@@ -7,6 +7,18 @@ const COLORS=Object.freeze({
   shield:'#70f2ec',inspect:'#cab9ff',heal:'#74f1b6',attack:'#fd9ac7',vote:'#ffdfa0'
 });
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+// Distinct visual motifs for five Core-authorized effect groups.
+// No role / faction / hidden target is inferred from the character.
+export function spellMotif(kind){
+  if(!SPELL_KINDS.includes(kind))return null;
+  return Object.freeze({
+    shield:{tilt:Math.PI/2,radius:.87,height:.05,spiral:0},
+    inspect:{tilt:.36,radius:.61,height:.3,spiral:2},
+    heal:{tilt:0,radius:.84,height:-.12,spiral:3},
+    attack:{tilt:Math.PI/3,radius:.65,height:.23,spiral:5},
+    vote:{tilt:0,radius:.74,height:.08,spiral:1}
+  }[kind]);
+}
 export function spellAppearance(kind){
   if(!SPELL_KINDS.includes(kind))return null;
   return {kind,color:COLORS[kind],
@@ -55,6 +67,7 @@ export function createArenaSpellVfx(THREE,root){
       clear();return false;
     }
     kind=type;active=true;
+    const motif=spellMotif(type);
     const remaining=clamp((end-now)/Math.max(1,end-start),0,1);
     const pulse=reducedMotion?1:1+.08*Math.sin(now*.009);
     color.set(COLORS[type]);
@@ -62,10 +75,12 @@ export function createArenaSpellVfx(THREE,root){
       ring.visible=true;ring.material.color.copy(color);
       ring.material.opacity=(reducedMotion?.48:.68)*Math.min(1,remaining*5);
       ring.position.set(i?from.x:to.x,(i?from.y:to.y)-.45,i?from.z:to.z);
+      ring.rotation.x=-Math.PI/2+motif.tilt;
       ring.rotation.z=reducedMotion?0:now*.0018*(i?1:-1);
-      ring.scale.setScalar(pulse*(i?.72:1.03));
+      const rs=pulse*(i?.72:1.03);
+      ring.scale.set(rs,rs*(type==='inspect'?.75:type==='heal'?1.25:1),rs);
     }
-    glow.visible=true;glow.position.set(to.x,to.y,to.z);
+    glow.visible=true;glow.position.set(to.x,to.y+motif.height,to.z);
     glow.scale.setScalar((reducedMotion?.85:1.06+.14*Math.sin(now*.008))*Math.min(1,remaining*4));
     glow.material.color.copy(color);glow.material.opacity=.53*remaining;
     const count=reducedMotion?4:lowPower?7:maxPearls;
@@ -73,10 +88,10 @@ export function createArenaSpellVfx(THREE,root){
     pearls.material.opacity=reducedMotion?.55:.85*remaining;
     for(let i=0;i<count;i++){
       const ratio=i/count,angle=ratio*Math.PI*2+(reducedMotion?0:now*.003);
-      const ringRadius=(i%2? .61:.8)*(reducedMotion?1:pulse);
+      const ringRadius=(i%2?motif.radius*.78:motif.radius)*(reducedMotion?1:pulse);
       const travel=reducedMotion?.5:(now-start)/(Math.max(1,end-start));
       const x=to.x+Math.cos(angle)*ringRadius,z=to.z+Math.sin(angle)*ringRadius;
-      const y=to.y-.5+.28*Math.sin(angle*2+travel*7);
+      const y=to.y-.5+motif.height+.28*Math.sin(angle*(2+motif.spiral)+travel*(7+motif.spiral));
       position.set(x,y,z);scale.setScalar(.65+(i%3)*.19);
       matrix.compose(position,quaternion,scale);
       pearls.setMatrixAt(i,matrix);
