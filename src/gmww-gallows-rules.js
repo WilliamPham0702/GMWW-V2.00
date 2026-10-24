@@ -154,7 +154,17 @@ export function gallowsSetRestriction(ballot,voter,kind,banned=true,now=Date.now
   const current=kind==='nomination'?gallowsBlockedNomination(ballot):gallowsGmBlockedVotes(ballot);
   const next=banned?unique([...current,voter]):current.filter(id=>id!==voter);
   const changed={...ballot,[field]:next,updatedAt:now};
-  if(kind==='nomination'){const nominations={...(ballot.nominations||{})};delete nominations[voter];changed.nominations=nominations}
+  if(kind==='nomination'){
+    const nominations={...(ballot.nominations||{})};delete nominations[voter];changed.nominations=nominations;
+    // A ban made after closing nominations invalidates the old receipt.
+    // Recompute the leader *and* hanging Character before the GM opens voting.
+    if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting'){
+      const nominee=gallowsAutomaticNominee(changed);
+      if(nominee!==ballot.candidateId){
+        changed.candidateId=nominee;changed.hangingStartedAt=nominee?now:null;
+      }
+    }
+  }
   else {const votes={...(ballot.votes||{})};delete votes[voter];changed.votes=votes;changed.blocked=[]}
   return {ok:true,value:changed};
 }
