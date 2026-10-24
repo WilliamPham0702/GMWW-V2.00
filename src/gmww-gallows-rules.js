@@ -1,7 +1,7 @@
 import {gallowsTally} from '../shared/gallows-statistics.mjs';
 // Server-authoritative gallows: member nominations/votes or GM-operated voting.
-export const GALLOWS_VOTE_MS=10000;
-export const gallowsDurationSec=(value,fallback=10)=>{
+export const GALLOWS_VOTE_MS=60000;
+export const gallowsDurationSec=(value,fallback=60)=>{
   const n=Number(value);
   return Number.isFinite(n)&&n>=1?Math.max(1,Math.min(3600,Math.trunc(n))):fallback;
 };
@@ -26,6 +26,26 @@ export function gallowsOpen(ballot,now=Date.now()){
 
 /* All public tallies derive from accepted, still-eligible Server receipts.
    Tie for nomination needs GM choice; tied execution votes save the accused. */
+// Timing belongs to the active Gallows panel, not the pre-match template.
+export function gallowsSetDuration(ballot,kind,seconds,now=Date.now()){
+  const stage=gallowsStage(ballot,now),field=kind==='nomination'?'nominationDurationSec':kind==='vote'?'voteDurationSec':null;
+  if(gallowsMode(ballot)!=='auto'||!field||stage==='resolved'||
+     (kind==='nomination'&&stage!=='ready')||
+     (kind==='vote'&&!['ready','nominating','selecting'].includes(stage)))
+    return {ok:false,error:'GALLOWS_TIMER_LOCKED'};
+  const duration=gallowsDurationSec(seconds,0);
+  if(!duration)return {ok:false,error:'INVALID_GALLOWS_DURATION'};
+  return {ok:true,value:{...ballot,[field]:duration,updatedAt:now}};
+}
+// Force an early nomination close; choose the unique leader, otherwise ask GM to break the tie.
+export function gallowsCloseNomination(ballot,now=Date.now()){
+  if(gallowsMode(ballot)!=='auto'||!['nominating','selecting'].includes(gallowsStage(ballot,now)))
+    return {ok:false,error:'NOMINATION_NOT_OPEN'};
+  if(gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting')return {ok:true,value:ballot};
+  const candidate=gallowsAutomaticNominee(ballot);
+  if(candidate)return gallowsBegin({...ballot,stage:'selecting'},candidate,now);
+  return {ok:true,value:{...ballot,stage:'selecting',nominationDeadlineAt:now,updatedAt:now}};
+}
 export function gallowsNominationTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedNomination(ballot)),counts=new Map();
   for(const [voter,target] of Object.entries(ballot?.nominations||{})){
