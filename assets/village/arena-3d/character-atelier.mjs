@@ -68,15 +68,21 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   });
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
   let reducedMotion=false,lastDraw=-1,updates=0;
-  function setActors(players){
+  function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
     const previous=new Map(byId);actors.length=0;byId.clear();const used=new Set();
     for(const source of (Array.isArray(players)?players:[])){
       const id=String(source?.id||'');if(!id||used.has(id)||actors.length>=limit)continue;
       used.add(id);
       const i=actors.length,style=atelierPalette(source.characterId),
-        x=Number(source?.position?.x),z=Number(source?.position?.z),theta=-Math.PI/2+TAU*i/Math.max(6,players.length);
-      const actor={id,index:i,position:{x:Number.isFinite(x)?x:Math.cos(theta)*6.5,
-        z:Number.isFinite(z)?z:Math.sin(theta)*5.1},
+        x=Number(source?.position?.x),z=Number(source?.position?.z),
+        seat=Number(source.seatId),
+        count=clamp(Math.trunc(Number(seatCount))||players.length||6,6,30),
+        theta=-Math.PI/2+TAU*(Number.isInteger(seat)&&seat>0&&seat<=count?seat-1:i)/count,
+        radius=count<=8?4.15:count<=12?5.1:count<=18?6.15:count<=24?7.2:8.35,
+        circle=seatLayout==='circle'&&Number.isInteger(seat)&&seat>0&&seat<=count,
+        seatX=circle?Math.cos(theta)*radius:(Number.isFinite(x)?x:Math.cos(theta)*radius),
+        seatZ=circle?Math.sin(theta)*radius*.89:(Number.isFinite(z)?z:Math.sin(theta)*radius*.89);
+      const actor={id,index:i,position:{x:seatX,z:seatZ},
         characterId:source.characterId,style:style.style,yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
         standAt:previous.get(id)?.standAt||0,standUntil:previous.get(id)?.standUntil||0,
         castStartedAt:previous.get(id)?.castStartedAt||0,castUntil:previous.get(id)?.castUntil||0,
