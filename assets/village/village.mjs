@@ -184,7 +184,7 @@ if(game){
       flag.title='Kéo lá cờ đỏ lên Character · chạm hai lần mở danh sách';
       flag.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true"><path d="M13 6V59" stroke="#f5dcb2" stroke-width="4" stroke-linecap="round"/><path d="M16 9Q35 4 56 13L50 27Q36 22 16 28Z" fill="#e73543" stroke="#ffe5b5" stroke-width="2.2"/><circle cx="35" cy="16" r="5.1" fill="white"/><circle cx="33.3" cy="16" r="1.1" fill="#ae1c31"/><circle cx="36.7" cy="16" r="1.1" fill="#ae1c31"/><path d="M32 21L38 21M28 24L43 11M29 11L43 24" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>';
       flag.style.cssText='position:fixed;z-index:1008;width:clamp(42px,11vw,64px);height:clamp(42px,11vw,64px);padding:0;background:transparent;border:0;box-shadow:none;filter:drop-shadow(0 4px 5px #000b);touch-action:none;user-select:none;cursor:grab;transform:translate(-50%,-50%)';
-      document.body.append(flag);
+      flag.hidden=true;document.body.append(flag);
       const atFire=()=>{
         const point=screenPoint(layout.fire),r=stageElement.getBoundingClientRect();
         flag.style.left=Math.round(r.left+r.width*point.x/100)+'px';
