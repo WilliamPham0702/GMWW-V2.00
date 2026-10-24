@@ -2,7 +2,7 @@ name: Deploy Arena 3D Core V2 STAGING (isolated)
 
 on:
   push:
-    branches: ["feature/arena-3d-dual-renderer", "feature/arena3d-stage5-iphone-performance"]
+    branches: ["feature/arena-3d-dual-renderer", "feature/arena3d-stage5-iphone-performance", "feature/arena3d-stage6-art-motion-vfx"]
     paths:
       - "src/arena3d-stage-worker.mjs"
       - "src/arena3d-visual-effect-policy.mjs"
@@ -11,6 +11,7 @@ on:
       - "assets/village/arena-3d/live.*"
       - "assets/village/arena-3d/room-realtime.mjs"
       - "assets/village/arena-3d/render-optimization.mjs"
+      - "assets/village/arena-3d/stage6-art-direction.mjs"
       - "assets/village/arena-3d/character-atelier.mjs"
       - "assets/village/arena-3d/arena-acceptance-scenario.mjs"
       - "assets/village/arena-3d/spell-vfx.mjs"
@@ -30,6 +31,8 @@ on:
       - "tests/arena3d-phase4-browser.mjs"
       - "tests/arena3d-stage5-performance.test.mjs"
       - "tests/arena3d-stage5-browser.mjs"
+      - "tests/arena3d-stage6.test.mjs"
+      - "tests/arena3d-stage6-browser.mjs"
       - "tests/arena3d-phase3-webkit.mjs"
       - "tests/arena3d-stage-http.mjs"
       - "docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md"
@@ -41,6 +44,7 @@ on:
       - "docs/releases/GMWW-ARENA3D-SPELL-ART-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-BATCH-ACCEPTANCE-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-STAGE5-IPHONE-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-STAGE6-ART-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -67,6 +71,8 @@ jobs:
           node --check src/arena3d-stage-worker.mjs
           node --check assets/village/arena-3d/live.mjs
           node --check assets/village/arena-3d/render-optimization.mjs
+          node --check assets/village/arena-3d/stage6-art-direction.mjs
+          node --check tests/arena3d-stage6-browser.mjs
           node --check tests/arena3d-stage5-browser.mjs
           node --check assets/village/arena-3d/room-realtime.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
@@ -76,7 +82,7 @@ jobs:
           node --check assets/village/arena-3d/casting-choreography.mjs
           node --check assets/village/arena-3d/coastal-village.mjs
           node --check src/arena3d-visual-effect-policy.mjs
-          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs tests/arena3d-stage5-performance.test.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-stage6.test.mjs
       - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
         run: |
           node - <<'NODE'
@@ -92,7 +98,7 @@ jobs:
 
   deploy-stage:
     name: Triển khai Core V2 Staging, kiểm chứng phòng/vai/vote, không Production
-    if: (github.ref == 'refs/heads/feature/arena-3d-dual-renderer' || github.ref == 'refs/heads/feature/arena3d-stage5-iphone-performance') && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/feature/arena-3d-dual-renderer' || github.ref == 'refs/heads/feature/arena3d-stage5-iphone-performance' || github.ref == 'refs/heads/feature/arena3d-stage6-art-motion-vfx') && github.event_name == 'push'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -139,7 +145,7 @@ jobs:
             assert.equal(d.ballot,'voting');
             assert.ok(d.atelier?.startsWith('arena-chibi-instanced'),'3D chibi model must be live');
             assert.ok(d.drawCalls>0&&d.drawCalls<=55,'6 actors use instanced fixed draw budget');
-            assert.ok(d.drawBudget<=37);
+            assert.ok(d.drawBudget<=45);
             assert.ok(d.fps>0);
             assert.equal(d.sky,'day');
             assert.equal(d.village,'coastal-day-night-v1');
@@ -178,6 +184,8 @@ jobs:
         run: node tests/arena3d-phase4-browser.mjs
       - name: Stage 5 — xác nhận FPS, animation 6–30, cache Scene và Player Web STAGING
         run: node tests/arena3d-stage5-browser.mjs
+      - name: Giai đoạn 6 — Kiểm thử chibi 40 biến thể, GPU và animation trên iPhone 390px
+        run: node tests/arena3d-stage6-browser.mjs
       - name: Kiểm thử Safari WebKit trên màn hình iPhone mô phỏng (không phải iPhone vật lý)
         run: |
           npx playwright install --with-deps webkit
@@ -200,6 +208,7 @@ jobs:
             /tmp/arena3d-core-staging-30-iphone390.png
             /tmp/arena3d-phase3-webkit.png
             /tmp/arena3d-stage5-30-iphone390.png
+            /tmp/arena3d-stage6-iphone390.png
             /tmp/gmww-arena3d-gm-phase4-390.png
             /tmp/gmww-arena3d-real-guard-spell-390.png
           if-no-files-found: ignore

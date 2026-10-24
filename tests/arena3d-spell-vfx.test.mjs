@@ -51,7 +51,7 @@ test('Character runtime displays VFX only after approved caster-to-target cue an
     }));
     field.setActors(players,{seatCount:n,seatLayout:'circle'});
     assert.equal(field.actorCount,n);
-    assert.ok(field.drawBudget<=37,'GPU draw budget independent of number of players');
+    assert.ok(field.drawBudget<=45,'GPU draw budget independent of number of players');
     field.draw(performance.now()+1,true);
     assert.equal(field.spellVfxActive,false);
     const now=performance.now(),date=Date.now();

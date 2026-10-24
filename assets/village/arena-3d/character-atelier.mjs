@@ -4,6 +4,7 @@
 export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v5-casting';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
+import {characterArtProfile,spellGesturePose} from './stage6-art-direction.mjs';
 const MAX=30,TAU=Math.PI*2;
 const PALETTE=['#22b6b0','#60b9d9','#f5b769','#d9a4f0','#9bcf79','#ffa6b6','#8ca9ea','#f2cd83'];
 const HAIR=['#1b6477','#31546e','#68456c','#bb7b53','#486652','#54588b','#774b4f','#a3698e'];
@@ -50,6 +51,15 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     ['cheekR',sphere,'blush',[.25,1.25,.286],[.10,.055,.028]],
     ['sailorCollar',sphere,'accessory',[0,1.05,.1],[.26,.10,.29]],
     ['hairTail',sphere,'hair',[.30,1.47,-.28],[.16,.36,.17]],
+    // Stage6 detail meshes: 40 visual variants, all still single-instance batches.
+    ['irisL',sphere,'iris',[-.145,1.355,.348],[.034,.052,.014]],
+    ['irisR',sphere,'iris',[.145,1.355,.348],[.034,.052,.014]],
+    ['browL',sphere,'hair',[-.15,1.48,.31],[.10,.028,.025]],
+    ['browR',sphere,'hair',[.15,1.48,.31],[.10,.028,.025]],
+    ['seaBow',sphere,'accessory',[-.39,1.65,.09],[.18,.10,.085]],
+    ['tiara',torus,'shine',[0,1.74,-.07],[.32,.13,.23]],
+    ['mantle',cone,'accessory',[0,.73,-.29],[.42,.52,.19]],
+    ['shellBuckle',sphere,'shine',[0,.87,.31],[.16,.11,.065]],
     ['stool',cylinder,'seat',[0,.15,-.12],[.48,.29,.46]]
   ];
   const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':key==='seat'?'#b99167':'white'});
@@ -98,10 +108,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         seatX=circle?Math.cos(theta)*radius:(Number.isFinite(x)?x:Math.cos(theta)*radius),
         seatZ=circle?Math.sin(theta)*radius*.89:(Number.isFinite(z)?z:Math.sin(theta)*radius*.89);
       const actor={id,index:i,position:{x:seatX,z:seatZ},
-        characterId:source.characterId,style:style.style,yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
+        characterId:source.characterId,style:style.style,art:characterArtProfile(source.characterId),
+        yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
         approach:approachPoint({x:seatX,z:seatZ}),travel:previous.get(id)?.travel||null,
         standAt:previous.get(id)?.standAt||0,standUntil:previous.get(id)?.standUntil||0,
         castStartedAt:previous.get(id)?.castStartedAt||0,castUntil:previous.get(id)?.castUntil||0,
+        castingKind:previous.get(id)?.castingKind||null,
         statusIds:new Set((source.statusTags||[]).map(t=>t.statusId)),effects:new Map(previous.get(id)?.effects||[])};
       actor.yaw=previous.get(id)?.yaw??Math.atan2(-actor.position.x,1.8-actor.position.z);
       actor.targetYaw=previous.get(id)?.targetYaw??actor.yaw;
@@ -109,8 +121,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       for(const part of meshes){
         const hex=part.kind==='seat'?'#b99167':part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:part.kind==='accessory'?style.accessory:
           part.kind==='skin'?style.skin:part.kind==='eye'?'#19273c':
-          part.kind==='shoe'?'#35526a':part.kind==='blush'?'#ed9b98':'#fff4d5';
-        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat'&&part.kind!=='blush')throw Error('UNKNOWN_ATELIER_MATERIAL');
+          part.kind==='shoe'?'#35526a':part.kind==='blush'?'#ed9b98':part.kind==='iris'?'#307689':'#fff4d5';
+        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat'&&part.kind!=='blush'&&part.kind!=='iris')throw Error('UNKNOWN_ATELIER_MATERIAL');
         part.mesh.setColorAt(i,colorTemp.set(hex));
       }
     }
@@ -161,7 +173,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     const changed=turn!==currentTurn;
     if(changed){
       currentTurn=turn;currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
-      for(const actor of actors)actor.effects.clear();
+      for(const actor of actors){actor.effects.clear();actor.castingKind=null;}
     }
     for(const actor of actors){
       if(turn&&authorizedIds.has(actor.id)){
@@ -181,7 +193,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const elapsed=Math.max(250,Math.min(4000,Number(cast.expiresAt)-Date.now()));
         const walkEnd=(caster.travel?.startedAt||now)+(caster.travel?.duration||0);
         const spellStart=Math.max(now,Math.min(now+WALK_TIMING.approachMs,walkEnd));
-        caster.gesture='cheer';caster.gestureEnd=spellStart+elapsed;
+        caster.gesture='cheer';caster.gestureEnd=spellStart+elapsed;caster.castingKind=cast.kind;
         caster.castStartedAt=spellStart;caster.castUntil=spellStart+elapsed;
         caster.standUntil=Math.max(caster.standUntil,spellStart+elapsed+WALK_TIMING.returnMs);
         if(target)caster.targetYaw=Math.atan2(target.position.x-caster.approach.x,target.position.z-caster.approach.z);
@@ -195,7 +207,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   function clearEffects(){
     currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
     const now=performance.now();
-    for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
+    for(const actor of actors){actor.effects.clear();actor.castingKind=null;if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true;spellVfx.setReducedMotion(reducedMotion)}
   function setLowPower(value){spellVfx.setLowPower(value===true)}
@@ -216,15 +228,19 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
+      const spellArt=pose.casting?spellGesturePose(actor.castingKind,time-actor.castStartedAt,{lowMotion:reducedMotion}):null;
       for(const part of meshes){
         let [x,y,z]=part.offset,[sx,sy,sz]=part.size;
-        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
+        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'||part.name.startsWith('iris')||part.name.startsWith('brow')||part.name==='tiara'||part.name==='seaBow'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
         if(part.name==='armL'||part.name==='armR'){
-          if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
+          if(spellArt)y+=part.name==='armL'?spellArt.left:spellArt.right;
+          else if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
           else if(gesturing&&actor.gesture==='cheer')y+=.25+.09*Math.sin(time*.016);
           else y+=gesturing?.10*Math.sin(time*.015):moving?.06*Math.sin(time*.009+actor.index):0;
         }
         if(gesturing&&actor.gesture==='nod'&&(part.name==='head'||part.name==='hair'||part.name.startsWith('eye')))y-=.055*Math.sin(time*.017);
+        if(spellArt&&part.name==='tunic')z+=spellArt.lean;
+        if(spellArt&&part.name==='head')x+=spellArt.tilt;
         if(part.name==='shellpin'){
           if(actor.style%5===1||actor.style%5===4)sx*=1.15;
           else sx=sy=sz=.00001;
@@ -240,12 +256,18 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           if(actor.style%5===2||actor.style%5===4)sy*=1.12;
           else sx=sy=sz=.00001;
         }
+        if(part.name==='seaBow'&&actor.art.headwear!==0&&actor.art.headwear!==3)sx=sy=sz=.00001;
+        if(part.name==='tiara'&&actor.art.headwear!==1&&actor.art.headwear!==4)sx=sy=sz=.00001;
+        if(part.name==='mantle'&&!actor.art.mantle)sx=sy=sz=.00001;
+        if(part.name==='shellBuckle'&&!actor.art.pearl)sx=sy=sz=.00001;
+        if(part.name==='hairTail'&&actor.art.hairShape===1)sy*=1.3;
+        if(part.name==='fringe'&&actor.art.hairShape===2)sx*=1.3;
         if(part.name==='shoeL'||part.name==='shoeR')y+=moving?.05*Math.abs(Math.sin(time*.014+actor.index)):0;
         if(part.name!=='stool'){
           y*=.69+.31*pose.stand;
           if(part.name==='skirt'||part.name==='tunic')sy*=.90+.1*pose.stand;
           if(part.name.startsWith('shoe'))z+=(1-pose.stand)*.21;
-          if(pose.casting&&part.name==='armR')y+=.24*Math.abs(Math.sin(time*.015));
+          if(pose.casting&&part.name==='armR'&&!spellArt)y+=.24*Math.abs(Math.sin(time*.015));
         }
         if(part.name==='stool')base.set(actor.position.x,0,actor.position.z);
         else base.set(walkPos.x,0,walkPos.z);

@@ -8,6 +8,7 @@ import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 import {arenaSceneSignature,createArenaAdaptiveQuality} from './render-optimization.mjs';
+import {STAGE6_ART_VERSION} from './stage6-art-direction.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -21,6 +22,7 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
+let characterCollectionOffset=0;
 const qualityController=createArenaAdaptiveQuality();
 function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
@@ -108,6 +110,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwLivePhase=String(phase);
   document.body.dataset.gmwwLiveCycle=String(cycle);
   document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
+  document.body.dataset.gmwwArtVersion=STAGE6_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
   document.body.dataset.gmwwVillageSky=village.sky;
@@ -115,12 +118,19 @@ function drawFrame(frame){
 function demo(n){
   const players=Array.from({length:n},(_,i)=>{
     const a=-Math.PI/2+Math.PI*2*i/n;
-    return {participantId:'synthetic-'+i,gameCharacterId:'character-'+String(i+1).padStart(2,'0'),
+    return {participantId:'synthetic-'+i,gameCharacterId:'character-'+String((i+characterCollectionOffset)%40+1).padStart(2,'0'),
       seatId:i+1,positionX:50+Math.cos(a)*32,positionY:50+Math.sin(a)*29};
   });
   drawFrame(createPublicRendererFrame({room:{code:'SYNTH',phase:'lobby',seatCount:n},players}));
 }
 function notice(s){$('log').textContent=String(s);dashboard.notify(s);}
+$('art-collection').onclick=()=>{
+  if(!synthetic){notice('Chỉ thay bộ Character mẫu khi chưa kết nối phòng; trận thật dùng nhân vật đã chọn trên Core.');return;}
+  characterCollectionOffset=characterCollectionOffset===0?10:0;
+  $('art-collection').textContent='🎨 Xem Character '+(characterCollectionOffset?'11–40':'01–30');
+  demo(rosterSize);
+  notice('Bộ 40 biến thể Character mẫu; không dùng để nhận diện vai trò bí mật.');
+};
 async function refreshPrivateGmEffects(){
   if(!gmToken||!code||!current?.room.matchId||current.room.phase!=='running')return;
   try{
@@ -373,7 +383,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.m
 window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
-  gmConsole:document.body.dataset.gmwwGmConsole,lowPower,autoQualityEnabled,sceneRebuilds,selectedId:dashboard.selectedId,
+  gmConsole:document.body.dataset.gmwwGmConsole,lowPower,autoQualityEnabled,sceneRebuilds,artVersion:STAGE6_ART_VERSION,selectedId:dashboard.selectedId,
   followCaster,activeCaster:gmToken||synthetic?field.activeCaster:null,cameraRadius:radius,
   activeCasterWorld:gmToken||synthetic?field.activeCasterWorld:null,
   village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
