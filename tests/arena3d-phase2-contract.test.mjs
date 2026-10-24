@@ -45,7 +45,10 @@ test('Stage uses real Core export with a separate DO namespace and does not touc
   const wrapper=readFileSync('src/arena3d-stage-worker.mjs','utf8');
   const config=JSON.parse(readFileSync('wrangler.arena3d-core-stage.jsonc','utf8'));
   assert.match(wrapper,/from '.\/index\.js'/);
-  assert.match(wrapper,/export \{RoomDurableObject\}/);
+  assert.match(wrapper,/export class RoomDurableObject extends GameRoomDurableObject/);
+  assert.match(wrapper,/gallowsSnapshot/);
+  assert.match(wrapper,/aggregateGallowsOnly/);
+  assert.doesNotMatch(wrapper,/nominations:raw\.nominations|votes:raw\.votes|eligible:raw\.eligible/);
   assert.equal(config.name,'gmww-arena3d-core-staging');
   assert.equal(config.main,'src/arena3d-stage-worker.mjs');
   assert.equal(config.durable_objects.bindings[0].name,'ROOMS');
@@ -65,6 +68,7 @@ test('Stage live page uses real state adapter, room endpoints and no client auth
   assert.match(live,/api\/gm\/rooms/);
   assert.match(adapter,/new WebSocketImpl/);
   assert.match(adapter,/shouldAcceptRendererFrame/);
+  assert.match(adapter,/reloadPublicBallot/);
   assert.doesNotMatch(adapter,/localStorage|sessionStorage|privateRole|privateArtifact/);
   assert.doesNotMatch(live,/localStorage|sessionStorage|gmSyncToken|GM_SYNC_TOKEN/);
 });
