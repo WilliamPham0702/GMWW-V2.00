@@ -213,7 +213,7 @@ function renderGallowsWidget(){
   el.hidden=!canNominate||!state.gallowsNominationOpen;
   if(el.hidden){gallowsTick();return}
   const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
-  el.querySelector('#gmwwGallowsPrompt').textContent='🏴‍☠️ Kéo cờ vào Character trong làng, hoặc chạm hai lần vào cờ để chọn người còn sống. Mỗi người một phiếu. Thời gian bỏ phiếu: '+(g.voteDurationSec||10)+' giây.';
+  el.querySelector('#gmwwGallowsPrompt').textContent='🏴‍☠️ Kéo cờ vào Character trong làng, hoặc chạm hai lần vào cờ để chọn người còn sống. Mỗi người một phiếu. Thời gian bỏ phiếu: '+(g.voteDurationSec||60)+' giây.';
   const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
   sel.replaceChildren();
   for(const p of state.players||[]){

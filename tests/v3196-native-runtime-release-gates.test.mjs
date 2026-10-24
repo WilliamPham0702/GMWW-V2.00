@@ -8,25 +8,25 @@ const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.js
 const worker=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
 const pipeline=read('.github/scripts/prepare-update-channel.mjs'),nativeCi=read('.github/workflows/build-server-game-ipa.yml');
 
-test('Runtime V3.202 is synchronized across Worker, GM, npm and cache keys; native shell stays V3.110',()=>{
- assert.equal(pkg.version,'3.202.0');
- assert.equal(lock.version,'3.202.0');
- assert.equal(lock.packages[''].version,'3.202.0');
- assert.match(worker,/VERSION="V3\.202",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3202"/);
- assert.match(app,/const VERSION='3\.202';/);
- assert.match(html,/<title>GMWW V3\.202<\/title>/);
+test('Runtime V3.203 is synchronized across Worker, GM, npm and cache keys; native shell stays V3.110',()=>{
+ assert.equal(pkg.version,'3.203.0');
+ assert.equal(lock.version,'3.203.0');
+ assert.equal(lock.packages[''].version,'3.203.0');
+ assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3203"/);
+ assert.match(app,/const VERSION='3\.203';/);
+ assert.match(html,/<title>GMWW V3\.203<\/title>/);
  for(const file of ['style.css','app.js','village-layout.js']){
-   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.202-');
+   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.203-');
    assert.match(html,re);
  }
- assert.equal(compareReleaseVersions('3.202','3.196'),1);
+ assert.equal(compareReleaseVersions('3.203','3.196'),1);
 });
 
 test('native IPA changes cannot suppress older-shell Runtime updates',()=>{
  assert.match(pipeline,/if\(version!==shell&&\(releaseType==='server_only'\|\|releaseType==='native'\)\) releaseType='runtime'/);
  assert.match(pipeline,/const isNative=releaseType==='native'/);
  assert.match(pipeline,/if\(version!==shell\)\s*\{\s*if\(releaseType!=='runtime'\)throw new Error/);
- assert.match(pipeline,/releaseNotes:\["V3\.202:/);
+ assert.match(pipeline,/releaseNotes:\["V3\.203:/);
  assert.match(pipeline,/"V3\.195:/);
  assert.match(pipeline,/"V3\.194:/);
 });

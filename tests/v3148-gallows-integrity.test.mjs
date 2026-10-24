@@ -5,7 +5,7 @@ import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gall
 
 const fresh=()=>({id:'g-1',matchId:'m1',cycleKey:'morning-2',day:2,stage:'nominating',
   nominations:{},votes:{},blocked:[],eligible:['alice','bob','carol']});
-test('one nomination per player, GM selected candidate opens exactly 10 seconds',()=>{
+test('one nomination per player, GM selected candidate opens using the configured 60-second default',()=>{
   const n=gallowsNominate(fresh(),'alice','bob',1000);
   assert.equal(n.ok,true);
   assert.equal(gallowsNominate(n.value,'alice','carol',1001).error,'NOMINATION_ALREADY_USED');
@@ -22,9 +22,9 @@ test('ballots are immutable after deadline, ineligible and banned voters are rej
   const banned=gallowsBan(first.value,'alice',4200);
   assert.equal(banned.value.votes.alice,undefined);
   assert.equal(gallowsCast(banned.value,'alice','👍',5000).error,'VOTER_BANNED');
-  assert.equal(gallowsCast(banned.value,'carol','👎',11000).error,'VOTE_DEADLINE_PASSED');
-  assert.equal(gallowsResolve(banned.value,'dead',10999).error,'VOTING_NOT_FINISHED');
-  const result=gallowsResolve(banned.value,'dead',11000);
+  assert.equal(gallowsCast(banned.value,'carol','👎',1000+GALLOWS_VOTE_MS).error,'VOTE_DEADLINE_PASSED');
+  assert.equal(gallowsResolve(banned.value,'dead',1000+GALLOWS_VOTE_MS-1).error,'VOTING_NOT_FINISHED');
+  const result=gallowsResolve(banned.value,'dead',1000+GALLOWS_VOTE_MS);
   assert.equal(result.ok,true);
   assert.equal(result.value.outcome,'dead');
 });
@@ -32,7 +32,7 @@ test('new match/day cannot reuse old ballot or disclose old votes',()=>{
   const ballot=gallowsBegin(fresh(),'bob',1000).value;
   assert.equal(gallowsSnapshot(ballot,{matchId:'m1',cycleKey:'morning-3'},2000),null);
   assert.equal(gallowsSnapshot(ballot,{matchId:'other',cycleKey:'morning-2'},2000),null);
-  assert.equal(gallowsSnapshot(ballot,{matchId:'m1',cycleKey:'morning-2'},11001).stage,'closed');
+  assert.equal(gallowsSnapshot(ballot,{matchId:'m1',cycleKey:'morning-2'},1000+GALLOWS_VOTE_MS+1).stage,'closed');
 });
 test('gallows is connected to authenticated GM and player APIs and private room state',()=>{
   const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');

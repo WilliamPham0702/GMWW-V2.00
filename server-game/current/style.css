@@ -7105,3 +7105,93 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsPanel .battle-gallows-audio-target code{flex:1;min-width:0}
 #battleGallowsPanel .battle-gallows-audio-target button{flex:none;min-height:30px;font-size:10px;padding:3px 7px}
 #audioGrid .gallows-audio-upload-target{outline:2px solid #f3d38d;outline-offset:2px;background:rgba(16,108,127,.22)}
+
+
+/* Lên Giàn V3.203 candidate: compact full-width panel, exactly one row per living player.
+   Only the roster scrolls after ten rows; no Character or map geometry changes. */
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+  width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;
+  max-height:calc(100dvh - 106px)!important;overflow-y:auto!important;
+  padding:9px!important;background:rgba(7,39,55,.73)!important;
+}
+#battleGallowsPanel[hidden],#battleGallowsAutomatic[hidden],
+#battleGallowsManualConclusion[hidden],#battleGallowsNominationBox[hidden],
+#battleGallowsVoteBox[hidden],#battleGallowsCandidateControl[hidden]{display:none!important}
+#battleGallowsPanel #battleGallowsBanDetails{display:block;min-width:0;margin:5px 0 7px}
+#battleGallowsPanel #battleGallowsBanDetails>summary{
+  display:list-item!important;list-style:disclosure-closed;min-height:34px;padding:7px 8px;
+  border:1px solid rgba(155,228,235,.36);border-radius:9px;
+  background:rgba(13,79,92,.33);color:#f6e6ac;font-size:11px;font-weight:850;
+}
+#battleGallowsPanel #battleGallowsBanDetails[open]>summary{list-style:disclosure-open}
+#battleGallowsPanel .gallows-roster-scroll{
+  width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;margin:4px 0 8px;
+}
+#battleGallowsPanel .gallows-roster-head,
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+  display:grid!important;grid-template-columns:30px minmax(132px,1fr) 58px 58px 58px 66px 64px!important;
+  min-width:530px!important;gap:4px!important;align-items:center;box-sizing:border-box;
+  padding:3px 5px!important;
+}
+#battleGallowsPanel .gallows-roster-head{
+  position:sticky;top:0;z-index:2;font-size:9px;font-weight:800;color:#ffe1a2;
+  background:rgba(7,40,55,.97);white-space:nowrap;min-height:26px;
+}
+#battleGallowsPanel #battleGallowsMembers{
+  display:block!important;max-height:380px!important;overflow-y:auto!important;
+  overflow-x:hidden!important;margin:0!important;padding:0!important;
+  overscroll-behavior-y:contain;
+}
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+  min-height:38px!important;height:38px;border-bottom:1px solid #9bccd92b;
+}
+#battleGallowsPanel .battle-gallows-member.is-selected{background:rgba(255,211,117,.16)}
+#battleGallowsPanel .battle-gallows-member .gallows-rank,
+#battleGallowsPanel .battle-gallows-member .gallows-count{font-size:11px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+#battleGallowsPanel #battleGallowsMembers .gallows-name{
+  display:block;min-width:0;text-align:left;font-weight:750;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding:4px!important;font-size:11px;min-height:30px!important;
+}
+#battleGallowsPanel #battleGallowsMembers button[data-gallows-kind]{
+  display:block;min-height:28px!important;height:28px;padding:2px!important;
+  font-size:11px!important;line-height:1;font-weight:900;
+}
+#battleGallowsPanel .gallows-mode-toolbar{
+  display:grid;grid-template-columns:1fr auto;gap:7px;margin:8px 0;
+}
+#battleGallowsPanel .gallows-mode-toolbar button{min-height:38px!important;font-size:12px!important;padding:5px 11px}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{
+  background:rgba(10,110,104,.72)!important;border-color:#f1d18f!important
+}
+#battleGallowsPanel .gallows-phase-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:7px 0}
+#battleGallowsPanel .gallows-phase-tabs button[aria-pressed="true"]{
+  background:rgba(15,114,103,.88)!important;border-color:#eeddac!important
+}
+#battleGallowsPanel .gallows-phase-box{
+  padding:8px;border-radius:10px;border:1px solid rgba(173,222,228,.36);
+  background:rgba(15,76,86,.24)
+}
+#battleGallowsPanel .gallows-timer-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#battleGallowsPanel .gallows-timer-row label{flex:1;min-width:0;font-size:11px}
+#battleGallowsPanel .gallows-timer-row input{
+  width:73px;min-width:0;height:36px;border:1px solid #8fcdd7;border-radius:9px;
+  background:rgba(3,30,44,.80);color:#fff;padding:4px;text-align:center;font-size:16px;font-weight:850;
+}
+#battleGallowsPanel .gallows-timer-row output{min-width:55px;text-align:right;font-size:18px;font-variant-numeric:tabular-nums;font-weight:900}
+#battleGallowsPanel #battleGallowsNominationStats{font-size:11px;margin:8px 1px!important;padding:5px 7px!important}
+#battleGallowsPanel .gallows-manual-outcome p{margin:7px 2px;font-size:11px;opacity:.9}
+#battleGallowsPanel .gallows-info{
+  padding:8px 9px;margin:8px 0;border:1px solid #9dd9e277;border-radius:10px;
+  background:rgba(16,73,79,.35);font-size:11px;font-weight:800;line-height:1.4;
+}
+#battleGallowsPanel .gallows-info[data-result-tone="negative"]{border-color:#ec8f92;color:#ffe7e2}
+#battleGallowsPanel .gallows-info[data-result-tone="positive"]{border-color:#92dcb6;color:#d2ffec}
+#battleGallowsPanel #battleGallowsVoteBreakdown{margin-top:4px;font-size:11px}
+#battleGallowsPanel #battleGallowsVoteBreakdown>summary{font-size:11px;min-height:30px;cursor:pointer}
+#battleGallowsPanel #battleGallowsVoteBreakdown #battleGallowsVotes{max-height:100px!important}
+#battleGallowsPanel #battleGallowsClock:empty{display:none}
+@media(max-width:380px){
+ #battleGallowsPanel .gallows-roster-head,
+ #battleGallowsPanel #battleGallowsMembers .battle-gallows-member{min-width:530px!important}
+}
