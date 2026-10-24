@@ -168,13 +168,13 @@ function gallowsWidget(){
     if(chosen)void sendGallowsChoice('nominate',chosen);
   });
   el.querySelector('#gmwwGallowsReset').addEventListener('click',()=>{
-    state.gallowsSelectedId='';renderGallowsWidget();
+    state.gallowsSelectedId='';renderGallowsWidget();syncVillageFrame(true);
   });
   el.querySelector('#gmwwGallowsGrid').addEventListener('click',event=>{
     const button=event.target.closest('button[data-gallows-nominee]');
     if(!button||button.disabled)return;
     state.gallowsSelectedId=button.dataset.gallowsNominee;
-    renderGallowsWidget();
+    renderGallowsWidget();syncVillageFrame(true);
   });
   setInterval(gallowsTick,500);
   return el;
