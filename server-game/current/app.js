@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.206';
+const VERSION='3.207';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4504,10 +4504,11 @@ const battleActions=()=>{
       const roleId=String(owner?.roleId||action.roleId||''),card=(state.cards||[]).find(r=>String(r.id)===roleId);
       if(roleId==='role_snow_wolf'&&action.actionId==='action_wolf_bite'&&
         (playSceneRuntime.assignments||[]).some(row=>{
-          const other=String(row?.roleId||''),login=String(row?.loginId||'');
-          const faction=String(row?.faction||row?.factionId||'').toLowerCase();
+          const other=String(row?.roleId||''),login=String(row?.loginId||'').trim().toLowerCase().replace(/^member:/,'');
+          const faction=String(row?.roleCard?.factionId||row?.factionId||row?.faction||'').toLowerCase();
           const wolf=other.includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
-          return other!=='role_snow_wolf'&&wolf&&login&&playPlayerEffect(login)!=='dead';
+          return other!=='role_snow_wolf'&&wolf&&login&&playPlayerEffect(login)!=='dead'&&
+            !((playSceneRuntime.activeEffects||[]).some(effect=>String(effect?.loginId||'').trim().toLowerCase().replace(/^member:/,'')===login&&effect?.type==='dead'&&effect?.effectActive!==false));
         })){unavailableReason='Còn Sói khác sống: Sói Tuyết chưa được Cắn.';return false}
       if(!roleId||!card)return true; // Legacy catalog: server still validates.
       const own=ledger.filter(row=>String(row?.matchId)===matchId&&String(row?.actorId)===String(actorId)&&String(row?.roleId)===roleId);
