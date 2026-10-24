@@ -30,12 +30,12 @@ const black=new THREE.MeshStandardMaterial({color:'#1b2a36'});
 const group=new THREE.Group();scene.add(group);let actors=[];
 const readPosition=(p)=>p.position||{x:0,y:0,z:1.4};
 function disposeActors(){
-  for(const actor of actors){group.remove(actor.group);actor.group.clear();}
+  for(const actor of actors){actor.group.children[0].material.dispose();group.remove(actor.group);actor.group.clear();}
   actors=[];
 }
 function createActor(p,index){
   const root=new THREE.Group();
-  const torso=new THREE.Mesh(bodyGeo,bodyMaterials[index%bodyMaterials.length]);torso.position.y=0.48;root.add(torso);
+  const torso=new THREE.Mesh(bodyGeo,bodyMaterials[index%bodyMaterials.length].clone());torso.position.y=0.48;root.add(torso);
   const head=new THREE.Mesh(headGeo,skin);head.position.y=1.11;root.add(head);
   const hair=new THREE.Mesh(new THREE.SphereGeometry(0.30,12,8),bodyMaterials[(index+2)%bodyMaterials.length]);
   hair.scale.set(1,0.45,1);hair.position.y=1.28;root.add(hair);
@@ -80,14 +80,17 @@ function showPublicEffect(kind){
   material.emissiveIntensity=0.65;
   showMessage(projected[0].label+' — '+selected.id+' (sự kiện công khai giả lập).');
 }
-function resetEffects(){for(const actor of actors){actor.group.children[0].material=bodyMaterials[actor.index%bodyMaterials.length];}showMessage('Đã đặt lại hiệu ứng hiển thị.');}
+function resetEffects(){for(const actor of actors){actor.group.children[0].material.emissive.set('#000000');actor.group.children[0].material.emissiveIntensity=0;}showMessage('Đã đặt lại hiệu ứng hiển thị.');}
 function orbitCamera(){
   camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,Math.cos(azimuth)*Math.cos(elevation)*radius+1.4);
   camera.lookAt(0,0,1.4);
 }
+let lastWidth=0,lastHeight=0;
 function resize(){
   const rect=canvas.getBoundingClientRect();
   const width=Math.max(1,Math.round(rect.width)),height=Math.max(1,Math.round(rect.height));
+  if(width===lastWidth&&height===lastHeight)return;
+  lastWidth=width;lastHeight=height;
   camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height,false);
 }
 let pointer=null;
