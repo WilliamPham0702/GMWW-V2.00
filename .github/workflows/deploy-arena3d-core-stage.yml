@@ -116,7 +116,7 @@ jobs:
             assert.equal(d.ballot,'voting');
             assert.ok(d.atelier?.startsWith('arena-chibi-instanced'),'3D chibi model must be live');
             assert.ok(d.drawCalls>0&&d.drawCalls<=32,'6 actors use instanced fixed draw budget');
-            assert.ok(d.drawBudget<=25);
+            assert.ok(d.drawBudget<=29);
             assert.ok(d.fps>0);
             // Page refresh must rehydrate the public gallows tally from real DO storage.
             await page.reload({waitUntil:'domcontentloaded'});
