@@ -4,7 +4,7 @@ import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -899,6 +899,9 @@ export class RoomDurableObject extends DurableObject {
     }else if(command==="begin"){
       if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
       result=gallowsBegin(ballot,target,now);
+    }else if(command==="hang"){
+      if(!eligible.includes(target))return j({ok:false,error:"INVALID_GALLOWS_CANDIDATE"},400);
+      result=gallowsSelectCandidate(ballot,target,now);
     }else if(command==="ban"){
       result=gallowsBan(ballot,target,now);
     }else if(command==="restriction"){
