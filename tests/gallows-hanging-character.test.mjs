@@ -61,7 +61,7 @@ test('Both UIs position a single Character above their fire without mutating Sea
  assert.match(worker,/this.broadcast\(\{type:"gallows_updated"/);
  assert.match(gm,/function syncPlayGallowsHanging\(/);
  assert.match(gm,/villageGallowsPosition\(\)/);
- assert.match(gm,/battleGallowsCommand\('hang',id\)/);
+ assert.match(gm,/battleGallowsCommand\('hang',String\(pick.dataset.gallowsPick/);
  assert.match(gm,/gallowsOriginLeft/);
  assert.match(player,/gallowsHanging:playerView.mode==='battle'/);
  assert.match(live,/gallows_updated/);
