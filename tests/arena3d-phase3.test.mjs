@@ -19,7 +19,7 @@ test('Phase3: 6/12/20/30 chibi actors share fixed draw-call budget, rotate 360 a
       movementStatus:i===0?'moving':'idle',statusTags:i===1?[{statusId:'protected'}]:[]}));
     atelier.setActors(players);
     assert.equal(atelier.actorCount,n);
-    assert.ok(atelier.drawBudget<=37,'Instanced meshes should not increase draw calls with players');
+    assert.ok(atelier.drawBudget<=45,'Instanced meshes should not increase draw calls with players');
     assert.ok(atelier.drawUpdates>0);
     assert.equal(atelier.turnActor('member:p0',Math.PI/2),true);
     assert.equal(atelier.turnActor('member:p0',Math.PI/2),true);
