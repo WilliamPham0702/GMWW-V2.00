@@ -32,7 +32,7 @@ test('V3.203 leaves native shell V3.110 and already-published IPA V3.200 unchang
 });
 
 test('V3.203 CI builds SHA-256 from actual Runtime bytes without deploying Production',()=>{
- const workflow=read('.github/workflows/prepare-runtime-v3203-candidate.yml');
+ const workflow=read('.github/workflows/prepare-runtime-v3202-candidate.yml');
  const verify=read('.github/scripts/verify-prepared-runtime.mjs');
  assert.match(workflow,/GMWW V3\.203 OTA Candidate SHA-256/);
  assert.match(workflow,/prepare-update-channel\.mjs runtime/);
