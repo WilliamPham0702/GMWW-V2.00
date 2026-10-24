@@ -189,4 +189,5 @@ jobs:
             /tmp/arena3d-core-staging-30-iphone390.png
             /tmp/arena3d-phase3-webkit.png
             /tmp/gmww-arena3d-gm-phase4-390.png
+            /tmp/gmww-arena3d-real-guard-spell-390.png
           if-no-files-found: ignore
