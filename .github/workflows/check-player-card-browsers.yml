@@ -41,6 +41,8 @@ on:
       - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
+      - ".github/scripts/ci-browser-scope.mjs"
+      - "tests/ci-browser-scope.test.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
   pull_request:
     branches: [main]
@@ -79,6 +81,8 @@ on:
       - "assets/village/gp2-world-camera.mjs"
       - "server-game/current/status-visuals.css"
       - "assets/village/status-visuals.css"
+      - ".github/scripts/ci-browser-scope.mjs"
+      - "tests/ci-browser-scope.test.mjs"
       - ".github/workflows/check-player-card-browsers.yml"
   workflow_dispatch:
 
@@ -87,7 +91,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - name: Tải mã nguồn để đối chiếu phạm vi thay đổi
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Chọn kiểm thử đúng phạm vi, an toàn mặc định
+        id: select
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+  postgame-regression:
+    needs: scope
+    if: needs.scope.outputs.mode == 'postgame'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kiểm thử đúng luồng kết thúc và tạo ván tiếp theo
+        run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
   browser-test:
+    needs: scope
+    if: needs.scope.outputs.mode == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

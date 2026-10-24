@@ -7,6 +7,8 @@ on:
       - "src/**"
       - "assets/village/**"
       - "tools/smoke-30-players.mjs"
+      - ".github/scripts/ci-browser-scope.mjs"
+      - "tests/ci-browser-scope.test.mjs"
       - ".github/workflows/check-30-player-realtime.yml"
   workflow_dispatch:
 
@@ -18,7 +20,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - name: Tải mã nguồn để đối chiếu phạm vi thay đổi
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Chọn kiểm thử đúng phạm vi, an toàn mặc định
+        id: select
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
   local-realtime:
+    needs: scope
+    if: needs.scope.outputs.mode == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
