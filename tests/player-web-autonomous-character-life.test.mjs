@@ -36,7 +36,7 @@ test('Player Web sitting is explicit, not permanent because seatId exists',()=>{
   const village=fs.readFileSync(new URL('../assets/village/village.mjs',import.meta.url),'utf8');
   assert.match(village,/function sittingNow[^\n]+villageActivity==="sitting"/);
   assert.doesNotMatch(village,/function sittingNow[^\n]+seatId/);
-  assert.match(village,/state=sitting\?"sitting"/);
+  assert.match(village,/state=hanging\?"walking":sitting\?"sitting"/);
 });
 
 test('actual Player Web renderer handles sitting and visible idle sequence for all 20',()=>{

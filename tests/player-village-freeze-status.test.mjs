@@ -46,7 +46,7 @@ test('Player Web bridge preserves public freeze through presence-only updates wi
   assert.match(gmwwMembersLiveScript, /const villageFrozenState=new Map\(\)/);
   assert.match(gmwwMembersLiveScript, /frozen,seatId:/);
   assert.doesNotMatch(gmwwMembersLiveScript.slice(gmwwMembersLiveScript.indexOf('function villagePublicPlayers'), gmwwMembersLiveScript.indexOf('function ensureDesktopResponsiveStyle')), /ownEffects[^;]*dead[^;]*frozen[^;]*out\.push\(\{[^}]*effects:/);
-  assert.match(page, /village\.css\?v=3201&amp;status=freeze1|village\.css\?v=3201&status=freeze1/);
-  assert.match(page, /village\.mjs\?v=fire3201&amp;status=freeze1|village\.mjs\?v=fire3201&status=freeze1/);
+  assert.match(page, /village\.css\?v=3202&amp;status=freeze1|village\.css\?v=3202&status=freeze1/);
+  assert.match(page, /village\.mjs\?v=fire3202&amp;status=freeze1|village\.mjs\?v=fire3202&status=freeze1/);
   assert.doesNotThrow(() => new Function(gmwwMembersLiveScript.replaceAll('__GMWW_WEB_VERSION__', 'V3.106')));
 });

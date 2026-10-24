@@ -171,7 +171,7 @@ if(game){
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:data?.villageActivity||base.activity||"idle"},data?.gameCharacterId||"character-01")}
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),hanging=battleStatic&&!dead&&data?.isGM!==true&&data?.kind!=="gm"&&setupState?.gallowsHanging?.active===true&&String(data?.id||"").replace(/^member:/,"")===String(setupState.gallowsHanging.candidateId||""),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=hanging?"walking":sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":hanging?"walk":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:hanging?"walk":data?.villageActivity||base.activity||"idle",paused:hanging?false:base.paused},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   /* Pirate nomination gesture lives INSIDE the village iframe so pointerup
      can hit a Character. The parent sends a signed member request to the DO. */
@@ -375,7 +375,7 @@ if(game){
     const hanging=setupState?.gallowsHanging,accused=battleStatic&&hanging?.active===true?
       String(hanging.candidateId||''):'';
     const live=all.some(p=>String(p?.id||'').replace(/^member:/,'')===accused&&!visuallyDeceased(p));
-    const target=live?accused:'',firePoint=target?screenPoint(layout.fire):null;
+    const target=live?accused:'',sceneAnchor=globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS?.[night?'night':'day'],configured=!!(sceneAnchor&&[sceneAnchor.x,sceneAnchor.y].every(Number.isFinite)),firePoint=target?(configured?{x:sceneAnchor.x,y:sceneAnchor.y}:screenPoint(layout.fire)):null;
     players.classList.toggle('has-gallows-hanging',!!target);
     for(const data of all){
       const node=mountedPlayerNodes.get(String(data?.id||''));if(!node)continue;
@@ -384,7 +384,7 @@ if(game){
       node.classList.toggle('gmww-gallows-hanging',isAccused);
       if(isAccused){
         node.style.left=Math.max(10,Math.min(90,firePoint.x))+'%';
-        node.style.top=Math.max(13,Math.min(80,firePoint.y-15))+'%';
+        node.style.top=Math.max(5,Math.min(90,configured?firePoint.y:firePoint.y-15))+'%';
         node.style.zIndex='950';
         node.setAttribute('aria-label',safeText(data.displayName||data.name||target)+' · Đang treo Lên Giàn');
       }
@@ -434,6 +434,7 @@ if(game){
     if(expirations.length)sitWakeTimer=setTimeout(()=>{sitWakeTimer=0;render()},Math.max(40,Math.min(2147483647,Math.min(...expirations)-clock+30)));
     if(!battleStatic&&villageMotionNeedsFrame(all)&&!document.hidden)moveFrame=requestAnimationFrame(animateMovementFrame)
   }
+  window.addEventListener('gmww:village-gallows-anchor',()=>{if(battleStatic)render()});
   function animateMovementFrame(now){
     moveFrame=0;if(document.hidden||battleStatic)return;
     villageRenderMetrics.movementFrames++;

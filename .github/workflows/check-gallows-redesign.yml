@@ -8,6 +8,9 @@ on:
       - "src/gmww-members-live.js"
       - "assets/village/village.mjs"
       - "assets/village/village.css"
+      - "assets/village/scene-manager.mjs"
+      - "server-game/src/00-core-and-library.part"
+      - "server-game/current/gallows-hanging.css"
       - "shared/gallows-statistics.mjs"
       - "server-game/current/GMWW.html"
       - "server-game/current/style.css"
@@ -43,9 +46,11 @@ jobs:
           node --check src/gmww-gallows-rules.js
           node --check shared/gallows-statistics.mjs
           node --check server-game/current/app.js
+          node --check src/index.js
+          node --check assets/village/scene-manager.mjs
       - name: Kiem tra thong ke, han che, ket luan va API Web
         run: |
-          node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs tests/gallows-hanging-character.test.mjs
+          node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs
       - name: Kiem tra 6 source GM khop ban app da dong goi
         run: node --test tests/gmww-gm-app-source-modules.test.mjs
       - name: Kiem tra source Player Web dong bo compiled runtime

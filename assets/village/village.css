@@ -479,14 +479,14 @@ html.embedded body.player-prep .hud{display:none!important}
 
 /* V3.163 battle-only low-power presentation. The approved Character40 renderer
    and its rollback bytes are untouched; this applies only inside live battle. */
-body.player-battle .player .portrait.game-character,
-body.player-battle .player .portrait.game-character .gmww-character-renderer,
-body.player-battle .player .portrait.game-character .gmww-segmented-rig,
-body.player-battle .player .portrait.game-character .gmww-segmented-rig *,
-body.player-battle .player .portrait.game-character img[data-walk-character]{
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-character-renderer,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig *,
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character img[data-walk-character]{
   animation:none!important;transition:none!important;will-change:auto!important;
 }
-body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
+body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .gmww-segmented-rig *{
   transform:none!important;
 }
 
@@ -498,29 +498,9 @@ body.player-battle .player .portrait.game-character .gmww-segmented-rig *{
   transition:left .72s cubic-bezier(.2,.85,.28,1),top .72s cubic-bezier(.2,.85,.28,1)!important;
   filter:drop-shadow(0 9px 11px rgba(7,36,54,.62));
 }
-.player.gmww-gallows-hanging .portrait.game-character{
-  transform-origin:50% 8%;animation:gmww-gallows-struggle 1.42s ease-in-out infinite!important;
-  will-change:transform;
-}
-.player.gmww-gallows-hanging::before{
-  content:'';position:absolute;top:-42px;left:50%;width:3px;height:54px;
-  border-radius:3px;background:repeating-linear-gradient(175deg,#ecd7a1 0 5px,#ab885d 6px 10px);
-  transform:translateX(-50%);box-shadow:0 0 8px #162a3b88;pointer-events:none;z-index:5;
-}
-.player.gmww-gallows-hanging::after{
-  content:'⚖ LÊN GIÀN';position:absolute;top:-68px;left:50%;transform:translateX(-50%);
-  font:800 10px/1.2 system-ui,sans-serif;letter-spacing:.08em;white-space:nowrap;color:#fff4cf;
-  background:#123746e8;border:1px solid #e6c992;border-radius:20px;padding:4px 8px;
-  pointer-events:none;box-shadow:0 3px 9px #0008;z-index:6;
-}
-@keyframes gmww-gallows-struggle{
-  0%,100%{transform:translateY(1px) rotate(-6deg)}
-  21%{transform:translateY(-5px) rotate(9deg)}
-  39%{transform:translateY(3px) rotate(-10deg)}
-  62%{transform:translateY(-3px) rotate(6deg)}
-  81%{transform:translateY(2px) rotate(-4deg)}
-}
+/* Use Walk frames from the existing 40 Character rigs. No overhead rope, tree
+   or badge and no replacement shake/rotation animation. */
 @media(prefers-reduced-motion:reduce){
-  .player.gmww-gallows-hanging,.player.gmww-gallows-hanging .portrait.game-character{
+  .player.gmww-gallows-hanging,.player.gmww-gallows-hanging .portrait.game-character *{
     animation:none!important;transition:none!important}
 }

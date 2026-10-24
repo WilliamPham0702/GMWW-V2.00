@@ -2010,6 +2010,7 @@ function initBattleControls(){
     }
   });
   document.getElementById('battleGMFireAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateFire()});
+  document.getElementById('battleGMGallowsAnchor')?.addEventListener('click',()=>{battleState.wolfOpen=false;renderPlayBattle();villageCalibrateGallows('day')});
   document.getElementById('battleQuickRevive')?.addEventListener('click',()=>battleQuickSelect('revive'));
   document.getElementById('battleQuickKill')?.addEventListener('click',()=>battleQuickSelect('dead'));
   document.getElementById('battleAdvance')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận và chuyển lượt?'))return;void advancePlayPhase()});

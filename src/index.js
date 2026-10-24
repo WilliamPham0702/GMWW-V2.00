@@ -39,7 +39,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.201",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3201",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.202",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3202",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -538,7 +538,7 @@ export class RoomDurableObject extends DurableObject {
   async sceneNormalizeRecord(raw){
     const record=raw&&typeof raw==="object"?raw:{revision:0};
     const revision=Math.max(0,Math.trunc(Number(record.revision)||0));
-    const output={revision,fireAnchors:record.fireAnchors||{},dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
+    const output={revision,fireAnchors:record.fireAnchors||{},gallowsAnchors:record.gallowsAnchors||{},dayRevision:Math.max(0,Number(record.dayRevision)||0),nightRevision:Math.max(0,Number(record.nightRevision)||0),updatedAt:record.updatedAt||null};
     for(const key of ["day","night"]){
       if(validImageDataUrl(record[key])&&revision>0){
         await this.ctx.storage.put("globalSetting:villageSceneImage:"+revision+":"+key,record[key]);
@@ -551,7 +551,7 @@ export class RoomDurableObject extends DurableObject {
     const revision=Math.max(0,Number(rec?.revision)||0);
     const imageRevision=key=>Math.max(0,Number(rec?.[key+"Revision"])||(validImageDataUrl(rec?.[key])?revision:0));
     const day=imageRevision("day"),night=imageRevision("night");
-    return {revision,updatedAt:rec?.updatedAt||null,fireAnchors:rec?.fireAnchors||{},
+    return {revision,updatedAt:rec?.updatedAt||null,fireAnchors:rec?.fireAnchors||{},gallowsAnchors:rec?.gallowsAnchors||{},
       day:day?"/api/village-scene/image/day?revision="+day:null,
       night:night?"/api/village-scene/image/night?revision="+night:null};
   }
@@ -589,24 +589,27 @@ export class RoomDurableObject extends DurableObject {
       return this.sceneSettingsReset();
     }
     const isImage=v=>v==null||(typeof v==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v)&&v.length<=1800000);
-    if(!body||(!body.day&&!body.night&&!body.fireAnchors)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
+    if(!body||(!body.day&&!body.night&&!body.fireAnchors&&!body.gallowsAnchors)||!isImage(body.day)||!isImage(body.night))return j({ok:false,error:"INVALID_SCENE_IMAGE"},400);
     if(body.fireAnchors&&(!Object.keys(body.fireAnchors).length||Object.entries(body.fireAnchors).some(([key,p])=>!["day","night"].includes(key)||!p||![p.x,p.y].every(v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100))))return j({ok:false,error:"INVALID_FIRE_ANCHOR"},400);
+    if(body.gallowsAnchors&&(!Object.keys(body.gallowsAnchors).length||Object.entries(body.gallowsAnchors).some(([key,p])=>!["day","night"].includes(key)||!p||![p.x,p.y].every(v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100))))return j({ok:false,error:"INVALID_GALLOWS_ANCHOR"},400);
     const previousRaw=(await this.ctx.storage.get("globalSetting:villageScene"))||{revision:0};
     if(body.expectedRevision!=null&&Number(body.expectedRevision)!==Number(previousRaw.revision))return j({ok:false,error:"SCENE_CHANGED",message:"Hình nền đã thay đổi. Hãy chọn lại vị trí đống lửa."},409);
     const previous=await this.sceneNormalizeRecord(previousRaw);
     const revision=previous.revision+1;
-    if(body.fireAnchors&&!body.day&&!body.night){
+    if((body.fireAnchors||body.gallowsAnchors)&&!body.day&&!body.night){
       // Landmark edits are metadata-only: never re-upload images, reset players,
       // or invalidate the locally cached Day/Night bitmap.
       const next={...previous,revision,updatedAt:new Date().toISOString(),
-        fireAnchors:{...previous.fireAnchors,...body.fireAnchors}};
+        fireAnchors:{...previous.fireAnchors,...body.fireAnchors},
+        gallowsAnchors:{...previous.gallowsAnchors,...body.gallowsAnchors}};
       await this.ctx.storage.put("globalSetting:villageScene",next);
       return j({ok:true,scene:this.scenePublicRecord(next)});
     }
-    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0,fireAnchors:{...previous.fireAnchors}};
+    const next={revision,updatedAt:new Date().toISOString(),dayRevision:0,nightRevision:0,fireAnchors:{...previous.fireAnchors},gallowsAnchors:{...previous.gallowsAnchors}};
     for(const key of ["day","night"]){
-      if(body[key])delete next.fireAnchors[key];
+      if(body[key]){delete next.fireAnchors[key];delete next.gallowsAnchors[key];}
       if(body.fireAnchors?.[key])next.fireAnchors[key]={x:body.fireAnchors[key].x,y:body.fireAnchors[key].y};
+       if(body.gallowsAnchors?.[key])next.gallowsAnchors[key]={x:body.gallowsAnchors[key].x,y:body.gallowsAnchors[key].y};
       let image=body[key];
       // A single replacement leaves the other currently applied image intact.
       if(!image){

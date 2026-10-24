@@ -49,7 +49,7 @@ test('Lobby HUD is absent before start; only game shows day/night controls',()=>
   assert.match(live,/#game\[data-gmww-player-scene="lobby"\] #gmwwGameViewTabs\{display:none!important\}/);
   assert.match(scene,/classList\.toggle\("player-prep",room\.playerSceneMode==="lobby"\)/);
   assert.match(css,/html\.embedded body\.player-prep \.hud\{display:none!important\}/);
-  assert.match(html,/village\.mjs\?v=fire3201/);
+  assert.match(html,/village\.mjs\?v=fire3202/);
   assert.match(live,/iframe\.src='\/village\/\?embed=1&v=3201'/);
 });
 

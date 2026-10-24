@@ -40,7 +40,7 @@ function createVillageLocalCache(base){
   async prepare(record,previous){
    const images={};
    await Promise.all(['day','night'].map(async k=>{images[k]=valid(previous)&&previous.record[k]===record[k]?previous.images[k]:await imageBytes(record[k])}));
-   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{}},images};
+   const next={record:{revision:Number(record.revision)||0,day:record.day||null,night:record.night||null,fireAnchors:record.fireAnchors||{},gallowsAnchors:record.gallowsAnchors||{}},images};
    if(!valid(next))throw Error('Không lưu được cặp ảnh nền hợp lệ');
    return next;
   },
@@ -58,6 +58,7 @@ const editor=!embedded&&new URLSearchParams(location.search).get('sceneEditor')=
 const state={published:{revision:0,day:null,night:null},draft:{day:null,night:null},ready:false};
 const boot=document.getElementById('sceneBootStatus');
 const localCache=createVillageLocalCache(location.href);
+let lastGallowsAnchorKey='';
 let localSnapshot=null;
 async function restoreLocal(){
  const saved=await localCache.restore();if(!saved)return;
@@ -71,6 +72,13 @@ const setStatus=t=>{if(status)status.textContent=t};
 function apply(){
  if(!state.ready)return;
  const key=game?.classList.contains('night')?'night':'day';
+ // Scene metadata is shared globally; players never write it.
+ const anchors=state.published.gallowsAnchors||{},signature=key+':'+JSON.stringify(anchors);
+ globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS=anchors;
+ if(signature!==lastGallowsAnchorKey){
+   lastGallowsAnchorKey=signature;
+   if(typeof Event==='function'&&typeof window.dispatchEvent==='function')window.dispatchEvent(new Event('gmww:village-gallows-anchor'));
+ }
  const image=(editor&&state.draft[key])||localSnapshot?.images[key];
  if(image){scene.style.setProperty('--gmww-scene-image',`url("${image}")`);scene.classList.add('custom-scene')}
  else{scene.style.removeProperty('--gmww-scene-image');scene.classList.remove('custom-scene')}
