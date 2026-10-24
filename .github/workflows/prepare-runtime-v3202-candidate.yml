@@ -11,7 +11,7 @@ on:
       - "package-lock.json"
       - ".github/scripts/prepare-update-channel.mjs"
       - ".github/scripts/verify-prepared-runtime.mjs"
-      - ".github/workflows/prepare-runtime-v3203-candidate.yml"
+      - ".github/workflows/prepare-runtime-v3202-candidate.yml"
 permissions:
   contents: read
 jobs:
