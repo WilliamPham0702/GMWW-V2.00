@@ -20,6 +20,7 @@ on:
       - "tests/arena3d-phase3.test.mjs"
       - "tests/arena3d-phase4.test.mjs"
       - "tests/arena3d-casting.test.mjs"
+      - "tests/arena3d-ritual-walk.test.mjs"
       - "tests/arena3d-coastal-village.test.mjs"
       - "tests/arena3d-phase4-browser.mjs"
       - "tests/arena3d-phase3-webkit.mjs"
@@ -29,6 +30,7 @@ on:
       - "docs/releases/GMWW-ARENA3D-PHASE4-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-TURN-CAST-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-COASTAL-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-RITUAL-WALK-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -60,7 +62,7 @@ jobs:
           node --check assets/village/arena-3d/casting-choreography.mjs
           node --check assets/village/arena-3d/coastal-village.mjs
           node --check src/arena3d-visual-effect-policy.mjs
-          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-preview.test.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs
       - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
         run: |
           node - <<'NODE'
