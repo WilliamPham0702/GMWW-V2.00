@@ -64,10 +64,26 @@ export function gallowsRosterStats(ballot){
   }).map(({player,...row})=>row);
 }
 
+/* The suspended Character is a derived visual state, never a Seat movement or death effect. */
+export function gallowsHangingState(ballot,now=Date.now()){
+  const stage=gallowsStage(ballot,now),candidateId=String(ballot?.candidateId||'');
+  if(!validId(candidateId)||!['selecting','voting','closed'].includes(stage)||
+     !(ballot?.eligible||[]).includes(candidateId))return null;
+  return {active:true,candidateId,stage,startedAt:Number(ballot.hangingStartedAt||ballot.startedAt||ballot.updatedAt||now)};
+}
+// GM selects the accused before Giết/Cứu; Durable Object persists and broadcasts.
+export function gallowsSelectCandidate(ballot,candidate,now=Date.now()){
+  if(gallowsMode(ballot)!=='gm')return {ok:false,error:'GM_MANUAL_MODE_REQUIRED'};
+  if(!validId(candidate)||!(ballot?.eligible||[]).includes(candidate))return {ok:false,error:'INVALID_GALLOWS_CANDIDATE'};
+  if(!['ready','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'GALLOWS_ALREADY_VOTING_OR_RESOLVED'};
+  if(ballot.stage==='selecting'&&ballot.candidateId===candidate)return {ok:true,idempotent:true,value:ballot};
+  return {ok:true,value:{...ballot,stage:'selecting',candidateId:candidate,
+    hangingStartedAt:now,outcome:null,updatedAt:now}};
+}
 export function gallowsSnapshot(ballot,meta,now=Date.now()){
   if(!ballot||ballot.matchId!==String(meta?.matchId||'')||ballot.cycleKey!==String(meta?.cycleKey||''))return null;
   const stage=gallowsStage(ballot,now),blockedNomination=gallowsBlockedNomination(ballot),blockedVotes=gallowsBlockedVotes(ballot);
-  return {id:ballot.id,day:ballot.day,candidateId:ballot.candidateId||null,stage,mode:gallowsMode(ballot),
+  return {id:ballot.id,day:ballot.day,candidateId:ballot.candidateId||null,stage,mode:gallowsMode(ballot),hanging:gallowsHangingState(ballot,now),
     deadlineAt:ballot.deadlineAt||null,startedAt:ballot.startedAt||null,
     nominationDeadlineAt:ballot.nominationDeadlineAt||null,nominationStartedAt:ballot.nominationStartedAt||null,
     nominationDurationSec:gallowsDurationSec(ballot.nominationDurationSec),voteDurationSec:gallowsDurationSec(ballot.voteDurationSec),
@@ -87,7 +103,7 @@ export function gallowsNominate(ballot,voter,target,now=Date.now()){
 }
 export function gallowsBegin(ballot,candidate,now=Date.now()){
   if(!validId(candidate)||!['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
-  return {ok:true,value:{...ballot,candidateId:candidate,stage:'voting',startedAt:now,
+  return {ok:true,value:{...ballot,candidateId:candidate,stage:'voting',hangingStartedAt:now,startedAt:now,
     deadlineAt:now+1000*gallowsDurationSec(ballot.voteDurationSec),updatedAt:now,votes:{}}};
 }
 export function gallowsCast(ballot,voter,choice,now=Date.now()){
@@ -118,7 +134,7 @@ export function gallowsSetMode(ballot,mode,now=Date.now()){
   if(!['auto','gm'].includes(mode)||gallowsStage(ballot,now)==='resolved')return {ok:false,error:'INVALID_GALLOWS_MODE'};
   if(gallowsMode(ballot)===mode)return {ok:true,value:ballot};
   // A switch never silently counts an already submitted ballot in another mode.
-  return {ok:true,value:{...ballot,mode,stage:'ready',candidateId:null,
+  return {ok:true,value:{...ballot,mode,stage:'ready',candidateId:null,hangingStartedAt:null,
     nominationStartedAt:null,nominationDeadlineAt:null,startedAt:null,deadlineAt:null,
     resolvedAt:null,outcome:null,nominations:{},votes:{},updatedAt:now}};
 }
