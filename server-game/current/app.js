@@ -2897,6 +2897,13 @@ function connectPlaySocket(){
   ws.onmessage=e=>{try{
     const d=JSON.parse(e.data||'{}');
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
+    if(d.type==='gallows_updated'&&String(playSceneState.roomCode)===code){
+      if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+      playSceneRuntime.gallows=d.gallows||null;
+      battleState.gallowsClosedShown=false;
+      if(playSceneState.step==='battle'&&playSceneState.phase==='day')battleGallowsRender('day');
+      return;
+    }
     const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
     if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
     if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
@@ -5148,11 +5155,8 @@ function battleGallowsTick(){
     remain(g?.nominationDeadlineAt,g?.nominationDurationSec,stage==='nominating'):'00:00';
   const vote=['ready','nominating','selecting','voting'].includes(stage)?
     remain(g?.deadlineAt,g?.voteDurationSec,stage==='voting'):'00:00';
-  const nominateClock=document.getElementById('battleGallowsNominationClock');
-  const voteClock=document.getElementById('battleGallowsVoteClock');
-  if(nominateClock)nominateClock.textContent=nom;
-  if(voteClock)voteClock.textContent=vote;
-  clock.textContent=['nominating'].includes(stage)?nom:['voting'].includes(stage)?vote:'';
+  clock.textContent=stage==='nominating'?nom:stage==='voting'?vote:
+    remain(null,stage==='selecting'||stage==='closed'?g?.voteDurationSec:g?.nominationDurationSec,false);
   if(g&&((stage==='nominating'&&now>=Number(g.nominationDeadlineAt||Infinity))||
      (stage==='voting'&&now>=Number(g.deadlineAt||Infinity)))&&!battleState.gallowsClosedShown){
     battleState.gallowsClosedShown=true;battleGallowsRender('day');
@@ -5194,7 +5198,6 @@ function battleGallowsRender(phase){
       const id=playEsc(m.loginId),name=playEsc(m.displayName||m.loginId),
         stats=rosterStats.get(String(m.loginId))||{},
         count=Number(stats.nominations??nomineeCount.get(m.loginId)??0),
-        saved=Number(stats.save||0),killed=Number(stats.kill||0),
         nom=nomBans.has(m.loginId),vote=voteBans.has(m.loginId),
         picked=String(g.candidateId||'')===String(m.loginId);
       return '<div class="battle-gallows-member'+(picked?' is-selected':'')+'" role="listitem">'+
@@ -5203,14 +5206,12 @@ function battleGallowsRender(phase){
         (mode!=='gm'||stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+
         'aria-pressed="'+picked+'" title="GM chọn người lên giàn">'+name+(picked?' ⚖️':'')+'</button>'+
         '<span class="gallows-count">'+count+'/'+nomEligible+'</span>'+
-        '<span class="gallows-count">'+saved+'/'+voteEligible+'</span>'+
-        '<span class="gallows-count">'+killed+'/'+voteEligible+'</span>'+
-        '<button type="button" data-gallows-kind="nomination" data-gallows-id="'+id+'" aria-pressed="'+nom+'" '+
-        (stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+'> '+(nom?'✓':'—')+' </button>'+
-        '<button type="button" data-gallows-kind="vote" data-gallows-id="'+id+'" aria-pressed="'+vote+'" '+
+        '<button type="button" data-gallows-kind="nomination" data-gallows-id="'+id+'" aria-label="'+(nom?'Bỏ cấm chọn ':'Cấm chọn ')+name+'" aria-pressed="'+nom+'" '+
+        (stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+'>'+(nom?'✓ CẤM':'CẤM')+'</button>'+
+        '<button type="button" data-gallows-kind="vote" data-gallows-id="'+id+'" aria-label="'+(vote?'Bỏ cấm vote ':'Cấm vote ')+name+'" aria-pressed="'+vote+'" '+
         (stage==='resolved'||battleState.gallowsBusy||artifactBans.has(m.loginId)?'disabled ':'')+
         ' title="'+(artifactBans.has(m.loginId)?'Artifact cấm Vote':'GM cấm Vote')+'">'+
-        (artifactBans.has(m.loginId)?'🎴':vote?'✓':'—')+'</button></div>';
+        (artifactBans.has(m.loginId)?'🎴 CẤM':vote?'✓ CẤM':'CẤM')+'</button></div>';
     }).join('');
     roster.scrollTop=top;const scroll=roster.closest('.gallows-roster-scroll');if(scroll)scroll.scrollLeft=left;
   }
@@ -5227,24 +5228,12 @@ function battleGallowsRender(phase){
   const manual=document.getElementById('battleGallowsManualConclusion');
   if(automatic)automatic.hidden=mode!=='auto';
   if(manual)manual.hidden=mode!=='gm';
-  // The tab only changes the GM control box; the Server owns the voting stage.
-  if(battleState.gallowsRenderedStage!==stage){
-    if(['voting','closed','resolved'].includes(stage))battleState.gallowsTab='vote';
-    else if(stage==='ready')battleState.gallowsTab='nomination';
-    battleState.gallowsRenderedStage=stage;
-  }
-  const tab=battleState.gallowsTab==='vote'?'vote':'nomination';
-  const nomBox=document.getElementById('battleGallowsNominationBox');
-  const voteBox=document.getElementById('battleGallowsVoteBox');
-  if(nomBox)nomBox.hidden=tab!=='nomination';
-  if(voteBox)voteBox.hidden=tab!=='vote';
-  for(const button of panel.querySelectorAll('[data-gallows-tab]'))
-    button.setAttribute('aria-pressed',String(button.dataset.gallowsTab===tab));
-  for(const [id,kind] of [['battleGallowsNominationSeconds','nomination'],['battleGallowsVoteSeconds','vote']]){
-    const input=document.getElementById(id),duration=Number(kind==='nomination'?g.nominationDurationSec:g.voteDurationSec)||60;
-    if(input&&document.activeElement!==input&&Number(input.value)!==duration)input.value=duration;
-    if(input)input.disabled=battleState.gallowsBusy||mode!=='auto'||(kind==='nomination'?stage!=='ready':!['ready','nominating','selecting'].includes(stage));
-  }
+  // One configured timer is shared by nomination and vote, each stage has its own deadline.
+  const secondsInput=document.getElementById('battleGallowsSeconds');
+  const duration=Number((['selecting','voting','closed'].includes(stage)?g.voteDurationSec:g.nominationDurationSec)||60);
+  if(secondsInput&&document.activeElement!==secondsInput&&Number(secondsInput.value)!==duration)
+    secondsInput.value=String(duration);
+  if(secondsInput)secondsInput.disabled=battleState.gallowsBusy||mode!=='auto'||stage!=='ready';
   const select=document.getElementById('battleGallowsCandidate');
   const leaders=nominationTallies.filter(t=>Number(t.votes)>0);
   const unique=leaders.length&&(!leaders[1]||Number(leaders[0].votes)>Number(leaders[1].votes))?String(leaders[0].loginId):'';
@@ -5259,9 +5248,18 @@ function battleGallowsRender(phase){
     select.value=allowed.some(m=>m.loginId===prev)?prev:'';
     select.disabled=battleState.gallowsBusy||stage==='resolved';
   }
-  const stats=document.getElementById('battleGallowsNominationStats');
-  if(stats)stats.textContent='Đã đề cử: '+Object.keys(g.nominations||{}).filter(id=>!nomBans.has(id)).length+'/'+nomEligible+
-    ' · Phiếu đã nhận: '+Number(g.voteTotals?.cast||0)+'/'+voteEligible;
+  // Counts are Server receipts, updated on every gallows_updated WebSocket event.
+  const chosen=Object.keys(g.nominations||{}).filter(id=>!nomBans.has(id)).length;
+  const selectedCount=document.getElementById('battleGallowsSelectedCount');
+  const votedCount=document.getElementById('battleGallowsVotedCount');
+  if(selectedCount)selectedCount.textContent=chosen+'/'+nomEligible;
+  if(votedCount)votedCount.textContent=Number(g.voteTotals?.cast||0)+'/'+voteEligible;
+  const nominationDetails=document.getElementById('battleGallowsNominations');
+  if(nominationDetails)nominationDetails.innerHTML=Object.entries(g.nominations||{})
+    .filter(([id])=>!nomBans.has(id))
+    .map(([id,target])=>'<div class="battle-gallows-vote"><strong>'+playEsc(memberName(id))+
+      '</strong><span>→ '+playEsc(memberName(target))+'</span></div>').join('')||
+      '<small>Chưa có đề cử.</small>';
   const stageText=document.getElementById('battleGallowsStage');
   if(stageText)stageText.textContent=stage==='ready'?(mode==='gm'?'Chọn người trên danh sách rồi chốt Sống / Chết.':'Sẵn sàng mở đề cử.') :
     stage==='nominating'?'Đang nhận đề cử từ Player Web.':
@@ -5313,7 +5311,7 @@ function battleGallowsRender(phase){
       voting=stage==='voting';
     button.disabled=battleState.gallowsBusy||
       (command==='open'&&(!ready||mode!=='auto'))||
-      (command==='close_nomination'&&(!nominating||mode!=='auto'))||
+      (command==='close_stage'&&(!(nominating||voting)||mode!=='auto'))||
       (command==='begin'&&(!selecting||mode!=='auto'||(!unique&&!select?.value)))||
       (command==='close_vote'&&(!voting||mode!=='auto'))||
       (command==='resolve'&&(mode!=='gm'||stage==='resolved'||!g.candidateId))||
@@ -5893,7 +5891,9 @@ function initBattleControls(){
   });
   document.getElementById('battleDayGallowsToggle')?.addEventListener('click',()=>{
     if(playSceneState.phase!=='day')return;
-    battleState.gallowsOpen=!battleState.gallowsOpen;
+    const opening=!battleState.gallowsOpen;
+    battleState.gallowsOpen=opening;
+    if(opening){battleUnlockAudioFromGesture();void battlePlayConfiguredAudio('system','audio_system_gallows_day_long','');}
     battleState.dayActionsOpen=false;battleState.morningOpen=false;renderPlayBattle();
   });
   document.getElementById('battleDayActionList')?.addEventListener('click',e=>{
@@ -5942,17 +5942,21 @@ function initBattleControls(){
     const g=playSceneRuntime.gallows||{},tallies=Array.isArray(g.nominationTotals)?g.nominationTotals:[],
       lead=tallies[0]&&(!tallies[1]||Number(tallies[0].votes)>Number(tallies[1].votes))?String(tallies[0].loginId):'',
       selected=document.getElementById('battleGallowsCandidate')?.value||'';
-    void battleGallowsCommand(btn.dataset.gallowsCommand,btn.dataset.gallowsCommand==='begin'?(lead||selected):String(g.candidateId||''),btn.dataset.outcome||'');
+    const stage=String(g.stage||'ready');
+    const command=btn.dataset.gallowsCommand==='close_stage'?
+      (stage==='nominating'?'close_nomination':'close_vote'):btn.dataset.gallowsCommand;
+    void battleGallowsCommand(command,command==='begin'?(lead||selected):String(g.candidateId||''),btn.dataset.outcome||'');
   });
-  // Timers are committed on focus exit; never reset an in-progress timer locally.
-  for(const [inputId,kind] of [['battleGallowsNominationSeconds','nomination'],['battleGallowsVoteSeconds','vote']]){
-    document.getElementById(inputId)?.addEventListener('focusout',event=>{
-      const input=event.currentTarget,g=playSceneRuntime.gallows||{},value=Number(input.value),
-        previous=Number(kind==='nomination'?g.nominationDurationSec:g.voteDurationSec)||60;
-      if(!Number.isInteger(value)||value<1||value>3600){input.value=previous;playFlashError('Thời gian từ 1 đến 3600 giây.');return}
-      if(value!==previous)void battleGallowsCommand('set_duration','','',{kind,seconds:value});
-    });
-  }
+  // Shared duration is saved once, authoritatively, for both stages.
+  document.getElementById('battleGallowsSeconds')?.addEventListener('focusout',event=>{
+    const input=event.currentTarget,g=playSceneRuntime.gallows||{},value=Number(input.value),
+      previous=Number(g.nominationDurationSec)||60;
+    if(!Number.isInteger(value)||value<1||value>3600){
+      input.value=String(previous);playFlashError('Thời gian từ 1 đến 3600 giây.');return;
+    }
+    if(value!==previous||value!==Number(g.voteDurationSec||60))
+      void battleGallowsCommand('set_duration','','',{kind:'both',seconds:value});
+  });
   battleBindAuxiliaryDrag('battleDetails','.play-battle-turn');
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
