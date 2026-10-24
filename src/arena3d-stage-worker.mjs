@@ -2,7 +2,7 @@
 // No change to production Worker, no cross-Worker service binding.
 import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
-import {projectGmOnlyVisuals} from './arena3d-visual-effect-policy.mjs';
+import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -15,15 +15,7 @@ function aggregateGallowsOnly(raw){
     outcome:raw.outcome||null};
 }
 export class RoomDurableObject extends GameRoomDurableObject{
-  broadcast(payload){
-    // Core V2's generic night confirmation includes raw private target IDs.
-    // Stage subscribers receive a confirmation without those IDs.
-    if(payload?.type==='battle_action_confirmed'){
-      const {targets,revealTargetIds,targetIds,...safe}=payload;
-      return super.broadcast(safe);
-    }
-    return super.broadcast(payload);
-  }
+  broadcast(payload){return super.broadcast(redactStagingPublicBroadcast(payload))}
   async fetch(request){
     const path=new URL(request.url).pathname;
     if(path==='/arena/gm-visuals'){
