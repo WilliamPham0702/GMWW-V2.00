@@ -102,7 +102,9 @@
   }
   function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
   function normalizeSeatOffset(value){
-    const safe=n=>Number.isFinite(Number(n))?Math.max(-30,Math.min(30,Math.round(Number(n)*10)/10)):0;
+    // Offset is a world-frame gesture, not an arbitrary ±30 drag cap.
+    // The actual bounds come from the full Seat formation below.
+    const safe=n=>Number.isFinite(Number(n))?Math.max(-100,Math.min(100,Math.round(Number(n)*10)/10)):0;
     return {x:safe(value?.x),y:safe(value?.y)};
   }
   function seatFormationBase(count,shape='',spacing=100){
@@ -117,31 +119,19 @@
   function resolveSeatOffset(count,shape='',offset=null,spacing=100){
     const base=seatFormationBase(count,shape,spacing);
     const target=normalizeSeatOffset(offset);
-    // A ring is ONE rigid body. Never clamp a single Seat to the fire or
-    // courtyard: that permanently distorts the formation (V3.193 regression).
-    const valid=(x,y)=>base.every(p=>inside(p.x+x,p.y+y));
-    if(!target.x&&!target.y)return{x:0,y:0};
-    // The requested vector can pass through the fire even when its endpoint
-    // looks legal. Follow the safe continuous segment from the default centre.
-    const steps=Math.max(1,Math.ceil(Math.hypot(target.x,target.y)*10));
-    let low=0,high=1,hit=false;
-    for(let i=1;i<=steps;i++){
-      const t=i/steps;
-      if(valid(target.x*t,target.y*t)){low=t;continue}
-      high=t;hit=true;break;
-    }
-    if(!hit)return target;
-    for(let i=0;i<12;i++){
-      const mid=(low+high)/2;
-      if(valid(target.x*mid,target.y*mid))low=mid;else high=mid;
-    }
-    // Truncate TOWARD zero: rounding away from the safe origin could move
-    // a Seat back into the forbidden fire. The GM and Server store this exact
-    // effective offset so arrows, drag, refresh and Player Web agree.
-    const safe=n=>Math.trunc((n+(n<0?1e-9:-1e-9))*10)/10;
-    let x=safe(target.x*low),y=safe(target.y*low);
-    while(!valid(x,y)&&(x||y)){x=safe(x*.99);y=safe(y*.99)}
-    return{x,y};
+    // Drag the WHOLE ring across the scene; the campfire/courtyard collision
+    // rules apply to walking Characters, not to GM positioning the Seat template.
+    // Bound each axis by the extreme Seat anchors, never by individual clamps.
+    // This makes the entire map reachable while preventing off-map Seats.
+    const margin=2;
+    const minX=Math.ceil((margin-Math.min(...base.map(p=>p.x)))*10)/10;
+    const maxX=Math.floor((100-margin-Math.max(...base.map(p=>p.x)))*10)/10;
+    const minY=Math.ceil((margin-Math.min(...base.map(p=>p.y)))*10)/10;
+    const maxY=Math.floor((100-margin-Math.max(...base.map(p=>p.y)))*10)/10;
+    return {
+      x:Math.max(minX,Math.min(maxX,target.x)),
+      y:Math.max(minY,Math.min(maxY,target.y))
+    };
   }
   function positions(count,shape='',offset=null,spacing=100){
     const base=seatFormationBase(count,shape,spacing);

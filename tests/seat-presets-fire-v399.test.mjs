@@ -53,7 +53,7 @@ test('GP2 preserves unique seats with extreme setup offsets and spacing',()=>{
   for(const count of sizes)for(const shape of shapes)
     for(const [offset,spacing] of [[{x:10,y:-10},135],[{x:-10,y:10},70]]){
       const players=layout.positions(count,shape,offset,spacing);
-      assert.ok(players.every(p=>layout.inside(p.x,p.y)));
+      assert.ok(players.every(p=>p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8));
       for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++)
         assert.ok(Math.hypot(players[i].x-players[j].x,(players[i].y-players[j].y)*1.78)>5.0,
           'overlapping extreme seats '+count+'/'+shape+'/'+i+'/'+j);

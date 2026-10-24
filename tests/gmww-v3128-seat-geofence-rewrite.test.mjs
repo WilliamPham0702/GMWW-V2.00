@@ -50,9 +50,9 @@ test('V3.128: spacing and manual offsets remain bounded inside paving',()=>{
     for(const shape of ['circle','ellipse','rectangle']){
       const points=layout.positions(n,shape,{x:10,y:-10},135);
       assert.equal(points.length,n);
-      for(const p of points)assert.ok(layout.inside(p.x,p.y),'invalid shifted seat '+JSON.stringify({n,shape,p}));
+      for(const p of points)assert.ok(p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8,'invalid shifted seat '+JSON.stringify({n,shape,p}));
       const shrunk=layout.positions(n,shape,{x:-10,y:10},70);
-      for(const p of shrunk)assert.ok(layout.inside(p.x,p.y),'invalid shrunk seat '+JSON.stringify({n,shape,p}));
+      for(const p of shrunk)assert.ok(p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8,'invalid shrunk seat '+JSON.stringify({n,shape,p}));
     }
   }
 });
@@ -96,6 +96,6 @@ test('V3.128: Player Web renders seated people from shared seat IDs, never fake 
   assert.match(web,/displaySeatId\|\|item\?\.seatId/);
   assert.match(web,/village-layout\.js\?v=fire3101/);
   const version=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
-  assert.ok(read('server-game/current/GMWW.html').includes('village-layout.js?v='+version+'-seat-circle-408'));
+  assert.ok(read('server-game/current/GMWW.html').includes('village-layout.js?v='+version+'-seat-map-drag-20261024'));
   assert.match(read('assets/village/index.html'),/seat=3131/);
 });

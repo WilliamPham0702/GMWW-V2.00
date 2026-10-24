@@ -137,17 +137,9 @@
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
-          <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
-          <div class="play-seat-shift-controls" aria-label="Căn chỉnh tất cả Seat quanh đốm lửa">
-            <span>CHỈNH VỊ TRÍ SEAT</span>
-            <div class="play-seat-shift-buttons">
-              <button type="button" data-seat-shift="left" aria-label="Dịch tất cả Seat sang trái">←</button>
-              <button type="button" data-seat-shift="up" aria-label="Dịch tất cả Seat lên trên">↑</button>
-              <button type="button" data-seat-shift="down" aria-label="Dịch tất cả Seat xuống dưới">↓</button>
-              <button type="button" data-seat-shift="right" aria-label="Dịch tất cả Seat sang phải">→</button>
-              <button type="button" data-seat-shift="reset" aria-label="Đặt lại Seat về vị trí tâm lửa">↺</button>
-            </div>
-            <output id="playSeatOffsetValue" aria-live="polite">X 0 · Y 0</output>
+          <div class="play-seat-shift-controls" aria-label="Giãn cách và khôi phục vị trí Seat">
+            <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
+            <div class="play-seat-shift-buttons"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục mặc định">🔄</button></div>
           </div>
           <div class="play-gather-toolbar-actions">
             <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
@@ -958,12 +950,12 @@
   </div>
 </div>
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
-<script src="village-layout.js?v=3.198-seat-circle-408"></script>
+<script src="village-layout.js?v=3.198-seat-map-drag-20261024"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.198-compact-room-village-scene-align-1-gp2&status=4"></script>
+<script src="app.js?v=3.198-compact-room-village-scene-align-1-gp2&seat-map-drag=20261024&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
