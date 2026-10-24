@@ -25,9 +25,9 @@ export function publicVoteSummary(ballot){
 }
 export function createGmDashboard({container,onSelect,onAction,onToggleQuality}){
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('DASHBOARD_CONTAINER_REQUIRED');
-  let frame=null,ballot=null,selectedId=null,hasGM=false,activeTab='room',lowPower=false,lastNotice='';
+  let frame=null,ballot=null,nightControl=null,selectedId=null,hasGM=false,activeTab='room',lowPower=false,lastNotice='';
   const controls=[
-    ['room','Phòng'],['day','Ngày / Đêm'],['gallows','Lên Giàn'],['vfx','Hiệu ứng'],['perf','Hiệu năng']
+    ['room','Phòng'],['day','Ngày / Đêm'],['turn','Lượt Đêm'],['gallows','Lên Giàn'],['vfx','Hiệu ứng'],['perf','Hiệu năng']
   ];
   const root=document.createElement('section');root.className='gm-console';
   const header=document.createElement('div');header.className='gm-console-head';
@@ -80,6 +80,33 @@ export function createGmDashboard({container,onSelect,onAction,onToggleQuality})
       actions.append(btn('☀️ Chuyển Ngày',()=>onAction?.('day'),{disabled:!hasGM}));
       actions.append(btn('Đồng bộ trạng thái',()=>onAction?.('refresh')));
       body.append(actions);
+    }else if(activeTab==='turn'){
+      body.append(el('p','Lượt đêm và quyền diễn hoạt được Core STAGING cung cấp riêng cho GM. Bản này chỉ kiểm tra tác động trình diễn, KHÔNG thay thế luật vai trò thực tế.','gm-console-hint'));
+      if(!hasGM||room.cyclePhase!=='night'||room.phase!=='running'){
+        body.append(el('p',hasGM?'Chuyển vào Đêm bằng menu Ngày/Đêm để điều khiển.':'Chỉ GM có quyền mới xem được lượt vai trò ban đêm.','gm-console-vote'));
+      }else{
+        body.append(el('div',nightControl?.label?('Lượt '+(nightControl.stepIndex+1)+'/'+nightControl.totalSteps+' · '+nightControl.label):'Core chưa trả lượt đêm','gm-console-vote'));
+        const actors=nightControl?.actorIds||[];
+        const owners=rows.filter(p=>actors.includes(p.id));
+        body.append(el('p','Người tới lượt: '+(owners.map(x=>x.label).join(', ')||'Chưa có người thực hiện'),'gm-console-hint'));
+        const target=rows.find(p=>p.id===selectedId);
+        body.append(el('p','Mục tiêu thử: '+(target?.label||'Hãy chọn người từ tab Phòng'),'gm-console-hint'));
+        const actions=el('div','','gm-console-actions');
+        actions.append(btn('Sang lượt tiếp theo',()=>onAction?.('nextTurn',nightControl?.turnId),
+          {disabled:!nightControl?.turnId}));
+        const trialRoles={role_guard:'🛡️ Bảo Vệ',role_prophet:'🔮 Tiên Tri',
+          role_witch:'💚 Phù Thủy cứu',role_wolf:'🌙 Ma Sói'};
+        const trialActors=nightControl?.roles?.length?
+          nightControl.roles.flatMap(r=>(r.actorIds||[]).map(id=>({roleId:r.roleId,actorId:id}))):
+          owners.map(o=>({roleId:nightControl?.roleId,actorId:o.id}));
+        for(const {roleId,actorId} of trialActors){
+          if(!trialRoles[roleId])continue;
+          actions.append(btn('Thử '+trialRoles[roleId],()=>onAction?.('roleTrial',nightControl.turnId,actorId,roleId,selectedId),
+            {disabled:!target}));
+        }
+        body.append(actions);
+        body.append(el('p','Mỗi hành động phải được Core xác thực theo người, vai và lượt; không tự phát phép ở trình duyệt.','gm-console-hint'));
+      }
     }else if(activeTab==='gallows'){
       body.append(el('p',publicVoteSummary(ballot),'gm-console-vote'));
       const names=(ballot?.nominationTotals||[]).map(x=>x.loginId+': '+x.votes).join(' · ');
@@ -111,7 +138,8 @@ export function createGmDashboard({container,onSelect,onAction,onToggleQuality})
   return {
     setState(next){frame=next;if(selectedId&&!publicGMRows(frame).some(p=>p.id===selectedId))selectedId=null;render()},
     setBallot(next){ballot=next;render()},
-    setGM(next){hasGM=next===true;render()},
+    setNightControl(next){nightControl=hasGM?next:null;render()},
+    setGM(next){hasGM=next===true;if(!hasGM)nightControl=null;render()},
     setSelection(next){selectedId=typeof next==='string'?next:null;render()},
     notify(message){lastNotice=String(message||'').slice(0,200);render()},
     get selectedId(){return selectedId},get authorized(){return hasGM},
