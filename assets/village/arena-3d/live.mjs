@@ -422,6 +422,7 @@ function loop(now){
   }
   if(now-fpsAt>=1000){
     fps=Math.round(frames*1000/(now-fpsAt));frames=0;fpsAt=now;
+    field.setQualityFps(fps);
     $('hud').textContent=field.actorCount+' Character · '+fps+' FPS · '+render.info.render.calls+' draw calls';
     document.body.dataset.gmwwStageFps=String(fps);
     document.body.dataset.gmwwDrawCalls=String(render.info.render.calls);
