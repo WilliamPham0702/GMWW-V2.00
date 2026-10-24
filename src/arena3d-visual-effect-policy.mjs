@@ -32,3 +32,11 @@ export function projectGmOnlyVisuals(interactions,{matchId,cycleKey,now=Date.now
   }
   return out.slice(-40);
 }
+
+// Staging Core V2 currently broadcasts a generic confirmation with raw night targets.
+// Keep the fact of a confirmation without its private targets for public WebSocket viewers.
+export function redactStagingPublicBroadcast(payload){
+  if(!payload||typeof payload!=='object'||payload.type!=='battle_action_confirmed')return payload;
+  const {targets,targetIds,revealTargetIds,revealTargetId,actorId,roleName,roleId,artifactId,...safe}=payload;
+  return safe;
+}
