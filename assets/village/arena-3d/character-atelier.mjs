@@ -46,6 +46,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     ['shellpin',sphere,'accessory',[.29,1.68,.12],[.15,.13,.075]],
     ['ribbon',sphere,'accessory',[-.39,1.53,-.03],[.20,.11,.13]],
     ['cape',sphere,'accessory',[0,.76,-.29],[.39,.48,.12]],
+    ['cheekL',sphere,'blush',[-.25,1.25,.286],[.10,.055,.028]],
+    ['cheekR',sphere,'blush',[.25,1.25,.286],[.10,.055,.028]],
+    ['sailorCollar',sphere,'accessory',[0,1.05,.1],[.26,.10,.29]],
+    ['hairTail',sphere,'hair',[.30,1.47,-.28],[.16,.36,.17]],
     ['stool',cylinder,'seat',[0,.15,-.12],[.48,.29,.46]]
   ];
   const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':key==='seat'?'#b99167':'white'});
@@ -105,8 +109,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       for(const part of meshes){
         const hex=part.kind==='seat'?'#b99167':part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:part.kind==='accessory'?style.accessory:
           part.kind==='skin'?style.skin:part.kind==='eye'?'#19273c':
-          part.kind==='shoe'?'#35526a':'#fff4d5';
-        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat')throw Error('UNKNOWN_ATELIER_MATERIAL');
+          part.kind==='shoe'?'#35526a':part.kind==='blush'?'#ed9b98':'#fff4d5';
+        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat'&&part.kind!=='blush')throw Error('UNKNOWN_ATELIER_MATERIAL');
         part.mesh.setColorAt(i,colorTemp.set(hex));
       }
     }
@@ -214,7 +218,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       if(!gesturing)actor.gesture='idle';
       for(const part of meshes){
         let [x,y,z]=part.offset,[sx,sy,sz]=part.size;
-        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
+        if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
         if(part.name==='armL'||part.name==='armR'){
           if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
           else if(gesturing&&actor.gesture==='cheer')y+=.25+.09*Math.sin(time*.016);
@@ -228,6 +232,9 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='ribbon'){
           if(actor.style%5===0||actor.style%5===3)sz*=1.15;
           else sx=sy=sz=.00001;
+        }
+        if(part.name==='hairTail'){
+          if(actor.style%5!==1&&actor.style%5!==3)sx=sy=sz=.00001;
         }
         if(part.name==='cape'){
           if(actor.style%5===2||actor.style%5===4)sy*=1.12;
