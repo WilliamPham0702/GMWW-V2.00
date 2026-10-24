@@ -114,8 +114,63 @@ function isDualRendererScope(changes){
     changes.every(c=>dualPaths.has(c.path)&&['A','M'].includes(c.status));
 }
 
+// PR #463 Lên Giàn has its own mandatory focused workflow.
+// Its large GM/Worker bundles must not trigger unrelated Chrome cards/Seats/OTA browser tests.
+const gallowsOnlyPaths=new Set([
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/verify-prepared-runtime.mjs',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  'docs/acceptance-pr463-gallows-iphone-playerweb.md',
+  'docs/release-notes-gallows-panel-20261024.md',
+  'package-lock.json','package.json',
+  'server-game/current/GMWW.html',
+  'server-game/current/app.js',
+  'server-game/current/style.css',
+  'server-game/src/00-core-and-library.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'src/gmww-gallows-rules.js','src/gmww-members-live.js','src/index.js',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'tests/demo-server-autonomous-e2e.mjs',
+  'tests/gallows-hanging-character.test.mjs',
+  'tests/gallows-panel-60s-controls.test.mjs',
+  'tests/gallows-redesign-live.test.mjs',
+  'tests/native-ipa-release-gate.test.mjs','tests/published-ipa.test.mjs',
+  'tests/v3148-gallows-integrity.test.mjs',
+  'tests/v3150-gallows-template-timing.test.mjs',
+  'tests/v3163-artifact-static-battle-swipe-actions.test.mjs',
+  'tests/v3179-demo-observer-bulletin-gallows-haptics.test.mjs',
+  'tests/v3192-gallows-dual-mode.test.mjs',
+  'tests/v3196-native-runtime-release-gates.test.mjs',
+  'tests/v3202-ota-release-gates.test.mjs',
+  'tests/v3202-runtime-integrity.test.mjs'
+]);
+function isGallowsScope(changes){
+  const names=new Set(changes.map(x=>x.path));
+  return names.has('.github/workflows/check-gallows-redesign.yml')&&
+    names.has('src/gmww-gallows-rules.js')&&
+    names.has('tests/gallows-panel-60s-controls.test.mjs')&&
+    changes.every(x=>gallowsOnlyPaths.has(x.path)&&['A','M'].includes(x.status));
+}
+// Testing changes to the selector itself needs only its dedicated unit tests.
+const policyPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-card-browsers.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/ci-browser-focused-gallows-20261024.md'
+]);
+function isPolicyScope(changes){
+  const names=new Set(changes.map(x=>x.path));
+  return names.has('.github/scripts/ci-browser-scope.mjs')&&
+    names.has('.github/workflows/check-player-card-browsers.yml')&&
+    names.has('tests/ci-browser-scope.test.mjs')&&
+    changes.every(x=>policyPaths.has(x.path)&&['A','M'].includes(x.status));
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isPolicyScope(changes))return 'ci-policy';
+  if(isGallowsScope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
   for(const {path,before,after,status} of changes){
@@ -159,10 +214,12 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
+  if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(result.mode!=='dual-renderer')console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
