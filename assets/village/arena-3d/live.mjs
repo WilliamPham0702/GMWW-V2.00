@@ -30,7 +30,9 @@ const pointlight=new THREE.PointLight(0xffa442,12,8);pointlight.position.set(0,1
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
   const previousMatch=current?.room.matchId,previousCycle=current?.room.cycleKey;
+  const changedRoom=current?.room.code!==frame.room.code;
   current=frame;synthetic=frame.room.code==='SYNTH';
+  if(changedRoom||frame.room.phase!=='running')field.setCastingTurn(null);
   const items=rendererCommands(frame,'3d').players;
   field.setActors(items);
   dashboard.setState(frame);
@@ -96,6 +98,7 @@ function enableGm(){if(!gmToken){field.setCastingTurn(null);document.body.datase
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
+  field.clearEffects();syntheticCastSeq++;
   if(feed)feed.close();
   code=room.trim().toUpperCase();$('room').value=code;
   const state=await json(roomUrl());
