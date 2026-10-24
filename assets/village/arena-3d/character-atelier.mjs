@@ -66,6 +66,15 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;
     root.add(mesh);return {name,mesh,size};
   });
+  // One lightweight spell ribbon from authorized caster to target.
+  // The beam only appears after a Core-confirmed private cue, never on public replay.
+  const beamMaterial=new THREE.MeshBasicMaterial({color:'#82edec',transparent:true,opacity:.82,depthWrite:false});
+  const beamGeometry=new THREE.CylinderGeometry(.047,.08,1,6);
+  const spellBeam=new THREE.Mesh(beamGeometry,beamMaterial);spellBeam.visible=false;
+  spellBeam.frustumCulled=false;root.add(spellBeam);
+  const beamDir=new THREE.Vector3(),beamFrom=new THREE.Vector3(),beamTo=new THREE.Vector3();
+  const beamUp=new THREE.Vector3(0,1,0);
+  let activeBeam=null;
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
   let reducedMotion=false,lastDraw=-1,updates=0;
   function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
@@ -157,11 +166,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const kind=['shield','inspect','heal','attack','vote'].includes(cast.kind)?cast.kind:'vote';
         caster.effects.set(kind,now+elapsed);
         if(target)target.effects.set(kind,now+elapsed);
+        activeBeam=target?{actorId:caster.id,targetId:target.id,until:now+elapsed,kind}:null;
       }
     }
   }
   function clearEffects(){
-    currentTurn='';currentCast='';
+    currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;
     for(const actor of actors){actor.effects.clear();actor.standUntil=performance.now()+560;actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true}
@@ -221,6 +231,23 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         temp.compose(pos,quat,scale);effect.mesh.setMatrixAt(actor.index,temp);
       }
     }
+    if(activeBeam&&time<activeBeam.until){
+      const caster=byId.get(activeBeam.actorId),target=byId.get(activeBeam.targetId);
+      if(caster&&target){
+        beamFrom.set(caster.position.x,1.4,caster.position.z);
+        beamTo.set(target.position.x,.82,target.position.z);
+        beamDir.subVectors(beamTo,beamFrom);
+        const distance=beamDir.length();
+        if(distance>.25){
+          spellBeam.position.copy(beamFrom).add(beamTo).multiplyScalar(.5);
+          spellBeam.quaternion.setFromUnitVectors(beamUp,beamDir.multiplyScalar(1/distance));
+          spellBeam.scale.set(1,distance,1);
+          beamMaterial.color.set({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec');
+          beamMaterial.opacity=reducedMotion?.55:.69+.13*Math.sin(time*.015);
+          spellBeam.visible=true;
+        }else spellBeam.visible=false;
+      }else spellBeam.visible=false;
+    }else{spellBeam.visible=false;if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
     for(const item of [...meshes,...effects])item.mesh.instanceMatrix.needsUpdate=true;
     updates++;return true;
   }
@@ -236,10 +263,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const item of effects)item.mesh.material.dispose();
     // Each geometry may be shared by multiple instanced meshes; dispose only once.
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
+    spellBeam.geometry.dispose();spellBeam.material.dispose();
     actors.length=0;byId.clear();
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,draw,pick,dispose,
-    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length},
+    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1},
+    get beamVisible(){return spellBeam.visible},
     get actors(){return actors.map(a=>({id:a.id,position:a.position,yaw:a.yaw,statusIds:[...a.statusIds],
       standing:a.standUntil>performance.now(),casting:a.castUntil>performance.now()}))}};
 }
