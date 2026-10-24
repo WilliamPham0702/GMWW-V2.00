@@ -6,6 +6,12 @@ on:
       - "assets/village/arena-3d/**"
       - "tests/arena3d-stage7-*"
       - ".github/workflows/arena3d-stage7-research.yml"
+  pull_request:
+    branches: ["feature/arena3d-stage6-art-motion-ritual"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "tests/arena3d-stage7-*"
+      - ".github/workflows/arena3d-stage7-research.yml"
   workflow_dispatch:
 permissions:
   contents: read
