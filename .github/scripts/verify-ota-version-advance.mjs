@@ -7,6 +7,7 @@ const productionOrigin = 'https://gmww-v2-00.williampham0702.workers.dev';
 const runtimeSourcePatterns = [
   /^server-game\/current\//,
   /^server-game\/shared\//,
+  /^server-game\/src\//,
   /^assets\/backgrounds\//,
   /^assets\/characters\//,
   /^assets\/village\//,
@@ -58,15 +59,9 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
 
   if (runtimeChanged) {
     const advance = compareReleaseVersions(candidate.releaseVersion, deployed.releaseVersion);
-    // A live Worker health fallback is NOT proof that the OTA manifest or its
-    // immutable assets were published. Permit a same-version repair deployment
-    // only when the production manifest is unavailable and the health endpoint
-    // verifies the exact candidate Runtime version. All other checks remain.
-    const sameVersionManifestRepair =
-      advance === 0 &&
-      deployed.source === 'verified-live-health-fallback' &&
-      candidate.releaseType === 'runtime' &&
-      String(candidate.runtimeVersion || '') === String(candidate.releaseVersion || '');
+    // Live health proves Worker identity/version, NOT the integrity of published OTA assets.
+    // Never allow a changed candidate at the same releaseVersion on that basis.
+    // Only a complete and byte-identical production inventory can be re-published.
     // Release tooling may change Worker metadata without changing any OTA bytes.
     // A healthy manifest with an identical complete file inventory proves that
     // no installed Runtime needs a new version. Actual runtime inputs still bump.
@@ -91,7 +86,7 @@ export function verifyOtaVersionAdvance(candidate, deployed, changedFiles = []) 
       candidate.shellVersion===deployed.shellVersion&&
       candidate.minimumShellVersion===deployed.minimumShellVersion&&
       candidate.runtimeVersion===deployed.runtimeVersion;
-    if ((advance === null || advance <= 0) && !sameVersionManifestRepair && !identicalPublishedPackage) {
+    if ((advance === null || advance <= 0) && !identicalPublishedPackage) {
       throw new Error(
         'Runtime source changed but candidate releaseVersion ' + candidate.releaseVersion +
         ' does not advance beyond Production ' + deployed.releaseVersion +
