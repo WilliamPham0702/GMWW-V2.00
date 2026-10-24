@@ -4,10 +4,10 @@
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import path from 'node:path';
 
 const scopedMarkers={
   'src/index.js':['  async gmConfig(request,body){','  async gmDayClock(request,body){'],
-  'src/gmww-public-room-contract.js':['export function publicRoom(m){',null],
   'server-game/src/50-roles-and-artifacts.part':['/* Match completion is shared','async function openPlayEndSheet(){'],
   'server-game/current/app.js':['/* Match completion is shared','async function openPlayEndSheet(){']
 };
@@ -28,6 +28,14 @@ export function classifyBrowserScope(changes){
   for(const {path,before,after,status} of changes){
     if(!path||!['M','A'].includes(status))return 'full';
     if(notesPath.test(path)||testPath.test(path))continue;
+    // Room DTO is large and shared with seats/cards: allow ONLY the exact
+    // extra result-identity field, never arbitrary changes to publicRoom().
+    if(path==='src/gmww-public-room-contract.js'){
+      if(status!=='M'||typeof before!=='string'||typeof after!=='string')return 'full';
+      const normalized=s=>s.replace(',lastEndedMatchId:m.lastEndedMatchId||null','');
+      if(normalized(before)!==normalized(after))return 'full';
+      continue;
+    }
     const markers=scopedMarkers[path];
     if(!markers||status!=='M')return 'full';
     const oldOutside=outsideScope(before,...markers),newOutside=outsideScope(after,...markers);
@@ -55,7 +63,7 @@ function detect(){
     return{mode:'full',reason:'Could not verify changes safely: '+String(error.message||error)};
   }
 }
-if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
+if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
