@@ -55,9 +55,11 @@ test('Wolf labels are white text on black and result colors are negative red, po
   assert.match(css,/justify-content:safe center!important/);
 });
 
-test('Gallows shows vote counts and result with three independently assignable audio links',()=>{
+test('Gallows shows verdicts and audio upload slots under System library, not Gallows panel',()=>{
   assert.match(html,/id="battleGallowsResult"/);
-  assert.match(battle,/audio_system_gallows_vote_result/);
+  assert.match(battle,/audio_system_gallows_open_vote/);
+  assert.match(html,/id="battleGallowsInfo"/);
+  assert.doesNotMatch(html,/id="battleGallowsAudioSources"/);
   assert.match(battle,/audio_system_gallows_result_dead/);
   assert.match(battle,/audio_system_gallows_result_saved/);
   for(const id of ['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'])
