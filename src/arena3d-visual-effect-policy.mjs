@@ -1,0 +1,34 @@
+// Strict GM-only visual projection. Called inside an authorized staging Durable Object.
+// No actor identity, role, faction, ballot receipt or individual vote is projected.
+// The public 3D renderer uses only already-public status tags + aggregate tally.
+const ACTION_TO_VISUAL=Object.freeze({
+  action_protect:'shield',action_guard:'shield',
+  action_witch_save:'heal',action_witch_heal:'heal',action_revive:'heal',
+  action_witch_kill:'attack',action_wolf_bite:'attack',action_poison:'attack',
+  action_prophet:'inspect',action_prophet_inspect:'inspect',action_seer:'inspect',
+  action_inspect:'inspect'
+});
+const TYPE_TO_VISUAL=Object.freeze({
+  protected:'shield',revive:'heal',dead:'attack',expelled:'attack',wolf_bitten:'attack',
+  frozen:'attack'
+});
+const safe=s=>String(s||'').slice(0,120);
+export function projectGmOnlyVisuals(interactions,{matchId,cycleKey,now=Date.now()}={}){
+  if(!Array.isArray(interactions)||!matchId||!cycleKey)return [];
+  const out=[],seen=new Set();
+  for(const row of interactions.slice(-150)){
+    if(!row||row.effectActive===false||row.undone===true)continue;
+    if(String(row.matchId||'')!==String(matchId)||String(row.cycleKey||'')!==String(cycleKey))continue;
+    const created=Date.parse(String(row.createdAt||row.resolvedAt||''));
+    if(!Number.isFinite(created)||created>now+10000||now-created>120000)continue;
+    const kind=ACTION_TO_VISUAL[String(row.actionId||'')]||TYPE_TO_VISUAL[String(row.type||'')];
+    const login=safe(row.loginId||row.targetId);
+    if(!kind||!login||!(/^[A-Za-z0-9_.-]{1,60}$/.test(login)))continue;
+    const id=safe(row.id||row.clientEventId);
+    if(!id||seen.has(id))continue;seen.add(id);
+    out.push({eventId:id,targetId:'member:'+login,kind,
+      // End time is tightly bounded; no historical replay of secret night actions.
+      expiresAt:Math.min(now+1500,created+120000)});
+  }
+  return out.slice(-40);
+}
