@@ -42,3 +42,48 @@ export function choreographyPose(actor,time,{lowMotion=false}={}){
   const until=Number(actor.castUntil)||0;
   return {stand,casting:standing&&time<until&&time>=Number(actor.castStartedAt||0)?1:0};
 }
+
+
+// Render-only staging movement. The authoritative seat coordinate never changes.
+export const WALK_TIMING=Object.freeze({approachMs:850,returnMs:920,standMs:420,seatMs:420});
+const clamp01=n=>Math.min(1,Math.max(0,n));
+const smooth=n=>{const t=clamp01(n);return t*t*(3-2*t)};
+export function approachPoint(seat,{fireX=0,fireZ=1.8,step=1.6,clearance=1.7}={}){
+  const x=Number(seat?.x),z=Number(seat?.z);
+  if(!Number.isFinite(x)||!Number.isFinite(z))return {x:0,z:0};
+  const radius=Math.hypot(x,z);
+  if(radius<.01)return {x,z};
+  // Ritual space lies inside the seat ring but outside the fire clearance.
+  let fraction=Math.max(0,(radius-Math.min(1.9,Math.max(.3,step)))/radius);
+  const limit=Math.min(1,Math.max(.5,clearance));
+  let candidate={x:x*fraction,z:z*fraction};
+  if(Math.hypot(candidate.x-fireX,candidate.z-fireZ)<limit){
+    // Fallback retreat towards the original seat: never stand in the fire.
+    const dx=x-candidate.x,dz=z-candidate.z;
+    const distance=Math.hypot(dx,dz)||1;
+    candidate={x:fireX+(candidate.x-fireX)*(limit/Math.max(.001,Math.hypot(candidate.x-fireX,candidate.z-fireZ))),
+      z:fireZ+(candidate.z-fireZ)*(limit/Math.max(.001,Math.hypot(candidate.x-fireX,candidate.z-fireZ)))};
+    const foot=Math.hypot(candidate.x-x,candidate.z-z);
+    if(foot>1.9){const t=1.9/foot;candidate={x:x+(candidate.x-x)*t,z:z+(candidate.z-z)*t}}
+    // If the seat itself is inside clearance, no movement can improve the situation.
+    if(Math.hypot(x-fireX,z-fireZ)<limit)return {x,z};
+    // Avoid walking through the fire; if the path would cross its circle, stay seated.
+    const sx=x-fireX,sz=z-fireZ,ex=candidate.x-fireX,ez=candidate.z-fireZ;
+    const segX=ex-sx,segZ=ez-sz;
+    const t=Math.max(0,Math.min(1,-(sx*segX+sz*segZ)/(segX*segX+segZ*segZ||1)));
+    if(Math.hypot(sx+segX*t,sz+segZ*t)<limit)return {x,z};
+    void dx;void dz;void distance;
+  }
+  return {x:candidate.x,z:candidate.z};
+}
+export function travelProgress(travel,now){
+  if(!travel)return 0;
+  const start=Number(travel.startedAt),duration=Number(travel.duration);
+  const from=Number(travel.from),to=Number(travel.to);
+  if(![start,duration,from,to].every(Number.isFinite)||duration<=0)return 0;
+  return from+(to-from)*smooth((now-start)/duration);
+}
+export function renderWalkPosition(seat,approach,travel,now){
+  const p=clamp01(travelProgress(travel,now));
+  return {x:seat.x+(approach.x-seat.x)*p,z:seat.z+(approach.z-seat.z)*p};
+}
