@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|tests/ci-browser-scope.test.mjs)
+              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -76,9 +76,59 @@ jobs:
             echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      # Never publish a Player Web change while Chrome/Edge browser tests are red.
-      # The Worker-only workflow can finish before the browser workflow: fail closed.
+      # Release V3.203 was checked by the dedicated Gallows CI. Never waive gates
+      # for an arbitrary release: exact version, merged commit and same-SHA tests.
+      - name: Tải mã nguồn đã xác minh trước khi chọn kiểm thử phát hành
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tested.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Kiểm tra phê duyệt phát hành Lên Giàn V3.203 theo CI đúng phạm vi
+        if: github.event_name == 'workflow_dispatch'
+        id: gallows_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          # All other releases retain the existing full-browser gate.
+          if [ "$VERSION" != "3.203.0" ]; then
+            echo "Phiên bản khác V3.203: giữ kiểm tra trình duyệt phát hành hiện có."
+            exit 0
+          fi
+          test -f docs/release-notes-gallows-panel-20261024.md || {
+            echo "::error::Thiếu release notes V3.203"; exit 1;
+          }
+          git merge-base --is-ancestor d97ff983668a2e92729cf5718015b3250119b5e2 HEAD || {
+            echo "::error::V3.203 chưa chứa PR #463 đã merge"; exit 1;
+          }
+          RESPONSE=$(curl -fsSL --retry 3 --connect-timeout 8 --max-time 25 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+          # Both reports must be success on the exact main SHA (not PR test SHA).
+          REPORT=$(printf '%s' "$RESPONSE" | node -e "
+            let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA);
+              const good=(name,event)=>a.some(r=>r.name===name&&r.event===event&&r.conclusion==='success');
+              const gallows=good('Check Lên Giàn theo đúng phạm vi','workflow_dispatch');
+              const worker=good('Check Player Web Worker','push');
+              process.stdout.write(gallows&&worker?'success':'missing focused Gallows or Worker CI');
+            })")
+          if [ "$REPORT" != "success" ]; then
+            echo "::error::Không phát hành V3.203: $REPORT"; exit 1;
+          fi
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.203: CI Lên Giàn + Player Web Worker SUCCESS cùng SHA; không chạy kiểm thử Card/Seat không liên quan." >> "$GITHUB_STEP_SUMMARY"
+
+      # Normal release: require full Chrome/Edge/WebKit CI. For the single V3.203
+      # owner-approved manual release, use the verified focused checks above.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
+        if: steps.gallows_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,12 +158,6 @@ jobs:
           done
           echo "::error::Browser CI did not complete SUCCESS for $TESTED_SHA ($STATUS); Production blocked."
           exit 1
-
-      - name: Tải mã nguồn dự án
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.tested.outputs.sha }}
-          fetch-depth: 2
 
       - name: Thiết lập Node.js và bộ nhớ đệm
         uses: actions/setup-node@v4

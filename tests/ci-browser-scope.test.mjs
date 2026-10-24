@@ -121,3 +121,31 @@ test('CI-only merge phải chặn auto-deploy Production',()=>{
   assert.match(workflow,/\.github\/workflows\/deploy-production\.yml/);
   assert.match(workflow,/CHỈ CI: BỎ QUA DEPLOY PRODUCTION/);
 });
+
+test('Bản vá cổng phát hành V3.203 chỉ chạy CI policy, không kiểm Chrome/Seat',()=>{
+  const c=[
+    modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+    modified('.github/workflows/check-player-card-browsers.yml','old','new'),
+    modified('.github/workflows/deploy-production.yml','old','new'),
+    modified('tests/ci-browser-scope.test.mjs','old','new'),
+    {path:'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md',status:'A'}
+  ];
+  assert.equal(classifyBrowserScope(c),'ci-policy');
+  assert.equal(classifyBrowserScope([...c,modified('server-game/current/app.js','before','after')]),'full');
+});
+
+test('V3.203 manual release only passes with dedicated Gallows CI and matching Worker SHA',()=>{
+  const s=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  for(const required of [
+    'github.event_name == \'workflow_dispatch\'',
+    'git merge-base --is-ancestor d97ff983668a2e92729cf5718015b3250119b5e2 HEAD',
+    'Check Lên Giàn theo đúng phạm vi',
+    'Check Player Web Worker',
+    'r.head_sha===process.env.TESTED_SHA',
+    'steps.gallows_release.outputs.approved',
+    '3.203.0',
+    'verify-ota-version-advance.mjs',
+    'npx wrangler deploy'
+  ])assert.ok(s.includes(required),'Missing release guard: '+required);
+  assert.ok(s.includes('docs/release-notes-gallows-panel-20261024.md'));
+});
