@@ -37,7 +37,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   chrome-edge:
     needs: scope
-    if: needs.scope.outputs.mode == 'full'
+    if: needs.scope.outputs.mode != 'postgame'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
