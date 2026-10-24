@@ -2629,7 +2629,7 @@ async function battleOpenGallowsAudioUpload(id){
   row?.scrollIntoView({block:'center'});
   row?.classList.add('gallows-audio-upload-target');
 }
-function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
   const key=kind+':'+(row?.id||targetId||name),now=Date.now();
