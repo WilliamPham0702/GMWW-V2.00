@@ -647,6 +647,7 @@
             <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
               <div class="health-v236-actions">
                 <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b>QUẢN LÝ CLOUDFLARE</b></button>
+                <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
               </div>
             </div>
             <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
@@ -680,7 +681,9 @@
             <div class="ops-status-grid" aria-live="polite">
               <div><small>NAMESPACES</small><b id="gmwwCfNamespaces">—</b></div>
               <div><small>PREVIEW</small><b id="gmwwCfPreviews">—</b></div>
-              <div><small>ĐỦ ĐIỀU KIỆN DỌN</small><b id="gmwwCfEligible">—</b></div>
+              <div><small>ỨNG VIÊN CẦN XÁC MINH RỖNG</small><b id="gmwwCfEligible">—</b></div>
+              <div><small>PREVIEW ĐƯỢC BẢO VỆ</small><b id="gmwwCfProtected">—</b></div>
+              <div><small>CHƯA ĐỐI CHIẾU</small><b id="gmwwCfUnlinked">—</b></div>
               <div><small>ĐÃ DỌN LƯỢT GẦN NHẤT</small><b id="gmwwCfDeleted">—</b></div>
             </div>
             <small class="maintenance-detail" id="gmwwCfLastRun" role="status">Chưa tải được báo cáo kiểm toán.</small>
@@ -689,7 +692,7 @@
               <button class="settings-action settings-action-server" id="gmwwCfScan" type="button"><span>⌕</span><b>QUÉT PREVIEW</b></button>
               <button class="settings-action settings-action-server" id="gmwwCfCleanup" type="button"><span>♻</span><b>DỌN THỦ CÔNG</b></button>
             </div>
-            <small class="gmww-cloudflare-notice">Quét / dọn thủ công mở GitHub Actions để chủ dự án xác nhận bằng tài khoản GitHub, không cần mã quản trị riêng. Tự quét &amp; dọn theo lịch đang cấu hình. Chỉ Preview đủ điều kiện và không có dữ liệu mới được phép xoá. Production và các phòng chơi luôn được giữ nguyên.</small>
+            <small class="gmww-cloudflare-notice">DỌN RÁC SERVER chỉ quản lý Preview Cloudflare cũ. Nhấn QUÉT PREVIEW để xem trước; nhấn DỌN THỦ CÔNG để chuyển tới GitHub Actions, đăng nhập rồi chọn <b>Run workflow → cleanup</b>. Không xóa từ iPhone hay bỏ qua bước xác nhận. Chỉ Preview đã đóng PR, quá 24 giờ và xác minh namespace rỗng mới có thể bị xoá (tối đa 10 mỗi lượt). <b>Chưa đối chiếu, PR đang mở, Production, phòng, lịch sử, bản sao lưu và hệ thống độc lập luôn được giữ lại.</b> Tự bảo trì theo lịch 09:00 (Việt Nam). <a href="/admin/cloudflare/index.html" target="_blank" rel="noopener noreferrer">Xem báo cáo chi tiết ↗</a></small>
           </div>
           <div class="settings-operation-console settings-maintenance-console" aria-label="Kết quả bảo trì">
           <div class="health-v236-head"><div><span class="maintenance-dot" id="maintenanceDot"></span><b>Tối ưu hệ thống</b></div><span class="maintenance-pill" id="maintenanceStatus">SẴN SÀNG</span></div>
@@ -1052,11 +1055,13 @@
       set('gmwwCfPreviews',data.previewCount);
       set('gmwwCfEligible',data.eligibleCount);
       set('gmwwCfDeleted',data.deletedCount);
+      set('gmwwCfProtected',Number.isSafeInteger(data.protectedCount)&&data.protectedCount>=0?data.protectedCount:'—');
+      set('gmwwCfUnlinked',Number.isSafeInteger(data.unlinkedCount)&&data.unlinkedCount>=0?data.unlinkedCount:'—');
       const date=Date.parse(data.updatedAt||'');
       set('gmwwCfLastRun',Number.isFinite(date)
         ? 'Lần '+(data.mode==='cleanup'?'dọn':'quét')+' gần nhất: '+new Date(date).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})+' · '+(data.state==='success'?'Hoàn tất':'Có mục được bảo vệ')
         : 'Báo cáo chưa có thời gian hợp lệ');
-      set('gmwwCfState','ĐÃ KIỂM TOÁN');
+      set('gmwwCfState',Date.now()-date>24*60*60*1000?'BÁO CÁO CŨ':'ĐÃ KIỂM TOÁN');
     }catch(error){
       set('gmwwCfState','KHÔNG KẾT NỐI');
       set('gmwwCfLastRun','Không tải được báo cáo: '+String(error.message||error).slice(0,110));
@@ -1069,11 +1074,21 @@
     button.addEventListener('click',()=>{
       panel.hidden=!panel.hidden;
       button.setAttribute('aria-expanded',String(!panel.hidden));
+      const shortcut=get('gmwwServerTrashOpen');if(shortcut)shortcut.setAttribute('aria-expanded',String(!panel.hidden));
       if(!panel.hidden)refresh();
+    });
+    const shortcut=get('gmwwServerTrashOpen');
+    if(shortcut)shortcut.addEventListener('click',()=>{
+      if(panel.hidden)button.click();
+      shortcut.setAttribute('aria-expanded','true');
+      panel.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
     const reload=get('gmwwCfRefresh');if(reload)reload.addEventListener('click',refresh);
     for(const id of ['gmwwCfScan','gmwwCfCleanup']){
-      const item=get(id);if(item)item.addEventListener('click',()=>window.location.assign(actions));
+      const item=get(id);if(item)item.addEventListener('click',()=>{
+        if(id==='gmwwCfCleanup'&&!window.confirm('Dọn rác Server sẽ mở GitHub Actions. Chỉ Preview đã xác minh rỗng được phép dọn, không xóa phòng hoặc dữ liệu. Tiếp tục?'))return;
+        window.location.assign(actions);
+      });
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

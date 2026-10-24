@@ -82,6 +82,17 @@ jobs:
           rm -rf "$APPDIR/Web"
           mkdir -p "$APPDIR/Web"
           cp server-game/current/GMWW.html "$APPDIR/Web/GMWW.html"
+          # IPA runs its HTML from a local Web bundle: the server-only admin
+          # route must be an absolute HTTPS navigation link, not a native file.
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='server-game/GMWW-Server/Web/GMWW.html';
+          const html=fs.readFileSync(file,'utf8');
+          const local='href="/admin/cloudflare/index.html"';
+          const remote='href="https://gmww-v2-00.williampham0702.workers.dev/admin/cloudflare/index.html"';
+          if(html.includes(local))fs.writeFileSync(file,html.replace(local,remote));
+          if(fs.readFileSync(file,'utf8').includes(local))throw new Error('Unresolved native Cloudflare administration link');
+          NODE
           cp server-game/current/style.css "$APPDIR/Web/style.css"
           cp server-game/current/app.js "$APPDIR/Web/app.js"
           cp server-game/current/character-renderer.js "$APPDIR/Web/character-renderer.js"
