@@ -169,7 +169,7 @@ $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',asy
   }
   await feed?.refresh();notice('Đã bổ sung '+added+' người thử; người đang tham gia Player Web được giữ nguyên và ưu tiên Seat.');
 });
-$('lock').onclick=()=>guarded('Khóa Seat',async()=>{await gm('seat-lock',{locked:true});await feed?.refresh()});
+$('lock').onclick=()=>guarded('Khóa Seat',async()=>{await gm('seat-lock',{locked:true});await feed?.refresh();notice('Đã khóa Seat trên Core staging.');});
 $('deal').onclick=()=>guarded('Phát Vai thử bằng Core V2',async()=>{
   await feed?.refresh();
   const people=(feed?.state.current?.players||[]).filter(p=>p.id.startsWith('member:'));
