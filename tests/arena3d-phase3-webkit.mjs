@@ -26,9 +26,8 @@ try{
   await page.locator('#camera-reset').click();
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).followCaster,true);
   await page.locator('#sample-cast').click();
-  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().activeCaster?.startsWith('synthetic-'),null,{timeout:8000});
-
-  await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='standing',null,{timeout:7000});
+  await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='standing'&&
+    window.__GMWW_ARENA_STAGE_READONLY?.().activeCaster?.startsWith('synthetic-'),null,{timeout:7000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:10000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='returning',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:12000});
