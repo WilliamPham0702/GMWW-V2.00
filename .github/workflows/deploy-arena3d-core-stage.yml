@@ -11,6 +11,7 @@ on:
       - "assets/village/arena-3d/live.*"
       - "assets/village/arena-3d/room-realtime.mjs"
       - "assets/village/arena-3d/character-atelier.mjs"
+      - "assets/village/arena-3d/arena-acceptance-scenario.mjs"
       - "assets/village/arena-3d/spell-vfx.mjs"
       - "assets/village/arena-3d/casting-choreography.mjs"
       - "assets/village/arena-3d/coastal-village.mjs"
@@ -21,6 +22,7 @@ on:
       - "tests/arena3d-phase3.test.mjs"
       - "tests/arena3d-spell-vfx.test.mjs"
       - "tests/arena3d-phase4.test.mjs"
+      - "tests/arena3d-role-scenario.test.mjs"
       - "tests/arena3d-casting.test.mjs"
       - "tests/arena3d-ritual-walk.test.mjs"
       - "tests/arena3d-coastal-village.test.mjs"
@@ -34,6 +36,7 @@ on:
       - "docs/releases/GMWW-ARENA3D-COASTAL-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-RITUAL-WALK-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-SPELL-ART-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-BATCH-ACCEPTANCE-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -63,10 +66,11 @@ jobs:
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/spell-vfx.mjs
           node --check assets/village/arena-3d/gm-dashboard.mjs
+          node --check assets/village/arena-3d/arena-acceptance-scenario.mjs
           node --check assets/village/arena-3d/casting-choreography.mjs
           node --check assets/village/arena-3d/coastal-village.mjs
           node --check src/arena3d-visual-effect-policy.mjs
-          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs tests/arena3d-preview.test.mjs
       - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
         run: |
           node - <<'NODE'
@@ -101,7 +105,7 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx wrangler deploy --config wrangler.arena3d-core-stage.jsonc
-      - name: Kiểm chứng Core qua HTTPS - room, players, phát vai, Ngày/Đêm, đề cử
+      - name: Kiểm chứng Core qua HTTPS - room, 4 vai thật, turn/cast, Ngày/Đêm, đề cử
         run: node tests/arena3d-stage-http.mjs
       - name: Kiểm chứng UI 3D với phòng Core trong Chromium 390px
         run: |
