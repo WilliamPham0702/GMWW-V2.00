@@ -97,7 +97,17 @@ jobs:
             assert.equal(d.count,6);
             assert.equal(d.cyclePhase,'morning');
             assert.equal(d.phase,'running');
+            assert.equal(d.ballot,'voting');
             assert.ok(d.fps>0);
+            // Page refresh must rehydrate the public gallows tally from real DO storage.
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting'&&document.body.dataset.gmwwLiveCount==='6',{timeout:30000});
+            // Brief network cut + explicit resync exercises WebSocket/HTTP fallback.
+            await page.context().setOffline(true);
+            await new Promise(resolve=>setTimeout(resolve,650));
+            await page.context().setOffline(false);
+            await page.locator('#refresh').click();
+            await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting'&&document.body.dataset.gmwwLiveCount==='6',{timeout:30000});
             assert.deepEqual(errors,[]);
             await page.screenshot({path:'/tmp/arena3d-core-staging-iphone390.png'});
             console.log('PASS REAL Core -> 3D browser 6:',JSON.stringify(d));
