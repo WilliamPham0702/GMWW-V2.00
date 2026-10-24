@@ -1305,12 +1305,14 @@ function battleGallowsRender(phase){
   const leaders=nominationTallies.filter(t=>Number(t.votes)>0);
   const unique=leaders.length&&(!leaders[1]||Number(leaders[0].votes)>Number(leaders[1].votes))?String(leaders[0].loginId):'';
   const chooser=document.getElementById('battleGallowsCandidateControl');
-  if(chooser)chooser.hidden=mode!=='auto'||!['nominating','selecting'].includes(stage)||!!unique;
+  if(chooser)chooser.hidden=mode!=='auto'||stage!=='selecting'||!!unique;
   if(select){
-    const prev=select.value||'',options='<option value="">— Chọn khi hòa / chưa có phiếu —</option>'+
-      ordered.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
+    const prev=select.value||'',topVotes=Number(leaders[0]?.votes||0),
+      allowed=topVotes>0?ordered.filter(m=>Number(rosterStats.get(m.loginId)?.nominations??nomineeCount.get(m.loginId)??0)===topVotes):ordered,
+      options='<option value="">— Chọn khi hòa / chưa có phiếu —</option>'+
+      allowed.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
     if(select.innerHTML!==options)select.innerHTML=options;
-    select.value=ordered.some(m=>m.loginId===prev)?prev:'';
+    select.value=allowed.some(m=>m.loginId===prev)?prev:'';
     select.disabled=battleState.gallowsBusy||stage==='resolved';
   }
   const stats=document.getElementById('battleGallowsNominationStats');
@@ -1368,7 +1370,7 @@ function battleGallowsRender(phase){
     button.disabled=battleState.gallowsBusy||
       (command==='open'&&(!ready||mode!=='auto'))||
       (command==='close_nomination'&&(!nominating||mode!=='auto'))||
-      (command==='begin'&&(!(nominating||selecting)||mode!=='auto'||(!unique&&!select?.value)))||
+      (command==='begin'&&(!selecting||mode!=='auto'||(!unique&&!select?.value)))||
       (command==='close_vote'&&(!voting||mode!=='auto'))||
       (command==='resolve'&&(mode!=='gm'||stage==='resolved'||!g.candidateId))||
       (command==='restore'&&ready&&!nomBans.size&&!voteBans.size&&!Object.keys(g.nominations||{}).length&&!Object.keys(g.votes||{}).length&&!g.candidateId);
@@ -1996,7 +1998,7 @@ function initBattleControls(){
     const g=playSceneRuntime.gallows||{},tallies=Array.isArray(g.nominationTotals)?g.nominationTotals:[],
       lead=tallies[0]&&(!tallies[1]||Number(tallies[0].votes)>Number(tallies[1].votes))?String(tallies[0].loginId):'',
       selected=document.getElementById('battleGallowsCandidate')?.value||'';
-    void battleGallowsCommand(btn.dataset.gallowsCommand,btn.dataset.gallowsCommand==='begin'?(selected||lead):String(g.candidateId||''),btn.dataset.outcome||'');
+    void battleGallowsCommand(btn.dataset.gallowsCommand,btn.dataset.gallowsCommand==='begin'?(lead||selected):String(g.candidateId||''),btn.dataset.outcome||'');
   });
   // Timers are committed on focus exit; never reset an in-progress timer locally.
   for(const [inputId,kind] of [['battleGallowsNominationSeconds','nomination'],['battleGallowsVoteSeconds','vote']]){
