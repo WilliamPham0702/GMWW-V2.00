@@ -599,6 +599,12 @@ async function gmwwPrivateDeliveryRecovery(){
  offlineReplace("    setGameViewPane('village',{persist:false});\n  }else if(!hasRole",
    "    if($('#game')?.dataset.privateCardView!=='open')setGameViewPane('village',{persist:false});\n  }else if(!hasRole");
 
+ // Preserve PR #439's independently confirmed repair. Individual seat swaps
+ // are retired; two orphaned calls can abort private receipt and room resume.
+ const retiredSeatSwapCall='handleSeatSwapRequests(d?.swapRequests);';
+ if(output.split(retiredSeatSwapCall).length!==3)throw new Error('Retired seat-swap call sites changed');
+ output=output.replaceAll(retiredSeatSwapCall,'');
+
  return output;
 }
 export const PLAYER_PRIVATE_CARD_PATCH_VERSION=PATCH_VERSION;
