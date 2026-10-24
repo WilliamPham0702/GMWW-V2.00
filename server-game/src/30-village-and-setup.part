@@ -231,6 +231,17 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     return true;
   }catch(_){return false}
 }
+async function battleOpenGallowsAudioUpload(id){
+  const allowed=['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
+  if(!allowed.includes(id))return;
+  document.querySelector('.nav[data-page="library"]')?.click();
+  document.querySelector('.libtab[data-lib="audio"]')?.click();
+  document.querySelector('#audioKindSeg [data-audio-kind="system"]')?.click();
+  await renderAudio();
+  const row=[...document.querySelectorAll('#audioGrid [data-audio-id]')].find(x=>x.dataset.audioId===id);
+  row?.scrollIntoView({block:'center'});
+  row?.classList.add('gallows-audio-upload-target');
+}
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);

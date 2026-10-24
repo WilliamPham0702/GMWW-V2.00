@@ -1,3 +1,4 @@
+import {gallowsTally} from '../shared/gallows-statistics.mjs';
 // Server-authoritative gallows: member nominations/votes or GM-operated voting.
 export const GALLOWS_VOTE_MS=10000;
 export const gallowsDurationSec=(value,fallback=10)=>{
@@ -49,6 +50,20 @@ export function gallowsAutomaticOutcome(ballot){
   return tally.kill>tally.save?'dead':'alive';
 }
 
+export function gallowsRosterStats(ballot){
+  // Server-authoritative receipts: do not reconstruct vote percentages from UI state.
+  const eligible=[...new Set(ballot?.eligible||[])];
+  const candidate=String(ballot?.candidateId||'');
+  const nominations=Object.entries(ballot?.nominations||{}).map(([voterId,targetId])=>({voterId,targetId}));
+  const votes=Object.entries(ballot?.votes||{}).map(([voterId,choice])=>({
+    voterId,targetId:candidate,choice:choice==='👍'?'save':choice==='👎'?'kill':null
+  }));
+  return gallowsTally(eligible.map(id=>({id})),nominations,votes,{
+    nominationBans:gallowsBlockedNomination(ballot),
+    voteBans:gallowsBlockedVotes(ballot)
+  }).map(({player,...row})=>row);
+}
+
 export function gallowsSnapshot(ballot,meta,now=Date.now()){
   if(!ballot||ballot.matchId!==String(meta?.matchId||'')||ballot.cycleKey!==String(meta?.cycleKey||''))return null;
   const stage=gallowsStage(ballot,now),blockedNomination=gallowsBlockedNomination(ballot),blockedVotes=gallowsBlockedVotes(ballot);
@@ -60,7 +75,8 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     votes:Object.fromEntries(Object.entries(ballot.votes||{}).filter(([id])=>!blockedVotes.includes(id))),
     blockedNomination,blockedVotes,gmBlockedVotes:gallowsGmBlockedVotes(ballot),
     artifactVoteBans:unique(ballot.artifactVoteBans),blocked:blockedVotes,outcome:ballot.outcome||null,
-    eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),voteTotals:gallowsVoteTotals(ballot)};
+    eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),
+    rosterStats:gallowsRosterStats(ballot),voteTotals:gallowsVoteTotals(ballot)};
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};

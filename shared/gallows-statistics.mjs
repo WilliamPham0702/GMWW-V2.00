@@ -7,17 +7,19 @@ export function gallowsTally(players = [], nominations = [], votes = [], restric
   const ids = new Set(eligible.map(p => String(p.loginId ?? p.id)));
   const blockedNomination = new Set((restrictions.nominationBans || []).map(String));
   const blockedVoting = new Set((restrictions.voteBans || []).map(String));
-  const unique = (records, blocked) => {
+  const unique = (records, blocked, nomination = false) => {
     const byVoter = new Map();
     for (const item of records) {
       const voter = String(item?.voterId ?? '');
       const target = String(item?.targetId ?? '');
-      if (!ids.has(voter) || !ids.has(target) || blocked.has(voter)) continue;
+      if (!ids.has(voter) || !ids.has(target) || blocked.has(voter) ||
+          (nomination && voter === target) ||
+          (!nomination && !['save', 'kill'].includes(item?.choice))) continue;
       byVoter.set(voter, { target, choice: item.choice });
     }
     return [...byVoter.values()];
   };
-  const nominationsValid = unique(nominations, blockedNomination);
+  const nominationsValid = unique(nominations, blockedNomination, true);
   const votesValid = unique(votes, blockedVoting);
   const count = new Map(eligible.map(p => [String(p.loginId ?? p.id), { nominations: 0, save: 0, kill: 0 }]));
   for (const { target } of nominationsValid) count.get(target).nominations++;
@@ -25,7 +27,7 @@ export function gallowsTally(players = [], nominations = [], votes = [], restric
     if (choice === 'save') count.get(target).save++;
     if (choice === 'kill') count.get(target).kill++;
   }
-  const denominator = Math.max(0, ids.size - blockedNomination.size);
+  const denominator = Math.max(0, [...ids].filter(id => !blockedNomination.has(id)).length);
   return eligible.map(player => {
     const id = String(player.loginId ?? player.id);
     const tally = count.get(id);
