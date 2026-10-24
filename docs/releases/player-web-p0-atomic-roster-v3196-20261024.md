@@ -23,3 +23,10 @@
 
 ## Bảo toàn & rollback
 Giữ dữ liệu Durable Object, phòng, vai trò, lịch sử, cấu hình, và bản IPA hiện có; không reset/di chuyển dữ liệu. Nếu cần rollback, sử dụng deployment trước đã xác minh thành công và bản commit tương ứng; không tự xóa dữ liệu. Đây là bản Server + Player Web, không sửa phần native.
+
+## Bổ sung xử lý PR #440 ngày 24/10/2026
+- Khắc phục bài E2E so khớp tên Bảo Vật có phân biệt chữ hoa/chữ thường; xác nhận đúng Bảo Vật riêng của Chrome/Edge thay vì so chữ hoa-cố định.
+- Mang trở lại bản sửa đã xác minh từ PR #439: loại bỏ hai lời gọi `handleSeatSwapRequests(d?.swapRequests)` đã bị loại bỏ khỏi Player Web, tránh lỗi ReferenceError làm dừng luồng khôi phục/phát Vai.
+- Yêu cầu kiểm thử riêng: join/roster 2 thành viên, phát/nhận/mở Role + Artifact, refresh/reconnect, cấm move mới sau phát vai, đề cử và 👍/👎 chỉ nếu luồng đồng bộ/ứng xử thay đổi.
+- Không tự chạy kiểm thử hình nền, seat 30, animation nhân vật hay DEMO rules không liên quan để xác nhận bản sửa P0. Bộ kiểm thử release toàn diện, nếu cần, là cổng riêng trước Production.
+- Chưa xác nhận nhánh cũ đã đồng bộ với `main` mới nhất. Không merge trước khi đối chiếu/rebase, CI đúng phạm vi SUCCESS và người dùng nghiệm thu.
