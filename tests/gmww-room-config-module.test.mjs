@@ -14,7 +14,7 @@ test('room config: rejects missing values and maintains legacy defaults',()=>{
   assert.deepEqual(result.artifacts,[]);
   assert.equal(result.artifactsEnabled,false);
   assert.deepEqual(result.timing,{
-    villageDiscussionSec:300,gallowsNominationSec:10,gallowsVoteSec:10,wolfDiscussionSec:30,earlyArtifactSec:30,
+    villageDiscussionSec:300,gallowsNominationSec:60,gallowsVoteSec:60,wolfDiscussionSec:30,earlyArtifactSec:30,
     defaultActionSec:45,artifactActionSec:30,autoAdvance:true
   });
 });
