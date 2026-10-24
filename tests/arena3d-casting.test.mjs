@@ -50,7 +50,8 @@ test('6–30 seated characters: ONLY server-approved actor stands, casts toward 
     assert.deepEqual(field.actors.filter(x=>x.standing).map(x=>x.id),['member:p1']);
     field.setCastingTurn({turnId:'turn-1',actorIds:['member:p1'],cast:{
       actorId:'member:p1',targetIds:['member:p2'],kind:'shield',startedAt:now,expiresAt:now+2500}});
-    assert.deepEqual(field.actors.filter(x=>x.casting).map(x=>x.id),['member:p1']);
+    assert.deepEqual(field.actors.filter(x=>x.casting).map(x=>x.id),[],
+      'caster walks toward the ritual spot before starting the spell');
     field.draw(performance.now()+900,true);
     assert.equal(field.beamVisible,true,'GM-authorized spell from caster to real target');
     const last=field.actors.find(x=>x.id==='member:p1');
