@@ -23,6 +23,22 @@ jobs:
     steps:
       - name: Tải mã nguồn
         uses: actions/checkout@v4
+      - name: Kiểm tra nhánh nghiên cứu có theo kịp main
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "$PR_HEAD_SHA" --quiet
+            git checkout --detach "$PR_HEAD_SHA"
+          fi
+          BEHIND=$(git rev-list --count HEAD..origin/main)
+          echo "Main đi trước nhánh nghiên cứu: $BEHIND commit"
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "::warning::Nhánh Arena 3D đang sau main $BEHIND commit; đồng bộ main vào feature và kiểm tra conflict trước nghiệm thu."
+          fi
       - name: Thiết lập Node.js
         uses: actions/setup-node@v4
         with:
