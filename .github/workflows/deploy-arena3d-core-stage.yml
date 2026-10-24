@@ -5,15 +5,20 @@ on:
     branches: ["feature/arena-3d-dual-renderer"]
     paths:
       - "src/arena3d-stage-worker.mjs"
+      - "src/arena3d-visual-effect-policy.mjs"
       - "src/index.js"
       - "src/gmww-dual-renderer-projection.js"
       - "assets/village/arena-3d/live.*"
       - "assets/village/arena-3d/room-realtime.mjs"
+      - "assets/village/arena-3d/character-atelier.mjs"
       - "assets/village/dual-renderer-core.mjs"
       - "wrangler.arena3d-core-stage.jsonc"
       - "tests/arena3d-phase2-contract.test.mjs"
+      - "tests/arena3d-phase3.test.mjs"
+      - "tests/arena3d-phase3-webkit.mjs"
       - "tests/arena3d-stage-http.mjs"
       - "docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -40,7 +45,9 @@ jobs:
           node --check src/arena3d-stage-worker.mjs
           node --check assets/village/arena-3d/live.mjs
           node --check assets/village/arena-3d/room-realtime.mjs
-          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-preview.test.mjs
+          node --check assets/village/arena-3d/character-atelier.mjs
+          node --check src/arena3d-visual-effect-policy.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-preview.test.mjs
       - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
         run: |
           node - <<'NODE'
@@ -98,6 +105,9 @@ jobs:
             assert.equal(d.cyclePhase,'morning');
             assert.equal(d.phase,'running');
             assert.equal(d.ballot,'voting');
+            assert.ok(d.atelier?.startsWith('arena-chibi-instanced'),'3D chibi model must be live');
+            assert.ok(d.drawCalls>0&&d.drawCalls<=32,'6 actors use instanced fixed draw budget');
+            assert.ok(d.drawBudget<=25);
             assert.ok(d.fps>0);
             // Page refresh must rehydrate the public gallows tally from real DO storage.
             await page.reload({waitUntil:'domcontentloaded'});
@@ -121,10 +131,18 @@ jobs:
             assert.equal(big.phase,'lobby');
             assert.ok(big.fps>0,'30 real players must actually render FPS');
             assert.equal(big.connected,'connected');
+            assert.ok(big.drawCalls>0&&big.drawCalls<=32,'30 actors share geometry and draw calls');
+            assert.ok(big.pixelRatio<=1.35,'iPhone viewport DPR must be battery limited');
+            assert.equal(big.privateOverlayCount,0,'anonymous browser has no GM overlays');
             await page.screenshot({path:'/tmp/arena3d-core-staging-30-iphone390.png'});
             console.log('PASS REAL Core -> 3D browser 30:',JSON.stringify(big));
           }finally{await b.close();}
           NODE
+      - name: Kiểm thử Safari WebKit trên màn hình iPhone mô phỏng (không phải iPhone vật lý)
+        continue-on-error: true
+        run: |
+          npx playwright install --with-deps webkit
+          node tests/arena3d-phase3-webkit.mjs
       - name: Ghi kết quả Preview staging vào Summary
         run: |
           CODE=$(cat /tmp/gmww-arena3d-stage-room.txt)
@@ -141,4 +159,5 @@ jobs:
           path: |
             /tmp/arena3d-core-staging-iphone390.png
             /tmp/arena3d-core-staging-30-iphone390.png
+            /tmp/arena3d-phase3-webkit.png
           if-no-files-found: ignore
