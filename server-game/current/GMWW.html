@@ -270,10 +270,13 @@
         <section id="battleGallowsPanel" role="region" aria-label="Lên Giàn" hidden>
           <header title="Giữ và kéo để di chuyển"><strong>⚖️ LÊN GIÀN</strong><output id="battleGallowsClock">00:10</output></header>
           <div id="battleGallowsStage" role="status" aria-live="polite">Sẵn sàng đề cử</div>
-          <div class="battle-gallows-mode" role="group" aria-label="Hình thức Lên giàn">
-            <button type="button" data-gallows-mode="auto" aria-pressed="true">TỰ ĐỘNG</button>
-            <button type="button" data-gallows-mode="gm" aria-pressed="false">GM THỦ CÔNG</button>
-          </div>
+          <details id="battleGallowsModeDetails" class="battle-gallows-mode-details">
+            <summary id="battleGallowsModeSummary">CHẾ ĐỘ: TỰ ĐỘNG ▾</summary>
+            <div class="battle-gallows-mode" role="group" aria-label="Hình thức Lên Giàn">
+              <button type="button" data-gallows-mode="auto" aria-pressed="true">TỰ ĐỘNG</button>
+              <button type="button" data-gallows-mode="gm" aria-pressed="false">GM THỦ CÔNG</button>
+            </div>
+          </details>
           <div id="battleGallowsAutomatic" aria-label="Tự động Lên Giàn">
           <div class="battle-gallows-actions battle-gallows-primary" aria-label="Điều khiển giai đoạn">
             <button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button>
@@ -281,8 +284,10 @@
           </div>
           <div id="battleGallowsNominationStats" aria-label="Thống kê đề cử theo người" aria-live="polite"></div>
           </div>
-          <label for="battleGallowsCandidate">Người lên giàn</label>
-          <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
+          <div id="battleGallowsCandidateControl">
+            <label for="battleGallowsCandidate">Người lên giàn</label>
+            <select id="battleGallowsCandidate" aria-label="Chọn người lên giàn"></select>
+          </div>
           <details id="battleGallowsBanDetails" class="battle-gallows-ban-details" open>
             <summary>☷ DANH SÁCH THÀNH VIÊN · CẤM CHỌN / VOTE <span id="battleGallowsBansCount"></span></summary>
             <div id="battleGallowsMembers" role="list" aria-label="Quản lý cấm đề cử và cấm bỏ phiếu"></div>
@@ -304,6 +309,13 @@
           </section>
           <div id="battleGallowsVotes" aria-label="Kết quả bỏ phiếu"></div>
           <p id="battleGallowsResult" role="status" aria-live="polite" hidden></p>
+          <details id="battleGallowsAudioSources" class="battle-gallows-audio-sources">
+            <summary>🔊 AUDIO KẾT LUẬN · THƯ VIỆN</summary>
+            <small>Thư viện âm thanh → Hệ thống: upload vào các vị trí đã tạo bên dưới.</small>
+            <code>audio_system_gallows_vote_result</code>
+            <code>audio_system_gallows_result_dead</code>
+            <code>audio_system_gallows_result_saved</code>
+          </details>
         </section>
         <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
           <header title="Giữ và kéo để di chuyển Thông báo Làng"><strong>📖 THÔNG CÁO LÀNG</strong><button type="button" id="battleMorningAudio" aria-label="Phát lại thông báo">🔊</button></header>
