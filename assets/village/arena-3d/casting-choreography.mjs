@@ -53,28 +53,21 @@ export function approachPoint(seat,{fireX=0,fireZ=1.8,step=1.6,clearance=1.7}={}
   if(!Number.isFinite(x)||!Number.isFinite(z))return {x:0,z:0};
   const radius=Math.hypot(x,z);
   if(radius<.01)return {x,z};
-  // Ritual space lies inside the seat ring but outside the fire clearance.
-  let fraction=Math.max(0,(radius-Math.min(1.9,Math.max(.3,step)))/radius);
-  const limit=Math.min(1,Math.max(.5,clearance));
-  let candidate={x:x*fraction,z:z*fraction};
-  if(Math.hypot(candidate.x-fireX,candidate.z-fireZ)<limit){
-    // Fallback retreat towards the original seat: never stand in the fire.
-    const dx=x-candidate.x,dz=z-candidate.z;
-    const distance=Math.hypot(dx,dz)||1;
-    candidate={x:fireX+(candidate.x-fireX)*(limit/Math.max(.001,Math.hypot(candidate.x-fireX,candidate.z-fireZ))),
-      z:fireZ+(candidate.z-fireZ)*(limit/Math.max(.001,Math.hypot(candidate.x-fireX,candidate.z-fireZ)))};
-    const foot=Math.hypot(candidate.x-x,candidate.z-z);
-    if(foot>1.9){const t=1.9/foot;candidate={x:x+(candidate.x-x)*t,z:z+(candidate.z-z)*t}}
-    // If the seat itself is inside clearance, no movement can improve the situation.
-    if(Math.hypot(x-fireX,z-fireZ)<limit)return {x,z};
-    // Avoid walking through the fire; if the path would cross its circle, stay seated.
-    const sx=x-fireX,sz=z-fireZ,ex=candidate.x-fireX,ez=candidate.z-fireZ;
-    const segX=ex-sx,segZ=ez-sz;
-    const t=Math.max(0,Math.min(1,-(sx*segX+sz*segZ)/(segX*segX+segZ*segZ||1)));
-    if(Math.hypot(sx+segX*t,sz+segZ*t)<limit)return {x,z};
-    void dx;void dz;void distance;
-  }
-  return {x:candidate.x,z:candidate.z};
+  const safeRadius=Math.min(2.6,Math.max(.5,clearance));
+  if(Math.hypot(x-fireX,z-fireZ)<=safeRadius)return {x,z};
+  const amount=Math.min(1.9,Math.max(.3,step),radius*.42);
+  const dest={x:x*(1-amount/radius),z:z*(1-amount/radius)};
+  // Use a binary search for the longest inward walk whose entire segment
+  // stays outside the campfire. Never modify the authoritative seat position.
+  const safe=t=>{
+    const endX=x+(dest.x-x)*t,endZ=z+(dest.z-z)*t;
+    const sx=x-fireX,sz=z-fireZ,dx=endX-x,dz=endZ-z;
+    const nearest=Math.max(0,Math.min(1,-(sx*dx+sz*dz)/(dx*dx+dz*dz||1)));
+    return Math.hypot(sx+dx*nearest,sz+dz*nearest)>=safeRadius;
+  };
+  let lo=0,hi=1;
+  for(let i=0;i<13;i++){const mid=(lo+hi)*.5;if(safe(mid))lo=mid;else hi=mid}
+  return {x:x+(dest.x-x)*lo,z:z+(dest.z-z)*lo};
 }
 export function travelProgress(travel,now){
   if(!travel)return 0;
