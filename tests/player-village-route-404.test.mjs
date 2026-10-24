@@ -51,7 +51,7 @@ test('Cloudflare routes village requests to Worker and the Player uses the same 
   assert.match(config,/"html_handling": "none"/);
   assert.match(config,/"\/village"/);
   assert.match(config,/"\/village\/\*"/);
-  assert.match(live,/iframe\.src='\/village\/\?embed=1&v=303'/);
+  assert.match(live,/iframe\.src='\/village\/\?embed=1&v=3201'/);
   assert.ok(fs.existsSync('assets/village/index.html'));
   assert.ok(fs.existsSync('assets/village/village.css'));
   assert.ok(fs.existsSync('assets/village/village.mjs'));
