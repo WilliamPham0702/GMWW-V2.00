@@ -4,7 +4,10 @@ on:
   push:
     branches: ["feature/arena-3d-dual-renderer"]
     paths:
-      - "assets/village/arena-3d/**"
+      - "assets/village/arena-3d/index.html"
+      - "assets/village/arena-3d/main.mjs"
+      - "assets/village/arena-3d/preview-worker.mjs"
+      - "assets/village/arena-3d/build-preview.mjs"
       - "assets/village/dual-renderer-core.mjs"
       - "wrangler.arena3d-preview.jsonc"
       - "tests/arena3d-preview.test.mjs"
