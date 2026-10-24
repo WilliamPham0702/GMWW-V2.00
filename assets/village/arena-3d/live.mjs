@@ -5,6 +5,7 @@ import {rendererCommands,createPublicRendererFrame} from '../dual-renderer-core.
 import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
+import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -16,17 +17,11 @@ field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false;
 const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
   onAction:(id,candidate)=>{if(id==='vote'&&candidate)chosenCandidate=candidate;$(id)?.click()},
-  onToggleQuality:value=>{lowPower=value;render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
+  onToggleQuality:value=>{lowPower=value;village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
 });
 let chosenCandidate=null;
-const floor=new THREE.Mesh(new THREE.CylinderGeometry(11.2,11.2,.25,64),new THREE.MeshStandardMaterial({color:'#e8cc99'}));
-floor.position.y=-.2;scene.add(floor);
-const rim=new THREE.Mesh(new THREE.TorusGeometry(10.15,.4,7,64),new THREE.MeshStandardMaterial({color:'#459c7f'}));rim.rotation.x=Math.PI/2;scene.add(rim);
-const fire=new THREE.Mesh(new THREE.ConeGeometry(.45,1.05,8),new THREE.MeshStandardMaterial({color:'#fda840',emissive:'#c46212',emissiveIntensity:1.6}));
-fire.position.set(0,.55,1.8);scene.add(fire);
-const sunlight=new THREE.DirectionalLight(0xffffff,2.3);sunlight.position.set(-8,12,6);scene.add(sunlight);
-scene.add(new THREE.AmbientLight(0xc2edfd,1.7));
-const pointlight=new THREE.PointLight(0xffa442,12,8);pointlight.position.set(0,1.2,1.8);scene.add(pointlight);
+const village=createCoastalVillage(THREE,scene);
+// Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
   const previousMatch=current?.room.matchId,previousCycle=current?.room.cycleKey;
@@ -34,17 +29,14 @@ function drawFrame(frame){
   current=frame;synthetic=frame.room.code==='SYNTH';
   if(changedRoom||frame.room.phase!=='running')field.setCastingTurn(null);
   const items=rendererCommands(frame,'3d').players;
-  field.setActors(items);
+  field.setActors(items,{seatCount:frame.room.seatCount,seatLayout:frame.room.seatLayout});
   dashboard.setState(frame);
   if(previousMatch!==undefined&&(previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey)){
     field.clearEffects();visibleGmEffects=0;
   }
   const phase=frame.room.phase||'lobby',cycle=frame.room.cyclePhase||'';
   const night=cycle==='night';
-  scene.background=new THREE.Color(night?'#10243b':'#85cddd');
-  sunlight.intensity=night?.36:2.3;
-  floor.material.color.set(night?'#8d8790':'#e8cc99');
-  pointlight.intensity=night?24:12;
+  village.setNight(night);
   $('state').textContent='Phòng '+frame.room.code+' · '+phase+' · '+(night?'Đêm ':cycle==='morning'?'Ngày ':'Vào phòng ')+(frame.room.cycleNight||0);
   $('hud').textContent=items.length+' Character · '+fps+' FPS · '+render.info.render.calls+' Draw Calls';
   document.body.dataset.gmwwLiveCount=String(items.length);
@@ -52,6 +44,8 @@ function drawFrame(frame){
   document.body.dataset.gmwwLiveCycle=String(cycle);
   document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
+  document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
+  document.body.dataset.gmwwVillageSky=village.sky;
 }
 function demo(n){
   const players=Array.from({length:n},(_,i)=>{
@@ -283,6 +277,7 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
   gmConsole:document.body.dataset.gmwwGmConsole,lowPower,selectedId:dashboard.selectedId,
+  village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
   drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
@@ -292,7 +287,7 @@ function loop(now){
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
       Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
     camera.lookAt(0,0,1.2);
-    if(!reducedMotion)fire.scale.y=.94+.06*Math.sin(now/280);
+    if(!reducedMotion)village.animate(now);
     field.draw(now);
     render.render(scene,camera);frames++;
   }
