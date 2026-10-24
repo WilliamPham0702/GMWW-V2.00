@@ -138,7 +138,7 @@ try{
   await artifact.waitFor({state:'visible',timeout:10000});
   await artifact.click({timeout:10000});
   await face.waitFor({state:'visible',timeout:10000});
-  assert.match(await face.locator('.gmww-card-title').innerText(),/Bảo Vật/);
+  assert.equal((await face.locator('.gmww-card-title').innerText()).toLocaleUpperCase('vi'),('Bảo Vật '+s.name).toLocaleUpperCase('vi'));
   await face.click({position:{x:35,y:35}});
   await face.waitFor({state:'hidden',timeout:10000});
   assert.equal((await roster(page)).length,2,'opening Role/Artifact cannot collapse roster');
