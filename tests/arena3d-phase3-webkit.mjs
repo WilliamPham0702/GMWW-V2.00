@@ -12,7 +12,9 @@ try{
   await page.waitForFunction(()=>Number(document.body.dataset.gmwwStageFps)>0,{timeout:45000});
   const six=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
   assert.equal(six.count,6);
-  assert.ok(six.drawCalls>0&&six.drawCalls<=32,'instanced chibi budget');
+  assert.equal(six.sky,'day');
+  assert.equal(six.village,'coastal-day-night-v1');
+  assert.ok(six.drawCalls>0&&six.drawCalls<=55,'instanced chibi budget');
   await page.locator('[data-fx="shield"]').click();
   assert.match(await page.locator('#log').innerText(),/Mẫu.*Bảo vệ/);
   await page.locator('#sample-cast').click();
@@ -23,7 +25,7 @@ try{
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,{timeout:30000});
   const thirty=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
   assert.equal(thirty.count,30);
-  assert.ok(thirty.drawCalls<=32,'30 actors do not multiply GPU drawcalls');
+  assert.ok(thirty.drawCalls<=55,'30 actors do not multiply GPU drawcalls');
   assert.equal(thirty.privateOverlayCount,0,'never expose GM-only visuals to a public observer');
   assert.ok(thirty.pixelRatio<=1.35);
   await page.screenshot({path:'/tmp/arena3d-phase3-webkit.png',fullPage:true});
