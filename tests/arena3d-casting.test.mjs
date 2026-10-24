@@ -52,12 +52,15 @@ test('6–30 seated characters: ONLY server-approved actor stands, casts toward 
       actorId:'member:p1',targetIds:['member:p2'],kind:'shield',startedAt:now,expiresAt:now+2500}});
     assert.deepEqual(field.actors.filter(x=>x.casting).map(x=>x.id),['member:p1']);
     field.draw(performance.now()+900,true);
+    assert.equal(field.beamVisible,true,'GM-authorized spell from caster to real target');
     const last=field.actors.find(x=>x.id==='member:p1');
     assert.ok(Number.isFinite(last.yaw));
     field.setCastingTurn({turnId:'turn-2',actorIds:['member:p3']});
     assert.ok(field.actors.find(x=>x.id==='member:p3').standing);
     field.setCastingTurn(null);
+    field.clearEffects();
     field.draw(performance.now()+1000,true);
+    assert.equal(field.beamVisible,false,'the private spell disappears on turn change');
     assert.equal(choreographyPose({standAt:1000,standUntil:1800,castStartedAt:1300,castUntil:1500},1600).casting,0);
     assert.equal(choreographyPose({standAt:1000,standUntil:1800},1000).stand,0);
     assert.equal(choreographyPose({standAt:1000,standUntil:1800},1400).stand>0,true);
