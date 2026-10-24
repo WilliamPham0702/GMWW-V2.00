@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   gallowsSetDuration,gallowsCloseNomination,gallowsOpen,gallowsNominate,
-  gallowsStage,gallowsCast,gallowsManualResolve,gallowsAutomaticNominee,gallowsBegin
+  gallowsStage,gallowsCast,gallowsManualResolve,gallowsAutomaticNominee,gallowsBegin,gallowsSetRestriction
 } from '../src/gmww-gallows-rules.js';
 
 const fixture=()=>({
@@ -112,4 +112,22 @@ test('GM only enables Mở bỏ phiếu after Chốt đề cử; stale select ca
  assert.match(gm,/command==='begin'&&\(!selecting/);
  assert.match(gm,/dataset\.gallowsCommand==='begin'\?\(lead\|\|selected\)/);
  assert.match(gm,/allowed=topVotes>0\?ordered\.filter/);
+});
+
+test('Cấm đề cử sau Chốt cập nhật ứng viên treo, không giữ người dẫn đầu cũ',()=>{
+ let b=gallowsOpen(fixture(),1000).value;
+ b=gallowsNominate(b,'alice','bob',1100).value;
+ b=gallowsNominate(b,'david','bob',1150).value;
+ b=gallowsNominate(b,'bob','carol',1200).value;
+ b=gallowsCloseNomination(b,1300).value;
+ assert.equal(b.candidateId,'bob');
+ const restricted=gallowsSetRestriction(b,'alice','nomination',true,1400);
+ assert.equal(restricted.ok,true);
+ assert.equal(restricted.value.candidateId,null,'Hoà 1–1 cần GM chọn, không treo nhầm Bob');
+ assert.equal(restricted.value.hangingStartedAt,null);
+ assert.equal(gallowsBegin(restricted.value,'bob',1500).ok,true);
+ assert.equal(gallowsBegin(restricted.value,'carol',1500).ok,true);
+ const final=gallowsSetRestriction(restricted.value,'david','nomination',true,1450).value;
+ assert.equal(final.candidateId,'carol','Khi chỉ Carol còn phiếu, chuyển người lên giàn đúng');
+ assert.equal(gallowsBegin(final,'bob',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
 });
