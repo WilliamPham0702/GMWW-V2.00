@@ -202,7 +202,7 @@ function villageCalibrateGallows(requestedPhase='day'){
        {expectedRevision:latest.scene.revision,gallowsAnchors:{[key]:point}});
      await setGMVillageScenePublished(data.scene);
      renderPlayScene();
-     playFlashMessage?.('Đã lưu vị trí treo Lên Giàn, đồng bộ Player Web.');
+     villageSceneStatus('Đã lưu vị trí treo Lên Giàn. Player Web tự đồng bộ.');
    }catch(error){playFlashError('Không lưu được vị trí treo: '+error.message)}
  },{once:true});
 }
