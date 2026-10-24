@@ -13,6 +13,7 @@ on:
       - "wrangler.arena3d-core-stage.jsonc"
       - "tests/arena3d-phase2-contract.test.mjs"
       - "tests/arena3d-stage-http.mjs"
+      - "docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -99,7 +100,15 @@ jobs:
             assert.ok(d.fps>0);
             assert.deepEqual(errors,[]);
             await page.screenshot({path:'/tmp/arena3d-core-staging-iphone390.png'});
-            console.log('PASS REAL Core -> 3D browser:',JSON.stringify(d));
+            console.log('PASS REAL Core -> 3D browser 6:',JSON.stringify(d));
+            const bigCode=readFileSync('/tmp/gmww-arena3d-stage-room30.txt','utf8').trim();
+            await page.goto('https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room='+bigCode,{waitUntil:'domcontentloaded',timeout:50000});
+            await page.waitForFunction(c=>document.body.dataset.gmwwLiveCount==='30'&&window.__GMWW_ARENA_STAGE_READONLY?.().room===c,bigCode,{timeout:40000});
+            const big=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+            assert.equal(big.count,30);
+            assert.equal(big.phase,'lobby');
+            await page.screenshot({path:'/tmp/arena3d-core-staging-30-iphone390.png'});
+            console.log('PASS REAL Core -> 3D browser 30:',JSON.stringify(big));
           }finally{await b.close();}
           NODE
       - name: Ghi kết quả Preview staging vào Summary
@@ -108,11 +117,14 @@ jobs:
           echo "### GMWW Arena 3D Core STAGING" >> "$GITHUB_STEP_SUMMARY"
           echo "Trang 3D: https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room=$CODE" >> "$GITHUB_STEP_SUMMARY"
           echo "Player Web 2D: https://gmww-arena3d-core-staging.williampham0702.workers.dev/join/$CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Phòng 30 người: https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html?room=$(cat /tmp/gmww-arena3d-stage-room30.txt)" >> "$GITHUB_STEP_SUMMARY"
           echo "Core riêng, phòng riêng, không merge/Production/IPA. FPS trình duyệt mô phỏng." >> "$GITHUB_STEP_SUMMARY"
       - name: Ảnh kiểm chứng (chỉ khi có)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: arena3d-core-stage-chromium
-          path: /tmp/arena3d-core-staging-iphone390.png
+          path: |
+            /tmp/arena3d-core-staging-iphone390.png
+            /tmp/arena3d-core-staging-30-iphone390.png
           if-no-files-found: ignore
