@@ -43,8 +43,10 @@ export function gallowsCloseNomination(ballot,now=Date.now()){
     return {ok:false,error:'NOMINATION_NOT_OPEN'};
   if(gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting')return {ok:true,value:ballot};
   const candidate=gallowsAutomaticNominee(ballot);
-  if(candidate)return gallowsBegin({...ballot,stage:'selecting'},candidate,now);
-  return {ok:true,value:{...ballot,stage:'selecting',nominationDeadlineAt:now,updatedAt:now}};
+  // Closing the poll must NOT start voting: only GM's "Mở bỏ phiếu" does.
+  // A unique leader can hang visually while the voting panel awaits GM action.
+  return {ok:true,value:{...ballot,stage:'selecting',candidateId:candidate,
+    hangingStartedAt:candidate?now:null,nominationDeadlineAt:now,updatedAt:now}};
 }
 export function gallowsNominationTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedNomination(ballot)),counts=new Map();
