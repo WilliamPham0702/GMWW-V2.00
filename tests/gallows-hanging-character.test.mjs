@@ -51,7 +51,7 @@ test('Both UIs position a single Character above their fire without mutating Sea
  const rules=fs.readFileSync('src/gmww-gallows-rules.js','utf8'),
    worker=fs.readFileSync('src/index.js','utf8'),
    gm=fs.readFileSync('server-game/current/app.js','utf8'),
-   gmCss=fs.readFileSync('server-game/current/style.css','utf8'),
+   gmCss=fs.readFileSync('server-game/current/gallows-hanging.css','utf8'),
    player=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8'),
    village=fs.readFileSync('assets/village/village.mjs','utf8'),
    villageCss=fs.readFileSync('assets/village/village.css','utf8'),
