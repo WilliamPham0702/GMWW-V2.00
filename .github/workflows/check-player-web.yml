@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Tải mã nguồn dự án
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Thiết lập Node.js và bộ nhớ đệm
         uses: actions/setup-node@v4
         with:
@@ -36,6 +38,12 @@ jobs:
           cache: npm
       - name: Cài thư viện theo tệp khóa
         run: npm ci
+      - name: Chọn phạm vi test theo phần code thực sự thay đổi
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
       - name: Kiểm tra mã nguồn Worker
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW
@@ -46,15 +54,24 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
-      - name: Chạy toàn bộ kiểm thử tự động
+      - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
+        if: steps.scope.outputs.mode == 'full'
         run: npm test
+      - name: Chỉ kiểm thử lỗi ván cũ hiện lại
+        if: steps.scope.outputs.mode == 'postgame'
+        run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
+      - name: Chỉ kiểm thử roster, vai, Artifact và khôi phục Player Web
+        if: steps.scope.outputs.mode == 'p0-roster'
+        run: node --test tests/player-web-p0-atomic-roster-role-release.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
+        if: steps.scope.outputs.mode == 'full'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
+        if: steps.scope.outputs.mode == 'full'
         shell: bash
         run: |
           set -euo pipefail
