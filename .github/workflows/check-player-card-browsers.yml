@@ -121,6 +121,7 @@ jobs:
           node-version: 22
       - name: Kiểm thử đúng luồng kết thúc và tạo ván tiếp theo
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
+  # On PR and safe CI-only main merges, run ONLY the selector policy test.
   ci-policy-test:
     needs: scope
     if: needs.scope.outputs.mode == 'ci-policy'

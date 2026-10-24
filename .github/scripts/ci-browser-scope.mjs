@@ -158,7 +158,8 @@ const policyPaths=new Set([
   '.github/workflows/check-player-card-browsers.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
-  'docs/releases/ci-browser-focused-gallows-20261024.md'
+  'docs/releases/ci-browser-focused-gallows-20261024.md',
+  'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md'
 ]);
 function isPolicyScope(changes){
   const names=new Set(changes.map(x=>x.path));
@@ -195,7 +196,22 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
-  if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Full CI mandatory on main/manual release'};
+  // Push of CI-policy-only main merges needs selector unit tests, not
+  // unrelated Chrome/Edge Card tests. All other main pushes remain full.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(line=>{
+        const [status,path]=line.split('\t');
+        const before=status==='M'?git('show','HEAD^1:'+path):null;
+        const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
+        return{status,path,before,after};
+      });
+      if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
+    }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
+    return{mode:'full',reason:'Main contains changes outside the verified CI-only list'};
+  }
+  if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};
   try{
