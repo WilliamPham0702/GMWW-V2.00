@@ -1074,6 +1074,7 @@
     button.addEventListener('click',()=>{
       panel.hidden=!panel.hidden;
       button.setAttribute('aria-expanded',String(!panel.hidden));
+      const shortcut=get('gmwwServerTrashOpen');if(shortcut)shortcut.setAttribute('aria-expanded',String(!panel.hidden));
       if(!panel.hidden)refresh();
     });
     const shortcut=get('gmwwServerTrashOpen');
