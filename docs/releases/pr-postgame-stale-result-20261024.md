@@ -14,7 +14,8 @@
 2. Room DTO: trả `lastEndedMatchId` để so khớp mã ván đã kết thúc với mã ván hiện tại.
 3. GM iPhone/runtime: chỉ tự mở bảng thắng khi server đề xuất thắng trong ván đang chạy hoặc kết quả đã xác nhận thuộc **đúng mã ván hiện tại**, không ở bước chuẩn bị/phát vai.
 4. Ẩn bảng thắng cũ nếu phòng đã chuyển sang setup ván mới; thao tác kết thúc thủ công trong setup mở bảng xác nhận kết thúc thay vì bảng thắng.
-5. Bổ sung kiểm thử hồi quy cho phòng tái sử dụng, Phát Vai, thắng cuộc hợp lệ, ván tiếp theo và việc giữ lịch sử.
+5. Không tự mở lại kết quả đã kết thúc khi GM chọn lại phòng; GM vẫn có thể xem kết quả hợp lệ bằng thao tác chủ động.
+6. Bổ sung kiểm thử hồi quy cho phòng tái sử dụng, Phát Vai, thắng cuộc hợp lệ, ván tiếp theo và việc giữ lịch sử.
 
 ## Kiểm thử nghiệm thu
 - Kết thúc ván A, chọn **Thoát hoàn toàn** rồi vào lại phòng A, chọn Ván Mẫu và **Phát Vai**: không xuất hiện kết quả cũ.
