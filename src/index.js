@@ -844,9 +844,8 @@ export class RoomDurableObject extends DurableObject {
       row?.artifactId&&String(row?.type)==='status'&&String(row?.statusId)==='vote_ban'&&
       (!row.matchId||String(row.matchId)===String(meta.matchId))&&
       Number(row.night)===Number(meta.cycleNight)).map(row=>normalizeLoginId(row.loginId)).filter(Boolean))];
-    // Freeze the voter roster after resolution. An automatic execution must not
-    // retroactively remove the condemned player's own valid ballot or erase
-    // nominations for them from the final scoreboard.
+    // Freeze historical voter eligibility after resolution; the accused never
+    // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
     let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
@@ -2109,6 +2108,9 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
+    const requiredRevealCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
+    if(!artifactId&&requiredRevealCount&&(revealIds.length!==requiredRevealCount||new Set(revealIds).size!==requiredRevealCount))
+      return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
     const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&!isExpelled(id)),
       assignments:await readNightAssignments(this.ctx.storage,matchId)}):null;
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
