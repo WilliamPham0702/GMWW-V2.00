@@ -5,6 +5,7 @@ import {rendererCommands,createPublicRendererFrame} from '../dual-renderer-core.
 import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
+import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -29,7 +30,9 @@ function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
   if(next===lowPower)return;
   lowPower=next;field.setLowPower(next);village.setQuality(next);
-  render.setPixelRatio(Math.min(devicePixelRatio||1,next?.78:(innerWidth<460?1.15:1.35)));
+  const budget=renderQualityBudget({characters:field.actorCount,fps,lowPower:next,reducedMotion});
+  render.setPixelRatio(Math.min(devicePixelRatio||1,budget.pixelRatioCap));
+  field.setQualityFps(fps||60);
   lastResize='';
 }
 function updateAutoQualityButton(){
@@ -112,6 +115,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwLiveCycle=String(cycle);
   document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
   document.body.dataset.gmwwArtVersion=CHARACTER_ART_VERSION;
+  document.body.dataset.gmwwStage7=STAGE7_VERSION;
   document.body.dataset.gmwwRitualArtVersion=RITUAL_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
