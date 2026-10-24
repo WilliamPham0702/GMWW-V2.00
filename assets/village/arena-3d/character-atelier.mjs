@@ -18,7 +18,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     torus=new THREE.TorusGeometry(1,.07,4,20);
   const white=new THREE.Color('#fff5e8'),dark=new THREE.Color('#19273c');
   const temp=new THREE.Matrix4(),pos=new THREE.Vector3(),quat=new THREE.Quaternion(),scale=new THREE.Vector3(),turn=new THREE.Quaternion();
-  const colorTemp=new THREE.Color();
+  const colorTemp=new THREE.Color(),base=new THREE.Vector3();
   const parts=[
     // Rounded anime/chibi silhouette: head, hair fringe, tunic, pearl, shells, tiny shoes.
     ['tunic',sphere,'cloth',[0,.66,0],[.34,.42,.28]],
@@ -61,7 +61,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
   let reducedMotion=false,lastDraw=-1,updates=0;
   function setActors(players){
-    actors.length=0;byId.clear();const used=new Set();
+    const previous=new Map(byId);actors.length=0;byId.clear();const used=new Set();
     for(const source of (Array.isArray(players)?players:[])){
       const id=String(source?.id||'');if(!id||used.has(id)||actors.length>=limit)continue;
       used.add(id);
@@ -70,7 +70,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const actor={id,index:i,position:{x:Number.isFinite(x)?x:Math.cos(theta)*6.5,
         z:Number.isFinite(z)?z:Math.sin(theta)*5.1},
         characterId:source.characterId,yaw:0,targetYaw:0,gestureEnd:0,walk:source.movementStatus==='moving',
-        statusIds:new Set((source.statusTags||[]).map(t=>t.statusId)),effects:new Map()};
+        statusIds:new Set((source.statusTags||[]).map(t=>t.statusId)),effects:new Map(previous.get(id)?.effects||[])};
+      actor.yaw=previous.get(id)?.yaw||0;actor.targetYaw=previous.get(id)?.targetYaw||0;
       actors.push(actor);byId.set(id,actor);
       for(const part of meshes){
         const hex=part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:
@@ -120,7 +121,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'){y+=bounce;x+=gesturing?.024*Math.sin(time*.016):0}
         if(part.name==='armL'||part.name==='armR'){y+=gesturing?.15*Math.sin(time*.015):moving?.06*Math.sin(time*.009+actor.index):0}
         if(part.name==='shoeL'||part.name==='shoeR')y+=moving?.05*Math.abs(Math.sin(time*.014+actor.index)):0;
-        pos.set(x,y,z).applyQuaternion(turn).add(new THREE.Vector3(actor.position.x,0,actor.position.z));
+        base.set(actor.position.x,0,actor.position.z);
+        pos.set(x,y,z).applyQuaternion(turn).add(base);
         scale.set(sx,sy,sz);
         temp.compose(pos,turn,scale);part.mesh.setMatrixAt(actor.index,temp);
       }
