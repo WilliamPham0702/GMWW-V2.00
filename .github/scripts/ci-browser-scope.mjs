@@ -66,6 +66,8 @@ const dualPaths=new Set([
   'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
   '.github/workflows/check-dual-renderer.yml',
   '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-p0-chrome-edge-realtime.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
 function isDualRendererScope(changes){
