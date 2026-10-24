@@ -18,20 +18,20 @@ test('V3.202 increases beyond Production V3.200; same-version changed bytes reje
  assert.throws(()=>verifyOtaVersionAdvance(make('3.200','b'.repeat(64)),{releaseVersion:'3.200',source:'verified-live-health-fallback'},['server-game/current/app.js']),/does not advance/);
 });
 
-test('V3.203 leaves native shell V3.110 and already-published IPA V3.200 unchanged',()=>{
+test('V3.204 leaves native shell V3.110 and already-published IPA V3.200 unchanged',()=>{
  const notes=read('.github/scripts/prepare-update-channel.mjs');
  const worker=read('src/index.js'),html=read('server-game/current/GMWW.html');
  const proof=JSON.parse(read('update-system/published-ipa.json'));
  assert.match(notes,/releaseNotes:\["V3\.203: PR #463/);
  assert.match(notes,/V3\.200: PR #457/);
  assert.match(notes,/không đổi seat/);
- assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3203"/);
+ assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3204"/);
  assert.match(html,/<title>GMWW V3\.203<\/title>/);
  assert.equal(proof.version,'3.200');
  assert.equal(proof.sha256,'974cefca2dbff129d0f6c4bf50505f883814a9b9813b08199238f8bb4a2f4aa6');
 });
 
-test('V3.203 CI builds SHA-256 from actual Runtime bytes without deploying Production',()=>{
+test('V3.204 CI builds SHA-256 from actual Runtime bytes without deploying Production',()=>{
  const workflow=read('.github/workflows/prepare-runtime-v3202-candidate.yml');
  const verify=read('.github/scripts/verify-prepared-runtime.mjs');
  assert.match(workflow,/GMWW V3\.203 OTA Candidate SHA-256/);
