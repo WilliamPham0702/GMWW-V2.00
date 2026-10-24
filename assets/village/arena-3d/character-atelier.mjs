@@ -164,7 +164,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           moveActor(actor,1,now);
           actor.targetYaw=Math.atan2(-actor.position.x,1.8-actor.position.z);
         }
-      }else if(changed&&actor.travel?.to!==0)moveActor(actor,0,now);
+      }else if(changed&&actor.travel?.to===1)moveActor(actor,0,now);
     }
     const cast=cue?.cast;
     const castKey=cast?String(cue.turnId)+':'+cast.startedAt+':'+cast.kind:'';
@@ -189,7 +189,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   function clearEffects(){
     currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;
     const now=performance.now();
-    for(const actor of actors){actor.effects.clear();if(actor.travel?.to!==0)moveActor(actor,0,now);actor.castUntil=0}
+    for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true}
   function draw(time,force=false){
