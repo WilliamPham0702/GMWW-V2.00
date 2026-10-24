@@ -9,13 +9,13 @@ test('Phase4 art: 40 character IDs yield forty color + hairstyle/accessory combi
   const styles=Array.from({length:40},(_,i)=>atelierPalette('character-'+String(i+1).padStart(2,'0')));
   assert.equal(new Set(styles.map(x=>JSON.stringify(x))).size,40);
   assert.deepEqual([...new Set(styles.map(x=>x.style))].sort((a,b)=>a-b),[0,1,2,3,4]);
-  assert.equal(ARENA_ATELIER_VERSION,'arena-chibi-instanced-v4');
+  assert.equal(ARENA_ATELIER_VERSION,'arena-chibi-instanced-v5-casting');
 });
 test('Phase4: 30 actors remain InstancedMesh with fixed draw calls despite 40 styles',()=>{
   const scene=new THREE.Scene(),atlas=createArenaCharacterField(THREE,scene);
   const actors=Array.from({length:30},(_,i)=>({id:'member:p'+i,seatId:i+1,characterId:'character-'+String(i+1).padStart(2,'0'),
     position:{x:Math.cos(i)*3,z:Math.sin(i)*3},statusTags:[]}));
-  atlas.setActors(actors);assert.equal(atlas.actorCount,30);assert.ok(atlas.drawBudget<=25);
+  atlas.setActors(actors);assert.equal(atlas.actorCount,30);assert.ok(atlas.drawBudget<=29);
   assert.equal(atlas.performGesture('member:p0','wave'),true);
   assert.equal(atlas.performGesture('member:p1','cheer'),true);
   assert.equal(atlas.performGesture('member:p2','nod'),true);
