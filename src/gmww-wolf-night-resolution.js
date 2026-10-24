@@ -109,7 +109,7 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   if(action==='action_compare_faction'){
     if(!reads[0].faction||!reads[1].faction)return null;
     const same=reads[0].faction===reads[1].faction;
-    return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
+    return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleId:x.roleId,roleName:x.roleName})),
       same,message:same?'CÙNG PHE':'KHÁC PHE'};
   }
   // The Alpha Wolf deceives the regular Seer only, not a group check.
