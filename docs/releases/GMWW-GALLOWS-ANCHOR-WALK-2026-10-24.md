@@ -14,5 +14,5 @@
 - Bổ sung kiểm tra riêng: lưu tọa độ/validate, hiển thị Player Web, sử dụng Walk, dọn CSS trang trí và so khớp bundle GM.
 
 ## Phát hành
-- Đang ở **PR sửa lỗi**. Chưa tự merge hoặc triển khai Production/OTA; không cập nhật IPA.
-- Khi tạo bản Runtime tiếp theo, tăng phiên bản so với Production, tạo SHA-256 và ghi chú bản phát hành này. Rollback: revert PR và sử dụng bản Runtime trước; metadata `gallowsAnchors` là tùy chọn và tương thích ngược.
+- Đã chuẩn bị **ứng viên Runtime OTA V3.202**, đang chờ CI/duyệt PR #462. Chưa merge hoặc triển khai Production; không nâng cấp IPA.
+- Phát hành sau khi CI/guard OTA xác nhận V3.202 lớn hơn Production, tạo SHA-256 và ghi chú bản phát hành. Rollback: khôi phục Runtime trước; metadata `gallowsAnchors` là tùy chọn và tương thích ngược.
