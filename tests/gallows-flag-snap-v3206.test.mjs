@@ -15,9 +15,10 @@ test('Snap chọn Character hợp lệ gần nhất, không hút người chết
   const dead=make('dead',100,100,false),alice=make('alice',115,110,true),
     bob=make('bob',148,148,true),remote=make('remote',600,600,true);
   const scope={document:{querySelectorAll:()=>[dead,alice,bob,remote]},eligibleNode:n=>n.valid,Math};
-  assert.equal(vm.runInNewContext(code+'\nsnapCandidate(108,105).id',scope),'alice');
-  assert.equal(vm.runInNewContext(code+'\nsnapCandidate(152,145).id',scope),'bob');
-  assert.equal(vm.runInNewContext(code+'\nsnapCandidate(370,370)',scope),null);
+  const invoke=(x,y)=>vm.runInNewContext('(()=>{\n'+code+'\nreturn snapCandidate('+x+','+y+');})()',scope);
+  assert.equal(invoke(108,105).id,'alice');
+  assert.equal(invoke(152,145).id,'bob');
+  assert.equal(invoke(370,370),null);
 });
 
 test('Cờ đỏ to, hút rõ Character, trạng thái tạm và nút OK / Khôi Phục nằm trên làng',()=>{
