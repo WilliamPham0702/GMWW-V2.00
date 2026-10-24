@@ -51,6 +51,8 @@ test('A genuine completed match is still visible; stale result is hidden on next
     endedAt:'old-date',winnerFaction:'Phe Dân'};
   const b=browser(room);
   await b.check.playWatchCompletion({room});
+  assert.equal(b.el('playMatchCompletionSheet').hidden,true,'Returning to a finished room must not reopen the old result');
+  await b.check.openPlayCompletionSheet(); // GM can still review an authentic confirmed result.
   assert.equal(b.el('playMatchCompletionSheet').hidden,false);
   assert.equal(b.check.playCompletionState.completed,true);
   assert.match(b.el('playCompletionTitle').textContent,/PHE DÂN THẮNG/);
