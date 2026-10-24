@@ -77,7 +77,7 @@ function apply(){
  globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS=anchors;
  if(signature!==lastGallowsAnchorKey){
    lastGallowsAnchorKey=signature;
-   window.dispatchEvent(new Event('gmww:village-gallows-anchor'));
+   if(typeof Event==='function'&&typeof window.dispatchEvent==='function')window.dispatchEvent(new Event('gmww:village-gallows-anchor'));
  }
  const image=(editor&&state.draft[key])||localSnapshot?.images[key];
  if(image){scene.style.setProperty('--gmww-scene-image',`url("${image}")`);scene.classList.add('custom-scene')}
