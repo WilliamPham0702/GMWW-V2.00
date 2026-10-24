@@ -370,6 +370,27 @@ if(game){
     return button;
   }
   function renderPortal(){document.getElementById('gmwwPortal')?.remove();document.getElementById('gmwwPortalNotice')?.remove()}
+  function syncGallowsHangingVisual(){
+    // Reposition the existing Character DOM only. Seat coordinates stay untouched.
+    const hanging=setupState?.gallowsHanging,accused=battleStatic&&hanging?.active===true?
+      String(hanging.candidateId||''):'';
+    const live=all.some(p=>String(p?.id||'').replace(/^member:/,'')===accused&&!visuallyDeceased(p));
+    const target=live?accused:'',firePoint=target?screenPoint(layout.fire):null;
+    players.classList.toggle('has-gallows-hanging',!!target);
+    for(const data of all){
+      const node=mountedPlayerNodes.get(String(data?.id||''));if(!node)continue;
+      const isAccused=!!(target&&firePoint&&String(data.id).replace(/^member:/,'')===target&&
+        data.isGM!==true&&data.kind!=='gm');
+      node.classList.toggle('gmww-gallows-hanging',isAccused);
+      if(isAccused){
+        node.style.left=Math.max(10,Math.min(90,firePoint.x))+'%';
+        node.style.top=Math.max(13,Math.min(80,firePoint.y-15))+'%';
+        node.style.zIndex='950';
+        node.setAttribute('aria-label',safeText(data.displayName||data.name||target)+' · Đang treo Lên Giàn');
+      }
+      // Other nodes are already reset to their real positions by stablePlayerNode.
+    }
+  }
   function render(){
     syncPirateNominationFlag();
     cancelAnimationFrame(moveFrame);moveFrame=0;
@@ -402,6 +423,7 @@ if(game){
     });
     for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
+    syncGallowsHangingVisual();
     const alive=new Set(all.map(p=>String(p.id)));
     for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
     villageRenderMetrics.mounted=mountedPlayerNodes.size;

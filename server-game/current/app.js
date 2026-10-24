@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.200';
+const VERSION='3.201';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3415,6 +3415,42 @@ function battleRoomDisplayPosition(point){
   // All stages now use precisely the Worker/Player Web seat coordinates.
   return point;
 }
+// Visual-only suspended candidate; do not change seat IDs or the room's layout.
+function playGallowsHangingCandidateId(){
+  const g=playSceneRuntime.gallows;
+  if(playSceneState.step!=='battle'||playSceneState.phase!=='day'||g?.hanging?.active!==true)return '';
+  const id=String(g.hanging.candidateId||'');
+  return (g.eligible||[]).includes(id)?id:'';
+}
+function syncPlayGallowsHanging(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  const accused=playGallowsHangingCandidateId(),fire=accused?villageFirePosition():null;
+  ring.classList.toggle('has-gallows-hanging',!!accused);
+  for(const token of ring.querySelectorAll('[data-play-player-id]')){
+    const id=String(token.dataset.playPlayerId||''),active=!!(accused&&fire&&id===accused&&!token.classList.contains('is-dead')&&!token.classList.contains('is-expelled'));
+    const was=token.classList.contains('gmww-gallows-hanging');
+    if(active){
+      if(!was){
+        token.dataset.gallowsOriginLeft=token.style.left;
+        token.dataset.gallowsOriginTop=token.style.top;
+        token.dataset.gallowsOriginDepth=token.style.zIndex;
+        token.dataset.gallowsOriginAria=token.getAttribute('aria-label')||'';
+      }
+      token.classList.add('gmww-gallows-hanging');
+      token.style.left=Math.max(10,Math.min(90,Number(fire[0])))+'%';
+      token.style.top=Math.max(13,Math.min(80,Number(fire[1])-15))+'%';
+      token.style.zIndex='950';
+      token.setAttribute('aria-label',(token.dataset.gallowsOriginAria||id)+' · Đang treo Lên Giàn');
+    }else if(was){
+      token.classList.remove('gmww-gallows-hanging');
+      token.style.left=token.dataset.gallowsOriginLeft||token.style.left;
+      token.style.top=token.dataset.gallowsOriginTop||token.style.top;
+      token.style.zIndex=token.dataset.gallowsOriginDepth||'10';
+      token.setAttribute('aria-label',token.dataset.gallowsOriginAria||id);
+      for(const key of ['gallowsOriginLeft','gallowsOriginTop','gallowsOriginDepth','gallowsOriginAria'])delete token.dataset[key];
+    }
+  }
+}
 function renderPlayPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   const previewNew=playRoomUiState.editorMode==='new'&&!document.getElementById('playCreateRoomSheet')?.classList.contains('hidden');
@@ -3459,6 +3495,7 @@ function renderPlayPlayers(){
     }
     syncPlayMovementTicker();
     if(playSceneState.step==='battle')battleMarkPlayers();
+    syncPlayGallowsHanging();
     return;
   }
   ring.dataset.gmwwPlayerDomSig=domSig;
@@ -3546,6 +3583,7 @@ function renderPlayPlayers(){
   syncPlayMovementTicker();
   // Vẽ lại vòng (realtime/poll) xóa class battle; gắn lại để GM luôn thấy ai đến lượt và mục tiêu đã chọn.
   if(playSceneState.step==='battle')battleMarkPlayers();
+  syncPlayGallowsHanging();
 }
 async function renderPlayCards(){
   const selected=(playSceneRuntime.assignments.length?playSceneRuntime.assignments:(Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[])).find(a=>String(a?.loginId||'')===String(playSceneState.activePlayerId||'')),selectedRoleId=String(selected?.roleId||playSceneState.roleId||'');
@@ -5088,9 +5126,11 @@ function battleGallowsRender(phase){
   if(modeSummary)modeSummary.textContent='CHẾ ĐỘ: '+(mode==='gm'?'GM THỦ CÔNG':'TỰ ĐỘNG')+' ▾';
   const select=document.getElementById('battleGallowsCandidate'),prev=select?.value||'';
   if(select){
-    const options=members.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
+    const options=(mode==='gm'&&stage==='ready'?'<option value="">— Chọn người lên giàn —</option>':'')+
+      members.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
     if(select.innerHTML!==options)select.innerHTML=options;
     if(g.candidateId&&members.some(m=>m.loginId===g.candidateId))select.value=g.candidateId;
+    else if(mode==='gm'&&stage==='ready')select.value='';
     else if(members.some(m=>m.loginId===prev))select.value=prev;
     select.disabled=battleState.gallowsBusy||stage==='resolved'||(mode==='auto'&&!['nominating','selecting'].includes(stage));
   }
@@ -5805,6 +5845,12 @@ function initBattleControls(){
     }
     const btn=event.target.closest('[data-gallows-command]');if(!btn||btn.disabled)return;
     void battleGallowsCommand(btn.dataset.gallowsCommand,document.getElementById('battleGallowsCandidate')?.value||'',btn.dataset.outcome||'');
+  });
+  document.getElementById('battleGallowsCandidate')?.addEventListener('change',event=>{
+    // Manual candidate becomes suspended ONLY after GM selects them explicitly.
+    const id=String(event.target.value||''),g=playSceneRuntime.gallows;
+    if(g?.mode==='gm'&&id&&id!==g.candidateId&&playSceneState.phase==='day')
+      void battleGallowsCommand('hang',id);
   });
   battleBindAuxiliaryDrag('battleDetails','.play-battle-turn');
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');

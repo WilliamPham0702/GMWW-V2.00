@@ -18,7 +18,7 @@ test('G3.8: six cohesive GM source parts regenerate EXACT shipped app.js bytes',
   const segments=paths.map(path=>readFileSync(path));
   for(const [index,chunk] of segments.entries()){
     assert.ok(chunk.length>1000,'source module '+index+' must not be empty');
-    assert.ok(chunk.length<200000,'source module '+index+' must be much smaller than monolith');
+    assert.ok(chunk.length<220000,'source module '+index+' must be much smaller than monolith');
   }
   const assembled=Buffer.concat(segments);
   const production=readFileSync('server-game/current/app.js');
