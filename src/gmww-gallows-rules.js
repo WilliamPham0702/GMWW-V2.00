@@ -118,13 +118,22 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
-  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
+  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(voter)||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
   if(gallowsBlockedNomination(ballot).includes(voter))return {ok:false,error:'NOMINATION_BANNED'};
   if(ballot.nominations?.[voter])return {ok:false,error:'NOMINATION_ALREADY_USED'};
   return {ok:true,value:{...ballot,nominations:{...ballot.nominations,[voter]:target},updatedAt:now}};
 }
 export function gallowsBegin(ballot,candidate,now=Date.now()){
-  if(!validId(candidate)||!['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
+  if(!validId(candidate)||!(ballot?.eligible||[]).includes(candidate)||
+     !['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
+  // When nominations have been closed, a unique leader is mandatory. On a
+  // positive tie the GM may choose only one of the top-scoring players.
+  // No nominations: keep legacy GM/demo selection available.
+  if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'){
+    const totals=gallowsNominationTotals(ballot),max=totals[0]?.votes||0;
+    if(max>0&&!totals.some(row=>row.loginId===candidate&&row.votes===max))
+      return {ok:false,error:'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE'};
+  }
   return {ok:true,value:{...ballot,candidateId:candidate,stage:'voting',hangingStartedAt:now,startedAt:now,
     deadlineAt:now+1000*gallowsDurationSec(ballot.voteDurationSec),updatedAt:now,votes:{}}};
 }
