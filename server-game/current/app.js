@@ -2618,7 +2618,7 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     return true;
   }catch(_){return false}
 }
-async async function battleOpenGallowsAudioUpload(id){
+async function battleOpenGallowsAudioUpload(id){
   const allowed=['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
   if(!allowed.includes(id))return;
   document.querySelector('.nav[data-page="library"]')?.click();
