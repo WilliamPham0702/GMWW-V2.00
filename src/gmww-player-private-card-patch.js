@@ -540,6 +540,13 @@ function gmwwShouldAdvancePrivatePhase(next){
  offlineReplace("    setGameViewPane('village',{persist:false});\n  }else if(!hasRole",
    "    if($('#game')?.dataset.privateCardView!=='open')setGameViewPane('village',{persist:false});\n  }else if(!hasRole");
 
+ // Individual seat swapping was retired: GM owns the seat layout. These
+ // orphaned calls abort resume before roster/WS setup and abort private
+ // receipts before Role/Artifact assignment. Remove them from shipped code.
+ const retiredSeatSwapCall='handleSeatSwapRequests(d?.swapRequests);';
+ if(output.split(retiredSeatSwapCall).length!==3)throw new Error('Retired seat-swap call sites changed');
+ output=output.replaceAll(retiredSeatSwapCall,'');
  return output;
 }
 export const PLAYER_PRIVATE_CARD_PATCH_VERSION=PATCH_VERSION;
+
