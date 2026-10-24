@@ -5313,14 +5313,21 @@ function battleGallowsRender(phase){
   battleGallowsTick();
 }
 async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
-  if(battleState.gallowsBusy||playSceneState.phase!=='day'||!isLivePlayRoom())return;
+  if(playSceneState.phase!=='day'||!isLivePlayRoom())return;
+  if(battleState.gallowsBusy){
+    // Tapping Open while a just-edited input loses focus must not drop the tap.
+    if(command!=='set_duration')battleState.gallowsQueuedCommand={command,targetId,outcome,extras};
+    return;
+  }
   if(command==='resolve'){
     const name=battleMember(targetId)?.displayName||targetId;
     if(!confirm('Xác nhận CHỐT '+(outcome==='dead'?'CHẾT':'SỐNG')+' cho '+name+'?'))return;
   }
   if(command==='restore'&&playSceneRuntime.gallows?.stage==='resolved'&&
      !confirm('Khôi phục kết quả Lên Giàn? Chỉ tác động do Lên Giàn gây ra sẽ được hoàn tác.'))return;
-  battleState.gallowsBusy=true;battleGallowsRender('day');
+  battleState.gallowsBusy=true;
+  // Preserve the focused button through the blur → save → click sequence.
+  if(command!=='set_duration')battleGallowsRender('day');
   try{
     const data=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,targetId,outcome,...extras})});
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
@@ -5333,7 +5340,13 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);
   }catch(err){playFlashError('Lên Giàn: '+String(err?.message||err))}
-  finally{battleState.gallowsBusy=false;battleGallowsRender('day')}
+  finally{
+    battleState.gallowsBusy=false;
+    const queued=battleState.gallowsQueuedCommand;
+    battleState.gallowsQueuedCommand=null;
+    battleGallowsRender('day');
+    if(queued)void battleGallowsCommand(queued.command,queued.targetId,queued.outcome,queued.extras);
+  }
 }
 
 function renderPlayBattle(){
