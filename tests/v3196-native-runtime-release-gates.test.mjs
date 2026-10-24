@@ -16,7 +16,7 @@ test('Runtime V3.198 is synchronized across Worker, GM, npm and cache keys; nati
  assert.match(app,/const VERSION='3\.198';/);
  assert.match(html,/<title>GMWW V3\.198<\/title>/);
  for(const file of ['style.css','app.js','village-layout.js']){
-   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.197-');
+   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.198-');
    assert.match(html,re);
  }
  assert.equal(compareReleaseVersions('3.198','3.196'),1);
