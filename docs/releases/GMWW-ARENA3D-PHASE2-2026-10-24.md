@@ -8,9 +8,10 @@ Tiếp tục GMWW Dual Renderer PR #452 bằng cách kết nối Arena 3D với 
 - Thêm `wrangler.arena3d-core-stage.jsonc`: Worker và Durable Object độc lập; không có service binding tới Production, không sử dụng namespace `gmww-v2-00`.
 - Thêm `assets/village/arena-3d/live.html` & `live.mjs`: sân 3D, tạo/phục hồi phòng thử, 6/12/20/30 người, Camera orbit, xoay Character, FPS/draw calls, hiển thị status hợp lệ; GM controls dùng API V2 thật (Seat, Phát Vai, Vào Trận, Ngày/Đêm, Lên Giàn).
 - Thêm `room-realtime.mjs`: bộ nhận trạng thái V2 thật, WebSocket là tín hiệu tức thời, HTTP snapshot khi refresh/reconnect, chống nhận revision cũ, lọc roster và phiếu công khai.
+- Thêm GET `/api/arena-staging/rooms/:code/gallows` chỉ trên Core staging để khôi phục thống kê đề cử và 👍/👎 sau refresh/mất mạng. API chỉ trả tổng số phiếu, không trả danh tính người bỏ phiếu, Role hay Artifact.
 - `/join/:roomCode` trên STAGING mở Player Web 2D dùng chính Core STAGING; 2D và 3D cùng nhận cùng Room DTO và cùng Match ID của môi trường thử nghiệm.
 - Không chèn vai trò/phe/Artifact bí mật vào scene public; vai/Artifact chỉ xem qua Client Player Web đã xác thực sẵn của V2, không thêm client-side GM quyền.
-- Bổ sung test hợp đồng Core 2D/3D & privacy, HTTP E2E phòng thật 6 thành viên/phát vai/Ngày Đêm/đề cử, UI Chromium 390px và ghép screenshot; không tính Chromium SwiftShader là iPhone vật lý.
+- Bổ sung test hợp đồng Core 2D/3D & privacy, HTTP E2E phòng thật 6 thành viên/phát vai/Ngày Đêm/đề cử và bỏ phiếu 👍/👎; thêm test các mốc 6/12/20/30 thành viên **thật** trong phòng Core staging và hiển thị 3D với 30 Character; UI Chromium 390px và screenshot; không tính Chromium SwiftShader là iPhone vật lý.
 
 ## Điều cần nghiệm thu sau CI
 1. Link staging live mở được trên iPhone Safari và Chrome/Edge; có thể tạo phòng thử mà không đụng dữ liệu Production.
@@ -32,6 +33,8 @@ Tiếp tục GMWW Dual Renderer PR #452 bằng cách kết nối Arena 3D với 
 - ADD: môi trường riêng chạy Core V2 game thật phục vụ 3D, cùng một nguồn luật.
 - ADD: WebSocket + HTTP snapshot/reconnect cho Arena 3D.
 - ADD: quản lý phòng, Seat 6–30 và luồng GM thử nghiệm Phát Vai/Ngày Đêm/Lên Giàn.
-- ADD: lọc sự kiện phiếu công khai và giới hạn thông tin vai trò.
+- ADD: lọc sự kiện phiếu công khai và giới hạn thông tin vai trò; bản xem 3D phục hồi tổng phiếu trực tiếp từ Core staging sau refresh/reconnect.
+- ADD: kiểm thử API Core V2 thật với 6, 12, 20, 30 thành viên và 2 screenshot Chromium tại 6/30.
+- SYNC: đưa thay đổi `main` V2.00 vào nhánh nghiên cứu sau khi xác nhận không có xung đột; không merge ngược.
 - ADD: CI đúng phạm vi và minh chứng staging qua HTTP/Chromium.
 - UNCHANGED: Core Production, Worker Production, dữ liệu, GM iOS IPA, Runtime OTA và Player Web đang sử dụng.
