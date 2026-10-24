@@ -3,6 +3,7 @@
 import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
+import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -16,6 +17,59 @@ function aggregateGallowsOnly(raw){
 }
 export class RoomDurableObject extends GameRoomDurableObject{
   broadcast(payload){return super.broadcast(redactStagingPublicBroadcast(payload))}
+  async captureAuthorizedCast(response,body,phase){
+    if(!response?.ok)return response;
+    const result=await response.clone().json().catch(()=>null);
+    if(result?.ok!==true||result?.idempotent===true)return response;
+    const meta=await this.ctx.storage.get('meta');
+    if(meta?.phase!=='running'||meta.cyclePhase!==phase||!meta.matchId||!meta.cycleKey)return response;
+    const actorId=String(body?.actorId||'');
+    const targets=Array.isArray(body?.targetIds)?body.targetIds:[];
+    const kind=classifyCastingAction(body?.actionId);
+    if(!/^[a-z0-9._-]{1,80}$/i.test(actorId)||!kind)return response;
+    const now=Date.now();
+    await this.ctx.storage.put('arena:lastCast:'+meta.matchId,{
+      matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),phase,
+      turnId:phase==='night'?String(body?.turnId||''):'day:'+String(body?.clientEventId||'').slice(0,90),
+      actorIds:['member:'+actorId],targetIds:targets.filter(id=>/^[a-z0-9._-]{1,80}$/i.test(String(id))).map(id=>'member:'+id),
+      kind,createdAt:now,expiresAt:now+4500
+    });
+    return response;
+  }
+  async gmBattleAction(request,body){
+    const response=await super.gmBattleAction(request,body);
+    return this.captureAuthorizedCast(response,body,'night');
+  }
+  async gmDayAction(request,body){
+    const response=await super.gmDayAction(request,body);
+    return this.captureAuthorizedCast(response,body,'morning');
+  }
+  async gmCastingState(meta){
+    if(meta.phase!=='running')return null;
+    const now=Date.now();
+    const saved=await this.ctx.storage.get('arena:lastCast:'+String(meta.matchId||''));
+    if(meta.cyclePhase==='night'){
+      const rt=await this.getNightRuntime(meta,Math.max(1,Number(meta.cycleNight)||1),false);
+      const step=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;
+      if(!step)return null;
+      const logins=[...(Array.isArray(step.loginIds)?step.loginIds:[step.loginId]),
+        ...((step.kind==='role-group'&&Array.isArray(step.roles))?step.roles.flatMap(r=>r.loginIds||[r.loginId]):[])];
+      const actorIds=[...new Set(logins.filter(id=>typeof id==='string'&&/^[a-z0-9._-]{1,80}$/i.test(id)).map(id=>'member:'+id))];
+      if(!actorIds.length)return null; // introduction/wakeup without an actual actor
+      const current=String(step.id||'');
+      const matched=saved&&saved.turnId===current&&saved.cycleKey===meta.cycleKey&&saved.matchId===meta.matchId&&saved.expiresAt>now;
+      return stageCastingCue({
+        matchId:meta.matchId,cycleKey:meta.cycleKey,phase:'night',turnId:current,
+        actorIds,
+        ...(matched?{targetIds:saved.targetIds,kind:saved.kind,createdAt:saved.createdAt,expiresAt:saved.expiresAt}:{})
+      },now);
+    }
+    if(meta.cyclePhase==='morning'&&saved&&saved.phase==='morning'&&saved.matchId===meta.matchId&&
+       saved.cycleKey===meta.cycleKey&&saved.expiresAt>now){
+      return stageCastingCue(saved,now);
+    }
+    return null;
+  }
   async fetch(request){
     const path=new URL(request.url).pathname;
     if(path==='/arena/gm-visuals'){
@@ -26,7 +80,8 @@ export class RoomDurableObject extends GameRoomDurableObject{
       if(meta.phase!=='running')return Response.json({ok:true,matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),effects:[]},{headers:{'cache-control':'no-store'}});
       const rows=await this.ctx.storage.get('interactions')||[];
       return Response.json({ok:true,matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),
-        effects:projectGmOnlyVisuals(rows,{matchId:meta.matchId,cycleKey:meta.cycleKey})},
+        effects:projectGmOnlyVisuals(rows,{matchId:meta.matchId,cycleKey:meta.cycleKey}),
+        casting:await this.gmCastingState(meta)},
         {headers:{'cache-control':'no-store'}});
     }
     if(path!=='/arena/public-gallows')return super.fetch(request);
