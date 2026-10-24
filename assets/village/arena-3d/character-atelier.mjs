@@ -79,7 +79,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   let activeBeam=null;
   const spellVfx=createArenaSpellVfx(THREE,root);
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
-  let reducedMotion=false,lastDraw=-1,updates=0;
+  let reducedMotion=false,lastDraw=-1,updates=0,qualityFps=60,qualityLowPower=false;
   function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
     const previous=new Map(byId);actors.length=0;byId.clear();const used=new Set();
     for(const source of (Array.isArray(players)?players:[])){
@@ -195,9 +195,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true;spellVfx.setReducedMotion(reducedMotion)}
-  function setLowPower(value){spellVfx.setLowPower(value===true)}
+  function setLowPower(value){qualityLowPower=value===true;spellVfx.setLowPower(qualityLowPower)}
+  function setQualityFps(value){if(Number.isFinite(value)&&value>0)qualityFps=value}
   function draw(time,force=false){
-    if(!force&&time-lastDraw<1000/(reducedMotion?12:30))return false;
+    const animationHz=renderQualityBudget({characters:actors.length,fps:qualityFps,lowPower:qualityLowPower,reducedMotion}).animationHz;
+    if(!force&&time-lastDraw<1000/animationHz)return false;
     const dt=lastDraw<0?0:Math.min(60,time-lastDraw);lastDraw=time;
     for(const actor of actors){
       actor.yaw+=clamp(actor.targetYaw-actor.yaw,-dt*.009,dt*.009);
@@ -303,7 +305,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     spellBeam.geometry.dispose();spellBeam.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,draw,pick,dispose,
+  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
