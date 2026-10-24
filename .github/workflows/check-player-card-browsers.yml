@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "src/gmww-player-private-card-patch.js"
+      - "update-system/published-ipa.json"
+      - ".github/scripts/prepare-update-channel.mjs"
       - "src/gmww-members-live.js"
       - "src/gmww-members-page.js"
       - "src/player-page-src/**"
@@ -44,6 +46,8 @@ on:
     branches: [main]
     paths:
       - "src/gmww-player-private-card-patch.js"
+      - "update-system/published-ipa.json"
+      - ".github/scripts/prepare-update-channel.mjs"
       - "src/gmww-members-live.js"
       - "src/gmww-members-page.js"
       - "src/player-page-src/**"
