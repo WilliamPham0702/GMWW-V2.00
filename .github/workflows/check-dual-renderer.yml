@@ -48,5 +48,6 @@ jobs:
           node --check assets/village/dual-renderer-core.mjs
           node --check src/gmww-dual-renderer-projection.js
           node --check assets/village/arena-3d/main.mjs
+          node --check assets/village/arena-3d/render-optimization.mjs
       - name: Kiểm thử tương thích và phân quyền trực tiếp
-        run: node --test tests/dual-renderer-contract.test.mjs tests/ci-browser-scope.test.mjs
+        run: node --test tests/dual-renderer-contract.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-stage5-performance.test.mjs
