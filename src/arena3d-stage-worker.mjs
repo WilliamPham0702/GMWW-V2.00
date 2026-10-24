@@ -44,6 +44,28 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const response=await super.gmDayAction(request,body);
     return this.captureAuthorizedCast(response,body,'morning');
   }
+  async gmNightControls(meta){
+    if(meta.phase!=='running'||meta.cyclePhase!=='night')return null;
+    const rt=await this.getNightRuntime(meta,Math.max(1,Number(meta.cycleNight)||1),true);
+    const step=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;
+    if(!step)return {complete:rt?.completed===true,turnId:null,actorIds:[],roleId:null,label:'Kết thúc đêm'};
+    const actors=[...new Set([
+      ...(Array.isArray(step.loginIds)?step.loginIds:[step.loginId]),
+      ...((step.kind==='role-group'&&Array.isArray(step.roles))?step.roles.flatMap(r=>r.loginIds||[]):[])
+    ].filter(id=>typeof id==='string'&&/^[a-z0-9._-]{1,80}$/i.test(id)))];
+    const roles=step.kind==='role-group'?(step.roles||[]).map(r=>({
+      roleId:String(r.roleId||'').slice(0,80),
+      label:String(r.label||r.roleId||'').slice(0,80),
+      actorIds:(r.loginIds||[]).filter(id=>actors.includes(id)).map(id=>'member:'+id)
+    })):[];
+    return {complete:false,turnId:String(step.id||'').slice(0,160),
+      label:String(step.label||step.kind||'Đến lượt').slice(0,120),
+      kind:String(step.kind||'').slice(0,35),
+      roleId:String(step.roleId||'').slice(0,80),
+      actorIds:actors.map(id=>'member:'+id),roles,
+      stepIndex:Math.max(0,Number(rt.cursor)||0),
+      totalSteps:Math.max(0,rt.queue?.length||0)};
+  }
   async gmCastingState(meta){
     if(meta.phase!=='running')return null;
     const now=Date.now();
@@ -81,7 +103,8 @@ export class RoomDurableObject extends GameRoomDurableObject{
       const rows=await this.ctx.storage.get('interactions')||[];
       return Response.json({ok:true,matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),
         effects:projectGmOnlyVisuals(rows,{matchId:meta.matchId,cycleKey:meta.cycleKey}),
-        casting:await this.gmCastingState(meta)},
+        casting:await this.gmCastingState(meta),
+        nightControl:await this.gmNightControls(meta)},
         {headers:{'cache-control':'no-store'}});
     }
     if(path!=='/arena/public-gallows')return super.fetch(request);
