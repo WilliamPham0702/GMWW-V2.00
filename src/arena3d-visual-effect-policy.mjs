@@ -20,7 +20,7 @@ export function projectGmOnlyVisuals(interactions,{matchId,cycleKey,now=Date.now
     if(!row||row.effectActive===false||row.undone===true)continue;
     if(String(row.matchId||'')!==String(matchId)||String(row.cycleKey||'')!==String(cycleKey))continue;
     const created=Date.parse(String(row.createdAt||row.resolvedAt||''));
-    if(!Number.isFinite(created)||created>now+10000||now-created>120000)continue;
+    if(!Number.isFinite(created)||created>now+10000||now-created>18000)continue;
     const kind=ACTION_TO_VISUAL[String(row.actionId||'')]||TYPE_TO_VISUAL[String(row.type||'')];
     const login=safe(row.loginId||row.targetId);
     if(!kind||!login||!(/^[A-Za-z0-9_.-]{1,60}$/.test(login)))continue;
@@ -28,7 +28,7 @@ export function projectGmOnlyVisuals(interactions,{matchId,cycleKey,now=Date.now
     if(!id||seen.has(id))continue;seen.add(id);
     out.push({eventId:id,targetId:'member:'+login,kind,
       // End time is tightly bounded; no historical replay of secret night actions.
-      expiresAt:Math.min(now+1500,created+120000)});
+      expiresAt:Math.min(now+1500,created+18000)});
   }
   return out.slice(-40);
 }
