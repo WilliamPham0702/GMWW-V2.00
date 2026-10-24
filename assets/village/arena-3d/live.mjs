@@ -4,6 +4,7 @@ import * as THREE from '../../characters/v5/vendor/three.module.min.js';
 import {rendererCommands,createPublicRendererFrame} from '../dual-renderer-core.mjs';
 import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
+import {createGmDashboard} from './gm-dashboard.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -12,7 +13,12 @@ let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code=''
 const field=createArenaCharacterField(THREE,scene);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
-let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0;
+let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false;
+const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
+  onAction:(id,candidate)=>{if(id==='vote'&&candidate)chosenCandidate=candidate;$(id)?.click()},
+  onToggleQuality:value=>{lowPower=value;render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
+});
+let chosenCandidate=null;
 const floor=new THREE.Mesh(new THREE.CylinderGeometry(11.2,11.2,.25,64),new THREE.MeshStandardMaterial({color:'#e8cc99'}));
 floor.position.y=-.2;scene.add(floor);
 const rim=new THREE.Mesh(new THREE.TorusGeometry(10.15,.4,7,64),new THREE.MeshStandardMaterial({color:'#459c7f'}));rim.rotation.x=Math.PI/2;scene.add(rim);
@@ -27,6 +33,7 @@ function drawFrame(frame){
   current=frame;synthetic=frame.room.code==='SYNTH';
   const items=rendererCommands(frame,'3d').players;
   field.setActors(items);
+  dashboard.setState(frame);
   if(previousMatch!==undefined&&(previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey)){
     field.clearEffects();visibleGmEffects=0;
   }
@@ -52,7 +59,7 @@ function demo(n){
   });
   drawFrame(createPublicRendererFrame({room:{code:'SYNTH',phase:'lobby',seatCount:n},players}));
 }
-function notice(s){$('log').textContent=String(s);}
+function notice(s){$('log').textContent=String(s);dashboard.notify(s);}
 async function refreshPrivateGmEffects(){
   if(!gmToken||!code||!current?.room.matchId||current.room.phase!=='running')return;
   try{
@@ -83,7 +90,8 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;}
+function enableGm(){for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
+  $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
   if(feed)feed.close();
   code=room.trim().toUpperCase();$('room').value=code;
@@ -98,6 +106,7 @@ async function attach(room){
   enableGm();
 }
 function showBallot(x){
+  dashboard.setBallot(x);
   if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
   if(x.candidateId)field.interact('member:'+x.candidateId,{effect:'vote',durationMs:1300});
@@ -109,10 +118,27 @@ async function guarded(label,work){try{notice(label+' ...');await work();}catch(
 $('create').onclick=()=>guarded('Tạo phòng STAGING',async()=>{
   if(feed)feed.close();feed=null;gmToken='';seeded=[];enableGm();
   const d=await json('/api/rooms',{method:'POST',body:{roomName:'Arena 3D STAGING '+rosterSize,roomMode:'online',seatCount:rosterSize,seatMoveMode:'instant'}});
-  gmToken=d.gmToken;await attach(d.roomCode);
+  gmToken=d.gmToken;$('gm-key').value=gmToken;await attach(d.roomCode);
 });
 $('connect').onclick=()=>guarded('Kết nối phòng',()=>{gmToken='';enableGm();return attach($('room').value)});
 $('refresh').onclick=()=>guarded('Đồng bộ lại',async()=>{if(feed)await feed.refresh();else if(code)await attach(code);});
+$('gm-restore').onclick=()=>guarded('Xác thực quyền GM Staging',async()=>{
+  if(!code)throw Error('Hãy chọn phòng trước');
+  const candidate=String($('gm-key').value||'').trim();
+  if(!candidate)throw Error('Chưa nhập mã GM Staging');
+  const resp=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gm-visuals',{
+    headers:{authorization:'Bearer '+candidate},cache:'no-store'
+  });
+  if(!resp.ok)throw Error('Mã GM không hợp lệ ('+resp.status+')');
+  gmToken=candidate;enableGm();$('gm-key').value='';
+  await refreshPrivateGmEffects();
+  notice('Đã xác thực GM với Core staging; mã chỉ giữ trong bộ nhớ tab.');
+});
+$('gm-copy').onclick=()=>guarded('Sao chép mã GM Staging',async()=>{
+  if(!gmToken)throw Error('Bạn chưa là GM');
+  await navigator.clipboard.writeText(gmToken);
+  notice('Đã sao chép mã GM Staging. Không chia sẻ với người chơi.');
+});
 let seeded=[];
 $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
   if(!code||!gmToken)throw Error('Hãy tạo phòng trước');
@@ -176,8 +202,11 @@ $('nominate').onclick=()=>guarded('Mở đề cử',async()=>{
   await feed?.refresh();notice('Đã mở đề cử TỰ ĐỘNG. Người chơi trên Player Web STAGING có thể chọn theo luật Core V2.');
 });
 $('vote').onclick=()=>guarded('Bắt đầu bỏ phiếu',async()=>{
-  const candidate=(feed?.state.current?.players||[]).find(p=>p.id.startsWith('member:'))?.id.slice(7);
-  if(!candidate)throw Error('Chưa có thành viên hợp lệ');
+  const picked=chosenCandidate||dashboard.selectedId;
+  chosenCandidate=null;
+  const valid=(feed?.state.current?.players||[]).find(p=>p.id===picked&&p.id.startsWith('member:'));
+  if(!valid)throw Error('Hãy chọn một Seat/người chơi tại mục Phòng trước khi bắt đầu bỏ phiếu');
+  const candidate=valid.id.slice(7);
   await gm('gallows',{command:'begin',targetId:candidate});
   await feed?.refresh();notice('Đã đưa '+candidate+' lên giàn trong Core V2 staging.');
 });
@@ -212,7 +241,7 @@ canvas.addEventListener('pointerup',e=>{
     const r=canvas.getBoundingClientRect(),ray=new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
     const id=field.pick(ray);
-    if(id){focusId=id;field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
+    if(id){focusId=id;dashboard.setSelection(id);field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
   }
   drag=null;
 });
@@ -220,11 +249,12 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.m
 window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
+  gmConsole:document.body.dataset.gmwwGmConsole,lowPower,selectedId:dashboard.selectedId,
   drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
-  if(!document.hidden&&now-lastPaint>=1000/(reducedMotion?20:30)){
+  if(!document.hidden&&now-lastPaint>=1000/(reducedMotion||lowPower?20:30)){
     lastPaint=now;resize();
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
       Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
