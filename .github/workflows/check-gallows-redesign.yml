@@ -1,0 +1,45 @@
+name: Check Lên Giàn theo đúng phạm vi
+on:
+  pull_request:
+    paths:
+      - "src/gmww-gallows-rules.js"
+      - "shared/gallows-statistics.mjs"
+      - "server-game/current/GMWW.html"
+      - "server-game/current/style.css"
+      - "server-game/current/app.js"
+      - "server-game/src/30-village-and-setup.part"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "tests/gallows-*.test.mjs"
+      - "tests/v3148-gallows-integrity.test.mjs"
+      - "tests/v3189-fire-gallows-voting.test.mjs"
+      - "tests/v3192-gallows-dual-mode.test.mjs"
+      - ".github/workflows/check-gallows-redesign.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gallows:
+    name: Chi kiem tra Len Gian va toan ven bundle GM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tai ma nguon
+        uses: actions/checkout@v4
+      - name: Thiet lap Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cai thu vien
+        run: npm ci
+      - name: Kiem tra cu phap Worker va GM
+        run: |
+          node --check src/gmww-gallows-rules.js
+          node --check shared/gallows-statistics.mjs
+          node --check server-game/current/app.js
+      - name: Kiem tra thong ke, han che, ket luan va API Web
+        run: |
+          node --test tests/gallows-statistics.test.mjs tests/gallows-redesign-live.test.mjs tests/v3148-gallows-integrity.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/v3192-gallows-dual-mode.test.mjs
+      - name: Kiem tra 6 source GM khop ban app da dong goi
+        run: node --test tests/gmww-gm-app-source-modules.test.mjs
