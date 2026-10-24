@@ -269,53 +269,50 @@
           <div id="battleDayActionList" role="list"></div>
         </section>
         <section id="battleGallowsPanel" role="region" aria-label="Trang Treo Giàn" hidden>
-          <header title="Giữ và kéo để di chuyển"><strong>⚖️ TREO GIÀN</strong><output id="battleGallowsClock">01:00</output></header>
-          <details id="battleGallowsBanDetails" class="battle-gallows-ban-details" open>
-            <summary>☷ DANH SÁCH THÀNH VIÊN <span id="battleGallowsBansCount"></span></summary>
-            <div class="gallows-roster-scroll" role="region" aria-label="Bảng thống kê thành viên, vuốt ngang để xem đủ cột">
-              <div class="gallows-roster-head" aria-hidden="true"><span>STT</span><span>TÊN THÀNH VIÊN</span><span>ĐỀ CỬ</span><span>👍 CỨU</span><span>👎 GIẾT</span><span>CẤM CHỌN</span><span>CẤM VOTE</span></div>
-              <div id="battleGallowsMembers" role="list" aria-label="Thành viên còn sống, xếp theo số đề cử cao nhất"></div>
-            </div>
-          </details>
-          <div id="battleGallowsModeDetails" class="gallows-mode-toolbar" role="group" aria-label="Chế độ và khôi phục">
+          <header title="Giữ và kéo để di chuyển"><strong>⚖️ LÊN GIÀN</strong></header>
+          <div id="battleGallowsModeDetails" class="gallows-mode-toolbar" role="group" aria-label="Chế độ, thời gian và khôi phục">
             <button type="button" id="battleGallowsModeToggle" data-gallows-mode="gm" aria-label="Chuyển chế độ Lên Giàn"><span id="battleGallowsModeSummary">TỰ ĐỘNG ⇄</span></button>
+            <label for="battleGallowsSeconds">GIÂY <input id="battleGallowsSeconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="60" aria-label="Số giây dùng chung cho đề cử và bỏ phiếu, rời ô để lưu"></label>
+            <output id="battleGallowsClock" role="timer" aria-label="Đồng hồ đếm ngược">01:00</output>
             <button type="button" data-gallows-command="restore">↶ KHÔI PHỤC</button>
           </div>
-          <div id="battleGallowsStage" role="status" aria-live="polite">Sẵn sàng đề cử</div>
-          <div id="battleGallowsAutomatic" aria-label="Tự động Lên Giàn">
-            <div class="gallows-phase-tabs" role="group" aria-label="Giai đoạn Lên Giàn">
-              <button type="button" data-gallows-tab="nomination" aria-pressed="true">ĐỀ CỬ</button>
-              <button type="button" data-gallows-tab="vote" aria-pressed="false">BỎ PHIẾU</button>
+          <details id="battleGallowsBanDetails" class="battle-gallows-ban-details" open>
+            <summary>☷ DANH SÁCH THÀNH VIÊN <span id="battleGallowsBansCount"></span></summary>
+            <div class="gallows-roster-scroll" role="region" aria-label="Danh sách thành viên và quyền đề cử, bỏ phiếu">
+              <div class="gallows-roster-head" aria-hidden="true"><span>STT</span><span>TÊN THÀNH VIÊN</span><span>ĐỀ CỬ</span><span>CẤM CHỌN</span><span>CẤM VOTE</span></div>
+              <div id="battleGallowsMembers" role="list" aria-label="Thành viên còn sống, số đề cử cập nhật trực tiếp từ Player Web"></div>
             </div>
-            <section id="battleGallowsNominationBox" class="gallows-phase-box" aria-label="Điều khiển đề cử">
-              <div class="gallows-timer-row">
-                <label for="battleGallowsNominationSeconds">Thời gian (giây)</label>
-                <input id="battleGallowsNominationSeconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="60" aria-label="Số giây đề cử, rời ô để lưu">
-                <output id="battleGallowsNominationClock" aria-live="off">01:00</output>
-              </div>
-              <div class="battle-gallows-actions"><button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button><button type="button" data-gallows-command="close_nomination">CHỐT ĐỀ CỬ</button></div>
-            </section>
-            <section id="battleGallowsVoteBox" class="gallows-phase-box" aria-label="Điều khiển bỏ phiếu" hidden>
-              <div class="gallows-timer-row">
-                <label for="battleGallowsVoteSeconds">Thời gian (giây)</label>
-                <input id="battleGallowsVoteSeconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="60" aria-label="Số giây bỏ phiếu, rời ô để lưu">
-                <output id="battleGallowsVoteClock" aria-live="off">01:00</output>
-              </div>
-              <div id="battleGallowsCandidateControl" hidden><label for="battleGallowsCandidate">Chọn người lên giàn (khi hòa phiếu)</label><select id="battleGallowsCandidate" aria-label="Chọn người lên giàn khi hòa đề cử"></select></div>
-              <div class="battle-gallows-actions"><button type="button" data-gallows-command="begin">MỞ BỎ PHIẾU</button><button type="button" data-gallows-command="close_vote">CHỐT PHIẾU</button></div>
-            </section>
-            <div id="battleGallowsNominationStats" aria-live="polite"></div>
+          </details>
+          <div id="battleGallowsStage" role="status" aria-live="polite">Sẵn sàng đề cử</div>
+          <div id="battleGallowsAutomatic" aria-label="Điều khiển Lên Giàn tự động">
+            <div class="gallows-control-row" role="group" aria-label="Mở đề cử, chốt, mở vote">
+              <button type="button" data-gallows-command="open">MỞ ĐỀ CỬ</button>
+              <button type="button" data-gallows-command="close_stage" aria-label="Chốt đề cử hoặc vote theo giai đoạn">CHỐT</button>
+              <button type="button" data-gallows-command="begin">MỞ VOTE</button>
+            </div>
+            <div id="battleGallowsCandidateControl" hidden><label for="battleGallowsCandidate">Chọn người lên giàn khi hòa đề cử</label><select id="battleGallowsCandidate" aria-label="Chọn người lên giàn khi hòa đề cử"></select></div>
           </div>
           <div id="battleGallowsManualConclusion" class="gallows-manual-outcome" hidden>
-            <p>Chọn tên người chơi ở danh sách phía trên, sau đó GM chốt kết quả.</p>
+            <p>GM chọn người trên danh sách rồi quyết định Sống hoặc Chết.</p>
             <div class="battle-gallows-actions battle-gallows-result-actions">
               <button type="button" data-gallows-command="resolve" data-outcome="alive">👍 CHỐT SỐNG</button>
               <button type="button" data-gallows-command="resolve" data-outcome="dead">👎 CHỐT CHẾT</button>
             </div>
           </div>
-          <div id="battleGallowsInfo" class="gallows-info" role="status" aria-live="polite">Chưa có người lên giàn.</div>
-          <details id="battleGallowsVoteBreakdown"><summary>🗳️ CHI TIẾT PHIẾU</summary><div id="battleGallowsVotes" aria-label="Kết quả bỏ phiếu"></div></details>
-          <p id="battleGallowsResult" role="status" aria-live="polite" hidden></p>
+          <section id="battleGallowsSummary" class="gallows-summary" aria-label="Thống kê và kết luận Lên Giàn">
+            <strong>THỐNG KÊ</strong>
+            <div class="gallows-summary-grid" aria-live="polite">
+              <span>ĐÃ CHỌN <b id="battleGallowsSelectedCount">0/0</b></span>
+              <span>ĐÃ VOTE <b id="battleGallowsVotedCount">0/0</b></span>
+            </div>
+            <details id="battleGallowsVoteBreakdown">
+              <summary>☷ CHI TIẾT ĐỀ CỬ / VOTE</summary>
+              <strong>Đề cử từ Player Web</strong><div id="battleGallowsNominations"></div>
+              <strong>Phiếu Cứu / Giết</strong><div id="battleGallowsVotes" aria-label="Kết quả bỏ phiếu"></div>
+            </details>
+            <div id="battleGallowsInfo" class="gallows-info" role="status" aria-live="polite">Chưa có người lên giàn.</div>
+            <p id="battleGallowsResult" role="status" aria-live="polite" hidden></p>
+          </section>
           <section id="battleGallowsManual" hidden><select id="battleGallowsManualMember" aria-label="Phiếu thủ công cũ"></select></section>
         </section>
         <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
