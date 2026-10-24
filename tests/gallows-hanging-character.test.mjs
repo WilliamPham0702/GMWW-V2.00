@@ -73,7 +73,7 @@ test('Both UIs position a single Character above their fire without mutating Sea
  assert.match(gm,/gallowsAnchors/);
  assert.match(gmCss,/gmww-gallows-hanging/);
  assert.match(villageCss,/gmww-gallows-hanging/);
- assert.doesNotMatch(gmCss,/::before|::after|gmww-gm-gallows-struggle/);
+ assert.doesNotMatch(gmCss,/content\s*:|gmww-gm-gallows-struggle/);
  assert.doesNotMatch(villageCss,/gmww-gallows-struggle|\.player\.gmww-gallows-hanging::before|\.player\.gmww-gallows-hanging::after/);
  assert.doesNotMatch(village.slice(village.indexOf('function syncGallowsHangingVisual'),village.indexOf('function render(){')),/seatId\s*=|seatOffset\s*=|setItem\(/);
  assert.doesNotMatch(gm.slice(gm.indexOf('function syncPlayGallowsHanging'),gm.indexOf('function renderPlayPlayers')),/seatId\s*=|seatOffset\s*=|playRoomApi\(/);
