@@ -58,7 +58,8 @@ test('Stage uses real Core export with a separate DO namespace and does not touc
   assert.equal(config.routes,undefined);
   assert.equal(config.services,undefined);
   assert.equal(config.vars,undefined);
-  assert.doesNotMatch(wrapper,/gmww-v2-00\.williampham|new WebSocketPair|ctx\.storage\.put/);
+  assert.doesNotMatch(wrapper,/gmww-v2-00\.williampham|new WebSocketPair/);
+  assert.match(wrapper,/arena:lastCast:/,'staging-only ephemeral spell cues are allowed');
 });
 test('Stage live page uses real state adapter, room endpoints and no client authorization bypass',()=>{
   const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
