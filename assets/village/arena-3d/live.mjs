@@ -170,9 +170,9 @@ async function cycle(phase){const room=feed?.state.current?.room;
 $('night').onclick=()=>guarded('Chuyển Đêm',()=>cycle('night'));
 $('day').onclick=()=>guarded('Chuyển Ngày',()=>cycle('morning'));
 $('nominate').onclick=()=>guarded('Mở đề cử',async()=>{
-  await gm('gallows',{command:'mode',mode:'gm'});
+  await gm('gallows',{command:'mode',mode:'auto'});
   await gm('gallows',{command:'open'});
-  await feed?.refresh();notice('Đã phát động đề cử bằng Core; xem kết quả đồng bộ trên Player Web thử nghiệm.');
+  await feed?.refresh();notice('Đã mở đề cử TỰ ĐỘNG. Người chơi trên Player Web STAGING có thể chọn theo luật Core V2.');
 });
 $('vote').onclick=()=>guarded('Bắt đầu bỏ phiếu',async()=>{
   const candidate=(feed?.state.current?.players||[]).find(p=>p.id.startsWith('member:'))?.id.slice(7);
