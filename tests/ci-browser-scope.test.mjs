@@ -149,3 +149,25 @@ test('V3.203 manual release only passes with dedicated Gallows CI and matching W
   ])assert.ok(s.includes(required),'Missing release guard: '+required);
   assert.ok(s.includes('docs/release-notes-gallows-panel-20261024.md'));
 });
+
+test('V3.205 chỉ test Lên Giàn: cờ đỏ Player Web, toolbar iPhone, Ẩn/Hiện người chết',()=>{
+ const changes=[
+  {path:'assets/village/village.mjs',status:'M'},
+  {path:'src/player-web-src/30-rooms-and-realtime.part',status:'M'},
+  {path:'src/gmww-members-live.js',status:'M'},
+  {path:'tests/gallows-pirate-ui-v3205.test.mjs',status:'A'},
+  {path:'server-game/current/GMWW.html',status:'M'},
+  {path:'server-game/current/style.css',status:'M'},
+  {path:'server-game/current/app.js',status:'M'},
+  {path:'server-game/src/00-core-and-library.part',status:'M'},
+  {path:'server-game/src/40-battle-and-timeline.part',status:'M'},
+  {path:'.github/workflows/check-gallows-redesign.yml',status:'M'},
+  {path:'.github/workflows/deploy-production.yml',status:'M'},
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'docs/releases/GMWW-V3.205-gallows-pirate-flag-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(changes),'gallows');
+ for(const unrelated of ['tests/browser-private-cards.mjs','assets/village/arena-3d/main.mjs','tests/seat-presets-ota-v399.test.mjs']){
+   assert.equal(classifyBrowserScope([...changes,{path:unrelated,status:'M'}]),'full',unrelated);
+ }
+});
