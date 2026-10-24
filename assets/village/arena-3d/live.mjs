@@ -259,9 +259,13 @@ $('sample-cast').onclick=()=>{
   },900);
   setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
     field.setCastingTurn(null);
+    document.body.dataset.gmwwSyntheticCasting='returning';
+    notice('Character '+(index+1)+' đang đi về ghế cũ.');
+  },4200);
+  setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
     document.body.dataset.gmwwSyntheticCasting='seated';
-    notice('Nhân vật đã ngồi xuống. Nhấn tiếp để thử lượt người kế tiếp.');
-  },4500);
+    notice('Nhân vật đã về đúng ghế và ngồi xuống. Nhấn tiếp để thử lượt người kế tiếp.');
+  },5600);
 };
 for(const b of document.querySelectorAll('[data-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
