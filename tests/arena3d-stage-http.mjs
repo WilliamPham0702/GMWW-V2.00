@@ -83,7 +83,29 @@ assert.ok(!('eligible' in replay.gallows));
 const day=await json('/api/rooms/'+code);
 assert.equal(day.players.length,6);
 assert.equal(day.room.matchId,matchId);
+// Independent 30-seat staging room: verify live roster at 6, 12, 20 and 30
+// on the SAME real Cloudflare Core (no synthetic 3D fixture in this test).
+const large=await json('/api/rooms',{roomName:'Arena 3D 30 E2E '+suffix,roomMode:'online',seatCount:30,seatMoveMode:'instant'});
+const bigCode=large.roomCode;assert.ok(bigCode&&large.gmToken);
+for(let i=0;i<30;i++){
+  const id='ar30'+suffix+'p'+String(i+1);
+  const account=await json('/api/members/register',{loginId:id,displayName:'30 Arena '+suffix+' '+(i+1),
+    gameCharacterId:'character-'+String(i+1).padStart(2,'0')});
+  const joined=await json('/api/rooms/'+bigCode+'/join',{token:account.token});
+  assert.ok(joined.player?.participantId,'real staging member joined');
+  await json('/api/gm/rooms/'+bigCode+'/seat',{participantId:joined.player.participantId,seatId:i+1},large.gmToken);
+  if([5,11,19,29].includes(i)){
+    const live=await json('/api/rooms/'+bigCode);
+    assert.equal(live.players.length,i+1,'Core roster count at '+(i+1));
+    assert.equal(new Set(live.players.map(p=>p.seatId)).size,i+1);
+    assert.ok(live.players.every(p=>p.seatId>=1&&p.seatId<=30));
+    console.log('PASS REAL CORE ROSTER',i+1);
+  }
+  await sleep(60);
+}
+writeFileSync('/tmp/gmww-arena3d-stage-room30.txt',bigCode+'\n');
 writeFileSync('/tmp/gmww-arena3d-stage-room.txt',code+'\n');
 console.log('PASS: Core staging REAL 6-member game, seat, lock, role release, running night/day, nomination, 👍/👎 votes and private-ballot-safe replay.');
 console.log('ACCEPTANCE_PREVIEW='+base+'/village/arena-3d/live.html?room='+code);
 console.log('PLAYER_WEB='+base+'/join/'+code);
+console.log('ACCEPTANCE_30='+base+'/village/arena-3d/live.html?room='+bigCode);
