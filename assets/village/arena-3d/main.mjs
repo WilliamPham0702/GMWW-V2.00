@@ -8,7 +8,7 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerP
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 const camera=new THREE.PerspectiveCamera(42,1,0.1,100);
-let azimuth=0.45,elevation=0.85,radius=19,night=false,count=12,selected=null,frame=null;
+let azimuth=0.45,elevation=0.85,radius=19,night=false,count=([6,12,20,30].includes(Number(new URLSearchParams(location.search).get('count')))?Number(new URLSearchParams(location.search).get('count')):12),selected=null,frame=null;
 const sunlight=new THREE.DirectionalLight(0xffffff,2.3);
 sunlight.position.set(-5,12,7);scene.add(sunlight);
 scene.add(new THREE.AmbientLight(0xbbe9f5,1.4));
@@ -59,6 +59,7 @@ function refreshActors(){
   visual.players.forEach(createActor);
   document.querySelectorAll('[data-count]').forEach(btn=>btn.setAttribute('aria-pressed',String(Number(btn.dataset.count)===count)));
   selected=actors[0]||null;
+  document.body.dataset.gmwwArenaCount=String(actors.length);
   showMessage('Bản 3D và bộ chiếu 2D cùng nhận '+rendererCommands(frame,'2d').players.length+' người từ một frame công khai.');
 }
 function showMessage(message){notice.textContent=message;}
@@ -126,8 +127,8 @@ function render(now){
     resize();orbitCamera();
     flame.scale.y=0.9+0.08*Math.sin(now/250);
     renderer.render(scene,camera);frames++;
-    if(now-last>=1000){fps=Math.round(frames*1000/(now-last));frames=0;last=now;metrics.textContent=count+' nhân vật · '+fps+' FPS · '+renderer.info.render.calls+' drawcalls · Dùng GPU '+(renderer.capabilities.isWebGL2?'WebGL2':'WebGL');}
+    if(now-last>=1000){fps=Math.round(frames*1000/(now-last));frames=0;last=now;document.body.dataset.gmwwArenaFps=String(fps);metrics.textContent=count+' nhân vật · '+fps+' FPS · '+renderer.info.render.calls+' drawcalls · Dùng GPU '+(renderer.capabilities.isWebGL2?'WebGL2':'WebGL');}
   }
   requestAnimationFrame(render);
 }
-setNight(false);refreshActors();resize();requestAnimationFrame(render);
+setNight(false);refreshActors();resize();document.body.dataset.gmwwArenaReady='true';requestAnimationFrame(render);
