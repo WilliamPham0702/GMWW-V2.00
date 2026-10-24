@@ -12,11 +12,11 @@ test('Runtime V3.204 is synchronized across Worker, GM, npm and cache keys; nati
  assert.equal(pkg.version,'3.204.0');
  assert.equal(lock.version,'3.204.0');
  assert.equal(lock.packages[''].version,'3.204.0');
- assert.match(worker,/VERSION="V3\.203",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3204"/);
- assert.match(app,/const VERSION='3\.203';/);
- assert.match(html,/<title>GMWW V3\.203<\/title>/);
+ assert.match(worker,/VERSION="V3\.204",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3204"/);
+ assert.match(app,/const VERSION='3\.204';/);
+ assert.match(html,/<title>GMWW V3\.204<\/title>/);
  for(const file of ['style.css','app.js','village-layout.js']){
-   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.203-');
+   const re=new RegExp(file.replace('.','\\.')+'\\?v=3\\.204-');
    assert.match(html,re);
  }
  assert.equal(compareReleaseVersions('3.204','3.196'),1);
@@ -26,7 +26,7 @@ test('native IPA changes cannot suppress older-shell Runtime updates',()=>{
  assert.match(pipeline,/if\(version!==shell&&\(releaseType==='server_only'\|\|releaseType==='native'\)\) releaseType='runtime'/);
  assert.match(pipeline,/const isNative=releaseType==='native'/);
  assert.match(pipeline,/if\(version!==shell\)\s*\{\s*if\(releaseType!=='runtime'\)throw new Error/);
- assert.match(pipeline,/releaseNotes:\["V3\.203:/);
+ assert.match(pipeline,/releaseNotes:\["V3\.204:/);
  assert.match(pipeline,/"V3\.195:/);
  assert.match(pipeline,/"V3\.194:/);
 });
