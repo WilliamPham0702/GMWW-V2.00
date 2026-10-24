@@ -9,6 +9,10 @@ import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
+// Catalogued divination rules take precedence over stale saved-card targetCount.
+export const demoDivinationTargetCount=action=>({
+ action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3
+})[String(action?.actionId||'')]??Math.max(0,Math.trunc(Number(action?.targetCount)||0));
 const MAX_STEPS=800,MAX_RUN_MS=24*60*60*1000;
 const matchRow=(x,m)=>!x?.matchId||String(x.matchId)===String(m.matchId);
 const status=(rows,m,id,type)=>rows.some(x=>x.loginId===id&&x.type===type&&x.effectActive!==false&&matchRow(x,m)&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now()));
@@ -28,7 +32,7 @@ async function context(room,meta){
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
- return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:action.targetCount,actorIds:action.actorIds.filter(actorId=>{
+ return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
   if(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
   const role=turn.kind==='role-group'?turn.roles.find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
@@ -67,8 +71,9 @@ export function targetsFor(action,actorId,ctx,meta){
  const attacked=wolfNight?(Array.isArray(wolfNight.attacked)?wolfNight.attacked:[]).map(x=>x.to).filter(Boolean):null;
  const available=Object.values(ctx.players).filter(m=>(!attacked||attacked.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&rules.targetAllowed(action,m,effect(ctx.rows,meta,m.loginId),ctx.rows,meta.cycleNight)).map(m=>m.loginId),chosen=[];
  if(action.actionId==='action_protect'&&!action.artifactId&&available.includes(actorId)&&action.targetCount===1)return [actorId];
- while(chosen.length<action.targetCount&&available.length){const id=pick(available);chosen.push(id);available.splice(available.indexOf(id),1)}
- return chosen.length===action.targetCount?chosen:null;
+ const count=demoDivinationTargetCount(action);
+ while(chosen.length<count&&available.length){const id=pick(available);chosen.push(id);available.splice(available.indexOf(id),1)}
+ return chosen.length===count?chosen:null;
 }
 async function observe(room,meta,lease,action,actorId='',targets=[],status='accepted',extra={}){
  const players=await room.ctx.storage.get('players')||{},name=id=>players['member:'+id]?.displayName||id;
@@ -98,6 +103,16 @@ async function execute(room,meta,lease,ctx,action,day=false){
  }
  await observe(room,meta,lease,observedAction,actorId,observedTargets,'accepted',{actionId:action.id,audioActionId:action.actionId,revelation:result.revelation||result.result||null});
 }
+// The same private, server-authoritative response handler used by Player Web resolves
+// the assassin's dawn challenge during autonomous DEMO; never expose gmChoice.
+export function pendingDemoAssassinResponses(ctx,meta){
+ return (ctx.rows||[]).filter(row=>row?.type==='assassin_mark'&&row?.status==='pending'&&
+  Number(row.night)===Number(meta.cycleNight)&&
+  (!row.matchId||String(row.matchId)===String(meta.matchId))&&
+  !!ctx.players?.['member:'+row.loginId]&&
+  !['dead','expelled'].some(type=>status(ctx.rows,meta,row.loginId,type)))
+  .map(row=>({id:'assassin:'+row.id,kind:'assassin-response',actorId:row.loginId,interactionId:row.id}));
+}
 async function tasksFor(room,meta,ctx){
  if(meta.cyclePhase==='night'){
   const rt=await room.getNightRuntime(meta,meta.cycleNight,true),turn=rt?.queue?.[rt.cursor],usage=await ctx.store.get('battleRoleUsage:'+meta.matchId)||[];
@@ -105,7 +120,10 @@ async function tasksFor(room,meta,ctx){
  }
  const {ballot,eligible}=await room.gallowsState(meta);
  if(ballot.mode==='gm'&&['nominating','voting'].includes(ballot.stage))return [];
- if(['ready','resolved'].includes(ballot.stage))return dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id}));
+ if(['ready','resolved'].includes(ballot.stage))return [
+  ...pendingDemoAssassinResponses(ctx,meta),
+  ...dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id}))
+ ];
  if(ballot.stage==='nominating')return eligible.filter(id=>!Object.hasOwn(ballot.nominations||{},id)&&!(ballot.blockedNomination||[]).includes(id)).map(id=>({id:'nominate:'+id,actorId:id,kind:'nominate'}));
  if(ballot.stage==='voting')return eligible.filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote'}));
  return [];
@@ -142,6 +160,15 @@ export async function runServerDemo(room,meta,budget=32){
  if(plan.cursor<plan.tasks.length&&duration-remaining+1>=slot){
   const task=plan.tasks[plan.cursor],ctx=await context(room,meta);
   if(task.kind){
+   if(task.kind==='assassin-response'){
+    const mark=ctx.rows.find(row=>row.id===task.interactionId&&row.type==='assassin_mark'&&row.status==='pending');
+    if(mark&&!['dead','expelled'].some(type=>status(ctx.rows,meta,task.actorId,type))){
+     const choice=pick(['👍','👎']),result=await checked(await room.playerInteractionRespond({
+      loginId:task.actorId,interactionId:task.interactionId,response:choice}));
+     await observe(room,meta,lease,'Sát Thủ · Phản hồi '+choice+' · '+(result.assassinOutcome==='dead'?'Chết':'Sống'),
+      task.actorId,[task.actorId],'accepted',{assassinOutcome:result.assassinOutcome||null});
+    }
+   }else{
    const {ballot,eligible}=await room.gallowsState(meta);
    if(ballot.mode==='gm'){ /* GM owns this ballot; retain their choices. */ }
    else if(task.kind==='nominate'&&eligible.includes(task.actorId)&&!(ballot.blockedNomination||[]).includes(task.actorId)&&!Object.hasOwn(ballot.nominations||{},task.actorId)){
@@ -149,6 +176,7 @@ export async function runServerDemo(room,meta,budget=32){
     if(targets.length){const target=pick(targets);if(await ballotAction(room,{command:'nominate',loginId:task.actorId,targetId:target}))await observe(room,meta,lease,'Đề cử',task.actorId,[target])}
    }else if(task.kind==='vote'&&eligible.includes(task.actorId)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(task.actorId)&&!Object.hasOwn(ballot.votes||{},task.actorId)){
     const choice=pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice}))await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);
+   }
    }
   }else{
    const day=meta.cyclePhase==='morning',rt=day?null:await room.getNightRuntime(meta,meta.cycleNight,false),actions=day?dayActions(ctx,meta,await store.get('dayRoleUsage:'+meta.matchId)||[],(await room.gallowsState(meta)).ballot):nightActions(ctx,meta,rt.queue[rt.cursor],await store.get('battleRoleUsage:'+meta.matchId)||[]),action=actions.find(a=>a.id===task.id);
