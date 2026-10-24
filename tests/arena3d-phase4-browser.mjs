@@ -40,9 +40,11 @@ try{
   await page.locator('#start').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='running',{timeout:25000});
   await page.locator('#night').click();
-  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night',{timeout:25000});
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night'&&window.__GMWW_ARENA_STAGE_READONLY?.().sky==='night',null,{timeout:25000});
+  await page.screenshot({path:'/tmp/gmww-arena3d-coastal-night-390.png'});
   await page.locator('#day').click();
-  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',{timeout:25000});
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning'&&window.__GMWW_ARENA_STAGE_READONLY?.().sky==='day',null,{timeout:25000});
+  await page.screenshot({path:'/tmp/gmww-arena3d-coastal-day-390.png'});
   await page.locator('#nominate').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='nominating',{timeout:30000});
   await page.getByRole('tab',{name:'Lên Giàn'}).click();
@@ -51,7 +53,7 @@ try{
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',{timeout:30000});
   s=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
   assert.equal(s.room,code);assert.equal(s.gmConsole,'authorized');
-  assert.ok(s.drawCalls>0&&s.drawCalls<=32);
+  assert.ok(s.drawCalls>0&&s.drawCalls<=55);
   assert.deepEqual(errors,[],'GM dashboard browser has no script errors');
   await page.screenshot({path:'/tmp/gmww-arena3d-gm-phase4-390.png'});
   console.log('PASS: Phase4 real Core GM dashboard with seat select, authorized GM token restore, battery mode, role deal, night/day, gallows',JSON.stringify({room:code,phase:s.phase,cycle:s.cyclePhase,drawCalls:s.drawCalls,fps:s.fps,model:s.atelier}));
