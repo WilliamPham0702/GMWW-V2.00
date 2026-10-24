@@ -4,6 +4,8 @@ import * as THREE from '../../characters/v5/vendor/three.module.min.js';
 import {rendererCommands,createPublicRendererFrame} from '../dual-renderer-core.mjs';
 import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
+import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
+import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
@@ -21,6 +23,7 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
+let galleryPage=0,previewRitualKind=null;
 const qualityController=createArenaAdaptiveQuality();
 function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
@@ -108,6 +111,8 @@ function drawFrame(frame){
   document.body.dataset.gmwwLivePhase=String(phase);
   document.body.dataset.gmwwLiveCycle=String(cycle);
   document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
+  document.body.dataset.gmwwArtVersion=CHARACTER_ART_VERSION;
+  document.body.dataset.gmwwRitualArtVersion=RITUAL_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
   document.body.dataset.gmwwVillageSky=village.sky;
@@ -115,7 +120,7 @@ function drawFrame(frame){
 function demo(n){
   const players=Array.from({length:n},(_,i)=>{
     const a=-Math.PI/2+Math.PI*2*i/n;
-    return {participantId:'synthetic-'+i,gameCharacterId:'character-'+String(i+1).padStart(2,'0'),
+    return {participantId:'synthetic-'+i,gameCharacterId:'character-'+String(galleryPage===0?i+1:i+11).padStart(2,'0'),
       seatId:i+1,positionX:50+Math.cos(a)*32,positionY:50+Math.sin(a)*29};
   });
   drawFrame(createPublicRendererFrame({room:{code:'SYNTH',phase:'lobby',seatCount:n},players}));
@@ -280,6 +285,14 @@ for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()
   else notice('Đã chọn '+rosterSize+' ghế cho phòng MỚI. Phòng hiện tại giữ số Seat Core đã cấp; tạo phòng mới để thử.');
 };
 document.querySelector('[data-roster="6"]').classList.add('active');
+for(const button of document.querySelectorAll('[data-gallery]'))button.onclick=()=>{
+  if(!synthetic){notice('Bộ sưu tập mỹ thuật chỉ chạy ở preview, không thay nhân vật người chơi trong phòng Core thật.');return;}
+  galleryPage=Number(button.dataset.gallery);
+  for(const b of document.querySelectorAll('[data-gallery]'))b.classList.toggle('active',b===button);
+  syntheticCastSeq++;field.clearEffects();demo(rosterSize);
+  notice('Đang xem Character '+(galleryPage===0?'01–30':'11–40')+'; đây là demo mỹ thuật, không thay dữ liệu phòng.');
+};
+document.querySelector('[data-gallery="0"]').classList.add('active');
 $('sample-daynight').onclick=()=>{
   if(!synthetic){notice('Chế độ phòng thật: chỉ GM thay đổi Đêm/Ngày qua Core, không đổi cảnh bằng nút mẫu.');return;}
   sceneNightPreview=!sceneNightPreview;
@@ -288,25 +301,26 @@ $('sample-daynight').onclick=()=>{
   notice(sceneNightPreview?'Đang xem cùng làng biển vào ĐÊM, có trăng, đèn và ánh lửa.':'Đang xem cùng làng biển vào NGÀY.');
 };
 let syntheticCastSeq=0;
-$('sample-cast').onclick=()=>{
+function playSyntheticRitual(requestedKind=null){
   if(!synthetic){notice('Khi vào phòng thật, chỉ Core mới quyết định lượt và nhân vật được làm phép.');return;}
   syntheticCastSeq++;
   const token=syntheticCastSeq;
   const people=field.actors;
   if(!people.length)return;
   const index=(syntheticCastSeq-1)%people.length,actorId=people[index].id;
-  const kind=['shield','inspect','heal','attack','vote'][index%5];
+  const kind=ritualArt(requestedKind)?requestedKind:['shield','inspect','heal','attack','vote'][index%5];
+  previewRitualKind=kind;
   const targetId=people[(index+2)%people.length].id;
   const now=Date.now();
   const cue={turnId:'synthetic-'+token,actorIds:[actorId],
     cast:{actorId,targetIds:[targetId],kind,startedAt:now+900,expiresAt:now+4000}};
   field.setCastingTurn({turnId:cue.turnId,actorIds:cue.actorIds});
   document.body.dataset.gmwwSyntheticCasting='standing';
-  notice('Lượt mẫu '+(index+1)+': Character '+(index+1)+' đứng lên chuẩn bị thi triển.');
+  notice('Mẫu '+ritualArt(kind).label+': Character '+(index+1)+' đứng lên, bước ra trước khi thi triển.');
   setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
     field.setCastingTurn(cue);
     document.body.dataset.gmwwSyntheticCasting='casting';
-    notice('Character '+(index+1)+' thi triển '+kind+' về Character '+((index+2)%people.length+1)+'.');
+    notice('Character '+(index+1)+' thi triển '+ritualArt(kind).label+' về Character '+((index+2)%people.length+1)+'.');
   },900);
   setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
     field.setCastingTurn(null);
@@ -317,11 +331,11 @@ $('sample-cast').onclick=()=>{
     document.body.dataset.gmwwSyntheticCasting='seated';
     notice('Nhân vật đã về đúng ghế và ngồi xuống. Nhấn tiếp để thử lượt người kế tiếp.');
   },5600);
-};
+}
+$('sample-cast').onclick=()=>playSyntheticRitual();
 for(const b of document.querySelectorAll('[data-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
-  const id=field.actors[0]?.id;
-  if(id){field.interact(id,{effect:b.dataset.fx,durationMs:3000});notice('Mẫu '+b.textContent+' cho Character 1 — không phát sự kiện vào game.');}
+  playSyntheticRitual(b.dataset.fx);
 });
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;
@@ -379,6 +393,8 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   village:COASTAL_VILLAGE_VERSION,sky:village.sky,sceneryDrawBudget:village.staticDrawBudget,
   drawBudget:field.drawBudget,privateOverlayCount:gmToken?visibleGmEffects:0,
   spellVfx:gmToken||synthetic?field.spellVfxKind:null,
+  artVersion:CHARACTER_ART_VERSION,ritualArtVersion:RITUAL_ART_VERSION,
+  galleryPage:synthetic?galleryPage:null,ritualMotif:synthetic&&previewRitualKind?ritualArt(previewRitualKind)?.motif:null,
   spellPearls:gmToken||synthetic?field.spellVfxPearls:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.

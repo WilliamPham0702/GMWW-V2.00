@@ -1,0 +1,103 @@
+name: Arena 3D Stage 6 Art Preview (STAGING ONLY)
+
+on:
+  push:
+    branches: ["feature/arena3d-stage6-art-motion-ritual"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "tests/arena3d-stage6-*"
+      - "docs/releases/GMWW-ARENA3D-STAGE6-ART-MOTION-2026-10-24.md"
+      - ".github/workflows/arena3d-stage6-art-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-arena3d-core-staging
+  cancel-in-progress: true
+
+jobs:
+  validate-art:
+    name: "GĐ6: Character, VFX, phân quyền, kiểm thử trực tiếp"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Chỉ kiểm tra cú pháp các module mỹ thuật GĐ6"
+        run: |
+          node --check assets/village/arena-3d/character-art-direction.mjs
+          node --check assets/village/arena-3d/role-ritual-art.mjs
+          node --check assets/village/arena-3d/character-atelier.mjs
+          node --check assets/village/arena-3d/spell-vfx.mjs
+          node --check assets/village/arena-3d/live.mjs
+          node --check tests/arena3d-stage6-browser.mjs
+      - name: "Chỉ test trực tiếp art, animation, phép và quyền truy cập"
+        run: |
+          node --test tests/arena3d-stage6-art.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-ritual-walk.test.mjs
+      - name: "Chặn triển khai nhầm Production và cấu hình độc lập"
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const config=JSON.parse(fs.readFileSync('wrangler.arena3d-core-stage.jsonc','utf8'));
+          assert.equal(config.name,'gmww-arena3d-core-staging');
+          assert.equal(config.main,'src/arena3d-stage-worker.mjs');
+          assert.equal(config.workers_dev,true);
+          assert.deepEqual(config.durable_objects.bindings.map(x=>x.class_name),['RoomDurableObject']);
+          assert.ok(!config.routes&&!config.services&&!config.env);
+          assert.ok(!JSON.stringify(config).includes('gmww-v2-00_RoomDurableObject'));
+          console.log('PASS: isolated Worker config, not Production');
+          NODE
+          npx wrangler deploy --config wrangler.arena3d-core-stage.jsonc --dry-run
+
+  deploy-preview:
+    name: "GĐ6: Chỉ deploy STAGING, Safari-size và 6–30 Character"
+    needs: validate-art
+    if: github.ref == 'refs/heads/feature/arena3d-stage6-art-motion-ritual' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Chỉ cập nhật Worker nghiên cứu STAGING riêng"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.arena3d-core-stage.jsonc
+      - name: "Test 40 Character, nghi lễ và FPS browser 390px trên STAGING"
+        run: |
+          npm install --no-save playwright@1.58.2
+          node tests/arena3d-stage6-browser.mjs
+      - name: "WebKit iPhone giả lập: tương tác Character và đi về ghế"
+        run: |
+          npx playwright install --with-deps webkit
+          node tests/arena3d-phase3-webkit.mjs
+      - name: "Bàn giao Preview để nghiệm thu iPhone thật"
+        run: |
+          echo "## Arena 3D Giai đoạn 6 – STAGING ONLY" >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview: https://gmww-arena3d-core-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "40 procedural sea Chibi · 5 role-effect motifs · 6/12/20/30 Character" >> "$GITHUB_STEP_SUMMARY"
+          echo "FPS ở CI chỉ là GPU phần mềm; chưa đo iPhone thật. Không merge/Production/IPA/Runtime." >> "$GITHUB_STEP_SUMMARY"
+      - name: "Ảnh nghiệm thu STAGING"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arena3d-stage6-iphone-preview
+          path: |
+            /tmp/arena3d-stage6-gallery-390.png
+            /tmp/arena3d-stage6-ritual-390.png
+            /tmp/arena3d-phase3-webkit.png
+          if-no-files-found: ignore
