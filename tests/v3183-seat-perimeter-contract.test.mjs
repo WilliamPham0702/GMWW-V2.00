@@ -43,7 +43,7 @@ test('GM and Player Web receive synchronized layout; Character size and scene pr
   assert.match(source,/count<6\|\|count>30\|\|count%2!==0/);
   assert.match(source,/playUpdateRoomSettings\(\{seatCount:count,seatLayout:shape\}\)/);
  }
- assert.ok(html.includes('village-layout.js?v='+version+'-seat-circle-408'));
+ assert.ok(html.includes('village-layout.js?v='+version+'-seat-map-drag-20261024'));
  assert.ok(player.includes('seat=3195-rigid'));
  assert.match(read('assets/village/index.html'),/seatfix=v3195-rigid/);
  assert.ok(worker.includes('VERSION="V'+version+'"'));
@@ -53,7 +53,7 @@ test('GM and Player Web receive synchronized layout; Character size and scene pr
 test('extreme supported spacing and offsets keep circular seats clear and unique',()=>{
  for(const n of [6,12,18,24,30])for(const [offset,spacing] of [[{x:-10,y:10},70],[{x:10,y:-10},135]]){
   const points=layout.positions(n,'circle',offset,spacing);
-  assert.ok(points.every(p=>layout.inside(p.x,p.y)),'courtyard');
+  assert.ok(points.every(p=>p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8),'map frame');
   for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)
     assert.ok(dist(points[i],points[j])>5,'overlap '+n+' '+spacing+' '+i+' '+j);
  }

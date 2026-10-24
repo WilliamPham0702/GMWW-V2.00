@@ -20,7 +20,7 @@ test('V3.194: all 6–30 seats retain identical relative vectors at ANY offset/s
       const effective=layout.resolveSeatOffset(n,'circle',offset,spacing);
       assert.equal(moved.length,n);
       for(let i=0;i<n;i++){
-        assert.ok(layout.inside(moved[i].x,moved[i].y),
+        assert.ok(moved[i].x>=2-1e-8&&moved[i].x<=98+1e-8&&moved[i].y>=2-1e-8&&moved[i].y<=98+1e-8,
           'Seat '+(i+1)+' escaped safe courtyard, n='+n+' spacing='+spacing+' offset='+JSON.stringify(offset));
         assert.ok(near(moved[i].x-origin[i].x,effective.x),
           'Seat '+(i+1)+' deviates from rigid X translation for '+n);
@@ -38,15 +38,15 @@ test('V3.194: all 6–30 seats retain identical relative vectors at ANY offset/s
   }
 });
 
-test('V3.194: the screenshot regression (8 seats at 95%, X1/Y-13.4) never sends a single leaf into the fire',()=>{
+test('V3.198: 8 Seat group moves beyond the previous fire collision barrier',()=>{
   const base=layout.positions(8,'circle',{x:0,y:0},95);
   const moved=layout.positions(8,'circle',{x:1,y:-13.4},95);
   const actual=layout.resolveSeatOffset(8,'circle',{x:1,y:-13.4},95);
   assert.equal(base.length,8);
-  assert.ok(moved.every(p=>layout.inside(p.x,p.y)),'Every Seat stays on the courtyard, away from the fire');
+  assert.ok(moved.every(p=>p.x>=2-1e-8&&p.x<=98+1e-8&&p.y>=2-1e-8&&p.y<=98+1e-8),'Every Seat stays in the map frame');
   assert.ok(moved.every((p,i)=>near(p.x-base[i].x,actual.x)&&near(p.y-base[i].y,actual.y)),
     'Every Seat must get the exact same shift');
-  assert.ok(actual.y>-13.4,'The full ring must stop before an individual seat enters the fire');
+  assert.equal(actual.y,-13.4,'Do not stop the complete ring at the campfire');
 });
 
 test('V3.194: reset restores the EXACT same geometry as the original 100% layout',()=>{
