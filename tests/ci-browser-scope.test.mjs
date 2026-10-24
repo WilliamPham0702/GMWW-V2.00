@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
@@ -80,4 +81,43 @@ test('P0 atomic roster and role recovery changes select focused Chrome/Edge chec
   assert.equal(classifyBrowserScope([modified('src/gmww-player-private-card-patch.js',patcherBefore,
     patcherAfter+'\\nnew unrelated view')]),'full');
   assert.equal(classifyBrowserScope([{status:'A',path:'src/player-web-src/dangerous.js',after:'new',before:null}]),'full');
+});
+
+test('PR #463 chỉ kiểm thử Lên Giàn; bỏ qua browser card, ghế, Khám Phá và OTA không liên quan',()=>{
+ const c=[
+  {path:'.github/workflows/check-gallows-redesign.yml',status:'M'},
+  {path:'src/gmww-gallows-rules.js',status:'M'},
+  {path:'tests/gallows-panel-60s-controls.test.mjs',status:'A'},
+  modified('src/index.js','old Worker','gallows Worker code'),
+  modified('server-game/current/app.js','old GM','gallows GM panel'),
+  modified('src/player-web-src/30-rooms-and-realtime.part','old','gallows display'),
+  modified('src/gmww-members-live.js','old','gallows state'),
+  modified('.github/scripts/prepare-update-channel.mjs','old','version gate'),
+  {path:'docs/release-notes-gallows-panel-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(c),'gallows');
+ assert.equal(classifyBrowserScope([...c,modified('src/gmww-player-private-card-patch.js','old','new')]),'full');
+ assert.equal(classifyBrowserScope([...c,modified('tests/browser-private-cards.mjs','old','new')]),'full');
+ assert.equal(classifyBrowserScope([...c,{path:'assets/village/village.css',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...c,{path:'src/player-web-src/unrelated.js',status:'A'}]),'full');
+});
+
+test('Đổi riêng quy tắc CI chỉ kiểm tra unit của bộ chọn, không quét toàn bộ Chrome/Seat',()=>{
+ const c=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('.github/workflows/check-player-card-browsers.yml','old','new'),
+  modified('.github/workflows/deploy-production.yml','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new'),
+  {path:'docs/releases/ci-browser-focused-gallows-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(c),'ci-policy');
+ assert.equal(classifyBrowserScope([...c,modified('src/index.js','x','y')]),'full');
+});
+
+test('CI-only merge phải chặn auto-deploy Production',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  assert.match(workflow,/deploy-scope:/);
+  assert.match(workflow,/needs\.deploy-scope\.outputs\.should_deploy == 'true'/);
+  assert.match(workflow,/\.github\/workflows\/deploy-production\.yml/);
+  assert.match(workflow,/CHỈ CI: BỎ QUA DEPLOY PRODUCTION/);
 });
