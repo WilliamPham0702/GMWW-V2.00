@@ -21,9 +21,16 @@ try{
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).sky,'night');
   await page.locator('#sample-daynight').click();
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).sky,'day');
+  await page.locator('#camera-follow').click();
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).followCaster,false);
+  await page.locator('#camera-reset').click();
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).followCaster,true);
   await page.locator('#sample-cast').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().activeCaster?.startsWith('member:'),null,{timeout:8000});
+
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='standing',null,{timeout:7000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:10000});
+  await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='returning',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:12000});
   await page.locator('[data-roster="30"]').click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,{timeout:30000});
