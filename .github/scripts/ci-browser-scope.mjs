@@ -128,7 +128,12 @@ const gallowsOnlyPaths=new Set([
   'server-game/current/app.js',
   'server-game/current/style.css',
   'server-game/src/00-core-and-library.part',
+  'server-game/src/30-village-and-setup.part',
   'server-game/src/40-battle-and-timeline.part',
+  '.github/workflows/deploy-production.yml',
+  '.github/scripts/ci-browser-scope.mjs',
+  'docs/releases/GMWW-V3.204-gallows-unified-20261024.md',
+  'tests/v3189-fire-gallows-voting.test.mjs',
   'src/gmww-gallows-rules.js','src/gmww-members-live.js','src/index.js',
   'src/player-web-src/30-rooms-and-realtime.part',
   'tests/demo-server-autonomous-e2e.mjs',
@@ -208,8 +213,9 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
+      if(isGallowsScope(changes))return{mode:'gallows',reason:'Verified main Lên Giàn-only release: '+changes.map(c=>c.path).join(', ')};
     }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
-    return{mode:'full',reason:'Main contains changes outside the verified CI-only list'};
+    return{mode:'full',reason:'Main contains changes outside the verified scoped lists'};
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
