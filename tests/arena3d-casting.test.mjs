@@ -31,7 +31,7 @@ test('Spell type derived from known Server action IDs and never guessed from a c
   assert.equal(classifyCastingAction('action_witch_save'),'heal');
   assert.equal(classifyCastingAction('action_prophet_inspect'),'inspect');
   assert.equal(classifyCastingAction('action_wolf_bite'),'attack');
-  assert.equal(classifyCastingAction('secret-ui-spell'),'null'==='kind'?true:null);
+  assert.equal(classifyCastingAction('secret-ui-spell'),null);
 });
 test('6–30 seated characters: ONLY server-approved actor stands, casts toward target, and sits',()=>{
   for(const n of [6,12,20,30]){
