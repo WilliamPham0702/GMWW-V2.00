@@ -7072,3 +7072,31 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 /* GMWW V3.193: iPhone drag-to-position for the complete Seat formation. */
 #playWorld.is-seat-drag-enabled{touch-action:none;cursor:grab}
 #playWorld.is-seat-drag-enabled:active{cursor:grabbing}
+
+/* Lên Giàn 2026-10-24 — one full-width GM menu; player Character scale untouched. */
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+  left:10px!important;right:auto!important;width:calc(100vw - 20px)!important;
+  max-width:calc(100vw - 20px)!important;max-height:min(65dvh,580px)!important;
+  background:rgba(7,43,54,.70)!important;backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important
+}
+#battleGallowsPanel #battleGallowsModeDetails{margin:5px 0 8px}
+#battleGallowsPanel #battleGallowsModeDetails>summary{
+  display:flex;align-items:center;min-height:36px;cursor:pointer;padding:5px 11px;
+  border:1px solid rgba(184,231,238,.35);border-radius:10px;color:#e9e1ae;
+  background:rgba(9,56,69,.36);font-size:11px;font-weight:850;touch-action:manipulation
+}
+#battleGallowsPanel #battleGallowsModeDetails .battle-gallows-mode{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:7px
+}
+#battleGallowsPanel #battleGallowsCandidateControl[hidden]{display:none!important}
+#battleGallowsPanel #battleGallowsNominationStats .battle-gallows-tally-list{max-height:128px}
+#battleGallowsPanel .battle-gallows-ban-details #battleGallowsMembers{
+  max-height:min(28dvh,240px);overflow-y:auto;overscroll-behavior:contain
+}
+#battleGallowsMembers .battle-gallows-member{grid-template-columns:minmax(0,1fr) auto auto!important}
+#battleGallowsMembers .battle-gallows-member-name small{font-variant-numeric:tabular-nums;white-space:normal}
+#battleGallowsPanel #battleGallowsAudioSources{margin-top:8px;padding-top:7px;border-top:1px solid #c8edec33}
+#battleGallowsPanel #battleGallowsAudioSources>summary{font-size:11px;font-weight:800;color:#bde8e6;cursor:pointer}
+#battleGallowsPanel #battleGallowsAudioSources small{display:block;padding:7px 0;color:#dcf4ef}
+#battleGallowsPanel #battleGallowsAudioSources code{display:block;font-size:10px;overflow-wrap:anywhere;color:#fae3ab;padding:2px 0}
