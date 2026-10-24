@@ -226,7 +226,7 @@ jobs:
           echo "approved=false" >> "$GITHUB_OUTPUT"
           VERSION=$(node -p "require('./package.json').version")
           if [ "$VERSION" != "3.206.0" ]; then exit 0; fi
-          test -f docs/releases/GMWW-V3.206-gallows-pirate-flag-20261024.md || {
+          test -f docs/releases/GMWW-V3.206-gallows-flag-snap-20261024.md || {
             echo "::error::Thiếu ghi chú Runtime V3.206"; exit 1;
           }
           grep -q 'gmww:gallows-preview-nominate' assets/village/village.mjs || exit 1
