@@ -48,7 +48,8 @@ test('Gallows controls live in the GM panel, server-owned and visible on Player 
  const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
  const worker=fs.readFileSync('src/index.js','utf8');
  for(const id of ['playGallowsNominationSec','playGallowsVoteSec'])assert.doesNotMatch(html,new RegExp('id="'+id+'"'));
- for(const id of ['battleGallowsNominationSeconds','battleGallowsVoteSeconds'])assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(html,/id="battleGallowsSeconds"/);
+ assert.doesNotMatch(html,/id="battleGallowsNominationSeconds"|id="battleGallowsVoteSeconds"/);
  assert.match(html,/data-gallows-command="open"/);
  assert.match(gm,/gallowsNominationSec/);
  assert.match(gm,/gallowsVoteSec/);
