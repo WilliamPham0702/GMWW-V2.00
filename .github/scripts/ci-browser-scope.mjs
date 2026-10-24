@@ -23,8 +23,42 @@ function outsideScope(source,startMarker,endMarker){
   return source.slice(0,start)+'\n/* verified scoped change */\n'+source.slice(end);
 }
 
+// P0 roster/role release: the ONLY permitted Worker edits are join and movement
+// phase handling; Player Web edits must be in the precise delivery recovery block.
+// Anything unrecognized, including CI changes, runs the full release suite.
+function outsideP0Worker(source){
+  let x=outsideScope(source,'  async playerMove(body){','  async playerMoveComplete(body){');
+  return x===null?null:outsideScope(x,'  async join(body){','  async ready(body){');
+}
+function stripP0CardPatch(source){
+  if(typeof source!=='string')return null;
+  const start=' // Join now returns a public, privacy-safe room snapshot atomically with the';
+  const end=' // First click should OPEN the chosen card in Chrome and Edge';
+  const a=source.indexOf(start),b=source.indexOf(end,a+start.length);
+  return a<0||b<0?null:source.slice(0,a)+source.slice(b);
+}
+function isP0Scope(changes){
+  let containsP0=false;
+  for(const {path,before,after,status} of changes){
+    if(notesPath.test(path))continue;
+    if(path==='src/index.js'&&status==='M'){
+      if(outsideP0Worker(before)===null||outsideP0Worker(before)!==outsideP0Worker(after))return false;
+      containsP0=true;continue;
+    }
+    if(path==='src/gmww-player-private-card-patch.js'&&status==='M'){
+      if(stripP0CardPatch(after)!==before)return false;
+      containsP0=true;continue;
+    }
+    if(path==='tests/browser-live-realtime-vote.mjs'&&status==='M'){containsP0=true;continue}
+    if(path==='tests/player-web-p0-atomic-roster-role-release.test.mjs'&&status==='A'){containsP0=true;continue}
+    return false;
+  }
+  return containsP0;
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isP0Scope(changes))return 'p0-roster';
   for(const {path,before,after,status} of changes){
     if(!path||!['M','A'].includes(status))return 'full';
     if(notesPath.test(path)||testPath.test(path))continue;
@@ -67,6 +101,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
+  if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
   else console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
