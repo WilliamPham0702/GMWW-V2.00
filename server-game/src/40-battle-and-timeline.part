@@ -1944,8 +1944,12 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
-    const audio=event.target.closest('[data-gallows-audio-target]');
-    if(audio){void battleOpenGallowsAudioUpload(audio.dataset.gallowsAudioTarget);return}
+    const tab=event.target.closest('[data-gallows-tab]');
+    if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
+    const pick=event.target.closest('[data-gallows-pick]');
+    if(pick&&!pick.disabled&&playSceneRuntime.gallows?.mode==='gm'){
+      void battleGallowsCommand('hang',String(pick.dataset.gallowsPick||''));return;
+    }
     const mode=event.target.closest('[data-gallows-mode]');
     if(mode){void battleGallowsCommand('mode','','',{mode:mode.dataset.gallowsMode});return}
     const block=event.target.closest('[data-gallows-kind]');
@@ -1963,14 +1967,20 @@ function initBattleControls(){
       return;
     }
     const btn=event.target.closest('[data-gallows-command]');if(!btn||btn.disabled)return;
-    void battleGallowsCommand(btn.dataset.gallowsCommand,document.getElementById('battleGallowsCandidate')?.value||'',btn.dataset.outcome||'');
+    const g=playSceneRuntime.gallows||{},tallies=Array.isArray(g.nominationTotals)?g.nominationTotals:[],
+      lead=tallies[0]&&(!tallies[1]||Number(tallies[0].votes)>Number(tallies[1].votes))?String(tallies[0].loginId):'',
+      selected=document.getElementById('battleGallowsCandidate')?.value||'';
+    void battleGallowsCommand(btn.dataset.gallowsCommand,btn.dataset.gallowsCommand==='begin'?(selected||lead):String(g.candidateId||''),btn.dataset.outcome||'');
   });
-  document.getElementById('battleGallowsCandidate')?.addEventListener('change',event=>{
-    // Manual candidate becomes suspended ONLY after GM selects them explicitly.
-    const id=String(event.target.value||''),g=playSceneRuntime.gallows;
-    if(g?.mode==='gm'&&id&&id!==g.candidateId&&playSceneState.phase==='day')
-      void battleGallowsCommand('hang',id);
-  });
+  // Timers are committed on focus exit; never reset an in-progress timer locally.
+  for(const [inputId,kind] of [['battleGallowsNominationSeconds','nomination'],['battleGallowsVoteSeconds','vote']]){
+    document.getElementById(inputId)?.addEventListener('focusout',event=>{
+      const input=event.currentTarget,g=playSceneRuntime.gallows||{},value=Number(input.value),
+        previous=Number(kind==='nomination'?g.nominationDurationSec:g.voteDurationSec)||60;
+      if(!Number.isInteger(value)||value<1||value>3600){input.value=previous;playFlashError('Thời gian từ 1 đến 3600 giây.');return}
+      if(value!==previous)void battleGallowsCommand('set_duration','','',{kind,seconds:value});
+    });
+  }
   battleBindAuxiliaryDrag('battleDetails','.play-battle-turn');
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
