@@ -25,6 +25,7 @@ on:
       - "tests/v3188-preview-iphone-webkit.mjs"
       - "tests/v3189-pirate-fire-webkit.mjs"
       - "tests/v3190-fire-image-calibration-webkit.mjs"
+      - "tests/task444-gm-day-night-fire-webkit.mjs"
       - "tests/demo-room-cross-origin-webkit.mjs"
       - "tests/demo-server-autonomous-e2e.mjs"
       - "server-game/current/battle-controls.js"
@@ -117,6 +118,8 @@ jobs:
         run: node tests/v3189-pirate-fire-webkit.mjs
       - name: Kiểm tra chạm đống lửa Ngày/Đêm trên iPhone
         run: node tests/v3190-fire-image-calibration-webkit.mjs
+      - name: Kiểm tra menu GM neo theo từng đống lửa Ngày và Đêm (Task #444)
+        run: node tests/task444-gm-day-night-fire-webkit.mjs
       - name: Kiểm tra dòng thời gian ban đêm trên iPhone
         run: node tests/night-timeline-iphone-webkit.mjs
       - name: Kiểm tra giao diện lá bài trên Chrome, Edge, WebKit
