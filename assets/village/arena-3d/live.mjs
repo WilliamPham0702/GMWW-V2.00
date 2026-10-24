@@ -14,7 +14,7 @@ let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code=''
 const field=createArenaCharacterField(THREE,scene);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
-let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false;
+let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focusId=id;field.turnActor(id,Math.PI/2);},
   onAction:(id,candidate)=>{if(id==='vote'&&candidate)chosenCandidate=candidate;$(id)?.click()},
   onToggleQuality:value=>{lowPower=value;village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
@@ -36,7 +36,7 @@ function drawFrame(frame){
   }
   const phase=frame.room.phase||'lobby',cycle=frame.room.cyclePhase||'';
   const night=cycle==='night';
-  village.setNight(night);
+  village.setNight(synthetic?sceneNightPreview:night);
   $('state').textContent='Phòng '+frame.room.code+' · '+phase+' · '+(night?'Đêm ':cycle==='morning'?'Ngày ':'Vào phòng ')+(frame.room.cycleNight||0);
   $('hud').textContent=items.length+' Character · '+fps+' FPS · '+render.info.render.calls+' Draw Calls';
   document.body.dataset.gmwwLiveCount=String(items.length);
@@ -217,6 +217,13 @@ for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()
   else notice('Đã chọn '+rosterSize+' ghế cho phòng MỚI. Phòng hiện tại giữ số Seat Core đã cấp; tạo phòng mới để thử.');
 };
 document.querySelector('[data-roster="6"]').classList.add('active');
+$('sample-daynight').onclick=()=>{
+  if(!synthetic){notice('Chế độ phòng thật: chỉ GM thay đổi Đêm/Ngày qua Core, không đổi cảnh bằng nút mẫu.');return;}
+  sceneNightPreview=!sceneNightPreview;
+  village.setNight(sceneNightPreview);
+  document.body.dataset.gmwwVillageSky=village.sky;
+  notice(sceneNightPreview?'Đang xem cùng làng biển vào ĐÊM, có trăng, đèn và ánh lửa.':'Đang xem cùng làng biển vào NGÀY.');
+};
 let syntheticCastSeq=0;
 $('sample-cast').onclick=()=>{
   if(!synthetic){notice('Khi vào phòng thật, chỉ Core mới quyết định lượt và nhân vật được làm phép.');return;}
