@@ -198,7 +198,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const actor of actors){
       actor.yaw+=clamp(actor.targetYaw-actor.yaw,-dt*.009,dt*.009);
       turn.setFromAxisAngle(up,actor.yaw);
-      const moving=(actor.walk||actor.travel?.to===1)&&!reducedMotion;
+      const inTransit=Boolean(actor.travel&&time>=actor.travel.startedAt&&
+        time<actor.travel.startedAt+actor.travel.duration&&
+        Math.abs(actor.travel.from-actor.travel.to)>.01);
+      const moving=(actor.walk||inTransit)&&!reducedMotion;
       const pose=choreographyPose(actor,time,{lowMotion:reducedMotion});
       const walkPos=renderWalkPosition(actor.position,actor.approach,actor.travel,
         reducedMotion?time+WALK_TIMING.approachMs:time);
