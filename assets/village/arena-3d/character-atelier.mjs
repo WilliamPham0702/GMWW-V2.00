@@ -2,7 +2,7 @@
 // All 6–30 actors share InstancedMesh geometries/materials; status/VFX are projections.
 // No player role, faction, secret target, account token or game rule is stored here.
 export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v5-casting';
-import {choreographyPose} from './casting-choreography.mjs';
+import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 const MAX=30,TAU=Math.PI*2;
 const PALETTE=['#22b6b0','#60b9d9','#f5b769','#d9a4f0','#9bcf79','#ffa6b6','#8ca9ea','#f2cd83'];
 const HAIR=['#1b6477','#31546e','#68456c','#bb7b53','#486652','#54588b','#774b4f','#a3698e'];
@@ -93,6 +93,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         seatZ=circle?Math.sin(theta)*radius*.89:(Number.isFinite(z)?z:Math.sin(theta)*radius*.89);
       const actor={id,index:i,position:{x:seatX,z:seatZ},
         characterId:source.characterId,style:style.style,yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
+        approach:approachPoint({x:seatX,z:seatZ}),travel:previous.get(id)?.travel||null,
         standAt:previous.get(id)?.standAt||0,standUntil:previous.get(id)?.standUntil||0,
         castStartedAt:previous.get(id)?.castStartedAt||0,castUntil:previous.get(id)?.castUntil||0,
         statusIds:new Set((source.statusTags||[]).map(t=>t.statusId)),effects:new Map(previous.get(id)?.effects||[])};
@@ -139,18 +140,31 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     }
   }
   let currentTurn='',currentCast='';
+  function moveActor(actor,to,now){
+    if(actor.travel?.to===to)return;
+    actor.travel={from:travelProgress(actor.travel,now),to,startedAt:now,
+      duration:to?WALK_TIMING.approachMs:WALK_TIMING.returnMs};
+    if(to===0){
+      actor.standUntil=now+WALK_TIMING.returnMs+WALK_TIMING.seatMs;
+      actor.castUntil=now;actor.gesture='idle';
+    }
+  }
   function setCastingTurn(cue,now=performance.now()){
     const turn=cue&&typeof cue.turnId==='string'?cue.turnId:'';
     const authorizedIds=new Set((cue?.actorIds||[]).filter(id=>byId.has(id)));
     const changed=turn!==currentTurn;
-    if(changed){currentTurn=turn;currentCast='';}
+    if(changed){
+      currentTurn=turn;currentCast='';activeBeam=null;spellBeam.visible=false;
+      for(const actor of actors)actor.effects.clear();
+    }
     for(const actor of actors){
       if(turn&&authorizedIds.has(actor.id)){
         if(changed||actor.standUntil<=now){
           actor.standAt=now;actor.standUntil=now+3600000;
+          moveActor(actor,1,now);
           actor.targetYaw=Math.atan2(-actor.position.x,1.8-actor.position.z);
         }
-      }else if(actor.standUntil>now+560){actor.standUntil=now+560;actor.castUntil=now;}
+      }else if(changed&&actor.travel?.to!==0)moveActor(actor,0,now);
     }
     const cast=cue?.cast;
     const castKey=cast?String(cue.turnId)+':'+cast.startedAt+':'+cast.kind:'';
@@ -159,20 +173,23 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const caster=byId.get(cast.actorId),target=(cast.targetIds||[]).map(id=>byId.get(id)).find(Boolean);
       if(caster){
         const elapsed=Math.max(250,Math.min(4000,Number(cast.expiresAt)-Date.now()));
-        caster.gesture='cheer';caster.gestureEnd=now+elapsed;
-        caster.castStartedAt=now;caster.castUntil=now+elapsed;
-        caster.standUntil=Math.max(caster.standUntil,now+elapsed+550);
-        if(target)caster.targetYaw=Math.atan2(target.position.x-caster.position.x,target.position.z-caster.position.z);
+        const walkEnd=(caster.travel?.startedAt||now)+(caster.travel?.duration||0);
+        const spellStart=Math.max(now,Math.min(now+WALK_TIMING.approachMs,walkEnd));
+        caster.gesture='cheer';caster.gestureEnd=spellStart+elapsed;
+        caster.castStartedAt=spellStart;caster.castUntil=spellStart+elapsed;
+        caster.standUntil=Math.max(caster.standUntil,spellStart+elapsed+WALK_TIMING.returnMs);
+        if(target)caster.targetYaw=Math.atan2(target.position.x-caster.approach.x,target.position.z-caster.approach.z);
         const kind=['shield','inspect','heal','attack','vote'].includes(cast.kind)?cast.kind:'vote';
-        caster.effects.set(kind,now+elapsed);
-        if(target)target.effects.set(kind,now+elapsed);
-        activeBeam=target?{actorId:caster.id,targetId:target.id,until:now+elapsed,kind}:null;
+        caster.effects.set(kind,spellStart+elapsed);
+        if(target)target.effects.set(kind,spellStart+elapsed);
+        activeBeam=target?{actorId:caster.id,targetId:target.id,start:spellStart,until:spellStart+elapsed,kind}:null;
       }
     }
   }
   function clearEffects(){
     currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;
-    for(const actor of actors){actor.effects.clear();actor.standUntil=performance.now()+560;actor.castUntil=0}
+    const now=performance.now();
+    for(const actor of actors){actor.effects.clear();if(actor.travel?.to!==0)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true}
   function draw(time,force=false){
@@ -181,8 +198,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const actor of actors){
       actor.yaw+=clamp(actor.targetYaw-actor.yaw,-dt*.009,dt*.009);
       turn.setFromAxisAngle(up,actor.yaw);
-      const moving=actor.walk&&!reducedMotion;
+      const moving=(actor.walk||actor.travel?.to===1)&&!reducedMotion;
       const pose=choreographyPose(actor,time,{lowMotion:reducedMotion});
+      const walkPos=renderWalkPosition(actor.position,actor.approach,actor.travel,
+        reducedMotion?time+WALK_TIMING.approachMs:time);
+      base.set(walkPos.x,0,walkPos.z);
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
@@ -214,11 +234,13 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           if(part.name.startsWith('shoe'))z+=(1-pose.stand)*.21;
           if(pose.casting&&part.name==='armR')y+=.24*Math.abs(Math.sin(time*.015));
         }
-        base.set(actor.position.x,0,actor.position.z);
+        if(part.name==='stool')base.set(actor.position.x,0,actor.position.z);
+        else base.set(walkPos.x,0,walkPos.z);
         pos.set(x,y,z).applyQuaternion(turn).add(base);
         scale.set(sx,sy,sz);
         temp.compose(pos,turn,scale);part.mesh.setMatrixAt(actor.index,temp);
       }
+      base.set(walkPos.x,0,walkPos.z);
       const status=actor.statusIds;
       for(const effect of effects){
         const active=(effect.name==='shield'&&status.has('protected'))||
@@ -226,16 +248,18 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           (effect.name==='vote'&&status.has('marked'))||
           Number(actor.effects.get(effect.name)||0)>time;
         const size=active?effect.size*(1+(reducedMotion?0:.05*Math.sin(time*.005+actor.index))):.00001;
-        pos.set(actor.position.x,.78,actor.position.z);scale.set(size,size,size);
+        pos.set(walkPos.x,.78,walkPos.z);scale.set(size,size,size);
         quat.setFromAxisAngle(up,time*.0005);
         temp.compose(pos,quat,scale);effect.mesh.setMatrixAt(actor.index,temp);
       }
     }
-    if(activeBeam&&time<activeBeam.until){
+    if(activeBeam&&time>=activeBeam.start&&time<activeBeam.until){
       const caster=byId.get(activeBeam.actorId),target=byId.get(activeBeam.targetId);
       if(caster&&target){
-        beamFrom.set(caster.position.x,1.4,caster.position.z);
-        beamTo.set(target.position.x,.82,target.position.z);
+        const casterWorld=renderWalkPosition(caster.position,caster.approach,caster.travel,time);
+        const targetWorld=renderWalkPosition(target.position,target.approach,target.travel,time);
+        beamFrom.set(casterWorld.x,1.4,casterWorld.z);
+        beamTo.set(targetWorld.x,.82,targetWorld.z);
         beamDir.subVectors(beamTo,beamFrom);
         const distance=beamDir.length();
         if(distance>.25){
@@ -269,6 +293,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,draw,pick,dispose,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1},
     get beamVisible(){return spellBeam.visible},
-    get actors(){return actors.map(a=>({id:a.id,position:a.position,yaw:a.yaw,statusIds:[...a.statusIds],
-      standing:a.standUntil>performance.now(),casting:a.castUntil>performance.now()}))}};
+    get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
+      renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
+      progress:travelProgress(a.travel,now),yaw:a.yaw,statusIds:[...a.statusIds],
+      standing:a.standUntil>now,casting:a.castUntil>now&&a.castStartedAt<=now}))},
+    get activeCaster(){return actors.find(a=>a.travel?.to===1&&a.standUntil>performance.now())?.id||null},
+    get activeCasterWorld(){const a=actors.find(x=>x.travel?.to===1&&x.standUntil>performance.now());
+      return a?renderWalkPosition(a.position,a.approach,a.travel,performance.now()):null}};
 }
