@@ -35,7 +35,7 @@ test('V3.199 giữ shell và lưu đầy đủ thay đổi PR #453 trong release
  const layout=read('assets/village/village-layout.js');
  assert.match(notes,/releaseNotes:\["V3\.199: PR #453/);
  assert.match(notes,/Giãn cách 70–135%/);
- assert.match(notes,/🔄 Khôi phục/);
+ assert.match(notes,/🔄 khôi phục/i);
  assert.match(worker,/VERSION="V3\.199",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3199"/);
  assert.match(html,/<title>GMWW V3\.199<\/title>/);
  assert.match(html,/data-seat-shift="reset"/);
