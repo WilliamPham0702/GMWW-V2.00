@@ -3,6 +3,7 @@
 // No player role, faction, secret target, account token or game rule is stored here.
 export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v5-casting';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
+import {createArenaSpellVfx} from './spell-vfx.mjs';
 const MAX=30,TAU=Math.PI*2;
 const PALETTE=['#22b6b0','#60b9d9','#f5b769','#d9a4f0','#9bcf79','#ffa6b6','#8ca9ea','#f2cd83'];
 const HAIR=['#1b6477','#31546e','#68456c','#bb7b53','#486652','#54588b','#774b4f','#a3698e'];
@@ -75,6 +76,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   const beamDir=new THREE.Vector3(),beamFrom=new THREE.Vector3(),beamTo=new THREE.Vector3();
   const beamUp=new THREE.Vector3(0,1,0);
   let activeBeam=null;
+  const spellVfx=createArenaSpellVfx(THREE,root);
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
   let reducedMotion=false,lastDraw=-1,updates=0;
   function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
@@ -154,7 +156,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     const authorizedIds=new Set((cue?.actorIds||[]).filter(id=>byId.has(id)));
     const changed=turn!==currentTurn;
     if(changed){
-      currentTurn=turn;currentCast='';activeBeam=null;spellBeam.visible=false;
+      currentTurn=turn;currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
       for(const actor of actors)actor.effects.clear();
     }
     for(const actor of actors){
@@ -187,11 +189,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     }
   }
   function clearEffects(){
-    currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;
+    currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
     const now=performance.now();
     for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
-  function setReducedMotion(value){reducedMotion=value===true}
+  function setReducedMotion(value){reducedMotion=value===true;spellVfx.setReducedMotion(reducedMotion)}
+  function setLowPower(value){spellVfx.setLowPower(value===true)}
   function draw(time,force=false){
     if(!force&&time-lastDraw<1000/(reducedMotion?12:30))return false;
     const dt=lastDraw<0?0:Math.min(60,time-lastDraw);lastDraw=time;
@@ -272,9 +275,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           beamMaterial.color.set({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec');
           beamMaterial.opacity=reducedMotion?.55:.69+.13*Math.sin(time*.015);
           spellBeam.visible=true;
-        }else spellBeam.visible=false;
-      }else spellBeam.visible=false;
-    }else{spellBeam.visible=false;if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
+          spellVfx.update({type:activeBeam.kind,from:beamFrom,to:beamTo,
+            start:activeBeam.start,end:activeBeam.until},time);
+        }else {spellBeam.visible=false;spellVfx.clear();}
+      }else {spellBeam.visible=false;spellVfx.clear();}
+    }else{spellBeam.visible=false;spellVfx.clear();if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
     for(const item of [...meshes,...effects])item.mesh.instanceMatrix.needsUpdate=true;
     updates++;return true;
   }
@@ -290,11 +295,13 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const item of effects)item.mesh.material.dispose();
     // Each geometry may be shared by multiple instanced meshes; dispose only once.
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
-    spellBeam.geometry.dispose();spellBeam.material.dispose();
+    spellBeam.geometry.dispose();spellBeam.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,draw,pick,dispose,
-    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1},
+  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,draw,pick,dispose,
+    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
+    get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
+    get spellVfxPearls(){return spellVfx.visiblePearls},
     get beamVisible(){return spellBeam.visible},
     get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
       renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
