@@ -11,18 +11,21 @@ on:
       - "assets/village/arena-3d/live.*"
       - "assets/village/arena-3d/room-realtime.mjs"
       - "assets/village/arena-3d/character-atelier.mjs"
+      - "assets/village/arena-3d/casting-choreography.mjs"
       - "assets/village/arena-3d/gm-dashboard.mjs"
       - "assets/village/dual-renderer-core.mjs"
       - "wrangler.arena3d-core-stage.jsonc"
       - "tests/arena3d-phase2-contract.test.mjs"
       - "tests/arena3d-phase3.test.mjs"
       - "tests/arena3d-phase4.test.mjs"
+      - "tests/arena3d-casting.test.mjs"
       - "tests/arena3d-phase4-browser.mjs"
       - "tests/arena3d-phase3-webkit.mjs"
       - "tests/arena3d-stage-http.mjs"
       - "docs/releases/GMWW-ARENA3D-PHASE2-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md"
       - "docs/releases/GMWW-ARENA3D-PHASE4-2026-10-24.md"
+      - "docs/releases/GMWW-ARENA3D-TURN-CAST-2026-10-24.md"
       - ".github/workflows/deploy-arena3d-core-stage.yml"
   workflow_dispatch:
 
@@ -51,8 +54,9 @@ jobs:
           node --check assets/village/arena-3d/room-realtime.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/gm-dashboard.mjs
+          node --check assets/village/arena-3d/casting-choreography.mjs
           node --check src/arena3d-visual-effect-policy.mjs
-          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-preview.test.mjs
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-preview.test.mjs
       - name: Chặn thay đổi Production và kiểm tra cấu hình Core Staging
         run: |
           node - <<'NODE'
