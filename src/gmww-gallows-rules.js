@@ -28,14 +28,16 @@ export function gallowsOpen(ballot,now=Date.now()){
    Tie for nomination needs GM choice; tied execution votes save the accused. */
 // Timing belongs to the active Gallows panel, not the pre-match template.
 export function gallowsSetDuration(ballot,kind,seconds,now=Date.now()){
-  const stage=gallowsStage(ballot,now),field=kind==='nomination'?'nominationDurationSec':kind==='vote'?'voteDurationSec':null;
+  const stage=gallowsStage(ballot,now),field=kind==='nomination'?'nominationDurationSec':kind==='vote'?'voteDurationSec':kind==='both'?'both':null;
   if(gallowsMode(ballot)!=='auto'||!field||stage==='resolved'||
+     (kind==='both'&&stage!=='ready')||
      (kind==='nomination'&&stage!=='ready')||
      (kind==='vote'&&!['ready','nominating','selecting'].includes(stage)))
     return {ok:false,error:'GALLOWS_TIMER_LOCKED'};
   const duration=gallowsDurationSec(seconds,0);
   if(!duration)return {ok:false,error:'INVALID_GALLOWS_DURATION'};
-  return {ok:true,value:{...ballot,[field]:duration,updatedAt:now}};
+  return {ok:true,value:{...ballot,...(kind==='both'?
+    {nominationDurationSec:duration,voteDurationSec:duration}:{[field]:duration}),updatedAt:now}};
 }
 // Force an early nomination close; choose the unique leader, otherwise ask GM to break the tie.
 export function gallowsCloseNomination(ballot,now=Date.now()){
