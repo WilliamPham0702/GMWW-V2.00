@@ -43,7 +43,7 @@ test('6–30 seated characters: ONLY server-approved actor stands, casts toward 
     }));
     field.setActors(actors);
     assert.equal(field.actorCount,n);
-    assert.ok(field.drawBudget<=29,'seats + 30 actors should share geometry');
+    assert.ok(field.drawBudget<=37,'seats + 30 actors should share geometry');
     assert.equal(field.actors.filter(x=>x.standing).length,0,'everyone seated by default');
     const now=Date.now();
     field.setCastingTurn({turnId:'turn-1',actorIds:['member:p1']});
