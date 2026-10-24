@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GMWW Arena 3D · Core V2 thử nghiệm</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#e9f8fa;background:#0b2430}
+*{box-sizing:border-box}body{margin:0}header{background:#153647;padding:10px 13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+h1{font-size:17px;margin:0}small{font-size:11px;color:#a9ced0}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#153647}
+button,input{font:inherit;border-radius:9px;border:1px solid #73a5a7;color:white;background:#205b70;padding:8px 9px}
+input{background:#0f3141;max-width:115px}button{cursor:pointer}button:disabled{opacity:.5}
+#scene{position:relative;width:100%;height:60dvh;min-height:340px;overflow:hidden;background:#70bcd3}
+#stage{display:block;width:100%;height:100%;touch-action:none}
+#hud,#state{position:absolute;background:#102c40e8;color:white;font-size:12px;padding:8px;border-radius:9px;max-width:52%}
+#hud{left:8px;top:8px}#state{right:8px;top:8px;text-align:right}
+#ballot{padding:9px;color:#f7de90;background:#173747;min-height:28px;font-size:13px}
+#log{padding:8px 12px;background:#081d27;font-size:12px;color:#b7dbd7;min-height:33px}
+#note{padding:8px 12px;font-size:11px;color:#c5dbd8}button.active{background:#a17632}
+a{color:#92e1df}#joinlink{font-weight:700}
+</style></head>
+<body>
+<header><div><h1>GMWW Arena 3D · Core V2.00</h1><small>STAGING riêng · Dữ liệu phòng thật chỉ trong môi trường thử nghiệm</small></div><small id="connection">Chưa kết nối</small></header>
+<div class="toolbar">
+  <input id="room" placeholder="Mã phòng" maxlength="12" aria-label="Mã phòng">
+  <button id="create">Tạo phòng thử</button>
+  <button id="connect">Vào phòng</button>
+  <button id="seed" disabled>Thêm 6 thành viên thử</button>
+  <button id="lock" disabled>Khóa Seat</button>
+  <button id="deal" disabled>Phát Vai thử</button>
+  <button id="start" disabled>Vào Trận</button>
+  <button id="night" disabled>🌙 Đêm</button>
+  <button id="day" disabled>☀️ Ngày</button>
+  <button id="nominate" disabled>Đề cử</button>
+  <button id="vote" disabled>Bỏ phiếu</button>
+  <button id="refresh">Đồng bộ lại</button>
+  <a href="#" id="joinlink" target="_blank" rel="noopener">Player Web 2D thử nghiệm</a>
+</div>
+<section id="scene"><canvas id="stage"></canvas><div id="hud">Đang tải Arena 3D...</div><div id="state">Core: chưa kết nối</div></section>
+<div id="ballot">Lên Giàn: chưa bắt đầu</div>
+<div class="toolbar"><span>Kiểm tra 6–30 Character:</span>
+<button data-roster="6">6</button><button data-roster="12">12</button><button data-roster="20">20</button><button data-roster="30">30</button>
+<span><small>Lúc chưa có phòng, đây là dữ liệu demo. Khi kết nối chỉ hiện người thật của phòng thử nghiệm.</small></span></div>
+<div id="log">Camera: kéo để xoay, chạm Character để quay 90°, cuộn để zoom.</div>
+<div id="note">Không dùng dữ liệu Production. Quyền GM chỉ thuộc token của phòng thử tạo tại trang này và không được lưu vào localStorage/URL. Vai trò bí mật chỉ hiển thị trên Player Web của chính người đó. FPS tại đây là số đo máy đang sử dụng.</div>
+<script type="module" src="./live.mjs"></script>
+</body></html>
