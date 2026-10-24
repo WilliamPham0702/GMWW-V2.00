@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {publicRoom} from '../src/gmww-public-room-contract.js';
 
 const gm=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const client=gm.slice(gm.indexOf('/* Match completion is shared'),gm.indexOf('async function openPlayEndSheet(){'));
@@ -79,7 +80,7 @@ test('Configuring a distinct new match clears only live winner metadata, not ros
   const entries=new Map([['meta',meta],['players',players],['matchCompletion:old-match',lastResult]]);
   const Room=vm.runInNewContext('(class {'+config+'})',{
     j:(body,status=200)=>Response.json(body,{status}),
-    sanitizeGameConfig:x=>x,validImageDataUrl:()=>false,publicRoom:x=>({...x}),publicPlayer:x=>({...x})
+    sanitizeGameConfig:x=>x,validImageDataUrl:()=>false,publicRoom,publicPlayer:x=>({...x})
   });
   const instance=new Room();
   instance.gmAuthorized=async()=>({ok:true,meta:entries.get('meta')});
