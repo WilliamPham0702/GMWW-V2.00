@@ -40,14 +40,14 @@ test('official V3.200 release evidence updates the Server download library witho
  assert.equal(ipa.size,proof.size);
 });
 
-test('GMWW V3.203 runtime advertises the verified V3.200 IPA without raising minimum shell',async()=>{
+test('GMWW V3.204 runtime advertises the verified V3.200 IPA without raising minimum shell',async()=>{
  const fs=await import('node:fs');
  const record=JSON.parse(fs.readFileSync('update-system/published-ipa.json','utf8'));
  const runtime=fs.readFileSync('server-game/current/app.js','utf8').match(/const VERSION='([^']+)'/)?.[1];
  const worker=fs.readFileSync('src/index.js','utf8');
- assert.equal(runtime,'3.203');
- assert.match(worker,/VERSION="V3\.203"/);
- assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3203"/);
+ assert.equal(runtime,'3.204');
+ assert.match(worker,/VERSION="V3\.204"/);
+ assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3204"/);
  const download=selectPublishedIpa(record,runtime,'3.110');
  assert.equal(download.version,'3.200');
  assert.equal(download.fileName,'GMWW-V3.200.ipa');
