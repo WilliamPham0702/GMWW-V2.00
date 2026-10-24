@@ -7100,3 +7100,8 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsPanel #battleGallowsAudioSources>summary{font-size:11px;font-weight:800;color:#bde8e6;cursor:pointer}
 #battleGallowsPanel #battleGallowsAudioSources small{display:block;padding:7px 0;color:#dcf4ef}
 #battleGallowsPanel #battleGallowsAudioSources code{display:block;font-size:10px;overflow-wrap:anywhere;color:#fae3ab;padding:2px 0}
+
+#battleGallowsPanel .battle-gallows-audio-target{display:flex;align-items:center;gap:8px;padding:4px 0}
+#battleGallowsPanel .battle-gallows-audio-target code{flex:1;min-width:0}
+#battleGallowsPanel .battle-gallows-audio-target button{flex:none;min-height:30px;font-size:10px;padding:3px 7px}
+#audioGrid .gallows-audio-upload-target{outline:2px solid #f3d38d;outline-offset:2px;background:rgba(16,108,127,.22)}
