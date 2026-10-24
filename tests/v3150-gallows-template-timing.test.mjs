@@ -10,13 +10,13 @@ const fresh=(nominationDurationSec=60,voteDurationSec=60)=>({
 });
 test('Old Ván Mẫu is backward compatible but new Lên Giàn defaults to 60 seconds',()=>{
  const old=sanitizeGameConfig({id:'legacy',name:'Ván cũ',timing:{villageDiscussionSec:300}});
- assert.equal(old.timing.gallowsNominationSec,60);
- assert.equal(old.timing.gallowsVoteSec,60);
+ assert.equal(old.timing.gallowsNominationSec,10);
+ assert.equal(old.timing.gallowsVoteSec,10);
  const configured=sanitizeGameConfig({id:'custom',timing:{gallowsNominationSec:23,gallowsVoteSec:38}});
  assert.equal(configured.timing.gallowsNominationSec,23);
  assert.equal(configured.timing.gallowsVoteSec,38);
  const bounded=sanitizeGameConfig({timing:{gallowsNominationSec:0,gallowsVoteSec:999999}});
- assert.equal(bounded.timing.gallowsNominationSec,60);
+ assert.equal(bounded.timing.gallowsNominationSec,10);
  assert.equal(bounded.timing.gallowsVoteSec,3600);
 });
 test('V3.150 GM opens 23s nomination at explicit gesture, nomination expires exactly on server deadline',()=>{
@@ -58,7 +58,7 @@ test('Gallows controls live in the GM panel, server-owned and visible on Player 
  assert.match(worker,/const nominationDurationSec=60,voteDurationSec=60/);
  assert.match(worker,/gallowsCloseNomination\(current,now\)/);
  assert.match(player,/nominationDeadlineAt/);
- assert.match(player,/g\.voteDurationSec\|\|10/);
+ assert.match(player,/g\.voteDurationSec\|\|60/);
  const packaged=fs.readFileSync('server-game/current/app.js','utf8');
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
  '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
