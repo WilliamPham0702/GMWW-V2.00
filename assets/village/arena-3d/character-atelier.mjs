@@ -1,7 +1,8 @@
 // Arena 3D v3: compact 3D chibi characters. Technical procedural art, no texture downloads.
 // All 6–30 actors share InstancedMesh geometries/materials; status/VFX are projections.
 // No player role, faction, secret target, account token or game rule is stored here.
-export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v4';
+export const ARENA_ATELIER_VERSION='arena-chibi-instanced-v5-casting';
+import {choreographyPose} from './casting-choreography.mjs';
 const MAX=30,TAU=Math.PI*2;
 const PALETTE=['#22b6b0','#60b9d9','#f5b769','#d9a4f0','#9bcf79','#ffa6b6','#8ca9ea','#f2cd83'];
 const HAIR=['#1b6477','#31546e','#68456c','#bb7b53','#486652','#54588b','#774b4f','#a3698e'];
@@ -43,9 +44,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     // Five silhouette variants cycle over forty IDs: hairpin, ribbon, cloak.
     ['shellpin',sphere,'accessory',[.29,1.68,.12],[.15,.13,.075]],
     ['ribbon',sphere,'accessory',[-.39,1.53,-.03],[.20,.11,.13]],
-    ['cape',sphere,'accessory',[0,.76,-.29],[.39,.48,.12]]
+    ['cape',sphere,'accessory',[0,.76,-.29],[.39,.48,.12]],
+    ['stool',cylinder,'seat',[0,.15,-.12],[.48,.29,.46]]
   ];
-  const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':'white'});
+  const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':key==='seat'?'#b99167':'white'});
   for(const [name,geometry,kind,offset,size] of parts){
     const mesh=new THREE.InstancedMesh(geometry,matOf(kind),limit);
     mesh.count=0;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -76,14 +78,17 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const actor={id,index:i,position:{x:Number.isFinite(x)?x:Math.cos(theta)*6.5,
         z:Number.isFinite(z)?z:Math.sin(theta)*5.1},
         characterId:source.characterId,style:style.style,yaw:0,targetYaw:0,gesture:'idle',gestureEnd:0,walk:source.movementStatus==='moving',
+        standAt:previous.get(id)?.standAt||0,standUntil:previous.get(id)?.standUntil||0,
+        castStartedAt:previous.get(id)?.castStartedAt||0,castUntil:previous.get(id)?.castUntil||0,
         statusIds:new Set((source.statusTags||[]).map(t=>t.statusId)),effects:new Map(previous.get(id)?.effects||[])};
-      actor.yaw=previous.get(id)?.yaw||0;actor.targetYaw=previous.get(id)?.targetYaw||0;
+      actor.yaw=previous.get(id)?.yaw??Math.atan2(-actor.position.x,1.8-actor.position.z);
+      actor.targetYaw=previous.get(id)?.targetYaw??actor.yaw;
       actors.push(actor);byId.set(id,actor);
       for(const part of meshes){
-        const hex=part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:part.kind==='accessory'?style.accessory:
+        const hex=part.kind==='seat'?'#b99167':part.kind==='cloth'?style.cloth:part.kind==='hair'?style.hair:part.kind==='accessory'?style.accessory:
           part.kind==='skin'?style.skin:part.kind==='eye'?'#19273c':
           part.kind==='shoe'?'#35526a':'#fff4d5';
-        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory')throw Error('UNKNOWN_ATELIER_MATERIAL');
+        if(part.kind!=='cloth'&&part.kind!=='hair'&&part.kind!=='skin'&&part.kind!=='eye'&&part.kind!=='shoe'&&part.kind!=='shine'&&part.kind!=='accessory'&&part.kind!=='seat')throw Error('UNKNOWN_ATELIER_MATERIAL');
         part.mesh.setColorAt(i,colorTemp.set(hex));
       }
     }
@@ -118,7 +123,41 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       target.effects.set(effect.kind,Number.isFinite(expires)?Math.min(performance.now()+3500,Math.max(performance.now()+200,performance.now()+expires-Date.now())):performance.now()+1800);
     }
   }
-  function clearEffects(){for(const actor of actors)actor.effects.clear()}
+  let currentTurn='',currentCast='';
+  function setCastingTurn(cue,now=performance.now()){
+    const turn=cue&&typeof cue.turnId==='string'?cue.turnId:'';
+    const authorizedIds=new Set((cue?.actorIds||[]).filter(id=>byId.has(id)));
+    const changed=turn!==currentTurn;
+    if(changed){currentTurn=turn;currentCast='';}
+    for(const actor of actors){
+      if(turn&&authorizedIds.has(actor.id)){
+        if(changed||actor.standUntil<=now){
+          actor.standAt=now;actor.standUntil=now+3600000;
+          actor.targetYaw=Math.atan2(-actor.position.x,1.8-actor.position.z);
+        }
+      }else if(actor.standUntil>now+560){actor.standUntil=now+560;actor.castUntil=now;}
+    }
+    const cast=cue?.cast;
+    const castKey=cast?String(cue.turnId)+':'+cast.startedAt+':'+cast.kind:'';
+    if(cast&&castKey!==currentCast&&authorizedIds.has(cast.actorId)&&Number(cast.expiresAt)>Date.now()){
+      currentCast=castKey;
+      const caster=byId.get(cast.actorId),target=(cast.targetIds||[]).map(id=>byId.get(id)).find(Boolean);
+      if(caster){
+        const elapsed=Math.max(250,Math.min(4000,Number(cast.expiresAt)-Date.now()));
+        caster.gesture='cheer';caster.gestureEnd=now+elapsed;
+        caster.castStartedAt=now;caster.castUntil=now+elapsed;
+        caster.standUntil=Math.max(caster.standUntil,now+elapsed+550);
+        if(target)caster.targetYaw=Math.atan2(target.position.x-caster.position.x,target.position.z-caster.position.z);
+        const kind=['shield','inspect','heal','attack','vote'].includes(cast.kind)?cast.kind:'vote';
+        caster.effects.set(kind,now+elapsed);
+        if(target)target.effects.set(kind,now+elapsed);
+      }
+    }
+  }
+  function clearEffects(){
+    currentTurn='';currentCast='';
+    for(const actor of actors){actor.effects.clear();actor.standUntil=performance.now()+560;actor.castUntil=0}
+  }
   function setReducedMotion(value){reducedMotion=value===true}
   function draw(time,force=false){
     if(!force&&time-lastDraw<1000/(reducedMotion?12:30))return false;
@@ -127,6 +166,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       actor.yaw+=clamp(actor.targetYaw-actor.yaw,-dt*.009,dt*.009);
       turn.setFromAxisAngle(up,actor.yaw);
       const moving=actor.walk&&!reducedMotion;
+      const pose=choreographyPose(actor,time,{lowMotion:reducedMotion});
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
@@ -152,6 +192,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           else sx=sy=sz=.00001;
         }
         if(part.name==='shoeL'||part.name==='shoeR')y+=moving?.05*Math.abs(Math.sin(time*.014+actor.index)):0;
+        if(part.name!=='stool'){
+          y*=.69+.31*pose.stand;
+          if(part.name==='skirt'||part.name==='tunic')sy*=.90+.1*pose.stand;
+          if(part.name.startsWith('shoe'))z+=(1-pose.stand)*.21;
+          if(pose.casting&&part.name==='armR')y+=.24*Math.abs(Math.sin(time*.015));
+        }
         base.set(actor.position.x,0,actor.position.z);
         pos.set(x,y,z).applyQuaternion(turn).add(base);
         scale.set(sx,sy,sz);
@@ -186,7 +232,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,clearEffects,setReducedMotion,draw,pick,dispose,
+  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,draw,pick,dispose,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length},
-    get actors(){return actors.map(a=>({id:a.id,position:a.position,yaw:a.yaw,statusIds:[...a.statusIds]}))}};
+    get actors(){return actors.map(a=>({id:a.id,position:a.position,yaw:a.yaw,statusIds:[...a.statusIds],
+      standing:a.standUntil>performance.now(),casting:a.castUntil>performance.now()}))}};
 }
