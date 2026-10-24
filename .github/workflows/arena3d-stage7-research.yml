@@ -38,6 +38,7 @@ jobs:
           node --check assets/village/arena-3d/stage7-expression-motion.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/live.mjs
+          node --check tests/arena3d-stage7-browser.mjs
       - name: "Kiểm thử GĐ7 và chuyển động phép"
         run: |
           node --test tests/arena3d-stage7-expression.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-ritual-walk.test.mjs
@@ -64,14 +65,12 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx wrangler deploy --config wrangler.arena3d-stage7-staging.jsonc
-      - name: "Kiểm thử trực tiếp 6–30 Character và nghi lễ"
+      - name: "Chuẩn bị trình duyệt Chrome và WebKit giả lập iPhone"
         run: |
           npm install --no-save playwright@1.58.2
-          node tests/arena3d-stage6-browser.mjs
-      - name: "WebKit giả lập iPhone"
-        run: |
           npx playwright install --with-deps webkit
-          node tests/arena3d-phase3-webkit.mjs
+      - name: "Kiểm thử STAGING GĐ7: 6–30 Character, nghi lễ, Chrome và WebKit"
+        run: node tests/arena3d-stage7-browser.mjs
       - name: "Ghi nhận Preview GĐ7"
         run: |
           echo "Preview GĐ7: https://gmww-arena3d-stage7-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
