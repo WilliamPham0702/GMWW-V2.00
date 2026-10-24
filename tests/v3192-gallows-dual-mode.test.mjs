@@ -72,11 +72,11 @@ test('same-day GM UI includes separate auto/manual stages and percentage tally',
  const backend=fs.readFileSync('src/index.js','utf8');
  assert.ok(html.includes('id="battleGallowsAutomatic"'));
  assert.ok(html.includes('id="battleGallowsMembers"'));
- assert.ok(gm.includes('nominationEligible'));
- assert.ok(gm.includes('đề cử · '));
- assert.ok(gm.includes('GM chọn thành viên'));
+ assert.ok(gm.includes('nomEligible'));
+ assert.ok(gm.includes('gallows-count'));
+ assert.ok(gm.includes('Chọn người trên danh sách'));
  assert.ok(gm.includes('artifactBans.has(m.loginId)'));
- assert.ok(gm.includes('if(manual)manual.hidden=true'));
+ assert.ok(gm.includes("if(manual)manual.hidden=mode!=='gm'"));
  assert.ok(css.includes('#battleGallowsAutomatic[hidden]'));
  assert.ok(backend.includes("gallowsManualResolve(ballot,target"));
  assert.ok(backend.includes('artifactVoteBans'));
