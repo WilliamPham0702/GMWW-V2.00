@@ -5060,7 +5060,10 @@ function battleGallowsRender(phase){
   }
   panel.hidden=phase!=='day'||!battleState.gallowsOpen;
   if(panel.hidden)return;
-  const members=playLiveMembers().filter(p=>p?.loginId&&playPlayerEffect(p.loginId)!=='dead'&&playPlayerEffect(p.loginId)!=='expelled');
+  const eligibleIds=new Set(Array.isArray(g.eligible)?g.eligible.map(String):[]);
+  const members=playLiveMembers().filter(p=>p?.loginId&&(eligibleIds.size?eligibleIds.has(String(p.loginId)):
+    playPlayerEffect(p.loginId)!=='dead'&&playPlayerEffect(p.loginId)!=='expelled'));
+  const rosterStats=new Map((g.rosterStats||[]).map(row=>[String(row.id),row]));
   const memberName=id=>battleMember(id)?.displayName||id||'';
   const mode=g.mode==='gm'?'gm':'auto',nomBans=new Set(g.blockedNomination||[]),
     voteBans=new Set(g.blockedVotes||g.blocked||[]),artifactBans=new Set(g.artifactVoteBans||[]);
@@ -5068,6 +5071,10 @@ function battleGallowsRender(phase){
   const phaseClock=document.getElementById('battleGallowsClock');if(phaseClock)phaseClock.hidden=mode==='gm';
   const candidateLabel=panel.querySelector('label[for="battleGallowsCandidate"]');
   if(candidateLabel)candidateLabel.textContent=mode==='gm'?'GM chọn thành viên':'Người lên giàn';
+  const candidateControl=document.getElementById('battleGallowsCandidateControl');
+  if(candidateControl)candidateControl.hidden=mode==='auto'&&stage!=='selecting';
+  const modeSummary=document.getElementById('battleGallowsModeSummary');
+  if(modeSummary)modeSummary.textContent='CHẾ ĐỘ: '+(mode==='gm'?'GM THỦ CÔNG':'TỰ ĐỘNG')+' ▾';
   const select=document.getElementById('battleGallowsCandidate'),prev=select?.value||'';
   if(select){
     const options=members.map(m=>'<option value="'+playEsc(m.loginId)+'">'+playEsc(m.displayName||m.loginId)+'</option>').join('');
@@ -5091,7 +5098,7 @@ function battleGallowsRender(phase){
       String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi'));
     nominationStats.innerHTML='<b>🏴‍☠️ ĐỀ CỬ: '+tallyCount+'/'+voterTotal+' người đã chọn</b>'+
       (stage==='ready'?'<small>Chưa mở bình chọn trên Player Web.</small>':
-        '<div class="battle-gallows-tally-list">'+sorted.slice(0,3).map(m=>
+        '<div class="battle-gallows-tally-list">'+sorted.map(m=>
         '<div><span>'+playEsc(m.displayName||m.loginId)+'</span><b>'+String(totals.get(m.loginId)||0)+' · '+Math.round(100*(totals.get(m.loginId)||0)/nominationEligible)+'%</b></div>').join('')+'</div>')+
       (mode==='auto'&&stage==='selecting'?'<small>Hòa hoặc chưa có đề cử: GM chọn người lên giàn.</small>':'');
   }
@@ -5101,17 +5108,25 @@ function battleGallowsRender(phase){
   if(roster){
     const scroll=roster.scrollTop;
     const counts=new Map(nominationTallies.map(row=>[String(row.loginId),Number(row.votes)||0]));
-    roster.innerHTML=members.map(m=>{
+    const ordered=[...members].sort((a,b)=>{
+      const count=id=>Number(rosterStats.get(String(id))?.nominations??counts.get(String(id))??0);
+      return count(b.loginId)-count(a.loginId)||
+        String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi');
+    });
+    roster.innerHTML=ordered.map(m=>{
       const id=playEsc(m.loginId),name=playEsc(m.displayName||m.loginId);
       const nom=nomBans.has(m.loginId),vote=voteBans.has(m.loginId);
-      const count=counts.get(m.loginId)||0,percent=Math.round(100*count/nominationEligible);
+      const stats=rosterStats.get(String(m.loginId))||{};
+      const count=Number(stats.nominations??counts.get(m.loginId)??0),
+        percent=Number(stats.nominationPercent??Math.round(100*count/nominationEligible)),
+        saved=Number(stats.save||0),killed=Number(stats.kill||0);
       const impact=[...new Set((playSceneRuntime.activeEffects||[]).filter(row=>
         row?.artifactId&&String(row.loginId)===String(m.loginId)&&row.effectActive!==false&&
         (!row.expiresAt||Date.parse(row.expiresAt)>now)&&
         Number(row.night)===Number(playSceneState.night)).map(row=>
         row.statusId==='vote_ban'?'🎴 Artifact cấm Vote':String(row.message||row.statusId||row.type||'Artifact').slice(0,60)))];
       return '<div class="battle-gallows-member" role="listitem"><span class="battle-gallows-member-name"><strong>'+name+'</strong>'+
-        (mode==='auto'?'<small>'+count+' đề cử · '+percent+'%</small>':'')+
+        '<small>'+count+' đề cử · '+percent+'% · 👍 CỨU '+saved+' · 👎 GIẾT '+killed+'</small>'+
         impact.map(label=>'<small class="gallows-artifact-status">'+playEsc(label)+'</small>').join('')+'</span>'+
         '<button type="button" data-gallows-kind="nomination" data-gallows-id="'+id+'" aria-pressed="'+nom+'" '+
         (stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+'>CẤM CHỌN '+(nom?'✓':'')+'</button>'+
@@ -5177,7 +5192,7 @@ function battleGallowsRender(phase){
     b.disabled=battleState.gallowsBusy||(cmd==='open'&&stage!=='ready')||
       (cmd==='begin'&&!['selecting','nominating'].includes(stage))||
       (cmd==='resolve'&&(mode!=='gm'||stage==='resolved'||!select?.value))||
-      (cmd==='restore'&&stage==='ready');
+      (cmd==='restore'&&stage==='ready'&&!nomBans.size&&!voteBans.size&&!Object.keys(g.nominations||{}).length&&!Object.keys(g.votes||{}).length);
   }
   battleGallowsTick();
 }
@@ -5187,6 +5202,8 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     const name=battleMember(targetId)?.displayName||targetId;
     if(!confirm('Xác nhận CHỐT '+(outcome==='dead'?'CHẾT':'SỐNG')+' cho '+name+'?'))return;
   }
+  if(command==='restore'&&playSceneRuntime.gallows?.stage==='resolved'&&
+     !confirm('Khôi phục kết quả Lên Giàn? Chỉ tác động do Lên Giàn gây ra sẽ được hoàn tác.'))return;
   battleState.gallowsBusy=true;battleGallowsRender('day');
   try{
     const data=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,targetId,outcome,...extras})});
