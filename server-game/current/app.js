@@ -5294,7 +5294,14 @@ function battleGallowsRender(phase){
       const audioKey=key+':'+stage;
       if(battleState.gallowsAudioKey!==audioKey){
         battleState.gallowsAudioKey=audioKey;
-        void battlePlayConfiguredAudio('system',g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved',result.textContent);
+        const verdictCue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
+        if(mode==='auto'){
+          // Read totals first, then the final verdict. Parallel audio would cut one cue off.
+          void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
+            'Công bố số phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
+            false,()=>{if(battleState.gallowsAudioKey===audioKey)
+              void battlePlayConfiguredAudio('system',verdictCue,result.textContent)});
+        }else void battlePlayConfiguredAudio('system',verdictCue,result.textContent);
       }
     }
   }
@@ -5333,7 +5340,7 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
-    const cues={open:'audio_system_gallows_day_long',close_nomination:'audio_system_gallows_nomination_result',
+    const cues={open:'audio_system_gallows_open_nomination',close_nomination:'audio_system_gallows_nomination_result',
       begin:'audio_system_gallows_open_vote'};
     if(cues[command])void battlePlayConfiguredAudio('system',cues[command],'');
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
