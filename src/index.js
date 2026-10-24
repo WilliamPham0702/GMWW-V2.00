@@ -2012,6 +2012,13 @@ export class RoomDurableObject extends DurableObject {
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
+    // Validate all private divination targets BEFORE any usage ledger or game-state write.
+    const inspectIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?
+      body.revealTargetIds.map(normalizeLoginId):(body?.revealTargetId?[normalizeLoginId(body.revealTargetId)]:targets);
+    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
+    if(!artifactId&&expectedInspectCount&&(inspectIds.length!==expectedInspectCount||
+      new Set(inspectIds).size!==expectedInspectCount||inspectIds.some(id=>!players['member:'+id])))
+      return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
     const isExpelled=id=>interactions.some(row=>
       normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
@@ -2108,9 +2115,6 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const requiredRevealCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
-    if(!artifactId&&requiredRevealCount&&(revealIds.length!==requiredRevealCount||new Set(revealIds).size!==requiredRevealCount))
-      return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
     const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&!isExpelled(id)),
       assignments:await readNightAssignments(this.ctx.storage,matchId)}):null;
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
