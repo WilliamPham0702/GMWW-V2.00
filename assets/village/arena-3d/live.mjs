@@ -7,6 +7,7 @@ import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-ateli
 import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} from './stage8-ritual-director.mjs';
+import {STAGE9_VERSION,publicGameplaySnapshot,reduceGameplaySync,gallowsVisual,gameplaySceneStatus} from './stage9-gameplay-sync.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -25,7 +26,7 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
-let galleryPage=0,previewRitualKind=null;
+let galleryPage=0,previewRitualKind=null,gameplaySnapshot=null,staleFrames=0;
 const qualityController=createArenaAdaptiveQuality();
 function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
@@ -89,6 +90,11 @@ const village=createCoastalVillage(THREE,scene);
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
+  const nextGameplay=publicGameplaySnapshot(frame,ballot);
+  const decision=reduceGameplaySync(gameplaySnapshot,nextGameplay);
+  if(!decision.accept){staleFrames++;document.body.dataset.gmwwStage9StaleFrames=String(staleFrames);return;}
+  gameplaySnapshot=nextGameplay;
+  if(decision.reset){ballot=null;field.clearEffects();visibleGmEffects=0;}
   const previousMatch=current?.room.matchId,previousCycle=current?.room.cycleKey;
   const changedRoom=current?.room.code!==frame.room.code;
   current=frame;synthetic=frame.room.code==='SYNTH';
@@ -118,6 +124,10 @@ function drawFrame(frame){
   document.body.dataset.gmwwArtVersion=CHARACTER_ART_VERSION;
   document.body.dataset.gmwwStage7=STAGE7_VERSION;
   document.body.dataset.gmwwStage8=STAGE8_VERSION;
+  document.body.dataset.gmwwStage9=STAGE9_VERSION;
+  document.body.dataset.gmwwStage9Cycle=gameplaySnapshot.cyclePhase;
+  document.body.dataset.gmwwStage9Phase=gameplaySnapshot.phase;
+  document.body.dataset.gmwwStage9Players=String(gameplaySnapshot.playerIds.length);
   document.body.dataset.gmwwRitualArtVersion=RITUAL_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
@@ -190,6 +200,11 @@ async function attach(room){
   enableGm();
 }
 function showBallot(x){
+  ballot=x;
+  if(current){gameplaySnapshot=publicGameplaySnapshot(current,x);}
+  const gallows=gallowsVisual(gameplaySnapshot);
+  document.body.dataset.gmwwStage9Gallows=gallows.active?'active':'none';
+  document.body.dataset.gmwwStage9Candidate=gallows.candidateId||'';
   dashboard.setBallot(x);
   if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
@@ -397,7 +412,7 @@ canvas.addEventListener('pointercancel',e=>{
   trackedPointers.delete(e.pointerId);drag=null;pinchDistance=0;
 });
 canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.min(32,radius+Math.sign(e.deltaY)))},{passive:false});
-window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
+window.__GMWW_ARENA_STAGE_READONLY=()=>({stage9:STAGE9_VERSION,staleFrames,gameplay:gameplaySnapshot?gameplaySceneStatus(gameplaySnapshot):null,gallows:gallowsVisual(gameplaySnapshot),count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
   ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
   gmConsole:document.body.dataset.gmwwGmConsole,lowPower,autoQualityEnabled,sceneRebuilds,selectedId:dashboard.selectedId,
