@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="116.21 136.91 549.61 549.61" width="1024" height="1024">
+<defs>
+<radialGradient id="sea" cx="42%" cy="37%" r="72%"><stop stop-color="#187da2"/><stop offset=".52" stop-color="#064c81"/><stop offset="1" stop-color="#031d43"/></radialGradient>
+<radialGradient id="aqua"><stop stop-color="#8cfffb"/><stop offset=".57" stop-color="#399bd9"/><stop offset="1" stop-color="#103e80"/></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a0641e"/><stop offset=".2" stop-color="#fbe4a3"/><stop offset=".42" stop-color="#ffcc65"/><stop offset=".66" stop-color="#9d5e21"/><stop offset=".82" stop-color="#ffdc91"/><stop offset="1" stop-color="#bc842f"/></linearGradient>
+<radialGradient id="iris"><stop stop-color="#a6faff"/><stop offset=".35" stop-color="#51dfff"/><stop offset=".7" stop-color="#2770e4"/><stop offset="1" stop-color="#502299"/></radialGradient>
+<radialGradient id="lens"><stop stop-color="#a0ffff"/><stop offset=".3" stop-color="#368eba"/><stop offset=".78" stop-color="#082c5d"/><stop offset="1" stop-color="#04152f"/></radialGradient>
+<linearGradient id="shield" x1="0" x2="1"><stop stop-color="#063669"/><stop offset=".5" stop-color="#1d97c2"/><stop offset="1" stop-color="#073a79"/></linearGradient>
+<linearGradient id="heal"><stop stop-color="#b8ffc9"/><stop offset=".4" stop-color="#2ce5ac"/><stop offset="1" stop-color="#00726f"/></linearGradient>
+<radialGradient id="poison"><stop stop-color="#e793f9"/><stop offset=".65" stop-color="#943dba"/><stop offset="1" stop-color="#33116c"/></radialGradient>
+<linearGradient id="ice" x1="0" x2="1"><stop stop-color="#e7fcff"/><stop offset=".5" stop-color="#44c8f3"/><stop offset="1" stop-color="#2769b9"/></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/><feOffset dx="0" dy="6" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+
+
+ <g transform="translate(800 0) scale(-1 1)">
+  <g filter="url(#shadow)" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M295 292 Q392 237 535 275 Q581 282 603 323 Q525 303 469 333 Q429 357 426 384 Q481 384 534 405 Q565 417 579 453 Q495 439 440 468 Q354 509 268 451 L212 400 277 335Z" fill="#0e6394" stroke="#73f4ff" stroke-width="15" opacity=".58"/>
+  <path d="M245 395 380 265 380 341 563 341 Q599 342 601 392 Q596 440 560 440 H380 V516Z" fill="url(#gold)" stroke="#9c521e" stroke-width="25"/>
+  <path d="M269 395 357 307 V370 H549 Q575 370 576 392 Q577 412 550 413 H356 V468Z" fill="url(#aqua)" stroke="#fff6bd" stroke-width="11"/>
+  <path d="M304 391 356 337 V382 H544" fill="none" stroke="#dffffc" stroke-width="13"/>
+  <path d="M380 486 Q450 513 507 471 M438 309 Q482 270 538 295" stroke="#4de2f9" stroke-width="11" fill="none"/>
+  <path d="M277 490 Q243 505 225 530 M531 276l18-22m-10 286 25 17" stroke="#ffd882" stroke-width="10"/>
+  <path d="M303 270l11 23 24 10-24 10-11 23-11-23-24-10 24-10Z" fill="#eaffff" stroke="#66dafa" stroke-width="4"/>
+  </g>
+ </g>
+
+</svg>

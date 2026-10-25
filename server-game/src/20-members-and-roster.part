@@ -724,11 +724,6 @@ let playSceneState=(()=>{
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
-
-/* Arena 3D official-room bridge: only the immediate trusted Production iframe
- * may request the currently selected GM room context. Never expose the room
- * bearer in URL/localStorage additions, DOM, logs, or cross-origin messages.
- * Core verifies it AGAIN before showing any GM-private information. */
 const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';
 window.addEventListener('message',event=>{
   if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||

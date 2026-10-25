@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.226';
+const VERSION='3.227';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -2578,11 +2578,6 @@ let playSceneState=(()=>{
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
-
-/* Arena 3D official-room bridge: only the immediate trusted Production iframe
- * may request the currently selected GM room context. Never expose the room
- * bearer in URL/localStorage additions, DOM, logs, or cross-origin messages.
- * Core verifies it AGAIN before showing any GM-private information. */
 const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';
 window.addEventListener('message',event=>{
   if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||
@@ -4915,16 +4910,42 @@ const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:
 // GM battleConfirm() and existing rollback token as manual target selection.
 const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';
 let battleIconDragging=null;
+let battleIconTurnKey='';
+const battleIconPositions=new Map(); // UI-only; the Core remains action authority.
 function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0'}catch{return true}}
-function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};renderPlayBattle()}
+function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};battleIconClearDrag();renderPlayBattle()}
 function battleIconResolve(action){
  const api=globalThis.GMWWActionIconLibrary;
- return api?.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+ if(!api)return [];
+ // Yêu Tinh already chooses direction in Core, so do not draw two arrows.
+ if(action.actionId==='action_transfer_bite'&&api.resolve(action.actionId))
+  return [{id:'yeu-tinh-xoay',name:'Yêu Tinh',assetId:'',image:'',isRotation:true}];
+ return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+}
+function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
+function battleIconClamp(x,y){
+ const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
+ return {x:Math.min(Math.max(24,x),Math.max(24,vw-24)),y:Math.min(Math.max(35,y),Math.max(35,vh-50))};
+}
+function battleIconFirePoint(){
+ // Same GM fire anchor as village layout. No secondary bottom-of-fire toolbar.
+ const core=document.querySelector('.play-village-core');
+ const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
+ if(core&&Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
+  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
+ }
+ const rect=core?.querySelector('.play-core-pearl')?.getBoundingClientRect();
+ if(rect&&rect.width>0&&rect.height>0)return battleIconClamp(rect.left+rect.width/2,rect.top+rect.height/2);
+ const shell=document.getElementById('playShell')?.getBoundingClientRect();
+ return battleIconClamp(shell?.width?shell.left+shell.width/2:innerWidth/2,shell?.height?shell.top+shell.height*.5:innerHeight*.5);
+}
+function battleIconResetPositions(){
+ battleIconPositions.clear();battleIconClearDrag();
+ const dock=document.getElementById('battleFireIconDock');if(dock)delete dock.dataset.sig;
 }
 function battleIconDock(actions,phase){
  const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
  if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
- const core=document.querySelector('.play-village-core');
  let dock=document.getElementById('battleFireIconDock');
  if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
@@ -4932,33 +4953,37 @@ function battleIconDock(actions,phase){
    .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
  const active=playSceneState.step==='battle'&&show&&eligible.length>0;
  const waiting=!!(battleState.busy||battleState.syncPending);
- dock.hidden=!active;
- dock.classList.toggle('is-pending',waiting);
+ const turn=String(playSceneRuntime.room?.matchId||'')+'|'+String(playSceneState.phase||'')+'|'+
+   String(playSceneState.night||'')+'|'+String(battleState.key||'');
+ if(turn!==battleIconTurnKey){battleIconTurnKey=turn;battleIconResetPositions()}
+ dock.hidden=!active;dock.classList.toggle('is-pending',waiting);
  if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
- // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
- const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
- if(core&&Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
-  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
- }
- const fire=core?.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect(),viewWidth=globalThis.visualViewport?.width||innerWidth,
-   viewHeight=globalThis.visualViewport?.height||innerHeight;
- if(rect&&rect.width>0&&rect.height>0){
-  dock.style.left=Math.max(70,Math.min(viewWidth-70,rect.left+rect.width/2))+'px';
-  dock.style.top=Math.max(65,Math.min(viewHeight-100,rect.bottom+10))+'px';
- }else{
-  const shell=document.getElementById('playShell')?.getBoundingClientRect();
-  dock.style.left=(shell?.width?shell.left+shell.width/2:viewWidth/2)+'px';
-  dock.style.top=(shell?.height?shell.top+shell.height*0.51:viewHeight*0.51)+'px';
- }
+ const fire=battleIconFirePoint();
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'')+':'+waiting;
- if(dock.dataset.sig===key||battleIconDragging)return;dock.dataset.sig=key;
+  ':'+turn+':'+battleState.actionId+':'+battleState.targets.length+':'+waiting;
+ if(battleIconDragging)return;
+ if(dock.dataset.sig===key){
+  // If GM moved the fire, unused icons still spawn on its new coordinates.
+  for(const button of dock.querySelectorAll('[data-fire-action]')){
+   const position=battleIconPositions.get(battleIconPositionKey(button.dataset.fireAction,button.dataset.fireIcon));
+   if(!position){button.style.left=fire.x+'px';button.style.top=fire.y+'px'}
+  }
+  return;
+ }
+ dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
- dock.innerHTML=eligible.map(({a,icon})=>
-  '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
-  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
-  '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
+ dock.innerHTML=eligible.map(({a,icon},i)=>{
+  const offset=eligible.length>1?{x:Math.cos((i/eligible.length)*Math.PI*2)*13,y:Math.sin((i/eligible.length)*Math.PI*2)*13}:{x:0,y:0};
+  const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
+    battleIconClamp(fire.x+offset.x,fire.y+offset.y);
+  const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
+    '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
+  return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
+   'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
+   '" data-fire-icon="'+playEsc(icon.id)+'" aria-label="'+playEsc(a.name)+
+   '" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
+   visual+'</button>';
+ }).join('');
 }
 function battleIconTargetAt(x,y,action){
  const ring=document.getElementById('playPlayerRing');if(!ring||!action)return null;
@@ -4967,45 +4992,65 @@ function battleIconTargetAt(x,y,action){
   const id=String(el.dataset.playPlayerId||''),m=battleMember(id);
   if(!m||!battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
   const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
-  const d=Math.hypot(x-cx,y-cy),limit=Math.max(42,Math.min(82,Math.max(r.width,r.height)*0.78));
+  const d=Math.hypot(x-cx,y-cy),limit=Math.max(68,Math.min(118,Math.max(r.width,r.height)*1.15));
   if(d<limit&&d<dist){candidate=el;dist=d}
  }
  return candidate;
 }
 function battleIconClearDrag(){
  const d=battleIconDragging;if(!d)return;
- d.ghost?.remove();d.target?.classList.remove('gmww-battle-icon-snap');
+ d.button?.classList.remove('is-dragging','is-sucked');
+ d.target?.classList.remove('gmww-battle-icon-snap');
  battleIconDragging=null;
 }
 function battleIconBind(){
  const dock=document.getElementById('battleFireIconDock');if(!dock||dock.dataset.bound)return;dock.dataset.bound='1';
  dock.addEventListener('pointerdown',e=>{
-  const btn=e.target.closest('[data-fire-action]');if(!btn||(e.button!==0&&e.pointerType!=='touch')||battleState.busy||battleState.syncPending)return;
+  const btn=e.target.closest('[data-fire-action]');
+  if(!btn||(e.button!==0&&e.pointerType!=='touch')||battleState.busy||battleState.syncPending)return;
   const action=battleActions().find(a=>a.id===btn.dataset.fireAction&&!a.unavailable);
   if(!action)return;
-  battleIconClearDrag();battleIconDragging={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,actionId:action.id,moved:false,target:null,ghost:null};
+  battleIconClearDrag();
+  const rect=btn.getBoundingClientRect();
+  battleIconDragging={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,
+   baseX:rect.left+rect.width/2,baseY:rect.top+rect.height/2,
+   actionId:action.id,iconId:btn.dataset.fireIcon,button:btn,moved:false,target:null};
   try{btn.setPointerCapture(e.pointerId)}catch{}
   e.preventDefault();
  });
  dock.addEventListener('pointermove',e=>{
   const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  if(!d.moved&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<8)return;
+  if(!d.moved&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<7)return;
   d.moved=true;
-  if(!d.ghost){d.ghost=document.createElement('img');d.ghost.className='gmww-battle-icon-ghost';d.ghost.src=[...dock.querySelectorAll('[data-fire-action]')].find(x=>x.dataset.fireAction===d.actionId)?.querySelector('img')?.src||'';
-    d.ghost.setAttribute('aria-hidden','true');document.body.appendChild(d.ghost)}
-  d.ghost.style.left=e.clientX+'px';d.ghost.style.top=e.clientY+'px';
-  const action=battleActions().find(a=>a.id===d.actionId&&!a.unavailable);
-  const candidate=action&&action.targetCount>0?battleIconTargetAt(e.clientX,e.clientY,action):null;
-  if(candidate!==d.target){d.target?.classList.remove('gmww-battle-icon-snap');d.target=candidate;candidate?.classList.add('gmww-battle-icon-snap')}
+  d.button.classList.add('is-dragging');
+  const a=battleActions().find(x=>x.id===d.actionId&&!x.unavailable);
+  const candidate=a&&a.targetCount>0&&!battleIsTransfer(a)?battleIconTargetAt(e.clientX,e.clientY,a):null;
+  if(candidate!==d.target){
+   d.target?.classList.remove('gmww-battle-icon-snap');
+   d.target=candidate;candidate?.classList.add('gmww-battle-icon-snap');
+  }
+  d.button.classList.toggle('is-sucked',!!candidate);
+  const r=candidate?.getBoundingClientRect();
+  const point=r?battleIconClamp(r.left+r.width/2,r.top+r.height/2):
+   battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
+  d.button.style.left=point.x+'px';d.button.style.top=point.y+'px';
   e.preventDefault();
  });
  const finish=e=>{
   const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  const id=d.actionId,moved=d.moved,aAtDrop=battleActions().find(x=>x.id===id&&!x.unavailable),
-    target=moved&&aAtDrop?.targetCount>0?battleIconTargetAt(e.clientX,e.clientY,aAtDrop):null;
+  const id=d.actionId,moved=d.moved;
+  const a=battleActions().find(x=>x.id===id&&!x.unavailable);
+  const target=e.type==='pointerup'&&moved&&a?.targetCount>0&&!battleIsTransfer(a)?
+   battleIconTargetAt(e.clientX,e.clientY,a):null;
+  const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
+  if(e.type==='pointerup'&&moved){
+   // Icon stays where released; moving around the village alone never submits gameplay.
+   battleIconPositions.set(battleIconPositionKey(id,d.iconId),point);
+  }else{
+   d.button.style.left=d.baseX+'px';d.button.style.top=d.baseY+'px';
+  }
   battleIconClearDrag();
-  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending)return;
-  const a=battleActions().find(x=>x.id===id&&!x.unavailable);if(!a)return;
+  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending||!a)return;
   if(!moved){
    if(battleIsTransfer(a)){battlePickAction(a.id);return}
    if(a.noTarget||a.targetCount===0){
@@ -5019,14 +5064,13 @@ function battleIconBind(){
   const accepted=battlePickTargetWithAudio(String(target.dataset.playPlayerId||''),id);
   if(!accepted)return;
   if(battleState.targets.length===a.targetCount){
-   // Keep special target semantics (e.g. assassin marker) on the existing confirmation UI.
    if(a.actionId==='action_assassin_mark'||battleIsTransfer(a))battleOpenTargetSheet(a.id,'list');
    else void battleConfirm(true);
   }
  };
- dock.addEventListener('pointerup',finish);dock.addEventListener('pointercancel',finish);
+ dock.addEventListener('pointerup',finish);
+ dock.addEventListener('pointercancel',finish);
 }
-
 // Repaint the current GM turn when the icon catalog becomes available after OTA.
 globalThis.addEventListener?.('gmww-action-icons-ready',()=>{
  if(playSceneState.step==='battle')renderPlayBattle();
@@ -6316,7 +6360,7 @@ async function battleUndoLast(){
     const d=await playRoomApi('/battle-undo',{method:'POST',body:JSON.stringify({undoToken:rec.token})});
     if(d?.ok!==true)throw new Error(d?.message||d?.error||'Server chưa xác nhận hoàn tác');
     if(playSceneRuntime.room?.demo===true){demoRunner.completed.clear();demoRunner.nightPlan=null;demoRunner.visual=null}
-    battleState.impacts.clear();battleClear();await playSyncRoom(true);
+    battleState.impacts.clear();battleClear();battleIconResetPositions();await playSyncRoom(true);
   }catch(err){playFlashError('Không thể khôi phục: '+String(err?.message||err))}
   finally{battleState.undoBusy=false;renderPlayBattle()}
 }

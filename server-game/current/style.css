@@ -7922,3 +7922,57 @@ body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gm
 body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
   pointer-events:auto!important
 }
+
+
+/* GMWW Icon Action V2 — free-floating, frameless controls (only gameplay icons). */
+#battleFireIconDock.battle-fire-icon-dock{
+ position:fixed!important;inset:0!important;width:100%!important;height:100%!important;
+ left:0!important;top:0!important;max-width:none!important;
+ transform:none!important;display:block!important;overflow:visible!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;padding:0!important;pointer-events:none!important;
+ touch-action:none!important;z-index:50000!important;contain:none!important
+}
+#battleFireIconDock[hidden]{display:none!important}
+#battleFireIconDock .battle-fire-icon{
+ position:fixed!important;width:44px!important;height:44px!important;
+ min-width:44px!important;min-height:44px!important;margin:0!important;padding:0!important;
+ transform:translate(-50%,-50%)!important;display:grid!important;place-items:center!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;outline:0!important;filter:none!important;
+ color:inherit!important;pointer-events:auto!important;touch-action:none!important;
+ -webkit-touch-callout:none!important;user-select:none!important;
+ -webkit-user-select:none!important;overflow:visible!important;
+ cursor:grab!important;transition:filter .12s ease!important;z-index:1!important
+}
+#battleFireIconDock .battle-fire-icon img{
+ width:24px!important;height:24px!important;max-width:24px!important;
+ object-fit:contain!important;display:block!important;pointer-events:none!important;
+ background:transparent!important;box-shadow:none!important;border:0!important;
+ filter:drop-shadow(0 1px 3px rgba(2,34,57,.48))
+}
+#battleFireIconDock .battle-fire-icon small{display:none!important}
+#battleFireIconDock .battle-fire-icon[aria-pressed="true"]{
+ background:transparent!important;outline:0!important;box-shadow:none!important
+}
+#battleFireIconDock .battle-fire-icon:focus-visible{outline:1px dashed #b8fbff!important;outline-offset:2px!important}
+#battleFireIconDock .battle-fire-icon.is-dragging{z-index:20!important;cursor:grabbing!important}
+#battleFireIconDock .battle-fire-icon.is-sucked{filter:drop-shadow(0 0 9px #afffff)!important}
+#battleFireIconDock .battle-fire-icon.is-sucked img{filter:drop-shadow(0 0 6px #80fbff) brightness(1.2)!important}
+#battleFireIconDock .gmww-icon-rotation{
+ font-size:24px!important;line-height:1!important;width:24px!important;
+ height:24px!important;display:grid!important;place-items:center!important;
+ filter:drop-shadow(0 2px 3px rgba(2,34,57,.55))
+}
+#playPlayerRing [data-play-player-id].gmww-battle-icon-snap{
+ outline:3px solid #8effff!important;outline-offset:6px!important;
+ border-radius:50%!important;
+ filter:drop-shadow(0 0 13px #4fffff) brightness(1.15)!important;
+ animation:gmwwIconV2SnapPulse .5s ease-in-out infinite alternate!important
+}
+@keyframes gmwwIconV2SnapPulse{
+ from{outline-offset:3px;filter:drop-shadow(0 0 7px #64faff)}
+ to{outline-offset:8px;filter:drop-shadow(0 0 21px #b2ffff)}
+}
+#battleFireIconDock.is-pending{pointer-events:none!important}
+#battleFireIconDock.is-pending .battle-fire-icon{opacity:.47!important;pointer-events:none!important}
