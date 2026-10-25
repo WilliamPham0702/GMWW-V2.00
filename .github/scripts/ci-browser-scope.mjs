@@ -816,7 +816,7 @@ function isGMIcons501Scope(changes){
 }
 
 // V3.223 release gate for approved PR #501. This is NOT a generic version
-// exemption: only the exact UI patch, release machinery and version 3.222 -> 3.222
+// exemption: only the exact UI patch, release machinery and version 3.222 -> 3.223
 // qualify; unrelated gameplay, native, or Worker changes always select full.
 const gm501ReleasePaths=new Set([
   ...gm501Paths,
@@ -848,15 +848,15 @@ function isGMIcons501ReleaseScope(changes){
   const before=(p)=>String(by.get(p)?.before||'');
   const after=(p)=>String(by.get(p)?.after||'');
   if(!before('server-game/current/app.js').includes("const VERSION='3.222'")||
-     !after('server-game/current/app.js').includes("const VERSION='3.222'")||
+     !after('server-game/current/app.js').includes("const VERSION='3.223'")||
      !before('server-game/src/00-core-and-library.part').includes("const VERSION='3.222'")||
-     !after('server-game/src/00-core-and-library.part').includes("const VERSION='3.222'")||
+     !after('server-game/src/00-core-and-library.part').includes("const VERSION='3.223'")||
      !before('src/index.js').includes('VERSION="V3.222"')||
      !after('src/index.js').includes('VERSION="V3.223"')||
      !after('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3223"')||
      !before('package.json').includes('"version": "3.222.0"')||
-     !after('package.json').includes('"version": "3.222.0"')||
-     !after('package-lock.json').includes('"version": "3.222.0"')||
+     !after('package.json').includes('"version": "3.223.0"')||
+     !after('package-lock.json').includes('"version": "3.223.0"')||
      !before('server-game/current/GMWW.html').includes('<title>GMWW V3.222</title>')||
      !after('server-game/current/GMWW.html').includes('<title>GMWW V3.223</title>'))return false;
   // These are the only new runtime behavior and OTA manifest notes.
