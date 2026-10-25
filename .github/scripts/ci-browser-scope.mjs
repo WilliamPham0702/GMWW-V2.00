@@ -731,8 +731,42 @@ function isHomeSea3219Scope(changes){
     !top.includes('button.append(stage,podium')&&!top.includes('/originals/');
 }
 
+// V3.220: only GM action icon display, iPhone touch gesture, and OTA release.
+const battleIcon3220Files=new Set([
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/current/action-icon-library.js',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'tests/gmww-battle-action-icons-touch.test.mjs',
+ 'docs/releases/GMWW-V3.220-battle-icon-drag-20261025.md'
+]);
+function isBattleIcon3220Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const byPath=new Map(changes.map(x=>[x.path,x]));
+ for(const path of ['server-game/current/app.js','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/action-icon-library.js','server-game/current/style.css',
+  'src/index.js','package.json','server-game/current/GMWW.html',
+  'tests/gmww-battle-action-icons-touch.test.mjs',
+  'docs/releases/GMWW-V3.220-battle-icon-drag-20261025.md'])if(!byPath.has(path))return false;
+ if(!changes.every(x=>['A','M'].includes(x.status)&&battleIcon3220Files.has(x.path)))return false;
+ const worker=byPath.get('src/index.js')?.after||'',
+  gm=byPath.get('server-game/current/app.js')?.after||'',
+  part=byPath.get('server-game/src/40-battle-and-timeline.part')?.after||'',
+  html=byPath.get('server-game/current/GMWW.html')?.after||'',
+  pkg=byPath.get('package.json')?.after||'';
+ return worker.includes('VERSION="V3.220"')&&gm.includes("const VERSION='3.220'")&&
+  pkg.includes('"version": "3.220.0"')&&html.includes('<title>GMWW V3.220</title>')&&
+  gm.includes("function battleIconPlace(")&&gm.includes("touchstart")&&
+  gm.includes("gmww-action-icons-ready")&&
+  part.includes("function battleIconPlace(")&&part.includes("touchcancel");
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isBattleIcon3220Scope(changes))return 'battle-icon-3220';
   if(isHomeSea3219Scope(changes))return 'home-sea-3219';
   if(isAudio3217Scope(changes))return 'audio-fix-3217';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
@@ -783,6 +817,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isBattleIcon3220Scope(changes))return{mode:'battle-icon-3220',reason:'V3.220 mobile action icons and OTA only'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
@@ -872,7 +907,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','battle-icon-3220'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
