@@ -115,7 +115,7 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   // The Alpha Wolf deceives the regular Seer only, not a group check.
   const wolves=reads.some(x=>x.wolf&&(action!=='action_seer'||x.roleId!=='role_alpha_wolf'));
   return {kind:'wolf-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
-    wolf:wolves,message:wolves?'CÓ SÓI':action==='action_seer'?'KHÔNG PHẢI SÓI':'KHÔNG CÓ SÓI'};
+    wolf:wolves,message:action==='action_seer'?(wolves?'Người bạn soi là Sói':'Người bạn soi không phải là Sói'):(wolves?'CÓ SÓI':'KHÔNG CÓ SÓI')};
 }
 
 /* Match-local Snow Wolf and Maiden rules; never infer deaths from player-web state. */
