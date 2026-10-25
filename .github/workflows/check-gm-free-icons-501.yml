@@ -47,6 +47,22 @@ jobs:
           node --test tests/gm-free-floating-shortcuts-20261025.test.mjs \
             tests/gallows-flag-snap-v3206.test.mjs \
             tests/gallows-pirate-ui-v3205.test.mjs
+      - name: SHA-256 bốn file thực tế và kiểm tra lại hash
+        run: |
+          sha256sum server-game/current/app.js \
+            server-game/current/GMWW.html \
+            server-game/current/style.css \
+            assets/village/village.mjs > gmww-pr501-ui.sha256
+          sha256sum --check gmww-pr501-ui.sha256
+      - name: Xuất bằng chứng PR501, không phát hành
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-PR501-UI-SHA256-NO-DEPLOY
+          path: |
+            gmww-pr501-ui.sha256
+            docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
+          if-no-files-found: error
+          retention-days: 14
       - name: Kiểm tra release notes và không đổi số phiên bản
         run: |
           test -s docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
