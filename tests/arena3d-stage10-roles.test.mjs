@@ -32,6 +32,6 @@ test('GĐ10 reduced motion, no audio URL invention, GPU lifecycle',()=>{
  assert.match(art,/wand\.geometry\.dispose\(\)/);
  assert.match(art,/profile\.projectile==='spectral-wolf-head'/);
  const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
- assert.match(live,/authorizedAnimationCue\(normalized,\{gmAuthorized:Boolean\(gmToken\)\}\)/);
  assert.match(live,/gmwwStage10=STAGE10_VERSION/);
+ assert.doesNotMatch(live,/dataset\\.gmwwStage10(?:Motion|Projectile|SoundId)/);
 });
