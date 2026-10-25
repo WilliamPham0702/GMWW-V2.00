@@ -1100,12 +1100,76 @@ function isIconActionV23227Scope(changes){
   icon.includes("'action-icons/v2/'")&&css.includes('GMWW Icon Action V2');
 }
 
+// Arena 3D official portal (before Runtime version bump): changes are strictly
+// the origin-checked iframe handoff + 3D render-only files. This is NOT a
+// Production-release exemption: ANY other Core/gameplay/OTA change fails closed.
+function isArena3dOfficialPortalScope(changes){
+ if(!Array.isArray(changes)||changes.length<5)return false;
+ const map=new Map(changes.map(x=>[x.path,x]));
+ if(map.size!==changes.length)return false;
+ const required=['server-game/current/app.js','server-game/src/20-members-and-roster.part',
+  'server-game/current/GMWW.html','assets/village/arena-3d/live.mjs',
+  'tests/arena3d-portal-handoff.test.mjs'];
+ if(required.some(p=>!map.has(p)))return false;
+ const safePath=p=>p.startsWith('assets/village/arena-3d/')||
+  /^tests\/arena3d-[^/]+\.mjs$/.test(p)||
+  /^docs\/releases\/GMWW-ARENA3D-[^/]+\.md$/.test(p)||
+  ['src/arena3d-stage-worker.mjs','wrangler.arena3d-stage14-staging.jsonc',
+   '.github/workflows/arena3d-stage14-16-research.yml',
+   '.github/workflows/check-dual-renderer.yml',
+   '.github/workflows/check-player-web.yml',
+   '.github/workflows/check-p0-chrome-edge-realtime.yml',
+   '.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs',
+   ...required].includes(p);
+ if(changes.some(x=>!safePath(x.path)||!['A','M'].includes(x.status)))return false;
+ function stripVerifiedBridge(value){
+  if(typeof value!=='string')return null;
+  const begin='const GMWW_ARENA_OFFICIAL_ORIGIN=',a=value.indexOf(begin);
+  if(a<0||value.indexOf(begin,a+1)>=0)return null;
+  const end=value.indexOf('\nfunction playLiveMembers()',a);
+  if(end<0)return null;
+  const chunk=value.slice(a,end);
+  if(!chunk.includes("event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN")||
+   !chunk.includes('event.source!==frame.contentWindow')||
+   !chunk.includes('GMWW_ARENA_OFFICIAL_ORIGIN);')||
+   !chunk.includes("event.data?.kind!=='gmww-arena3d-ready'"))return null;
+  return value.slice(0,a).replace(/\n$/,'')+value.slice(end);
+ }
+ for(const p of ['server-game/current/app.js','server-game/src/20-members-and-roster.part']){
+  const x=map.get(p);
+  if(x.status!=='M'||typeof x.before!=='string'||
+   stripVerifiedBridge(x.after)!==x.before)return false;
+ }
+ const entry=map.get('server-game/current/GMWW.html');
+ if(entry.status!=='M'||typeof entry.before!=='string')return false;
+ const patches=[
+  ['aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"','aria-label="Vào Làng Arena 3D chính thức"'],
+  ['<small>THỬ NGHIỆM ARENA 3D</small>','<small>CHƠI ARENA 3D</small>'],
+  ["const arenaUrl='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html';",
+   "const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';"],
+  ["overlay.setAttribute('aria-label','Thử nghiệm Arena 3D · STAGING');",
+   "overlay.setAttribute('aria-label','GMWW Arena 3D · Phòng chơi thật');"],
+  ["title.textContent='🌊 ARENA 3D · STAGING';","title.textContent='🌊 ARENA 3D';"],
+  ["frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';",
+   "frame.title='GMWW Arena 3D — kết nối phòng chơi thật';"],
+  ["/* This Runtime-only experiment keeps the 2D menu/game untouched.\n * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.\n * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */",
+   "/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.\n * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host\n * credentials are only transmitted by origin-checked one-frame postMessage.\n * Never send a GM token in URL or across an untrusted origin. */"]
+ ];
+ let expected=entry.before;
+ for(const [oldText,newText] of patches){
+  if(expected.split(oldText).length!==2)return false;
+  expected=expected.replace(oldText,newText);
+ }
+ return expected===entry.after;
+}
+
 export function classifyBrowserScope(changes){
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
   if(isGMIcons501Scope(changes))return 'gm-icons-501';
   if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
   if(isAutoVanReleaseScope(changes))return 'auto-van-3222';
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isArena3dOfficialPortalScope(changes))return 'arena3d-official';
   if(isIconActionV23227Scope(changes))return 'icon-action-v2-3227';
   if(isFireIcons3226Scope(changes))return 'fire-icons-3226';
   if(isActionIcon3225Scope(changes))return 'active-icons-3225';
@@ -1274,9 +1338,10 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
+  if(result.mode==='arena3d-official')console.log('Chỉ kiểm thử 3D/portal GMWW; bất kỳ thay đổi Core/gameplay khác đều chạy đầy đủ.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['arena3d-official','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
