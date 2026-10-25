@@ -85,7 +85,8 @@ test('GM-only camera follow and pinch zoom do not alter roster or secrets',()=>{
   assert.match(ui,/cameraAim\.lerp/);
   assert.match(ui,/field\.activeCasterWorld/);
   assert.match(ui,/trackedPointers\.size>=2/);
-  assert.match(ui,/field\.setCastingTurn\(data\.casting\|\|null\)/);
+  assert.match(ui,/normalizeRitualCue\(data\.casting,authorized\)/);
+  assert.match(ui,/field\.setCastingTurn\(normalized\)/);
   assert.match(html,/id="camera-follow"/);
   assert.match(html,/id="camera-reset"/);
   assert.doesNotMatch(ui,/localStorage|sessionStorage|gmToken.*searchParams/);
