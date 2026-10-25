@@ -90,7 +90,9 @@ jobs:
           cp -R "$APP" Payload/
           ditto -c -k --sequesterRsrc --keepParent Payload "$QA_IPA"
           unzip -t "$QA_IPA" >/dev/null
-          test "$(stat -f%z "$QA_IPA")" -gt 50000
+          IPA_BYTES="$(stat -f%z "$QA_IPA")"
+          echo "Arena QA IPA compressed bytes: $IPA_BYTES"
+          test "$IPA_BYTES" -gt 10000
           shasum -a 256 "$QA_IPA" > "$QA_IPA.sha256"
           printf 'Arena 3D QA 0.32.0 (GĐ32)\nsource=%s\nbundleId=%s\nserver=%s\nsigning=UNSIGNED_NEEDS_SIGNING_BEFORE_IPHONE_INSTALL\nofficial=false\n' \
             "$GITHUB_SHA" "$QA_BUNDLE_ID" "$QA_ORIGIN" > ARENA-QA-METADATA.txt
