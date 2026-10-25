@@ -114,6 +114,36 @@ function isDualRendererScope(changes){
     changes.every(c=>dualPaths.has(c.path)&&['A','M'].includes(c.status));
 }
 
+// PR #475: only DEMO assassin reply, divination, shared gallows eligibility,
+// role-name audio, and dedicated staging/CI scaffolding. New unknown files fail closed.
+const demo475Paths=new Set([
+ 'src/gmww-demo-runner.js','src/gmww-wolf-night-resolution.js',
+ 'src/gmww-gallows-rules.js','src/index.js',
+ 'server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part',
+ 'server-game/current/app.js',
+ 'src/player-web-src/30-rooms-and-realtime.part',
+ 'src/gmww-members-live.js',
+ 'tests/demo-assassin-gallows-divination.test.mjs',
+ 'tests/v3189-fire-gallows-voting.test.mjs',
+ 'docs/CHANGELOG_DEMO_ASSASSIN_GALLOWS_20261024.md',
+ 'docs/acceptance-pr475-demo-staging.md',
+ '.github/workflows/check-gallows-redesign.yml',
+ '.github/workflows/check-player-web.yml',
+ '.github/scripts/ci-browser-scope.mjs',
+ 'tests/ci-browser-scope.test.mjs',
+ '.github/workflows/deploy-demo-pr475-staging.yml',
+ '.github/scripts/build-demo-pr475-staging.mjs',
+ 'wrangler.demo-pr475-staging.jsonc'
+]);
+function isDemo475Scope(changes){
+ const names=new Set(changes.map(x=>x.path));
+ return names.has('src/gmww-demo-runner.js')&&
+   names.has('src/gmww-gallows-rules.js')&&
+   names.has('tests/demo-assassin-gallows-divination.test.mjs')&&
+   changes.every(x=>demo475Paths.has(x.path)&&['M','A'].includes(x.status));
+}
+
 // PR #463 Lên Giàn has its own mandatory focused workflow.
 // Its large GM/Worker bundles must not trigger unrelated Chrome cards/Seats/OTA browser tests.
 const gallowsOnlyPaths=new Set([
@@ -213,6 +243,7 @@ function isPolicyScope(changes){
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isPolicyScope(changes))return 'ci-policy';
+  if(isDemo475Scope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
@@ -273,12 +304,13 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }

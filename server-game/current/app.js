@@ -2677,7 +2677,7 @@ async function battleOpenGallowsAudioUpload(id){
   row?.scrollIntoView({block:'center'});
   row?.classList.add('gallows-audio-upload-target');
 }
-async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null){
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
   const key=kind+':'+(row?.id||targetId||name),now=Date.now();
@@ -2697,6 +2697,15 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
   battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  // V1.11 used a saved role-name cut point and played only that initial segment.
+  // Prefer that marker when present, otherwise a safe four-second excerpt.
+  const excerptSec=Number(maxSeconds)>0?Math.max(3,Math.min(5,Number(row.roleNameEnd)||Number(maxSeconds))):0;
+  if(excerptSec)player.ontimeupdate=()=>{
+    if(battleActiveAudio===player&&player.currentTime>=excerptSec){
+      player.ontimeupdate=null;try{player.pause()}catch{}
+      player.onended?.();
+    }
+  };
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
@@ -4865,7 +4874,21 @@ function battlePresentRevelation(actionId,revelation){
   if(!revelation?.message)return;
   battleShowResultPopup('',String(revelation.message||''),true);
   const cue=battleDivinationSystemAudioCue(actionId,revelation);
-  if(actionId==='action_aura_read'){
+  if(actionId==='action_compare_faction'){
+    // Linked verdict clip, then only the opening 3–5 seconds of each selected
+    // role's already-linked wake-up audio. This is GM-only private information.
+    const names=(Array.isArray(revelation.targets)?revelation.targets:[])
+      .filter(t=>t?.roleId&&t?.roleName).slice(0,2);
+    const next=i=>{
+      if(i>=names.length)return;
+      const target=names[i];
+      void battlePlayConfiguredAudio('cards',target.roleId,target.roleName,false,()=>next(i+1),4);
+    };
+    if(names.length===2){
+      if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>next(0));
+      else next(0);
+    }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+  }else if(actionId==='action_aura_read'){
     const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
     if(!playAudioMuted()&&roleName){
       if(cue&&battleFindAudio('system',cue,revelation.message))

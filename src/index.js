@@ -844,9 +844,8 @@ export class RoomDurableObject extends DurableObject {
       row?.artifactId&&String(row?.type)==='status'&&String(row?.statusId)==='vote_ban'&&
       (!row.matchId||String(row.matchId)===String(meta.matchId))&&
       Number(row.night)===Number(meta.cycleNight)).map(row=>normalizeLoginId(row.loginId)).filter(Boolean))];
-    // Freeze the voter roster after resolution. An automatic execution must not
-    // retroactively remove the condemned player's own valid ballot or erase
-    // nominations for them from the final scoreboard.
+    // Freeze historical voter eligibility after resolution; the accused never
+    // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
     let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
@@ -2013,6 +2012,13 @@ export class RoomDurableObject extends DurableObject {
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
+    // Validate all private divination targets BEFORE any usage ledger or game-state write.
+    const inspectIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?
+      body.revealTargetIds.map(normalizeLoginId):(body?.revealTargetId?[normalizeLoginId(body.revealTargetId)]:targets);
+    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
+    if(!artifactId&&expectedInspectCount&&(inspectIds.length!==expectedInspectCount||
+      new Set(inspectIds).size!==expectedInspectCount||inspectIds.some(id=>!players['member:'+id])))
+      return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
     const interactions=await this.ctx.storage.get("interactions")||[];
     const isExpelled=id=>interactions.some(row=>
       normalizeLoginId(row?.loginId)===id&&String(row?.type||"")==="expelled"&&
