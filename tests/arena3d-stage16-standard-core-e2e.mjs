@@ -72,7 +72,7 @@ try{
   const button=gm.getByRole('button',{name:/Thử .*Bảo Vệ/});
   if(await button.count()){
    await button.click();
-   await gm.waitForFunction(()=>document.querySelector('#log')?.textContent?.includes('Core xác nhận lượt thử'),null,{timeout:20000});
+   await gm.waitForFunction(()=>document.querySelector('#log')?.textContent?.includes('Core đã xác nhận hành động'),null,{timeout:20000});
    cast=await gm.evaluate(async code=>{
     const token=document.getElementById('gm-key').value;
     const r=await fetch('/api/arena-staging/rooms/'+code+'/gm-visuals',{headers:{authorization:'Bearer '+token},cache:'no-store'});
