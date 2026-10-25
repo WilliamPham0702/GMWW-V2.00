@@ -1,5 +1,6 @@
 // Stage 10: art-only animation catalog. Role identity MUST come from authorized GM-private Core cues.
 // No roles, secret targets or faction identities may be inferred from public room snapshots.
+import {coreActionFamily} from './stage11-core-action-bridge.mjs';
 export const STAGE10_VERSION='gmww.arena.role-animation.10';
 const PROFILES=Object.freeze({
  wand:Object.freeze({motion:'wand-orbit',projectile:'arcane-ribbon',impact:'star-bloom',sound:'ritual_wand',color:'#b6a5ff'}),
@@ -29,7 +30,8 @@ const safeRoleId=x=>typeof x==='string'&&/^[a-z0-9_-]{1,64}$/i.test(x)?x.toLower
 export function resolveRoleAnimation({kind='vote',roleId='',actionId=''}={}){
  const role=safeRoleId(roleId),action=safeRoleId(actionId);
  // Core action takes priority for witch heal/kill, oracle inspect, and wolf bite.
- let family=aliases.get(role)||({shield:'shield',inspect:'oracle',heal:'heal',attack:'attack',vote:'vote'}[kind]||'vote');
+ let family=coreActionFamily(action)||aliases.get(role)||({shield:'shield',inspect:'oracle',heal:'heal',attack:'attack',vote:'vote'}[kind]||'vote');
+ if(coreActionFamily(action))return Object.freeze({family,...PROFILES[family]});
  if(action==='wolf-bite'||action==='bite')family='wolf';
  else if(action==='protect')family='shield';
  else if(action==='inspect'||action==='aura-inspect')family='oracle';
