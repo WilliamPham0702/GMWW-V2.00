@@ -740,7 +740,7 @@ const battleIcon3220Files=new Set([
  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
  '.github/workflows/prepare-runtime-v3202-candidate.yml',
- 'tests/gmww-battle-action-icons-touch.test.mjs',
+ 'tests/gmww-battle-action-icons-touch.test.mjs','tests/action-icon-library.test.mjs',
  'docs/releases/GMWW-V3.220-battle-icon-drag-20261025.md'
 ]);
 function isBattleIcon3220Scope(changes){
