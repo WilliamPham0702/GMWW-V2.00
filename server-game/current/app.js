@@ -4658,37 +4658,84 @@ const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:
 const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';
 let battleIconDragging=null;
 function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0'}catch{return true}}
-function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};renderPlayBattle()}
+function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};battleIconClearDrag();renderPlayBattle()}
+// The Library may finish loading or be edited after the battle screen first
+// renders. Re-render only the icon layer, without changing Server/Core state.
+window.addEventListener('gmww:action-icons-changed',()=>{
+ if(playSceneState.step==='battle')renderPlayBattle();
+});
+let battleIconRepositionQueued=false;
+function battleIconSchedulePosition(){
+ const dock=document.getElementById('battleFireIconDock');
+ if(!dock||dock.hidden||battleIconRepositionQueued)return;
+ battleIconRepositionQueued=true;
+ requestAnimationFrame(()=>{battleIconRepositionQueued=false;
+  const activeDock=document.getElementById('battleFireIconDock');
+  if(activeDock&&!activeDock.hidden)battleIconDockPosition(activeDock,document.querySelector('.play-village-core'));
+ });
+}
+window.addEventListener('resize',battleIconSchedulePosition,{passive:true});
+window.visualViewport?.addEventListener('resize',battleIconSchedulePosition,{passive:true});
+window.visualViewport?.addEventListener('scroll',battleIconSchedulePosition,{passive:true});
 function battleIconResolve(action){
- const api=globalThis.GMWWActionIconLibrary;
- return api?.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+ const api=globalThis.GMWWActionIconLibrary,actionId=String(action?.actionId||'').trim();
+ if(!api||!actionId)return [];
+ const matches=typeof api.resolveAll==='function'?api.resolveAll(actionId):
+   (typeof api.resolve==='function'?[api.resolve(actionId)]:[]);
+ return (Array.isArray(matches)?matches:[]).filter(icon=>icon&&(icon.assetId||icon.image));
+}
+// Position the fire dock in the *visible viewport* without moving the real campfire.
+// iPhone landscape, webview safe areas and zoom can shift/get zero-sized fire bounds.
+function battleIconDockPoint(rect,viewportWidth,viewportHeight,dockWidth=330){
+ const vw=Math.max(160,Number(viewportWidth)||320),vh=Math.max(160,Number(viewportHeight)||568);
+ const half=Math.min(Math.max(100,(Number(dockWidth)||330)/2),Math.max(40,(vw-16)/2));
+ const valid=rect&&[rect.left,rect.right,rect.top,rect.bottom,rect.width,rect.height].every(Number.isFinite)&&rect.width>0&&rect.height>0;
+ const left=valid?(rect.left+rect.width/2):vw/2;
+ const top=valid?(rect.bottom+10):vh*0.56;
+ return{left:Math.min(vw-half-8,Math.max(half+8,left)),
+        top:Math.min(vh-100,Math.max(80,top))};
+}
+function battleIconDockPosition(dock,core){
+ if(!dock)return;
+ const fire=core?.querySelector('.play-core-pearl');
+ const fr=fire?.getBoundingClientRect(),cr=core?.getBoundingClientRect();
+ const rect=fr?.width>0&&fr?.height>0?fr:cr;
+ const viewport=window.visualViewport;
+ const w=viewport?.width||document.documentElement.clientWidth||window.innerWidth;
+ const h=viewport?.height||document.documentElement.clientHeight||window.innerHeight;
+ const width=Math.min(330,w*.74);
+ const point=battleIconDockPoint(rect,w,h,width);
+ dock.style.left=((viewport?.offsetLeft||0)+point.left)+'px';
+ dock.style.top=((viewport?.offsetTop||0)+point.top)+'px';
 }
 function battleIconDock(actions,phase){
  const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
  if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
- const core=document.querySelector('.play-village-core');if(!core)return;
+ const core=document.querySelector('.play-village-core');
  let dock=document.getElementById('battleFireIconDock');
  if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
- const eligible=(Array.isArray(actions)?actions:[]).filter(a=>!a.unavailable&&a.actionId)
+ // Only server-eligible actions are actionable. Keep their dock on screen during
+ // a transient busy/sync state (buttons disabled) instead of making it disappear.
+ const eligible=(Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable)
    .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
- const active=playSceneState.step==='battle'&&show&&eligible.length>0&&!battleState.busy&&!battleState.syncPending;
- dock.hidden=!active;if(!active){dock.replaceChildren();delete dock.dataset.sig;return}
- // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
- const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
- if(Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
-  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
- }
- const fire=core.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect();
- if(rect){dock.style.left=(rect.left+rect.width/2)+'px';dock.style.top=Math.min(innerHeight-83,rect.bottom+10)+'px'}
- const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
- if(dock.dataset.sig===key)return;dock.dataset.sig=key;
+ dock.dataset.actionCount=String(eligible.length);
+ dock.dataset.unmappedCount=String((Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable&&!battleIconResolve(a).length).length);
+ const active=playSceneState.step==='battle'&&show&&eligible.length>0;
+ dock.hidden=!active;
+ if(!active){dock.replaceChildren();delete dock.dataset.sig;battleIconClearDrag();return}
+ battleIconDockPosition(dock,core);
+ const locked=!!(battleState.busy||battleState.syncPending||battleState.undoBusy);
+ const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.actionId,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
+  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'')+':'+String(locked);
+ if(dock.dataset.sig===key)return;
+ // Do not remove the pointer-captured button during an active gesture.
+ if(battleIconDragging)return;
+ dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon})=>
   '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
-  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
+  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'"'+(locked?' disabled':'')+'>'+
   '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
 }
 function battleIconTargetAt(x,y,action){
@@ -4732,10 +4779,14 @@ function battleIconBind(){
  });
  const finish=e=>{
   const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  const target=d.target,id=d.actionId,moved=d.moved,btn=e.target.closest?.('[data-fire-action]');
+  const id=d.actionId,moved=d.moved;
+  // Resolve the release point as well: on iPhone Safari, a rapid drag may have
+  // no last pointermove event before pointerup. Never confirm an invalid target.
+  const a=battleActions().find(x=>x.id===id&&!x.unavailable);
+  const target=e.type==='pointerup'&&a&&a.targetCount>0?
+    (battleIconTargetAt(e.clientX,e.clientY,a)||d.target):null;
   battleIconClearDrag();
-  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending)return;
-  const a=battleActions().find(x=>x.id===id&&!x.unavailable);if(!a)return;
+  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending||!a)return;
   if(!moved){
    if(a.noTarget){
     if(!confirm('Xác nhận '+a.name+'?'))return;
