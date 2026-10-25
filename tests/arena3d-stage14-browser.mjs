@@ -35,6 +35,11 @@ async function check(engine,kind){
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:18000});
   assert.equal(await page.locator('#arena-audio-file').count(),1);
   assert.equal(await page.locator('#arena-audio-action').count(),1);
+  // Upload a real (test) file into GM-local browser memory; never to Worker.
+  await page.locator('#arena-audio-file').setInputFiles({
+    name:'arena-preview.mp3',mimeType:'audio/mpeg',buffer:Buffer.from('ID3\\0ARENA_TEST_AUDIO','utf8')
+  });
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().loadedVoiceFiles===1,null,{timeout:3000});
   await page.locator('#arena-audio').click();
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).soundEnabled,true);
   // Real 3D draw checks: these cues are strictly synthetic, never live Core/GM secrets.
