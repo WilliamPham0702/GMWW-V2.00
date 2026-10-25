@@ -5,6 +5,7 @@ import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
 import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction,artifactVisualSnapshot,shouldRevokeVisualAfterUndo} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
+import {privateTurnActionOptions} from '../assets/village/arena-3d/stage29-gm-actions.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -129,7 +130,33 @@ export class RoomDurableObject extends GameRoomDurableObject{
       label:String(r.label||r.roleId||'').slice(0,80),
       actorIds:(r.loginIds||[]).filter(id=>actors.includes(id)).map(id=>'member:'+id)
     })):[];
+    // This function is reached only through the bearer-protected GM-only
+    // /arena/gm-visuals path. Never include availableActions in public WS.
+    const activeTurnActors=actors.map(id=>'member:'+id);
+    const roleAssignments=roles.length?roles:[{roleId:String(step.roleId||''),
+      actorIds:activeTurnActors}];
+    const availableActions=[];
+    for(const assigned of roleAssignments){
+      const roleId=String(assigned.roleId||'');
+      for(const memberId of (assigned.actorIds||[]).slice(0,30)){
+        const loginId=String(memberId).replace(/^member:/,'');
+        if(!actors.includes(loginId))continue;
+        const delivered=await this.ctx.storage.get('roles:'+loginId)||[];
+        const legacy=delivered.length?null:await this.ctx.storage.get('role:'+loginId);
+        const card=verifiedPrivateCard({actorId:loginId,roleId,
+          roles:Array.isArray(delivered)&&delivered.length?delivered:[legacy].filter(Boolean),
+          matchId:meta.matchId});
+        const owned=await this.ctx.storage.get('artifact:'+loginId);
+        const artifactId=String(owned?.artifactId||'');
+        const items=privateTurnActionOptions({
+          actorId:loginId,roleId,artifactId,card,
+          artifactCard:owned?.matchId===meta.matchId?owned.artifactCard:null,
+          turnActorIds:activeTurnActors,matchOk:Boolean(card||owned?.matchId===meta.matchId)});
+        availableActions.push(...items);
+      }
+    }
     return {complete:false,turnId:String(step.id||'').slice(0,160),
+      availableActions:availableActions.slice(0,90),
       label:String(step.label||step.kind||'Đến lượt').slice(0,120),
       kind:String(step.kind||'').slice(0,35),
       roleId:String(step.roleId||'').slice(0,80),
