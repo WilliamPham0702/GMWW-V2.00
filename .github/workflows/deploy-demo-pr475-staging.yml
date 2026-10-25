@@ -1,0 +1,138 @@
+name: "PR475 DEMO STAGING - isolated iPhone Safari and Player Web"
+on:
+  push:
+    branches:
+      - "fix/demo-assassin-spiritualist-gallows-audio-20261024"
+    paths:
+      - "src/**"
+      - "server-game/current/**"
+      - "server-game/src/**"
+      - "tests/demo-assassin-gallows-divination.test.mjs"
+      - "tests/v3189-fire-gallows-voting.test.mjs"
+      - "assets/village/village-layout.js"
+      - ".github/scripts/build-demo-pr475-staging.mjs"
+      - "wrangler.demo-pr475-staging.jsonc"
+      - ".github/workflows/deploy-demo-pr475-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-demo-pr475-staging
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: "Kiem tra rieng 4 loi va cau hinh STAGING"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: "Test Sát Thủ, 2-3 mục tiêu, audio 3-5s, quyền Cứu Giết"
+        run: |
+          node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs
+          node --test tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+      - name: "Chặn liên kết Production và namespace khác trong STAGING"
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const c=JSON.parse(fs.readFileSync('wrangler.demo-pr475-staging.jsonc','utf8'));
+          if(c.name!=='gmww-demo-pr475-staging'||c.main!=='src/index.js')throw Error('Wrong staging worker');
+          if(c.routes||c.route||c.services||c.env||c.vars)throw Error('Unexpected Production route/service binding');
+          if(c.durable_objects?.bindings?.length!==1||c.durable_objects.bindings[0].class_name!=='RoomDurableObject')
+            throw Error('Stage must own room/member DO without binding Production namespace');
+          if(JSON.stringify(c).includes('gmww-v2-00_RoomDurableObject'))throw Error('Production DO namespace');
+          console.log('PASS: worker name, DO and routes isolated');
+          NODE
+          node .github/scripts/build-demo-pr475-staging.mjs
+          node --check src/index.js
+          node --check assets/gm-pr475/app.js
+          npx wrangler deploy --config wrangler.demo-pr475-staging.jsonc --dry-run
+
+  deploy-staging:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/demo-assassin-spiritualist-gallows-audio-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: "Phat hanh STAGING rieng, khong main hoac Production"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: "Tao GM Safari stage va key rieng (khong in key)"
+        run: node .github/scripts/build-demo-pr475-staging.mjs
+      - name: "Deploy Worker STAGING va Durable Object namespace rieng"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.demo-pr475-staging.jsonc
+      - name: "HTTP smoke tren Stage: health, GM Safari, Player Web, phong DEMO"
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-demo-pr475-staging.williampham0702.workers.dev"
+          for i in $(seq 1 25); do
+            if curl -fsS "$BASE/api/health" > /tmp/gmww475-health.json; then break; fi
+            sleep 2
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/gmww475-health.json
+          curl -fsS "$BASE/gm-pr475/GMWW.html" | grep -q 'GMWW STAGING PR #475'
+          curl -fsS "$BASE/gm-pr475/app.js" > /tmp/gmww475-app.js
+          grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gmww475-app.js
+          if grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gmww475-app.js; then
+            echo "::error::Production origin leaked into staging"; exit 1
+          fi
+          curl -fsS "$BASE/" | grep -q 'GMWW PLAYER'
+          TOKEN="$(cat /tmp/gmww-pr475-staging-gm-token)"
+          ROOM="$(curl -fsS -X POST "$BASE/api/rooms" -H "authorization: Bearer $TOKEN" \
+            -H 'content-type: application/json' \
+            --data '{"demo":true,"roomMode":"offline","roomName":"PR475 STAGING QA","seatCount":8}')"
+          CODE="$(node -e 'const d=JSON.parse(process.argv[1]); if(!d.roomCode)process.exit(1);process.stdout.write(d.roomCode)' "$ROOM")"
+          test -n "$CODE"
+          curl -fsS "$BASE/join/$CODE" | grep -q 'GMWW PLAYER'
+          curl -fsS -X POST "$BASE/api/gm/rooms/$CODE/delete" -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' --data '{}' > /tmp/gmww475-cleanup.json
+          echo "PASS: isolated GM Safari, Player Web and Demo room; temporary QA room deleted."
+          echo "### GMWW PR #475 STAGING - doc lap Production" >> "$GITHUB_STEP_SUMMARY"
+          echo "GM Safari iPhone: $BASE/gm-pr475/GMWW.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "Player Web: $BASE/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Test: 4 DEMO rules, valid Worker/Player UI, demo room created/deleted." >> "$GITHUB_STEP_SUMMARY"
+      - name: "WebKit mô phỏng khung hình iPhone: GM và Player Web (không phải iPhone vật lý)"
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+          node --input-type=module <<'NODE'
+          import {webkit} from 'playwright';
+          import assert from 'node:assert/strict';
+          const browser=await webkit.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
+          const base='https://gmww-demo-pr475-staging.williampham0702.workers.dev';
+          try{
+            await page.goto(base+'/gm-pr475/GMWW.html',{waitUntil:'domcontentloaded',timeout:60000});
+            await page.locator('#home').waitFor({state:'attached',timeout:30000});
+            assert.match(await page.title(),/STAGING PR #475/);
+            await page.screenshot({path:'/tmp/gmww-pr475-iphone-gm.png'});
+            await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:60000});
+            assert.ok((await page.content()).includes('GMWW PLAYER'));
+            await page.screenshot({path:'/tmp/gmww-pr475-iphone-player.png'});
+            console.log('PASS WebKit iPhone-sized load. Real iPhone approval still required.');
+          }finally{await browser.close();}
+          NODE
+      - name: "Bang chung WebKit iPhone gia lap"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-pr475-stage-iphone-webkit
+          path: /tmp/gmww-pr475-iphone-*.png
+          if-no-files-found: ignore
