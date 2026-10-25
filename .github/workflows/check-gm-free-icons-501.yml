@@ -1,5 +1,15 @@
 name: "Kiểm tra 5 icon GM và Player Web #501"
 on:
+  push:
+    branches: [main]
+    paths:
+      - "assets/village/village.mjs"
+      - "server-game/current/app.js"
+      - "server-game/current/GMWW.html"
+      - "server-game/current/style.css"
+      - "src/index.js"
+      - "package.json"
+      - ".github/workflows/check-gm-free-icons-501.yml"
   pull_request:
     branches: [main]
     paths:
