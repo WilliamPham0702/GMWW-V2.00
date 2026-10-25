@@ -19,7 +19,7 @@ function mockElement(tag){
  };
 }
 
-test('Render ba bục dùng đúng ID hồ sơ và không dùng avatar cũ',()=>{
+test('Top 3 không bục dùng đúng ID hồ sơ và không dùng avatar cũ',()=>{
  const target=mockElement('div'),status=mockElement('p');
  const document={
   getElementById:id=>id==='gmwwHomeTop3'?target:id==='gmwwHomeTop3Status'?status:null,
@@ -42,15 +42,15 @@ test('Render ba bục dùng đúng ID hồ sơ và không dùng avatar cũ',()=>
   const card=target.children[i];
   assert.equal(card.dataset.rank,String(rank));
   assert.deepEqual(card.children.map(x=>x.className),[
-   'gmww-home-podium-stage-v3211','gmww-home-podium-platform-v3213','gmww-home-podium-info-v3213'
+   'gmww-home-top3-stage-v3219','gmww-home-top3-glass-v3219'
   ]);
   const image=card.children[0].children[1].children[0];
   assert.equal(image.dataset.memberCharacterId,id);
   assert.equal(image.src,'https://gmww.example.test/api/game-characters/'+id+'/image?rev=c40-4');
   assert.ok(!image.src.includes('/originals/'));
-  assert.equal(card.children[2].children[1].textContent,name);
-  assert.equal(card.children[2].children[2].textContent,'100%');
-  assert.equal(card.children[2].children[5].textContent,'1 thắng / 1 ván');
+  assert.equal(card.children[1].children[1].textContent,name);
+  assert.equal(card.children[1].children[2].textContent,'100%');
+  assert.equal(card.children[1].children[5].textContent,'1 thắng / 1 ván');
  }
 });
 

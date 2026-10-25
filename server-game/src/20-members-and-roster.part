@@ -538,50 +538,45 @@ function gmwwHomeRenderTop3(rows){
     status.textContent=!Array.isArray(rows)?'Không tải được xếp hạng. Nhấn làm mới để thử lại.'
       :'Chưa có người chơi hoàn tất ván để xếp hạng.';
   }
-  // Bảng vinh danh thật: lấy gameCharacterId hiện tại từ cùng hồ sơ Worker/Player Web.
-  // Thứ tự bục cố định 02–01–03, dữ liệu và kết quả thắng luôn từ Server.
+  // Không dựng bục hay dùng ảnh mẫu: Character thực tế theo gameCharacterId của hồ sơ.
+  // Thứ tự Top 3 là 02–01–03; giữ nguyên phép tính tỷ lệ từ Server.
   for(const index of [1,0,2]){
     const member=best[index];
     if(!member)continue;
     const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
     const button=document.createElement('button');
-    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211 gmww-home-winner-v3213 gmww-home-sea-v3216';
+    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-top3-sea-v3219';
     button.dataset.rank=String(place);
     button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
-    const stage=document.createElement('span');stage.className='gmww-home-podium-stage-v3211';
-    const glow=document.createElement('span');glow.className='gmww-home-podium-glow-v3211';glow.setAttribute('aria-hidden','true');
-    const character=document.createElement('span');character.className='gmww-home-podium-character-v3211';
+    const stage=document.createElement('span');stage.className='gmww-home-top3-stage-v3219';
+    const glow=document.createElement('span');glow.className='gmww-home-top3-halo-v3219';glow.setAttribute('aria-hidden','true');
+    const character=document.createElement('span');character.className='gmww-home-top3-character-v3219';
     const characterId=String(member.gameCharacterId||'').trim();
-    // Chỉ dùng ảnh Idle từ chính atlas Character 40 đang hiển thị trong làng/Player Web.
-    // Tuyệt đối không lấy originals cũ hoặc dùng avatarId lịch sử để giả danh người chơi.
+    // Cùng endpoint ảnh Character Idle C40 với làng; không fallback sang avatarId cũ.
     if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(characterId)){
       const image=document.createElement('img');
       image.src=GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(characterId)+'/image?rev=c40-4';
       image.alt='';image.loading='lazy';image.decoding='async';
       image.dataset.memberCharacterId=characterId;
-      image.onerror=()=>{image.remove();character.textContent='✦';character.classList.add('gmww-home-character-unavailable-v3213')};
+      image.onerror=()=>{image.remove();character.textContent='✦';character.classList.add('gmww-home-character-unavailable-v3219')};
       character.append(image);
     }else{
       character.textContent='✦';
-      character.classList.add('gmww-home-character-unavailable-v3213');
+      character.classList.add('gmww-home-character-unavailable-v3219');
     }
     stage.setAttribute('aria-hidden','true');stage.append(glow,character);
-    const podium=document.createElement('span');podium.className='gmww-home-podium-platform-v3213';podium.setAttribute('aria-hidden','true');
-    const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
-    crown.textContent=String(place);podium.append(crown);
-    const details=document.createElement('span');details.className='gmww-home-podium-info-v3213';
+    const details=document.createElement('span');details.className='gmww-home-top3-glass-v3219';
     const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
     const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';
     name.textContent=String(member.displayName||member.loginId||'Thành viên');
-    const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';
-    percent.textContent=rate+'%';
+    const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';percent.textContent=rate+'%';
     const percentLabel=document.createElement('span');percentLabel.className='gmww-home-top3-percent-label-v377';percentLabel.textContent='TỶ LỆ THẮNG';
     const meter=document.createElement('span');meter.className='gmww-home-top3-meter-v377';
     const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,rate))+'%';meter.append(fill);
     const record=document.createElement('small');record.className='gmww-home-top3-record-v377';
     record.textContent=stats.w+' thắng / '+stats.games+' ván';
     details.append(badge,name,percent,percentLabel,meter,record);
-    button.append(stage,podium,details);
+    button.append(stage,details);
     button.addEventListener('click',()=>gmwwHomeOpenMemberRanking());
     target.append(button);
   }
