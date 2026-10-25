@@ -46,6 +46,17 @@ async function check(engine,kind){
   assert.ok(eco.drawCalls<qualityDraws,'eco mode must reduce actual GPU draw calls');
   await page.getByRole('button',{name:'Mượt',exact:true}).click();
   await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().lowPower===false,null,{timeout:15000});
+  // GĐ19–21: Browser telemetry is local and safe; don't upload tokens/IDs.
+  await page.locator('#arena-mobile-diagnostics').evaluate(el=>{el.open=true});
+  await page.locator('#arena-diag-refresh').click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().mobileQa?.sampleCount>0,
+    null,{timeout:12000});
+  const diag=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY().mobileQa);
+  assert.ok(diag.paintCpuP95Ms>=0,'CPU render stats collected on device');
+  assert.ok(diag.drawCalls>0,'GPU draw-call statistics collected');
+  assert.equal(diag.thermalCelsius,null,'Safari thermals are not exposed by JS');
+  assert.doesNotMatch(JSON.stringify(diag),/gmToken|roleId|artifactId|loginId|roomCode/);
+  assert.equal(await page.locator('#arena-diag-copy').count(),1);
   await page.locator('#sample-cast').click();
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:18000});
