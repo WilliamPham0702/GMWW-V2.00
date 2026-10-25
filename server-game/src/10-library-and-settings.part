@@ -193,7 +193,7 @@ async function gmwwOpenAudioNameEditor(a){
     drawSelection();
   };
   from.value=String(Math.max(0,Number(a.roleNameStart)||0));
-  to.value=String(Math.max(Number(from.value)+.05,Number(a.roleNameEnd)||4));
+  to.value=String(Math.max(Number(from.value)+.05,Number(a.roleNameEnd)||5));
   from.addEventListener('input',()=>clamp('start'));to.addEventListener('input',()=>clamp('end'));
   audio.onloadedmetadata=()=>{
     if(Number.isFinite(audio.duration)&&audio.duration>.05)duration=audio.duration;
