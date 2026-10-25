@@ -1,4 +1,4 @@
-name: Arena 3D GĐ14–16 — Core, Artifact, Audio, E2E STAGING
+name: Arena 3D GĐ14–34 — Core V3.226, Player 3D, E2E STAGING
 on:
   push:
     branches: ["feature/arena3d-stage14-16-dynamic-artifacts-audio"]
@@ -47,7 +47,7 @@ permissions:
   contents: read
 jobs:
   verify-stage14:
-    name: "GĐ14–16: biểu cảm, animation, hiệu năng"
+    name: "GĐ14–34: kiểm toán Core, Player 3D, animation"
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -89,7 +89,7 @@ jobs:
         run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
 
   deploy-stage14-preview:
-    name: "GĐ14–16: STAGING riêng + browser iPhone"
+    name: "GĐ14–34: STAGING, WebKit/Chrome, Core 30"
     needs: verify-stage14
     if: >-
       github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' &&
