@@ -44,7 +44,7 @@ test('GĐ12 GM token gate, synthetic-only audio preview and direct user toggle',
  assert.match(src,/playArenaCastSound\(normalized\)/);
  assert.match(src,/playArenaCastSound\(cue,\{syntheticPreview:true\}\)/);
  assert.match(src,/\$\('arena-audio'\)\.onclick=/);
- assert.match(src,/window\.addEventListener\('pagehide',\(\)=>arenaAudio\.stop\(\)\)/);
+ assert.match(src,/window\.addEventListener\('pagehide',\(\)=>\{arenaAudio\.stop\(\);localVoice\.clear\(\)\}\)/);
  assert.ok(html.includes('id="arena-audio"'));
  assert.doesNotMatch(src,/dataset\.gmwwStage10(?:Motion|Projectile|SoundId)/);
 });
