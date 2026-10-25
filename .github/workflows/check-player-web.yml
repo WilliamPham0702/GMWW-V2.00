@@ -57,7 +57,7 @@ jobs:
       - name: Chỉ kiểm thử PR475 - Sát Thủ, soi xét, audio và quyền vote
         if: steps.scope.outputs.mode == 'demo-475'
         run: |
-          node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
