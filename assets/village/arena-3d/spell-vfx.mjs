@@ -47,7 +47,7 @@ export function createArenaSpellVfx(THREE,root){
     for(const ring of rings)ring.visible=false;
     glow.visible=false;pearls.count=0;
   }
-  function update({type,from,to,start,end},now){
+  function update({type,from,to,start,end,signature=null},now){
     if(!SPELL_KINDS.includes(type)||!from||!to||!Number.isFinite(start)||!Number.isFinite(end)||
       now<start||now>=end){
       clear();return false;
@@ -64,19 +64,21 @@ export function createArenaSpellVfx(THREE,root){
       ring.visible=true;ring.material.color.copy(color);
       ring.material.opacity=(reducedMotion?.48:.68)*Math.min(1,remaining*5);
       ring.position.set(i?from.x:to.x,(i?from.y:to.y)-.45,i?from.z:to.z);
-      ring.rotation.z=i?ritual.casterRingRotation:ritual.targetRingRotation;
+      ring.rotation.z=(i?ritual.casterRingRotation:ritual.targetRingRotation)+(signature?.orbitalPhase||0);
       ring.rotation.x=-Math.PI/2+ritual.ringTilt;
-      ring.scale.setScalar(pulse*(i?.72:1.03));
+      ring.scale.setScalar(pulse*(i?.72:1.03)*(signature?.impactScale||1));
     }
     glow.visible=true;glow.position.set(to.x,to.y,to.z);
-    glow.scale.setScalar(ritual.glowScale*Math.min(1,remaining*4));
+    glow.scale.setScalar(ritual.glowScale*(signature?.impactScale||1)*Math.min(1,remaining*4));
     glow.material.color.copy(color);glow.material.opacity=.53*remaining;
     const count=reducedMotion?4:lowPower?7:maxPearls;
     pearls.count=count;pearls.material.color.copy(color);
     pearls.material.opacity=reducedMotion?.55:.85*remaining;
     for(let i=0;i<count;i++){
       const art=ritualPearlPoint(type,i,count,now,{start,end,reducedMotion});
-      position.set(to.x+art.x,to.y-.5+art.y,to.z+art.z);
+      const a=signature?.orbitalPhase||0;
+      position.set(to.x+art.x*Math.cos(a)-art.z*Math.sin(a),to.y-.5+art.y,
+        to.z+art.x*Math.sin(a)+art.z*Math.cos(a));
       scale.setScalar(art.scale);
       matrix.compose(position,quaternion,scale);
       pearls.setMatrixAt(i,matrix);
