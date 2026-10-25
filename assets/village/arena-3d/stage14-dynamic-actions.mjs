@@ -83,7 +83,8 @@ export function artifactVisualSnapshot(rows,ownedArtifacts,{matchId=''}={}){
    const id=checked(String(fn?.actionId||fn?.id||''));
    if(!id||!matchConfiguredAction(card,id))continue;
    const visual=familyForConfirmedAction({actionId:id,card:{functions:[fn]},type:'effect_notice'});
-   if(visual)out[loginId+':'+artifactId+':'+id]=visual.family;
+   if(visual&&!(loginId+':'+artifactId+':'+id in out))
+     out[loginId+':'+artifactId+':'+id]=visual.family;
   }
  }
  return out;
