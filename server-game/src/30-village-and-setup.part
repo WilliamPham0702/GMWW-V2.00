@@ -175,9 +175,14 @@ function battleInvalidateAudioCache(kind,id){
 }
 function battleFindAudio(kind,targetId,name){
   const list=Array.isArray(state?.audio?.[kind])?state.audio[kind]:[];
-  const target=String(targetId||''),label=String(name||'').trim().toLowerCase();
+  const label=String(name||'').trim().toLowerCase();
   // Empty IDs are not a wildcard: this previously played "Xác nhận" for Artifact đầu ván.
   const fold=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+  const rawTarget=String(targetId||'');
+  // Saved V1.11 rooms may retain legacy 'source-18' even though the V2 audio
+  // catalog is keyed by 'role_old_witch'. Normalize AUDIO lookup only.
+  const target=kind==='cards'&&(rawTarget==='source-18'||fold(name)==='phu thuy gia')?
+    'role_old_witch':rawTarget;
   const exact=item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target);
   const candidates=list.filter(item=>exact(item)||(label&&fold(item?.name)===fold(label)&&(!item?.targetId||String(item.targetId)===target)));
   const linked=item=>!!(item?.url||item?.fileName||item?.sourceKey||item?.verifiedBinary);
@@ -269,7 +274,8 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const nameStart=Math.max(0,Number(row.roleNameStart)||0);
   const nameEnd=Number(row.roleNameEnd);
   const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:Number.isFinite(nameEnd)&&nameEnd>nameStart?nameEnd:nameStart+5}:null;
-  if(requestedCut&&battleUnlockedAudioContext?.state==='running'){
+  if((requestedCut||targetId==='role_old_witch'||targetId==='source-18'||targetId==='audio_system_day_wakeup')&&
+     battleUnlockedAudioContext?.state==='running'){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
