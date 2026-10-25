@@ -20,6 +20,10 @@ on:
       - "tests/arena3d-stage33-*"
       - "tests/arena3d-casting.test.mjs"
       - "tests/arena3d-player-public.test.mjs"
+      - "tests/arena3d-portal-handoff.test.mjs"
+      - "server-game/src/20-members-and-roster.part"
+      - "server-game/current/app.js"
+      - "server-game/current/GMWW.html"
       - "tests/arena3d-production-gm-adapter.test.mjs"
       - "tests/arena3d-native-gm-bridge.test.mjs"
       - "tests/arena3d-player-browser.mjs"
@@ -81,6 +85,7 @@ jobs:
           node --check tests/arena3d-casting.test.mjs
           node --check assets/village/arena-3d/player.mjs
           node --check tests/arena3d-player-public.test.mjs
+          node --check tests/arena3d-portal-handoff.test.mjs
           node --check assets/village/arena-3d/production-gm-adapter.mjs
           node --check tests/arena3d-production-gm-adapter.test.mjs
           node --check assets/village/arena-3d/gm-native-bridge.mjs
@@ -92,6 +97,9 @@ jobs:
       - name: "Kiểm thử GĐ14–16 và chuyển động phép"
         run: |
           node --test tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage33-parity.test.mjs tests/arena3d-stage26-28.test.mjs tests/arena3d-stage29-31.test.mjs tests/arena3d-stage22-frame-pacing.test.mjs tests/arena3d-stage19-21.test.mjs tests/arena3d-stage18-performance.test.mjs tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+      - name: "Xác minh GMWW nguồn/bundle không lệch sau bridge Arena 3D"
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
       - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
         run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
 
