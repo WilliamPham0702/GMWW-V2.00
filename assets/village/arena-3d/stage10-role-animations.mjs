@@ -1,6 +1,7 @@
 // Stage 10: art-only animation catalog. Role identity MUST come from authorized GM-private Core cues.
 // No roles, secret targets or faction identities may be inferred from public room snapshots.
 import {coreActionFamily} from './stage11-core-action-bridge.mjs';
+import {arenaActionSignature} from './stage26-action-signatures.mjs';
 export const STAGE10_VERSION='gmww.arena.role-animation.10';
 const PROFILES=Object.freeze({
  wand:Object.freeze({motion:'wand-orbit',projectile:'arcane-ribbon',impact:'star-bloom',sound:'ritual_wand',color:'#b6a5ff'}),
@@ -31,7 +32,13 @@ export function resolveRoleAnimation({kind='vote',roleId='',actionId='',authoriz
  const role=safeRoleId(roleId),action=safeRoleId(actionId);
  // Core action takes priority for witch heal/kill, oracle inspect, and wolf bite.
  let family=coreActionFamily(action)||(Object.hasOwn(PROFILES,authorizedFamily)?authorizedFamily:null)||aliases.get(role)||({shield:'shield',inspect:'oracle',heal:'heal',attack:'attack',vote:'vote'}[kind]||'vote');
- if(coreActionFamily(action))return Object.freeze({family,...PROFILES[family]});
+ // Built-ins use the canonical action, never a role-name guess. Each action
+ // receives a distinct, deterministic visual accent without changing its
+ // family or sound ID. Core-confirmed custom role/Artifact uses trusted family.
+ if(coreActionFamily(action))return Object.freeze({
+  family,...PROFILES[family],signature:arenaActionSignature({
+   actionId:action,family,coreConfirmed:true})
+ });
  if(action==='wolf-bite'||action==='bite')family='wolf';
  else if(action==='protect')family='shield';
  else if(action==='inspect'||action==='aura-inspect')family='oracle';
@@ -40,7 +47,9 @@ export function resolveRoleAnimation({kind='vote',roleId='',actionId='',authoriz
  else if(family==='wolf'&&kind!=='attack')family=({shield:'shield',inspect:'oracle',heal:'heal'}[kind]||family);
  else if(family==='wand'&&kind==='heal')family='heal';
  const profile=PROFILES[family]||PROFILES.vote;
- return Object.freeze({family,...profile});
+ return Object.freeze({family,...profile,
+  signature:authorizedFamily&&Object.hasOwn(PROFILES,authorizedFamily)?
+   arenaActionSignature({actionId:action,family,coreConfirmed:true}):null});
 }
 export function authorizedAnimationCue(cue,{gmAuthorized=false}={}){
  if(!gmAuthorized||!cue?.cast)return null;
@@ -48,11 +57,12 @@ export function authorizedAnimationCue(cue,{gmAuthorized=false}={}){
  if(typeof cast.actorId!=='string'||!Array.isArray(cast.targetIds))return null;
  return Object.freeze({actorId:cast.actorId,targetIds:cast.targetIds.slice(0,5),
   kind:cast.kind,startedAt:cast.startedAt,expiresAt:cast.expiresAt,
-  profile:resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId})});
+  profile:resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,authorizedFamily:cast.visualFamily})});
 }
 export function animationMotion(profile,time,{reducedMotion=false}={}){
  const t=Number.isFinite(time)?time:0;
- const wave=reducedMotion?0:Math.sin(t*.018);
+ const accent=profile?.signature;
+ const wave=reducedMotion?0:Math.sin(t*.018*(accent?.gestureSpeed||1)+(accent?.orbitalPhase||0));
  return Object.freeze({armLift:profile?.motion==='wand-orbit'?.27+.18*wave:
   profile?.motion==='claw-charge'?.34+.12*wave:
   profile?.motion==='raise-shield'?.42:
