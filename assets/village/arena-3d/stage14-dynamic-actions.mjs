@@ -15,7 +15,13 @@ const EFFECT_FAMILY=Object.freeze({
  effect_snow_wolf_freeze:'curse',effect_exile:'curse',effect_kill:'attack',
  effect_seer:'oracle',effect_aura_read:'oracle',effect_fox_scan:'oracle',
  effect_bear_scan:'oracle',effect_inspect:'oracle',effect_hunted_death:'attack',
- effect_stab:'attack',effect_thief_change_role:'wand'
+ effect_stab:'attack',effect_thief_change_role:'wand',
+ effect_destroyer_kill:'attack',effect_knight_last_strike:'attack',
+ effect_destroyer_scry:'oracle',effect_scan_three:'oracle',
+ effect_find_seer:'oracle',effect_compare_faction:'oracle',
+ effect_assassin_mark:'curse',effect_transfer_bite:'wand',
+ effect_drunk_draw:'wand',effect_clone_watch:'scout',
+ effect_visit_house:'scout',effect_hunter_mark:'attack'
 });
 const checked=x=>typeof x==='string'&&SAFE_ACTION_ID.test(x)?x:'';
 export function matchConfiguredAction(card,actionId){
@@ -88,4 +94,12 @@ export function artifactVisualSnapshot(rows,ownedArtifacts,{matchId=''}={}){
   }
  }
  return out;
+}
+
+/** A successful Core undo can revoke only the visual from that exact match/cycle/action. */
+export function shouldRevokeVisualAfterUndo(saved,{matchId='',cycleKey='',undoToken=''}={}){
+ return Boolean(saved&&typeof saved.undoToken==='string'&&saved.undoToken&&
+   typeof undoToken==='string'&&undoToken&&
+   saved.matchId===String(matchId)&&saved.cycleKey===String(cycleKey)&&
+   saved.undoToken===undoToken);
 }
