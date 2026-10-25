@@ -120,3 +120,31 @@ test('GĐ22: no change to Core networking or GM private visibility, only GPU pai
  assert.match(live,/refreshPrivateGmEffects\(/);
  assert.doesNotMatch(source,/gmToken|roleId|artifactId|privateRole/);
 });
+
+import {arenaCrowdDetailPolicy,ARENA_STAGE23_25_VERSION}
+ from '../assets/village/arena-3d/stage23-25-mobile-budget.mjs';
+
+test('GĐ23: 6/12/20/30 seats reduce cosmetic GPU draws without removing actor, head, hands or VFX',()=>{
+ assert.equal(ARENA_STAGE23_25_VERSION,'gmww.arena.crowd-session.23-25');
+ const tiers=[6,12,20,24,30].map(characters=>arenaCrowdDetailPolicy({characters}));
+ assert.deepEqual(tiers.map(x=>x.tier),['full','full','crowd20','crowd30','crowd30']);
+ assert.deepEqual(tiers.map(x=>x.hiddenCount),[0,0,4,9,9]);
+ const essential=['head','eyeL','eyeR','armL','armR','shoeL','shoeR','tunic','skirt','stool'];
+ for(const policy of [...tiers,arenaCrowdDetailPolicy({characters:30,lowPower:true})]){
+  assert.equal(policy.essentialParts.includes('head'),true);
+  for(const p of essential)assert.ok(!policy.hiddenParts.includes(p),p+' remains visible');
+  assert.ok(!policy.hiddenParts.includes('shield'),'Core shield/VFX never hidden');
+  assert.ok(!policy.hiddenParts.includes('attack'),'Core attack/VFX never hidden');
+ }
+ assert.equal(arenaCrowdDetailPolicy({characters:30,lowPower:true}).hiddenCount,13);
+});
+
+test('GĐ24: crowd budget and stale effects must not reset a caster en route or holding a Core turn',()=>{
+ const source=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+ assert.match(source,/function applyVisualBudget\(\)/);
+ assert.match(source,/applyVisualBudget\(\);\s*draw\(performance\.now\(\),true\)/);
+ assert.match(source,/for\(const \[kind,deadline\] of actor\.effects\)/);
+ assert.match(source,/if\(actor\.travel\?\.to===0&&time>actor\.travel\.startedAt/);
+ assert.match(source,/if\(activeBeam&&time>=activeBeam\.start&&time<activeBeam\.until\)/);
+ assert.match(source,/const headMesh=meshes\.find\(p=>p\.name==='head'\)/);
+});
