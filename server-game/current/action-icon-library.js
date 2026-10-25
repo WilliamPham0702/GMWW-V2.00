@@ -1,7 +1,7 @@
 /* GMWW SEA icon library — V1. Draft feature: visual catalog only, no gameplay mutation. */
 (()=>{
 'use strict';
-const KEY='GMWW_ACTION_ICON_LIBRARY_V2';
+const KEY='GMWW_ACTION_ICON_LIBRARY_V3';
 const SHAPES={
 eye:'<path d="M15 48q33-40 66 0-33 40-66 0Z"/><circle cx="48" cy="48" r="11"/><circle cx="51" cy="44" r="3" fill="#fff6c7" stroke="none"/>',
 triple:'<path d="M17 35q15-17 30 0-15 17-30 0Zm34 0q15-17 30 0-15 17-30 0ZM33 64q15-17 30 0-15 17-30 0Z"/><circle cx="32" cy="35" r="3"/><circle cx="66" cy="35" r="3"/><circle cx="48" cy="64" r="3"/>',
@@ -42,7 +42,17 @@ const DEFAULT=[
 ["tham-nha","16_tham_nha","Thăm nhà","character","action_visit_house"],
 ["nhan-ban","17_nhan_ban","Nhân bản","character","action_clone_target"],
 ["doi-vai","18_doi_vai_tro","Đổi vai trò / Rút bài","card","action_thief_change_role,action_drunk_draw"],
-["hiep-si","19_hiep_si","Hiệp sĩ chọn chết","character","action_knight_last_strike"]
+["hiep-si","19_hiep_si","Hiệp sĩ chọn chết","character","action_knight_last_strike"],
+["phong-an","20_phong_an","Phong ấn","character",""],
+["cam-vote","21_cam_vote","Cấm bỏ phiếu","character",""],
+["cam-de-cu","22_cam_de_cu","Cấm đề cử","character",""],
+["nguyen-rua","23_nguyen_rua","Nguyền rủa","character",""],
+["ban-phuoc","24_ban_phuoc","Ban phước","character",""],
+["cuop-artifact","25_cuop_artifact","Cướp Artifact","character",""],
+["phan-don","26_phan_don","Phản đòn","character",""],
+["tang-hinh","27_tang_hinh","Tàng hình","character",""],
+["dat-bay","28_bay","Đặt bẫy","character",""],
+["thanh-tay","29_thanh_tay","Thanh tẩy","character",""]
 ].map(([id,file,name,target,actions])=>({id,name,assetId:file+'.png',shape:'spark',target,actions:actions?actions.split(','):[],image:''}));
 const clone=x=>JSON.parse(JSON.stringify(x));
 const cleanActions=s=>[...new Set(String(s||'').split(/[,\n;]/).map(x=>x.trim()).filter(x=>/^[A-Za-z][A-Za-z0-9_:-]{0,100}$/.test(x)))].slice(0,80);
@@ -56,6 +66,8 @@ function load(){
   assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
  }));
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return parse(saved)}catch(_){}
+ // Migrate V2 library without losing custom edits, deletions or role mappings; append ONLY the 10 newly approved IDs.
+ try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V2')||'null');if(Array.isArray(prior)&&prior.length<300){const existing=parse(prior),ids=new Set(existing.map(x=>x.id));return existing.concat(clone(DEFAULT.filter(x=>x.assetId&&/^2[0-9]_/.test(x.assetId)&&!ids.has(x.id))));}}catch(_){}
  // Preserve only user-created icons from an earlier Draft prototype, never overwrite approved artwork with old demo SVG.
  try{const old=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V1')||'null');
   if(Array.isArray(old)){
@@ -91,12 +103,47 @@ function auditCatalog(){
  for(const row of rows)row.label=String(definitions.find(x=>String(x.id)===row.id)?.name||row.id);
  return {roles:state.cards.length,artifacts:state.artifacts.length,actions:rows,missing:rows.filter(x=>!icons.some(icon=>icon.actions.includes(x.id)))};
 }
+
+const EXACT_ACTION_ICON_NAMES={
+ 'phong an':'phong-an','niem phong':'phong-an','phong an ky nang':'phong-an',
+ 'cam bo phieu':'cam-vote','cam vote':'cam-vote','khoa bo phieu':'cam-vote',
+ 'cam de cu':'cam-de-cu','khoa de cu':'cam-de-cu','cam chon':'cam-de-cu',
+ 'nguyen rua':'nguyen-rua','loi nguyen':'nguyen-rua',
+ 'ban phuoc':'ban-phuoc','ban phuc':'ban-phuoc','chuc phuc':'ban-phuoc',
+ 'cuop artifact':'cuop-artifact','cuop bao vat':'cuop-artifact','trom artifact':'cuop-artifact',
+ 'phan don':'phan-don','phan cong':'phan-don',
+ 'tang hinh':'tang-hinh','an than':'tang-hinh',
+ 'dat bay':'dat-bay','giang bay':'dat-bay',
+ 'thanh tay':'thanh-tay','giai nguyen':'thanh-tay'
+};
+function normalizedActionName(value){
+ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+// Only exact named semantic matches from the actual local catalog. Never infer IDs
+// from arbitrary substrings; no new game actions or ownership are created.
+function mapUnambiguousLocalActions(){
+ const report=auditCatalog();if(!report||!report.missing.length)return 0;
+ const next=clone(icons),lookup=new Map(next.map(icon=>[icon.id,icon]));
+ let mapped=0;
+ for(const action of report.missing){
+  if(!action.label||action.label===action.id)continue;
+  const iconId=EXACT_ACTION_ICON_NAMES[normalizedActionName(action.label)];
+  const icon=lookup.get(iconId);
+  if(!icon||icon.actions.includes(action.id))continue;
+  icon.actions.push(action.id);mapped++;
+ }
+ return mapped&&store(next)?mapped:0;
+}
+
 function renderAudit(){
  const box=document.getElementById('gmwwIconAudit');if(!box)return;
+ const autoMapped=mapUnambiguousLocalActions();
  const report=auditCatalog();
  if(!report){box.textContent='Chưa tìm thấy danh mục Vai Trò/Artifact trên thiết bị này.';return}
  box.innerHTML='<b>KIỂM KÊ TRÊN THIẾT BỊ</b><p>'+report.roles+' Vai Trò · '+report.artifacts+' Artifact · '+report.actions.length+' kiểu hành động chủ động · '+report.missing.length+' hành động chưa gán icon.</p>'+
  (report.missing.length?'<details><summary>Xem hành động chưa gán</summary>'+report.missing.map(x=>'<div>'+esc(x.label)+' — '+esc(x.kind==='artifact'?'Artifact':'Vai Trò')+' ('+esc(x.owners.join(', '))+') <select aria-label="Chọn icon" data-icon-select="'+esc(x.id)+'">'+icons.map(icon=>'<option value="'+esc(icon.id)+'">'+esc(icon.name)+'</option>').join('')+'</select> <button type="button" data-icon-map="'+esc(x.id)+'">Gán icon</button></div>').join('')+'</details>':'<small>Đã gán icon cho tất cả hành động đọc được.</small>');
+ if(autoMapped){const msg=document.createElement('p');msg.textContent='Đã tự gán '+autoMapped+' hành động trùng tên chính xác.';box.prepend(msg);}
+ const exportBtn=document.createElement('button');exportBtn.type='button';exportBtn.textContent='SAO CHÉP DANH SÁCH CHƯA GÁN';exportBtn.onclick=()=>{const latest=auditCatalog();if(!latest)return;const payload=JSON.stringify({roleCount:latest.roles,artifactCount:latest.artifacts,missing:latest.missing},null,2);if(navigator.clipboard?.writeText){navigator.clipboard.writeText(payload).catch(()=>window.prompt('Sao chép danh sách hành động:',payload));}else window.prompt('Sao chép danh sách hành động:',payload)};box.append(exportBtn);
  box.querySelectorAll('[data-icon-map]').forEach(b=>b.onclick=()=>{
   const selected=[...box.querySelectorAll('[data-icon-select]')].find(x=>x.dataset.iconSelect===b.dataset.iconMap)?.value;
   const next=clone(icons),found=next.find(x=>x.id===selected);
