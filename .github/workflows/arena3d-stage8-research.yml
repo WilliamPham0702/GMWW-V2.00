@@ -1,7 +1,7 @@
 name: Arena 3D GĐ8 — kiểm thử đúng phạm vi
 on:
   push:
-    branches: ["feature/arena3d-stage8-expressions-motion"]
+    branches: ["feature/arena3d-stage8-core-ritual-sequences"]
     paths:
       - "assets/village/arena-3d/**"
       - "tests/arena3d-stage8-*"
@@ -48,7 +48,7 @@ jobs:
   deploy-stage8-preview:
     name: "GĐ8: STAGING riêng + browser iPhone"
     needs: verify-stage8
-    if: github.ref == 'refs/heads/feature/arena3d-stage8-expressions-motion' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage8 == true
+    if: github.ref == 'refs/heads/feature/arena3d-stage8-core-ritual-sequences' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage8 == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
