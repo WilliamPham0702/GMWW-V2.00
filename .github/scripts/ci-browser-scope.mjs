@@ -731,8 +731,34 @@ function isHomeSea3219Scope(changes){
     !top.includes('button.append(stage,podium')&&!top.includes('/originals/');
 }
 
+// V3.221 — phạm vi xếp hạng trong trang GM; không chạy test gameplay ngoài task.
+const ranking3221Paths=new Set([
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+ 'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+ 'tests/member-ranking-games-first-v3221.test.mjs','tests/home-top3-podium-v3211.test.mjs',
+ 'docs/releases/GMWW-V3.221-ranking-games-first-20261025.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+]);
+function isRanking3221Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const map=new Map(changes.map(x=>[x.path,x]));
+ for(const path of ['server-game/current/app.js','server-game/src/20-members-and-roster.part',
+  'server-game/src/00-core-and-library.part','server-game/current/GMWW.html','src/index.js','package.json',
+  'tests/member-ranking-games-first-v3221.test.mjs','docs/releases/GMWW-V3.221-ranking-games-first-20261025.md'])
+  if(!map.has(path))return false;
+ if(!changes.every(x=>ranking3221Paths.has(x.path)&&['A','M'].includes(x.status)))return false;
+ const after=p=>map.get(p)?.after||'';
+ const gm=after('server-game/current/app.js'),src=after('server-game/src/20-members-and-roster.part');
+ return gm.includes("const VERSION='3.221'")&&gm.includes('function gmwwRankMembers(a,b)')&&
+  src.includes('function gmwwRankMembers(a,b)')&&
+  after('src/index.js').includes('VERSION="V3.221"')&&
+  after('package.json').includes('"version": "3.221.0"')&&
+  after('server-game/current/GMWW.html').includes('<title>GMWW V3.221</title>');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isRanking3221Scope(changes))return 'ranking-3221';
   if(isHomeSea3219Scope(changes))return 'home-sea-3219';
   if(isAudio3217Scope(changes))return 'audio-fix-3217';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
@@ -783,6 +809,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isRanking3221Scope(changes))return{mode:'ranking-3221',reason:'GMWW V3.221 xếp hạng ưu tiên nhiều ván'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
