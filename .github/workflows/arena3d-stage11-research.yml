@@ -5,6 +5,7 @@ on:
     paths:
       - "assets/village/arena-3d/**"
       - "src/arena3d-stage-worker.mjs"
+      - "assets/village/arena-3d/render-optimization.mjs"
       - "tests/arena3d-stage11-*"
       - "tests/arena3d-stage12-*"
       - "tests/arena3d-stage13-*"
@@ -48,7 +49,7 @@ jobs:
           node --check tests/arena3d-stage11-browser.mjs
       - name: "Kiểm thử GĐ11 và chuyển động phép"
         run: |
-          node --test tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+          node --test tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
       - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
         run: npx wrangler deploy --config wrangler.arena3d-stage11-staging.jsonc --dry-run
 
