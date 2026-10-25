@@ -289,8 +289,42 @@ function isPolicyScope(changes){
     changes.every(x=>policyPaths.has(x.path)&&['A','M'].includes(x.status));
 }
 
+
+// V3.208 audio-only release: whitelist the exact GM narration + day bulletin
+// files so unrelated Chrome Card/Seat/Character/OTA tests do not block it.
+// Unrecognized files or altered version markers always fall back to full.
+const audio208Paths=new Set([
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+ '.github/scripts/prepare-update-channel.mjs',
+ 'docs/releases/GMWW-V3.208-audio-v111-and-release-notes-20261025.md',
+ 'package.json','package-lock.json',
+ 'src/index.js','src/gmww-wolf-night-resolution.js','src/gmww-update-release-notes.js',
+ 'server-game/current/GMWW.html','server-game/current/app.js','server-game/current/style.css',
+ 'server-game/src/00-core-and-library.part','server-game/src/10-library-and-settings.part',
+ 'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+ 'tests/update-release-notes-range.test.mjs','tests/night-rules-audio-regression.test.mjs',
+ 'tests/v3133-timeline-audio-role-intel.test.mjs',
+ 'tests/v3141-fairy-role-scan-day-audio.test.mjs'
+]);
+function isAudio208Scope(changes){
+ const names=new Set(changes.map(c=>c.path));
+ if(!names.has('src/gmww-wolf-night-resolution.js')||
+    !names.has('server-game/src/10-library-and-settings.part')||
+    !names.has('src/gmww-update-release-notes.js')||
+    !names.has('server-game/current/app.js')||
+    !names.has('.github/scripts/ci-browser-scope.mjs')||
+    !names.has('.github/workflows/check-player-web.yml')||
+    !names.has('docs/releases/GMWW-V3.208-audio-v111-and-release-notes-20261025.md')||
+    !changes.every(c=>audio208Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const worker=changes.find(c=>c.path==='src/index.js')?.after||'';
+ const gm=changes.find(c=>c.path==='server-game/src/00-core-and-library.part')?.after||'';
+ const pkg=changes.find(c=>c.path==='package.json')?.after||'';
+ return worker.includes('VERSION="V3.208"')&&gm.includes("const VERSION='3.208'")&&pkg.includes('"version": "3.208.0"');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isAudio208Scope(changes))return 'audio-v3208';
   if(isPolicyScope(changes))return 'ci-policy';
   if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
@@ -328,6 +362,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
       if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)){
         git('merge-base','--is-ancestor','8772337ab95e7561aeba6d63b2ec2337d7bbee94','HEAD');
@@ -357,13 +392,14 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='audio-v3208')console.log('Chỉ xác minh cú pháp, SHA và luồng Audio/Tiên Tri/Thông cáo liên quan V3.208; bỏ kiểm thử khác.');
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }

@@ -39,7 +39,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.207",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3207",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.208",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3208",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1691,11 +1691,20 @@ export class RoomDurableObject extends DurableObject {
       const maidenVictims=resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
         interactions:rows,matchId:String(meta.matchId||""),night:n});
       for(const loginId of maidenVictims){
+        const visit=rows.find(row=>String(row?.actionId||"")==="action_visit_house"&&
+          normalizeLoginId(row?.actorId)===normalizeLoginId(loginId)&&
+          String(row?.matchId||"")===String(meta.matchId||"")&&Number(row?.night)===n);
+        const targetId=normalizeLoginId(visit?.loginId);
+        const assigned=(await this.ctx.storage.get("assignments"))||[];
+        const visited=assigned.find(row=>normalizeLoginId(row?.loginId)===targetId);
+        const faction=String(visited?.roleCard?.factionId||visited?.factionId||visited?.faction||"").toLowerCase();
+        const visitingWolf=String(visited?.roleId||"").includes("wolf")||faction==="wolf"||faction.includes("sói")||faction.includes("soi");
+        const maidenReason=visitingWolf?"Thiếu Nữ chết vì đến thăm nhà Sói.":"Thiếu Nữ chết vì người được thăm đã chết trong đêm.";
         const id="maiden-visit:"+String(meta.matchId)+":"+n+":"+loginId;
         if(rows.some(row=>String(row?.id||"")===id))continue;
         rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
           night:n,cycleKey:key,effectActive:true,actionId:"action_visit_house",
-          effectId:"effect_visit_house",effectName:"Thăm Nhà",message:"Thiếu Nữ chết vì quy tắc Thăm Nhà.",
+          effectId:"effect_visit_house",effectName:"Thăm Nhà",message:maidenReason,
           createdAt:now,source:"maiden-night-engine",status:"pending",response:null});
         await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
       }

@@ -31,9 +31,9 @@ test('older GM 3.83 to 3.86 sees V3.84, V3.85 and V3.86 (not V3.82)', () => {
  assert.deepEqual(gmwwReleaseNotesBetween(notes, '3.83', '3.86'), notes.slice(1, 4));
 });
 
-test('no update if installed version equals or exceeds release', () => {
- assert.deepEqual(gmwwReleaseNotesBetween(notes, '3.86', '3.86'), []);
- assert.deepEqual(gmwwReleaseNotesBetween(notes, '3.87', '3.86'), []);
+test('installed release notes persist until another release, even if already installed', () => {
+ assert.deepEqual(gmwwReleaseNotesBetween(notes, '3.86', '3.86'), [notes[1]]);
+ assert.deepEqual(gmwwReleaseNotesBetween(notes, '3.87', '3.86'), [notes[1]]);
 });
 
 test('unversioned or future notes never appear in the upgrade summary', () => {
