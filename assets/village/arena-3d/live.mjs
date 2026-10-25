@@ -18,6 +18,7 @@ import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mj
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
 import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION} from './stage19-mobile-diagnostics.mjs';
+import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mobile-budget.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -35,6 +36,7 @@ let galleryPage=0,previewRitualKind=null,lastPacingHz=-1;
 const qualityController=createArenaAdaptiveQuality();
 const paintScheduler=createArenaPaintScheduler();
 const mobileQa=createArenaMobileDiagnostics();
+const sessionTrend=createArenaSessionTrend({maxMinutes:30});
 let webglLost=false;
 const matchSync=createMatchSyncGate();
 const arenaAudio=createArenaAudioEngine(window.AudioContext||window.webkitAudioContext);
@@ -153,6 +155,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage18=ARENA_STAGE18_VERSION;
   document.body.dataset.gmwwStage19=ARENA_STAGE19_VERSION;
   document.body.dataset.gmwwStage22=ARENA_STAGE22_VERSION;
+  document.body.dataset.gmwwStage25=ARENA_STAGE23_25_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
@@ -489,7 +492,7 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   pixelRatio:render.getPixelRatio(),reducedMotion,paintTargetHz:lastPacingHz,
   soundEnabled:arenaAudio.enabled,soundPlays:gmToken||synthetic?arenaAudio.playedCount:0,
   loadedVoiceFiles:gmToken||synthetic?localVoice.count:0,
-  mobileQa:mobileQa.snapshot(),webglLost,
+  mobileQa:mobileQa.snapshot(),sessionTrend:sessionTrend.summary(),crowdTier:field.crowdTier,webglLost,
   activeShieldDomes:gmToken||synthetic?field.visibleShieldDomes:0,
   activeWolfHeads:gmToken||synthetic?field.visibleWolfHeads:0});
 // GĐ18: keep Core networking at normal cadence, but reduce GPU painting while idle.
@@ -506,6 +509,7 @@ function loop(now){
     lastPacingHz=frameHz;document.body.dataset.gmwwPaintTargetHz=String(frameHz);
   }
   if(paintScheduler.shouldPaint(now,frameHz,{paused:webglLost})){
+    const sincePaint=lastPaint>0?now-lastPaint:null;
     lastPaint=now;
     const cpuStart=performance.now();
     resize();
@@ -522,6 +526,12 @@ function loop(now){
     mobileQa.sample({at:now,paintCpuMs:performance.now()-cpuStart,
       drawCalls:render.info.render.calls,targetHz:frameHz,
       characters:field.actorCount,pixelRatio:render.getPixelRatio()});
+    // GĐ25: summarize only per-minute local browser performance. Never
+    // send samples, room identifiers or authentication to the Worker.
+    sessionTrend.observe({at:now,drawCalls:render.info.render.calls,
+      paintCpuMs:performance.now()-cpuStart,intervalMs:sincePaint,
+      targetHz:frameHz,characters:field.actorCount,
+      active:field.hasActiveMotion(now)});
   }
   if(now-fpsAt>=1000){
     fps=Math.round(frames*1000/(now-fpsAt));frames=0;fpsAt=now;
@@ -537,16 +547,17 @@ function loop(now){
 // preserve authoritative Core/WebSocket state, character seats and GM authorization.
 canvas.addEventListener('webglcontextlost',event=>{
   event.preventDefault();
-  webglLost=true;mobileQa.lost();paintScheduler.reset();lastPaint=0;frames=0;
+  webglLost=true;mobileQa.lost();sessionTrend.gpuLost();paintScheduler.reset();lastPaint=0;frames=0;
   notice('WebGL tạm mất. Đang giữ trạng thái ván và đợi trình duyệt khôi phục đồ họa.');
 });
 canvas.addEventListener('webglcontextrestored',()=>{
-  webglLost=false;mobileQa.restored();paintScheduler.reset();lastPaint=0;lastResize='';
+  webglLost=false;mobileQa.restored();sessionTrend.gpuRestored();paintScheduler.reset();lastPaint=0;lastResize='';
   qualityController.reset();field.draw(performance.now(),true);
   notice('WebGL đã khôi phục; trạng thái ván và Character được giữ nguyên.');
 });
 document.addEventListener('visibilitychange',()=>{
   mobileQa.visibility(document.hidden);
+  sessionTrend.suspend(document.hidden);
   paintScheduler.reset();lastPaint=0;fpsAt=performance.now();frames=0;
   if(document.hidden)qualityController.observe(performance.now(),false);
   else if(!webglLost)field.draw(performance.now(),true);
@@ -564,16 +575,21 @@ function refreshMobileQa(){
     '\\nMất/khôi phục WebGL: '+info.contextLosses+'/'+info.contextRestores+
     ' | mẫu: '+info.sampleCount:
     'Chưa đủ mẫu đo. Xoay camera hoặc chạy nghi lễ để lấy mẫu.';
-  $('arena-diag-result').textContent=text.replaceAll('\\n',String.fromCharCode(10));
+  const trend=sessionTrend.summary();
+  $('arena-diag-result').textContent=text.replaceAll('\\n',String.fromCharCode(10))+
+    '\nPhiên dài: '+trend.storedWindows+' cửa sổ / '+trend.observedFrames+
+    ' khung · Nhân vật tối đa: '+trend.maxCharacters;
 }
 $('arena-diag-refresh').onclick=refreshMobileQa;
 $('arena-diag-reset').onclick=()=>{
-  mobileQa.reset();refreshMobileQa();
+  mobileQa.reset();sessionTrend.reset();refreshMobileQa();
 };
 $('arena-diag-copy').onclick=async()=>{
   try{
     if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
-    await navigator.clipboard.writeText(mobileQa.report());
+    const report=JSON.parse(mobileQa.report());
+    report.sessionTrend=sessionTrend.summary();
+    await navigator.clipboard.writeText(JSON.stringify(report,null,2));
     notice('Đã sao chép số đo hiệu năng ẩn danh; không có mã phòng, vai trò hay token.');
   }catch{notice('Không thể sao chép tự động. Hãy dùng nút Lấy kết quả để xem số đo.');}
 };
