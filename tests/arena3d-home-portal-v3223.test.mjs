@@ -77,7 +77,7 @@ test('V3.223: nút Chơi 2D giữ nguyên điều hướng cũ, đóng Arena QA'
 
 test('V3.223: OTA change is navigation-only, independent production/Core boundaries',()=>{
   const releases=readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
-  assert.match(releases,/V3\.223: Trang Chủ/);
+  assert.match(releases,/V3\.223: Tạm thời dùng nút VÀO LÀNG/);
   assert.match(releases,/copy\('server-game\/current\/GMWW\.html','GMWW\.html'\)/);
   assert.match(releases,/sha256:sha\(path\.join\(outRoot,rel\)\)/);
   const worker=readFileSync('src/index.js','utf8');
