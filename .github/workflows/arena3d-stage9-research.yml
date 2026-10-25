@@ -1,13 +1,13 @@
 name: Arena 3D GĐ9 — kiểm thử đúng phạm vi
 on:
   push:
-    branches: ["feature/arena3d-stage9-core-ritual-sequences"]
+    branches: ["feature/arena3d-stage9-full-match-sync"]
     paths:
       - "assets/village/arena-3d/**"
       - "tests/arena3d-stage9-*"
       - ".github/workflows/arena3d-stage9-research.yml"
   pull_request:
-    branches: ["feature/arena3d-stage7-expressions-motion"]
+    branches: ["feature/arena3d-stage8-core-ritual-sequences"]
     paths:
       - "assets/village/arena-3d/**"
       - "tests/arena3d-stage9-*"
@@ -48,7 +48,7 @@ jobs:
   deploy-stage9-preview:
     name: "GĐ9: STAGING riêng + browser iPhone"
     needs: verify-stage9
-    if: github.ref == 'refs/heads/feature/arena3d-stage9-core-ritual-sequences' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage9 == true
+    if: github.ref == 'refs/heads/feature/arena3d-stage9-full-match-sync' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage9 == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
