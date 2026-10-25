@@ -50,5 +50,5 @@ test('Bục 2.5D vàng–bạc–đồng, Character phóng 3 lần và hiệu �
   assert.match(css,/@keyframes gmwwVictoryDance3211/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(css,/animation:none!important/);
-  assert.match(html,/<title>GMWW V3\.211<\/title>/);
+  assert.match(html,/<title>GMWW V3\.214<\/title>/);
 });
