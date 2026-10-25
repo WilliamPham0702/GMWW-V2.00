@@ -8,7 +8,7 @@ const code=app.slice(app.indexOf('function gmwwHomeTop3Ranked'),app.indexOf('fun
 
 test('Ranking từ Server vẫn giữ thứ tự 02–01–03 và công thức tỷ lệ thắng',()=>{
  assert.match(code,/stats\.games>0/);
- assert.match(code,/\.sort\(\(left,right\)=>/);
+ assert.match(code,/\.sort\(gmwwRankMembers\)/);
  assert.match(code,/\.slice\(0,3\)/);
  assert.match(code,/for\(const index of \[1,0,2\]\)/);
  assert.match(code,/rate=Math\.round\(100\*stats\.w\/stats\.games\)/);
@@ -30,5 +30,5 @@ test('Top 3 V3.219 bỏ bục thật và chuyển toàn bộ chi tiết vào kí
  assert.doesNotMatch(render,/podium\.append|createElement\('span'\);podium/);
  assert.match(css,/V3\.219 — Top 3 không bục/);
  assert.match(css,/gmww-home-top3-glass-v3219/);
- assert.match(html,/<title>GMWW V3\.219<\/title>/);
+ assert.match(html,/<title>GMWW V3\.221<\/title>/);
 });
