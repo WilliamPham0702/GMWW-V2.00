@@ -32,3 +32,14 @@ Phạm vi: PR #487 nghiên cứu độc lập, Cloudflare Worker/DO STAGING tác
 
 ## Rollback
 Rollback Worker STAGING về GĐ22 version `dd78c369-351c-4f5f-989c-00b71dfc55d7`, hoặc revert các commit GĐ23–25 trên nhánh PR #487. Không ảnh hưởng Production.
+
+## Kết quả đã kiểm chứng tại STAGING — cả lô GĐ23–25
+- GitHub Actions / CI / Chrome / WebKit / Core E2E: **SUCCESS** https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40171674011.
+- Worker STAGING (Cloudflare version): **`755963dd-47f3-4c0a-bce7-65c0a21a2122`**, từ commit mã `752846fd2ee8abe50f2eefcf186ea713a93ed313`.
+- Chrome và WebKit (giả lập iPhone, GPU phần mềm), với cố định chế độ **Mượt**: 6 người **46**, 12 người **46**, 20 người **42**, 30 người **37 draw calls**. Giảm **9/46 ≈ 19,6% draw calls** khi ở 30 người so với giữ đầy đủ chi tiết (cùng một cảnh khác nhau về mật độ người). Chỉ đây là bằng chứng giảm draw calls, **không phải cam kết FPS tăng 19,6%**.
+- Browser: đổi đội hình nhiều lần 6/12/20/30, bật/tắt Tiết kiệm pin, ghi số đo phiên dài, 4 vai diễn hoạt Sói/Phù Thủy/Tiên Tri Hào Quang/Bảo Vệ và kiểm tra phân quyền UI: **PASS**, không ghi nhận uncaught browser error.
+- Core E2E thật trên DO STAGING (hai client): GM thử Bảo Vệ, đêm→ngày, đề cử→bỏ phiếu, kết thúc ván, viewer reconnect, từ chối viewer truy cập GM-only (HTTP 401): **PASS**.
+- Vai trò tùy chỉnh Shield hai mục tiêu và Artifact Heal một mục tiêu từ Core: **PASS**. Phần hiển thị VFX vẫn theo cấp quyền GM.
+- Node unit: chứng minh 90 phút dữ liệu giả lập vẫn chỉ giữ tối đa 30 cửa sổ trong tab; background/WebGL loss loại trừ mẫu nền: **PASS**.
+- Các FPS số đo headless ở Chrome ~8, WebKit ~2 với GPU phần mềm không phản ánh hiệu năng Safari iPhone vật lý. **Chưa có số đo FPS khi 30 người làm phép đồng thời trên iPhone thật, chưa có kiểm chứng 30–60 phút chơi thật, pin/nhiệt thật**.
+- **Kết luận kỹ thuật:** hoàn tất lô GĐ23–25 trên nhánh nghiên cứu và STAGING riêng, đủ điều kiện trình một **đợt nghiệm thu iPhone thực tế cho cả lô**, không nghiệm thu từng giai đoạn. PR #487 vẫn Draft, không merge, không deploy Production. Rollback STAGING về GĐ22 version `dd78c369-351c-4f5f-989c-00b71dfc55d7`.
