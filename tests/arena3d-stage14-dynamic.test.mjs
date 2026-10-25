@@ -75,12 +75,15 @@ test('GĐ14 regression: GM-assigned artifact retained VFX before Core sanitizes 
  const delivered={guest01:{loginId,matchId,artifactId,artifactCard:{
   actions:[{id:actionId,targetCount:1}]}}};
  const snapshot=artifactVisualSnapshot(incoming,delivered,{matchId});
+ const flattened=[{loginId,artifactId,artifactCard:incoming[0].artifact.artifactCard}];
+ assert.equal(artifactVisualSnapshot(flattened,delivered,{matchId})[loginId+':'+artifactId+':'+actionId],'heal');
  assert.equal(snapshot[loginId+':'+artifactId+':'+actionId],'heal');
  assert.equal(familyForConfirmedAction({actionId,type:'effect_notice',card:delivered.guest01.artifactCard,
   stagingFamily:snapshot[loginId+':'+artifactId+':'+actionId]}).family,'heal');
  assert.equal(artifactVisualSnapshot(incoming,{guest01:{...delivered.guest01,matchId:'other'}},{matchId})[loginId+':'+artifactId+':'+actionId],undefined);
  const worker=readFileSync('src/arena3d-stage-worker.mjs','utf8');
  assert.match(worker,/async gmAssign\(request,body\)/);
+ assert.match(worker,/row\?\.artifact\|\|row\?\.artifactId/);
  assert.match(worker,/const response=await super\.gmAssign\(request,body\)/);
  assert.match(worker,/const visual=artifactVisualSnapshot\(roles,owned,\{matchId\}\)/);
  assert.match(worker,/await this\.ctx\.storage\.put\('arena:artifact-vfx:'\+matchId,visual\)/);
