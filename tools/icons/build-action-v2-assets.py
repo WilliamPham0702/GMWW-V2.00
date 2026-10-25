@@ -5,6 +5,7 @@ Do not resample a contact sheet or replace content with an emoji. Keep the
 recognizable icon subject; remove only its shared medallion, scenery and rim.
 """
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
@@ -26,7 +27,6 @@ def frameless(source, name):
         head=source[:defs_end+len('</defs>')]
         motif=source[badge_end.end():]
         result=head+'\n'+motif
-        result=re.sub(r'viewBox="[^"]+"','viewBox="160 160 480 480"',result,count=1)
     else:
         # 30–39 use the other shared medal template: first seven direct
         # elements after <defs> are the circular rim and ornamental jewels.
@@ -38,7 +38,6 @@ def frameless(source, name):
         if not all(motifs[i].tag.endswith(t) for i,t in enumerate(['circle','circle','circle','path','path','path','path'])):
             raise ValueError('Unexpected medallion layout: '+name)
         for decorative in motifs[:7]:svg.remove(decorative)
-        svg.set('viewBox','190 180 620 620')
         result=ET.tostring(svg,encoding='unicode')
     if '<svg' not in result or '</svg>' not in result:
         # In ElementTree the root can carry an ns0 namespace.
@@ -56,6 +55,22 @@ def main():
         name=icon['svg']
         original=(SRC/name).read_text()
         result=frameless(original,name)
+        # Fit each unique original motif with its own generous 12% transparent margin.
+        # Auto-fitting avoids clipped arrows, handles, wings or diagonal weapons.
+        untrimmed=cairosvg.svg2png(bytestring=result.encode(),output_width=1024,output_height=1024)
+        with Image.open(io.BytesIO(untrimmed)) as im:
+            box=im.convert('RGBA').getchannel('A').getbbox()
+        if box is None:raise ValueError('Empty motif: '+name)
+        view=ET.fromstring(result).attrib.get('viewBox','0 0 800 800')
+        vx,vy,vw,vh=map(float,view.split())
+        cx=vx+((box[0]+box[2])/2)/1024*vw
+        cy=vy+((box[1]+box[3])/2)/1024*vh
+        size=max((box[2]-box[0])/1024*vw,(box[3]-box[1])/1024*vh)*1.34
+        if size<=0:raise ValueError('Invalid motif size: '+name)
+        result=re.sub(r'viewBox="[^"]+"',
+           f'viewBox="{cx-size/2:.2f} {cy-size/2:.2f} {size:.2f} {size:.2f}"',
+           result,count=1)
+
         svgpath=OUT/name
         pngpath=OUT/icon['png']
         svgpath.write_text(result)
