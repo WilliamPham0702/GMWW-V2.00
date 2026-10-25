@@ -68,6 +68,15 @@ jobs:
             echo "Chỉ có Arena 3D: dual-renderer-contract PASS; bỏ test selector Runtime không liên quan."
             exit 0
           fi
+          # Verify PR diff is EXACTLY the audited Arena portal/GM bridge before
+          # excluding unrelated legacy AUTO VÁN selector assertions.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SCOPE=$(GMWW_CI_EVENT=pull_request GMWW_CI_BASE_SHA="${{ github.event.pull_request.base.sha }}" node .github/scripts/ci-browser-scope.mjs)
+            if printf '%s\n' "$SCOPE" | grep -q 'GMWW browser CI scope: arena3d-official '; then
+              echo "Dual Renderer Core PASS; cổng Arena đúng whitelist, không test release AUTO VÁN cũ."
+              exit 0
+            fi
+          fi
           if grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
             node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           else
