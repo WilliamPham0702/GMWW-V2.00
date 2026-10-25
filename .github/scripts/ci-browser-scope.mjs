@@ -171,6 +171,20 @@ function isDemo475FinalGateScope(changes){
    changes.every(x=>demo475FinalGatePaths.has(x.path)&&['A','M'].includes(x.status));
 }
 
+// Exact final CI-selector correction after PR #479. A documentation-only
+// release marker plus selector/unit tests can safely re-run focused DEMO CI.
+const demo475CompletionPaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ 'tests/ci-browser-scope.test.mjs',
+ 'docs/releases/GMWW-V3.207-demo475-main-ci-final-20261025.md'
+]);
+function isDemo475CompletionScope(changes){
+ const names=new Set(changes.map(x=>x.path));
+ return names.size===demo475CompletionPaths.size&&
+   [...demo475CompletionPaths].every(p=>names.has(p))&&
+   changes.every(c=>demo475CompletionPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
 function isDemo475Scope(changes){
  const names=new Set(changes.map(x=>x.path));
  return names.has('src/gmww-demo-runner.js')&&
@@ -278,7 +292,7 @@ function isPolicyScope(changes){
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isPolicyScope(changes))return 'ci-policy';
-  if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
+  if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
@@ -315,7 +329,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
-      if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)){
+      if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)){
         git('merge-base','--is-ancestor','8772337ab95e7561aeba6d63b2ec2337d7bbee94','HEAD');
         return{mode:'demo-475',reason:'Verified merged PR #475 / focused V3.207 release: '+changes.map(c=>c.path).join(', ')};
       }
