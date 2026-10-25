@@ -543,10 +543,11 @@ function battleIconDock(actions,phase){
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
  // Only server-eligible actions are actionable. Keep their dock on screen during
  // a transient busy/sync state (buttons disabled) instead of making it disappear.
- const eligible=(Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable)
-   .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
+ const recognized=(Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable)
+   .map(a=>({a,icons:battleIconResolve(a)}));
+ const eligible=recognized.flatMap(({a,icons})=>icons.map(icon=>({a,icon})));
  dock.dataset.actionCount=String(eligible.length);
- dock.dataset.unmappedCount=String(eligible.filter(x=>x.icon.isFallback).length);
+ dock.dataset.unmappedCount=String(recognized.filter(x=>!x.icons.length||x.icons.some(i=>i.isFallback)).length);
  const active=playSceneState.step==='battle'&&show&&eligible.length>0;
  dock.hidden=!active;
  if(!active){dock.replaceChildren();delete dock.dataset.sig;battleIconClearDrag();return}
