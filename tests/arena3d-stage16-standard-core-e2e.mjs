@@ -46,6 +46,17 @@ try{
    uiNotice:await gm.locator('#log').innerText(),coreRequests
   })+'; '+String(error.message).slice(0,100));
  }
+ // GĐ27: player enters halfway through deal, disconnect/reconnect and must
+ // retain the authoritative public phase without exposing private role data.
+ await viewer.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',
+  null,{timeout:35000});
+ await viewer.reload({waitUntil:'domcontentloaded',timeout:60000});
+ await viewer.waitForFunction(code=>
+  window.__GMWW_ARENA_STAGE_READONLY?.().room===code&&
+  window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',
+  code,{timeout:45000});
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gmConsole,'read-only');
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
  await gm.locator('#start').click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='running',null,{timeout:35000});
  await gm.locator('#night').click();
@@ -83,6 +94,11 @@ try{
  await viewer.reload({waitUntil:'domcontentloaded',timeout:60000});
  await viewer.waitForFunction(code=>window.__GMWW_ARENA_STAGE_READONLY?.().room===code&&window.__GMWW_ARENA_STAGE_READONLY?.().count===6,code,{timeout:45000});
  assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gmConsole,'read-only');
+ const reconnectedDenied=await viewer.evaluate(async code=>{
+  const response=await fetch('/api/arena-staging/rooms/'+code+'/gm-visuals',{cache:'no-store'});
+  return response.status;
+ },code);
+ assert.ok([401,403].includes(reconnectedDenied),'reconnect must not grant private GM effects');
  await gm.locator('#day').click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',null,{timeout:30000});
  await viewer.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',null,{timeout:35000});
@@ -106,8 +122,11 @@ try{
  await gm.locator('#refresh').click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null,{timeout:35000});
  await viewer.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null,{timeout:35000});
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gmConsole,'read-only');
  assert.deepEqual(errors,[]);
  console.log('STAGE16_STANDARD_CORE_TWO_CLIENT_PASS',JSON.stringify({room:code,
   realCoreAction:cast.actionId,cycle:'night=>morning',gallows:'nominating=>voting',ended:true,
-  viewerDenied:deny.status,viewerReconnected:true,production:false,physicalIphone:false}));
+  viewerDenied:deny.status,viewerReconnected:true,dealReconnect:true,
+  protectedAfterReconnect:true,production:false,physicalIphone:false}));
 }finally{await ctx.close();await browser.close()}
