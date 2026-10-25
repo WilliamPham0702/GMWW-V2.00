@@ -10,6 +10,8 @@ on:
       - "server-game/src/30-village-and-setup.part"
       - "server-game/src/40-battle-and-timeline.part"
       - "tests/gm-free-floating-shortcuts-20261025.test.mjs"
+      - "tests/gm-free-floating-shortcuts-iphone-webkit.mjs"
+      - "tests/v3188-preview-iphone-webkit.mjs"
       - "tests/gallows-flag-snap-v3206.test.mjs"
       - "tests/gallows-pirate-ui-v3205.test.mjs"
       - "docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md"
@@ -47,6 +49,22 @@ jobs:
           node --test tests/gm-free-floating-shortcuts-20261025.test.mjs \
             tests/gallows-flag-snap-v3206.test.mjs \
             tests/gallows-pirate-ui-v3205.test.mjs
+      - name: Cài WebKit cho mô phỏng iPhone đúng phạm vi icon
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+      - name: Kiểm tra icon nổi và DEMO chạm kéo trên iPhone WebKit
+        run: |
+          node tests/gm-free-floating-shortcuts-iphone-webkit.mjs
+          node tests/v3188-preview-iphone-webkit.mjs
+      - name: Lưu ảnh QA 5 icon trên iPhone WebKit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-PR501-IPHONE-WEBKIT-PREVIEW-NO-DEPLOY
+          path: /tmp/gmww-pr501-iphone-webkit-icons.png
+          if-no-files-found: ignore
+          retention-days: 14
       - name: SHA-256 bốn file thực tế và kiểm tra lại hash
         run: |
           sha256sum server-game/current/app.js \
