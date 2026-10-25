@@ -63,6 +63,12 @@ jobs:
           node --check .github/scripts/prepare-update-channel.mjs
           test -s docs/releases/GMWW-V3.210-icons-runtime-20261025.md
 
+      - name: Chỉ kiểm thử Top 3 bục 2.5D V3.211 và đóng gói GM
+        if: steps.scope.outputs.mode == 'home-podium-3211'
+        run: |
+          node --test tests/home-top3-podium-v3211.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
       - name: Chỉ xác minh bộ đóng gói GM/Player Web V3.209
         if: steps.scope.outputs.mode == 'audio-gallows-3209'
         run: |

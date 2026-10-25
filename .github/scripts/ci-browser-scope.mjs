@@ -410,9 +410,40 @@ function isIcon3210DispatchGateScope(changes){
   deploy.includes('id: icon_release_3210');
 }
 
+// V3.211: thay đổi hình ảnh Top 3 ở GM Home, không liên quan Chrome Card/Seat/DEMO.
+const homePodium3211Paths=new Set([
+ 'src/index.js','package.json','package-lock.json',
+ 'server-game/current/app.js','server-game/current/style.css','server-game/current/GMWW.html',
+ 'server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+ 'tests/home-top3-podium-v3211.test.mjs',
+ 'docs/releases/GMWW-V3.211-top3-victory-podium-20261025.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+]);
+function isHomePodium3211Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const files=new Map(changes.map(c=>[c.path,c]));
+ for(const mandatory of [
+   'src/index.js','package.json','package-lock.json',
+   'server-game/current/app.js','server-game/current/style.css',
+   'server-game/current/GMWW.html','server-game/src/00-core-and-library.part',
+   'server-game/src/20-members-and-roster.part','tests/home-top3-podium-v3211.test.mjs',
+   'docs/releases/GMWW-V3.211-top3-victory-podium-20261025.md'
+ ])if(!files.has(mandatory))return false;
+ if(!changes.every(c=>homePodium3211Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const code=files.get('server-game/current/app.js')?.after||'';
+ const style=files.get('server-game/current/style.css')?.after||'';
+ const worker=files.get('src/index.js')?.after||'';
+ const html=files.get('server-game/current/GMWW.html')?.after||'';
+ const pkg=files.get('package.json')?.after||'';
+ return worker.includes('VERSION="V3.211"')&&code.includes("const VERSION='3.211'")&&
+   code.includes('gmww-home-podium-stage-v3211')&&style.includes('gmwwVictoryDance3211')&&
+   html.includes('<title>GMWW V3.211</title>')&&pkg.includes('"version": "3.211.0"');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isIcon3210DispatchGateScope(changes))return 'icon-runtime-3210';
+  if(isHomePodium3211Scope(changes))return 'home-podium-3211';
   if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
@@ -454,6 +485,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isIcon3210DispatchGateScope(changes))return{mode:'icon-runtime-3210',reason:'Verified CI-only V3.210 owner dispatch correction'};
+      if(isHomePodium3211Scope(changes))return{mode:'home-podium-3211',reason:'Verified focused V3.211 Top 3 home podium release'};
       if(isIconRuntime3210Scope(changes))return{mode:'icon-runtime-3210',reason:'Verified V3.210 ICON Runtime/OTA release only'};
       if(isAudioGallows209Scope(changes))return{mode:'audio-gallows-3209',reason:'Verified V3.209 audio and public vote UI only'};
       if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
