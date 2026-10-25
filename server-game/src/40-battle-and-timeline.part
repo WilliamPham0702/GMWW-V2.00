@@ -2196,9 +2196,6 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleMorningReport','header');
   battleBindAuxiliaryDrag('battleFactionStats','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
-  document.querySelector('[data-morning-audio-upload]')?.addEventListener('click',event=>{
-    battleOpenGallowsAudioUpload(String(event.currentTarget.dataset.morningAudioUpload||''));
-  });
   document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
     if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);
   });
@@ -2244,8 +2241,6 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
-    const audio=event.target.closest('[data-gallows-audio-upload]');
-    if(audio){void battleOpenGallowsAudioUpload(String(audio.dataset.gallowsAudioUpload||''));return;}
     const tab=event.target.closest('[data-gallows-tab]');
     if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
     const pick=event.target.closest('[data-gallows-pick]');
