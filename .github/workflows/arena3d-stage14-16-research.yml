@@ -12,6 +12,7 @@ on:
       - "tests/arena3d-stage15-*"
       - "tests/arena3d-stage16-*"
       - "tests/arena3d-stage17-*"
+      - "tests/arena3d-stage18-*"
       - "tests/arena3d-stage13-*"
       - ".github/workflows/arena3d-stage14-16-research.yml"
   pull_request:
@@ -23,6 +24,7 @@ on:
       - "tests/arena3d-stage15-*"
       - "tests/arena3d-stage16-*"
       - "tests/arena3d-stage17-*"
+      - "tests/arena3d-stage18-*"
       - ".github/workflows/arena3d-stage14-16-research.yml"
   workflow_dispatch:
     inputs:
@@ -59,9 +61,10 @@ jobs:
           node --check assets/village/arena-3d/live.mjs
           node --check tests/arena3d-stage14-browser.mjs
           node --check tests/arena3d-stage17-undo.test.mjs
+          node --check tests/arena3d-stage18-performance.test.mjs
       - name: "Kiểm thử GĐ14–16 và chuyển động phép"
         run: |
-          node --test tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+          node --test tests/arena3d-stage18-performance.test.mjs tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
       - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
         run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
 
