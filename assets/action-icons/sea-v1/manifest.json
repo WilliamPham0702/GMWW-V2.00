@@ -16,7 +16,8 @@
         "action-digan-scry",
         "action-rotten-seer-check",
         "artifact_action_check_villager",
-        "artifact_action_check_awake"
+        "artifact_action_check_awake",
+        "artifact_action_check_third_faction"
       ],
       "png": "01_soi_xet.png",
       "svg": "01_soi_xet.svg",
@@ -36,9 +37,7 @@
         "action_destroyer_scry",
         "action_find_seer",
         "action_wolf_seer",
-        "action_rotten_seer",
-        "artifact_action_view",
-        "artifact_action_reveal_role"
+        "action_rotten_seer"
       ],
       "png": "02_soi_dac_biet.png",
       "svg": "02_soi_dac_biet.svg",
@@ -76,8 +75,7 @@
       "name": "So sánh phe",
       "target": "multi",
       "actions": [
-        "action_compare_faction",
-        "artifact_action_check_third_faction"
+        "action_compare_faction"
       ],
       "png": "04_so_sanh_phe.png",
       "svg": "04_so_sanh_phe.svg",
@@ -95,7 +93,6 @@
       "target": "character",
       "actions": [
         "action_wolf_bite",
-        "action-demon-wolf-convert",
         "action-fire-wolf-bite",
         "action-wolf-brother-bite"
       ],
@@ -184,8 +181,6 @@
       "actions": [
         "action_assassin_mark",
         "action_hunter_mark",
-        "action-g7-crow-votes",
-        "action-wild-child-idol",
         "action-grudge-designate"
       ],
       "png": "10_danh_dau.png",
@@ -255,8 +250,7 @@
       "target": "character",
       "actions": [
         "action_exile",
-        "action-black-woman-leave",
-        "artifact_action_turn_away"
+        "action-black-woman-leave"
       ],
       "png": "14_duoi_khoi_lang.png",
       "svg": "14_duoi_khoi_lang.svg",
@@ -276,10 +270,8 @@
         "action_hunt",
         "action_destroyer_kill",
         "action_stab",
-        "action-knight-stab",
         "action-g7-prince-stab",
-        "action-cult-kill",
-        "artifact_action_destroy"
+        "action-cult-kill"
       ],
       "png": "15_san_giet.png",
       "svg": "15_san_giet.svg",
@@ -313,8 +305,7 @@
       "name": "Nhân bản",
       "target": "character",
       "actions": [
-        "action_clone_target",
-        "artifact_action_copy_function"
+        "action_clone_target"
       ],
       "png": "17_nhan_ban.png",
       "svg": "17_nhan_ban.svg",
@@ -334,7 +325,6 @@
         "action_thief_change_role",
         "action_drunk_draw",
         "action-maid-inherit",
-        "artifact_action_exchange",
         "artifact_action_swap_role"
       ],
       "png": "18_doi_vai_tro.png",
@@ -352,7 +342,8 @@
       "name": "Hiệp sĩ chọn chết",
       "target": "character",
       "actions": [
-        "action_knight_last_strike"
+        "action_knight_last_strike",
+        "action-knight-stab"
       ],
       "png": "19_hiep_si.png",
       "svg": "19_hiep_si.svg",
