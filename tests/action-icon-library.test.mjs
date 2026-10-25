@@ -44,3 +44,22 @@ test('Icon assets are custom drawn SVG, not iPhone emoji assets',()=>{
   assert.match(api.image(sample),/^data:image\/svg\+xml/);
   assert.equal(api.get().every(x=>x.id&&x.name&&!x.image),true);
 });
+
+
+test('Device catalog scan discovers custom Artifact actions without inventing built-in metadata',()=>{
+  const original=ctx.localStorage.getItem;
+  ctx.localStorage.getItem=key=>key==='GMWW_V258_STATE'?JSON.stringify({
+    cards:[{name:'Tiên Tri',functions:[{actionId:'action_seer'}]}],
+    artifacts:[{name:'Đá Thần',functions:[{actionId:'artifact_custom_light',passive:false,targetCount:1}]}],
+    actions:{role:[{id:'action_seer',name:'Soi'}],artifacts:[{id:'artifact_custom_light',name:'Chiếu sáng'}]}
+  }):null;
+  try{
+    const audit=api.audit();
+    assert.equal(audit.roles,1);
+    assert.equal(audit.artifacts,1);
+    assert.equal(audit.actions.length,2);
+    assert.equal(audit.missing.length,1);
+    assert.equal(audit.missing[0].id,'artifact_custom_light');
+    assert.equal(audit.missing[0].label,'Chiếu sáng');
+  }finally{ctx.localStorage.getItem=original}
+});
