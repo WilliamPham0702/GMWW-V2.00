@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="65.52 56.54 668.95 668.95" width="1024" height="1024">
+<defs>
+<radialGradient id="sea" cx="42%" cy="37%" r="72%"><stop stop-color="#187da2"/><stop offset=".52" stop-color="#064c81"/><stop offset="1" stop-color="#031d43"/></radialGradient>
+<radialGradient id="aqua"><stop stop-color="#8cfffb"/><stop offset=".57" stop-color="#399bd9"/><stop offset="1" stop-color="#103e80"/></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a0641e"/><stop offset=".2" stop-color="#fbe4a3"/><stop offset=".42" stop-color="#ffcc65"/><stop offset=".66" stop-color="#9d5e21"/><stop offset=".82" stop-color="#ffdc91"/><stop offset="1" stop-color="#bc842f"/></linearGradient>
+<radialGradient id="iris"><stop stop-color="#a6faff"/><stop offset=".35" stop-color="#51dfff"/><stop offset=".7" stop-color="#2770e4"/><stop offset="1" stop-color="#502299"/></radialGradient>
+<radialGradient id="lens"><stop stop-color="#a0ffff"/><stop offset=".3" stop-color="#368eba"/><stop offset=".78" stop-color="#082c5d"/><stop offset="1" stop-color="#04152f"/></radialGradient>
+<linearGradient id="shield" x1="0" x2="1"><stop stop-color="#063669"/><stop offset=".5" stop-color="#1d97c2"/><stop offset="1" stop-color="#073a79"/></linearGradient>
+<linearGradient id="heal"><stop stop-color="#b8ffc9"/><stop offset=".4" stop-color="#2ce5ac"/><stop offset="1" stop-color="#00726f"/></linearGradient>
+<radialGradient id="poison"><stop stop-color="#e793f9"/><stop offset=".65" stop-color="#943dba"/><stop offset="1" stop-color="#33116c"/></radialGradient>
+<linearGradient id="ice" x1="0" x2="1"><stop stop-color="#e7fcff"/><stop offset=".5" stop-color="#44c8f3"/><stop offset="1" stop-color="#2769b9"/></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/><feOffset dx="0" dy="6" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+
+
+ <g filter="url(#shadow)" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Radiant knight sword -->
+  <path d="M400 178 443 241 422 490 400 542 378 490 359 241Z" fill="url(#gold)" stroke="#ffe9af" stroke-width="16"/>
+  <path d="M400 219 416 255 404 491 400 506 390 491 382 255Z" fill="url(#ice)" stroke="#f6ffff" stroke-width="6"/>
+  <path d="M400 212V511" stroke="#ffffff" stroke-width="8"/>
+  <path d="M301 511Q399 486 499 511 L508 537 Q454 562 426 542 L423 570H377L373 542 Q349 563 292 538Z" fill="url(#gold)" stroke="#fff1bd" stroke-width="11"/>
+  <path d="M374 572 H426 L433 608 H370Z" fill="#99612a" stroke="#fff0ae" stroke-width="9"/>
+  <path d="M367 608 H437V630 H367Z" fill="url(#gold)" stroke="#ffefb4" stroke-width="8"/>
+  <path d="M400 498 421 522 400 547 380 522Z" fill="url(#aqua)" stroke="#fdf3bb" stroke-width="7"/>
+  <!-- Halo rays -->
+  <path d="M400 142V174 M307 189l31 34M491 190l-33 34 M250 304l42 15 M550 306l-42 15 M279 450l32-26M524 452l-33-27" stroke="#f8e4a8" stroke-width="12" fill="none"/>
+  <path d="M400 304 420 354 466 376 421 398 400 443 378 398 331 376 380 354Z" fill="#8ae8ff" opacity=".43" stroke="#fff4a7" stroke-width="5"/>
+ </g>
+
+</svg>

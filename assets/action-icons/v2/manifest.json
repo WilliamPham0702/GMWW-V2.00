@@ -1,0 +1,642 @@
+{
+  "count": 49,
+  "icons": [
+    {
+      "id": "soi-xet",
+      "png": "01_soi_xet.png",
+      "svg": "01_soi_xet.svg",
+      "sha256_png": "347f2e39e1a733c77770a0e067e6abd9042196d0e0d186d33f2a5f1109eb2f58",
+      "sha256_svg": "96949c6dfe26d8dced61670fdec4394738f78bfc1a86ad0add8c49697c9bab8b",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "soi-dac-biet",
+      "png": "02_soi_dac_biet.png",
+      "svg": "02_soi_dac_biet.svg",
+      "sha256_png": "aeda459a9a65b0f013ddcae5b78710250e6095337c2eb40b7d44f92bfa204315",
+      "sha256_svg": "da1ecfb7b7b2c1dd4b481948711c9417661f76515624f0025b81835c8417a4ec",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "soi-nhom",
+      "png": "03_soi_nhom.png",
+      "svg": "03_soi_nhom.svg",
+      "sha256_png": "40ec83516eaaaa7e8f4703c098fcbca738e5eb617891673ec57f6f5fdd27097f",
+      "sha256_svg": "cd499162aef2bdccba576900dc9d5c7944864a4791a26c403833d04aeb763842",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "so-sanh-phe",
+      "png": "04_so_sanh_phe.png",
+      "svg": "04_so_sanh_phe.svg",
+      "sha256_png": "f3391984ac6764a514d9440f1880f03c8dc665e49557e449cfb9a010a7a867b1",
+      "sha256_svg": "aa08153642239f3237a18575b2006ac412f9bb0295f8cdec7fdc983c7d2e8350",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "soi-can",
+      "png": "05_soi_can.png",
+      "svg": "05_soi_can.svg",
+      "sha256_png": "74437904fcb3ad48a985ab4187a73e8c06775d17d0d73cc5a85e0c53197f4350",
+      "sha256_svg": "6199bc106868c90c5ea5e075b0b77c446104800b0788b0613c1938862f14eb90",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "bao-ve",
+      "png": "06_bao_ve.png",
+      "svg": "06_bao_ve.svg",
+      "sha256_png": "9be23e31318d70a03ca03c017741c792482b3d73207106c88cbb9a59bc44badb",
+      "sha256_svg": "a4975a12684983a0ff9025e7b7834ab4280e13960358906daff856d52bf4759d",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cuu",
+      "png": "07_cuu.png",
+      "svg": "07_cuu.svg",
+      "sha256_png": "f43e44ce989eee9df660ca3e12bca0923fbf5fb1c9947cc072781000679b8310",
+      "sha256_svg": "5621ac71afa6e6eab4273e0da14192f8fd627ebd4f51c119fde40d932ec4e621",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "ha-doc",
+      "png": "08_ha_doc.png",
+      "svg": "08_ha_doc.svg",
+      "sha256_png": "ca06d2fb2798b8877f474b2d34dbae4d74d69850ff7e47950d16e1a8fcd3c7df",
+      "sha256_svg": "d608ca448291e72a2740ca592570031cce0b24f8d21ca1ea28d289c3ae90e23e",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "dong-bang",
+      "png": "09_dong_bang.png",
+      "svg": "09_dong_bang.svg",
+      "sha256_png": "9e42d24498d1a32bc532ba45bc47e1d878fbda55a881c779912de151689e2a98",
+      "sha256_svg": "0d191df2093a1a322f87f1bff7473563084923e22adff1369c817e8036836918",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "danh-dau",
+      "png": "10_danh_dau.png",
+      "svg": "10_danh_dau.svg",
+      "sha256_png": "a98f2aebdada05a726b9781a9456ee537151e6d6b195a31d64170f1c10cebd44",
+      "sha256_svg": "2beb763489620907b328f59e5a273dab466ba4a8bd3af801a8ae9e2def95dcb4",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "dich-trai",
+      "png": "11_dich_trai.png",
+      "svg": "11_dich_trai.svg",
+      "sha256_png": "c09f56b59214aba78341d6a809f3a6dfaabf0a0c61c65f13e1c7a032ad9b0ec8",
+      "sha256_svg": "5759f38a6ca0f799e7f5bdcf3e58f8e76df372f671d83691f27889726300a6fb",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "dich-phai",
+      "png": "12_dich_phai.png",
+      "svg": "12_dich_phai.svg",
+      "sha256_png": "ed9a928341c020ba996819ca91417737d11cc1f6d02e8c903c7ad64e39b7ce7c",
+      "sha256_svg": "375bef8c319c5e281ac84c73820d6008c6b43cee9f4d351a22534feae9ce0f59",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "hoi-sinh",
+      "png": "13_hoi_sinh.png",
+      "svg": "13_hoi_sinh.svg",
+      "sha256_png": "bcdd62cd183bb31a173ea8165578649b42120ebf0ea1b68bf13915a2a8de1ea8",
+      "sha256_svg": "890f260b8d580ed72d768beded755d356671d16a733c7bea4605a627b0c78a46",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "duoi",
+      "png": "14_duoi_khoi_lang.png",
+      "svg": "14_duoi_khoi_lang.svg",
+      "sha256_png": "0c33eea1d89457a6148c05ce0a69d791a4865a1118c2b46fdb5c19bf6467da54",
+      "sha256_svg": "95094d6de50d056af1b666d5a4a0dfdc4ed3355fa7a8dcf73f90473e3bfa87f3",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "san-giet",
+      "png": "15_san_giet.png",
+      "svg": "15_san_giet.svg",
+      "sha256_png": "e3cc640cbced541a85c87dfab6bf3f289d98c5ec87e90c5fe249e0f7febb48d8",
+      "sha256_svg": "1f7bd0d80dba9db55c5b347031281edfd89f2b9330fa94dbf9ae556085c3d28a",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "tham-nha",
+      "png": "16_tham_nha.png",
+      "svg": "16_tham_nha.svg",
+      "sha256_png": "985cd9da9682d2972daf89f531f1a8327cce7dca1ac47362ca5e9f7291b9554f",
+      "sha256_svg": "f89c398f1ff9a49e342ac32b02505245b81b09ee17ea6f9d8e676635adee328d",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "nhan-ban",
+      "png": "17_nhan_ban.png",
+      "svg": "17_nhan_ban.svg",
+      "sha256_png": "43a3ed518ea390c6e6cb93484a1735df09c355c37c5c25efc04bc2cd62de55d1",
+      "sha256_svg": "757878021019746324e8359856953cf9fcd983100735c38f64ea8a4e68155f5f",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "doi-vai",
+      "png": "18_doi_vai_tro.png",
+      "svg": "18_doi_vai_tro.svg",
+      "sha256_png": "4729312942ecece736fdb8e55dc89612cebe55c761358e9ebdd1538fec67be87",
+      "sha256_svg": "a0f066e1d4e11f63e59ef28d63f4d59652a2da96c5ec258885042bb1b80266e2",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "hiep-si",
+      "png": "19_hiep_si.png",
+      "svg": "19_hiep_si.svg",
+      "sha256_png": "9fe699cfc066b273489a06a5cd62ad90cab7101be21ac8a5e67e9f56abcfc54b",
+      "sha256_svg": "14149bd775ff989774eac00b63d10732f0f4039692afb045cbae41f95f5b42bb",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "phong-an",
+      "png": "20_phong_an.png",
+      "svg": "20_phong_an.svg",
+      "sha256_png": "a84ec96e207d83667bb0ad7c7500d95b9dc662344294efc47039039d6c02d47f",
+      "sha256_svg": "761546d53519b310fa1247718320295148f0f15e95c045c91144fafa39f38914",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cam-vote",
+      "png": "21_cam_vote.png",
+      "svg": "21_cam_vote.svg",
+      "sha256_png": "4e00886b008fc0be03ba7e7169d858b78a048e6b097a31d3a2088bc2b14d57e6",
+      "sha256_svg": "3d09caa793d86642dde3cc87f21918ca20cded2fd17061e48936d8dc2915e68d",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cam-de-cu",
+      "png": "22_cam_de_cu.png",
+      "svg": "22_cam_de_cu.svg",
+      "sha256_png": "456fb1db80338bbba568c4ba6b14bc64c6ac96ff0fce68b412c4fb938f0daece",
+      "sha256_svg": "acd15724918f493eea444c3506772fb807af069fe2db8ac723d26a08e8cdcfbd",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "nguyen-rua",
+      "png": "23_nguyen_rua.png",
+      "svg": "23_nguyen_rua.svg",
+      "sha256_png": "521a5ac4bc5bf7df6364cc36d644adc27eb196fe9076b45dfda6d940f173bf7f",
+      "sha256_svg": "07ca73b2dd57337a587390925d514a792a1cf53778b0139314c378f8f3159e18",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "ban-phuoc",
+      "png": "24_ban_phuoc.png",
+      "svg": "24_ban_phuoc.svg",
+      "sha256_png": "078b42c19909fff8fc9b638a95c6bbdec8c9363458a03ec2e82427be4f763f24",
+      "sha256_svg": "ce78d170e72340402ade9d87745e55fafe0f2a3883ef72a0cef2de296a26d175",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cuop-artifact",
+      "png": "25_cuop_artifact.png",
+      "svg": "25_cuop_artifact.svg",
+      "sha256_png": "1e20eed764861514031947ad53beb60d712592b02cf86cfadc21db2db512032c",
+      "sha256_svg": "b88fff5c4a9451af222dfa9863976e8ca22f869c93892b9918af15168a646201",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "phan-don",
+      "png": "26_phan_don.png",
+      "svg": "26_phan_don.svg",
+      "sha256_png": "c39051abf07d40c8d0ec21ecb0656e12a0573d7a1da1556700507a523c5d63af",
+      "sha256_svg": "ef39eafcfe39ed247875e0668548181c9b431b15be780b24c3e9c329c39b7dcc",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "tang-hinh",
+      "png": "27_tang_hinh.png",
+      "svg": "27_tang_hinh.svg",
+      "sha256_png": "4e995e56a7fc3ac565e43f939f4c0ce336339a8eccafefaa795ced21ef9c3191",
+      "sha256_svg": "a7cffe379fc29c9feb91891ffb74f64ccc5c6614816ae43927e2292036d67ac7",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "dat-bay",
+      "png": "28_bay.png",
+      "svg": "28_bay.svg",
+      "sha256_png": "7c1d92a85a15dfff599539e2104ae8463a0ee77a5826519828aaae7a0b637947",
+      "sha256_svg": "6454f5acff9cb255c22351b29f5a3ad5202a386e1b2e86a141531fbb51c0a578",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "thanh-tay",
+      "png": "29_thanh_tay.png",
+      "svg": "29_thanh_tay.svg",
+      "sha256_png": "8cae4566d3eee35e2c254b2f6de17cb7961ea545584ddaa1a3ede28b0f537993",
+      "sha256_svg": "0ea49367af20b3a79ecadc0292ecf8faeb6dcf05a9854bef487a3c026ded40da",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "ghep-doi",
+      "png": "30_ghep_doi.png",
+      "svg": "30_ghep_doi.svg",
+      "sha256_png": "21a4e24e7b947055adc7a084ecc956c51f51ec18c628d561e297bc0d5bf3da71",
+      "sha256_svg": "80eb12acc44c205c966cf99c1e21a527a6cc20d0b6be35c889bad687c543c6ca",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "rung-chuong",
+      "png": "31_rung_chuong.png",
+      "svg": "31_rung_chuong.svg",
+      "sha256_png": "1f5a50d0e5fc9328b878fd7f93ed1a17c8a92e0d35ba2a5bd969e2cf53e12659",
+      "sha256_svg": "21c70880b81833885156de1eca4e02cceb1e88a680780dfdcfeb361f98cb8a70",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "hi-mat",
+      "png": "32_hi_mat.png",
+      "svg": "32_hi_mat.svg",
+      "sha256_png": "27c23b6a411f6f814164a06366d2d3277b200d0cdc0e02ce7ef093129117d342",
+      "sha256_svg": "e6617c59acf60a1bd189e92360e407ac326423604043f26c417adf1833b0b887",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "giao",
+      "png": "33_giao.png",
+      "svg": "33_giao.svg",
+      "sha256_png": "abf07681daa5f8dd414a805d0ff0b0df605a82b4576915eee19133f399c0de63",
+      "sha256_svg": "9be899bf1201fa2589bb1807ee4a603de7f3c5c9bbeab5e24a1ba93b1f6d0e5b",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "ba-anh-em",
+      "png": "34_ba_anh_em.png",
+      "svg": "34_ba_anh_em.svg",
+      "sha256_png": "6dfdc1fe1f7e012348286be38eaf81edf3ab4b1dcf1e46d99acaf8478933fe26",
+      "sha256_svg": "d0891d8e3cac30a64d9c9c6d9d96876f8b75f62ff82a853328c0ec8df89871c5",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "bao-thu",
+      "png": "35_bao_thu.png",
+      "svg": "35_bao_thu.svg",
+      "sha256_png": "0e1a36eb3c3b8a3daff22e748bb1331006d08634f885cd788712ae79bcfd0f62",
+      "sha256_svg": "6df7f4e74c08fed5bdfdc3b0910f4d5a49b3cd448e00a7bc9ca8ac96df5fb868",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "mang-benh",
+      "png": "36_mang_benh.png",
+      "svg": "36_mang_benh.svg",
+      "sha256_png": "f69bb0980d4e6fdbfa9c8130a8c7a52ffb3ed88419bef76d97580190cb94c54e",
+      "sha256_svg": "d9267b3eb351885270539f15aa648ab12261d74d5a1f0dba45dacea07d5b5d94",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "loan-tin",
+      "png": "37_loan_tin.png",
+      "svg": "37_loan_tin.svg",
+      "sha256_png": "f4383a4bb64bacb1afc14717fc71f44154582de4ddb0c32e0897cc3456d03355",
+      "sha256_svg": "7a633720391cc268ff5e5bf5ec61fe84c70f1523c73d5d381b90922a36758c3c",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "phan-quyet-kep",
+      "png": "38_phan_quyet_kep.png",
+      "svg": "38_phan_quyet_kep.svg",
+      "sha256_png": "5099646fa4d79ca1b4f2987bd97f02f666d1ef54da674c4dcd461da83ca525fa",
+      "sha256_svg": "b10e7ef9f838aba301b557ab4b5ad2e40fa84d1ec5db77dbc6dffbe8444db464",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cam-noi",
+      "png": "39_cam_noi.png",
+      "svg": "39_cam_noi.svg",
+      "sha256_png": "8c5267aaa799f3ee4627d20b41b01fbc4f3cfc1ea705da2d6a01a95521bf0f93",
+      "sha256_svg": "f586fd4fdacf9dcc02ccc17ae021d7a0c71db493bfe8c9f62132a695e76c41e5",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "phieu-con-qua",
+      "png": "40_phieu_con_qua.png",
+      "svg": "40_phieu_con_qua.svg",
+      "sha256_png": "abea51ec23885eb2a6dad61987ad1f564789043a735e0d224901cf8c105f186e",
+      "sha256_svg": "0c69185c4f6aa8b54ada240c128c0469619f887b123bdbb8e3fca312edb09860",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "can-chuyen-hoa",
+      "png": "41_can_chuyen_hoa.png",
+      "svg": "41_can_chuyen_hoa.svg",
+      "sha256_png": "680c6b00bb7e5db388843d728e0e7e991c8045c767f5b1bfc9e365d1e95a3c7a",
+      "sha256_svg": "409a5103d0544afcf7ab21f17bd06dab5c6da4e099043d0eed2b82d39ae3f000",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "chon-hinh-tuong",
+      "png": "42_chon_hinh_tuong.png",
+      "svg": "42_chon_hinh_tuong.svg",
+      "sha256_png": "770510714af8888015207dd8aad92c7eb218895c800396f3892e0b59fb5271e5",
+      "sha256_svg": "8058eba1a7732d53fe33221609f4aa85219d8066ce5fa3a4f75bc6f0d30af0d8",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "xem-artifact",
+      "png": "43_xem_artifact.png",
+      "svg": "43_xem_artifact.svg",
+      "sha256_png": "3742c1c53026920f535be6899330edce229b9b42eb5a698a90ebc9ff14f5d60e",
+      "sha256_svg": "5b5d40e67de0a78160d060a0e31be1251224f30b210c7164e2ce25fd7a95e8bb",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "doi-artifact",
+      "png": "44_doi_artifact.png",
+      "svg": "44_doi_artifact.svg",
+      "sha256_png": "ca8ba61391d4de39b6c5cc6c75b048dde84d3880795efe5a36054ce8a12e466c",
+      "sha256_svg": "ddea98027ad8b7de41191b28d6a4fa8072d0ce1f068b1eb640b452cff0fd4c8b",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "cong-khai-vai",
+      "png": "45_cong_khai_vai.png",
+      "svg": "45_cong_khai_vai.svg",
+      "sha256_png": "a27a958ad501354b93aa8be6f363c6922ce732357298f86c105f6ccf8bd962db",
+      "sha256_svg": "c591d659ae33fb9095d5437ebf6feec9c2eb5dfbdf25d22d273e658c20bd2ecc",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "sao-chep-chuc-nang",
+      "png": "46_sao_chep_chuc_nang.png",
+      "svg": "46_sao_chep_chuc_nang.svg",
+      "sha256_png": "d751f564bf85e316d7603f20e5868cf2c1e1e5aaa6e90f4c0a35b89548aade2f",
+      "sha256_svg": "66fb65712b4b7c031630346b9a9555cc57754480efb1227b12bedc803e495d28",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "huy-artifact",
+      "png": "47_huy_artifact.png",
+      "svg": "47_huy_artifact.svg",
+      "sha256_png": "2e03be57a9a54e507cf4a7ad71b0eb7070ad7edc1c3f06a0d598397fd52f8f19",
+      "sha256_svg": "1f2517d4a562962a8ffeea1d789ba9b117bcc4da65963d0c316a9014c4ead4ea",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "buoc-quay-mat",
+      "png": "48_buoc_quay_mat.png",
+      "svg": "48_buoc_quay_mat.svg",
+      "sha256_png": "e18f2edd74895e48e376f82d255b05e48e73976a028487837fd461fa5dec6208",
+      "sha256_svg": "5a367aff582b7a03104e8b760a68177bf6d9366f014b0fe8ba3a7b05a15eeec8",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    },
+    {
+      "id": "sang-tao-artifact",
+      "png": "49_sang_tao_artifact.png",
+      "svg": "49_sang_tao_artifact.svg",
+      "sha256_png": "72c1c17b15be278a5fcca12f3bdf1e4a55585b907c723c6a4e47855e062fdcad",
+      "sha256_svg": "2c4e46d077ff4ae62aabc211d15e2b26c7eaadf95337d393e0d1b3c69a57d397",
+      "size": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "frameless": true
+    }
+  ]
+}
