@@ -167,7 +167,7 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // Battle audio must be tied to a real action or wake-up event, not just a
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
-let battleActiveAudio=null,battleAudioLast={key:'',at:0},battleAudioRequestId=0;
+let battleActiveAudio=null,battleAudioLast={key:'',at:0,turn:''},battleAudioRequestId=0;
 function battleInvalidateAudioCache(kind,id){
   const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
@@ -248,8 +248,8 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
   const key=kind+':'+(row?.id||targetId||name),now=Date.now();
-  if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500){onFinished?.();return false}
-  battleAudioLast={key,at:now};
+  if(!showError&&battleAudioLast.key===key&&battleAudioLast.turn===String(battleState?.key||'')&&now-battleAudioLast.at<350){onFinished?.();return false}
+  battleAudioLast={key,at:now,turn:String(battleState?.key||'')};
   const requestId=++battleAudioRequestId;
   if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
   if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
@@ -261,27 +261,37 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const src=ready||await battleWarmAudio(kind,row);
   if(requestId!==battleAudioRequestId){onFinished?.();return false}
   if(!src)return battleSpeakCue(name,showError,onFinished);
+  // Exact name clip: prefer decoded WebAudio with explicit offset and duration.
+  // WKWebView HTMLAudioElement timeupdate is not guaranteed to fire while hidden.
+  const nameStart=Math.max(0,Number(row.roleNameStart)||0);
+  const nameEnd=Number(row.roleNameEnd);
+  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:Number.isFinite(nameEnd)&&nameEnd>nameStart?nameEnd:nameStart+5}:null;
+  if(requestedCut&&battleUnlockedAudioContext?.state==='running'){
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
+  }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  let cutTimer=null,finished=false;
+  const finish=()=>{if(finished)return;finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  battleActiveAudio=player;player.onended=finish;player.onerror=finish;
   // Named V1.11 segment: the editor stores its start/end on the EXISTING
   // role wake-up audio, without duplicating binary data or changing its source.
-  const excerpt=Number(maxSeconds)>0?
-    {start:Math.max(0,Number(row.roleNameStart)||0),
-     end:Number.isFinite(Number(row.roleNameEnd))&&Number(row.roleNameEnd)>Number(row.roleNameStart||0)
-       ?Number(row.roleNameEnd):Math.max(0,Number(row.roleNameStart)||0)+Number(maxSeconds)}:null;
+  const excerpt=requestedCut;
   if(excerpt){
-    player.onloadedmetadata=()=>{
-      const until=Math.min(Number.isFinite(player.duration)?player.duration:excerpt.end,excerpt.end);
-      if(excerpt.start>=until){player.onended?.();return}
-      try{player.currentTime=excerpt.start}catch(_){}
+    const stop=()=>{if(finished||battleActiveAudio!==player)return;
+      try{player.pause()}catch(_){}finish()};
+    const seek=()=>{const end=Math.min(Number.isFinite(player.duration)?player.duration:excerpt.end,excerpt.end);
+      if(excerpt.start>=end){stop();return}
+      try{if(Math.abs(player.currentTime-excerpt.start)>.07)player.currentTime=excerpt.start}catch(_){}
     };
-    player.ontimeupdate=()=>{
-      if(battleActiveAudio===player&&player.currentTime>=excerpt.end){
-        player.ontimeupdate=null;try{player.pause()}catch(_){}
-        player.onended?.();
-      }
-    };
+    player.onloadedmetadata=seek;
+    player.addEventListener('playing',()=>{
+      if(cutTimer!==null)clearTimeout(cutTimer);
+      cutTimer=setTimeout(stop,Math.max(100,Math.ceil((excerpt.end-excerpt.start)*1000)+120));
+    },{once:true});
+    player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
+    if(player.readyState>=1)seek();
   }
   try{await player.play();return true}
   catch(err){
@@ -351,12 +361,11 @@ function battleAudioForTurn(turn,auto=false){
     }
   }
   if(auto){
+    // Start on the current user activation: awaiting IndexedDB here suppressed
+    // WKWebView playback on Phù Thuỷ Già and the first role of later nights.
     const expectedKey=battleState.key;
-    void (async()=>{
-      if(audio)await battleWarmAudio(kind,audio);
-      if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    if(battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night')
       battlePlayTurnAudioSequence(cues,expectedKey);
-    })().catch(error=>console.warn('GMWW first-turn audio:',error));
   }
 }
 function battleReplayAudio(){
