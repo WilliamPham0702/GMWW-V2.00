@@ -14,16 +14,22 @@ export function arenaSceneSignature(room, players) {
 // Samples requestAnimationFrame cadence (not the capped render FPS), so the
 // quality tier can recover while rendering at the low-power 20 FPS cap.
 export function createArenaAdaptiveQuality({windowSize=75,slowFrameMs=36,fastFrameMs=24,
-  slowWindows=2,fastWindows=4,cooldownMs=12000}={}) {
-  let previous=null,elapsed=0,count=0,slow=0,fast=0,lowPower=false,lastChange=-Infinity;
-  function clearSamples(){elapsed=0;count=0;slow=0;fast=0;previous=null}
+  slowWindows=2,fastWindows=4,cooldownMs=12000,severeFrames=3}={}) {
+  let previous=null,elapsed=0,count=0,slow=0,fast=0,severe=0,lowPower=false,lastChange=-Infinity;
+  function clearSamples(){elapsed=0;count=0;slow=0;fast=0;severe=0;previous=null}
   function observe(now,visible=true) {
     if(!visible || !Number.isFinite(now)){clearSamples();return lowPower}
     if(previous!==null){
       const dt=now-previous;
-      // Ignore the first frame after device sleep, tab resume or a debugger pause.
-      if(dt<=0 || dt>250){clearSamples()}
-      else {elapsed+=dt;count++}
+      // One long frame can mean sleep/resume. Multiple long VISIBLE frames
+      // indicate low-end mobile GPU overload: do not stay at high resolution.
+      if(dt<=0||dt>1400){clearSamples()}
+      else if(dt>250){
+        elapsed=0;count=0;slow=0;fast=0;severe++;
+        if(!lowPower&&severe>=severeFrames&&now-lastChange>=cooldownMs){
+          lowPower=true;lastChange=now;severe=0;
+        }
+      }else{severe=0;elapsed+=dt;count++}
     }
     previous=now;
     if(count>=windowSize){
