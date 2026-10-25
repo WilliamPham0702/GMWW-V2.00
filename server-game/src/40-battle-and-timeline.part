@@ -891,7 +891,7 @@ function battleMorningShow(){
       const sentence=action.startsWith('đã ')?' '+action:
         action.startsWith('chết ')||action.startsWith('đã chết ')?' '+action:
         ' '+action;
-      const wording=sentence+(row.actor?' bởi '+row.actor:'':'');
+      const wording=sentence+(row.actor?' bởi '+row.actor:'');
       line.append(name,document.createTextNode(wording+(wording.trim().endsWith('.')?'':'.')));
       host.append(line);
     }
