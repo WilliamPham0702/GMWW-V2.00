@@ -33,7 +33,9 @@ test('GM Arena receives only ephemeral postMessage, revalidates bearer with real
  assert.doesNotMatch(gm,/searchParams\.set\(['"](?:gmToken|token|gmKey)['"]/);
  assert.doesNotMatch(gm,/localStorage\.setItem\([^\n]*gmToken/);
 });
-test('Runtime V3.226 remains untouched: STAGING entry cannot receive official GM token',()=>{
- assert.match(native,/const arenaUrl='https:\/\/gmww-arena3d-stage14-staging\.williampham0702\.workers\.dev/);
- assert.doesNotMatch(native,/gmww-arena3d-gm-context/);
+test('Official VÀO LÀNG routes to same-origin Arena 3D and never places GM token in a URL',()=>{
+ assert.match(native,/const arenaUrl='https:\/\/gmww-v2-00\.williampham0702\.workers\.dev\/village\/arena-3d\/live\.html'/);
+ assert.match(native,/frame\.id='gmwwArena3dQaFrame'/);
+ assert.doesNotMatch(native,/const arenaUrl='https:\/\/gmww-arena3d-stage14-staging/);
+ assert.doesNotMatch(native,/\?gmToken=|\?gmKey=|\?token=/);
 });
