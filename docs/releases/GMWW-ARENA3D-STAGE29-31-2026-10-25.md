@@ -26,4 +26,15 @@
 - Rollback STAGING về bản GĐ26–28 đã có: Cloudflare Worker version `6e729ed6-9f3e-4e59-be59-563a144ff216`. Production giữ nguyên.
 
 ## Kết quả
-Đang xác minh ở STAGING. Chỉ ghi kết quả PASS khi các bài kiểm thử có kết quả thực tế.
+Đã hoàn thành **GĐ29–31 ở mức kỹ thuật STAGING và CI SUCCESS**; chưa có nghiệm thu iPhone vật lý mới cho lô này.
+
+## Kết quả xác minh STAGING — lô GĐ29–31
+- GitHub Actions **SUCCESS**: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40176994082; commit build `7aca265637303b84cbe18bfd4435d889e35b313b`.
+- Cloudflare Worker STAGING version: **`7ac53fa4-6449-49d0-a121-e82dd9572acc`**.
+- GĐ29: kiểm thử unit 26 action Core có thể biểu diễn từ thẻ đã phát, nhiều mục tiêu (2–3), action không mục tiêu, cấm tự chọn, artifact đúng quyền, từ chối actor sai lượt; chạy Core thật 6 người với GM sử dụng action Bảo Vệ từ menu động **PASS**. Menu chỉ cho thao tác action mà Core đã phát; hành động mới bị Core từ chối nếu không đủ quyền.
+- GĐ30: Core thật **30 Character / 30 Seat** với hai client, từ tạo phòng, đăng ký/lấp 30 người thử, khoá ghế, Phát Vai, Player reload/reconnect, vào trận, Đêm, Ngày, Lên Giàn đề cử → bỏ phiếu → kết thúc ván **PASS**. Viewer không được xem hiệu ứng GM riêng (HTTP 401); chỉ tạo và sử dụng dữ liệu test trên Worker/DO STAGING.
+- GĐ31: Chrome và WebKit (iPhone giả lập trên CI) **PASS** với 6/12/20/30 Character. Draw calls 46/46/42/37 theo số lượng, 4 VFX kiểm tra; test Core Role Shield 2 mục tiêu và Artifact Heal 1 mục tiêu **PASS**.
+- **Không phải chứng nhận toàn bộ 63 vai / 44 Artifact đã kiểm thử hoạt động riêng từng chức năng trên máy thật.** Dữ liệu Core catalog trên nhánh hiện tại là 28 vai/26 hành động dựng sẵn, hỗ trợ dynamic role/artifact do Core cấp quyền. UI triển khai mới ở tab GM **Lượt Đêm**, các tính năng thuộc những giai đoạn khác cần tiếp tục đối chiếu khi có catalog tương ứng.
+- **Chưa nghiệm thu trên iPhone thật cho lô GĐ29–31.** FPS CI Chrome/WebKit phần mềm không tương đương FPS/nhiệt/pin trên thiết bị vật lý.
+- Giữ PR #487 **Draft** và main/Production/Player Web 2D/Runtime OTA/IPA/room data nguyên vẹn.
+- **Rollback Worker STAGING** về phiên bản GĐ26–28 `6e729ed6-9f3e-4e59-be59-563a144ff216`.
