@@ -30,6 +30,12 @@ async function check(engine,kind){
      return state?.count===n&&state.crowdTier===(n>=24?'crowd30':n>=20?'crowd20':'full');
    },n,{timeout:30000});
    await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().fps>0,null,{timeout:45000});
+   if(n>=20){
+     const oldCalls=roster.at(-1).drawCalls;
+     await page.waitForFunction(oldCalls=>
+       window.__GMWW_ARENA_STAGE_READONLY?.().drawCalls<oldCalls,
+       oldCalls,{timeout:20000});
+   }
    const state=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
    assert.equal(state.artVersion,'gmww.arena.art.sea-chibi.6');
    assert.equal(await page.locator('body').getAttribute('data-gmww-stage10'),'gmww.arena.role-animation.10');
