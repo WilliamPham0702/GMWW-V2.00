@@ -211,3 +211,18 @@ test('PR475 release CI on main selects focused DEMO checks and fails closed',()=
   'Check Player Web Worker'
  ])assert.ok(wf.includes(required),'Missing focused release guard: '+required);
 });
+
+
+test('PR475 manual Gallows workflow dispatched on exact main SHA is scoped and fail-closed',()=>{
+ const changes=[
+  modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+  modified('.github/workflows/deploy-production.yml','before','after'),
+  modified('tests/ci-browser-scope.test.mjs','before','after'),
+  {path:'docs/releases/GMWW-V3.207-demo475-manual-gallows-ci-20261025.md',status:'A',after:'notes'}
+ ];
+ assert.equal(classifyBrowserScope(changes),'demo-475');
+ assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+ assert.equal(classifyBrowserScope([...changes,modified('src/index.js','x','y')]),'full');
+ const wf=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ assert.match(wf,/r\.event==='workflow_dispatch'&&r\.name==='Check Lên Giàn theo đúng phạm vi'/);
+});

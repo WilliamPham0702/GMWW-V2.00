@@ -155,6 +155,22 @@ function isDemo475ReleaseScope(changes){
    changes.every(x=>demo475ReleasePaths.has(x.path)&&['A','M'].includes(x.status));
 }
 
+// Final release-gate correction: GitHub does not run the Gallows workflow
+// automatically for CI-only changes, so the owner dispatches it on the exact
+// main SHA. This whitelist covers only those CI changes, never gameplay.
+const demo475FinalGatePaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/deploy-production.yml',
+ 'tests/ci-browser-scope.test.mjs',
+ 'docs/releases/GMWW-V3.207-demo475-manual-gallows-ci-20261025.md'
+]);
+function isDemo475FinalGateScope(changes){
+ const names=new Set(changes.map(x=>x.path));
+ return names.size===demo475FinalGatePaths.size&&
+   [...demo475FinalGatePaths].every(x=>names.has(x))&&
+   changes.every(x=>demo475FinalGatePaths.has(x.path)&&['A','M'].includes(x.status));
+}
+
 function isDemo475Scope(changes){
  const names=new Set(changes.map(x=>x.path));
  return names.has('src/gmww-demo-runner.js')&&
@@ -262,7 +278,7 @@ function isPolicyScope(changes){
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isPolicyScope(changes))return 'ci-policy';
-  if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes))return 'demo-475';
+  if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
