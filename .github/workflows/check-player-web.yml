@@ -63,7 +63,7 @@ jobs:
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.221-ranking-games-first-20261025.md
       - name: Chỉ test 5 icon PR501 và chốt bundle/Player Web
-        if: steps.scope.outputs.mode == 'gm-icons-501'
+        if: steps.scope.outputs.mode == 'gm-icons-501' || steps.scope.outputs.mode == 'gm-icons-501-release'
         run: |
           node --test tests/gm-free-floating-shortcuts-20261025.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/gallows-pirate-ui-v3205.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
