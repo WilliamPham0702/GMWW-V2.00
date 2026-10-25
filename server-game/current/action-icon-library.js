@@ -208,6 +208,6 @@ function init(){
  document.getElementById('gmwwIconSearch').oninput=render;
  render();
 }
-window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),resolveAll:(actionId)=>clone(icons.filter(x=>x.actions.includes(String(actionId)))),image:picture,audit:auditCatalog};
+window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),resolveAll:(actionId)=>clone(icons.filter(x=>x.actions.includes(String(actionId)))),image:picture,audit:auditCatalog,autoMap:mapUnambiguousLocalActions};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
