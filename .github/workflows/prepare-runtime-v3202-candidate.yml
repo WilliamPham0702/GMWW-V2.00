@@ -1,4 +1,4 @@
-name: GMWW V3.218 OTA Candidate SHA-256
+name: GMWW V3.222 OTA Candidate SHA-256 (Arena3D Home)
 on:
   pull_request:
     branches: [main]
@@ -51,12 +51,12 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/action-icon-library.test.mjs
+          node --test tests/arena3d-home-portal-v3222.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
-      - name: Kiểm chứng SHA-256 từng file và manifest V3.218
-        run: node .github/scripts/verify-prepared-runtime.mjs 3.218
-      - name: Kiểm tra V3.218 lớn hơn bản đang chạy, chặn trùng phiên bản
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.222
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.222
+      - name: Kiểm tra V3.222 lớn hơn bản đang chạy, chặn trùng phiên bản
         shell: bash
         run: |
           set -euo pipefail
@@ -82,11 +82,11 @@ jobs:
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V3.218-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          name: GMWW-V3.222-OTA-CANDIDATE-SHA256-NO-DEPLOY
           path: |
-            out/gmww-runtime-v3.218-sha256.json
+            out/gmww-runtime-v3.222-sha256.json
             assets/updates/latest.json
-            assets/updates/runtime/V3.218/manifest.json
-            assets/updates/runtime/V3.218/manifest-runtime-3218.json
+            assets/updates/runtime/V3.222/manifest.json
+            assets/updates/runtime/V3.222/manifest-runtime-3222.json
           if-no-files-found: error
           retention-days: 14
