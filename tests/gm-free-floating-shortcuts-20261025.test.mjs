@@ -118,7 +118,8 @@ test('Kéo icon iPhone thực sự di chuyển, lưu vị trí, không kích ho�
     innerWidth:390,innerHeight:844,
     Date,Math,JSON,Number,Object
   };
-  vm.runInNewContext(source.slice(start,end)+'\ngmwwSetupFreeBattleIcons();',mock);
+  const context=vm.createContext(mock);
+  vm.runInContext(source.slice(start,end)+'\ngmwwSetupFreeBattleIcons();',context);
   for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver'])
     assert.equal(panels.get(id).parentElement,shell,id+' must leave fixed dock');
   assert.equal(stats.parentElement,shell);
@@ -145,7 +146,7 @@ test('Kéo icon iPhone thực sự di chuyển, lưu vị trí, không kích ho�
   // Re-render must neither rebind listeners nor reset manually positioned icon.
   const count=events.get('battleFactionStatsFloat').pointerdown.length;
   const location=panels.get('battleFactionStatsFloat').style.left;
-  vm.runInNewContext(source.slice(start,end)+'\ngmwwSetupFreeBattleIcons();',mock);
+  vm.runInContext('gmwwSetupFreeBattleIcons();',context);
   assert.equal(events.get('battleFactionStatsFloat').pointerdown.length,count);
   assert.equal(panels.get('battleFactionStatsFloat').style.left,location);
 });
