@@ -130,3 +130,6 @@ try{
   viewerDenied:deny.status,viewerReconnected:true,dealReconnect:true,
   protectedAfterReconnect:true,production:false,physicalIphone:false}));
 }finally{await ctx.close();await browser.close()}
+
+// GĐ30: in the same isolated STAGING workflow, verify 30 real Core seats.
+await import('./arena3d-stage30-crowd-core-e2e.mjs');
