@@ -1111,7 +1111,9 @@ function isIconV2CIRepairScope(changes){
   'docs/releases/GMWW-V3.227-icon-action-v2-20261025.md',
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-web.yml',
-  '.github/workflows/deploy-production.yml'
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml'
  ]);
  if(!Array.isArray(changes)||changes.length!==allow.size)return false;
  if(!changes.every(x=>x.status==='M'&&allow.has(x.path)))return false;
