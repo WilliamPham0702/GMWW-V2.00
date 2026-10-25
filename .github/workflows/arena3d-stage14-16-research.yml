@@ -1,0 +1,123 @@
+name: Arena 3D GĐ14–16 — Core, Artifact, Audio, E2E STAGING
+on:
+  push:
+    branches: ["feature/arena3d-stage14-core-role-catalog"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "src/arena3d-stage-worker.mjs"
+      - "assets/village/arena-3d/render-optimization.mjs"
+      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage12-*"
+      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage15-*"
+      - "tests/arena3d-stage16-*"
+      - "tests/arena3d-stage13-*"
+      - ".github/workflows/arena3d-stage14-16-research.yml"
+  pull_request:
+    branches: ["feature/arena3d-stage11-core-role-catalog"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "tests/arena3d-stage10-*"
+      - ".github/workflows/arena3d-stage14-16-research.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_stage14:
+        description: 'Triển khai STAGING riêng GĐ14–16 sau khi CI đạt'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify-stage14:
+    name: "GĐ14–16: biểu cảm, animation, hiệu năng"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Kiểm tra cú pháp module liên quan"
+        run: |
+          node --check assets/village/arena-3d/stage14-core-catalog.mjs
+          node --check assets/village/arena-3d/stage14-core-action-bridge.mjs
+          node --check assets/village/arena-3d/stage12-audio-engine.mjs
+          node --check assets/village/arena-3d/stage14-dynamic-actions.mjs
+          node --check assets/village/arena-3d/stage15-local-audio.mjs
+          node --check tests/arena3d-stage16-dynamic-core-e2e.mjs
+          node --check tests/arena3d-stage13-core-e2e.mjs
+          node --check src/arena3d-stage-worker.mjs
+          node --check assets/village/arena-3d/character-atelier.mjs
+          node --check assets/village/arena-3d/live.mjs
+          node --check tests/arena3d-stage14-browser.mjs
+      - name: "Kiểm thử GĐ14–16 và chuyển động phép"
+        run: |
+          node --test tests/arena3d-stage14-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+      - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
+        run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
+
+  deploy-stage14-preview:
+    name: "GĐ14–16: STAGING riêng + browser iPhone"
+    needs: verify-stage14
+    if: github.ref == 'refs/heads/feature/arena3d-stage14-core-role-catalog' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Deploy Worker nghiên cứu STAGING, không Production"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          export DEPLOY_STARTED_MS="$(node -p 'Date.now()')"
+          set +e
+          npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc 2>&1 | tee /tmp/arena3d-stage14-wrangler.log
+          WRANGLER_EXIT=${PIPESTATUS[0]}
+          set -e
+          if [ "$WRANGLER_EXIT" -ne 0 ] && ! grep -q 'code: 10007' /tmp/arena3d-stage14-wrangler.log; then
+            echo "Wrangler thất bại trước khi có xác nhận Cloudflare"
+            exit "$WRANGLER_EXIT"
+          fi
+          CF_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-arena3d-stage14-staging"
+          curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$CF_URL/deployments" > /tmp/arena3d-stage14-deployments.json
+          node -e '
+            const data=require("/tmp/arena3d-stage14-deployments.json");
+            const item=data.result?.deployments?.[0];
+            const started=Number(process.env.DEPLOY_STARTED_MS);
+            if(!data.success||!item||Date.parse(item.created_on)<started-10000||
+              !item.versions?.some(v=>v.percentage===100))
+              throw Error("Cloudflare chưa xác nhận triển khai Worker GĐ14–16 mới nhất");
+            console.log("Cloudflare đã xác nhận version GĐ14–16:",item.versions[0].version_id);
+          '
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"enabled":true,"previews_enabled":false}' "$CF_URL/subdomain" > /tmp/arena3d-stage14-subdomain.json
+          node -e '
+            const data=require("/tmp/arena3d-stage14-subdomain.json");
+            if(!data.success||data.result?.enabled!==true)
+              throw Error("Chưa bật được workers.dev cho riêng GĐ14–16");
+            console.log("workers.dev GĐ14–16 đã bật; Production và GĐ6 không thay đổi");
+          '
+      - name: "Chuẩn bị trình duyệt Chrome và WebKit giả lập iPhone"
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+      - name: "Kiểm thử STAGING GĐ14–16: 6–30 Character, nghi lễ, Chrome và WebKit"
+        run: node tests/arena3d-stage14-browser.mjs
+      - name: "GĐ13: hai client thực, phân quyền Core, GM làm phép, reconnect và bỏ phiếu"
+        run: node tests/arena3d-stage16-standard-core-e2e.mjs
+      - name: "GĐ16: Core thật — Vai Trò tự tạo và Artifact 3D"
+        run: node tests/arena3d-stage16-dynamic-core-e2e.mjs
+      - name: "Ghi nhận Preview GĐ14–16"
+        run: |
+          echo "Preview GĐ14–16: https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "Chưa phải kiểm thử FPS/pin/nhiệt trên iPhone vật lý. Không Production." >> "$GITHUB_STEP_SUMMARY"
