@@ -47,7 +47,7 @@ test('Approved icons use actual 49 individual PNG assets, not demo SVG or emoji'
  assert.equal(new Set(icons.map(x=>x.assetId)).size,49);
  for(const icon of icons){
   const url=api.image(icon);
-  assert.match(url,/^action-icons\/sea-v1\/[0-9]{2}_[a-z_]+\.png$/);
+  assert.match(url,/^action-icons\/v2\/[0-9]{2}_[a-z_]+\.png$/);
   const workerPath=new URL('../assets/'+url,import.meta.url);
   const gmPath=new URL('../server-game/current/'+url,import.meta.url);
   const svgPath=new URL('../assets/'+url.replace(/\.png$/,'.svg'),import.meta.url);
