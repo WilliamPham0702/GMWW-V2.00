@@ -4,6 +4,7 @@ import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
+import {coreRoleForActor,isCanonicalCoreAction} from '../assets/village/arena-3d/stage11-core-action-bridge.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -17,7 +18,7 @@ function aggregateGallowsOnly(raw){
 }
 export class RoomDurableObject extends GameRoomDurableObject{
   broadcast(payload){return super.broadcast(redactStagingPublicBroadcast(payload))}
-  async captureAuthorizedCast(response,body,phase){
+  async captureAuthorizedCast(response,body,phase,roleId=''){
     if(!response?.ok)return response;
     const result=await response.clone().json().catch(()=>null);
     if(result?.ok!==true||result?.idempotent===true)return response;
@@ -25,20 +26,27 @@ export class RoomDurableObject extends GameRoomDurableObject{
     if(meta?.phase!=='running'||meta.cyclePhase!==phase||!meta.matchId||!meta.cycleKey)return response;
     const actorId=String(body?.actorId||'');
     const targets=Array.isArray(body?.targetIds)?body.targetIds:[];
-    const kind=classifyCastingAction(body?.actionId);
+    const actionId=String(body?.actionId||'');
+    const kind=classifyCastingAction(actionId);
     if(!/^[a-z0-9._-]{1,80}$/i.test(actorId)||!kind)return response;
     const now=Date.now();
     await this.ctx.storage.put('arena:lastCast:'+meta.matchId,{
       matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),phase,
       turnId:phase==='night'?String(body?.turnId||''):'day:'+String(body?.clientEventId||'').slice(0,90),
       actorIds:['member:'+actorId],targetIds:targets.filter(id=>/^[a-z0-9._-]{1,80}$/i.test(String(id))).map(id=>'member:'+id),
-      kind,createdAt:now,expiresAt:now+4500
+      kind,actionId:isCanonicalCoreAction(actionId)?actionId:'',roleId,
+      createdAt:now,expiresAt:now+4500
     });
     return response;
   }
   async gmBattleAction(request,body){
+    // Capture Core-authored role before its action advances the night queue.
+    const meta=await this.ctx.storage.get('meta');
+    const control=meta?.phase==='running'&&meta.cyclePhase==='night'
+      ?await this.gmNightControls(meta).catch(()=>null):null;
+    const roleId=coreRoleForActor(control,String(body?.actorId||''));
     const response=await super.gmBattleAction(request,body);
-    return this.captureAuthorizedCast(response,body,'night');
+    return this.captureAuthorizedCast(response,body,'night',roleId);
   }
   async gmDayAction(request,body){
     const response=await super.gmDayAction(request,body);
@@ -71,6 +79,13 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const now=Date.now();
     const saved=await this.ctx.storage.get('arena:lastCast:'+String(meta.matchId||''));
     if(meta.cyclePhase==='night'){
+      // A confirmed cast outlives the queue cursor (GM may advance immediately).
+      // This cue stays in GM-only response, matches exact match/cycle and expires quickly.
+      if(saved?.phase==='night'&&String(saved.matchId)===String(meta.matchId)&&
+         String(saved.cycleKey)===String(meta.cycleKey)&&saved.expiresAt>now){
+        const live=stageCastingCue(saved,now);
+        if(live?.cast)return live;
+      }
       const rt=await this.getNightRuntime(meta,Math.max(1,Number(meta.cycleNight)||1),false);
       const step=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;
       if(!step)return null;
@@ -79,12 +94,8 @@ export class RoomDurableObject extends GameRoomDurableObject{
       const actorIds=[...new Set(logins.filter(id=>typeof id==='string'&&/^[a-z0-9._-]{1,80}$/i.test(id)).map(id=>'member:'+id))];
       if(!actorIds.length)return null; // introduction/wakeup without an actual actor
       const current=String(step.id||'');
-      const matched=saved&&saved.turnId===current&&saved.cycleKey===meta.cycleKey&&saved.matchId===meta.matchId&&saved.expiresAt>now;
-      return stageCastingCue({
-        matchId:meta.matchId,cycleKey:meta.cycleKey,phase:'night',turnId:current,
-        actorIds,
-        ...(matched?{targetIds:saved.targetIds,kind:saved.kind,createdAt:saved.createdAt,expiresAt:saved.expiresAt}:{})
-      },now);
+      return stageCastingCue({matchId:meta.matchId,cycleKey:meta.cycleKey,
+        phase:'night',turnId:current,actorIds},now);
     }
     if(meta.cyclePhase==='morning'&&saved&&saved.phase==='morning'&&saved.matchId===meta.matchId&&
        saved.cycleKey===meta.cycleKey&&saved.expiresAt>now){
