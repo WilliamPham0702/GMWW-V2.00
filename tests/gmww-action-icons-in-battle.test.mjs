@@ -67,7 +67,7 @@ test('Eligible action stays visible at 🔥 during benign server sync, with butt
  const{ctx,dock,toggle}=dockContext();
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
  assert.equal(dock.hidden,false);
- assert.match(dock.innerHTML,/action-icons\/sea-v1\/01_soi_xet\.png/);
+ assert.match(dock.innerHTML,/action-icons\/v2\/01_soi_xet\.png/);
  assert.equal(toggle.textContent,'ICON: BẬT');
  assert.match(dock.innerHTML,/top:[0-9.]+px/);
  ctx.battleState.syncPending=true;

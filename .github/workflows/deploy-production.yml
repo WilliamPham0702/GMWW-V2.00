@@ -48,6 +48,17 @@ jobs:
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # ICON_V2_CI_HOTFIX: verify the exact seven-file non-runtime repair.
+          # Runtime V3.227 is already live; no package, Worker or GM logic changed.
+          # Fail closed: a different file set, image, checksum or version deploys normally.
+          if [ "$SHOULD_DEPLOY" = true ] && \
+             [ "$(wc -l < /tmp/gmww-production-change-scope.txt | tr -d ' ')" = 9 ] && \
+             [ "$(node -p "require('./package.json').version")" = '3.227.0' ] && \
+             [ "$(sha256sum assets/action-icons/v2/01_soi_xet.svg | awk '{print $1}')" = '3d74accb407aa6344fe787e588e89e4c2da12f88e378a81cd574e8df29d52e29' ] && \
+             ! grep -Ev '^(tests/gmww-action-icons-in-battle[.]test[.]mjs|assets/action-icons/v2/01_soi_xet[.]svg|assets/action-icons/v2/manifest[.]json|docs/releases/GMWW-V3[.]227-icon-action-v2-20261025[.]md|[.]github/scripts/ci-browser-scope[.]mjs|[.]github/workflows/check-player-web[.]yml|[.]github/workflows/deploy-production[.]yml|[.]github/workflows/build-server-game-ipa[.]yml|[.]github/workflows/check-dual-renderer[.]yml)$' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'V3.227: chỉ sửa kiểm thử/định dạng/manifest SHA-256 đã kiểm tra – không phát hành Runtime trùng phiên bản.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"

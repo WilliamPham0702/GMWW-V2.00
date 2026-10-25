@@ -1100,7 +1100,41 @@ function isIconActionV23227Scope(changes){
   icon.includes("'action-icons/v2/'")&&css.includes('GMWW Icon Action V2');
 }
 
+// The approved 3.227 Runtime is already in Production. This narrowly scoped
+// CI repair fixes a stale V2 icon path and harmless source whitespace only.
+// Any game code / asset PNG change falls back to complete safety gates.
+function isIconV2CIRepairScope(changes){
+ const allow=new Set([
+  'tests/gmww-action-icons-in-battle.test.mjs',
+  'assets/action-icons/v2/01_soi_xet.svg',
+  'assets/action-icons/v2/manifest.json',
+  'docs/releases/GMWW-V3.227-icon-action-v2-20261025.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==allow.size)return false;
+ if(!changes.every(x=>x.status==='M'&&allow.has(x.path)))return false;
+ const paths=new Map(changes.map(x=>[x.path,x.after]));
+ if(paths.size!==allow.size)return false;
+ const t=paths.get('tests/gmww-action-icons-in-battle.test.mjs')||'';
+ const svg=paths.get('assets/action-icons/v2/01_soi_xet.svg')||'';
+ const notes=paths.get('docs/releases/GMWW-V3.227-icon-action-v2-20261025.md')||'';
+ if(!t.includes('action-icons')||!t.includes('v2')||t.includes('sea-v1\\/01_soi_xet'))return false;
+ if(svg.split('\n').some(x=>/[ \t]+$/.test(x))||notes.split('\n').some(x=>/[ \t]+$/.test(x)))return false;
+ try{
+  const m=JSON.parse(paths.get('assets/action-icons/v2/manifest.json')||'null');
+  const icon=m?.icons?.find(x=>x.svg==='01_soi_xet.svg');
+  if(m?.count!==49||m.icons.length!==49||icon?.sha256_svg!=='3d74accb407aa6344fe787e588e89e4c2da12f88e378a81cd574e8df29d52e29')return false;
+ }catch(_){return false}
+ return (paths.get('.github/workflows/check-player-web.yml')||'').includes("'icon-v2-ci-fix'") &&
+  (paths.get('.github/workflows/deploy-production.yml')||'').includes('ICON_V2_CI_HOTFIX');
+}
+
 export function classifyBrowserScope(changes){
+  if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
   if(isGMIcons501Scope(changes))return 'gm-icons-501';
   if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
@@ -1161,6 +1195,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
       if(isIconActionV23227Scope(changes))return{mode:'icon-action-v2-3227',reason:'Icon Action V2 free drag/snap, 49 frameless SVG/PNG and OTA only'};
@@ -1262,6 +1297,7 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='icon-v2-ci-fix')console.log('V3.227: chỉ sửa test V2, khoảng trắng SVG/notes và checksum, không kiểm thử gameplay khác.');
   if(result.mode==='icon-wave5-3218')console.log('V3.218: chỉ test icon/manifest/OTA liên quan.');
   if(result.mode==='icon-game-3215')console.log('V3.215: chỉ kiểm tra giao diện ICON, 54 ánh xạ, kéo thả GM và Runtime OTA.');
   if(result.mode==='icon-wave3-3213')console.log('V3.213: chỉ kiểm tra 29 icon/SHA-256 và bản cập nhật OTA.');
@@ -1276,7 +1312,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }

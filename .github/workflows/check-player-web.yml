@@ -70,6 +70,16 @@ jobs:
           test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
           grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
           grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: V3.227 – chỉ kiểm thử sửa sai đường dẫn Icon V2 và checksum SVG
+        if: steps.scope.outputs.mode == 'icon-v2-ci-fix'
+        run: |
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node --check server-game/current/action-icon-library.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
+          test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
+
       - name: Kiểm thử trực tiếp GMWW Icon Action V2 — V3.227
         if: steps.scope.outputs.mode == 'icon-action-v2-3227'
         run: |
