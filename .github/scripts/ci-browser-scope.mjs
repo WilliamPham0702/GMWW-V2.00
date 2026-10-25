@@ -756,6 +756,53 @@ function isRanking3221Scope(changes){
   after('server-game/current/GMWW.html').includes('<title>GMWW V3.221</title>');
 }
 
+// AUTO VÁN owner-approved #504: fail closed on every unrelated change.
+const autoVanCIPolicyPaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml',
+ '.github/workflows/deploy-production.yml',
+ 'tests/ci-browser-scope.test.mjs'
+]);
+function isAutoVanCIPolicyScope(changes){
+ const names=new Set(changes.map(c=>c.path));
+ return names.size===autoVanCIPolicyPaths.size&&
+   [...autoVanCIPolicyPaths].every(x=>names.has(x))&&
+   changes.every(c=>autoVanCIPolicyPaths.has(c.path)&&c.status==='M');
+}
+const autoVanReleasePaths=new Set([
+ 'package.json','package-lock.json','src/index.js',
+ 'server-game/src/00-core-and-library.part',
+ 'server-game/current/app.js','server-game/current/GMWW.html',
+ '.github/scripts/prepare-update-channel.mjs',
+ 'docs/releases/GMWW-V3.222-auto-van-20261025.md'
+]);
+function isAutoVanReleaseScope(changes){
+ if(changes.length!==autoVanReleasePaths.size||
+    !changes.every(c=>autoVanReleasePaths.has(c.path)))return false;
+ const map=new Map(changes.map(c=>[c.path,c]));
+ const versionChange=(path,beforeToken,afterToken,global=false)=>{
+   const c=map.get(path);
+   if(!c||c.status!=='M'||typeof c.before!=='string'||typeof c.after!=='string'||!c.before.includes(beforeToken))return false;
+   const expected=global?c.before.split(beforeToken).join(afterToken):c.before.replace(beforeToken,afterToken);
+   return c.after===expected;
+ };
+ const pkg=versionChange('package.json','"version": "3.221.0"','"version": "3.222.0"');
+ const lock=versionChange('package-lock.json','"version": "3.221.0"','"version": "3.222.0"',true);
+ const source=versionChange('server-game/src/00-core-and-library.part',"const VERSION='3.221'","const VERSION='3.222'");
+ const app=versionChange('server-game/current/app.js',"const VERSION='3.221'","const VERSION='3.222'");
+ const html=versionChange('server-game/current/GMWW.html','<title>GMWW V3.221</title>','<title>GMWW V3.222</title>');
+ const worker=map.get('src/index.js');
+ const workerOK=worker?.status==='M'&&
+  worker.after===worker.before.replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"');
+ const notes=map.get('docs/releases/GMWW-V3.222-auto-van-20261025.md');
+ const notesOK=notes?.status==='A'&&typeof notes.after==='string'&&notes.after.includes('AUTO VÁN')&&notes.after.includes('rollback');
+ const channel=map.get('.github/scripts/prepare-update-channel.mjs');
+ const noteRegex=/(releaseNotes:\[)"V3\.222:[^"]+",/;
+ const channelOK=channel?.status==='M'&&noteRegex.test(channel.after||'')&&
+   String(channel.after).replace(noteRegex,'$1')===channel.before;
+ return pkg&&lock&&source&&app&&html&&workerOK&&notesOK&&channelOK;
+}
+
 // PR #501: strictly UI-only GM/Player Web icon patch. A release/version change,
 // Worker/native file, new gameplay rule or unknown path MUST fall back to full.
 // This scope is PR-only; main and owner release builds keep their release gates.
@@ -872,6 +919,8 @@ function isGMIcons501ReleaseScope(changes){
 export function classifyBrowserScope(changes){
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
   if(isGMIcons501Scope(changes))return 'gm-icons-501';
+  if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
+  if(isAutoVanReleaseScope(changes))return 'auto-van-3222';
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isRanking3221Scope(changes))return 'ranking-3221';
   if(isHomeSea3219Scope(changes))return 'home-sea-3219';
@@ -924,8 +973,10 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isGMIcons501ReleaseScope(changes))return{mode:'gm-icons-501-release',reason:'V3.223 five icons, strict same-SHA OTA'};
+      if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
+      if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
       if(isRanking3221Scope(changes))return{mode:'ranking-3221',reason:'GMWW V3.221 xếp hạng ưu tiên nhiều ván'};
-      if(isGMIcons501ReleaseScope(changes))return{mode:'gm-icons-501-release',reason:'V3.223 five UI icons and Runtime OTA exactly scoped'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};

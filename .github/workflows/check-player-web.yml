@@ -54,6 +54,22 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ xác minh quy tắc CI AUTO VÁN (không chạy gameplay không liên quan)
+        if: steps.scope.outputs.mode == 'auto-van-ci'
+        run: |
+          node --test tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ kiểm thử AUTO VÁN và chốt Runtime V3.222
+        if: steps.scope.outputs.mode == 'auto-van-3222'
+        run: |
+          node --test tests/auto-game-template.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
+          grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
+          grep -q 'gmAutoComposeRoles' server-game/current/app.js
       - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
         if: steps.scope.outputs.mode == 'ranking-3221'
         run: |

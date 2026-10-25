@@ -241,6 +241,33 @@ test('V3.207 final main push CI selector stays scoped for documented verified co
  assert.ok(selector.includes('isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)'));
 });
 
+test('AUTO VÁN CI-only selector is isolated; never treats gameplay as CI-only',()=>{
+ const files=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('.github/workflows/check-player-web.yml','old','new'),
+  modified('.github/workflows/deploy-production.yml','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new')
+ ];
+ assert.equal(classifyBrowserScope(files),'auto-van-ci');
+ assert.equal(classifyBrowserScope([...files,modified('src/index.js','before','unknown gameplay')]),'full');
+});
+test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchanged gameplay',()=>{
+ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+ const files=[
+  modified('package.json',read('package.json'),read('package.json').replace('"version": "3.221.0"','"version": "3.222.0"')),
+  modified('package-lock.json',read('package-lock.json'),read('package-lock.json').split('"version": "3.221.0"').join('"version": "3.222.0"')),
+  modified('src/index.js',read('src/index.js'),read('src/index.js').replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
+  modified('server-game/src/00-core-and-library.part',read('server-game/src/00-core-and-library.part'),read('server-game/src/00-core-and-library.part').replace("const VERSION='3.221'","const VERSION='3.222'")),
+  modified('server-game/current/app.js',read('server-game/current/app.js'),read('server-game/current/app.js').replace("const VERSION='3.221'","const VERSION='3.222'")),
+  modified('server-game/current/GMWW.html',read('server-game/current/GMWW.html'),read('server-game/current/GMWW.html').replace('<title>GMWW V3.221</title>','<title>GMWW V3.222</title>')),
+  modified('.github/scripts/prepare-update-channel.mjs',read('.github/scripts/prepare-update-channel.mjs'),read('.github/scripts/prepare-update-channel.mjs').replace('releaseNotes:[','releaseNotes:["V3.222: AUTO VÁN đúng số người, lưu khi xác nhận; rollback V3.221.",')),
+  {path:'docs/releases/GMWW-V3.222-auto-van-20261025.md',status:'A',before:null,after:'AUTO VÁN\nrollback'}
+ ];
+ assert.equal(classifyBrowserScope(files),'auto-van-3222');
+ assert.equal(classifyBrowserScope([...files,modified('src/gmww-gallows-rules.js','x','y')]),'full');
+ const broken=files.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\n// gameplay changed'}:c);
+ assert.equal(classifyBrowserScope(broken),'full');
+});
 
 test('PR501 chỉ thu gọn CI khi chính xác 5 icon, phiên bản giữ nguyên và không có gameplay/Native',()=>{
   const entries=[
