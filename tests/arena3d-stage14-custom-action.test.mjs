@@ -77,7 +77,9 @@ test('GĐ14: GM-only Core casting pipeline retains whitelisted visualFamily',()=
  const clean=normalizeRitualCue(authorized,['member:'+actor,'member:target'],now);
  assert.equal(clean.cast.visualFamily,'shield');
  assert.equal(resolveRoleAnimation(clean.cast).family,'shield');
- const unsafe=stageCastingCue({...cue,visualFamily:'fake-wolf',createdAt:now,expiresAt:now+1200},now);
+ const unsafe=stageCastingCue({matchId:match,cycleKey:'night-1',phase:'night',
+  actorIds:['member:'+actor],turnId:'custom-turn',kind:'attack',
+  visualFamily:'fake-wolf',createdAt:now,expiresAt:now+1200},now);
  assert.equal(unsafe.cast.visualFamily,'');
 });
 test('GĐ14: runtime effects only after Core success, GM auth; undo clears stale spells',()=>{
