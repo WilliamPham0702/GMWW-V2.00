@@ -44,7 +44,7 @@ const assigned=[
 test('V3.133: server-verified Seer recognizes regular wolf but Alpha appears non-wolf',()=>{
  const one=resolveNightReveal({actionId:'action_seer',targetIds:['anna'],assignments:assigned});
  const alpha=resolveNightReveal({actionId:'action_seer',targetIds:['bao'],assignments:assigned});
- assert.equal(one.message,'CÓ SÓI');assert.equal(alpha.message,'KHÔNG PHẢI SÓI');
+ assert.equal(one.message,'Người bạn soi là Sói');assert.equal(alpha.message,'Người bạn soi không phải là Sói');
  assert.equal(resolveNightReveal({actionId:'action_seer',targetIds:['unknown'],assignments:assigned}),null);
 });
 test('V3.133: other divination can show role abilities or group wolf status without revealing to Player Web',()=>{
