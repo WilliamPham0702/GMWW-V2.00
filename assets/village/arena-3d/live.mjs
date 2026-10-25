@@ -93,8 +93,8 @@ function drawFrame(frame){
   const nextGameplay=publicGameplaySnapshot(frame,ballot);
   const decision=reduceGameplaySync(gameplaySnapshot,nextGameplay);
   if(!decision.accept){staleFrames++;document.body.dataset.gmwwStage9StaleFrames=String(staleFrames);return;}
-  gameplaySnapshot=nextGameplay;
   if(decision.reset){ballot=null;field.clearEffects();visibleGmEffects=0;}
+  gameplaySnapshot=decision.reset?publicGameplaySnapshot(frame,null):nextGameplay;
   const previousMatch=current?.room.matchId,previousCycle=current?.room.cycleKey;
   const changedRoom=current?.room.code!==frame.room.code;
   current=frame;synthetic=frame.room.code==='SYNTH';
