@@ -242,16 +242,6 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     return true;
   }catch(_){return false}
 }
-function battleOpenGallowsAudioUpload(id){
-  // Resolve the authoritative system cue, then open that EXACT file picker.
-  // Navigation to the library used to land on the wrong row/category in V3.209.
-  const allowed=['audio_system_day_wakeup','audio_system_gallows_day_long','audio_system_gallows_vote_result',
-    'audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
-  if(!allowed.includes(id))return;
-  const slot=(state.audio?.system||[]).find(x=>String(x.targetId||x.id)===id);
-  if(!slot){playFlashError('Chưa có ô âm thanh cho '+id+'.');return}
-  replaceAudioItem(slot,'system');
-}
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
