@@ -731,7 +731,67 @@ function isHomeSea3219Scope(changes){
     !top.includes('button.append(stage,podium')&&!top.includes('/originals/');
 }
 
+// PR #501: strictly UI-only GM/Player Web icon patch. A release/version change,
+// Worker/native file, new gameplay rule or unknown path MUST fall back to full.
+// This scope is PR-only; main and owner release builds keep their release gates.
+const gm501Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/check-gm-free-icons-501.yml',
+  'server-game/current/GMWW.html',
+  'server-game/current/style.css',
+  'server-game/current/app.js',
+  'server-game/src/30-village-and-setup.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'assets/village/village.mjs',
+  'tests/gallows-pirate-ui-v3205.test.mjs',
+  'tests/gallows-flag-snap-v3206.test.mjs',
+  'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+  'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
+  'tests/v3188-preview-iphone-webkit.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md',
+  'docs/acceptance-pr501-iphone-playerweb.md'
+]);
+function isGMIcons501Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const found=new Map(changes.map(c=>[c.path,c]));
+  for(const must of [
+    'assets/village/village.mjs',
+    'server-game/current/GMWW.html',
+    'server-game/current/app.js',
+    'server-game/current/style.css',
+    'server-game/src/30-village-and-setup.part',
+    'server-game/src/40-battle-and-timeline.part',
+    'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+    'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
+    '.github/workflows/check-gm-free-icons-501.yml'
+  ])if(!found.has(must))return false;
+  if(!changes.every(c=>gm501Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const gm=found.get('server-game/current/app.js');
+  const html=found.get('server-game/current/GMWW.html');
+  const village=found.get('assets/village/village.mjs');
+  const ui=found.get('server-game/src/30-village-and-setup.part');
+  const css=found.get('server-game/current/style.css');
+  if(![gm,html,village,ui,css].every(c=>c?.status==='M'&&typeof c.before==='string'&&typeof c.after==='string'))return false;
+  const version=s=>s.match(/const VERSION='([^']+)'/)?.[1]||'';
+  if(!version(gm.before)||version(gm.before)!==version(gm.after))return false;
+  if(!gm.after.includes("gmwwSetupFreeBattleIcons();")||
+     !ui.after.includes("const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'")||
+     !css.after.includes('#battleFactionStatsFloat.gmww-free-icon')||
+     !village.after.includes("flag.textContent='🚩'")||
+     !['🌈','🏖️','⛱️','🐦‍🔥'].every(icon=>html.after.includes(icon)))return false;
+  // Disallow release title/version changes or a new player/GM API contract.
+  if((html.before.match(/<title>[^<]+<\/title>/)||[])[0]!==
+     (html.after.match(/<title>[^<]+<\/title>/)||[])[0])return false;
+  return true;
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMIcons501Scope(changes))return 'gm-icons-501';
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isHomeSea3219Scope(changes))return 'home-sea-3219';
   if(isAudio3217Scope(changes))return 'audio-fix-3217';
