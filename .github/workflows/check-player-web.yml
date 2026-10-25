@@ -54,6 +54,15 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Kiểm thử đúng phạm vi giao diện ICON V3.212
+        if: steps.scope.outputs.mode == 'icon-clean-3212'
+        run: |
+          node --test tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.212-icon-clean-ui-20261025.md
+
       - name: Chỉ kiểm thử Icon và đóng gói Runtime V3.210
         if: steps.scope.outputs.mode == 'icon-runtime-3210'
         run: |
