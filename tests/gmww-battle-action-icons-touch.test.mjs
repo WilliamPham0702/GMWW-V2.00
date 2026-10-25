@@ -143,3 +143,18 @@ test('Existing server-authorized undo token and role/core validators remain inta
  assert.match(source,/void battleConfirm\(true\)/);
  assert.match(source,/data-fire-action/);
 });
+
+test('Two different Yêu Tinh direction icons preserve distinct left/right Core input',()=>{
+ for(const [iconId,expected] of [['dich-trai','left'],['dich-phai','right']]){
+  const x=scenario({id:'elf-turn',actionId:'action_transfer_bite',name:'Dịch vết cắn',targetCount:0,noTarget:false,unavailable:false});
+  x.button.dataset.fireIcon=iconId;
+  x.emit('pointerdown',{x:350,y:600});x.emit('pointerup',{x:350,y:600});
+  assert.equal(x.battleState.transferDir,expected);
+  assert.equal(x.calls.confirm,1);
+ }
+});
+test('Unavailable actions must not become clickable despite mapped icon',()=>{
+ const x=scenario({id:'turn-locked',actionId:'action_seer',name:'Soi xét',targetCount:1,unavailable:true});
+ assert.equal(x.dock.hidden,true);
+ assert.equal(x.dock.innerHTML,'');
+});
