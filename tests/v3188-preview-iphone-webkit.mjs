@@ -23,7 +23,7 @@ try{
       <aside id="battleDemoObserver" aria-label="Quan sát DEMO" style="position:absolute;left:12px;top:-220px;width:280px;min-height:110px">
         <header aria-label="Kéo bảng quan sát"><span class="battle-menu-grip"></span>
           <strong id="battleDemoTurn">Đang chạy · Đêm 1</strong>
-          <button type="button" id="battleDemoCollapse" aria-expanded="true" title="Thu gọn thành 📗">📗<span id="battleDemoCount">5</span></button>
+          <button type="button" id="battleDemoCollapse" aria-expanded="true" title="Thu gọn thành 🐦‍🔥">🐦‍🔥<span id="battleDemoCount">5</span></button>
         </header>
         <small id="battleDemoEventTurn">MỚI NHẤT</small>
         <p id="battleDemoEvent">Sói đã cắn người chơi</p>
@@ -46,6 +46,9 @@ try{
 
   await page.evaluate(()=>v3188.initDemoPanel());
   const book=page.locator('#battleDemoCollapse');
+  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),true,'DEMO starts as free phoenix icon on a new device');
+  await book.click();
+  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),false,'First tap expands DEMO event history');
   await book.click();
   const folded=await page.evaluate(()=>{
     const box=document.getElementById('battleDemoObserver').getBoundingClientRect(),
@@ -56,14 +59,14 @@ try{
   });
   assert.equal(folded.saved,'1','Book collapse preference must persist on this device');
   assert.equal(folded.expanded,'false','Screen reader receives collapsed state');
-  assert.ok(folded.w<=53&&folded.h<=52,'Folded observer occupies just the 📗 tile: '+JSON.stringify(folded));
+  assert.ok(folded.w<=53&&folded.h<=52,'Folded observer occupies just the 🐦‍🔥 icon: '+JSON.stringify(folded));
   assert.ok(folded.buttonW>=43&&folded.buttonH>=43,'Book control keeps an iPhone-sized touch target');
   // Initialization is intentionally idempotent: do not forge a fresh
   // element by deleting its event-listener guard (which duplicates clicks).
   await page.evaluate(()=>v3188.initDemoPanel());
-  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),true,'Book collapse survives panel reinit');
+  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),true,'Phoenix collapse survives panel reinit');
   await book.click();
-  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),false,'Book restores event history');
+  assert.equal(await page.locator('#battleDemoObserver').evaluate(el=>el.classList.contains('is-collapsed')),false,'Phoenix icon restores event history');
   assert.equal(await page.evaluate(()=>localStorage.getItem('gmww_demo_observer_compact_v1')),'0');
 
   await page.evaluate(()=>{
@@ -96,5 +99,5 @@ try{
   assert.ok(campfire.verticalGap<=16,'GM menu must open beside 🔥, not at fixed footer: '+JSON.stringify(campfire));
   assert.ok(campfire.left>=0&&campfire.right<=campfire.width+1&&campfire.top>=0&&campfire.bottom<=campfire.height+1,'GM menu stays inside viewport');
   await page.screenshot({path:'/tmp/gmww-v3188-preview-iphone-webkit.png'});
-  console.log('PASS V3.188 iPhone WebKit: 📗 fold/unfold, local dock restore/clear and fire-anchored GM menu');
+  console.log('PASS PR501 iPhone WebKit: 🐦‍🔥 default compact, expand/collapse, persistent choice, local dock and campfire menu');
 }finally{await browser.close()}

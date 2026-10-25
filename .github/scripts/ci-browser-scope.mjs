@@ -867,7 +867,123 @@ function isArenaHome3223Scope(changes){
  return true;
 }
 
+// PR #501: strictly UI-only GM/Player Web icon patch. A release/version change,
+// Worker/native file, new gameplay rule or unknown path MUST fall back to full.
+// This scope is PR-only; main and owner release builds keep their release gates.
+const gm501Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/check-gm-free-icons-501.yml',
+  'server-game/current/GMWW.html',
+  'server-game/current/style.css',
+  'server-game/current/app.js',
+  'server-game/src/30-village-and-setup.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'assets/village/village.mjs',
+  'tests/gallows-pirate-ui-v3205.test.mjs',
+  'tests/gallows-flag-snap-v3206.test.mjs',
+  'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+  'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
+  'tests/v3188-preview-iphone-webkit.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md',
+  '.github/workflows/check-dual-renderer.yml',
+  'docs/acceptance-pr501-iphone-playerweb.md'
+]);
+function isGMIcons501Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const found=new Map(changes.map(c=>[c.path,c]));
+  for(const must of [
+    'assets/village/village.mjs',
+    'server-game/current/GMWW.html',
+    'server-game/current/app.js',
+    'server-game/current/style.css',
+    'server-game/src/30-village-and-setup.part',
+    'server-game/src/40-battle-and-timeline.part',
+    'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+    'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
+    '.github/workflows/check-gm-free-icons-501.yml'
+  ])if(!found.has(must))return false;
+  if(!changes.every(c=>gm501Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const gm=found.get('server-game/current/app.js');
+  const html=found.get('server-game/current/GMWW.html');
+  const village=found.get('assets/village/village.mjs');
+  const ui=found.get('server-game/src/30-village-and-setup.part');
+  const css=found.get('server-game/current/style.css');
+  if(![gm,html,village,ui,css].every(c=>c?.status==='M'&&typeof c.before==='string'&&typeof c.after==='string'))return false;
+  const version=s=>s.match(/const VERSION='([^']+)'/)?.[1]||'';
+  if(!version(gm.before)||version(gm.before)!==version(gm.after))return false;
+  if(!gm.after.includes("gmwwSetupFreeBattleIcons();")||
+     !ui.after.includes("const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'")||
+     !css.after.includes('#battleFactionStatsFloat.gmww-free-icon')||
+     !village.after.includes("flag.textContent='🚩'")||
+     !['🌈','🏖️','⛱️','🐦‍🔥'].every(icon=>html.after.includes(icon)))return false;
+  // Disallow release title/version changes or a new player/GM API contract.
+  if((html.before.match(/<title>[^<]+<\/title>/)||[])[0]!==
+     (html.after.match(/<title>[^<]+<\/title>/)||[])[0])return false;
+  return true;
+}
+
+// V3.223 release gate for approved PR #501. This is NOT a generic version
+// exemption: only the exact UI patch, release machinery and version 3.223 -> 3.224
+// qualify; unrelated gameplay, native, or Worker changes always select full.
+const gm501ReleasePaths=new Set([
+  ...gm501Paths,
+  'src/index.js',
+  'package.json',
+  'package-lock.json',
+  'server-game/src/00-core-and-library.part',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/deploy-production.yml',
+  'docs/releases/GMWW-V3.224-five-floating-icons-20261025.md'
+]);
+function isGMIcons501ReleaseScope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  if(!changes.every(c=>gm501ReleasePaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  for(const name of [
+    'assets/village/village.mjs','server-game/current/GMWW.html',
+    'server-game/current/app.js','server-game/current/style.css',
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/30-village-and-setup.part',
+    'server-game/src/40-battle-and-timeline.part',
+    '.github/scripts/prepare-update-channel.mjs',
+    'src/index.js','package.json','package-lock.json',
+    'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+    'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
+    '.github/workflows/check-gm-free-icons-501.yml',
+    'docs/releases/GMWW-V3.224-five-floating-icons-20261025.md'
+  ])if(!by.has(name))return false;
+  const before=(p)=>String(by.get(p)?.before||'');
+  const after=(p)=>String(by.get(p)?.after||'');
+  if(!before('server-game/current/app.js').includes("const VERSION='3.223'")||
+     !after('server-game/current/app.js').includes("const VERSION='3.224'")||
+     !before('server-game/src/00-core-and-library.part').includes("const VERSION='3.223'")||
+     !after('server-game/src/00-core-and-library.part').includes("const VERSION='3.224'")||
+     !before('src/index.js').includes('VERSION="V3.223"')||
+     !after('src/index.js').includes('VERSION="V3.224"')||
+     !after('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3224"')||
+     !before('package.json').includes('"version": "3.223.0"')||
+     !after('package.json').includes('"version": "3.224.0"')||
+     !after('package-lock.json').includes('"version": "3.224.0"')||
+     !before('server-game/current/GMWW.html').includes('<title>GMWW V3.223</title>')||
+     !after('server-game/current/GMWW.html').includes('<title>GMWW V3.224</title>'))return false;
+  // These are the only new runtime behavior and OTA manifest notes.
+  if(!after('server-game/current/app.js').includes('gmwwSetupFreeBattleIcons();')||
+     !after('server-game/src/30-village-and-setup.part').includes("GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'")||
+     !after('assets/village/village.mjs').includes("flag.textContent='🚩'")||
+     !['🌈','🏖️','⛱️','🐦‍🔥'].every(e=>after('server-game/current/GMWW.html').includes(e))||
+     !after('.github/scripts/prepare-update-channel.mjs').includes('releaseNotes:["V3.224:')||
+     !after('docs/releases/GMWW-V3.224-five-floating-icons-20261025.md').includes('Rollback V3.223'))return false;
+  return true;
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
+  if(isGMIcons501Scope(changes))return 'gm-icons-501';
   if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
   if(isAutoVanReleaseScope(changes))return 'auto-van-3222';
   if(!Array.isArray(changes)||!changes.length)return 'full';
@@ -926,6 +1042,7 @@ function detect(){
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
       if(isArenaHome3223Scope(changes))return{mode:'arena-home-3223',reason:'V3.223 cổng VÀO LÀNG → Arena3D QA STAGING; OTA chốt an toàn'};
+      if(isGMIcons501ReleaseScope(changes))return{mode:'gm-icons-501-release',reason:'GMWW V3.224 exact PR501 5 icon release; no Native or Core changes'};
       if(isRanking3221Scope(changes))return{mode:'ranking-3221',reason:'GMWW V3.221 xếp hạng ưu tiên nhiều ván'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};

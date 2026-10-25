@@ -18,7 +18,8 @@ test('Player village shows ONLY one red pirate flag anchored at fire during nomi
  const village=read('assets/village/village.mjs');
  const player=read('src/player-web-src/30-rooms-and-realtime.part');
  assert.match(village,/flag\.id='gmwwPirateNominate'/);
- assert.match(village,/fill="#eb3047"/);
+ assert.match(village,/flag\.textContent='🚩'/);
+ assert.match(village,/border:0;box-shadow:none/);
  assert.match(village,/const point=screenPoint\(layout\.fire\)/);
  assert.match(village,/flag\.hidden=!visible/);
  assert.match(village,/snapCandidate\(x,y\)/);

@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.223';
+const VERSION='3.224';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3246,6 +3246,246 @@ function renderPlayCreatedRooms(){
 /* Demo controls now live at the top of the GM campfire menu. */
 function demoPanelTouch(){}
 const GMWW_DEMO_OBSERVER_COMPACT_KEY='gmww_demo_observer_compact_v1';
+/* GM shortcuts: independent iPhone-friendly free icons; position is local-only. */
+const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1';
+function gmwwSetupFreeBattleIcons(){
+  const shell=document.getElementById('playShell');if(!shell)return;
+  const read=()=>{try{const v=JSON.parse(localStorage.getItem(GMWW_BATTLE_ICON_POSITIONS)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch{return {}}};
+  const clamp=(node,left,top)=>{
+    const width=node.offsetWidth||48,height=node.offsetHeight||48;
+    return {left:Math.max(6,Math.min(Math.max(6,innerWidth-width-6),left)),
+      top:Math.max(6,Math.min(Math.max(6,innerHeight-height-6),top))};
+  };
+  const place=(node,left,top)=>{
+    const p=clamp(node,left,top);
+    for(const [name,value] of Object.entries({left:p.left+'px',top:p.top+'px',right:'auto',bottom:'auto',transform:'none'}))
+      node.style.setProperty(name,value,'important');
+    return p;
+  };
+  for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver']){
+    const panel=document.getElementById(id);if(!panel)continue;
+    if(panel.parentElement!==shell)shell.appendChild(panel);
+    const saved=read()[id];
+    if(!panel.dataset.gmwwFreeRestored&&saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){
+      const width=panel.offsetWidth||48,height=panel.offsetHeight||48;
+      place(panel,saved.x*Math.max(0,innerWidth-width),saved.y*Math.max(0,innerHeight-height));
+    }
+    panel.dataset.gmwwFreeRestored='1';
+    if(panel.dataset.gmwwFreeReady)continue;
+    panel.dataset.gmwwFreeReady='1';
+    panel.classList.add('gmww-free-icon');
+    const button=panel.querySelector(id==='battleDemoObserver'?'#battleDemoCollapse':'button');
+    if(!button)continue;
+    let drag=null,blockClickUntil=0;
+    const movable=()=>id!=='battleDemoObserver'||panel.classList.contains('is-collapsed');
+    button.addEventListener('pointerdown',event=>{
+      if(panel.hidden||!movable()||(event.button!==0&&event.pointerType!=='touch'))return;
+      const rect=panel.getBoundingClientRect();
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+      try{button.setPointerCapture(event.pointerId)}catch{}
+    });
+    button.addEventListener('pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+      if(!drag.moved&&Math.hypot(dx,dy)<8)return;
+      drag.moved=true;
+      place(panel,drag.left+dx,drag.top+dy);
+      event.preventDefault();
+    });
+    const finish=event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      if(drag.moved){
+        blockClickUntil=Date.now()+450;
+        if(event.type==='pointerup'){
+          const rect=panel.getBoundingClientRect();
+          const saved=read();
+          saved[id]={x:Math.max(0,Math.min(1,rect.left/Math.max(1,innerWidth-rect.width))),
+            y:Math.max(0,Math.min(1,rect.top/Math.max(1,innerHeight-rect.height)))};
+          try{localStorage.setItem(GMWW_BATTLE_ICON_POSITIONS,JSON.stringify(saved))}catch{}
+        }
+        event.preventDefault();
+      }
+      drag=null;try{button.releasePointerCapture(event.pointerId)}catch{}
+    };
+    button.addEventListener('pointerup',finish);
+    button.addEventListener('pointercancel',finish);
+    button.addEventListener('click',event=>{
+      if(Date.now()<blockClickUntil){event.preventDefault();event.stopImmediatePropagation()}
+    },true);
+    const keepVisible=()=>{
+      if(!panel.hidden&&panel.style.left)place(panel,panel.getBoundingClientRect().left,panel.getBoundingClientRect().top);
+    };
+    window.addEventListener('resize',keepVisible,{passive:true});
+    window.visualViewport?.addEventListener('resize',keepVisible,{passive:true});
+  }
+  // Escape old pointer-events:none dock; keep the statistics dialog interactive.
+  const stats=document.getElementById('battleFactionStats');
+  if(stats&&stats.parentElement!==shell)shell.appendChild(stats);
+}
+function battleMorningRows(){
+  const night=arguments.length?Math.max(1,Number(arguments[0])||1):Math.max(1,Number(playSceneState.night)||1),
+    timeOfDay=arguments[1]||'night';
+  const match=String(playSceneRuntime.room?.matchId||'');
+  const entries=Array.isArray(playSceneRuntime.villageHistory)?playSceneRuntime.villageHistory:
+    Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
+  const labels={dead:'đã chết',expelled:'đã bị đuổi khỏi làng',
+    assassin_mark:'đã bị Sát Thủ chọn',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
+    silenced:'đã bị câm',infected:'đã bị nhiễm bệnh',protected:'được bảo vệ',
+    saved:'đã được cứu',healed:'đã được hồi phục',revived:'đã hồi sinh',
+    blessed:'đã được chúc phúc',shielded:'đã nhận khiên',poisoned:'đã bị đầu độc'};
+  const negative=new Set(['dead','expelled','assassin_mark','marked','frozen','silenced','infected','poisoned','wolf_bite','cursed']);
+  const rows=[],seen=new Set();
+  for(const entry of entries){
+    if(!entry||Number(entry.night)!==night||
+       (entry.matchId&&String(entry.matchId)!==match)||
+       (entry.effectActive===false&&/UNDO|RESTORE|REVERT|GM_CLEAR/i.test(String(entry.expiredReason||''))))continue;
+    const type=String(entry.type||'');
+    // The Assassin mark is recorded at NIGHT; its verified response is a DAY
+    // event and must be announced once as a verdict, without leaking the GM sign.
+    const resolvedAssassin=type==='assassin_mark'&&entry.status==='responded'&&
+      ['👍','👎'].includes(String(entry.response||''))&&
+      ['👍','👎'].includes(String(entry.gmChoice||''));
+    const isDay=['gallows','day-action'].includes(String(entry.source||''))||
+      ['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
+    if(timeOfDay==='day'?!(isDay||resolvedAssassin):isDay)continue;
+    const assassinCorrect=resolvedAssassin&&entry.response===entry.gmChoice;
+    const key=resolvedAssassin&&timeOfDay==='day'?(assassinCorrect?'assassin_correct':'assassin_wrong'):
+      (type==='status'?String(entry.statusId||'status'):type);
+    if(!key||['pending','responded'].includes(key))continue;
+    const id=String(entry.id||entry.clientEventId||'')||key+':'+String(entry.loginId||'')+':'+String(entry.createdAt||'');
+    if(seen.has(id))continue;seen.add(id);
+    const loginId=String(entry.loginId||entry.playerId||'').replace(/^member:/,'');
+    const member=loginId?battleMember(loginId):null;
+    const maidenDeath=type==='dead'&&(String(entry.source||'')==='maiden-night-engine'||String(entry.actionId||'')==='action_visit_house');
+    const rawLabel=key==='assassin_correct'?'đã chọn đúng dấu Sát Thủ · SỐNG':
+      key==='assassin_wrong'?'đã chọn sai dấu Sát Thủ · CHẾT':
+      maidenDeath?String(entry.message||'Thiếu Nữ đã chết vì Thăm Nhà').replace(/^Thiếu Nữ\s*/i,''):
+      labels[key]||String(entry.effectName||entry.message||entry.actionId||key).trim();
+    const targetRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===loginId);
+    const sourceId=String(entry.actorId||entry.sourceActorId||entry.causedBy||'').replace(/^member:/,'');
+    const sourceMember=sourceId?battleMember(sourceId):null;
+    const sourceRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===sourceId);
+    const targetName=String(member?.displayName||member?.name||loginId||'Người chơi');
+    const role=String(targetRole?.roleName||targetRole?.roleCard?.name||targetRole?.roleId||'Vai Trò');
+    const actor=sourceId?(String(sourceRole?.roleName||sourceRole?.roleCard?.name||sourceRole?.roleId||'Vai Trò')+
+      ' ('+String(sourceMember?.displayName||sourceId)+')'):'';
+    const isNegative=negative.has(key)||key==='assassin_wrong';
+    const badAction=(type==='dead'&&!maidenDeath&&
+      /wolf_bite|kill|poison|assassin_mark|stab|exile/i.test(String(entry.actionId||'')+' '+String(entry.effectId||'')))||
+      (type==='poisoned'&&!!entry.actionId);
+    rows.push({id,kind:key,name:targetName,role,actor,label:rawLabel,negative:isNegative,badAction,
+      at:String(entry.respondedAt||entry.createdAt||''),day:isDay||resolvedAssassin});
+  }
+  return rows.sort((a,b)=>Number(b.negative)-Number(a.negative)||b.at.localeCompare(a.at));
+}
+function battleMorningShow(){
+  const panel=document.getElementById('battleMorningReport'),
+    body=document.getElementById('battleMorningList'),
+    history=document.getElementById('battleVillageHistoryList');
+  if(!panel||!body||playSceneState.phase!=='day')return;
+  const currentNight=Math.max(1,Number(playSceneState.night)||1),
+    key=String(playSceneRuntime.room?.matchId||'')+':'+currentNight,
+    rows=battleMorningRows(currentNight,'night'),
+    deaths=rows.filter(x=>x.kind==='dead').length,
+    historyRows=Array.from({length:currentNight},(_,i)=>({
+      night:i+1,nightRows:battleMorningRows(i+1,'night'),dayRows:battleMorningRows(i+1,'day')
+    })),
+    signature=key+':'+JSON.stringify(rows)+':'+JSON.stringify(historyRows);
+  if(battleState.morningDayKey!==key){
+    battleState.morningDayKey=key;battleState.morningOpen=true;battleState.morningSig='';
+    if(battleState.morningAutoHideTimer)clearTimeout(battleState.morningAutoHideTimer);
+    // Only the automatic daybreak bulletin closes after ten seconds;
+    // history remains accessible on manual reopen through the toolbar.
+    battleState.morningAutoHideTimer=setTimeout(()=>{
+      if(battleState.morningDayKey!==key||playSceneState.phase!=='day')return;
+      battleState.morningOpen=false;
+      const sheet=document.getElementById('battleMorningReport');
+      if(sheet)sheet.hidden=true;
+    },10000);
+  }
+  const appendRows=(host,notices)=>{
+    for(const row of notices){
+      const line=document.createElement('p'),name=document.createElement('strong');
+      line.className='battle-morning-line'+(row.negative?' is-critical':'')+(row.badAction?' is-bad-action':'');
+      name.textContent=row.name+' ('+row.role+')';
+      const action=String(row.label||'').trim();
+      const sentence=action.startsWith('đã ')?' '+action:
+        action.startsWith('chết ')||action.startsWith('đã chết ')?' '+action:
+        ' '+action;
+      const wording=sentence+(row.actor?' bởi '+row.actor:'');
+      line.append(name,document.createTextNode(wording+(wording.trim().endsWith('.')?'':'.')));
+      host.append(line);
+    }
+  };
+  if(battleState.morningSig!==signature){
+    battleState.morningSig=signature;body.replaceChildren();
+    const summary=document.createElement('p');
+    summary.className='battle-morning-summary';
+    summary.textContent='ĐÊM '+currentNight+' · '+(deaths?'Làng có '+deaths+' người chết':
+      rows.length?'Các tác động được ghi nhận':'Không ghi nhận tác động');
+    body.append(summary);appendRows(body,rows);
+    if(history){
+      history.replaceChildren();
+      for(const group of historyRows){
+        const nightTitle=document.createElement('h4');nightTitle.textContent='ĐÊM '+group.night;
+        const nightRows=document.createElement('div');appendRows(nightRows,group.nightRows);
+        if(!group.nightRows.length)nightRows.textContent='Không ghi nhận tác động.';
+        const dayTitle=document.createElement('h4');dayTitle.textContent='NGÀY '+group.night;
+        const dayRows=document.createElement('div');appendRows(dayRows,group.dayRows);
+        if(!group.dayRows.length)dayRows.textContent='Chưa có tác động được ghi nhận.';
+        history.append(nightTitle,nightRows,dayTitle,dayRows);
+      }
+    }
+  }
+  panel.hidden=!battleState.morningOpen;
+  if(battleState.morningAudioKey!==key){
+    battleState.morningAudioKey=key;battleMorningPlayAudio();
+  }
+  // Assassin responses arrive after the morning announcement. Speak each
+  // committed verdict exactly once when GM sync sees the response.
+  const heard=battleState.morningVerdictsHeard||(battleState.morningVerdictsHeard=new Set());
+  for(const row of battleMorningRows(currentNight,'day')){
+    if(!['assassin_correct','assassin_wrong'].includes(row.kind))continue;
+    const verdictId=key+':'+row.id+':'+row.kind;
+    if(heard.has(verdictId))continue;
+    heard.add(verdictId);
+    const cue=row.kind==='assassin_correct'?'audio_system_assassin_correct':'audio_system_assassin_wrong';
+    void battlePlayConfiguredAudio('system',cue,row.kind==='assassin_correct'?'Chọn đúng':'Chọn sai');
+  }
+}
+function battleRenderFactionStats(){
+  const panel=document.getElementById('battleFactionStats');if(!panel||panel.hidden)return;
+  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
+    groups=new Map([['Phe Dân',{total:0,alive:0}],['Phe Sói',{total:0,alive:0}],['Phe Ba',{total:0,alive:0}]]);
+  for(const a of rows){
+    const id=String(a?.loginId||''),card=(state.cards||[]).find(r=>String(r.id)===String(a.roleId||'')),
+      raw=String(a?.roleCard?.factionId||card?.factionId||a?.factionId||a?.faction||'').toLowerCase();
+    const fac=raw==='wolf'||raw.includes('sói')||raw.includes('soi')?'Phe Sói':
+      raw==='third'||raw.includes('ba')?'Phe Ba':raw==='village'||raw.includes('dân')||raw.includes('dan')?'Phe Dân':'Phe Khác';
+    const stat=groups.get(fac)||{total:0,alive:0};stat.total++;
+    if(!['dead','expelled'].includes(playPlayerEffect(id)))stat.alive++;
+    groups.set(fac,stat);
+  }
+  const summary=panel.querySelector('[data-faction-counts]');
+  if(summary)summary.innerHTML=[...groups].filter(([,x])=>x.total>0).map(([name,v])=>
+    '<div class="battle-faction-row"><span>'+playEsc(name)+'</span><b>'+v.alive+' / '+v.total+'</b>'+
+    '<i style="--faction-progress:'+Math.round(100*v.alive/Math.max(1,v.total))+'%"></i></div>').join('')||'<p>Chưa phân vai.</p>';
+  const preview=panel.querySelector('[data-faction-forecast]');
+  const known=playSceneRuntime.winProposal;
+  if(preview){
+    const day=Math.max(1,Number(playSceneState.night)||1),wolf=groups.get('Phe Sói')?.alive||0,
+      other=[...groups].filter(([name])=>name!=='Phe Sói').reduce((n,[,g])=>n+g.alive,0),
+      villager=groups.get('Phe Dân')?.alive||0;
+    if(known)preview.textContent='Server xác định: '+String(known.winnerFaction||'Phe thắng')+' · Ngày '+day+'.';
+    else if(!rows.length)preview.textContent='Chưa có dữ liệu phe để dự báo.';
+    else{
+      const favored=wolf>=other?'Phe Sói':wolf===0?'Phe Dân':villager>=wolf?'Phe Dân':'Phe Sói';
+      const estimate=wolf>=other||wolf===0?day:day+Math.max(1,Math.ceil(Math.abs(other-wolf)/2));
+      preview.textContent='Dự báo tham khảo theo quân số: '+favored+' · khoảng ngày '+estimate+
+        '. Đây là giả định, không tính tác động vai trò/Artifact và không phải kết quả Server.';
+    }
+  }
+}
 function initDemoPanel(){
   const panel=document.getElementById('battleDemoObserver'),button=document.getElementById('battleDemoCollapse');
   if(!panel||!button||button.dataset.ready)return;
@@ -3254,10 +3494,10 @@ function initDemoPanel(){
     panel.classList.toggle('is-collapsed',collapsed);
     button.setAttribute('aria-expanded',String(!collapsed));
     button.setAttribute('aria-label',collapsed?'Mở bảng hành động DEMO':'Thu gọn bảng hành động DEMO');
-    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 📗';
+    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 🐦‍🔥';
     if(!collapsed)panel.classList.remove('has-unread');
   };
-  let collapsed=false;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)==='1'}catch{}
+  let collapsed=true;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)!=='0'}catch{}
   toggle(collapsed);
   button.addEventListener('click',e=>{
     e.stopPropagation();
@@ -5065,62 +5305,6 @@ function battleShowResultPopup(title,message,scanOnly=false){
 }
 /* Morning notices are derived only from committed interactions for this match and night.
    They must never be synthesized from a selected target or a private role card. */
-function battleMorningRows(){
-  const night=arguments.length?Math.max(1,Number(arguments[0])||1):Math.max(1,Number(playSceneState.night)||1),
-    timeOfDay=arguments[1]||'night';
-  const match=String(playSceneRuntime.room?.matchId||'');
-  const entries=Array.isArray(playSceneRuntime.villageHistory)?playSceneRuntime.villageHistory:
-    Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
-  const labels={dead:'đã chết',expelled:'đã bị đuổi khỏi làng',
-    assassin_mark:'đã bị Sát Thủ chọn',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
-    silenced:'đã bị câm',infected:'đã bị nhiễm bệnh',protected:'được bảo vệ',
-    saved:'đã được cứu',healed:'đã được hồi phục',revived:'đã hồi sinh',
-    blessed:'đã được chúc phúc',shielded:'đã nhận khiên',poisoned:'đã bị đầu độc'};
-  const negative=new Set(['dead','expelled','assassin_mark','marked','frozen','silenced','infected','poisoned','wolf_bite','cursed']);
-  const rows=[],seen=new Set();
-  for(const entry of entries){
-    if(!entry||Number(entry.night)!==night||
-       (entry.matchId&&String(entry.matchId)!==match)||
-       (entry.effectActive===false&&/UNDO|RESTORE|REVERT|GM_CLEAR/i.test(String(entry.expiredReason||''))))continue;
-    const type=String(entry.type||'');
-    // The Assassin mark is recorded at NIGHT; its verified response is a DAY
-    // event and must be announced once as a verdict, without leaking the GM sign.
-    const resolvedAssassin=type==='assassin_mark'&&entry.status==='responded'&&
-      ['👍','👎'].includes(String(entry.response||''))&&
-      ['👍','👎'].includes(String(entry.gmChoice||''));
-    const isDay=['gallows','day-action'].includes(String(entry.source||''))||
-      ['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
-    if(timeOfDay==='day'?!(isDay||resolvedAssassin):isDay)continue;
-    const assassinCorrect=resolvedAssassin&&entry.response===entry.gmChoice;
-    const key=resolvedAssassin&&timeOfDay==='day'?(assassinCorrect?'assassin_correct':'assassin_wrong'):
-      (type==='status'?String(entry.statusId||'status'):type);
-    if(!key||['pending','responded'].includes(key))continue;
-    const id=String(entry.id||entry.clientEventId||'')||key+':'+String(entry.loginId||'')+':'+String(entry.createdAt||'');
-    if(seen.has(id))continue;seen.add(id);
-    const loginId=String(entry.loginId||entry.playerId||'').replace(/^member:/,'');
-    const member=loginId?battleMember(loginId):null;
-    const maidenDeath=type==='dead'&&(String(entry.source||'')==='maiden-night-engine'||String(entry.actionId||'')==='action_visit_house');
-    const rawLabel=key==='assassin_correct'?'đã chọn đúng dấu Sát Thủ · SỐNG':
-      key==='assassin_wrong'?'đã chọn sai dấu Sát Thủ · CHẾT':
-      maidenDeath?String(entry.message||'Thiếu Nữ đã chết vì Thăm Nhà').replace(/^Thiếu Nữ\s*/i,''):
-      labels[key]||String(entry.effectName||entry.message||entry.actionId||key).trim();
-    const targetRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===loginId);
-    const sourceId=String(entry.actorId||entry.sourceActorId||entry.causedBy||'').replace(/^member:/,'');
-    const sourceMember=sourceId?battleMember(sourceId):null;
-    const sourceRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===sourceId);
-    const targetName=String(member?.displayName||member?.name||loginId||'Người chơi');
-    const role=String(targetRole?.roleName||targetRole?.roleCard?.name||targetRole?.roleId||'Vai Trò');
-    const actor=sourceId?(String(sourceRole?.roleName||sourceRole?.roleCard?.name||sourceRole?.roleId||'Vai Trò')+
-      ' ('+String(sourceMember?.displayName||sourceId)+')'):'';
-    const isNegative=negative.has(key)||key==='assassin_wrong';
-    const badAction=(type==='dead'&&!maidenDeath&&
-      /wolf_bite|kill|poison|assassin_mark|stab|exile/i.test(String(entry.actionId||'')+' '+String(entry.effectId||'')))||
-      (type==='poisoned'&&!!entry.actionId);
-    rows.push({id,kind:key,name:targetName,role,actor,label:rawLabel,negative:isNegative,badAction,
-      at:String(entry.respondedAt||entry.createdAt||''),day:isDay||resolvedAssassin});
-  }
-  return rows.sort((a,b)=>Number(b.negative)-Number(a.negative)||b.at.localeCompare(a.at));
-}
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
   // Guaranteed day-entry event: the server may skip the optional final
@@ -5149,81 +5333,6 @@ function battleMorningPlayAudio(){
     void battlePlayConfiguredAudio('system',id,label,false,next);
   };
   next();
-}
-function battleMorningShow(){
-  const panel=document.getElementById('battleMorningReport'),
-    body=document.getElementById('battleMorningList'),
-    history=document.getElementById('battleVillageHistoryList');
-  if(!panel||!body||playSceneState.phase!=='day')return;
-  const currentNight=Math.max(1,Number(playSceneState.night)||1),
-    key=String(playSceneRuntime.room?.matchId||'')+':'+currentNight,
-    rows=battleMorningRows(currentNight,'night'),
-    deaths=rows.filter(x=>x.kind==='dead').length,
-    historyRows=Array.from({length:currentNight},(_,i)=>({
-      night:i+1,nightRows:battleMorningRows(i+1,'night'),dayRows:battleMorningRows(i+1,'day')
-    })),
-    signature=key+':'+JSON.stringify(rows)+':'+JSON.stringify(historyRows);
-  if(battleState.morningDayKey!==key){
-    battleState.morningDayKey=key;battleState.morningOpen=true;battleState.morningSig='';
-    if(battleState.morningAutoHideTimer)clearTimeout(battleState.morningAutoHideTimer);
-    // Only the automatic daybreak bulletin closes after ten seconds;
-    // history remains accessible on manual reopen through the toolbar.
-    battleState.morningAutoHideTimer=setTimeout(()=>{
-      if(battleState.morningDayKey!==key||playSceneState.phase!=='day')return;
-      battleState.morningOpen=false;
-      const sheet=document.getElementById('battleMorningReport');
-      if(sheet)sheet.hidden=true;
-    },10000);
-  }
-  const appendRows=(host,notices)=>{
-    for(const row of notices){
-      const line=document.createElement('p'),name=document.createElement('strong');
-      line.className='battle-morning-line'+(row.negative?' is-critical':'')+(row.badAction?' is-bad-action':'');
-      name.textContent=row.name+' ('+row.role+')';
-      const action=String(row.label||'').trim();
-      const sentence=action.startsWith('đã ')?' '+action:
-        action.startsWith('chết ')||action.startsWith('đã chết ')?' '+action:
-        ' '+action;
-      const wording=sentence+(row.actor?' bởi '+row.actor:'');
-      line.append(name,document.createTextNode(wording+(wording.trim().endsWith('.')?'':'.')));
-      host.append(line);
-    }
-  };
-  if(battleState.morningSig!==signature){
-    battleState.morningSig=signature;body.replaceChildren();
-    const summary=document.createElement('p');
-    summary.className='battle-morning-summary';
-    summary.textContent='ĐÊM '+currentNight+' · '+(deaths?'Làng có '+deaths+' người chết':
-      rows.length?'Các tác động được ghi nhận':'Không ghi nhận tác động');
-    body.append(summary);appendRows(body,rows);
-    if(history){
-      history.replaceChildren();
-      for(const group of historyRows){
-        const nightTitle=document.createElement('h4');nightTitle.textContent='ĐÊM '+group.night;
-        const nightRows=document.createElement('div');appendRows(nightRows,group.nightRows);
-        if(!group.nightRows.length)nightRows.textContent='Không ghi nhận tác động.';
-        const dayTitle=document.createElement('h4');dayTitle.textContent='NGÀY '+group.night;
-        const dayRows=document.createElement('div');appendRows(dayRows,group.dayRows);
-        if(!group.dayRows.length)dayRows.textContent='Chưa có tác động được ghi nhận.';
-        history.append(nightTitle,nightRows,dayTitle,dayRows);
-      }
-    }
-  }
-  panel.hidden=!battleState.morningOpen;
-  if(battleState.morningAudioKey!==key){
-    battleState.morningAudioKey=key;battleMorningPlayAudio();
-  }
-  // Assassin responses arrive after the morning announcement. Speak each
-  // committed verdict exactly once when GM sync sees the response.
-  const heard=battleState.morningVerdictsHeard||(battleState.morningVerdictsHeard=new Set());
-  for(const row of battleMorningRows(currentNight,'day')){
-    if(!['assassin_correct','assassin_wrong'].includes(row.kind))continue;
-    const verdictId=key+':'+row.id+':'+row.kind;
-    if(heard.has(verdictId))continue;
-    heard.add(verdictId);
-    const cue=row.kind==='assassin_correct'?'audio_system_assassin_correct':'audio_system_assassin_wrong';
-    void battlePlayConfiguredAudio('system',cue,row.kind==='assassin_correct'?'Chọn đúng':'Chọn sai');
-  }
 }
 function battleDivinationSystemAudioCue(actionId,result){
   const action=String(actionId||'');
@@ -5604,39 +5713,6 @@ function battleRenderGallowsVerdict(g,stage,phase){
   if(result)result.textContent=g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
   if(votes)votes.textContent='👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
 }
-function battleRenderFactionStats(){
-  const panel=document.getElementById('battleFactionStats');if(!panel||panel.hidden)return;
-  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
-    groups=new Map([['Phe Dân',{total:0,alive:0}],['Phe Sói',{total:0,alive:0}],['Phe Ba',{total:0,alive:0}]]);
-  for(const a of rows){
-    const id=String(a?.loginId||''),card=(state.cards||[]).find(r=>String(r.id)===String(a.roleId||'')),
-      raw=String(a?.roleCard?.factionId||card?.factionId||a?.factionId||a?.faction||'').toLowerCase();
-    const fac=raw==='wolf'||raw.includes('sói')||raw.includes('soi')?'Phe Sói':
-      raw==='third'||raw.includes('ba')?'Phe Ba':raw==='village'||raw.includes('dân')||raw.includes('dan')?'Phe Dân':'Phe Khác';
-    const stat=groups.get(fac)||{total:0,alive:0};stat.total++;
-    if(!['dead','expelled'].includes(playPlayerEffect(id)))stat.alive++;
-    groups.set(fac,stat);
-  }
-  const summary=panel.querySelector('[data-faction-counts]');
-  if(summary)summary.innerHTML=[...groups].filter(([,x])=>x.total>0).map(([name,v])=>
-    '<div class="battle-faction-row"><span>'+playEsc(name)+'</span><b>'+v.alive+' / '+v.total+'</b>'+
-    '<i style="--faction-progress:'+Math.round(100*v.alive/Math.max(1,v.total))+'%"></i></div>').join('')||'<p>Chưa phân vai.</p>';
-  const preview=panel.querySelector('[data-faction-forecast]');
-  const known=playSceneRuntime.winProposal;
-  if(preview){
-    const day=Math.max(1,Number(playSceneState.night)||1),wolf=groups.get('Phe Sói')?.alive||0,
-      other=[...groups].filter(([name])=>name!=='Phe Sói').reduce((n,[,g])=>n+g.alive,0),
-      villager=groups.get('Phe Dân')?.alive||0;
-    if(known)preview.textContent='Server xác định: '+String(known.winnerFaction||'Phe thắng')+' · Ngày '+day+'.';
-    else if(!rows.length)preview.textContent='Chưa có dữ liệu phe để dự báo.';
-    else{
-      const favored=wolf>=other?'Phe Sói':wolf===0?'Phe Dân':villager>=wolf?'Phe Dân':'Phe Sói';
-      const estimate=wolf>=other||wolf===0?day:day+Math.max(1,Math.ceil(Math.abs(other-wolf)/2));
-      preview.textContent='Dự báo tham khảo theo quân số: '+favored+' · khoảng ngày '+estimate+
-        '. Đây là giả định, không tính tác động vai trò/Artifact và không phải kết quả Server.';
-    }
-  }
-}
 function battleGallowsRender(phase){
   const panel=document.getElementById('battleGallowsPanel');if(!panel)return;
   const g=playSceneRuntime.gallows||{stage:'ready',mode:'auto',nominationDurationSec:60,voteDurationSec:60,
@@ -5828,8 +5904,15 @@ function renderPlayBattle(){
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
   const statsFloat=document.getElementById('battleFactionStatsFloat');if(statsFloat)statsFloat.hidden=!visible;
+  gmwwSetupFreeBattleIcons();
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
+  if(!visible){
+    for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver','battleFactionStats']){
+      const node=document.getElementById(id);if(node)node.hidden=true;
+    }
+    document.getElementById('battleFactionStatsToggle')?.setAttribute('aria-pressed','false');
+  }
   if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}

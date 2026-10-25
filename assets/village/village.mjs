@@ -207,9 +207,9 @@ if(game){
       flag=document.createElement('button');flag.id='gmwwPirateNominate';flag.type='button';
       flag.setAttribute('aria-label','Kéo cờ đỏ gần Character để hút; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
       flag.title='Cờ đỏ: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
-      // The red fabric fills almost the entire symbol, not merely the pole.
-      flag.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 76" width="100%" height="100%" aria-hidden="true"><path d="M9 4V73" stroke="#f6deb0" stroke-width="4" stroke-linecap="round"/><path d="M12 6Q36 1 73 12L66 47Q41 36 12 45Z" fill="#eb3047" stroke="#ffe9a3" stroke-width="3.5"/><path d="M18 12Q46 6 64 15" fill="none" stroke="#ff9ba2" stroke-width="2.5"/><circle cx="43" cy="24" r="9" fill="#fff0d7"/><circle cx="40" cy="23" r="2.3" fill="#892a35"/><circle cx="46" cy="23" r="2.3" fill="#892a35"/><path d="M38 31H48M31 39L57 13M31 13L57 39" stroke="#fff0d7" stroke-width="3.5" stroke-linecap="round"/></svg>';
-      flag.style.cssText='position:fixed;z-index:1008;width:clamp(72px,18vw,100px);height:clamp(72px,18vw,100px);padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
+      // Use the native red-flag emoji at its regular icon scale, without a box.
+      flag.textContent='🚩';
+      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
       flag.hidden=true;document.body.append(flag);
       const controls=document.createElement('div');controls.id='gmwwPirateConfirm';controls.hidden=true;
       controls.innerHTML='<button type="button" data-gallows-ok>✓ OK</button><button type="button" data-gallows-reset>↶ KHÔI PHỤC</button>';

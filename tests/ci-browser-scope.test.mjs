@@ -268,3 +268,59 @@ test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchan
  const broken=files.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\n// gameplay changed'}:c);
  assert.equal(classifyBrowserScope(broken),'full');
 });
+
+test('PR501 chỉ thu gọn CI khi chính xác 5 icon, phiên bản giữ nguyên và không có gameplay/Native',()=>{
+  const entries=[
+    modified('assets/village/village.mjs','old flag code',"flag.textContent='🚩'"),
+    modified('server-game/current/GMWW.html','<title>GMWW V3.218</title>','<title>GMWW V3.218</title> 🌈 🏖️ ⛱️ 🐦‍🔥'),
+    modified('server-game/current/app.js',"const VERSION='3.218';","const VERSION='3.218'; gmwwSetupFreeBattleIcons();"),
+    modified('server-game/current/style.css','old CSS','#battleFactionStatsFloat.gmww-free-icon'),
+    modified('server-game/src/30-village-and-setup.part','old UI',"const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'"),
+    modified('server-game/src/40-battle-and-timeline.part','old','new'),
+    {path:'tests/gm-free-floating-shortcuts-20261025.test.mjs',status:'A',after:'tests'},
+    {path:'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',status:'A',after:'webkit'},
+    {path:'.github/workflows/check-gm-free-icons-501.yml',status:'A',after:'CI'},
+    modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+    modified('.github/workflows/check-player-web.yml','before','after'),
+    modified('.github/workflows/build-server-game-ipa.yml','before','after'),
+    modified('.github/workflows/check-gallows-redesign.yml','before','after'),
+    modified('.github/workflows/prepare-runtime-v3202-candidate.yml','before','after'),
+    {path:'docs/acceptance-pr501-iphone-playerweb.md',status:'A',after:'Checklist'}
+  ];
+  assert.equal(classifyBrowserScope(entries),'gm-icons-501');
+  assert.equal(classifyBrowserScope([...entries,modified('src/index.js','old','new')]),'full','Worker logic expands scope');
+  assert.equal(classifyBrowserScope([...entries,modified('server-game/GMWW-Server/GameView.swift','old','new')]),'full','Native changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/gmww-gallows-rules.js',status:'A',after:'change'}]),'full','Gameplay changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,modified('package.json','3.218','3.219')]),'full','Runtime release needs own gate');
+  assert.equal(classifyBrowserScope(entries.map(c=>c.path==='server-game/current/app.js'?
+    {...c,after:"const VERSION='3.219'; gmwwSetupFreeBattleIcons();"}:c)),'full','Any version advance requires release gates');
+  assert.equal(classifyBrowserScope(entries.filter(c=>c.path!=='assets/village/village.mjs')),'full','Missing Player Web flag forces full');
+});
+
+
+test('V3.224 #501 release mode verifies exact 3.223 to 3.224 changes and fails closed',()=>{
+ const modified501=(path,before,after)=>({path,before,after,status:'M'});
+ const c=[
+  modified501('assets/village/village.mjs','old flag',"flag.textContent='🚩'"),
+  modified501('server-game/current/GMWW.html','<title>GMWW V3.223</title>','<title>GMWW V3.224</title> 🌈 🏖️ ⛱️ 🐦‍🔥'),
+  modified501('server-game/current/app.js',"const VERSION='3.223';","const VERSION='3.224'; gmwwSetupFreeBattleIcons();"),
+  modified501('server-game/current/style.css','old','#battleFactionStatsFloat.gmww-free-icon'),
+  modified501('server-game/src/00-core-and-library.part',"const VERSION='3.223';","const VERSION='3.224';"),
+  modified501('server-game/src/30-village-and-setup.part','old',"GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'"),
+  modified501('server-game/src/40-battle-and-timeline.part','old','new'),
+  modified501('src/index.js','VERSION="V3.223"','VERSION="V3.224"; UPDATE_CHANNEL_REV="runtime-3224"'),
+  modified501('package.json','"version": "3.223.0"','"version": "3.224.0"'),
+  modified501('package-lock.json','"version": "3.223.0"','"version": "3.224.0"'),
+  modified501('.github/scripts/prepare-update-channel.mjs','old','releaseNotes:["V3.224:'),
+  {path:'docs/releases/GMWW-V3.224-five-floating-icons-20261025.md',status:'A',after:'Rollback V3.223'},
+  {path:'tests/gm-free-floating-shortcuts-20261025.test.mjs',status:'A',after:'tests'},
+  {path:'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',status:'A',after:'WebKit'},
+  {path:'.github/workflows/check-gm-free-icons-501.yml',status:'A',after:'CI'}
+ ];
+ assert.equal(classifyBrowserScope(c),'gm-icons-501-release');
+ assert.equal(classifyBrowserScope([...c,modified501('src/gmww-gallows-rules.js','old','new')]),'full','No gameplay changes');
+ assert.equal(classifyBrowserScope([...c,modified501('server-game/GMWW-Server/Native.swift','a','b')]),'full','No IPA changes');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='package.json'?{...x,after:'"version": "3.225.0"'}:x)),'full','No arbitrary release version');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='server-game/current/app.js'?{...x,after:"const VERSION='3.223';"}:x)),'full','Missing runtime version fails closed');
+ assert.equal(classifyBrowserScope(c.filter(x=>x.path!=='docs/releases/GMWW-V3.224-five-floating-icons-20261025.md')),'full','Mandatory release notes');
+});

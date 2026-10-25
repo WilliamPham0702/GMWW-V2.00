@@ -7842,3 +7842,80 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
   border-radius:11px;background:#09516bd4;color:#eefdfa;font-size:11px;font-weight:800;min-height:42px}
 .gmww-system-sound-links button small{font-size:9px;color:#ffe6a5;font-weight:600}
 @media(max-width:340px){.gmww-system-sound-links>div{grid-template-columns:1fr}}
+
+
+/* 2026-10-25 — GM free shortcuts. Icons are unboxed, draggable and outside the bottom rail. */
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsFloat,#battleDayNoticeFloat,#battleDayGallowsFloat).gmww-free-icon{
+  position:fixed!important;z-index:1570!important;display:flex!important;
+  align-items:center!important;justify-content:center!important;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;flex:none!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;pointer-events:auto!important;touch-action:none!important;
+  transform:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStatsFloat.gmww-free-icon{
+  top:32%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDayNoticeFloat.gmww-free-icon{
+  top:43%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDayGallowsFloat.gmww-free-icon{
+  top:54%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsFloat,#battleDayNoticeFloat,#battleDayGallowsFloat).gmww-free-icon[hidden]{
+  display:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle){
+  display:grid!important;place-items:center!important;width:50px!important;height:50px!important;
+  min-width:50px!important;max-width:50px!important;
+  min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;filter:none!important;
+  color:inherit!important;font-size:36px!important;font-weight:400!important;line-height:1!important;
+  cursor:grab!important;touch-action:none!important;-webkit-tap-highlight-color:transparent;
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle):active{
+  cursor:grabbing!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle) small{
+  display:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle):focus-visible{
+  outline:2px solid #ffe6ac!important;outline-offset:2px!important;border-radius:7px!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon{
+  position:fixed!important;z-index:1570!important;pointer-events:auto!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed{
+  top:calc(env(safe-area-inset-top) + 154px);right:12px;left:auto;bottom:auto;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;overflow:visible!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed>header{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:50px!important;height:50px!important;min-height:50px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed #battleDemoCollapse{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;color:inherit!important;
+  font-size:34px!important;cursor:grab!important;touch-action:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed #battleDemoCollapse:active{
+  cursor:grabbing!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed.has-unread #battleDemoCollapse{
+  border:0!important;box-shadow:none!important;filter:drop-shadow(0 0 5px #fff2a4)!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
+  pointer-events:auto!important
+}
