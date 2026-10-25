@@ -41,6 +41,11 @@ if(productionCoreView){
   $('gm-key').placeholder='Mã GM của phòng';
   document.querySelector('header h1').textContent='GMWW Arena 3D';
   document.querySelector('header small').textContent='Chơi thật · Core GMWW V2.00';
+  document.title='GMWW Arena 3D · Chơi chính thức';
+  $('joinlink').textContent='🎴 Player Web';
+  $('[data-roster]')?.closest('.toolbar')?.setAttribute('hidden','');
+  $('note').textContent='Arena 3D điều khiển phòng thật bằng Core GMWW V2.00: chỉ Thành Viên thật; Vai Trò và Artifact theo ván đã cấu hình. Không tạo dữ liệu DEMO.';
+
 }
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -675,6 +680,8 @@ $('arena-diag-copy').onclick=async()=>{
     notice('Đã sao chép số đo hiệu năng ẩn danh; không có mã phòng, vai trò hay token.');
   }catch{notice('Không thể sao chép tự động. Hãy dùng nút Lấy kết quả để xem số đo.');}
 };
-demo(rosterSize);requestAnimationFrame(loop);
+if(!productionCoreView)demo(rosterSize);
+else notice('Hãy chọn hoặc kết nối phòng GMWW thật. Arena 3D không tạo nhân vật mẫu trong chế độ chính thức.');
+requestAnimationFrame(loop);
 const param=new URL(location.href).searchParams.get('room');
 if(param)void guarded('Khôi phục trạng thái phòng',()=>attach(param));
