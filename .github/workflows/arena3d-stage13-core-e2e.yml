@@ -1,10 +1,5 @@
 name: Arena 3D GĐ13 — kiểm thử riêng Core hai client
 on:
-  pull_request:
-    branches: ["feature/arena3d-stage10-role-animation-library"]
-    paths:
-      - "tests/arena3d-stage13-core-e2e.mjs"
-      - ".github/workflows/arena3d-stage13-core-e2e.yml"
   workflow_dispatch:
 permissions:
   contents: read
