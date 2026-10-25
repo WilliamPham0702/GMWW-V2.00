@@ -852,7 +852,7 @@ function isArenaHome3223Scope(changes){
     'app.js?v=3.221-top3-glass-compact-room-village-gallows-anchor-scene-align-1-gp2');
  if(stripped!==html.before)return false;
  const prep=map.get('.github/scripts/prepare-update-channel.mjs');
- if(prep?.status!=='M'||!prep.after.includes('V3.223: Trang Chủ')||
+ if(prep?.status!=='M'||!prep.after.includes('V3.223: Tạm thời dùng nút VÀO LÀNG')||
     prep.after.replace(/(releaseNotes:\[)"V3\.223:[^"\n]*",/,"$1")!==prep.before)return false;
  const test=map.get('tests/arena3d-home-portal-v3223.test.mjs');
  if(test?.status!=='A'||!test.after.includes('iframe')||!test.after.includes('Chơi 2D'))return false;
