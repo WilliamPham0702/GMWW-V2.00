@@ -27,7 +27,7 @@ test('GĐ18: idle pacing does not throttle WebSocket and private GM update netwo
  assert.match(live,/arenaTargetFrameHz\(\{visible:!document\.hidden/);
  assert.match(live,/active:field\.hasActiveMotion\(now\)/);
  assert.match(live,/interacting:trackedPointers\.size>0/);
- assert.match(painting,/if\(!webglLost&&frameHz>0&&now-lastPaint>=1000\/frameHz\)/);
+ assert.match(painting,/paintScheduler\.shouldPaint\(now,frameHz,\{paused:webglLost\}\)/);
  assert.match(painting,/render\.render\(scene,camera\);frames\+\+/);
  assert.match(live,/setInterval\(\(\)=>\{if\(!document\.hidden&&gmToken\)/);
  assert.ok(live.indexOf('connectStagingRoom(')<live.indexOf('function loop(now){'));
