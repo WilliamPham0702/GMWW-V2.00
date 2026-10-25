@@ -21,7 +21,7 @@ export function publicGallowsScene(gallows,room){
 // Both browsers read the SAME /api/rooms/:code and /ws/:code supplied by
 // isolated GMWW V2 Core. WebSocket is a hint, HTTP snapshot wins after reconnect.
 // No new mutation or second player-state store.
-export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,fetchImpl=fetch,WebSocketImpl=WebSocket,intervalMs=4000}){
+export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,fetchImpl=fetch,WebSocketImpl=WebSocket,intervalMs=4000,loadPublicGallows=true}){
   const code=String(roomCode||'').toUpperCase().trim();
   if(!/^[A-Z0-9]{4,12}$/.test(code))throw new TypeError('INVALID_ROOM_CODE');
   let stopped=false,ws=null,timer=null,retry=null,latest=null,generation=0,ballot=null,abort=null;
@@ -33,6 +33,10 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
     latest=next;onFrame(next);
   };
   async function reloadPublicBallot(){
+    // 3D Player may run on the live Core Worker, which already provides public
+    // room/WS but not the research-only ballot summary endpoint. Player Web
+    // inside the same origin remains authoritative for votes/nomination.
+    if(loadPublicGallows===false){ballot=null;onGallows?.(null);return;}
     if(!latest||latest.room.cyclePhase!=='morning'){ballot=null;onGallows?.(null);return;}
     try {
       const response=await fetchImpl('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gallows',{cache:'no-store'});
