@@ -22,3 +22,10 @@
 - Chrome/WebKit 6, 12, 20, 30 Character: PASS; FPS Chrome headless ~16, WebKit headless ~2, không dùng làm chứng nhận hiệu năng iPhone vật lý.
 - Preview: https://gmww-arena3d-stage10-staging.williampham0702.workers.dev/village/arena-3d/live.html
 - Smoke hiện xác minh render/animation tổng quát, **chưa** kiểm thử trực quan riêng đầu sói/đũa/khiên trong trận Core thực tế. Giữ PR Draft, chưa nghiệm thu.
+
+## Bổ sung lô animation tiếp theo
+- VFX mới: vòng tác động theo màu từng nhóm vai trò, hỗ trợ tối đa 5 mục tiêu, tự giải phóng geometry/material khi thoát.
+- Mã hóa castKey bao gồm actor, action, role và mục tiêu để cập nhật hiệu ứng khi Core đổi mục tiêu trong cùng lượt.
+- Giữ nguyên hợp đồng ngân sách draw-call cũ cho các Character dạng instancing; báo cáo thêm peakVfxDrawBudget riêng để không làm hỏng kiểm thử hiệu năng của GĐ8.
+- CI GĐ10 đúng phạm vi SUCCESS: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40153769263.
+- Chưa kết luận nghiệm thu toàn bộ vai trò/Artifact hoặc audio khi chưa có đối chiếu Core thực tế.
