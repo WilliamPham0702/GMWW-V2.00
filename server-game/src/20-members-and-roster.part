@@ -545,7 +545,7 @@ function gmwwHomeRenderTop3(rows){
     if(!member)continue;
     const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
     const button=document.createElement('button');
-    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211 gmww-home-winner-v3213';
+    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211 gmww-home-winner-v3213 gmww-home-sea-v3216';
     button.dataset.rank=String(place);
     button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
     const stage=document.createElement('span');stage.className='gmww-home-podium-stage-v3211';
@@ -568,7 +568,7 @@ function gmwwHomeRenderTop3(rows){
     stage.setAttribute('aria-hidden','true');stage.append(glow,character);
     const podium=document.createElement('span');podium.className='gmww-home-podium-platform-v3213';podium.setAttribute('aria-hidden','true');
     const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
-    crown.textContent=place===1?'♛':place===2?'✦':'✧';podium.append(crown);
+    crown.textContent=String(place);podium.append(crown);
     const details=document.createElement('span');details.className='gmww-home-podium-info-v3213';
     const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
     const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';

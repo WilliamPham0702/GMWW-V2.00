@@ -54,6 +54,13 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ kiểm thử Top 3 style biển và Character V3.216
+        if: steps.scope.outputs.mode == 'home-sea-3216'
+        run: |
+          node --test tests/home-top3-podium-sea-v3216.test.mjs tests/home-top3-podium-identity-v3214.test.mjs tests/home-top3-podium-v3211.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
       - name: Chỉ kiểm thử Top 3 bục và Character thật V3.214
         if: steps.scope.outputs.mode == 'home-podium-3214'
         run: |

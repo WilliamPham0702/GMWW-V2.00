@@ -581,9 +581,40 @@ function isIconGame3215Scope(changes){
   battle.includes('battleIconSetOn(!battleIconOn())');
 }
 
+// V3.216: narrow GM Home visual podium sea/glass with existing character identity.
+const homeSea3216Paths=new Set([
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/src/20-members-and-roster.part','server-game/current/style.css',
+ 'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+ 'tests/home-top3-podium-v3211.test.mjs','tests/home-top3-podium-sea-v3216.test.mjs',
+ 'docs/releases/GMWW-V3.216-top3-sea-glass-20261025.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+]);
+function isHomeSea3216Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const map=new Map(changes.map(c=>[c.path,c]));
+ for(const need of ['server-game/current/app.js','server-game/src/00-core-and-library.part',
+  'server-game/src/20-members-and-roster.part','server-game/current/style.css',
+  'server-game/current/GMWW.html','src/index.js','package.json',
+  'tests/home-top3-podium-sea-v3216.test.mjs',
+  'docs/releases/GMWW-V3.216-top3-sea-glass-20261025.md'])if(!map.has(need))return false;
+ if(!changes.every(c=>homeSea3216Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const app=map.get('server-game/current/app.js')?.after||'';
+ const css=map.get('server-game/current/style.css')?.after||'';
+ const worker=map.get('src/index.js')?.after||'';
+ const pkg=map.get('package.json')?.after||'';
+ const html=map.get('server-game/current/GMWW.html')?.after||'';
+ const top=app.slice(app.indexOf('function gmwwHomeRenderTop3('),app.indexOf('function gmwwHomeOpenMemberRanking()'));
+ return worker.includes('VERSION="V3.216"')&&pkg.includes('"version": "3.216.0"')&&
+  html.includes('<title>GMWW V3.216</title>')&&app.includes("const VERSION='3.216'")&&
+  top.includes('gmww-home-sea-v3216')&&top.includes('image?rev=c40-4')&&
+  !top.includes('/originals/')&&css.includes('gmwwCoastalVictory3216');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
+  if(isHomeSea3216Scope(changes))return 'home-sea-3216';
   if(isIconGame3215Scope(changes))return 'icon-game-3215';
   if(isIconWave3213Scope(changes))return 'icon-wave3-3213';
   if(isIconClean3212Scope(changes))return 'icon-clean-3212';
@@ -630,6 +661,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
+      if(isHomeSea3216Scope(changes))return{mode:'home-sea-3216',reason:'V3.216 GM Top 3 sea podium/glass only'};
       if(isIconGame3215Scope(changes))return{mode:'icon-game-3215',reason:'Verified V3.215 10 icons and GM-only fire drag via existing Core'};
       if(isIconWave3213Scope(changes))return{mode:'icon-wave3-3213',reason:'Verified 10 icons wave 3 and OTA only'};
       if(isIconClean3212Scope(changes))return{mode:'icon-clean-3212',reason:'Verified V3.212 ICON card UI and OTA only'};
@@ -706,7 +738,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
