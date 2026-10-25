@@ -4958,7 +4958,9 @@ function battleIconDock(actions,phase){
  dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon},i)=>{
-  const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||fire;
+  const offset=eligible.length>1?{x:Math.cos((i/eligible.length)*Math.PI*2)*13,y:Math.sin((i/eligible.length)*Math.PI*2)*13}:{x:0,y:0};
+  const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
+    battleIconClamp(fire.x+offset.x,fire.y+offset.y);
   const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
     '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
@@ -6343,7 +6345,7 @@ async function battleUndoLast(){
     const d=await playRoomApi('/battle-undo',{method:'POST',body:JSON.stringify({undoToken:rec.token})});
     if(d?.ok!==true)throw new Error(d?.message||d?.error||'Server chưa xác nhận hoàn tác');
     if(playSceneRuntime.room?.demo===true){demoRunner.completed.clear();demoRunner.nightPlan=null;demoRunner.visual=null}
-    battleState.impacts.clear();battleClear();await playSyncRoom(true);
+    battleState.impacts.clear();battleClear();battleIconResetPositions();await playSyncRoom(true);
   }catch(err){playFlashError('Không thể khôi phục: '+String(err?.message||err))}
   finally{battleState.undoBusy=false;renderPlayBattle()}
 }
