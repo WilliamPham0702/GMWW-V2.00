@@ -1,12 +1,12 @@
 name: Arena 3D GĐ14–16 — Core, Artifact, Audio, E2E STAGING
 on:
   push:
-    branches: ["feature/arena3d-stage14-core-role-catalog"]
+    branches: ["feature/arena3d-stage14-16-dynamic-artifacts-audio"]
     paths:
       - "assets/village/arena-3d/**"
       - "src/arena3d-stage-worker.mjs"
       - "assets/village/arena-3d/render-optimization.mjs"
-      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage11-*"
       - "tests/arena3d-stage12-*"
       - "tests/arena3d-stage14-*"
       - "tests/arena3d-stage15-*"
@@ -17,7 +17,10 @@ on:
     branches: ["feature/arena3d-stage11-core-role-catalog"]
     paths:
       - "assets/village/arena-3d/**"
-      - "tests/arena3d-stage10-*"
+      - "src/arena3d-stage-worker.mjs"
+      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage15-*"
+      - "tests/arena3d-stage16-*"
       - ".github/workflows/arena3d-stage14-16-research.yml"
   workflow_dispatch:
     inputs:
@@ -42,27 +45,27 @@ jobs:
       - run: npm ci
       - name: "Kiểm tra cú pháp module liên quan"
         run: |
-          node --check assets/village/arena-3d/stage14-core-catalog.mjs
-          node --check assets/village/arena-3d/stage14-core-action-bridge.mjs
+          node --check assets/village/arena-3d/stage11-core-catalog.mjs
+          node --check assets/village/arena-3d/stage11-core-action-bridge.mjs
           node --check assets/village/arena-3d/stage12-audio-engine.mjs
           node --check assets/village/arena-3d/stage14-dynamic-actions.mjs
           node --check assets/village/arena-3d/stage15-local-audio.mjs
           node --check tests/arena3d-stage16-dynamic-core-e2e.mjs
-          node --check tests/arena3d-stage13-core-e2e.mjs
+          node --check tests/arena3d-stage16-standard-core-e2e.mjs
           node --check src/arena3d-stage-worker.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/live.mjs
           node --check tests/arena3d-stage14-browser.mjs
       - name: "Kiểm thử GĐ14–16 và chuyển động phép"
         run: |
-          node --test tests/arena3d-stage14-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+          node --test tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
       - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
         run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
 
   deploy-stage14-preview:
     name: "GĐ14–16: STAGING riêng + browser iPhone"
     needs: verify-stage14
-    if: github.ref == 'refs/heads/feature/arena3d-stage14-core-role-catalog' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true
+    if: github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
