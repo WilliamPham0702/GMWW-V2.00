@@ -1129,10 +1129,7 @@ function isArena3dOfficialPortalScope(changes){
   const end=value.indexOf('\nfunction playLiveMembers()',a);
   if(end<0)return null;
   const chunk=value.slice(a,end);
-  if(!chunk.includes("event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN")||
-   !chunk.includes('event.source!==frame.contentWindow')||
-   !chunk.includes('GMWW_ARENA_OFFICIAL_ORIGIN);')||
-   !chunk.includes("event.data?.kind!=='gmww-arena3d-ready'"))return null;
+  if(chunk.trim()!=="const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';\nwindow.addEventListener('message',event=>{\n  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||\n     event.data?.kind!=='gmww-arena3d-ready')return;\n  const frame=document.getElementById('gmwwArena3dQaFrame');\n  if(!frame||!frame.isConnected||frame.closest('[hidden]')||\n     event.source!==frame.contentWindow)return;\n  const roomCode=String(playSceneState.roomCode||'').trim(),\n    gmToken=String(playSceneState.gmToken||'').trim();\n  if(!isLivePlayRoom()||!/^[A-Za-z0-9._~+\\/=:-]{12,256}$/.test(gmToken))return;\n  frame.contentWindow.postMessage(\n    {kind:'gmww-arena3d-gm-context',roomCode,gmToken},\n    GMWW_ARENA_OFFICIAL_ORIGIN);\n});")return null;
   return value.slice(0,a).replace(/\n$/,'')+value.slice(end);
  }
  for(const p of ['server-game/current/app.js','server-game/src/20-members-and-roster.part']){
