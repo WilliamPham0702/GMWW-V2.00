@@ -12,7 +12,7 @@ const end=part.indexOf('function battleIconTargetAt(x,y,action){',start);
 assert.ok(start>=0&&end>start,'pure icon dock functions must exist');
 const logic=part.slice(start,end);
 
-function harness({mapped=true,viewport={width:390,height:844},fireRect={left:170,top:340,right:220,bottom:390,width:50,height:50}}={}){
+function harness({mapped=true,fallback=false,viewport={width:390,height:844},fireRect={left:170,top:340,right:220,bottom:390,width:50,height:50}}={}){
  const nodes=new Map();
  const fire={getBoundingClientRect(){return fireRect;}};
  const core={querySelector(sel){return sel==='.play-core-pearl'?fire:null;},getBoundingClientRect(){return {left:135,top:300,right:255,bottom:430,width:120,height:130}}};
@@ -28,6 +28,7 @@ function harness({mapped=true,viewport={width:390,height:844},fireRect={left:170
    };}
  };
  const api={resolveAll(id){return mapped&&id==='action_wolf_bite'?[{id:'soi-can',assetId:'05_soi_can.png'}]:[];},
+   get(){return fallback?[{id:'danh-dau',assetId:'10_danh_dau.png'}]:[];},
    image(icon){return 'action-icons/sea-v1/'+icon.assetId;}};
  const context=vm.createContext({
    document,window:{visualViewport:{width:viewport.width,height:viewport.height,offsetLeft:0,offsetTop:0}},
@@ -64,6 +65,15 @@ test('Unmapped action is counted without inventing a mapping; unavailable role i
  assert.equal(dock.hidden,true);assert.equal(dock.dataset.unmappedCount,'1');
  const j=harness();j.call([{...action,unavailable:true}]);
  assert.equal(j.nodes.get('battleFireIconDock').hidden,true);
+});
+test('New custom action without a dedicated image uses preapproved GM PNG and retains Core action ID',()=>{
+ const h=harness({mapped:false,fallback:true});h.call([{...action,actionId:'new_custom_skill'}]);
+ const dock=h.nodes.get('battleFireIconDock');
+ assert.equal(dock.hidden,false);
+ assert.equal(dock.dataset.unmappedCount,'1');
+ assert.match(dock.innerHTML,/10_danh_dau\\.png/);
+ assert.match(dock.innerHTML,/data-fire-action="turn-1"/);
+ assert.match(dock.innerHTML,/icon chung/);
 });
 test('Fire coordinate missing or offscreen never positions the dock below the viewport',()=>{
  const h=harness({viewport:{width:320,height:568},fireRect:{left:0,top:0,right:0,bottom:0,width:0,height:0}});
