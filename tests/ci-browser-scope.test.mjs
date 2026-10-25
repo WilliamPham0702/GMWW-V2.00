@@ -226,3 +226,17 @@ test('PR475 manual Gallows workflow dispatched on exact main SHA is scoped and f
  const wf=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
  assert.match(wf,/r\.event==='workflow_dispatch'&&r\.name==='Check Lên Giàn theo đúng phạm vi'/);
 });
+
+
+test('V3.207 final main push CI selector stays scoped for documented verified correction',()=>{
+ const c=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new'),
+  {path:'docs/releases/GMWW-V3.207-demo475-main-ci-final-20261025.md',status:'A',after:'# Corrected main push CI'}
+ ];
+ assert.equal(classifyBrowserScope(c),'demo-475');
+ assert.equal(classifyBrowserScope(c.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...c,modified('src/index.js','before','different runtime')]),'full');
+ const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+ assert.ok(selector.includes('isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)'));
+});
