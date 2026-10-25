@@ -320,7 +320,7 @@ test('V3.224 #501 release mode verifies exact 3.223 to 3.224 changes and fails c
  assert.equal(classifyBrowserScope(c),'gm-icons-501-release');
  assert.equal(classifyBrowserScope([...c,modified501('src/gmww-gallows-rules.js','old','new')]),'full','No gameplay changes');
  assert.equal(classifyBrowserScope([...c,modified501('server-game/GMWW-Server/Native.swift','a','b')]),'full','No IPA changes');
- assert.equal(classifyBrowserScope(c.map(x=>x.path==='package.json'?{...x,after:'"version": "3.224.0"'}:x)),'full','No arbitrary release version');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='package.json'?{...x,after:'"version": "3.225.0"'}:x)),'full','No arbitrary release version');
  assert.equal(classifyBrowserScope(c.map(x=>x.path==='server-game/current/app.js'?{...x,after:"const VERSION='3.223';"}:x)),'full','Missing runtime version fails closed');
  assert.equal(classifyBrowserScope(c.filter(x=>x.path!=='docs/releases/GMWW-V3.224-five-floating-icons-20261025.md')),'full','Mandatory release notes');
 });
