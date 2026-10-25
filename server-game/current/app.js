@@ -4660,36 +4660,63 @@ let battleIconDragging=null;
 function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0'}catch{return true}}
 function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};renderPlayBattle()}
 function battleIconResolve(action){
- const api=globalThis.GMWWActionIconLibrary;
- return api?.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+ const api=globalThis.GMWWActionIconLibrary,actionId=String(action?.actionId||'');
+ if(!api?.resolveAll||!actionId)return [];
+ const matches=api.resolveAll(actionId).filter(icon=>!!icon&&(!!icon.assetId||!!icon.image));
+ if(matches.length)return matches;
+ // A valid Core action must never disappear solely because its artwork was
+ // removed from the user's custom library. Render a clearly generic placeholder
+ // without fabricating an actionId or bypassing the Core rules.
+ return [{id:'unassigned-'+actionId,name:String(action?.name||'Chưa gán icon'),target:'character',
+  image:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(
+   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><circle cx="48" cy="48" r="43" fill="#064b67" stroke="#e9cd83" stroke-width="5"/><path d="M48 23v36m0 12v3" stroke="#f9f2dc" stroke-width="8" stroke-linecap="round"/></svg>')}];
+}
+function battleIconPlace(dock,core){
+ const fire=core?.querySelector('.play-core-pearl')||document.querySelector('.play-village-core .play-core-pearl');
+ const rect=fire?.getBoundingClientRect();
+ const w=Math.max(280,Number(globalThis.innerWidth)||document.documentElement.clientWidth||390),
+   h=Math.max(360,Number(globalThis.innerHeight)||document.documentElement.clientHeight||750);
+ // Position near 🔥 while remaining inside the visible iPhone viewport; never
+ // position over the bottom GM controls or move the fire itself.
+ const width=Math.min(330,w-24),height=Math.max(80,dock.getBoundingClientRect().height||80);
+ dock.style.maxWidth=width+'px';
+ const cx=rect&&rect.width>0?rect.left+rect.width/2:w/2;
+ dock.style.left=Math.max(width/2+12,Math.min(w-width/2-12,cx))+'px';
+ const safeBottom=h-104,safeTop=58;
+ let y=rect&&rect.height>0?rect.bottom+8:Math.min(h/2,safeBottom-height);
+ if(y+height>safeBottom&&rect?.height)y=rect.top-height-8;
+ dock.style.top=Math.max(safeTop,Math.min(safeBottom-height,y))+'px';
 }
 function battleIconDock(actions,phase){
  const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
  if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
- const core=document.querySelector('.play-village-core');if(!core)return;
  let dock=document.getElementById('battleFireIconDock');
  if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
- const eligible=(Array.isArray(actions)?actions:[]).filter(a=>!a.unavailable&&a.actionId)
-   .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
- const active=playSceneState.step==='battle'&&show&&eligible.length>0&&!battleState.busy&&!battleState.syncPending;
- dock.hidden=!active;if(!active){dock.replaceChildren();delete dock.dataset.sig;return}
- // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
- const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
- if(Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
-  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
- }
- const fire=core.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect();
- if(rect){dock.style.left=(rect.left+rect.width/2)+'px';dock.style.top=Math.min(innerHeight-83,rect.bottom+10)+'px'}
- const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
- if(dock.dataset.sig===key)return;dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
- dock.innerHTML=eligible.map(({a,icon})=>
-  '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
-  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
-  '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
+ const eligible=(Array.isArray(actions)?actions:[]).filter(a=>a&&a.actionId&&!a.unavailable)
+   .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
+ // Do not hide actions while Server is processing; make them visible but disabled.
+ // Reconnection must not make an otherwise valid turn look as if it has no skill.
+ const active=playSceneState.step==='battle'&&show&&eligible.length>0;
+ dock.hidden=!active;
+ if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
+ const busy=battleState.busy||battleState.syncPending||battleState.undoBusy;
+ const core=document.querySelector('.play-village-core');
+ if(battleIconDragging)battleIconClearDrag();
+ const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.actionId,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
+  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'')+':'+String(busy);
+ if(dock.dataset.sig!==key){
+  dock.dataset.sig=key;
+  dock.innerHTML=eligible.map(({a,icon})=>
+   '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
+   '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+
+   '" '+(busy?'disabled aria-disabled="true"':'')+'>'+
+   '<img draggable="false" src="'+playEsc(icon.image||(api?.image?.(icon)||''))+'" alt=""><small>'+
+   playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+
+   '</small></button>').join('');
+ }
+ battleIconPlace(dock,core);
 }
 function battleIconTargetAt(x,y,action){
  const ring=document.getElementById('playPlayerRing');if(!ring||!action)return null;
