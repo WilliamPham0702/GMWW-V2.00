@@ -10,6 +10,7 @@ import {arenaActionSignature,arenaSignatureCoverage} from '../assets/village/are
 import {resolveRoleAnimation} from '../assets/village/arena-3d/stage10-role-animations.mjs';
 import {familyForConfirmedAction} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 import {privateTurnActionOptions} from '../assets/village/arena-3d/stage29-gm-actions.mjs';
+import {spellActionAccent} from '../assets/village/arena-3d/spell-vfx.mjs';
 
 const ids=(items)=>items.map(item=>item.id);
 const sorted=(items)=>[...items].sort();
@@ -75,4 +76,19 @@ test('GĐ33: custom Artifact only animates after authorized delivered-card metad
  assert.equal(authorized.length,1);
  assert.equal(authorized[0].targetCount,2);
  assert.equal(authorized[0].noSelf,true);
+});
+
+test('GĐ33: each Core action has safe sea-colored spell parameters within existing draw budget',()=>{
+ const seen=new Set();
+ for(const {id} of CORE_ACTION_CATALOG){
+   const signature=arenaActionSignature({actionId:id,coreConfirmed:true});
+   const accent=spellActionAccent(signature);
+   assert.ok(accent.hue>=.47&&accent.hue<.65,id+' hue must stay in sea palette');
+   assert.ok(accent.pearls>=5&&accent.pearls<=12,id+' too many spell particles');
+   seen.add(signature.signatureId);
+ }
+ assert.equal(seen.size,CORE_ACTION_CATALOG.length);
+ assert.equal(spellActionAccent(null),null);
+ assert.equal(spellActionAccent({accentHue:Infinity,streakCount:99}),null);
+ assert.equal(spellActionAccent({accentHue:-90,streakCount:99}).pearls,12);
 });
