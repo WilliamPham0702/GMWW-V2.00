@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION}
+ from '../assets/village/arena-3d/stage19-mobile-diagnostics.mjs';
+
+const sample=(tracker,at,extra={})=>tracker.sample({at,paintCpuMs:5,drawCalls:43,targetHz:30,characters:30,pixelRatio:1.1,...extra});
+test('GĐ19: bounded real paint measurements and percentile CPU do not pretend to be GPU time',()=>{
+ const q=createArenaMobileDiagnostics({capacity:10});
+ assert.equal(ARENA_STAGE19_VERSION,'gmww.arena.mobile-qa.19-21');
+ for(let i=0;i<14;i++)sample(q,100+i*50,{paintCpuMs:i+1});
+ let r=q.snapshot();
+ assert.equal(r.sampleCount,10);
+ assert.equal(r.totalFrames,14);
+ assert.equal(r.characterCount,30);
+ assert.equal(r.drawCalls,43);
+ assert.equal(r.paintIntervalMedianMs,50);
+ assert.equal(r.measuredPaintFps,20);
+ assert.equal(r.paintCpuP95Ms,14);
+ assert.equal(r.thermalCelsius,null);
+ assert.equal(r.batteryDrainPercent,null);
+ assert.equal(r.measurements,'browser-cpu-and-paint-cadence-only');
+ q.reset();
+ assert.equal(q.snapshot().sampleCount,0);
+});
+test('GĐ20: hidden tab and WebGL loss stop capture, resume ignores long gap',()=>{
+ const q=createArenaMobileDiagnostics();
+ sample(q,100);sample(q,150);
+ q.visibility(true);sample(q,200);
+ q.visibility(false);sample(q,10000);
+ sample(q,10050);
+ q.lost();sample(q,10100);q.lost();
+ assert.equal(q.snapshot().contextLosses,1);
+ assert.equal(q.snapshot().webglContextLost,true);
+ q.restored();sample(q,13000);sample(q,13050);
+ const r=q.snapshot();
+ assert.equal(r.contextRestores,1);
+ assert.equal(r.contextLosses,1);
+ assert.equal(r.hidden,false);
+ assert.equal(r.webglContextLost,false);
+ assert.equal(r.paintIntervalP95Ms,50,'sleep and WebGL restore cannot pollute performance samples');
+});
+test('GĐ21: report only allowlisted metrics; never includes GM or player identifiers',()=>{
+ const q=createArenaMobileDiagnostics();
+ sample(q,100);
+ const report=q.report();
+ assert.deepEqual(JSON.parse(report).version,'gmww.arena.mobile-qa.19-21');
+ assert.doesNotMatch(report,/roomCode|roomId|loginId|actorId|roleId|artifactId|token|private|authorization|userAgent|navigator/i);
+ const s=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+ const html=readFileSync('assets/village/arena-3d/live.html','utf8');
+ assert.match(s,/canvas\.addEventListener\('webglcontextlost'/);
+ assert.match(s,/canvas\.addEventListener\('webglcontextrestored'/);
+ assert.match(s,/document\.addEventListener\('visibilitychange'/);
+ assert.match(s,/if\(!webglLost&&frameHz>0/);
+ assert.match(s,/mobileQa\.sample\(\{at:now,paintCpuMs:/);
+ assert.match(s,/await navigator\.clipboard\.writeText\(mobileQa\.report\(\)\)/);
+ assert.match(html,/id="arena-mobile-diagnostics"/);
+ assert.match(html,/id="arena-diag-refresh"/);
+ assert.match(html,/id="arena-diag-copy"/);
+ assert.doesNotMatch(s,/localStorage|sessionStorage/);
+});
