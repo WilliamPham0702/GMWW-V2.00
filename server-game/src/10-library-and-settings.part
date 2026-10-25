@@ -492,9 +492,7 @@ function gmwwReleaseNotesList(manifest){
     ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean):[];
   const current=gmwwRuntimeVersion(), latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
   if(!latest)return ['Chưa có thông tin phiên bản.'];
-  if(gmwwVersionCompare(latest,current)<=0)return notes.length?notes.filter(note=>String(note).includes('V'+latest+':')).slice(0,6).concat(
-    notes.filter(note=>!String(note).includes('V'+latest+':')).length&&notes.every(note=>!String(note).includes('V'+latest+':'))?notes.slice(0,1):[]
-  ):['Phiên bản V'+latest+' đang sử dụng; chưa có ghi chú cập nhật.'];
+  if(gmwwVersionCompare(latest,current)<=0)return notes.length?notes.slice(0,6):['Phiên bản V'+latest+' đang sử dụng; chưa có ghi chú cập nhật.'];
   const previous=String(manifest?.previousVersion||manifest?.fromVersion||'').replace(/^V/i,'');
   if(previous&&gmwwVersionCompare(previous,current)!==0)return ['Phiên bản V'+latest+' có bản cập nhật mới. Chưa có ghi chú riêng cho bước nâng cấp từ V'+current+'.'];
   return notes.length?notes.slice(0,6):['Có bản cập nhật V'+latest+'. Chưa có ghi chú thay đổi riêng cho phiên bản này.'];
