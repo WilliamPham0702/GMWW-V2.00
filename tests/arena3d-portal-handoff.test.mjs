@@ -36,7 +36,7 @@ test('GM app compiled runtime contains exactly the same Arena 3D trusted-frame h
  assert.equal(bridgeFrom(source),bridgeFrom(build));
  assert.match(html,/const arenaUrl='https:\/\/gmww-v2-00\.williampham0702\.workers\.dev\/village\/arena-3d\/live\.html'/);
  assert.doesNotMatch(html,/gmww-arena3d-stage14-staging\.williampham0702\.workers\.dev/);
- assert.match(html,/id="gmwwArena3dQaFrame"/);
+ assert.match(html,/frame\.id='gmwwArena3dQaFrame'/);
  assert.match(arena,/window\.parent\.postMessage\(\{kind:'gmww-arena3d-ready'\},'\*'\)/);
  assert.match(arena,/validateArenaGmContext\(event\.data/);
  assert.match(arena,/if\(!verified\.ok\)throw Error/);
