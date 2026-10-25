@@ -256,7 +256,26 @@ async function renderAudio(){
   });
 }
 async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
-function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);battleInvalidateAudioCache(audioKind,a.id);a.fileName=f.name;a.verifiedBinary=true;delete a.status;saveState();renderAudio()};i.click()}
+function replaceAudioItem(a,category=audioKind){
+  if(!a)return;
+  // Freeze the category while iOS Files picker is open. The old global audioKind
+  // could change before onchange, silently saving CHỐT SỐNG into a wrong tab.
+  const kind=String(category||'system');
+  const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;
+  document.body.appendChild(i);
+  i.onchange=async()=>{
+    const file=i.files?.[0];i.remove();if(!file)return;
+    try{
+      await dbPut(audioBlobKey(kind,a.id),file);
+      battleInvalidateAudioCache(kind,a.id);
+      a.fileName=file.name;a.verifiedBinary=true;delete a.status;saveState();
+      if(document.getElementById('library')?.classList.contains('active')&&audioKind===kind)void renderAudio();
+      const names={audio_system_gallows_result_saved:'CHỐT SỐNG',audio_system_gallows_result_dead:'CHỐT CHẾT'};
+      if(names[a.targetId||a.id])playFlashError('Đã gán Audio '+names[a.targetId||a.id]+': '+file.name);
+    }catch(err){playFlashError('Không lưu được Audio: '+String(err.message||err))}
+  };
+  i.click()
+}
 async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});battleInvalidateAudioCache(audioKind,a.id);saveState();renderAudio()}
 
 function bindCore(){
