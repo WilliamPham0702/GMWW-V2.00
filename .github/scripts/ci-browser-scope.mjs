@@ -826,6 +826,7 @@ const gm501Paths=new Set([
   'tests/v3188-preview-iphone-webkit.mjs',
   'tests/ci-browser-scope.test.mjs',
   'docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md',
+  '.github/workflows/check-dual-renderer.yml',
   'docs/acceptance-pr501-iphone-playerweb.md'
 ]);
 function isGMIcons501Scope(changes){
