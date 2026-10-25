@@ -11,7 +11,7 @@ try{
  const gm=await ctx.newPage(),viewer=await ctx.newPage();
  const coreRequests=[];let coreUndoToken='';
  gm.on('response',async response=>{
-  if(!/\\/battle-action$/.test(new URL(response.url()).pathname))return;
+  if(!new URL(response.url()).pathname.endsWith('/battle-action'))return;
   const d=await response.json().catch(()=>null);
   if(d?.ok===true&&typeof d.undoToken==='string')coreUndoToken=d.undoToken;
  });
