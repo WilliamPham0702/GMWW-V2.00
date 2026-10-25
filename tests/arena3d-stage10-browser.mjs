@@ -1,4 +1,4 @@
-// Stage 9 only: smoke test against its dedicated research Worker, NEVER Production or accepted Stage 6.
+// Stage 10 isolated research: browser smoke + synthetic role-specific VFX test against its dedicated research Worker, NEVER Production or accepted Stage 6.
 import assert from 'node:assert/strict';
 import {chromium,webkit,devices} from 'playwright';
 const base='https://gmww-arena3d-stage10-staging.williampham0702.workers.dev';
@@ -33,6 +33,13 @@ async function check(engine,kind){
   await page.locator('#sample-cast').click();
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:18000});
+  // Real 3D draw checks: these cues are strictly synthetic, never live Core/GM secrets.
+  for(const [role,visible] of [['soi-tuyet','previewWolfHeads'],['phu-thuy','previewImpactRings'],['tien-tri-hao-quang','previewWand'],['bao-ve','previewShieldDomes']]){
+    await page.locator('[data-role-fx="'+role+'"]').click();
+    await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:6000});
+    await page.waitForFunction(key=>Boolean(window.__GMWW_ARENA_STAGE_READONLY?.()[key]),visible,{timeout:4500});
+    assert.equal(await page.locator('body').getAttribute('data-gmww-stage10-projectile'),null,'never publish GM-only role animation metadata');
+  }
   assert.deepEqual(errors,[],kind+' uncaught browser errors');
   console.log('STAGE10_'+kind.toUpperCase()+'_PASS',JSON.stringify({roster,physicalIphone:false,staging:base}));
   await ctx.close();
