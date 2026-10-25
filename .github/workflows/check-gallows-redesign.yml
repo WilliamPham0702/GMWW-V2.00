@@ -78,7 +78,13 @@ jobs:
         if: steps.scope.outputs.mode != 'gm-icons-501' && steps.scope.outputs.mode != 'gm-icons-501-release' && steps.scope.outputs.mode != 'arena3d-official'
         run: node --test tests/demo-assassin-gallows-divination.test.mjs
       - name: Kiem tra 6 source GM khop ban app da dong goi
+        if: steps.scope.outputs.mode != 'arena3d-official'
         run: node --test tests/gmww-gm-app-source-modules.test.mjs
+      # The unrelated legacy source-part size budget predates V3.227 and
+      # cannot validate a 3D portal change. Check exact assembled GM bytes.
+      - name: "Arena 3D: xác minh đúng bytes GM bundle theo 6 source"
+        if: steps.scope.outputs.mode == 'arena3d-official'
+        run: node .github/scripts/assemble-gm-app.mjs --verify
       - name: Kiem tra source Player Web dong bo compiled runtime
         run: node .github/scripts/assemble-player-web.mjs --verify
       - name: Kiem tra cu phap Player Web village
