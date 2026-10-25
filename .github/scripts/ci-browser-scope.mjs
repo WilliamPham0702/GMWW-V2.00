@@ -581,8 +581,46 @@ function isIconGame3215Scope(changes){
   battle.includes('battleIconSetOn(!battleIconOn())');
 }
 
+// V3.216: isolate the three audio defects from Card, Seat, 3D and older release QA.
+const audio3216Files=new Set([
+  'src/index.js','package.json','package-lock.json',
+  'server-game/src/00-core-and-library.part','server-game/src/10-library-and-settings.part',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/app.js','server-game/current/GMWW.html','server-game/current/style.css',
+  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  'docs/releases/GMWW-V3.216-fix-role-day-gallows-audio-20261025.md',
+  'tests/audio-v3216-role-day-verdict.test.mjs'
+]);
+function isAudio3216Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const files=new Map(changes.map(c=>[c.path,c]));
+  for(const required of [
+    'src/index.js','package.json','server-game/current/app.js',
+    'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+    'server-game/src/10-library-and-settings.part','server-game/current/GMWW.html',
+    'tests/audio-v3216-role-day-verdict.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'docs/releases/GMWW-V3.216-fix-role-day-gallows-audio-20261025.md'
+  ])if(!files.has(required))return false;
+  if(!changes.every(c=>audio3216Files.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const worker=files.get('src/index.js')?.after||'';
+  const pkg=files.get('package.json')?.after||'';
+  const audio=files.get('server-game/src/30-village-and-setup.part')?.after||'';
+  const battle=files.get('server-game/src/40-battle-and-timeline.part')?.after||'';
+  const library=files.get('server-game/src/10-library-and-settings.part')?.after||'';
+  const html=files.get('server-game/current/GMWW.html')?.after||'';
+  return worker.includes('VERSION="V3.216"')&&
+    pkg.includes('"version": "3.216.0"')&&
+    audio.includes("rawTarget==='source-18'")&&
+    battle.includes("queue.push(['audio_system_day_wakeup'")&&
+    library.includes("replaceAudioItem(item,'system')")&&
+    !html.includes('data-gallows-audio-upload');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isAudio3216Scope(changes))return 'audio-fix-3216';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
   if(isIconGame3215Scope(changes))return 'icon-game-3215';
   if(isIconWave3213Scope(changes))return 'icon-wave3-3213';
@@ -629,6 +667,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isAudio3216Scope(changes))return{mode:'audio-fix-3216',reason:'V3.216: verified exact Old Witch, daybreak, System Gallows audio changes'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
       if(isIconGame3215Scope(changes))return{mode:'icon-game-3215',reason:'Verified V3.215 10 icons and GM-only fire drag via existing Core'};
       if(isIconWave3213Scope(changes))return{mode:'icon-wave3-3213',reason:'Verified 10 icons wave 3 and OTA only'};
@@ -698,6 +737,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='icon-wave3-3213')console.log('V3.213: chỉ kiểm tra 29 icon/SHA-256 và bản cập nhật OTA.');
   if(result.mode==='icon-clean-3212')console.log('V3.212: chỉ kiểm tra giao diện ICON, phiên bản và OTA.');
   if(result.mode==='icon-runtime-3210')console.log('V3.210: chỉ test Icon và OTA, không test Card, Seat, DEMO hoặc Native IPA.');
+  if(result.mode==='audio-fix-3216')console.log('Chỉ kiểm thử 3 lỗi âm thanh được báo và xác minh GM OTA V3.216.');
   if(result.mode==='audio-gallows-3209')console.log('Chỉ xác minh cú pháp, assembled bundles và phiên bản/OTA; không chạy bộ test gameplay mở rộng.');
   if(result.mode==='audio-v3208')console.log('Chỉ xác minh cú pháp, SHA và luồng Audio/Tiên Tri/Thông cáo liên quan V3.208; bỏ kiểm thử khác.');
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
@@ -706,7 +746,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3216','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
