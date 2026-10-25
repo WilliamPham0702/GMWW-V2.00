@@ -94,8 +94,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   });
   const wand=new THREE.Mesh(new THREE.CylinderGeometry(.018,.027,.57,5),new THREE.MeshBasicMaterial({color:'#f5e2a7'}));
   wand.visible=false;root.add(wand);
+  const impactRings=Array.from({length:5},()=>{
+    const mesh=new THREE.Mesh(new THREE.TorusGeometry(.44,.035,4,16),new THREE.MeshBasicMaterial({color:'#c9efff',transparent:true,opacity:.8,depthWrite:false}));
+    mesh.rotation.x=Math.PI/2;mesh.visible=false;root.add(mesh);return mesh;
+  });
   const spellBeam=spellBeams[0];
-  const hideBeams=()=>{for(const beam of spellBeams)beam.visible=false;for(const head of wolfHeads)head.visible=false;for(const dome of shieldDomes)dome.visible=false;wand.visible=false};
+  const hideBeams=()=>{for(const beam of spellBeams)beam.visible=false;for(const head of wolfHeads)head.visible=false;for(const dome of shieldDomes)dome.visible=false;for(const ring of impactRings)ring.visible=false;wand.visible=false};
   const beamDir=new THREE.Vector3(),beamFrom=new THREE.Vector3(),beamTo=new THREE.Vector3();
   const beamUp=new THREE.Vector3(0,1,0);
   let activeBeam=null;
@@ -192,7 +196,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       }else if(changed&&actor.travel?.to===1)moveActor(actor,0,now);
     }
     const cast=cue?.cast;
-    const castKey=cast?String(cue.turnId)+':'+cast.startedAt+':'+cast.kind:'';
+    const castKey=cast?[cue.turnId,cast.startedAt,cast.kind,cast.actorId,cast.actionId,cast.roleId,...(cast.targetIds||[])].join(':'):'';
     if(cast&&castKey!==currentCast&&authorizedIds.has(cast.actorId)&&Number(cast.expiresAt)>Date.now()){
       currentCast=castKey;
       const caster=byId.get(cast.actorId),target=(cast.targetIds||[]).map(id=>byId.get(id)).find(Boolean);
@@ -309,6 +313,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         beamDir.subVectors(beamTo,beamFrom);
         const distance=beamDir.length();
         if(distance<=.25)continue;
+        const ring=impactRings[index];
+        ring.position.set(beamTo.x,beamTo.y+.1,beamTo.z);
+        ring.material.color.set(profile.color||'#c9efff');
+        ring.scale.setScalar(reducedMotion?.85:1+.13*Math.sin(time*.014));
+        ring.visible=true;
         if(profile.projectile==='spectral-wolf-head'){
           const head=wolfHeads[index];
           const progress=reducedMotion?.78:Math.min(1,Math.max(0,(time-activeBeam.start)/(activeBeam.until-activeBeam.start)));
@@ -325,7 +334,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         beam.position.copy(beamFrom).add(beamTo).multiplyScalar(.5);
         beam.quaternion.setFromUnitVectors(beamUp,beamDir.multiplyScalar(1/distance));
         beam.scale.set(1,distance,1);
-        beam.material.color.set({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec');
+        beam.material.color.set(profile.color||({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec'));
         beam.material.opacity=reducedMotion?.55:.69+.13*Math.sin(time*.015);
         beam.visible=true;
         if(!firstBeam){
@@ -353,18 +362,20 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     spellBeam.geometry.dispose();for(const beam of spellBeams)beam.material.dispose();
     for(const head of wolfHeads){for(const part of head.children){part.geometry.dispose();part.material.dispose();}}
     for(const dome of shieldDomes){dome.geometry.dispose();dome.material.dispose();}
+    for(const ring of impactRings){ring.geometry.dispose();ring.material.dispose();}
     wand.geometry.dispose();wand.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
-    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
+    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1+spellVfx.drawBudget},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
     get beamVisible(){return spellBeams.some(beam=>beam.visible)},
     get visibleBeamCount(){return spellBeams.filter(beam=>beam.visible).length},
     get visibleWolfHeads(){return wolfHeads.filter(head=>head.visible).length},
     get visibleShieldDomes(){return shieldDomes.filter(dome=>dome.visible).length},
+    get visibleImpactRings(){return impactRings.filter(ring=>ring.visible).length},
     get wandVisible(){return wand.visible},
     get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
       renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
