@@ -8,7 +8,8 @@ import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} from './stage8-ritual-director.mjs';
 import {STAGE9_VERSION,createMatchSyncGate,publicMatchView,publicMatchStatus} from './stage9-match-sync.mjs';
-import {STAGE10_VERSION} from './stage10-role-animations.mjs';
+import {STAGE10_VERSION,resolveRoleAnimation} from './stage10-role-animations.mjs';
+import {createArenaAudioEngine,STAGE12_VERSION} from './stage12-audio-engine.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -30,6 +31,17 @@ let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=fal
 let galleryPage=0,previewRitualKind=null;
 const qualityController=createArenaAdaptiveQuality();
 const matchSync=createMatchSyncGate();
+const arenaAudio=createArenaAudioEngine(window.AudioContext||window.webkitAudioContext);
+function playArenaCastSound(cue,{syntheticPreview=false}={}){
+  // GM-private Core cue, or local synthetic preview only; never public frames.
+  if(!cue?.cast||(!syntheticPreview&&!gmToken)||!arenaAudio.enabled)return false;
+  const cast=cue.cast;
+  const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId});
+  const identity=[syntheticPreview?'preview':'gm',current?.room.matchId||'SYNTH',
+    current?.room.cycleKey||'',cue.turnId,cast.startedAt,cast.actionId||''].join(':');
+  return arenaAudio.play(profile,identity);
+}
+
 function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
   if(next===lowPower)return;
@@ -123,6 +135,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage8=STAGE8_VERSION;
   document.body.dataset.gmwwStage9=STAGE9_VERSION;
   document.body.dataset.gmwwStage10=STAGE10_VERSION;
+  document.body.dataset.gmwwStage12=STAGE12_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
@@ -156,6 +169,7 @@ async function refreshPrivateGmEffects(){
       const authorized=field.actors.map(a=>a.id);
       const normalized=normalizeRitualCue(data.casting,authorized);
       field.setCastingTurn(normalized);
+      playArenaCastSound(normalized);
       // Do not expose GM-only role, animation or audio identifiers via public DOM attributes.
       // Core-authorized cues are rendered in the private GM scene only.
       const summary=publicRitualSummary(normalized);
@@ -348,6 +362,7 @@ function playSyntheticRitual(requestedKind=null,{roleId='',actionId=''}={}){
   notice('Mẫu '+ritualArt(kind).label+': Character '+(index+1)+' đứng lên, bước ra trước khi thi triển.');
   setTimeout(()=>{if(token!==syntheticCastSeq||!synthetic)return;
     field.setCastingTurn(cue);
+    playArenaCastSound(cue,{syntheticPreview:true});
     document.body.dataset.gmwwSyntheticCasting='casting';
     notice('Character '+(index+1)+' thi triển '+ritualArt(kind).label+' về Character '+((index+2)%people.length+1)+'.');
   },900);
@@ -361,6 +376,12 @@ function playSyntheticRitual(requestedKind=null,{roleId='',actionId=''}={}){
     notice('Nhân vật đã về đúng ghế và ngồi xuống. Nhấn tiếp để thử lượt người kế tiếp.');
   },5600);
 }
+$('arena-audio').onclick=()=>{
+  if(arenaAudio.enabled){arenaAudio.stop();$('arena-audio').textContent='🔇 Bật tiếng phép 3D';}
+  else if(arenaAudio.enableFromGesture())$('arena-audio').textContent='🔊 Tắt tiếng phép 3D';
+  else notice('Trình duyệt không hỗ trợ AudioContext cho tiếng phép.');
+};
+window.addEventListener('pagehide',()=>arenaAudio.stop());
 $('sample-cast').onclick=()=>playSyntheticRitual();
 for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
@@ -430,7 +451,8 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   previewShieldDomes:synthetic?field.visibleShieldDomes:0,
   previewWand:synthetic?field.wandVisible:false,
   previewImpactRings:synthetic?field.visibleImpactRings:0,
-  pixelRatio:render.getPixelRatio(),reducedMotion});
+  pixelRatio:render.getPixelRatio(),reducedMotion,
+  soundEnabled:arenaAudio.enabled});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
   const adaptive=qualityController.observe(now,!document.hidden);
