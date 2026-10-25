@@ -4682,7 +4682,13 @@ function battleIconResolve(action){
  if(!api||!actionId)return [];
  const matches=typeof api.resolveAll==='function'?api.resolveAll(actionId):
    (typeof api.resolve==='function'?[api.resolve(actionId)]:[]);
- return (Array.isArray(matches)?matches:[]).filter(icon=>icon&&(icon.assetId||icon.image));
+ const specific=(Array.isArray(matches)?matches:[]).filter(icon=>icon&&(icon.assetId||icon.image));
+ if(specific.length)return specific;
+ // A newly added/custom action can be valid on Core but have no assigned image.
+ // Use an *existing GMWW PNG* as a clearly generic UI fallback, never a new
+ // guessed action mapping. The original action.id is still sent to Core.
+ const shared=api.get?.().find(icon=>icon.id==='danh-dau'&&(icon.assetId||icon.image));
+ return shared?[{...shared,isFallback:true}]:[];
 }
 // Position the fire dock in the *visible viewport* without moving the real campfire.
 // iPhone landscape, webview safe areas and zoom can shift/get zero-sized fire bounds.
@@ -4720,7 +4726,7 @@ function battleIconDock(actions,phase){
  const eligible=(Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable)
    .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
  dock.dataset.actionCount=String(eligible.length);
- dock.dataset.unmappedCount=String((Array.isArray(actions)?actions:[]).filter(a=>a?.actionId&&!a.unavailable&&!battleIconResolve(a).length).length);
+ dock.dataset.unmappedCount=String(eligible.filter(x=>x.icon.isFallback).length);
  const active=playSceneState.step==='battle'&&show&&eligible.length>0;
  dock.hidden=!active;
  if(!active){dock.replaceChildren();delete dock.dataset.sig;battleIconClearDrag();return}
@@ -4735,7 +4741,7 @@ function battleIconDock(actions,phase){
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon})=>
   '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
-  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'"'+(locked?' disabled':'')+'>'+
+  '" aria-label="'+playEsc(a.name+(icon.isFallback?' (icon chung)':''))+'" title="'+playEsc(a.name+(icon.isFallback?' · Icon chung chưa gán ảnh riêng':''))+'" aria-pressed="'+String(a.id===battleState.actionId)+'"'+(locked?' disabled':'')+'>'+
   '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
 }
 function battleIconTargetAt(x,y,action){
