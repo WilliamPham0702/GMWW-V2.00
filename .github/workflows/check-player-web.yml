@@ -70,6 +70,15 @@ jobs:
           test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
           grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
           grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: 'V3.223: chỉ kiểm thử VÀO LÀNG → Arena3D STAGING và chốt OTA'
+        if: steps.scope.outputs.mode == 'arena-home-3223'
+        run: |
+          node --test tests/arena3d-home-portal-v3223.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md
       - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
         if: steps.scope.outputs.mode == 'ranking-3221'
         run: |
