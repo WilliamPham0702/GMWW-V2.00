@@ -118,6 +118,7 @@ test('Disabled actions and ICON OFF never expose actionable icon',()=>{
 });
 test('Styling keeps battle icon dock within interactive iPhone layer',()=>{
  assert.match(css,/\.battle-fire-icon-dock\{[^}]*position:fixed/);
- assert.match(css,/\.battle-fire-icon-dock\{[^}]*z-index:125/);
+ assert.match(css,/\.battle-fire-icon-dock\{[^}]*z-index:1200/);
+ assert.match(css,/body\.play-immersive #start\.play-page\.active\{[^}]*z-index:1000/);
  assert.match(css,/\.battle-fire-icon-dock\[hidden\]\{display:none\}/);
 });
