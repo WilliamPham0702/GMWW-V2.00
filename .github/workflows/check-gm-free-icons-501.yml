@@ -1,0 +1,51 @@
+name: "Kiểm tra 5 icon GM và Player Web #501"
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "assets/village/village.mjs"
+      - "server-game/current/GMWW.html"
+      - "server-game/current/style.css"
+      - "server-game/current/app.js"
+      - "server-game/src/30-village-and-setup.part"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "tests/gm-free-floating-shortcuts-20261025.test.mjs"
+      - "tests/gallows-flag-snap-v3206.test.mjs"
+      - "tests/gallows-pirate-ui-v3205.test.mjs"
+      - "docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md"
+      - ".github/workflows/check-gm-free-icons-501.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-icons:
+    name: "5 icon, GM bundle và an toàn Runtime"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lấy mã nguồn PR
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Cài đúng thư viện khóa
+        run: npm ci
+      - name: Kiểm tra cú pháp giao diện và độ sạch của bản vá
+        run: |
+          node --check server-game/current/app.js
+          node --check assets/village/village.mjs
+          git diff --check HEAD^ HEAD || true
+      - name: Bắt buộc 6 module GM trùng khớp chính xác Runtime
+        run: node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ kiểm 5 icon, kéo chạm thật và cờ đề cử giữ luật cũ
+        run: |
+          node --test tests/gm-free-floating-shortcuts-20261025.test.mjs \
+            tests/gallows-flag-snap-v3206.test.mjs \
+            tests/gallows-pirate-ui-v3205.test.mjs
+      - name: Kiểm tra release notes và không đổi số phiên bản
+        run: |
+          test -s docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
