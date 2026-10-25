@@ -31,6 +31,8 @@ function scenario(action={id:'turn-1',actionId:'action_seer',name:'Soi xét',tar
  const core=fake('div');core.style={left:'48%',top:'50%'};core.querySelector=x=>x==='.play-core-pearl'?fire:null;
  const dock=fake();dock.getBoundingClientRect=()=>({height:82,width:180});
  const toggle=fake('button');
+ const ring=fake('div');ring.querySelectorAll=selector=>selector==='[data-play-player-id]'?playerNodes:[];
+ nodes.set('battleFireIconDock',dock);nodes.set('playPlayerRing',ring);
  nodes.set('battleGMActionIcons',toggle);
  const doc={
   body:{appendChild(el){if(el.id)nodes.set(el.id,el)}},
