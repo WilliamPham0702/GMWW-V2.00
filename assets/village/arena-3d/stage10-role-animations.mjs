@@ -27,11 +27,16 @@ const aliases=new Map(Object.entries(roleGroups).flatMap(([family,ids])=>ids.map
 export const animationFamilies=Object.freeze(Object.keys(PROFILES));
 export const animationRoleGroups=roleGroups;
 const safeRoleId=x=>typeof x==='string'&&/^[a-z0-9_-]{1,64}$/i.test(x)?x.toLowerCase():'';
-export function resolveRoleAnimation({kind='vote',roleId='',actionId=''}={}){
+export function resolveRoleAnimation({kind='vote',roleId='',actionId='',visualFamily=''}={}){
  const role=safeRoleId(roleId),action=safeRoleId(actionId);
  // Core action takes priority for witch heal/kill, oracle inspect, and wolf bite.
  let family=coreActionFamily(action)||aliases.get(role)||({shield:'shield',inspect:'oracle',heal:'heal',attack:'attack',vote:'vote'}[kind]||'vote');
  if(coreActionFamily(action))return Object.freeze({family,...PROFILES[family]});
+ // Visual metadata originates in the GM-only, Core-verified cast. No public hints.
+ if(typeof visualFamily==='string'&&Object.hasOwn(PROFILES,visualFamily)){
+   family=visualFamily;
+   return Object.freeze({family,...PROFILES[family]});
+ }
  if(action==='wolf-bite'||action==='bite')family='wolf';
  else if(action==='protect')family='shield';
  else if(action==='inspect'||action==='aura-inspect')family='oracle';
@@ -48,7 +53,7 @@ export function authorizedAnimationCue(cue,{gmAuthorized=false}={}){
  if(typeof cast.actorId!=='string'||!Array.isArray(cast.targetIds))return null;
  return Object.freeze({actorId:cast.actorId,targetIds:cast.targetIds.slice(0,5),
   kind:cast.kind,startedAt:cast.startedAt,expiresAt:cast.expiresAt,
-  profile:resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId})});
+  profile:resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,visualFamily:cast.visualFamily})});
 }
 export function animationMotion(profile,time,{reducedMotion=false}={}){
  const t=Number.isFinite(time)?time:0;

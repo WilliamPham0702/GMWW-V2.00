@@ -36,7 +36,7 @@ function playArenaCastSound(cue,{syntheticPreview=false}={}){
   // GM-private Core cue, or local synthetic preview only; never public frames.
   if(!cue?.cast||(!syntheticPreview&&!gmToken)||!arenaAudio.enabled)return false;
   const cast=cue.cast;
-  const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId});
+  const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,visualFamily:cast.visualFamily});
   const identity=[syntheticPreview?'preview':'gm',current?.room.matchId||'SYNTH',
     current?.room.cycleKey||'',cue.turnId,cast.startedAt,cast.actionId||''].join(':');
   return arenaAudio.play(profile,identity);
@@ -344,7 +344,7 @@ $('sample-daynight').onclick=()=>{
   notice(sceneNightPreview?'Đang xem cùng làng biển vào ĐÊM, có trăng, đèn và ánh lửa.':'Đang xem cùng làng biển vào NGÀY.');
 };
 let syntheticCastSeq=0;
-function playSyntheticRitual(requestedKind=null,{roleId='',actionId=''}={}){
+function playSyntheticRitual(requestedKind=null,{roleId='',actionId='',visualFamily=''}={}){
   if(!synthetic){notice('Khi vào phòng thật, chỉ Core mới quyết định lượt và nhân vật được làm phép.');return;}
   syntheticCastSeq++;
   const token=syntheticCastSeq;
@@ -356,7 +356,8 @@ function playSyntheticRitual(requestedKind=null,{roleId='',actionId=''}={}){
   const targetId=people[(index+2)%people.length].id;
   const now=Date.now();
   const cue={turnId:'synthetic-'+token,actorIds:[actorId],
-    cast:{actorId,targetIds:[targetId],kind,roleId,actionId,startedAt:now+900,expiresAt:now+4000}};
+    cast:{actorId,targetIds:[targetId],kind,roleId,actionId,
+      visualFamily,startedAt:now+900,expiresAt:now+4000}};
   field.setCastingTurn({turnId:cue.turnId,actorIds:cue.actorIds});
   document.body.dataset.gmwwSyntheticCasting='standing';
   notice('Mẫu '+ritualArt(kind).label+': Character '+(index+1)+' đứng lên, bước ra trước khi thi triển.');
@@ -383,9 +384,10 @@ $('arena-audio').onclick=()=>{
 };
 window.addEventListener('pagehide',()=>arenaAudio.stop());
 $('sample-cast').onclick=()=>playSyntheticRitual();
-for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventListener('click',()=>{
+for(const b of document.querySelectorAll('[data-fx],[data-role-fx],[data-artifact-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
-  playSyntheticRitual(b.dataset.fx||b.dataset.roleKind,{roleId:b.dataset.roleFx||'',actionId:b.dataset.roleAction||''});
+  playSyntheticRitual(b.dataset.fx||b.dataset.roleKind,{roleId:b.dataset.roleFx||'',
+    actionId:b.dataset.roleAction||'',visualFamily:b.dataset.artifactFx||''});
 });
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;

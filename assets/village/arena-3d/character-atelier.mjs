@@ -204,7 +204,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const elapsed=Math.max(250,Math.min(4000,Number(cast.expiresAt)-Date.now()));
         const walkEnd=(caster.travel?.startedAt||now)+(caster.travel?.duration||0);
         const spellStart=Math.max(now,Math.min(now+WALK_TIMING.approachMs,walkEnd));
-        caster.animationProfile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId});
+        caster.animationProfile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,visualFamily:cast.visualFamily});
         caster.gesture='cheer';caster.gestureEnd=spellStart+elapsed;
         caster.castStartedAt=spellStart;caster.castUntil=spellStart+elapsed;
         caster.standUntil=Math.max(caster.standUntil,spellStart+elapsed+WALK_TIMING.returnMs);

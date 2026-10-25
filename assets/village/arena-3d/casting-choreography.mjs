@@ -1,4 +1,5 @@
 import {coreCastingKind} from './stage11-core-action-bridge.mjs';
+import {safePrivateVisualFamily} from './stage14-dynamic-visuals.mjs';
 // Arena3D staging only: turn-driven choreography. Never infer turns, roles or victims on Player Web.
 // Stage/GM owns secret cues; public players see ONLY approved public status effects.
 export const CHOREOGRAPHY_VERSION='gmww.arena.cast.v1';
@@ -15,7 +16,7 @@ export function classifyCastingAction(actionId){
   if(['action_wolf_bite','action_witch_kill','action_poison','action_kill','action_hunter_shot'].includes(id))return 'attack';
   return null;
 }
-export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetIds=[],kind,createdAt,expiresAt,actionId='',roleId=''},now=Date.now()){
+export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetIds=[],kind,createdAt,expiresAt,actionId='',roleId='',visualFamily=''},now=Date.now()){
   const actors=[...new Set((actorIds||[]).map(visibleId).filter(Boolean))].slice(0,30);
   const targets=[...new Set((targetIds||[]).map(visibleId).filter(Boolean))].slice(0,30);
   const start=Number(createdAt),expiry=Number(expiresAt);
@@ -29,7 +30,8 @@ export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetId
     // Target identifiers are restricted to authorized-GM responses.
     cast:active?{actorId:actors[0],targetIds:targets,kind,startedAt:start,expiresAt:expiry,
       actionId:typeof actionId==='string'?actionId.slice(0,90):'',
-      roleId:typeof roleId==='string'?roleId.slice(0,90):''}:null
+      roleId:typeof roleId==='string'?roleId.slice(0,90):'',
+      visualFamily:safePrivateVisualFamily(visualFamily)}:null
   };
 }
 export function publicCastingState(room,cue,{authorizedGM=false}={}){
