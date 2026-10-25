@@ -110,7 +110,7 @@ function render(){
  const q=(document.getElementById('gmwwIconSearch')?.value||'').toLowerCase();
  const box=document.getElementById('gmwwIconGrid');if(!box)return;
  const rows=icons.filter(x=>(x.name+' '+x.id+' '+x.actions.join(' ')).toLowerCase().includes(q));
- box.innerHTML=rows.map(x=>'<article class="gmww-icon-tile" data-icon-id="'+esc(x.id)+'"><img src="'+esc(picture(x))+'" alt=""><b>'+esc(x.name)+'</b><small>'+esc(x.target==='character'?'Kéo vào người chơi':x.target==='multi'?'Chọn đủ mục tiêu':x.target==='direction'?'Chọn hướng': 'Chọn lá bài')+'</small><small class="gmww-icon-actions">'+esc(x.actions.join(' · ')||'Chưa gán hành động')+'</small><div><button type="button" data-icon-edit="'+esc(x.id)+'">Sửa</button><button type="button" data-icon-delete="'+esc(x.id)+'">Xoá</button></div></article>').join('')||'<p>Không có icon phù hợp.</p>';
+ box.innerHTML=rows.map(x=>'<article class="gmww-icon-tile" data-icon-id="'+esc(x.id)+'"><img src="'+esc(picture(x))+'" alt=""><b>'+esc(x.name)+'</b><div><button type="button" data-icon-edit="'+esc(x.id)+'">Sửa</button><button type="button" data-icon-delete="'+esc(x.id)+'">Xoá</button></div></article>').join('')||'<p>Không có icon phù hợp.</p>';
  box.querySelectorAll('[data-icon-edit]').forEach(b=>b.onclick=()=>edit(b.dataset.iconEdit));
  box.querySelectorAll('[data-icon-delete]').forEach(b=>b.onclick=()=>remove(b.dataset.iconDelete));
  document.getElementById('gmwwIconCount').textContent=icons.length+' icon';
