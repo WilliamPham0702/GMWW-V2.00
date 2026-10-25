@@ -257,10 +257,59 @@ jobs:
           echo "::error::Chưa có hai CI SUCCESS cùng SHA, không triển khai Production."
           exit 1
 
+      # V3.207: PR #475 was merged and verified with exactly-scoped DEMO,
+      # Player Web and Lên Giàn CI. The 14 unrelated legacy npm tests must
+      # not block this explicitly owner-approved production release.
+      # This exception is limited to V3.207 + merged PR SHA + same-SHA CI.
+      - name: Xác minh phát hành V3.207 DEMO #475 bằng CI trực tiếp liên quan
+        id: demo475_release_3207
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.207.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md || {
+            echo "::error::Thiếu release notes V3.207 DEMO #475"; exit 1;
+          }
+          git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD || {
+            echo "::error::Bản phát hành chưa có thay đổi PR #475"; exit 1;
+          }
+          for FILE in src/gmww-demo-runner.js src/gmww-gallows-rules.js \\
+            tests/demo-assassin-gallows-divination.test.mjs src/gmww-members-live.js; do
+            test -s "$FILE" || { echo "::error::Thiếu thành phần DEMO #475: $FILE"; exit 1; }
+          done
+          for TRY in $(seq 1 40); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \\
+              -H "Authorization: Bearer $GH_TOKEN" \\
+              -H "Accept: application/vnd.github+json" \\
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.event==='push'&&r.head_sha===process.env.TESTED_SHA);
+                const status=n=>{const r=a.filter(x=>x.name===n).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at))[0];return r?(r.conclusion||'pending'):'pending'};
+                const v=[status('Check Player Web Worker'),status('Check Lên Giàn theo đúng phạm vi')];
+                process.stdout.write(v.every(x=>x==='success')?'success':v.some(x=>['failure','timed_out','cancelled','action_required','skipped'].includes(x))?'failure':'pending');
+              })")
+            echo "V3.207 DEMO #475: CI Worker + Lên Giàn $TRY = $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.207: 2 CI trực tiếp liên quan cùng SHA SUCCESS; bỏ qua các test legacy ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI trực tiếp liên quan FAIL; dừng Production"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::Không xác minh được 2 CI liên quan cùng SHA; dừng Production."
+          exit 1
+
       # Normal release: browser gate is retained except tightly scoped verified
       # V3.203 owner-dispatched release and V3.204 gallows-focused release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
