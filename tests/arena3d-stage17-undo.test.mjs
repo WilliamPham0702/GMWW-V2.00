@@ -48,3 +48,13 @@ test('GĐ17: undo does not bypass Core and never publishes the GM secret cue',()
   assert.match(worker,/const previous=await this\.ctx\.storage\.get\('meta'\)/);
   assert.doesNotMatch(rollback,/this\.broadcast\(/);
 });
+
+test('GĐ17: stale GM visual fetch cannot re-enable old effects or sound after reconnect',()=>{
+  const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+  assert.match(live,/const session=\{room:code,token:gmToken,matchId:/);
+  assert.match(live,/if\(code!==session\.room\|\|gmToken!==session\.token/);
+  assert.match(live,/String\(current\?\.room\.cycleKey\|\|''\)!==session\.cycleKey/);
+  assert.match(live,/arenaAudio\.stop\(\);localVoice\.clear\(\)/);
+  assert.ok(live.indexOf('if(code!==session.room')<live.indexOf('field.setServerEffects(data.effects)'),
+    'Session guard must run before applying a private cue');
+});
