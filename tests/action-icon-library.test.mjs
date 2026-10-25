@@ -60,7 +60,7 @@ test('Approved icons use actual 49 individual PNG assets, not demo SVG or emoji'
   assert.equal(worker.readUInt32BE(16),1024);
   assert.equal(worker.readUInt32BE(20),1024);
   assert.equal(worker[25],6,'RGBA with alpha');
-  assert.match(fs.readFileSync(svgPath,'utf8'),/<svg\s/);
+  assert.match(fs.readFileSync(svgPath,'utf8'),/<(?:ns[0-9]+:)?svg\s/);
  }
 });
 test('Direction-based skill displays two independent choices, no automatic action submission',()=>{
@@ -182,7 +182,7 @@ test('Double-tap tiles never show external Edit/Delete buttons and delete action
 test('Fire icon uses battle targetAllowed and original Server commit, without a second action ledger',()=>{
  const battle=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
  assert.match(battle,/battleIconDock\(actions,phase\)/);
- assert.match(battle,/battleIconTargetAt\(e\.clientX,e\.clientY,action\)/);
+ assert.match(battle,/battleIconTargetAt\(e\.clientX,e\.clientY,(?:action|a)\)/);
  assert.match(battle,/battlePickTargetWithAudio\(String\(target\.dataset\.playPlayerId/);
  assert.match(battle,/battleConfirm\(true\)/);
  assert.match(battle,/battleRules\(\)\?\.targetAllowed/);
