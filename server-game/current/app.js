@@ -3256,10 +3256,10 @@ function initDemoPanel(){
     panel.classList.toggle('is-collapsed',collapsed);
     button.setAttribute('aria-expanded',String(!collapsed));
     button.setAttribute('aria-label',collapsed?'Mở bảng hành động DEMO':'Thu gọn bảng hành động DEMO');
-    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 📗';
+    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 🐦‍🔥';
     if(!collapsed)panel.classList.remove('has-unread');
   };
-  let collapsed=false;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)==='1'}catch{}
+  let collapsed=true;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)!=='0'}catch{}
   toggle(collapsed);
   button.addEventListener('click',e=>{
     e.stopPropagation();
@@ -5825,11 +5825,88 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
   }
 }
 
+/* GM shortcuts: independent iPhone-friendly free icons; position is local-only. */
+const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1';
+function gmwwSetupFreeBattleIcons(){
+  const shell=document.getElementById('playShell');if(!shell)return;
+  const read=()=>{try{const v=JSON.parse(localStorage.getItem(GMWW_BATTLE_ICON_POSITIONS)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch{return {}}};
+  const clamp=(node,left,top)=>{
+    const width=node.offsetWidth||48,height=node.offsetHeight||48;
+    return {left:Math.max(6,Math.min(Math.max(6,innerWidth-width-6),left)),
+      top:Math.max(6,Math.min(Math.max(6,innerHeight-height-6),top))};
+  };
+  const place=(node,left,top)=>{
+    const p=clamp(node,left,top);
+    for(const [name,value] of Object.entries({left:p.left+'px',top:p.top+'px',right:'auto',bottom:'auto',transform:'none'}))
+      node.style.setProperty(name,value,'important');
+    return p;
+  };
+  for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver']){
+    const panel=document.getElementById(id);if(!panel)continue;
+    if(panel.parentElement!==shell)shell.appendChild(panel);
+    const saved=read()[id];
+    if(!panel.dataset.gmwwFreeRestored&&saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){
+      const width=panel.offsetWidth||48,height=panel.offsetHeight||48;
+      place(panel,saved.x*Math.max(0,innerWidth-width),saved.y*Math.max(0,innerHeight-height));
+    }
+    panel.dataset.gmwwFreeRestored='1';
+    if(panel.dataset.gmwwFreeReady)continue;
+    panel.dataset.gmwwFreeReady='1';
+    panel.classList.add('gmww-free-icon');
+    const button=panel.querySelector(id==='battleDemoObserver'?'#battleDemoCollapse':'button');
+    if(!button)continue;
+    let drag=null,blockClickUntil=0;
+    const movable=()=>id!=='battleDemoObserver'||panel.classList.contains('is-collapsed');
+    button.addEventListener('pointerdown',event=>{
+      if(panel.hidden||!movable()||(event.button!==0&&event.pointerType!=='touch'))return;
+      const rect=panel.getBoundingClientRect();
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+      try{button.setPointerCapture(event.pointerId)}catch{}
+    });
+    button.addEventListener('pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+      if(!drag.moved&&Math.hypot(dx,dy)<8)return;
+      drag.moved=true;
+      place(panel,drag.left+dx,drag.top+dy);
+      event.preventDefault();
+    });
+    const finish=event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      if(drag.moved){
+        blockClickUntil=Date.now()+450;
+        if(event.type==='pointerup'){
+          const rect=panel.getBoundingClientRect();
+          const saved=read();
+          saved[id]={x:Math.max(0,Math.min(1,rect.left/Math.max(1,innerWidth-rect.width))),
+            y:Math.max(0,Math.min(1,rect.top/Math.max(1,innerHeight-rect.height)))};
+          try{localStorage.setItem(GMWW_BATTLE_ICON_POSITIONS,JSON.stringify(saved))}catch{}
+        }
+        event.preventDefault();
+      }
+      drag=null;try{button.releasePointerCapture(event.pointerId)}catch{}
+    };
+    button.addEventListener('pointerup',finish);
+    button.addEventListener('pointercancel',finish);
+    button.addEventListener('click',event=>{
+      if(Date.now()<blockClickUntil){event.preventDefault();event.stopImmediatePropagation()}
+    },true);
+    const keepVisible=()=>{
+      if(!panel.hidden&&panel.style.left)place(panel,panel.getBoundingClientRect().left,panel.getBoundingClientRect().top);
+    };
+    window.addEventListener('resize',keepVisible,{passive:true});
+    window.visualViewport?.addEventListener('resize',keepVisible,{passive:true});
+  }
+  // Escape old pointer-events:none dock; keep the statistics dialog interactive.
+  const stats=document.getElementById('battleFactionStats');
+  if(stats&&stats.parentElement!==shell)shell.appendChild(stats);
+}
 function renderPlayBattle(){
   demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
   const statsFloat=document.getElementById('battleFactionStatsFloat');if(statsFloat)statsFloat.hidden=!visible;
+  gmwwSetupFreeBattleIcons();
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
   if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
