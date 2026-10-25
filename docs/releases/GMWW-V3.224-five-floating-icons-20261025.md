@@ -14,12 +14,12 @@ Tọa độ icon GM lưu riêng trên máy, không thay state hoặc game rule. 
 ## Chốt phát hành bắt buộc
 - GitHub PR #501 có CI chuyên biệt SUCCESS (Node + WebKit mô phỏng iPhone + Player Web + GM bundle).
 - CI Worker main & workflow 5 icon cùng **một SHA** SUCCESS. Mọi thay đổi ngoài whitelist yêu cầu full CI.
-- Cú pháp, phiên bản Worker/GM/package/lock khớp 3.222, app.js = đúng 6 source module GM.
+- Cú pháp, phiên bản Worker/GM/package/lock khớp 3.224, app.js = đúng 6 source module GM.
 - Quy trình Production chuẩn prepare-update-channel.mjs runtime tạo manifest V3.224 với SHA-256 từng file và verify-gmww-versions.mjs xác minh tăng phiên bản.
 - Sau deploy, kiểm tra Worker /api/health, OTA /api/update/manifest, checksum, Player Web trên Production.
 - **Không tự động đổi Native shell hoặc IPA**.
 
 ## Rollback V3.223
-Rollback sang Worker/Runtime Production V3.222 đã triển khai trước khi nâng cấp. Khôi phục Worker deployment version từ Cloudflare và asset/manifest OTA tương ứng; **không xóa hay reset DO, không thay dữ liệu/phòng chơi**. Với code, revert PR #501 và commit release sau nếu cần. Khóa localStorage gmww_battle_free_icons_v1 chỉ chứa vị trí icon, an toàn giữ nguyên.
+Rollback sang Worker/Runtime Production V3.223 đã triển khai trước khi nâng cấp. Khôi phục Worker deployment version từ Cloudflare và asset/manifest OTA tương ứng; **không xóa hay reset DO, không thay dữ liệu/phòng chơi**. Với code, revert PR #501 và commit release sau nếu cần. Khóa localStorage gmww_battle_free_icons_v1 chỉ chứa vị trí icon, an toàn giữ nguyên.
 
 **Đường dẫn phục vụ kiểm tra:** https://gmww-v2-00.williampham0702.workers.dev/api/health
