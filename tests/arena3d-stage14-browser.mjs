@@ -17,10 +17,18 @@ async function check(engine,kind){
   assert.equal(res.status(),200);
   await page.waitForFunction(()=>document.body.dataset.gmwwStage10==='gmww.arena.role-animation.10'&&
     window.__GMWW_ARENA_STAGE_READONLY?.().count===6,null,{timeout:45000});
+  // GĐ23: lock Smooth to measure real crowd LOD, not auto-eco (headless
+  // software WebGL may independently decide to save power).
+  await page.getByRole('tab',{name:'Hiệu năng'}).click();
+  await page.getByRole('button',{name:'Mượt',exact:true}).click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().autoQualityEnabled===false);
   const roster=[];
   for(const n of [6,12,20,30]){
    if(n!==6)await page.locator('[data-roster="'+n+'"]').click();
-   await page.waitForFunction(n=>window.__GMWW_ARENA_STAGE_READONLY?.().count===n,n,{timeout:30000});
+   await page.waitForFunction(n=>{
+     const state=window.__GMWW_ARENA_STAGE_READONLY?.();
+     return state?.count===n&&state.crowdTier===(n>=24?'crowd30':n>=20?'crowd20':'full');
+   },n,{timeout:30000});
    await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().fps>0,null,{timeout:45000});
    const state=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
    assert.equal(state.artVersion,'gmww.arena.art.sea-chibi.6');
@@ -28,8 +36,15 @@ async function check(engine,kind){
    assert.ok(state.drawCalls>0&&state.drawCalls<=57,'30 actors share the expected draw-call budget');
    assert.ok(state.pixelRatio<=1.75,'Stage7 mobile pixel-ratio budget');
    assert.equal(state.privateOverlayCount,0,'synthetic demo must not show GM-private effects');
-   roster.push({players:n,drawCalls:state.drawCalls,fps:state.fps,pixelRatio:state.pixelRatio});
+   roster.push({players:n,drawCalls:state.drawCalls,fps:state.fps,
+     pixelRatio:state.pixelRatio,crowdTier:state.crowdTier});
   }
+  // Stage23: with fixed Smooth quality, GPU sees fewer mesh calls at 20/30.
+  assert.ok(roster[2].drawCalls<roster[1].drawCalls,
+    '20 Character must have fewer draw calls than 12');
+  assert.ok(roster[3].drawCalls<roster[2].drawCalls,
+    '30 Character must have fewer draw calls than 20');
+
   // GĐ18: verify a real WebGL scene loses draw calls in eco mode, not
   // merely a badge claiming lower power. Keep Character/seat counts intact.
   await page.getByRole('tab',{name:'Hiệu năng'}).click();
@@ -55,6 +70,10 @@ async function check(engine,kind){
   assert.ok(diag.paintCpuP95Ms>=0,'CPU render stats collected on device');
   assert.ok(diag.drawCalls>0,'GPU draw-call statistics collected');
   assert.equal(diag.thermalCelsius,null,'Safari thermals are not exposed by JS');
+  const trend=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY().sessionTrend);
+  assert.equal(trend.windowCapacity,30,'GĐ25 local session QA stays bounded');
+  assert.ok(trend.storedWindows<=30);
+  assert.equal(trend.maxCharacters,30);
   assert.doesNotMatch(JSON.stringify(diag),/gmToken|roleId|artifactId|loginId|roomCode/);
   assert.equal(await page.locator('#arena-diag-copy').count(),1);
   await page.locator('#sample-cast').click();
@@ -77,6 +96,21 @@ async function check(engine,kind){
     assert.equal(await page.locator('body').getAttribute('data-gmww-stage10-projectile'),null,'never publish GM-only role animation metadata');
     assert.ok((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).soundPlays>=1);
   }
+  // GĐ24/25 short live stress: repeated seat rosters preserve instancing
+  // and LOD without WebGL loss or public exposure of private caster metadata.
+  for(const n of [12,30,6,20,30]){
+    await page.locator('[data-roster="'+n+'"]').click();
+    await page.waitForFunction(n=>{
+      const state=window.__GMWW_ARENA_STAGE_READONLY?.();
+      return state?.count===n&&state.crowdTier===(n>=24?'crowd30':n>=20?'crowd20':'full');
+    },n,{timeout:30000});
+  }
+  const after=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+  assert.equal(after.count,30);
+  assert.equal(after.crowdTier,'crowd30');
+  assert.equal(after.webglLost,false);
+  assert.ok(after.sessionTrend.storedWindows<=30);
+  assert.equal(after.privateOverlayCount,0);
   assert.deepEqual(errors,[],kind+' uncaught browser errors');
   console.log('STAGE14_'+kind.toUpperCase()+'_PASS',JSON.stringify({roster,physicalIphone:false,staging:base}));
   await ctx.close();
