@@ -26,3 +26,11 @@
 - Chỉ số CI giả lập: 46 draw calls; Chrome 10 FPS; WebKit 1 FPS. **WebKit 1 FPS trên CI là dấu hiệu phải đo trực tiếp iPhone; chưa thể xác nhận đạt mục tiêu hiệu năng iPhone thật**.
 - Đã cập nhật bài kiểm thử trực tiếp liên quan đến Core cue: nhận cue chuẩn hóa GĐ8 thay cho chuyển thẳng cue chưa xác minh.
 - Không thay đổi Worker GĐ6/GĐ7, Production, game 2D hay dữ liệu.
+
+## Bổ sung đợt 2 — phép nhiều mục tiêu (25/10/2026)
+- Character Atelier hiển thị đồng thời tối đa 5 tia phép đến các mục tiêu được Core cho phép; trước đó chỉ hiển thị tia đến mục tiêu đầu tiên.
+- Tái sử dụng geometry, dọn dẹp materials khi đóng cảnh; giữ ngân sách VFX và giới hạn phân quyền.
+- Bổ sung unit regression trực tiếp kiểm tra mô hình 5 tia phép.
+- CI scoped: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40147508441 — SUCCESS.
+- CI + STAGING riêng + Chrome/WebKit: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40147539790 — SUCCESS.
+- FPS WebKit trong môi trường CI mô phỏng vẫn cần kiểm chứng iPhone vật lý; không dùng CI software-rendering làm tiêu chuẩn pin/nhiệt.
