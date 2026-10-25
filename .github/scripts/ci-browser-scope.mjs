@@ -687,8 +687,53 @@ function isIconWave3218Scope(changes){
   app.includes("const VERSION='3.218'")&&html.includes('<title>GMWW V3.218</title>')&&
   lib.includes('49_sang_tao_artifact')&&lib.includes('REASSIGNED_REAL_ACTIONS');
 }
+
+/* V3.219 — chỉ phạm vi giao diện Top 3 và chốt phát hành Runtime bắt buộc. */
+const homeSea3219Paths=new Set([
+  'server-game/src/00-core-and-library.part',
+  'server-game/src/20-members-and-roster.part',
+  'server-game/current/app.js','server-game/current/GMWW.html',
+  'server-game/current/style.css','src/index.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'tests/home-top3-podium-v3211.test.mjs',
+  'tests/home-top3-podium-identity-v3214.test.mjs',
+  'tests/home-top3-podium-sea-v3216.test.mjs',
+  'docs/releases/GMWW-V3.219-top3-no-podium-frosted-glass-20261025.md'
+]);
+function isHomeSea3219Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const byPath=new Map(changes.map(c=>[c.path,c]));
+  for(const p of [
+    'server-game/current/app.js','server-game/src/20-members-and-roster.part',
+    'server-game/src/00-core-and-library.part','server-game/current/style.css',
+    'server-game/current/GMWW.html','src/index.js','package.json',
+    'tests/home-top3-podium-sea-v3216.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'docs/releases/GMWW-V3.219-top3-no-podium-frosted-glass-20261025.md'
+  ])if(!byPath.has(p))return false;
+  if(!changes.every(c=>homeSea3219Paths.has(c.path)&&['M','A'].includes(c.status)))return false;
+  const get=p=>byPath.get(p)?.after||'';
+  const render=get('server-game/current/app.js');
+  const a=render.indexOf('function gmwwHomeRenderTop3(rows){'),b=render.indexOf('function gmwwHomeOpenMemberRanking()',a);
+  const top=render.slice(a,b);
+  const src=get('server-game/src/20-members-and-roster.part');
+  const sa=src.indexOf('function gmwwHomeRenderTop3(rows){'),sb=src.indexOf('function gmwwHomeOpenMemberRanking()',sa);
+  if(a<0||b<a||sa<0||sb<sa||src.slice(sa,sb)!==top)return false;
+  return get('package.json').includes('"version": "3.219.0"')&&
+    get('src/index.js').includes('VERSION="V3.219"')&&
+    get('server-game/current/GMWW.html').includes('<title>GMWW V3.219</title>')&&
+    render.includes("const VERSION='3.219'")&&
+    get('server-game/current/style.css').includes('V3.219 — Top 3 không bục')&&
+    get('.github/scripts/prepare-update-channel.mjs').includes('V3.219: Bỏ hoàn toàn 3 bục')&&
+    top.includes('button.append(stage,details)')&&top.includes('member.gameCharacterId')&&
+    top.includes('image?rev=c40-4')&&!top.includes('podium.append')&&
+    !top.includes('button.append(stage,podium')&&!top.includes('/originals/');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isHomeSea3219Scope(changes))return 'home-sea-3219';
   if(isAudio3217Scope(changes))return 'audio-fix-3217';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
   if(isHomeSea3216Scope(changes))return 'home-sea-3216';
@@ -738,6 +783,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
       if(isHomeSea3216Scope(changes))return{mode:'home-sea-3216',reason:'V3.216 GM Top 3 sea podium/glass only'};
