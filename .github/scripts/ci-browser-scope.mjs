@@ -1119,6 +1119,9 @@ function isArena3dOfficialPortalScope(changes){
    '.github/workflows/check-dual-renderer.yml',
    '.github/workflows/check-player-web.yml',
    '.github/workflows/check-p0-chrome-edge-realtime.yml',
+   '.github/workflows/check-gallows-redesign.yml',
+   '.github/workflows/build-server-game-ipa.yml',
+   '.github/workflows/prepare-runtime-v3202-candidate.yml',
    '.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs',
    ...required].includes(p);
  if(changes.some(x=>!safePath(x.path)||!['A','M'].includes(x.status)))return false;
