@@ -41,7 +41,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   build:
     needs: scope
-    if: needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215'
+    if: needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218'
     runs-on: macos-latest
     steps:
       - name: Checkout
