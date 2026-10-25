@@ -50,6 +50,8 @@ test('GM Production retains original 2D Core auth and never imports trial assign
  assert.match(source,/projectAuthorizedGmCoreState\(payload\)/);
  assert.match(source,/loadPublicGallows:!productionCoreView/);
  assert.match(source,/productionCoreView&&\['seed','deal'\]\.includes\(id\)/);
+ assert.match(source,/\$('seed'\)\.onclick=[\s\S]*?if\(productionCoreView\)throw Error\('Chỉ dành cho phòng STAGING/);
+ assert.match(source,/\$('deal'\)\.onclick=[\s\S]*?if\(productionCoreView\)throw Error\('Chỉ dành cho STAGING/);
  assert.match(source,/if\(productionCoreView\)\{/);
  assert.match(source,/if\(!productionCoreView\)demo\(rosterSize\)/);
  assert.match(source,/document\.title='GMWW Arena 3D · Chơi chính thức'/);
