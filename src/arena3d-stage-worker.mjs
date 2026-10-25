@@ -4,7 +4,7 @@ import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
-import {coreRoleForActor,isCanonicalCoreAction} from '../assets/village/arena-3d/stage11-core-action-bridge.mjs';
+import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -27,15 +27,24 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const actorId=String(body?.actorId||'');
     const targets=Array.isArray(body?.targetIds)?body.targetIds:[];
     const actionId=String(body?.actionId||'');
-    const kind=classifyCastingAction(actionId);
-    if(!/^[a-z0-9._-]{1,80}$/i.test(actorId)||!kind)return response;
+    const artifactId=String(body?.artifactId||'');
+    if(!/^[a-z0-9._-]{1,80}$/i.test(actorId))return response;
+    // Read only this actor's already-delivered private cards after Core confirms.
+    const roles=await this.ctx.storage.get('roles:'+actorId)||[];
+    const legacy=roles.length?null:await this.ctx.storage.get('role:'+actorId);
+    const artifact=artifactId?await this.ctx.storage.get('artifact:'+actorId):null;
+    const verifiedRole=artifactId?'':phase==='morning'?String(body?.roleId||''):roleId;
+    const card=verifiedPrivateCard({actorId,roleId:verifiedRole,artifactId,
+      roles:Array.isArray(roles)&&roles.length?roles:[legacy].filter(Boolean),artifact,matchId:meta.matchId});
+    const visual=familyForConfirmedAction({actionId,type:body?.type,card,effectId:body?.effectId});
+    if(!visual)return response; // Never infer secret cues from unconfigured custom IDs.
     const now=Date.now();
     await this.ctx.storage.put('arena:lastCast:'+meta.matchId,{
       matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),phase,
       turnId:phase==='night'?String(body?.turnId||''):'day:'+String(body?.clientEventId||'').slice(0,90),
       actorIds:['member:'+actorId],targetIds:targets.filter(id=>/^[a-z0-9._-]{1,80}$/i.test(String(id))).map(id=>'member:'+id),
-      kind,actionId:isCanonicalCoreAction(actionId)?actionId:'',roleId,
-      createdAt:now,expiresAt:now+4500
+      kind:visual.kind,actionId:visual.actionId,roleId:verifiedRole,
+      visualFamily:visual.family,createdAt:now,expiresAt:now+4500
     });
     return response;
   }
@@ -44,7 +53,7 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const meta=await this.ctx.storage.get('meta');
     const control=meta?.phase==='running'&&meta.cyclePhase==='night'
       ?await this.gmNightControls(meta).catch(()=>null):null;
-    const roleId=coreRoleForActor(control,String(body?.actorId||''));
+    const roleId=stageAuthorizedRoleId(control,String(body?.actorId||''));
     const response=await super.gmBattleAction(request,body);
     return this.captureAuthorizedCast(response,body,'night',roleId);
   }
