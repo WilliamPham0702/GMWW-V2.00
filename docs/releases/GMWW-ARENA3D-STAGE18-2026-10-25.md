@@ -12,7 +12,10 @@
 - Chrome và WebKit trên STAGING: kiểm tra 6/12/20/30 Character, ẩn chi tiết làm **giảm draw calls thực** và nút Mượt khôi phục hiển thị.
 - Trận Core thật GM/viewer, đa mục tiêu và Artifact từ suite GĐ16 để tránh ảnh hưởng tương tác có liên quan.
 - Không mở suite game 2D/Seat/Player Card/OTA/IPA không liên quan.
-- Trạng thái CI và STAGING phải lấy từ GitHub Actions tương ứng, không được mặc định coi là PASS trước khi kiểm tra.
+- **CI GĐ18 SUCCESS**: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40163798470.
+- **STAGING/GPU/browser/Core E2E SUCCESS**: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40163845910. Worker STAGING version `9dcd0697-06a1-4ebe-bf8e-73e82132ddab`.
+- Chrome/WebKit 6–30 Character PASS, bao gồm kiểm tra draw calls giảm khi bật Tiết kiệm pin; Core thật có Bảo Vệ, refresh viewer, Lên Giàn PASS; Vai trò tùy chỉnh 2 mục tiêu và Artifact 1 mục tiêu PASS; người xem bị từ chối endpoint GM-only (HTTP 401).
+- CI headless software GPU cho Chrome khoảng 9 FPS, WebKit khoảng 2 FPS; **không phản ánh FPS iPhone vật lý**, không công bố cải thiện FPS đo thực tế nếu chưa đo trên máy thật.
 
 ## Ranh giới
 - Giữ PR #487 **Draft**; chỉ phát hành sang Worker `gmww-arena3d-stage14-staging` khi CI thành công; không merge/deploy Production, không thay gameplay game 2D, dữ liệu, DO Production hoặc IPA.
