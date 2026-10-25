@@ -28,7 +28,7 @@ function runPortal() {
       return null;
     },
     createElement:makeElement,
-    addEventListener(type,handler,capture){listeners[type]=handler;state.capture=capture},
+    addEventListener(type,handler,capture){listeners[type]=handler;if(type==='click')state.capture=capture},
     querySelector(selector){return selector==='#bottomNav .nav[data-page="start"]'?nav:null}
   };
   vm.runInNewContext(script,{document},{timeout:1000});
