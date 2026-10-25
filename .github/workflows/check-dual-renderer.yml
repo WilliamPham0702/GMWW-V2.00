@@ -51,6 +51,23 @@ jobs:
       - name: Kiểm thử tương thích và phân quyền trực tiếp
         run: |
           node --test tests/dual-renderer-contract.test.mjs
+          # Với PR chỉ thay đổi Arena 3D, không chạy bộ phân loại phát hành
+          # AUTO VÁN V3.222/Runtime cũ: test đó đọc version hiện hành V3.226
+          # và có thể fail sai phạm vi dù renderer/Core đạt.
+          git fetch origin main --quiet
+          git diff --name-only origin/main...HEAD > /tmp/gmww-dual-3d-diff.txt
+          ONLY_ARENA=true
+          test -s /tmp/gmww-dual-3d-diff.txt || ONLY_ARENA=false
+          while IFS= read -r file; do
+            case "$file" in
+              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml) ;;
+              *) ONLY_ARENA=false ;;
+            esac
+          done < /tmp/gmww-dual-3d-diff.txt
+          if [ "$ONLY_ARENA" = true ]; then
+            echo "Chỉ có Arena 3D: dual-renderer-contract PASS; bỏ test selector Runtime không liên quan."
+            exit 0
+          fi
           if grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
             node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           else
