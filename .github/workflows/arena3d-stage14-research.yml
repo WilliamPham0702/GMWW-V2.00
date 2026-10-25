@@ -13,7 +13,8 @@ on:
     branches: ["feature/arena3d-stage11-core-role-catalog"]
     paths:
       - "assets/village/arena-3d/**"
-      - "tests/arena3d-stage10-*"
+      - "tests/arena3d-stage14-*"
+      - "src/arena3d-stage-worker.mjs"
       - ".github/workflows/arena3d-stage14-research.yml"
   workflow_dispatch:
     inputs:
@@ -76,10 +77,10 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
           export DEPLOY_STARTED_MS="$(node -p 'Date.now()')"
           set +e
-          npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc 2>&1 | tee /tmp/arena3d-stage10-wrangler.log
+          npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc 2>&1 | tee /tmp/arena3d-stage14-wrangler.log
           WRANGLER_EXIT=${PIPESTATUS[0]}
           set -e
-          if [ "$WRANGLER_EXIT" -ne 0 ] && ! grep -q 'code: 10007' /tmp/arena3d-stage10-wrangler.log; then
+          if [ "$WRANGLER_EXIT" -ne 0 ] && ! grep -q 'code: 10007' /tmp/arena3d-stage14-wrangler.log; then
             echo "Wrangler thất bại trước khi có xác nhận Cloudflare"
             exit "$WRANGLER_EXIT"
           fi
