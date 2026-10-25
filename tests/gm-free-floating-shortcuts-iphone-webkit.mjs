@@ -78,6 +78,7 @@ try{
     'Touch drag must move the free icon: '+JSON.stringify(moved));
   assert.ok(Number.isFinite(moved.saved?.x)&&Number.isFinite(moved.saved?.y),'Relative position must persist');
   assert.equal(moved.opened,0,'Drag must not activate faction stats');
+  await page.waitForTimeout(490); // iOS drops the synthetic click after a drag for 450 ms.
   await page.locator('#battleFactionStatsToggle').click();
   assert.equal(await page.locator('#battleFactionStats').isVisible(),true,'Tap must open stats');
   assert.equal(await page.evaluate(()=>window.pr501.getOpened()),1,'Tap must register exactly once');
