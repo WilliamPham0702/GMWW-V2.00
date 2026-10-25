@@ -1,0 +1,76 @@
+// GĐ30: 30-player authoritative Core session on isolated Arena3D Worker.
+// Deliberately create only temporary STAGING test room/members; never production.
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const base='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev';
+assert.equal(new URL(base).hostname,'gmww-arena3d-stage14-staging.williampham0702.workers.dev');
+const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+ args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'vi-VN'});
+const gm=await context.newPage(),viewer=await context.newPage(),errors=[];
+for(const page of [gm,viewer])page.on('pageerror',e=>errors.push(e.message));
+const wait=(page,check,arg,timeout=60000)=>page.waitForFunction(check,arg,{timeout});
+try{
+ await gm.goto(base+'/village/arena-3d/live.html',{waitUntil:'domcontentloaded',timeout:60000});
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===6,null);
+ await gm.locator('[data-roster="30"]').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null);
+ await gm.locator('#create').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized',null);
+ const code=await gm.locator('#room').inputValue();
+ assert.match(code,/^[A-Z0-9]{4,12}$/);
+ await viewer.goto(base+'/village/arena-3d/live.html?room='+code,{waitUntil:'domcontentloaded',timeout:60000});
+ await wait(viewer,c=>window.__GMWW_ARENA_STAGE_READONLY?.().room===c,code);
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gmConsole,'read-only');
+ await gm.locator('#seed').click();
+ await wait(gm,()=>document.getElementById('log')?.textContent?.includes('Đã bổ sung 30 người'),null,240000);
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null);
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null,90000);
+ await gm.locator('#lock').click();
+ await wait(gm,()=>document.getElementById('log')?.textContent?.includes('Đã khóa Seat'),null);
+ await gm.locator('#deal').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',null);
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',null);
+ await viewer.reload({waitUntil:'domcontentloaded',timeout:60000});
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery'&&
+  window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null,90000);
+ await gm.locator('#start').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='running',null);
+ await gm.locator('#night').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night',null);
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='night',null);
+ const noRoleLeaks=await viewer.evaluate(async c=>{
+  const response=await fetch('/api/arena-staging/rooms/'+c+'/gm-visuals',{cache:'no-store'});
+  return {http:response.status,state:window.__GMWW_ARENA_STAGE_READONLY()};
+ },code);
+ assert.ok([401,403].includes(noRoleLeaks.http));
+ assert.equal(noRoleLeaks.state.privateOverlayCount,0);
+ assert.equal(noRoleLeaks.state.count,30);
+ await gm.locator('#day').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',null);
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().cyclePhase==='morning',null);
+ await gm.locator('#nominate').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='nominating',null);
+ await gm.getByRole('tab',{name:'Phòng'}).click();
+ await gm.locator('.gm-seat-grid button[data-seat-id="6"]').click();
+ await gm.locator('#vote').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',null);
+ const result=await gm.evaluate(async c=>{
+  const token=document.getElementById('gm-key').value,
+   matchId=window.__GMWW_ARENA_STAGE_READONLY().matchId;
+  const res=await fetch('/api/gm/rooms/'+c+'/end',{method:'POST',cache:'no-store',
+   headers:{authorization:'Bearer '+token,'content-type':'application/json'},
+   body:JSON.stringify({matchId,winnerFaction:'village',winner:'Dân Làng'})});
+  return {status:res.status,data:await res.json()};
+ },code);
+ assert.equal(result.status,200);
+ assert.equal(result.data.ok,true);
+ await gm.locator('#refresh').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
+ await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
+ assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
+ assert.deepEqual(errors,[]);
+ console.log('STAGE30_CROWD_CORE_PASS',JSON.stringify({players:30,dealReconnect:true,
+  fullCoreMatch:true,night:true,morning:true,gallows:'nominating-to-voting',
+  end:true,viewerDenied:noRoleLeaks.http,production:false,physicalIphone:false}));
+}finally{await context.close();await browser.close()}
