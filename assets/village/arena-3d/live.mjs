@@ -330,7 +330,7 @@ $('sample-daynight').onclick=()=>{
   notice(sceneNightPreview?'Đang xem cùng làng biển vào ĐÊM, có trăng, đèn và ánh lửa.':'Đang xem cùng làng biển vào NGÀY.');
 };
 let syntheticCastSeq=0;
-function playSyntheticRitual(requestedKind=null){
+function playSyntheticRitual(requestedKind=null,{roleId='',actionId=''}={}){
   if(!synthetic){notice('Khi vào phòng thật, chỉ Core mới quyết định lượt và nhân vật được làm phép.');return;}
   syntheticCastSeq++;
   const token=syntheticCastSeq;
@@ -342,7 +342,7 @@ function playSyntheticRitual(requestedKind=null){
   const targetId=people[(index+2)%people.length].id;
   const now=Date.now();
   const cue={turnId:'synthetic-'+token,actorIds:[actorId],
-    cast:{actorId,targetIds:[targetId],kind,startedAt:now+900,expiresAt:now+4000}};
+    cast:{actorId,targetIds:[targetId],kind,roleId,actionId,startedAt:now+900,expiresAt:now+4000}};
   field.setCastingTurn({turnId:cue.turnId,actorIds:cue.actorIds});
   document.body.dataset.gmwwSyntheticCasting='standing';
   notice('Mẫu '+ritualArt(kind).label+': Character '+(index+1)+' đứng lên, bước ra trước khi thi triển.');
@@ -362,9 +362,9 @@ function playSyntheticRitual(requestedKind=null){
   },5600);
 }
 $('sample-cast').onclick=()=>playSyntheticRitual();
-for(const b of document.querySelectorAll('[data-fx]'))b.addEventListener('click',()=>{
+for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
-  playSyntheticRitual(b.dataset.fx);
+  playSyntheticRitual(b.dataset.fx||b.dataset.roleKind,{roleId:b.dataset.roleFx||'',actionId:b.dataset.roleAction||''});
 });
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;
@@ -425,6 +425,11 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   artVersion:CHARACTER_ART_VERSION,ritualArtVersion:RITUAL_ART_VERSION,
   galleryPage:synthetic?galleryPage:null,ritualMotif:synthetic&&previewRitualKind?ritualArt(previewRitualKind)?.motif:null,
   spellPearls:gmToken||synthetic?field.spellVfxPearls:0,
+  // Debug-only animation counts: never include role IDs or target IDs in public DOM.
+  previewWolfHeads:synthetic?field.visibleWolfHeads:0,
+  previewShieldDomes:synthetic?field.visibleShieldDomes:0,
+  previewWand:synthetic?field.wandVisible:false,
+  previewImpactRings:synthetic?field.visibleImpactRings:0,
   pixelRatio:render.getPixelRatio(),reducedMotion});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
