@@ -945,6 +945,9 @@ function battleMorningRows(){
 }
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
+  // Guaranteed day-entry event: the server may skip the optional final
+  // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
+  queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
   queue.push(['audio_system_gallows_day_long','Ngày dài rồi']);
   queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
   queue.push(['audio_system_morning_number_'+dead,String(dead)]);
@@ -1088,12 +1091,9 @@ async function battleWakeupToDay(expectedKey){
 function battlePlayWakeupAndAdvance(turn,key){
   if(battleState.wakeAudioStartedKey===key)return;
   battleState.wakeAudioStartedKey=key;
-  const cue=battleTurnAudioCue(turn);
-  if(!cue)return;
-  // Change phase only after media or speech finishes; a stale turn can never advance.
-  void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,false,()=>{
-    Promise.resolve().then(()=>{void battleWakeupToDay(key)});
-  });
+  // Daybreak narration belongs to the authoritative Day phase, never the
+  // optional terminal Night turn. This avoids missing or double wake-up cues.
+  void battleWakeupToDay(key);
 }
 function battleWolfOutcomeText(result){
   if(!result?.ok)return 'Không thể xác định vết cắn: cần kiểm tra vị trí Seat.';
@@ -1667,10 +1667,11 @@ function renderPlayBattle(){
   // Do not claim a wake-up cue was played during intermediate Server sync, or
   // while the GM is navigating. The first stable role of EVERY night must speak.
   if(t&&phase==='night'&&!battleConfirmAudioGate&&!battleState.busy&&!playSceneRuntime.busy&&
-     !battleState.syncPending&&battleState.lastAudioTurnKey!==key){
-    battleState.lastAudioTurnKey=key;
-    if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);
-    else battleAudioForTurn(t,true);
+     !battleState.syncPending&&battleState.lastAudioTurnKey!==key&&
+     battleState.audioPendingTurnKey!==key){
+    if(t.kind==='village-wakeup'){
+      battleState.lastAudioTurnKey=key;battlePlayWakeupAndAdvance(t,key);
+    }else battleAudioForTurn(t,true);
   }
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
@@ -2240,8 +2241,6 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
-    const audio=event.target.closest('[data-gallows-audio-upload]');
-    if(audio){void battleOpenGallowsAudioUpload(String(audio.dataset.gallowsAudioUpload||''));return;}
     const tab=event.target.closest('[data-gallows-tab]');
     if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
     const pick=event.target.closest('[data-gallows-pick]');
