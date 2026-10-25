@@ -815,8 +815,8 @@ function isGMIcons501Scope(changes){
   return true;
 }
 
-// V3.222 release gate for approved PR #501. This is NOT a generic version
-// exemption: only the exact UI patch, release machinery and version 3.221 -> 3.222
+// V3.223 release gate for approved PR #501. This is NOT a generic version
+// exemption: only the exact UI patch, release machinery and version 3.222 -> 3.222
 // qualify; unrelated gameplay, native, or Worker changes always select full.
 const gm501ReleasePaths=new Set([
   ...gm501Paths,
@@ -826,7 +826,7 @@ const gm501ReleasePaths=new Set([
   'server-game/src/00-core-and-library.part',
   '.github/scripts/prepare-update-channel.mjs',
   '.github/workflows/deploy-production.yml',
-  'docs/releases/GMWW-V3.222-five-floating-icons-20261025.md'
+  'docs/releases/GMWW-V3.223-five-floating-icons-20261025.md'
 ]);
 function isGMIcons501ReleaseScope(changes){
   if(!Array.isArray(changes)||!changes.length)return false;
@@ -843,29 +843,29 @@ function isGMIcons501ReleaseScope(changes){
     'tests/gm-free-floating-shortcuts-20261025.test.mjs',
     'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',
     '.github/workflows/check-gm-free-icons-501.yml',
-    'docs/releases/GMWW-V3.222-five-floating-icons-20261025.md'
+    'docs/releases/GMWW-V3.223-five-floating-icons-20261025.md'
   ])if(!by.has(name))return false;
   const before=(p)=>String(by.get(p)?.before||'');
   const after=(p)=>String(by.get(p)?.after||'');
-  if(!before('server-game/current/app.js').includes("const VERSION='3.221'")||
+  if(!before('server-game/current/app.js').includes("const VERSION='3.222'")||
      !after('server-game/current/app.js').includes("const VERSION='3.222'")||
-     !before('server-game/src/00-core-and-library.part').includes("const VERSION='3.221'")||
+     !before('server-game/src/00-core-and-library.part').includes("const VERSION='3.222'")||
      !after('server-game/src/00-core-and-library.part').includes("const VERSION='3.222'")||
-     !before('src/index.js').includes('VERSION="V3.221"')||
-     !after('src/index.js').includes('VERSION="V3.222"')||
-     !after('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3222"')||
-     !before('package.json').includes('"version": "3.221.0"')||
+     !before('src/index.js').includes('VERSION="V3.222"')||
+     !after('src/index.js').includes('VERSION="V3.223"')||
+     !after('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-3223"')||
+     !before('package.json').includes('"version": "3.222.0"')||
      !after('package.json').includes('"version": "3.222.0"')||
      !after('package-lock.json').includes('"version": "3.222.0"')||
-     !before('server-game/current/GMWW.html').includes('<title>GMWW V3.221</title>')||
-     !after('server-game/current/GMWW.html').includes('<title>GMWW V3.222</title>'))return false;
+     !before('server-game/current/GMWW.html').includes('<title>GMWW V3.222</title>')||
+     !after('server-game/current/GMWW.html').includes('<title>GMWW V3.223</title>'))return false;
   // These are the only new runtime behavior and OTA manifest notes.
   if(!after('server-game/current/app.js').includes('gmwwSetupFreeBattleIcons();')||
      !after('server-game/src/30-village-and-setup.part').includes("GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'")||
      !after('assets/village/village.mjs').includes("flag.textContent='🚩'")||
      !['🌈','🏖️','⛱️','🐦‍🔥'].every(e=>after('server-game/current/GMWW.html').includes(e))||
-     !after('.github/scripts/prepare-update-channel.mjs').includes('releaseNotes:["V3.222:')||
-     !after('docs/releases/GMWW-V3.222-five-floating-icons-20261025.md').includes('Rollback V3.221'))return false;
+     !after('.github/scripts/prepare-update-channel.mjs').includes('releaseNotes:["V3.223:')||
+     !after('docs/releases/GMWW-V3.223-five-floating-icons-20261025.md').includes('Rollback V3.222'))return false;
   return true;
 }
 
@@ -925,7 +925,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isRanking3221Scope(changes))return{mode:'ranking-3221',reason:'GMWW V3.221 xếp hạng ưu tiên nhiều ván'};
-      if(isGMIcons501ReleaseScope(changes))return{mode:'gm-icons-501-release',reason:'V3.222 five UI icons and Runtime OTA exactly scoped'};
+      if(isGMIcons501ReleaseScope(changes))return{mode:'gm-icons-501-release',reason:'V3.223 five UI icons and Runtime OTA exactly scoped'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
