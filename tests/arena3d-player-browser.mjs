@@ -16,7 +16,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   const response=await context.request.post(base+'/api/rooms',{
     data:{roomName:'Arena 3D Player E2E',roomMode:'online',seatCount:6,seatMoveMode:'instant'},
     timeout:45000});
-  assert.equal(response.status(),200);
+  assert.equal(response.status(),201,'POST /api/rooms tạo phòng Core mới trả 201 Created');
   const created=await response.json(),roomCode=String(created.roomCode||'');
   assert.match(roomCode,/^[A-Z0-9]{4,12}$/);
   const page=await context.newPage(),pageErrors=[],unsafeRequests=[];
