@@ -7379,3 +7379,9 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
 @media(prefers-reduced-motion:reduce){
  #battleGallowsVerdict,.gmww-winner-sea-glow,#playMatchCompletionSheet .play-completion-card{animation:none!important}
 }
+
+#start #playShell[data-step="battle"] .gmww-gallows-audio-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:8px 0}
+#start #playShell[data-step="battle"] .gmww-gallows-audio-links button{min-width:0;min-height:30px;padding:4px 5px;
+  font-size:10px;color:#baf0f0;border:1px solid #64c0bf77;background:#0d3e55ad;border-radius:10px}
+.gmww-winner-sea-glow[hidden]{display:none!important}
+#playMatchCompletionSheet[data-victory="false"] .play-completion-card{animation:none!important}
