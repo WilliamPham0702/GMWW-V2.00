@@ -12,7 +12,7 @@ export function normalizeRitualCue(cue,actorIds=[],now=Date.now()){
  const expiresAt=Number(cast.expiresAt),startedAt=Number(cast.startedAt);
  if(!Number.isFinite(expiresAt)||expiresAt<=now||expiresAt>now+60000||!Number.isFinite(startedAt)||startedAt>expiresAt)return {turnId:cue.turnId,actorIds:participants,cast:null};
  const targets=[...new Set((Array.isArray(cast.targetIds)?cast.targetIds:[]).filter(x=>authorized.has(x)))].slice(0,5);
- return {turnId:cue.turnId,actorIds:participants,cast:{actorId:cast.actorId,targetIds:targets,kind:cast.kind,startedAt,expiresAt}};
+ return {turnId:cue.turnId,actorIds:participants,cast:{actorId:cast.actorId,targetIds:targets,kind:cast.kind,startedAt,expiresAt,roleId:typeof cast.roleId==='string'?cast.roleId:'',actionId:typeof cast.actionId==='string'?cast.actionId:''}};
 }
 export function ritualSequence(cue,{start=0,approachMs=900,castMs=2500,returnMs=1400}={}){
  if(!cue?.actorIds?.length)return [];
