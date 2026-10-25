@@ -6682,7 +6682,6 @@ function gmAutoComposeRoles(catalog,players,history=[]){
     for(const r of required)add(r);
     const others=available.filter(r=>!counts.has(r.id)),extra=Math.min(Math.max(0,specialLimit-required.length),others.length,villageSlots-required.length-1);
     for(let i=0;i<extra;i++){const r=pick(others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
-    if(n<=4){const s=pick(available,attempt+11);add(s)}
     const chosenVillage=[...counts].reduce((sum,[id,count])=>sum+(String(all.get(id)?.factionId||'')==='village'?count:0),0);
     if(chosenVillage>=villageSlots)continue;
     add(villager,villageSlots-chosenVillage);
@@ -6899,7 +6898,7 @@ async function migrateV109GameTemplates(){
 }
 async function loadPlayGameTemplates(){
   try{await migrateV109GameTemplates();const data=await gmApi('/api/gm/game-templates');playSceneRuntime.gameTemplates=Array.isArray(data?.templates)?data.templates:[]}catch(err){playSceneRuntime.gameTemplates=[];playGameStatus('Không tải được danh sách Ván Mẫu: '+String(err?.message||'Lỗi kết nối'),'error')}
-  const sel=document.getElementById('playGameTemplateSelect'),mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play';if(sel){sel.innerHTML=(mode==='library'?'<option value="">Tạo Ván Mẫu mới</option>':'<option value="">Chọn Ván Mẫu</option>')+playSceneRuntime.gameTemplates.map(x=>'<option value="'+playEsc(x.id)+'">'+playEsc(x.name)+' • '+Number(x.playerCount||0)+' người</option>').join('');sel.value=playSceneState.gameTemplateId||''}
+  const sel=document.getElementById('playGameTemplateSelect'),mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play';if(sel){const need=playLiveMembers().length,ordered=mode==='play'?gmAutoRankTemplates(playSceneRuntime.gameTemplates,need):playSceneRuntime.gameTemplates;sel.innerHTML=(mode==='library'?'<option value="">Tạo Ván Mẫu mới</option>':'<option value="">Chọn Ván Mẫu</option>')+ordered.map(x=>{const count=Number(x.playerCount||0),badge=mode==='play'?(count===need?' ✓ PHÙ HỢP':' • chênh '+Math.abs(count-need)+' người'):'';return '<option value="'+playEsc(x.id)+'">'+playEsc(x.name)+' • '+count+' người'+badge+'</option>'}).join('');if(mode==='play'&&playSceneRuntime.autoGameConfig?.playerCount===need)sel.insertAdjacentHTML('afterbegin','<option value="__auto__">✨ '+playEsc(playSceneRuntime.autoGameConfig.name)+'</option>');sel.value=playSceneState.gameTemplateId||(mode==='play'&&playSceneRuntime.autoGameConfig?.playerCount===need?'__auto__':'')}
   renderGameTemplateLibrary();
 }
 function readLegacyTemplatesForExport(){
@@ -6996,8 +6995,8 @@ async function applyPlayGameTemplate(id){
   const matchSettings=matchMode?playSceneState.matchArtifactSettings:null;
   id=String(id||'');if(!id){playSceneRuntime.templateArtifactPoolIds=[];playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};await renderPlayGameRoles();updatePlayGameRoleCount();return}
   try{
-    const data=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)throw new Error('Ván Mẫu chưa tải được dữ liệu. Vui lòng thử lại.');
-    playSceneState.gameTemplateId=id;playSceneState.gameName=String(cfg.name||'Ván GMWW');playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};
+    const data=id==='__auto__'?{template:{gameConfig:playSceneRuntime.autoGameConfig}}:await gmApi('/api/gm/game-templates/'+encodeURIComponent(id)),cfg=data?.template?.compiledConfig||data?.template?.gameConfig||null;if(!cfg)throw new Error('Ván Mẫu chưa tải được dữ liệu. Vui lòng thử lại.');
+    playSceneState.gameTemplateId=id==='__auto__'?'':id;playSceneState.gameName=String(cfg.name||'Ván GMWW');playSceneState.rolePlan={};playSceneState.roleDurations={};playSceneState.roleOrders={};
     for(const r of (cfg.roles||[])){if(r?.roleId){playSceneState.rolePlan[String(r.roleId)]=Math.max(0,Number(r.count)||0);playSceneState.roleOrders[String(r.roleId)]=Math.max(1,Number(r.order)||1);const commonSec=Math.max(0,Math.min(3600,Number(cfg?.timing?.defaultActionSec??30)||0)),individualSec=Math.max(0,Math.min(3600,Number(r.actionDurationSec??commonSec)||0));if(individualSec!==commonSec)playSceneState.roleDurations[String(r.roleId)]=individualSec}}
     const templateArtifactIds=(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean);
     playSceneRuntime.templateArtifactPoolIds=templateArtifactIds;
@@ -7035,8 +7034,8 @@ async function openPlayGameSheet(){
   sheet.classList.add('hidden');await loadPlayGameTemplates();
   if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
   const sel=document.getElementById('playGameTemplateSelect');if(sel){
-    sel.onchange=e=>applyPlayGameTemplate(e.target.value);
-    if(!sel.value&&playSceneRuntime.gameTemplates[0])sel.value=String(playSceneRuntime.gameTemplates[0].id);
+    sel.onchange=e=>{if(e.target.value!=='__auto__')gmAutoShowSummary('');void applyPlayGameTemplate(e.target.value)};
+    if(!sel.value){const first=gmAutoRankTemplates(playSceneRuntime.gameTemplates,playLiveMembers().length)[0];if(first)sel.value=String(first.id)}
     // Always rehydrate the SELECTED template rather than reusing another template's stale draft.
     if(sel.value)await applyPlayGameTemplate(sel.value);
   }if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
@@ -7068,6 +7067,7 @@ async function savePlayGame(){
   const card=document.querySelector('.play-game-sheet-card'),mode=card?.dataset.mode||'play',clamp=x=>Math.max(0,Math.min(3600,Number(x)||0));
   if(mode==='play'){
     const id=String(document.getElementById('playGameTemplateSelect')?.value||'');
+    if(id==='__auto__'&&!playSceneRuntime.autoGameConfig){playFlashError('Hãy tạo lại AUTO VÁN.');return}
     if(!id){playFlashError('Hãy chọn Ván Mẫu đã lưu trong Thư Viện.');return}
     const total=playRolePlanTotal(),need=playLiveMembers().length;
     if(total!==need){playFlashError('Ván Mẫu có '+total+' lá, nhưng phòng có '+need+' người. Hãy chọn Ván Mẫu phù hợp.');return}
@@ -7087,12 +7087,13 @@ async function savePlayGame(){
     if(chooseButton){chooseButton.disabled=true;chooseButton.textContent='ĐANG NẠP VÁN…'}
     try{
       playGameStatus('Đang xác thực Ván Mẫu và các lá bài…','progress');
-      const template=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));
+      const autoId=id==='__auto__'?String(playSceneRuntime.autoGameConfig.id):id;
+      const template=id==='__auto__'?await gmApi('/api/gm/game-templates',{method:'PUT',body:JSON.stringify({id:autoId,gameConfig:playSceneRuntime.autoGameConfig})}):await gmApi('/api/gm/game-templates/'+encodeURIComponent(id));
       const base=template?.template?.compiledConfig||template?.template?.gameConfig;
       if(!base)throw new Error('Không tải được Ván Mẫu.');
       const missingRoles=(base.roles||[]).filter(r=>!(state.cards||[]).some(card=>String(card.id)===String(r.roleId)));
       if(missingRoles.length)throw new Error('Thiếu '+missingRoles.length+' Lá Vai Trò trong Thư Viện. Vui lòng đồng bộ Bộ Bài rồi thử lại.');
-      await playEnsureTemplateAssets(id,base);
+      await playEnsureTemplateAssets(autoId,base);
       playGameStatus('Đang chuẩn bị cấu hình và Artwork cho trận…','progress');
       const artifactConfig=playMatchArtifactConfig();
       if(artifactConfig.artifactsEnabled&&!artifactConfig.artifacts.length)
@@ -7107,7 +7108,7 @@ async function savePlayGame(){
       const templateAssets=playTemplateAssetIds(base);
       playGameStatus('Đang liên kết '+templateAssets.length+' lá Vai Trò đã lưu trên Server…','progress');
       const prepared=await playRoomApi('/template-assets',{method:'POST',timeoutMs:20000,
-        body:JSON.stringify({templateId:id,assetIds:templateAssets})});
+        body:JSON.stringify({templateId:autoId,assetIds:templateAssets})});
       if(prepared?.ready!==true||prepared?.mode!=='reference'||!templateAssets.every(assetId=>prepared.assetIds?.includes(assetId)))
         throw new Error('Artwork Ván Mẫu chưa liên kết xong. Vui lòng kiểm tra kho Vai Trò.');
       playGameStatus('Đang xác thực Artwork và lưu cấu hình phòng…','progress');
@@ -7121,7 +7122,7 @@ async function savePlayGame(){
       playSceneRuntime.room=data.room||playSceneRuntime.room;
       playGameStatus('Đang đồng bộ bước Phân Vai…','progress');
       if(!(await playPublishStage('roles')))throw new Error('Server chưa xác nhận chuyển sang Phân Vai. Hãy thử chọn lại.');
-      playSceneState.gameTemplateId=id;
+      playSceneState.gameTemplateId=autoId;
       playSceneState.gameName=configured.name||'Ván GMWW';
       playSceneState.matchId=matchId;
       playSceneState.assignmentsPreview=[];
