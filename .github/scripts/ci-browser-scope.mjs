@@ -469,8 +469,46 @@ function isIconClean3212Scope(changes){
   icon.includes('box.innerHTML=rows.map')&&!icon.includes('<small class="gmww-icon-actions">');
 }
 
+// Strict V3.213 icon wave-3 scope: 10 SVG + 10 PNG + 10 offline PNG.
+const wave3213Files=new Set([
+ 'server-game/current/action-icon-library.js','server-game/current/GMWW.html',
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'assets/action-icons/sea-v1/manifest.json',
+ 'tests/action-icon-library.test.mjs',
+ 'docs/releases/GMWW-V3.213-icons-wave3-20261025.md'
+]);
+function wave3213Asset(path){
+ const a='assets/action-icons/sea-v1/',b='server-game/current/action-icons/sea-v1/';
+ if(path.startsWith(a))return /^2[0-9]_[a-z_]+[.](png|svg)$/.test(path.slice(a.length));
+ if(path.startsWith(b))return /^2[0-9]_[a-z_]+[.]png$/.test(path.slice(b.length));
+ return false;
+}
+function isIconWave3213Scope(changes){
+ const names=new Map(changes.map(x=>[x.path,x]));
+ for(const p of ['src/index.js','package.json','server-game/current/app.js','server-game/current/GMWW.html',
+  'server-game/current/action-icon-library.js','tests/action-icon-library.test.mjs','assets/action-icons/sea-v1/manifest.json',
+  'docs/releases/GMWW-V3.213-icons-wave3-20261025.md'])if(!names.has(p))return false;
+ if(!changes.every(x=>['A','M'].includes(x.status)&&(wave3213Files.has(x.path)||wave3213Asset(x.path))))return false;
+ if(changes.filter(x=>x.path.startsWith('assets/action-icons/sea-v1/2')&&x.path.endsWith('.png')).length!==10)return false;
+ if(changes.filter(x=>x.path.startsWith('assets/action-icons/sea-v1/2')&&x.path.endsWith('.svg')).length!==10)return false;
+ if(changes.filter(x=>x.path.startsWith('server-game/current/action-icons/sea-v1/2')&&x.path.endsWith('.png')).length!==10)return false;
+ const pkg=names.get('package.json')?.after||'';
+ const worker=names.get('src/index.js')?.after||'';
+ const gm=names.get('server-game/current/app.js')?.after||'';
+ const html=names.get('server-game/current/GMWW.html')?.after||'';
+ const icons=names.get('server-game/current/action-icon-library.js')?.after||'';
+ return pkg.includes('"version": "3.213.0"')&&worker.includes('VERSION="V3.213"')&&
+  gm.includes("const VERSION='3.213'")&&html.includes('<title>GMWW V3.213</title>')&&
+  icons.includes('29_thanh_tay')&&icons.includes('mapUnambiguousLocalActions');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isIconWave3213Scope(changes))return 'icon-wave3-3213';
   if(isIconClean3212Scope(changes))return 'icon-clean-3212';
   if(isIcon3210DispatchGateScope(changes))return 'icon-runtime-3210';
   if(isHomePodium3211Scope(changes))return 'home-podium-3211';
@@ -514,6 +552,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIconWave3213Scope(changes))return{mode:'icon-wave3-3213',reason:'Verified 10 icons wave 3 and OTA only'};
       if(isIconClean3212Scope(changes))return{mode:'icon-clean-3212',reason:'Verified V3.212 ICON card UI and OTA only'};
       if(isIcon3210DispatchGateScope(changes))return{mode:'icon-runtime-3210',reason:'Verified CI-only V3.210 owner dispatch correction'};
       if(isHomePodium3211Scope(changes))return{mode:'home-podium-3211',reason:'Verified focused V3.211 Top 3 home podium release'};
@@ -531,6 +570,9 @@ function detect(){
   }
   // Owner-initiated V3.210 release on main after approved PR #483 merged.
   // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.213.0'){
+    if(fs.existsSync('docs/releases/GMWW-V3.213-icons-wave3-20261025.md')){const m=JSON.parse(fs.readFileSync('assets/action-icons/sea-v1/manifest.json','utf8'));if(m.count===29&&m.icons.length===29)return{mode:'icon-wave3-3213',reason:'Owner V3.213 verified icon manifest'};}
+  }
   if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.212.0'){
     if(fs.existsSync('docs/releases/GMWW-V3.212-icon-clean-ui-20261025.md')&&fs.existsSync('tests/action-icon-card-clean.test.mjs'))return{mode:'icon-clean-3212',reason:'Owner V3.212, narrow icon card cleanup only'};
   }
@@ -564,6 +606,7 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='icon-wave3-3213')console.log('V3.213: chỉ kiểm tra 29 icon/SHA-256 và bản cập nhật OTA.');
   if(result.mode==='icon-clean-3212')console.log('V3.212: chỉ kiểm tra giao diện ICON, phiên bản và OTA.');
   if(result.mode==='icon-runtime-3210')console.log('V3.210: chỉ test Icon và OTA, không test Card, Seat, DEMO hoặc Native IPA.');
   if(result.mode==='audio-gallows-3209')console.log('Chỉ xác minh cú pháp, assembled bundles và phiên bản/OTA; không chạy bộ test gameplay mở rộng.');
@@ -574,7 +617,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
