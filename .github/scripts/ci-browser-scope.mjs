@@ -991,6 +991,7 @@ const actionIcon3225Files=new Set([
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
  '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
  'tests/gmww-action-icons-in-battle.test.mjs',
+ 'tests/action-icon-library.test.mjs',
  'docs/releases/GMWW-V3.225-active-icon-drag-20261025.md'
 ]);
 function isActionIcon3225Scope(changes){
