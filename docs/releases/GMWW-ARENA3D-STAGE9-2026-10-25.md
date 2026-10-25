@@ -18,3 +18,12 @@
 ## Bảo toàn
 - PR Draft xếp chồng PR #476, không merge hoặc deploy Production.
 - Không chỉnh sửa game 2D, IPA, OTA, Runtime Production, dữ liệu phòng thật hoặc STAGING GĐ6–8.
+
+## Kết quả CI/STAGING (25/10/2026)
+- PR #477: https://github.com/WilliamPham0702/GMWW-V2.00/pull/477 (Draft).
+- Unit CI và dry-run: SUCCESS; triển khai STAGING riêng và browser smoke: SUCCESS.
+- Workflow: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40148265498
+- Cloudflare version: `ce634df3-1e31-4432-90a4-0ad15797c075`.
+- Chrome/WebKit PASS các mốc 6, 12, 20, 30 Character, animation nghi lễ và dữ liệu trạng thái công khai GĐ9.
+- FPS giả lập: Chrome 11, WebKit 2; không đại diện iPhone thật.
+- **Chưa kiểm chứng đủ luồng nhiều người thật:** chuyển phòng/đêm/ngày và Lên Giàn qua Core có unit test projection, nhưng browser smoke hiện dùng cảnh SYNTH; cần bổ sung kiểm thử E2E phòng STAGING thực trước khi bàn giao nghiệm thu toàn bộ GĐ9.
