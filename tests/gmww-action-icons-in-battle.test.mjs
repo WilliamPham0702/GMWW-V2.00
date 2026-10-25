@@ -12,7 +12,7 @@ const cut=(start,end)=>{
  return part.slice(a,b);
 };
 const iconFns=cut("const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';", 'const battleRules=');
-const runtimeIconFns="const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';"+iconFns;
+const runtimeIconFns="const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';"+iconFns.slice("const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';".length);
 test('GM loads approved icon catalog before its battle script in iPhone WKWebView',()=>{
  const i=html.indexOf('<script src="action-icon-library.js');
  const gm=html.indexOf('<script src="app.js');
