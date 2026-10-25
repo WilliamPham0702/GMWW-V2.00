@@ -366,6 +366,10 @@ if(productionCoreView&&window.parent!==window){
       notice('Chưa kết nối GM Arena 3D: '+String(error.message||error));
     }
   });
+  // Only a non-sensitive handshake leaves the Arena frame. The parent sends
+  // its room bearer to the exact official Worker origin, never to STAGING.
+  // Source/origin/room token are then verified by the official Core.
+  window.parent.postMessage({kind:'gmww-arena3d-ready'},'*');
 }
 let seeded=[];
 $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
