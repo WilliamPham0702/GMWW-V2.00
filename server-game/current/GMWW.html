@@ -1170,20 +1170,6 @@
     frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';
     frame.setAttribute('referrerpolicy','no-referrer');
     frame.setAttribute('allow','fullscreen; autoplay');
-    // Armed only for our OWN official HTTPS Worker, never for QA/STAGING.
-    // The bearer token is transient in an in-memory message, not in a URL.
-    frame.addEventListener('load',()=>{
-      try{
-        const liveOrigin='https://gmww-v2-00.williampham0702.workers.dev';
-        const address=new URL(frame.src);
-        if(address.origin!==liveOrigin||address.pathname!=='/village/arena-3d/live.html')return;
-        const state=typeof playSceneState==='object'&&playSceneState?playSceneState:null;
-        const roomCode=String(state?.roomCode||'').trim().toUpperCase();
-        const gmToken=String(state?.gmToken||'');
-        if(!/^[A-Z0-9]{4,12}$/.test(roomCode)||!/^[A-Za-z0-9._~+\\/=:-]{12,256}$/.test(gmToken))return;
-        frame.contentWindow?.postMessage({kind:'gmww-arena3d-gm-context',roomCode,gmToken},liveOrigin);
-      }catch{}
-    });
     overlay.append(bar,frame);
     document.body.appendChild(overlay);
   }
