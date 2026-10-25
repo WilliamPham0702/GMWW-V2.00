@@ -54,6 +54,13 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ test 5 icon PR501 và chốt bundle/Player Web
+        if: steps.scope.outputs.mode == 'gm-icons-501'
+        run: |
+          node --test tests/gm-free-floating-shortcuts-20261025.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/gallows-pirate-ui-v3205.test.mjs tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          test -s docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
       - name: Chỉ kiểm thử Top 3 KHÔNG BỤC V3.219 và chốt Runtime
         if: steps.scope.outputs.mode == 'home-sea-3219'
         run: |
