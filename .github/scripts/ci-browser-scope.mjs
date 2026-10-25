@@ -303,7 +303,8 @@ const audio208Paths=new Set([
  'server-game/src/00-core-and-library.part','server-game/src/10-library-and-settings.part',
  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
  'tests/update-release-notes-range.test.mjs','tests/night-rules-audio-regression.test.mjs',
- 'tests/v3133-timeline-audio-role-intel.test.mjs'
+ 'tests/v3133-timeline-audio-role-intel.test.mjs',
+ 'tests/v3141-fairy-role-scan-day-audio.test.mjs'
 ]);
 function isAudio208Scope(changes){
  const names=new Set(changes.map(c=>c.path));
