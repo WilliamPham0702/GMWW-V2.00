@@ -37,14 +37,14 @@ test('GĐ18: idle pacing does not throttle WebSocket and private GM update netwo
 
 test('GĐ18: low-power removes cosmetic instanced meshes, preserving heads and gameplay',()=>{
  const src=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
- assert.match(src,/const ECO_DETAIL_PARTS=new Set\(/);
- assert.match(src,/part\.mesh\.visible=!next\|\|!ECO_DETAIL_PARTS\.has\(part\.name\)/);
+ assert.match(src,/function applyVisualBudget\(\)/);
+ assert.match(src,/part\.mesh\.visible=!hidden\.has\(part\.name\)/);
  assert.match(src,/if\(!part\.mesh\.visible\)continue/);
  assert.match(src,/function hasActiveMotion\(/);
  assert.match(src,/if\(activeBeam&&time<activeBeam\.until\)return true/);
  assert.match(src,/actor\.walk\|\|actor\.gestureEnd>time\|\|actor\.castUntil>time/);
  assert.match(src,/headMesh=meshes\.find\(p=>p\.name==='head'\)/);
- const eco=src.match(/const ECO_DETAIL_PARTS=new Set\(\[([\s\S]*?)\]\)/)?.[1]||'';
+ const eco=arenaCrowdDetailPolicy({characters:30,lowPower:true}).hiddenParts.join(',');
  for(const corePart of ['head','eyeL','eyeR','armL','armR','tunic','skirt','shoeL','shoeR']){
   assert.doesNotMatch(eco,new RegExp("'"+corePart+"'"),corePart+' must remain visible/pickable');
  }
