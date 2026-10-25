@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="135.2273 138.7429 532.6705 532.6705" width="1024" height="1024">
+<defs>
+<radialGradient id="sea" cx="42%" cy="37%" r="72%"><stop stop-color="#187da2" /><stop offset=".52" stop-color="#064c81" /><stop offset="1" stop-color="#031d43" /></radialGradient>
+<radialGradient id="aqua"><stop stop-color="#8cfffb" /><stop offset=".57" stop-color="#399bd9" /><stop offset="1" stop-color="#103e80" /></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a0641e" /><stop offset=".2" stop-color="#fbe4a3" /><stop offset=".42" stop-color="#ffcc65" /><stop offset=".66" stop-color="#9d5e21" /><stop offset=".82" stop-color="#ffdc91" /><stop offset="1" stop-color="#bc842f" /></linearGradient>
+<radialGradient id="iris"><stop stop-color="#a6faff" /><stop offset=".35" stop-color="#51dfff" /><stop offset=".7" stop-color="#2770e4" /><stop offset="1" stop-color="#502299" /></radialGradient>
+<radialGradient id="lens"><stop stop-color="#a0ffff" /><stop offset=".3" stop-color="#368eba" /><stop offset=".78" stop-color="#082c5d" /><stop offset="1" stop-color="#04152f" /></radialGradient>
+<linearGradient id="shield" x1="0" x2="1"><stop stop-color="#063669" /><stop offset=".5" stop-color="#1d97c2" /><stop offset="1" stop-color="#073a79" /></linearGradient>
+<linearGradient id="heal"><stop stop-color="#b8ffc9" /><stop offset=".4" stop-color="#2ce5ac" /><stop offset="1" stop-color="#00726f" /></linearGradient>
+<radialGradient id="poison"><stop stop-color="#e793f9" /><stop offset=".65" stop-color="#943dba" /><stop offset="1" stop-color="#33116c" /></radialGradient>
+<linearGradient id="ice" x1="0" x2="1"><stop stop-color="#e7fcff" /><stop offset=".5" stop-color="#44c8f3" /><stop offset="1" stop-color="#2769b9" /></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" /><feOffset dx="0" dy="6" result="offset" /><feMerge><feMergeNode in="offset" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+</defs>
+<g filter="url(#shadow)" stroke-linejoin="round" stroke-linecap="round">
+  
+  <circle cx="399" cy="392" r="163" fill="#052f5a" opacity=".5" stroke="#d49b53" stroke-width="13" />
+  <circle cx="399" cy="392" r="119" fill="none" stroke="#ff7b67" stroke-width="14" />
+  <circle cx="399" cy="392" r="74" fill="none" stroke="#fce3a5" stroke-width="8" />
+  <path d="M400 204V278 M400 510V582 M213 392H286 M514 392H590" stroke="#f5b275" stroke-width="17" />
+  
+  <path d="M258 547 508 285 548 322 295 574Z" fill="#8e4525" stroke="#ffe1a9" stroke-width="11" />
+  <path d="M497 308 546 218 588 201 579 248 537 339Z" fill="url(#ice)" stroke="#ffe3aa" stroke-width="13" />
+  <path d="M537 223 538 308" stroke="#e8ffff" stroke-width="8" />
+  <path d="M261 555 235 575 258 600 289 571" fill="url(#gold)" stroke="#fff0c3" stroke-width="7" />
+  <path d="M289 504 Q421 457 508 366" fill="none" stroke="#fc5962" stroke-width="28" opacity=".73" />
+  <path d="M316 531 Q453 487 545 355" fill="none" stroke="#ffe58b" stroke-width="8" opacity=".88" />
+  <path d="M497 458l15 28 28 13-28 12-15 27-12-27-28-12 28-13Z" fill="#ffdbb6" stroke="#f8847d" stroke-width="4" />
+ </g>
+
+</svg>
