@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 const read=path=>fs.readFileSync(path,'utf8');
 
 test('GM dùng đúng bốn emoji không khung và không khóa vào thanh dưới',()=>{
@@ -149,4 +150,36 @@ test('Kéo icon iPhone thực sự di chuyển, lưu vị trí, không kích ho�
   vm.runInContext('gmwwSetupFreeBattleIcons();',context);
   assert.equal(events.get('battleFactionStatsFloat').pointerdown.length,count);
   assert.equal(panels.get('battleFactionStatsFloat').style.left,location);
+});
+
+
+test('🌈 Thống kê phe tính số quân thật từ Server, cập nhật người chết và hiện dự báo tham khảo',()=>{
+  const source=read('server-game/src/40-battle-and-timeline.part');
+  const from=source.indexOf('function battleRenderFactionStats(){');
+  const to=source.indexOf('function battleGallowsRender(phase){',from);
+  assert.ok(from>0&&to>from,'Must test real GM faction renderer');
+  const summary={innerHTML:''},forecast={textContent:''};
+  const panel={hidden:false,querySelector:selector=>selector==='[data-faction-counts]'?summary:
+    selector==='[data-faction-forecast]'?forecast:null};
+  const scope={
+    document:{getElementById:id=>id==='battleFactionStats'?panel:null},
+    playSceneRuntime:{assignments:[
+      {loginId:'u1',roleId:'wolf-1',factionId:'wolf'},
+      {loginId:'u2',roleId:'villager-1',factionId:'village'},
+      {loginId:'u3',roleId:'third-1',factionId:'third'}
+    ],winProposal:null},
+    playSceneState:{night:2},
+    state:{cards:[]},
+    playPlayerEffect:id=>id==='u1'?'dead':'alive',
+    playEsc:value=>String(value),
+    Map,Math,Number,String,Array
+  };
+  vm.runInNewContext(source.slice(from,to)+'\\nbattleRenderFactionStats();',scope);
+  assert.match(summary.innerHTML,/Phe Sói[\\s\\S]*?0 \\/ 1/,'Dead Wolf must not count alive');
+  assert.match(summary.innerHTML,/Phe Dân[\\s\\S]*?1 \\/ 1/,'Living village role counted');
+  assert.match(summary.innerHTML,/Phe Ba[\\s\\S]*?1 \\/ 1/,'Third faction counted');
+  assert.match(forecast.textContent,/Dự báo tham khảo/,'No invented Server victory declaration');
+  panel.hidden=true;summary.innerHTML='sentinel';
+  vm.runInNewContext('battleRenderFactionStats();',scope);
+  assert.equal(summary.innerHTML,'sentinel','Closed stats must not unexpectedly redraw');
 });
