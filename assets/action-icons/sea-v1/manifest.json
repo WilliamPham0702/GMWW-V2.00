@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "name": "GMWW SEA action icons",
-  "version": "v1-wave3",
-  "status": "artwork_ready_dynamic_assignment_needs_real_device_audit",
-  "count": 29,
-  "source": "19 previously approved + 10 independent proposed icons 2026-10-25",
+  "version": "v1-wave4",
+  "status": "accepted_icon_catalog_exact_codes_from_device",
+  "count": 39,
+  "source": "GMWW approved 29 old + 10 individually drawn from 54 real GM actions on 2026-10-25",
   "icons": [
     {
       "id": "soi-xet",
@@ -12,7 +12,11 @@
       "target": "character",
       "actions": [
         "action_seer",
-        "action_aura_read"
+        "action_aura_read",
+        "action-digan-scry",
+        "action-rotten-seer-check",
+        "artifact_action_check_villager",
+        "artifact_action_check_awake"
       ],
       "png": "01_soi_xet.png",
       "svg": "01_soi_xet.svg",
@@ -32,7 +36,9 @@
         "action_destroyer_scry",
         "action_find_seer",
         "action_wolf_seer",
-        "action_rotten_seer"
+        "action_rotten_seer",
+        "artifact_action_view",
+        "artifact_action_reveal_role"
       ],
       "png": "02_soi_dac_biet.png",
       "svg": "02_soi_dac_biet.svg",
@@ -51,7 +57,9 @@
       "actions": [
         "action_scan_three",
         "action_fox_scan",
-        "action_bear_scan"
+        "action_bear_scan",
+        "action-vampire-check",
+        "artifact_action_judge_two_wolves"
       ],
       "png": "03_soi_nhom.png",
       "svg": "03_soi_nhom.svg",
@@ -68,7 +76,8 @@
       "name": "So sánh phe",
       "target": "multi",
       "actions": [
-        "action_compare_faction"
+        "action_compare_faction",
+        "artifact_action_check_third_faction"
       ],
       "png": "04_so_sanh_phe.png",
       "svg": "04_so_sanh_phe.svg",
@@ -85,7 +94,10 @@
       "name": "Sói cắn",
       "target": "character",
       "actions": [
-        "action_wolf_bite"
+        "action_wolf_bite",
+        "action-demon-wolf-convert",
+        "action-fire-wolf-bite",
+        "action-wolf-brother-bite"
       ],
       "png": "05_soi_can.png",
       "svg": "05_soi_can.svg",
@@ -171,7 +183,10 @@
       "target": "character",
       "actions": [
         "action_assassin_mark",
-        "action_hunter_mark"
+        "action_hunter_mark",
+        "action-g7-crow-votes",
+        "action-wild-child-idol",
+        "action-grudge-designate"
       ],
       "png": "10_danh_dau.png",
       "svg": "10_danh_dau.svg",
@@ -239,7 +254,9 @@
       "name": "Đuổi khỏi làng",
       "target": "character",
       "actions": [
-        "action_exile"
+        "action_exile",
+        "action-black-woman-leave",
+        "artifact_action_turn_away"
       ],
       "png": "14_duoi_khoi_lang.png",
       "svg": "14_duoi_khoi_lang.svg",
@@ -258,7 +275,11 @@
       "actions": [
         "action_hunt",
         "action_destroyer_kill",
-        "action_stab"
+        "action_stab",
+        "action-knight-stab",
+        "action-g7-prince-stab",
+        "action-cult-kill",
+        "artifact_action_destroy"
       ],
       "png": "15_san_giet.png",
       "svg": "15_san_giet.svg",
@@ -292,7 +313,8 @@
       "name": "Nhân bản",
       "target": "character",
       "actions": [
-        "action_clone_target"
+        "action_clone_target",
+        "artifact_action_copy_function"
       ],
       "png": "17_nhan_ban.png",
       "svg": "17_nhan_ban.svg",
@@ -310,7 +332,10 @@
       "target": "card",
       "actions": [
         "action_thief_change_role",
-        "action_drunk_draw"
+        "action_drunk_draw",
+        "action-maid-inherit",
+        "artifact_action_exchange",
+        "artifact_action_swap_role"
       ],
       "png": "18_doi_vai_tro.png",
       "svg": "18_doi_vai_tro.svg",
@@ -343,7 +368,12 @@
       "id": "phong-an",
       "name": "Phong ấn",
       "target": "character",
-      "actions": [],
+      "actions": [
+        "artifact_action_disable_function",
+        "artifact_action_negate",
+        "artifact_action_lock_function",
+        "artifact_action_limit_wolf_targets"
+      ],
       "png": "20_phong_an.png",
       "svg": "20_phong_an.svg",
       "sha256_png": "f64d5962bf5a4e94fe464947f30ca87350fce06aa6f1ea0fb18e46a64332e50d",
@@ -407,7 +437,9 @@
       "id": "ban-phuoc",
       "name": "Ban phước",
       "target": "character",
-      "actions": [],
+      "actions": [
+        "artifact_action_activate_two"
+      ],
       "png": "24_ban_phuoc.png",
       "svg": "24_ban_phuoc.svg",
       "sha256_png": "83fdc0ae862747e6cf6723b6794bfb1a6811a0c197697d75d5ecef1f4e22aae6",
@@ -423,7 +455,10 @@
       "id": "cuop-artifact",
       "name": "Cướp Artifact",
       "target": "character",
-      "actions": [],
+      "actions": [
+        "artifact_action_reclaim",
+        "artifact_action_steal"
+      ],
       "png": "25_cuop_artifact.png",
       "svg": "25_cuop_artifact.svg",
       "sha256_png": "739a50d3da88baea2ee384030040be198340699a387c0d382bdc4dde5b203b25",
@@ -487,7 +522,9 @@
       "id": "thanh-tay",
       "name": "Thanh tẩy",
       "target": "character",
-      "actions": [],
+      "actions": [
+        "action-mad-doctor-cure"
+      ],
       "png": "29_thanh_tay.png",
       "svg": "29_thanh_tay.svg",
       "sha256_png": "1bfdf503fec91a7a7276ed3e52fa62f8803a7399be192f9419cc9469a24f5491",
@@ -498,6 +535,181 @@
       },
       "transparent": true,
       "pending_catalog_verification": true
+    },
+    {
+      "id": "ghep-doi",
+      "name": "Ghép Đôi",
+      "target": "multi",
+      "actions": [
+        "action-cupid-pair",
+        "artifact_action_link"
+      ],
+      "png": "30_ghep_doi.png",
+      "svg": "30_ghep_doi.svg",
+      "sha256_png": "557f216079d5626975a3358f558628a5b939636888cc1ef917a09b30be64d95e",
+      "sha256_svg": "8c0478d6f5099835833adcfe5b86fe676291c091f0525bbb2699a0dbfe3e2c8e",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "rung-chuong",
+      "name": "Rung Chuông",
+      "target": "none",
+      "actions": [
+        "18"
+      ],
+      "png": "31_rung_chuong.png",
+      "svg": "31_rung_chuong.svg",
+      "sha256_png": "54359d606101cfd88206cd46662264519704471e895cb720a9ae4a3298354da4",
+      "sha256_svg": "50dcb33cb915d9658dc278fc16bc79e4c4de36528032db98d1aa867ace4d4c1f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "hi-mat",
+      "name": "Hí Mắt",
+      "target": "none",
+      "actions": [
+        "action-peek"
+      ],
+      "png": "32_hi_mat.png",
+      "svg": "32_hi_mat.svg",
+      "sha256_png": "a8b2edaea6f9a425f40ff45730447274590ff4d8c6a15428efb1248fd5176782",
+      "sha256_svg": "c651ad6eaaca2201b5cf147b3567f15ee7f48d75efce7790829dd121880b2e42",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "giao",
+      "name": "Giáo",
+      "target": "character",
+      "actions": [
+        "25"
+      ],
+      "png": "33_giao.png",
+      "svg": "33_giao.svg",
+      "sha256_png": "22524cb7d50040bc15b894bf251b3b82cef3d0c06784d2903fabe33f81d5b042",
+      "sha256_svg": "b4266b0e5ac02cd97f9cbb2ca863d75530e2677c22969573612fd0bad52fafe0",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "ba-anh-em",
+      "name": "Nhận Biết / Về Bầy",
+      "target": "character",
+      "actions": [
+        "action-three-brothers-recognize",
+        "action-lone-wolf-join",
+        "action-cult-add"
+      ],
+      "png": "34_ba_anh_em.png",
+      "svg": "34_ba_anh_em.svg",
+      "sha256_png": "7ed4bed7155fc1caf42e095ef51bd332c6c6f89862b27ff189ea7697e904aa9b",
+      "sha256_svg": "3307234b2b7565630655f998ac62257eddf5b8f353215774b1fd75b2163b9c42",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "bao-thu",
+      "name": "Báo Thù",
+      "target": "character",
+      "actions": [
+        "action-avenger-target"
+      ],
+      "png": "35_bao_thu.png",
+      "svg": "35_bao_thu.svg",
+      "sha256_png": "3ef2db7c38bff767e0df6dfddd5982469e4dcc93ad079a69293552d68c39cb9c",
+      "sha256_svg": "c841993732abbb8f6bfa7f2cfbe490e5a14be8cb50437e1969da1292125d2317",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "mang-benh",
+      "name": "Mang Bệnh",
+      "target": "character",
+      "actions": [
+        "action-disease-self"
+      ],
+      "png": "36_mang_benh.png",
+      "svg": "36_mang_benh.svg",
+      "sha256_png": "24af46d8feb95aac56f287293cd7f17b17eac5b5f38269e83b415188445533c6",
+      "sha256_svg": "cdd0740bea8b14af8d58339b4e8865c2584d7931738280fa35d02781c89d9430",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "loan-tin",
+      "name": "Loan Tin / Thông Điệp",
+      "target": "character",
+      "actions": [
+        "action-news-role",
+        "action-ghost-message"
+      ],
+      "png": "37_loan_tin.png",
+      "svg": "37_loan_tin.svg",
+      "sha256_png": "648b11824c4348249a02b38ae13e95154930e07b0d9c76b711757af93605fe51",
+      "sha256_svg": "7433d11fbb627d43fba9ba9e075c8d8aeae9c235f7e3325689a6e15ac7295921",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "phan-quyet-kep",
+      "name": "Phán Quyết Kép",
+      "target": "none",
+      "actions": [
+        "action-judge-double",
+        "artifact_action_force_vote"
+      ],
+      "png": "38_phan_quyet_kep.png",
+      "svg": "38_phan_quyet_kep.svg",
+      "sha256_png": "ed05fc87da4177adf84759657d98d4936f4a17b75e9e2992159efe166906657b",
+      "sha256_svg": "526dc284ce9105bf150ea3f3e98183398beec86140ab43600a11dbf37f734e6b",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "cam-noi",
+      "name": "Cấm Nói",
+      "target": "character",
+      "actions": [
+        "artifact_action_silence"
+      ],
+      "png": "39_cam_noi.png",
+      "svg": "39_cam_noi.svg",
+      "sha256_png": "2db3eec5058dfd0c353f7ffea566fc0dd7a7895d2e6743c673d15eaf46e9fea9",
+      "sha256_svg": "a6fa772e6896d579824728cef91f1f5e1456fb2f028e561661bae3556f2abd3a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
     }
   ]
 }

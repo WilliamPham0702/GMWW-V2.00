@@ -22,7 +22,7 @@ const api=ctx.window.GMWWActionIconLibrary;
 test('GM Icon library linked to GM page and parseable without gameplay initialization',()=>{
   assert.match(html,/<script src="action-icon-library\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(api);
-  assert.equal(api.get().length,29);
+  assert.equal(api.get().length,39);
 });
 test('Every built-in active role action is mapped to an icon',()=>{
   const chunk=core.slice(core.indexOf('  actions:{'),core.indexOf('  effects:['));
@@ -40,10 +40,10 @@ test('Multi-target, directional and card selection actions are not forced to cha
   assert.equal(api.resolve('action_seer').target,'character');
   assert.equal(api.resolve('action_wolf_bite').target,'character');
 });
-test('Approved icons use actual 29 individual PNG assets, not demo SVG or emoji',()=>{
+test('Approved icons use actual 39 individual PNG assets, not demo SVG or emoji',()=>{
  const icons=api.get();
- assert.equal(icons.length,29);
- assert.equal(new Set(icons.map(x=>x.assetId)).size,29);
+ assert.equal(icons.length,39);
+ assert.equal(new Set(icons.map(x=>x.assetId)).size,39);
  for(const icon of icons){
   const url=api.image(icon);
   assert.match(url,/^action-icons\/sea-v1\/[0-9]{2}_[a-z_]+\.png$/);
@@ -89,11 +89,11 @@ test('Device catalog scan discovers custom Artifact actions without inventing bu
   }finally{ctx.localStorage.getItem=original}
 });
 
-test('All 29 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
+test('All 39 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
  const manifest=JSON.parse(fs.readFileSync(new URL('../assets/action-icons/sea-v1/manifest.json',import.meta.url),'utf8'));
- assert.equal(manifest.count,29);
- assert.equal(manifest.icons.length,29);
- assert.equal(new Set(manifest.icons.map(x=>x.id)).size,29);
+ assert.equal(manifest.count,39);
+ assert.equal(manifest.icons.length,39);
+ assert.equal(new Set(manifest.icons.map(x=>x.id)).size,39);
  for(const record of manifest.icons){
   const icon=api.get().find(x=>x.id===record.id);
   assert.ok(icon,record.id+' present');
@@ -106,10 +106,10 @@ test('All 29 files match the approved SHA-256 manifest, including editable SVG o
  }
 });
 
-test('Ten new designs start unassigned; unknown device IDs are never invented',()=>{
+test('Wave 3 keeps 10 standalone images and unknown IDs are never fabricated',()=>{
  const wave=api.get().filter(x=>/^2[0-9]_/.test(x.assetId));
  assert.equal(wave.length,10);
- assert.equal(wave.every(x=>x.actions.length===0),true);
+ assert.equal(api.resolve('artifact_custom_light'),null);
 });
 test('Exact local-name match auto-assigns only the matching Artifact action',()=>{
  const original=ctx.localStorage.getItem,originalSet=ctx.localStorage.setItem;
@@ -124,7 +124,7 @@ test('Exact local-name match auto-assigns only the matching Artifact action',()=
   assert.ok(api.resolve('artifact_silence'));
   assert.equal(api.resolve('artifact_silence').id,'cam-vote');
   assert.equal(api.resolve('artifact_unknown'),null);
-  assert.ok(written?.key?.endsWith('_V3'));
+  assert.ok(written?.key?.endsWith('_V4'));
  }finally{ctx.localStorage.getItem=original;ctx.localStorage.setItem=originalSet}
 });
 test('Old V2 custom icon mappings survive migration and 10 approved new IDs appear',()=>{
@@ -134,8 +134,58 @@ test('Old V2 custom icon mappings survive migration and 10 approved new IDs appe
  localStorage:{getItem(key){return key==='GMWW_ACTION_ICON_LIBRARY_V2'?JSON.stringify(old):null}},alert(){}};
  vm.createContext(next);new vm.Script(script).runInContext(next);
  const results=next.window.GMWWActionIconLibrary.get();
- assert.equal(results.length,12);
+ assert.equal(results.length,22);
  assert.equal(results.find(x=>x.id==='soi-xet').name,'Soi đã sửa');
  assert.ok(results.some(x=>x.id==='icon-custom-1'));
  assert.equal(results.filter(x=>/^2[0-9]_/.test(x.assetId)).length,10);
+});
+
+test('All 54 actual iPhone audit rows map to a valid icon except unknown customizable Artifact',()=>{
+ const fixture=JSON.parse(fs.readFileSync(new URL('../docs/plans/GMWW-ACTION-AUDIT-REAL-2026-10-25.json',import.meta.url),'utf8'));
+ assert.equal(fixture.missing.length,54);
+ assert.equal(fixture.roleCount,63);assert.equal(fixture.artifactCount,44);
+ const unresolved=fixture.missing.filter(r=>!api.resolve(r.id));
+ assert.deepEqual(unresolved.map(x=>x.id),['artifact_action_custom']);
+ const exact=api.resolve('18');assert.equal(exact.id,'rung-chuong');
+ assert.equal(api.resolve('25').id,'giao');
+ assert.equal(api.resolve('action-cupid-pair').id,'ghep-doi');
+ assert.equal(api.resolve('action-disease-self').id,'mang-benh');
+ assert.equal(api.resolve('action-ghost-message').id,'loan-tin');
+ assert.equal(api.resolve('artifact_action_silence').id,'cam-noi');
+ assert.equal(api.resolve('action-rotten-seer-check').id,'soi-xet');
+ assert.equal(api.resolve('artifact_action_disable_function').id,'phong-an');
+});
+test('V3 icon edits and manual maps migrate without loss, new ten added only once',()=>{
+ const customized=[{id:'soi-xet',name:'Tên đã sửa',target:'character',actions:['action_seer','my_custom']},
+  {id:'user-created-321',name:'Icon tự tạo',target:'character',actions:['artifact_user_owned']}];
+ const client={window:{},document:{readyState:'loading',addEventListener(){}},
+  localStorage:{getItem(key){return key==='GMWW_ACTION_ICON_LIBRARY_V3'?JSON.stringify(customized):null}},alert(){}};
+ vm.createContext(client);new vm.Script(script).runInContext(client);
+ const icons=client.window.GMWWActionIconLibrary.get();
+ assert.equal(icons.length,12);
+ assert.equal(icons.find(x=>x.id==='soi-xet').name,'Tên đã sửa');
+ assert.ok(icons.find(x=>x.id==='soi-xet').actions.includes('my_custom'));
+ assert.ok(icons.find(x=>x.id==='user-created-321'));
+ assert.equal(icons.filter(x=>/^3[0-9]_/.test(x.assetId)).length,10);
+});
+test('Double-tap tiles never show external Edit/Delete buttons and delete action remains in editor',()=>{
+ const a=script.indexOf('box.innerHTML=rows.map(x=>'),b=script.indexOf('function edit(id)',a);
+ const tiles=script.slice(a,b);
+ assert.ok(tiles.includes('aria-label='));
+ assert.ok(tiles.includes('box.ondblclick'));
+ assert.ok(!tiles.includes('data-icon-delete'));
+ assert.ok(!tiles.includes('data-icon-edit'));
+ assert.ok(script.includes('id="gmwwIconDelete"'));
+ assert.ok(script.includes("document.getElementById('gmwwIconDelete').onclick"));
+});
+test('Fire icon uses battle targetAllowed and original Server commit, without a second action ledger',()=>{
+ const battle=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
+ assert.match(battle,/battleIconDock\(actions,phase\)/);
+ assert.match(battle,/battleIconTargetAt\(e\.clientX,e\.clientY,action\)/);
+ assert.match(battle,/battlePickTargetWithAudio\(String\(target\.dataset\.playPlayerId/);
+ assert.match(battle,/battleConfirm\(true\)/);
+ assert.match(battle,/battleRules\(\)\?\.targetAllowed/);
+ assert.match(battle,/battleIconSetOn\(!battleIconOn\(\)\)/);
+ assert.match(battle,/battleIconClearDrag\(\);const picker/);
+ assert.doesNotMatch(battle,/\/icon-action.*method:'POST'/);
 });

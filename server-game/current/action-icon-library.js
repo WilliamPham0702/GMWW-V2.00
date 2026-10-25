@@ -1,7 +1,7 @@
 /* GMWW SEA icon library — V1. Draft feature: visual catalog only, no gameplay mutation. */
 (()=>{
 'use strict';
-const KEY='GMWW_ACTION_ICON_LIBRARY_V3';
+const KEY='GMWW_ACTION_ICON_LIBRARY_V4';
 const SHAPES={
 eye:'<path d="M15 48q33-40 66 0-33 40-66 0Z"/><circle cx="48" cy="48" r="11"/><circle cx="51" cy="44" r="3" fill="#fff6c7" stroke="none"/>',
 triple:'<path d="M17 35q15-17 30 0-15 17-30 0Zm34 0q15-17 30 0-15 17-30 0ZM33 64q15-17 30 0-15 17-30 0Z"/><circle cx="32" cy="35" r="3"/><circle cx="66" cy="35" r="3"/><circle cx="48" cy="64" r="3"/>',
@@ -52,22 +52,48 @@ const DEFAULT=[
 ["phan-don","26_phan_don","Phản đòn","character",""],
 ["tang-hinh","27_tang_hinh","Tàng hình","character",""],
 ["dat-bay","28_bay","Đặt bẫy","character",""],
-["thanh-tay","29_thanh_tay","Thanh tẩy","character",""]
+["thanh-tay","29_thanh_tay","Thanh tẩy","character",""],
+["ghep-doi", "30_ghep_doi", "Ghép Đôi", "multi", "action-cupid-pair,artifact_action_link"],
+["rung-chuong", "31_rung_chuong", "Rung Chuông", "none", "18"],
+["hi-mat", "32_hi_mat", "Hí Mắt", "none", "action-peek"],
+["giao", "33_giao", "Giáo", "character", "25"],
+["ba-anh-em", "34_ba_anh_em", "Nhận Biết / Về Bầy", "character", "action-three-brothers-recognize,action-lone-wolf-join,action-cult-add"],
+["bao-thu", "35_bao_thu", "Báo Thù", "character", "action-avenger-target"],
+["mang-benh", "36_mang_benh", "Mang Bệnh", "character", "action-disease-self"],
+["loan-tin", "37_loan_tin", "Loan Tin / Thông Điệp", "character", "action-news-role,action-ghost-message"],
+["phan-quyet-kep", "38_phan_quyet_kep", "Phán Quyết Kép", "none", "action-judge-double,artifact_action_force_vote"],
+["cam-noi", "39_cam_noi", "Cấm Nói", "character", "artifact_action_silence"]
 ].map(([id,file,name,target,actions])=>({id,name,assetId:file+'.png',shape:'spark',target,actions:actions?actions.split(','):[],image:''}));
+const KNOWN_REAL_ACTIONS={"san-giet": ["action-knight-stab", "action-g7-prince-stab", "action-cult-kill", "artifact_action_destroy"], "soi-xet": ["action-digan-scry", "action-rotten-seer-check", "artifact_action_check_villager", "artifact_action_check_awake"], "soi-nhom": ["action-vampire-check", "artifact_action_judge_two_wolves"], "so-sanh-phe": ["artifact_action_check_third_faction"], "soi-dac-biet": ["artifact_action_view", "artifact_action_reveal_role"], "soi-can": ["action-demon-wolf-convert", "action-fire-wolf-bite", "action-wolf-brother-bite"], "danh-dau": ["action-g7-crow-votes", "action-wild-child-idol", "action-grudge-designate"], "duoi": ["action-black-woman-leave", "artifact_action_turn_away"], "thanh-tay": ["action-mad-doctor-cure"], "doi-vai": ["action-maid-inherit", "artifact_action_exchange", "artifact_action_swap_role"], "cuop-artifact": ["artifact_action_reclaim", "artifact_action_steal"], "phong-an": ["artifact_action_disable_function", "artifact_action_negate", "artifact_action_lock_function", "artifact_action_limit_wolf_targets"], "nhan-ban": ["artifact_action_copy_function"], "ban-phuoc": ["artifact_action_activate_two"]};
 const clone=x=>JSON.parse(JSON.stringify(x));
-const cleanActions=s=>[...new Set(String(s||'').split(/[,\n;]/).map(x=>x.trim()).filter(x=>/^[A-Za-z][A-Za-z0-9_:-]{0,100}$/.test(x)))].slice(0,80);
+const cleanActions=s=>[...new Set(String(s||'').split(/[,\n;]/).map(x=>x.trim()).filter(x=>/^[A-Za-z0-9][A-Za-z0-9_:-]{0,100}$/.test(x)))].slice(0,100);
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function approvedMappings(rows){
+ const next=clone(rows),mapped=new Set(next.flatMap(x=>x.actions||[]));
+ for(const [iconId,ids] of Object.entries(KNOWN_REAL_ACTIONS)){
+  const icon=next.find(x=>x.id===iconId);if(!icon)continue;
+  for(const id of ids)if(!mapped.has(id)){icon.actions.push(id);mapped.add(id)}
+ }
+ return next;
+}
 function load(){
  const known=new Map(DEFAULT.map(x=>[x.id,x.assetId]));
  const parse=(arr)=>arr.filter(x=>x&&/^[a-z0-9-]{1,80}$/.test(x.id)).map(x=>({
   id:x.id,name:String(x.name||'').slice(0,100),shape:SHAPES[x.shape]?x.shape:'spark',
-  target:['character','multi','card','direction'].includes(x.target)?x.target:'character',
+  target:['character','multi','card','direction','none'].includes(x.target)?x.target:'character',
   actions:cleanActions((Array.isArray(x.actions)?x.actions:[]).join(',')),
   assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
  }));
- try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return parse(saved)}catch(_){}
+ try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return approvedMappings(parse(saved))}catch(_){}
+ // Retain all V3 manually edited icons; add 10 independent wave-4 designs once.
+ try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V3')||'null');
+  if(Array.isArray(prior)&&prior.length<300){
+    const old=parse(prior),ids=new Set(old.map(x=>x.id));
+    return approvedMappings(old.concat(clone(DEFAULT.filter(x=>/^3[0-9]_/.test(x.assetId)&&!ids.has(x.id)))));
+  }
+ }catch(_){}
  // Migrate V2 library without losing custom edits, deletions or role mappings; append ONLY the 10 newly approved IDs.
- try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V2')||'null');if(Array.isArray(prior)&&prior.length<300){const existing=parse(prior),ids=new Set(existing.map(x=>x.id));return existing.concat(clone(DEFAULT.filter(x=>x.assetId&&/^2[0-9]_/.test(x.assetId)&&!ids.has(x.id))));}}catch(_){}
+ try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V2')||'null');if(Array.isArray(prior)&&prior.length<300){const existing=parse(prior),ids=new Set(existing.map(x=>x.id));return approvedMappings(existing.concat(clone(DEFAULT.filter(x=>x.assetId&&/^[23][0-9]_/.test(x.assetId)&&!ids.has(x.id)))));}}catch(_){}
  // Preserve only user-created icons from an earlier Draft prototype, never overwrite approved artwork with old demo SVG.
  try{const old=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V1')||'null');
   if(Array.isArray(old)){
@@ -75,7 +101,7 @@ function load(){
    return clone(DEFAULT).concat(parse(old.filter(x=>!previous.has(x?.id)&&!known.has(x?.id))));
   }
  }catch(_){}
- return clone(DEFAULT);
+ return approvedMappings(clone(DEFAULT));
 }
 let icons=load(),editing=null,pendingImage=null;
 function store(next){try{localStorage.setItem(KEY,JSON.stringify(next));icons=next;return true}catch(_){alert('Không đủ bộ nhớ. Hãy dùng ảnh PNG/WEBP nhỏ hơn hoặc xoá icon chưa sử dụng.');return false}}
@@ -157,9 +183,15 @@ function render(){
  const q=(document.getElementById('gmwwIconSearch')?.value||'').toLowerCase();
  const box=document.getElementById('gmwwIconGrid');if(!box)return;
  const rows=icons.filter(x=>(x.name+' '+x.id+' '+x.actions.join(' ')).toLowerCase().includes(q));
- box.innerHTML=rows.map(x=>'<article class="gmww-icon-tile" data-icon-id="'+esc(x.id)+'"><img src="'+esc(picture(x))+'" alt=""><b>'+esc(x.name)+'</b><div><button type="button" data-icon-edit="'+esc(x.id)+'">Sửa</button><button type="button" data-icon-delete="'+esc(x.id)+'">Xoá</button></div></article>').join('')||'<p>Không có icon phù hợp.</p>';
- box.querySelectorAll('[data-icon-edit]').forEach(b=>b.onclick=()=>edit(b.dataset.iconEdit));
- box.querySelectorAll('[data-icon-delete]').forEach(b=>b.onclick=()=>remove(b.dataset.iconDelete));
+ box.innerHTML=rows.map(x=>'<article class="gmww-icon-tile" role="button" tabindex="0" aria-label="Nhấn đúp để sửa '+esc(x.name)+'" data-icon-id="'+esc(x.id)+'"><img src="'+esc(picture(x))+'" alt=""><b>'+esc(x.name)+'</b></article>').join('')||'<p>Không có icon phù hợp.</p>';
+ let lastTap=null;
+ box.onclick=e=>{const tile=e.target.closest('[data-icon-id]');if(!tile)return;
+  const now=Date.now();if(lastTap?.id===tile.dataset.iconId&&now-lastTap.at<440){lastTap=null;edit(tile.dataset.iconId)}
+  else lastTap={id:tile.dataset.iconId,at:now};
+ };
+ box.ondblclick=e=>{const tile=e.target.closest('[data-icon-id]');if(tile)edit(tile.dataset.iconId)};
+ box.onkeydown=e=>{if(!['Enter',' '].includes(e.key))return;const tile=e.target.closest('[data-icon-id]');if(tile){e.preventDefault();edit(tile.dataset.iconId)}};
+
  document.getElementById('gmwwIconCount').textContent=icons.length+' icon';
  renderAudit();
 }
@@ -172,6 +204,7 @@ function edit(id){
  document.getElementById('gmwwIconTarget').value=row.target;
  document.getElementById('gmwwIconFile').value='';
  document.getElementById('gmwwIconEditorTitle').textContent=id?'Chỉnh sửa icon':'Thêm icon mới';
+ document.getElementById('gmwwIconDelete').hidden=!id;
  document.getElementById('gmwwIconName').focus();
 }
 function remove(id){const row=icons.find(x=>x.id===id);if(!row||!confirm('Xoá icon "'+row.name+'"? Thao tác này chỉ xoá khỏi Thư viện Icon.'))return;if(store(icons.filter(x=>x.id!==id)))render()}
@@ -183,7 +216,7 @@ async function readImage(file){
 function save(){
  const name=document.getElementById('gmwwIconName').value.trim().slice(0,100),actions=cleanActions(document.getElementById('gmwwIconActions').value),target=document.getElementById('gmwwIconTarget').value;
  if(!name){alert('Cần nhập tên icon.');return}
- if(!['character','multi','card','direction'].includes(target))return;
+ if(!['character','multi','card','direction','none'].includes(target))return;
  const id=editing||('icon-'+Date.now().toString(36));
  const prev=icons.find(x=>x.id===id)||{};
  const next=icons.filter(x=>x.id!==id).concat({id,name,actions,target,image:pendingImage||'',assetId:prev.assetId||'',shape:prev.shape||'spark'});
@@ -195,14 +228,15 @@ function init(){
  const tab=document.createElement('button');tab.className='libtab';tab.dataset.lib='icons';tab.type='button';tab.innerHTML='<b>ICON</b>';
  nav.insertBefore(tab,nav.querySelector('[data-lib="themes"]'));
  const pane=document.createElement('section');pane.className='libpane';pane.id='lib-icons';pane.setAttribute('aria-label','Thư viện Icon hành động');
- pane.innerHTML='<div class="gmww-icon-lib"><header><h2>ICON HÀNH ĐỘNG</h2><p>Icon GMWW chủ đề Biển · Một icon có thể dùng cho nhiều Vai Trò và Artifact. Thay đổi ở trang này chưa tự kích hoạt trong trận.</p></header><div class="gmww-icon-tools"><button id="gmwwIconAdd" type="button">＋ THÊM ICON</button><button id="gmwwIconReset" type="button">↻ KHÔI PHỤC</button><input id="gmwwIconSearch" placeholder="Tìm icon / actionId" aria-label="Tìm icon"><span id="gmwwIconCount"></span></div><section id="gmwwIconEditor" hidden><h3 id="gmwwIconEditorTitle">Thêm icon</h3><label>Tên icon<input id="gmwwIconName" maxlength="100"></label><label>Gắn actionId (cách nhau bằng dấu phẩy)<textarea id="gmwwIconActions" rows="2"></textarea></label><label>Loại tác động<select id="gmwwIconTarget"><option value="character">Kéo vào Character</option><option value="multi">Nhiều mục tiêu</option><option value="direction">Chọn hướng</option><option value="card">Chọn lá bài</option></select></label><label>Ảnh icon tuỳ chỉnh (PNG / WEBP / JPG)<input id="gmwwIconFile" type="file" accept="image/png,image/jpeg,image/webp"></label><div><button id="gmwwIconSave" type="button">LƯU</button><button id="gmwwIconCancel" type="button">HUỶ</button></div></section><section id="gmwwIconAudit" style="padding:12px;margin:12px 0;border:1px solid #4ca9b8;border-radius:12px;background:#063247aa"></section><div class="gmww-icon-grid" id="gmwwIconGrid"></div></div>';
+ pane.innerHTML='<div class="gmww-icon-lib"><header><h2>ICON HÀNH ĐỘNG</h2><p>Icon GMWW chủ đề Biển · Một icon có thể dùng cho nhiều Vai Trò và Artifact. Thay đổi ở trang này chưa tự kích hoạt trong trận.</p></header><div class="gmww-icon-tools"><button id="gmwwIconAdd" type="button">＋ THÊM ICON</button><button id="gmwwIconReset" type="button">↻ KHÔI PHỤC</button><input id="gmwwIconSearch" placeholder="Tìm icon / actionId" aria-label="Tìm icon"><span id="gmwwIconCount"></span></div><section id="gmwwIconEditor" hidden><h3 id="gmwwIconEditorTitle">Thêm icon</h3><label>Tên icon<input id="gmwwIconName" maxlength="100"></label><label>Gắn actionId (cách nhau bằng dấu phẩy)<textarea id="gmwwIconActions" rows="2"></textarea></label><label>Loại tác động<select id="gmwwIconTarget"><option value="character">Kéo vào Character</option><option value="multi">Nhiều mục tiêu</option><option value="direction">Chọn hướng</option><option value="card">Chọn lá bài</option><option value="none">Không cần mục tiêu</option></select></label><label>Ảnh icon tuỳ chỉnh (PNG / WEBP / JPG)<input id="gmwwIconFile" type="file" accept="image/png,image/jpeg,image/webp"></label><div><button id="gmwwIconSave" type="button">LƯU</button><button id="gmwwIconDelete" type="button" hidden>XOÁ ICON</button><button id="gmwwIconCancel" type="button">HUỶ</button></div></section><section id="gmwwIconAudit" style="padding:12px;margin:12px 0;border:1px solid #4ca9b8;border-radius:12px;background:#063247aa"></section><div class="gmww-icon-grid" id="gmwwIconGrid"></div></div>';
  root.insertBefore(pane,document.getElementById('lib-themes'));
  const style=document.createElement('style');style.textContent='.gmww-icon-lib{padding:14px;color:#daf7ff}.gmww-icon-lib header p{opacity:.85;line-height:1.45}.gmww-icon-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}.gmww-icon-tools input{flex:1;min-width:120px;padding:10px}.gmww-icon-tools button,.gmww-icon-tile button,#gmwwIconEditor button{background:#0b536b;color:#e4fcff;border:1px solid #77bfcb;border-radius:10px;padding:9px 12px;cursor:pointer}.gmww-icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}.gmww-icon-tile{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid #4aaaba88;border-radius:15px;background:#082f47aa;padding:12px;text-align:center}.gmww-icon-tile img{width:88px;height:88px;object-fit:contain}.gmww-icon-tile small{font-size:11px;line-height:1.35;overflow-wrap:anywhere}.gmww-icon-actions{opacity:.75;max-height:42px;overflow:auto}.gmww-icon-tile>div{display:flex;gap:6px;margin-top:auto}#gmwwIconEditor{border:1px solid #6bcbd0;border-radius:14px;background:#073852;padding:14px;margin-bottom:16px}#gmwwIconEditor[hidden]{display:none}#gmwwIconEditor label{display:grid;gap:5px;margin:8px 0}#gmwwIconEditor input,#gmwwIconEditor textarea,#gmwwIconEditor select{min-width:0;width:100%;box-sizing:border-box;padding:9px;border-radius:8px}#gmwwIconEditor>div{display:flex;gap:8px}';
- document.head.appendChild(style);
+ style.textContent+='.gmww-icon-tile{cursor:pointer;touch-action:manipulation}.gmww-icon-tile:focus-visible{outline:3px solid #9efaff}.gmww-icon-tile img{pointer-events:none}.gmww-icon-tile b{margin-bottom:0}.gmww-icon-tile:active{transform:scale(.98)}';document.head.appendChild(style);
  tab.onclick=()=>{nav.querySelectorAll('.libtab').forEach(b=>b.classList.toggle('active',b===tab));root.querySelectorAll('.libpane').forEach(x=>x.classList.toggle('active',x===pane));render();};
  document.getElementById('gmwwIconAdd').onclick=()=>edit();
  document.getElementById('gmwwIconReset').onclick=()=>{if(confirm('Khôi phục bộ icon GMWW mặc định và bỏ mọi thay đổi?')&&store(clone(DEFAULT)))render()};
  document.getElementById('gmwwIconCancel').onclick=()=>document.getElementById('gmwwIconEditor').hidden=true;
+ document.getElementById('gmwwIconDelete').onclick=()=>{if(editing){const id=editing;remove(id);if(!icons.some(x=>x.id===id))document.getElementById('gmwwIconEditor').hidden=true}};
  document.getElementById('gmwwIconSave').onclick=save;
  document.getElementById('gmwwIconFile').onchange=e=>{void readImage(e.target.files?.[0])};
  document.getElementById('gmwwIconSearch').oninput=render;
