@@ -7,6 +7,7 @@ import {expressionFrame,renderQualityBudget,STAGE7_VERSION} from './stage7-expre
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
 import {resolveRoleAnimation,animationMotion} from './stage10-role-animations.mjs';
+import {arenaCrowdDetailPolicy} from './stage23-25-mobile-budget.mjs';
 const MAX=30,TAU=Math.PI*2;
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 export const atelierPalette=characterArtProfile;
@@ -52,8 +53,17 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   ];
   // GĐ18: low-power LOD removes tiny decorative mesh draw calls, but never
   // touches actor identity, seat positions, Core actions, heads or picking.
-  const ECO_DETAIL_PARTS=new Set(['shineL','shineR','pearl','shell','waistSash',
-    'shellCrown','shellpin','ribbon','cape','cheekL','cheekR','sailorCollar','hairTail']);
+  let crowdTier='full';
+  function applyVisualBudget(){
+    const policy=arenaCrowdDetailPolicy({characters:actors.length,lowPower:qualityLowPower});
+    if(policy.tier===crowdTier)return;
+    crowdTier=policy.tier;
+    const hidden=new Set(policy.hiddenParts);
+    for(const part of meshes)part.mesh.visible=!hidden.has(part.name);
+    // Force rematerialization before next GPU draw; restored accessories must
+    // never retain stale matrices after an extended 30-player sequence.
+    lastDraw=-1;
+  }
   const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':key==='seat'?'#b99167':'white'});
   for(const [name,geometry,kind,offset,size] of parts){
     const mesh=new THREE.InstancedMesh(geometry,matOf(kind),limit);
@@ -146,6 +156,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       if(part.mesh.instanceColor)part.mesh.instanceColor.needsUpdate=true;
     }
     for(const effect of effects)effect.mesh.count=actors.length;
+    applyVisualBudget();
     draw(performance.now(),true);
   }
   function turnActor(id,step=Math.PI/2){
@@ -230,10 +241,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     const next=value===true;
     if(next===qualityLowPower)return;
     qualityLowPower=next;
-    for(const part of meshes)part.mesh.visible=!next||!ECO_DETAIL_PARTS.has(part.name);
+    applyVisualBudget();
     spellVfx.setLowPower(next);
-    // Draw the restored high-detail matrices even if recovering from sleep.
-    lastDraw=-1;
   }
   function setQualityFps(value){if(Number.isFinite(value)&&value>0)qualityFps=value}
   function draw(time,force=false){
@@ -254,6 +263,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const expression=expressionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),reducedMotion});
       base.set(walkPos.x,0,walkPos.z);
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
+      // A long Core session must not retain stale effect deadlines or old
+      // travel data after dozens of night/day cycles.
+      for(const [kind,deadline] of actor.effects)if(deadline<=time)actor.effects.delete(kind);
+      if(actor.travel&&time>actor.travel.startedAt+actor.travel.duration+1000){
+        actor.travel=null;
+      }
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
       for(const part of meshes){
@@ -392,7 +407,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
-    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
+    get actorCount(){return actors.length},get crowdTier(){return crowdTier},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get peakVfxDrawBudget(){return spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
