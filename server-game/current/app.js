@@ -4822,6 +4822,8 @@ function battleIconBind(){
  dock.addEventListener('touchcancel',e=>touchFinish(e,true),{passive:false});
 }
 
+// Late-loaded Runtime OTA assets must refresh a turn already visible on iPhone.
+document.addEventListener('gmww-action-icons-ready',()=>{if(playSceneState.step==='battle')renderPlayBattle()});
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleDayActions=()=>{
