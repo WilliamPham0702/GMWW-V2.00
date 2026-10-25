@@ -59,7 +59,7 @@ export function createArenaSessionTrend({maxMinutes=30}={}){
  function gpuRestored(){contextLost=false;current=null}
  function reset(){buckets.length=0;current=null;minutesObserved=0;slowMinutes=0}
  function summary(){
-  const list=current&&current.frames?[...buckets,{
+  const list=current&&current.frames?[...buckets.slice(-(cap-1)),{
    frames:current.frames,drawCallsMean:round(current.drawSum/current.frames),
    cpuMaxMs:round(current.cpuMax),intervalMaxMs:round(current.intervalMax),
    slowFrameShare:round(current.slow/current.frames*100),
