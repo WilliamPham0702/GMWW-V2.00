@@ -1,6 +1,6 @@
 // Stage 9: public-only Core projection, deterministic reconnect, no private role leakage.
 export const STAGE9_VERSION='gmww.arena.full-match-sync.9';
-const PHASES=new Set(['lobby','gathering','seating','roles','dealing','running','ended','finished']);
+const PHASES=new Set(['lobby','gathering','seating','roles','dealing','role_delivery','running','ended','finished']);
 const safeString=value=>typeof value==='string'?value:'';
 export function publicMatchKey(frame){
  const room=frame?.room||{};
@@ -17,6 +17,9 @@ export function publicMatchView(frame){
   alive:p.alive!==false&&p.isAlive!==false
  })).filter(p=>p.id);
  return {key:publicMatchKey(frame),phase:PHASES.has(phase)?phase:'lobby',
+  // Core can change GM stages and publish role cards without changing cycle.
+  gmStage:safeString(room.gmStage),
+  deliveryVersion:Math.max(0,Math.trunc(Number(room.deliveryVersion)||0)),
   cycle,night:Math.max(0,Math.trunc(Number(room.cycleNight)||0)),
   players:players.length,online:players.filter(p=>p.online).length,
   alive:players.filter(p=>p.alive).length};
