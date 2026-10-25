@@ -36,7 +36,7 @@ function playArenaCastSound(cue,{syntheticPreview=false}={}){
   // GM-private Core cue, or local synthetic preview only; never public frames.
   if(!cue?.cast||(!syntheticPreview&&!gmToken)||!arenaAudio.enabled)return false;
   const cast=cue.cast;
-  const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId});
+  const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,visualFamily:cast.visualFamily});
   const identity=[syntheticPreview?'preview':'gm',current?.room.matchId||'SYNTH',
     current?.room.cycleKey||'',cue.turnId,cast.startedAt,cast.actionId||''].join(':');
   return arenaAudio.play(profile,identity);
