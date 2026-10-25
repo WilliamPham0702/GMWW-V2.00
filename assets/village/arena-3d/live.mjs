@@ -6,6 +6,7 @@ import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
+import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} from './stage8-ritual-director.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -116,6 +117,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwAtelier=ARENA_ATELIER_VERSION;
   document.body.dataset.gmwwArtVersion=CHARACTER_ART_VERSION;
   document.body.dataset.gmwwStage7=STAGE7_VERSION;
+  document.body.dataset.gmwwStage8=STAGE8_VERSION;
   document.body.dataset.gmwwRitualArtVersion=RITUAL_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
@@ -142,7 +144,14 @@ async function refreshPrivateGmEffects(){
     if(Array.isArray(data.effects)){
       field.setServerEffects(data.effects);
       visibleGmEffects=data.effects.length;
-      field.setCastingTurn(data.casting||null);
+      const authorized=field.actors.map(a=>a.id);
+      const normalized=normalizeRitualCue(data.casting,authorized);
+      field.setCastingTurn(normalized);
+      const summary=publicRitualSummary(normalized);
+      document.body.dataset.gmwwStage8Ritual=summary.active?(summary.kind||'waiting'):'none';
+      document.body.dataset.gmwwStage8Targets=String(summary.targets);
+      const quality=ritualQuality({players:authorized.length,fps,reducedMotion,lowPower});
+      document.body.dataset.gmwwStage8VfxBudget=String(quality.effectTrailSegments);
       dashboard.setNightControl(data.nightControl||null);
       document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
