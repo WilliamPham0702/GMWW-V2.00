@@ -68,6 +68,16 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           node --check server-game/current/app.js
+      - name: Kiểm thử đúng 49 ICON V3.218 và 34 mã thực tế
+        if: steps.scope.outputs.mode == 'icon-wave5-3218'
+        run: |
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.218-49-icons-audit-20261025.md
+
       - name: Kiểm thử trực tiếp Icon GM V3.215 và 39 ảnh đã được gán
         if: steps.scope.outputs.mode == 'icon-game-3215'
         run: |

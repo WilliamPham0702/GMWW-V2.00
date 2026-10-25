@@ -22,7 +22,7 @@ const api=ctx.window.GMWWActionIconLibrary;
 test('GM Icon library linked to GM page and parseable without gameplay initialization',()=>{
   assert.match(html,/<script src="action-icon-library\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(api);
-  assert.equal(api.get().length,39);
+  assert.equal(api.get().length,49);
 });
 test('Every built-in active role action is mapped to an icon',()=>{
   const chunk=core.slice(core.indexOf('  actions:{'),core.indexOf('  effects:['));
@@ -40,10 +40,10 @@ test('Multi-target, directional and card selection actions are not forced to cha
   assert.equal(api.resolve('action_seer').target,'character');
   assert.equal(api.resolve('action_wolf_bite').target,'character');
 });
-test('Approved icons use actual 39 individual PNG assets, not demo SVG or emoji',()=>{
+test('Approved icons use actual 49 individual PNG assets, not demo SVG or emoji',()=>{
  const icons=api.get();
- assert.equal(icons.length,39);
- assert.equal(new Set(icons.map(x=>x.assetId)).size,39);
+ assert.equal(icons.length,49);
+ assert.equal(new Set(icons.map(x=>x.assetId)).size,49);
  for(const icon of icons){
   const url=api.image(icon);
   assert.match(url,/^action-icons\/sea-v1\/[0-9]{2}_[a-z_]+\.png$/);
@@ -89,11 +89,11 @@ test('Device catalog scan discovers custom Artifact actions without inventing bu
   }finally{ctx.localStorage.getItem=original}
 });
 
-test('All 39 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
+test('All 49 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
  const manifest=JSON.parse(fs.readFileSync(new URL('../assets/action-icons/sea-v1/manifest.json',import.meta.url),'utf8'));
- assert.equal(manifest.count,39);
- assert.equal(manifest.icons.length,39);
- assert.equal(new Set(manifest.icons.map(x=>x.id)).size,39);
+ assert.equal(manifest.count,49);
+ assert.equal(manifest.icons.length,49);
+ assert.equal(new Set(manifest.icons.map(x=>x.id)).size,49);
  for(const record of manifest.icons){
   const icon=api.get().find(x=>x.id===record.id);
   assert.ok(icon,record.id+' present');
@@ -124,7 +124,7 @@ test('Exact local-name match auto-assigns only the matching Artifact action',()=
   assert.ok(api.resolve('artifact_silence'));
   assert.equal(api.resolve('artifact_silence').id,'cam-vote');
   assert.equal(api.resolve('artifact_unknown'),null);
-  assert.ok(written?.key?.endsWith('_V4'));
+  assert.ok(written?.key?.endsWith('_V5'));
  }finally{ctx.localStorage.getItem=original;ctx.localStorage.setItem=originalSet}
 });
 test('Old V2 custom icon mappings survive migration and 10 approved new IDs appear',()=>{
@@ -134,7 +134,7 @@ test('Old V2 custom icon mappings survive migration and 10 approved new IDs appe
  localStorage:{getItem(key){return key==='GMWW_ACTION_ICON_LIBRARY_V2'?JSON.stringify(old):null}},alert(){}};
  vm.createContext(next);new vm.Script(script).runInContext(next);
  const results=next.window.GMWWActionIconLibrary.get();
- assert.equal(results.length,22);
+ assert.equal(results.length,32);
  assert.equal(results.find(x=>x.id==='soi-xet').name,'Soi đã sửa');
  assert.ok(results.some(x=>x.id==='icon-custom-1'));
  assert.equal(results.filter(x=>/^2[0-9]_/.test(x.assetId)).length,10);
@@ -145,7 +145,7 @@ test('All 54 actual iPhone audit rows map to a valid icon except unknown customi
  assert.equal(fixture.missing.length,54);
  assert.equal(fixture.roleCount,63);assert.equal(fixture.artifactCount,44);
  const unresolved=fixture.missing.filter(r=>!api.resolve(r.id));
- assert.deepEqual(unresolved.map(x=>x.id),['artifact_action_custom']);
+ assert.deepEqual(unresolved.map(x=>x.id),[]);
  const exact=api.resolve('18');assert.equal(exact.id,'rung-chuong');
  assert.equal(api.resolve('25').id,'giao');
  assert.equal(api.resolve('action-cupid-pair').id,'ghep-doi');
@@ -162,7 +162,7 @@ test('V3 icon edits and manual maps migrate without loss, new ten added only onc
   localStorage:{getItem(key){return key==='GMWW_ACTION_ICON_LIBRARY_V3'?JSON.stringify(customized):null}},alert(){}};
  vm.createContext(client);new vm.Script(script).runInContext(client);
  const icons=client.window.GMWWActionIconLibrary.get();
- assert.equal(icons.length,12);
+ assert.equal(icons.length,22);
  assert.equal(icons.find(x=>x.id==='soi-xet').name,'Tên đã sửa');
  assert.ok(icons.find(x=>x.id==='soi-xet').actions.includes('my_custom'));
  assert.ok(icons.find(x=>x.id==='user-created-321'));
@@ -188,4 +188,56 @@ test('Fire icon uses battle targetAllowed and original Server commit, without a 
  assert.match(battle,/battleIconSetOn\(!battleIconOn\(\)\)/);
  assert.match(battle,/battleIconClearDrag\(\);const picker/);
  assert.doesNotMatch(battle,/\/icon-action.*method:'POST'/);
+});
+
+test('Latest real GM audit: all 34 unique IDs across 36 Role/Artifact rows resolve to one icon',()=>{
+ const userRows=[
+ 'action-knight-stab','action-maid-inherit','action-digan-scry','action-g7-prince-stab',
+ 'action-g7-crow-votes','action-rotten-seer-check','action-black-woman-leave',
+ 'action-mad-doctor-cure','action-demon-wolf-convert','action-fire-wolf-bite',
+ 'action-wolf-brother-bite','action-wild-child-idol','action-vampire-check',
+ 'action-cult-kill','artifact_action_reclaim','artifact_action_view',
+ 'action-grudge-designate','artifact_action_disable_function','artifact_action_check_villager',
+ 'artifact_action_exchange','artifact_action_reveal_role','action-black-woman-leave',
+ 'artifact_action_negate','artifact_action_check_awake','artifact_action_steal',
+ 'artifact_action_lock_function','artifact_action_copy_function',
+ 'artifact_action_check_third_faction','artifact_action_destroy',
+ 'artifact_action_judge_two_wolves','artifact_action_limit_wolf_targets',
+ 'action-maid-inherit','artifact_action_activate_two','artifact_action_turn_away',
+ 'artifact_action_swap_role','artifact_action_custom'
+ ];
+ assert.equal(userRows.length,36);
+ assert.equal(new Set(userRows).size,34);
+ for(const id of userRows)assert.ok(api.resolve(id),id);
+ assert.equal(api.resolve('artifact_action_custom').id,'sang-tao-artifact');
+ assert.equal(api.resolve('action-g7-crow-votes').id,'phieu-con-qua');
+ assert.equal(api.resolve('action-demon-wolf-convert').id,'can-chuyen-hoa');
+ assert.equal(api.resolve('action-wild-child-idol').id,'chon-hinh-tuong');
+ assert.equal(api.resolve('artifact_action_reveal_role').target,'none');
+ assert.equal(api.resolve('artifact_action_custom').target,'none');
+ assert.equal(api.resolve('action-vampire-check').target,'multi');
+});
+test('New 10 standalone images have no duplicate action ownership, except intentional left/right action',()=>{
+ const icons=api.get(),wave=icons.filter(x=>/^4[0-9]_/.test(x.assetId));
+ assert.equal(wave.length,10);
+ assert.equal(new Set(wave.map(x=>x.assetId)).size,10);
+ const owners=new Map();
+ for(const icon of icons)for(const id of icon.actions){
+  const ids=owners.get(id)||[];
+  ids.push(icon.id);owners.set(id,ids);
+ }
+ for(const [id,iconIds] of owners)if(id!=='action_transfer_bite')assert.equal(iconIds.length,1,id);
+ assert.deepEqual(owners.get('action_transfer_bite'),['dich-trai','dich-phai']);
+});
+test('V4 on-device edits migrate without lost icons; exact old generic mappings become dedicated icons',()=>{
+ const old=[{id:'danh-dau',name:'Đánh dấu tự chỉnh',target:'character',actions:['action-g7-crow-votes','my_custom_mark'],shape:'spark'},
+ {id:'icon-my-own',name:'Icon tự tạo',target:'character',actions:['custom_action'],shape:'spark'}];
+ const c={window:{},document:{readyState:'loading',addEventListener(){}},
+  localStorage:{getItem(k){return k==='GMWW_ACTION_ICON_LIBRARY_V4'?JSON.stringify(old):null}},alert(){}};
+ vm.createContext(c);new vm.Script(script).runInContext(c);
+ const migrated=c.window.GMWWActionIconLibrary.get();
+ assert.equal(migrated.length,12);
+ assert.equal(c.window.GMWWActionIconLibrary.resolve('action-g7-crow-votes').id,'phieu-con-qua');
+ assert.ok(migrated.find(x=>x.id==='danh-dau').actions.includes('my_custom_mark'));
+ assert.ok(migrated.find(x=>x.id==='icon-my-own'));
 });
