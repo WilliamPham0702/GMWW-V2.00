@@ -227,6 +227,30 @@ export class RoomDurableObject extends GameRoomDurableObject{
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
+    // Dedicated GĐ32 IPA test channel. An isolated GitHub QA prerelease
+    // stores bytes; STAGING serves a stable download URL without modifying
+    // the official Production /api/update or Tải IPA channel.
+    if(url.pathname.startsWith('/api/arena-staging/ipa')){
+      const releaseTag='arena3d-qa-20261025-gd32-r1';
+      const prefix='https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/'+releaseTag+'/';
+      const ipa='GMWW-Arena3D-QA-GD32-20261025.ipa';
+      if(request.method!=='GET')return new Response('Method not allowed',{status:405});
+      if(url.pathname==='/api/arena-staging/ipa/metadata'){
+        return Response.json({ok:true,channel:'arena3d-qa-staging-only',
+          version:'0.32.0',bundleId:'com.gmww.v2.arena3d.qa',
+          sourceWorker:'gmww-arena3d-stage14-staging',
+          signing:'unsigned-needs-iOS-sideload-signing',
+          officialRelease:false,productionModified:false,
+          download:'/api/arena-staging/ipa',
+          sha256:'/api/arena-staging/ipa/sha256',
+          notes:'/village/arena-3d/ipa.html'},
+          {headers:{'cache-control':'no-store'}});
+      }
+      const file=url.pathname==='/api/arena-staging/ipa'?ipa:
+        url.pathname==='/api/arena-staging/ipa/sha256'?ipa+'.sha256':null;
+      if(!file)return new Response('Not found',{status:404});
+      return Response.redirect(prefix+file,302);
+    }
     if(url.pathname==='/api/arena-staging/health'){
       return Response.json({ok:true,service:'gmww-arena3d-core-staging',
         isolated:true,core:'GMWW-V2.00',durableObjects:'staging-only',
