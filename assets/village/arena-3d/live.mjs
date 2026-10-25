@@ -21,6 +21,7 @@ import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION} from './stage19-mobi
 import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mobile-budget.mjs';
 import {validateGmActionTargets,ARENA_STAGE29_VERSION} from './stage29-gm-actions.mjs';
 import {projectAuthorizedGmCoreState} from './production-gm-adapter.mjs';
+import {validateArenaGmContext} from './gm-native-bridge.mjs';
 const $=id=>document.getElementById(id);
 // STAGING keeps its isolated DO visual endpoint; the official Core hostname
 // uses the existing authenticated GM state. No production credentials cross origin.
@@ -321,6 +322,43 @@ $('gm-copy').onclick=()=>guarded('Sao chép mã GM Staging',async()=>{
   await navigator.clipboard.writeText(gmToken);
   notice('Đã sao chép mã GM Staging. Không chia sẻ với người chơi.');
 });
+// Official GMWW Runtime can provide the already-authorized room context to its
+// own 3D iframe. The GM key is never serialized into URL, HTML or local storage.
+let nativeBridgeSerial=0;
+if(productionCoreView&&window.parent!==window){
+  window.addEventListener('message',async event=>{
+    const bridged=validateArenaGmContext(event.data,{
+      origin:event.origin,expectedOrigin:location.origin,
+      sourceIsParent:event.source===window.parent,hasParentFrame:true
+    });
+    if(!bridged)return;
+    const serial=++nativeBridgeSerial;
+    try{
+      // Never accept a token merely because a native frame sent it.
+      // The SAME live Core RoomDurableObject verifies bearer permission.
+      const verified=await fetch(privateGmUrl(bridged.roomCode),{
+        headers:{authorization:'Bearer '+bridged.gmToken},cache:'no-store'
+      });
+      if(!verified.ok)throw Error('Core từ chối quyền GM ('+verified.status+')');
+      const state=await verified.json();
+      if(!state?.ok||serial!==nativeBridgeSerial)return;
+      if(code!==bridged.roomCode){
+        gmToken=bridged.gmToken;
+        await attach(bridged.roomCode);
+      }else{
+        gmToken=bridged.gmToken;
+        enableGm();
+      }
+      $('gm-key').value='';
+      await refreshPrivateGmEffects();
+      notice('Đã liên kết phòng GMWW '+bridged.roomCode+' với Arena 3D. Quyền do Core xác thực.');
+    }catch(error){
+      if(serial!==nativeBridgeSerial)return;
+      gmToken='';enableGm();
+      notice('Chưa kết nối GM Arena 3D: '+String(error.message||error));
+    }
+  });
+}
 let seeded=[];
 $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
   if(!code||!gmToken)throw Error('Hãy tạo phòng trước');
