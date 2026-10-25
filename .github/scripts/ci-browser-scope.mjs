@@ -136,6 +136,25 @@ const demo475Paths=new Set([
  '.github/scripts/build-demo-pr475-staging.mjs',
  'wrangler.demo-pr475-staging.jsonc'
 ]);
+// PR #475 was tested as a PR, then merged at 8772337. A narrow CI/release
+// follow-up must remain scoped on main; unknown code paths still fail closed.
+const demo475ReleasePaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml',
+ '.github/workflows/deploy-production.yml',
+ 'tests/ci-browser-scope.test.mjs',
+ 'docs/releases/GMWW-V3.207-demo475-production-20261025.md'
+]);
+function isDemo475ReleaseScope(changes){
+ const names=new Set(changes.map(x=>x.path));
+ return names.has('.github/scripts/ci-browser-scope.mjs')&&
+   names.has('.github/workflows/check-player-web.yml')&&
+   names.has('.github/workflows/deploy-production.yml')&&
+   names.has('tests/ci-browser-scope.test.mjs')&&
+   names.has('docs/releases/GMWW-V3.207-demo475-production-20261025.md')&&
+   changes.every(x=>demo475ReleasePaths.has(x.path)&&['A','M'].includes(x.status));
+}
+
 function isDemo475Scope(changes){
  const names=new Set(changes.map(x=>x.path));
  return names.has('src/gmww-demo-runner.js')&&
@@ -243,7 +262,7 @@ function isPolicyScope(changes){
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isPolicyScope(changes))return 'ci-policy';
-  if(isDemo475Scope(changes))return 'demo-475';
+  if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
   if(isDualRendererScope(changes))return 'dual-renderer';
@@ -280,6 +299,10 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
+      if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)){
+        git('merge-base','--is-ancestor','8772337ab95e7561aeba6d63b2ec2337d7bbee94','HEAD');
+        return{mode:'demo-475',reason:'Verified merged PR #475 / focused V3.207 release: '+changes.map(c=>c.path).join(', ')};
+      }
       if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return{mode:'gallows',reason:'Verified main Lên Giàn-only release: '+changes.map(c=>c.path).join(', ')};
     }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
     return{mode:'full',reason:'Main contains changes outside the verified scoped lists'};
