@@ -92,8 +92,22 @@ try{
  await gm.getByRole('button',{name:'Bỏ phiếu cho Seat đã chọn'}).click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',null,{timeout:35000});
  assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
+ // Finish this isolated match through the real GM V2 end endpoint.
+ const ended=await gm.evaluate(async code=>{
+  const token=document.getElementById('gm-key').value;
+  const matchId=window.__GMWW_ARENA_STAGE_READONLY().matchId;
+  const response=await fetch('/api/gm/rooms/'+code+'/end',{method:'POST',cache:'no-store',
+   headers:{authorization:'Bearer '+token,'content-type':'application/json'},
+   body:JSON.stringify({matchId,winnerFaction:'village',winner:'Dân Làng'})});
+  const data=await response.json();return {status:response.status,ok:data.ok,error:data.error||null};
+ },code);
+ assert.equal(ended.status,200,'real isolated Core must accept GM end-of-match');
+ assert.equal(ended.ok,true);
+ await gm.locator('#refresh').click();
+ await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null,{timeout:35000});
+ await viewer.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null,{timeout:35000});
  assert.deepEqual(errors,[]);
  console.log('STAGE13_CORE_TWO_CLIENT_PASS',JSON.stringify({room:code,
-  realCoreAction:cast.actionId,cycle:'night=>morning',gallows:'nominating=>voting',
+  realCoreAction:cast.actionId,cycle:'night=>morning',gallows:'nominating=>voting',ended:true,
   viewerDenied:deny.status,viewerReconnected:true,production:false,physicalIphone:false}));
 }finally{await ctx.close();await browser.close()}
