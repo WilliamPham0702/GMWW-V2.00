@@ -59,3 +59,52 @@ test('GĐ21: report only allowlisted metrics; never includes GM or player identi
  assert.match(html,/id="arena-diag-copy"/);
  assert.doesNotMatch(s,/localStorage|sessionStorage/);
 });
+
+import {createArenaSessionTrend} from '../assets/village/arena-3d/stage23-25-mobile-budget.mjs';
+
+test('GĐ25: 90 minutes of simulated 30-character frames retain max 30 minute windows',()=>{
+ const trend=createArenaSessionTrend({maxMinutes:30});
+ for(let minute=0;minute<90;minute++){
+  for(let i=0;i<120;i++)trend.observe({
+   at:minute*60000+i*500,drawCalls:37,paintCpuMs:4,
+   intervalMs:500,targetHz:12,characters:30,active:i%3===0
+  });
+ }
+ const s=trend.summary();
+ assert.equal(s.minutesObserved,89,'89 finished minutes + current minute');
+ assert.equal(s.storedWindows,30,'ring buffer remains 30 maximum');
+ assert.equal(s.windowCapacity,30);
+ assert.equal(s.maxCharacters,30);
+ assert.equal(s.maxPaintCpuMs,4);
+ assert.equal(s.thermalCelsius,null);
+ assert.equal(s.batteryDrainPercent,null);
+ assert.deepEqual(Object.keys(s).filter(x=>/token|role|target|room|actor|member|code/i.test(x)),[]);
+});
+
+test('GĐ25: background and WebGL loss close session window without retaining user records',()=>{
+ const trend=createArenaSessionTrend({maxMinutes:6});
+ const point=(at,chars=6)=>trend.observe({
+  at,drawCalls:42,paintCpuMs:2,intervalMs:85,targetHz:12,characters:chars,active:false
+ });
+ point(1000);point(1050);trend.suspend(true);point(2000,30);
+ assert.equal(trend.summary().maxCharacters,6);
+ trend.suspend(false);trend.gpuLost();point(5000,30);
+ assert.equal(trend.summary().maxCharacters,6);
+ trend.gpuRestored();point(9000,12);
+ assert.equal(trend.summary().maxCharacters,12);
+ trend.reset();
+ assert.equal(trend.summary().storedWindows,0);
+ assert.equal(trend.summary().observedFrames,0);
+});
+
+test('GĐ25: browser reports session aggregate privately, without changing Core traffic',()=>{
+ const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+ assert.match(live,/sessionTrend\.observe\(\{at:now/);
+ assert.match(live,/sessionTrend\.suspend\(document\.hidden\)/);
+ assert.match(live,/sessionTrend\.gpuLost\(\)/);
+ assert.match(live,/sessionTrend\.gpuRestored\(\)/);
+ assert.match(live,/report\.sessionTrend=sessionTrend\.summary\(\)/);
+ assert.match(live,/JSON\.stringify\(report,null,2\)/);
+ assert.match(live,/refreshPrivateGmEffects\(\)/);
+ assert.doesNotMatch(live,/localStorage|sessionStorage/);
+});
