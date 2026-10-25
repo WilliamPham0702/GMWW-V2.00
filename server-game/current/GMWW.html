@@ -37,7 +37,7 @@
         <section class="gmww-home-scene-v350 gmww-home-scene-v351" aria-label="Làng biển WilliamPham">
           <div class="gmww-home-hero-artboard-v351"><img src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển với nhân vật GM và sói trắng" class="gmww-home-scene-image-v350" decoding="async" fetchpriority="high"></div>
         </section>
-        <section class="gmww-home-enter-banner-v352" aria-label="Vào Làng"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350 gmww-home-portal-action-v352" type="button" aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"><img src="home-art/home-sea-portal-v354.svg" alt="" class="gmww-home-portal-art-v352"><strong>VÀO LÀNG</strong><small>THỬ NGHIỆM ARENA 3D</small></button></section>
+        <section class="gmww-home-enter-banner-v352" aria-label="Vào Làng"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350 gmww-home-portal-action-v352" type="button" aria-label="Vào Làng Arena 3D chính thức"><img src="home-art/home-sea-portal-v354.svg" alt="" class="gmww-home-portal-art-v352"><strong>VÀO LÀNG</strong><small>CHƠI ARENA 3D</small></button></section>
         <section class="gmww-home-discover-banner-v352" aria-label="Khám phá GMWW"><header class="gmww-home-discover-title-v352"><span class="gmww-home-heading-gem" aria-hidden="true">✦</span><h2>Khám Phá</h2><span class="gmww-home-heading-line" aria-hidden="true"></span></header><div class="gmww-home-tiles-v350 gmww-home-tiles-v351">
           <button type="button" data-home-destination="library" data-home-library-tab="cards"><img src="home-art/home-sea-cards-v354.svg" alt=""><b>Bộ Bài</b><small>Vai trò · Artifact</small></button>
           <button type="button" data-home-destination="members"><img src="home-art/home-sea-members-v354.svg" alt=""><b>Thành Viên</b><small>Quản lý · Xếp hạng</small></button>
@@ -1132,12 +1132,13 @@
 #gmwwArena3dQaFrame{display:block;flex:1;width:100%;min-height:0;border:0;background:#0b2430}
 </style>
 <script>
-/* This Runtime-only experiment keeps the 2D menu/game untouched.
- * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.
- * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */
+/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.
+ * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host
+ * credentials are only transmitted by origin-checked one-frame postMessage.
+ * Never send a GM token in URL or across an untrusted origin. */
 (function(){
   'use strict';
-  const arenaUrl='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html';
+  const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';
   const button=document.getElementById('gmwwHomeEnterVillage');
   if(!button)return;
   let overlay=null,frame=null,lastFocus=null,originalOverflow='';
@@ -1158,16 +1159,16 @@
     overlay.hidden=true;
     overlay.setAttribute('role','dialog');
     overlay.setAttribute('aria-modal','true');
-    overlay.setAttribute('aria-label','Thử nghiệm Arena 3D · STAGING');
+    overlay.setAttribute('aria-label','GMWW Arena 3D · Phòng chơi thật');
     const bar=document.createElement('div');bar.className='gmww-arena-qa-bar';
-    const title=document.createElement('strong');title.textContent='🌊 ARENA 3D · STAGING';
+    const title=document.createElement('strong');title.textContent='🌊 ARENA 3D';
     const back=document.createElement('button');back.type='button';back.textContent='‹ Trang Chủ';
     back.id='gmwwArena3dQaClose';back.addEventListener('click',()=>closeArena(false));
     const to2d=document.createElement('button');to2d.type='button';to2d.textContent='Chơi 2D';
     to2d.id='gmwwArena3dQa2d';to2d.addEventListener('click',()=>closeArena(true));
     bar.append(back,title,to2d);
     frame=document.createElement('iframe');frame.id='gmwwArena3dQaFrame';
-    frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';
+    frame.title='GMWW Arena 3D — kết nối phòng chơi thật';
     frame.setAttribute('referrerpolicy','no-referrer');
     frame.setAttribute('allow','fullscreen; autoplay');
     overlay.append(bar,frame);
