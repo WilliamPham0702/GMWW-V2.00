@@ -2135,6 +2135,8 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
+    const audio=event.target.closest('[data-gallows-audio-upload]');
+    if(audio){void battleOpenGallowsAudioUpload(String(audio.dataset.gallowsAudioUpload||''));return;}
     const tab=event.target.closest('[data-gallows-tab]');
     if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
     const pick=event.target.closest('[data-gallows-pick]');
