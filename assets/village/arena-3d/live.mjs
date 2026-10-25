@@ -20,7 +20,24 @@ import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_
 import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION} from './stage19-mobile-diagnostics.mjs';
 import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mobile-budget.mjs';
 import {validateGmActionTargets,ARENA_STAGE29_VERSION} from './stage29-gm-actions.mjs';
+import {projectAuthorizedGmCoreState} from './production-gm-adapter.mjs';
 const $=id=>document.getElementById(id);
+// STAGING keeps its isolated DO visual endpoint; the official Core hostname
+// uses the existing authenticated GM state. No production credentials cross origin.
+const productionCoreView=!location.hostname.includes('arena3d-stage14-staging');
+const privateGmUrl=room=>productionCoreView?'/api/gm/rooms/'+encodeURIComponent(room):
+ '/api/arena-staging/rooms/'+encodeURIComponent(room)+'/gm-visuals';
+const projectGmPayload=payload=>productionCoreView?projectAuthorizedGmCoreState(payload):payload;
+if(productionCoreView){
+  // A production room must be filled by REAL players with Core-configured roles.
+  // Do not display the research-only fake-member or fixed four-role actions.
+  for(const id of ['seed','deal','sample-vfx','gallery-toolbar'])$(id).hidden=true;
+  $('create').textContent='Tạo phòng';
+  $('gm-restore').textContent='Xác thực GM';
+  $('gm-key').placeholder='Mã GM của phòng';
+  document.querySelector('header h1').textContent='GMWW Arena 3D';
+  document.querySelector('header small').textContent='Chơi thật · Core GMWW V2.00';
+}
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
 const camera=new THREE.PerspectiveCamera(42,1,.1,90);
@@ -202,11 +219,12 @@ async function refreshPrivateGmEffects(){
   const session={room:code,token:gmToken,matchId:String(current.room.matchId),
     cycleKey:String(current.room.cycleKey)};
   try{
-    const response=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(session.room)+'/gm-visuals',{
+    const response=await fetch(privateGmUrl(session.room),{
       headers:{authorization:'Bearer '+session.token},cache:'no-store'
     });
     if(!response.ok)return;
-    const data=await response.json();
+    const data=projectGmPayload(await response.json());
+    if(!data)return;
     if(code!==session.room||gmToken!==session.token||
       String(current?.room.matchId||'')!==session.matchId||
       String(current?.room.cycleKey||'')!==session.cycleKey)return;
@@ -226,6 +244,7 @@ async function refreshPrivateGmEffects(){
       const quality=ritualQuality({players:authorized.length,fps,reducedMotion,lowPower});
       document.body.dataset.gmwwStage8VfxBudget=String(quality.effectTrailSegments);
       dashboard.setNightControl(data.nightControl||null);
+      if(productionCoreView&&data.gallows)showBallot(data.gallows);
       document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
   }catch{}
@@ -246,7 +265,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
 function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
-  for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
+  for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken||(productionCoreView&&['seed','deal'].includes(id));
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
   field.clearEffects();syntheticCastSeq++;matchSync.reset();
@@ -258,14 +277,14 @@ async function attach(room){
   const query=new URL(location.href);query.searchParams.set('room',code);history.replaceState(null,'',query);
   const initial=createPublicRendererFrame(state);
   if(matchSync.accept(initial,{source:'snapshot'}).accepted)drawFrame(initial);
-  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{
+  feed=connectStagingRoom({roomCode:code,loadPublicGallows:!productionCoreView,onFrame:frame=>{
     const result=matchSync.accept(frame,{source:'realtime'});
     if(result.accepted)drawFrame(frame);
     if(result.accepted&&gmToken)void refreshPrivateGmEffects();
   },
     onGallows:updated=>{ballot=updated;showBallot(updated);},onStatus:s=>$('connection').textContent=s,
     onError:e=>notice('Lỗi kết nối '+String(e.message||e))});
-  notice('Đã kết nối phòng thật '+code+' trên Core V2 STAGING. Mở Player Web 2D tại liên kết phía trên.');
+  notice('Đã kết nối phòng '+code+' trên Core V2'+(productionCoreView?' chính thức.':' STAGING.')+' Mở Player Web tại liên kết phía trên.');
   enableGm();
 }
 function showBallot(x){
@@ -280,7 +299,7 @@ function showBallot(x){
 async function guarded(label,work){try{notice(label+' ...');await work();}catch(error){notice(label+': '+String(error.message||error));}}
 $('create').onclick=()=>guarded('Tạo phòng STAGING',async()=>{
   if(feed)feed.close();feed=null;gmToken='';seeded=[];enableGm();
-  const d=await json('/api/rooms',{method:'POST',body:{roomName:'Arena 3D STAGING '+rosterSize,roomMode:'online',seatCount:rosterSize,seatMoveMode:'instant'}});
+  const d=await json('/api/rooms',{method:'POST',body:{roomName:(productionCoreView?'Arena 3D ':'Arena 3D STAGING ')+rosterSize,roomMode:'online',seatCount:rosterSize,seatMoveMode:'instant'}});
   gmToken=d.gmToken;$('gm-key').value=gmToken;await attach(d.roomCode);
 });
 $('connect').onclick=()=>guarded('Kết nối phòng',()=>{gmToken='';enableGm();return attach($('room').value)});
@@ -289,13 +308,13 @@ $('gm-restore').onclick=()=>guarded('Xác thực quyền GM Staging',async()=>{
   if(!code)throw Error('Hãy chọn phòng trước');
   const candidate=String($('gm-key').value||'').trim();
   if(!candidate)throw Error('Chưa nhập mã GM Staging');
-  const resp=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gm-visuals',{
+  const resp=await fetch(privateGmUrl(code),{
     headers:{authorization:'Bearer '+candidate},cache:'no-store'
   });
   if(!resp.ok)throw Error('Mã GM không hợp lệ ('+resp.status+')');
   gmToken=candidate;enableGm();$('gm-key').value='';
   await refreshPrivateGmEffects();
-  notice('Đã xác thực GM với Core staging; mã chỉ giữ trong bộ nhớ tab.');
+  notice('Đã xác thực GM với Core phòng; mã chỉ giữ trong bộ nhớ tab.');
 });
 $('gm-copy').onclick=()=>guarded('Sao chép mã GM Staging',async()=>{
   if(!gmToken)throw Error('Bạn chưa là GM');
