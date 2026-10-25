@@ -89,15 +89,19 @@ test('Device catalog scan discovers custom Artifact actions without inventing bu
   }finally{ctx.localStorage.getItem=original}
 });
 
-test('Approved PNG files match acceptance package SHA-256 reference',()=>{
- const expected={
-  '01_soi_xet':'e635abab365f3ae5850fd211ced98554314fb4683f3a38281a452bee955e0bc1',
-  '10_danh_dau':'4de56cbca9ad18ef0d81444d57ec3c3a7bc5b067aca3b57f714236051a46e035',
-  '11_dich_trai':'55fccef70b48baf23c99bf4ce2d580b633b048acf61c5a1586c76e4d778ad1c0',
-  '19_hiep_si':'de680456f00037f0cce571d058d7704bb8f43888864e465e904732edc8ec773c'
- };
- for(const [name,digest] of Object.entries(expected)){
-  const src=fs.readFileSync(new URL('../assets/action-icons/sea-v1/'+name+'.png',import.meta.url));
-  assert.equal(crypto.createHash('sha256').update(src).digest('hex'),digest,name);
+test('All 19 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
+ const manifest=JSON.parse(fs.readFileSync(new URL('../assets/action-icons/sea-v1/manifest.json',import.meta.url),'utf8'));
+ assert.equal(manifest.count,19);
+ assert.equal(manifest.icons.length,19);
+ assert.equal(new Set(manifest.icons.map(x=>x.id)).size,19);
+ for(const record of manifest.icons){
+  const icon=api.get().find(x=>x.id===record.id);
+  assert.ok(icon,record.id+' present');
+  assert.equal(icon.assetId,record.png);
+  assert.deepEqual(Array.from(icon.actions),record.actions);
+  for(const [name,expected] of [[record.png,record.sha256_png],[record.svg,record.sha256_svg]]){
+   const file=fs.readFileSync(new URL('../assets/action-icons/sea-v1/'+name,import.meta.url));
+   assert.equal(crypto.createHash('sha256').update(file).digest('hex'),expected,name);
+  }
  }
 });
