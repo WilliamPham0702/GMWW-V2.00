@@ -756,8 +756,73 @@ function isRanking3221Scope(changes){
   after('server-game/current/GMWW.html').includes('<title>GMWW V3.221</title>');
 }
 
+// Runtime V3.222 (owner-approved): only the Home "VÀO LÀNG" link opens an
+// isolated Arena3D STAGING iframe. This scope is fail-closed against any
+// unexpected gameplay/Core/Player/IPA mutation or version mismatch.
+function isArenaHome3222Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const allowed=new Set([
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/src/00-core-and-library.part','src/index.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  'tests/arena3d-home-portal-v3222.test.mjs',
+  'docs/releases/GMWW-V3.222-arena3d-home-portal-20261025.md'
+ ]);
+ const needed=[
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/src/00-core-and-library.part','src/index.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'tests/arena3d-home-portal-v3222.test.mjs',
+  'docs/releases/GMWW-V3.222-arena3d-home-portal-20261025.md'
+ ];
+ const map=new Map(changes.map(x=>[x.path,x]));
+ if(changes.length!==map.size||needed.some(x=>!map.has(x))||
+    changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+ function only(p,from,to){
+   const x=map.get(p);
+   return x?.status==='M'&&typeof x.before==='string'&&
+     x.before.includes(from)&&x.after===x.before.replace(from,to);
+ }
+ if(!only('server-game/src/00-core-and-library.part',"const VERSION='3.221';","const VERSION='3.222';"))return false;
+ if(!only('server-game/current/app.js',"const VERSION='3.221';","const VERSION='3.222';"))return false;
+ if(!only('src/index.js','VERSION="V3.221"','VERSION="V3.222"'))return false;
+ if(!only('package.json','"version": "3.221.0"','"version": "3.222.0"'))return false;
+ const lock=map.get('package-lock.json');
+ if(lock?.status!=='M'||lock.before.split('"version": "3.221.0"').length!==3||
+    lock.after!==lock.before.replaceAll('"version": "3.221.0"','"version": "3.222.0"'))return false;
+ const html=map.get('server-game/current/GMWW.html');
+ if(html?.status!=='M'||!html.after.includes("gmwwArena3dQaFrame")||
+    !html.after.includes('gmww-arena3d-stage14-staging.williampham0702.workers.dev'))return false;
+ const stripped=html.after
+  .replace(/<!-- Arena 3D GĐ32[\s\S]*?<\/script>\n/,'')
+  .replace('<title>GMWW V3.222</title>','<title>GMWW V3.221</title>')
+  .replace('Vào Làng và thử nghiệm Arena 3D STAGING','Vào Làng và mở Trang Chơi')
+  .replace('<small>THỬ NGHIỆM ARENA 3D</small>','<small>Tạo phòng · Chơi ngay</small>')
+  .replace('app.js?v=3.222-arena3d-qa-home-portal',
+    'app.js?v=3.221-top3-glass-compact-room-village-gallows-anchor-scene-align-1-gp2');
+ if(stripped!==html.before)return false;
+ const prep=map.get('.github/scripts/prepare-update-channel.mjs');
+ if(prep?.status!=='M'||!prep.after.includes('V3.222: Trang Chủ')||
+    prep.after.replace(/"V3\.222:[^"\n]*",(?="V3\.219:)/,'')!==prep.before)return false;
+ const test=map.get('tests/arena3d-home-portal-v3222.test.mjs');
+ if(test?.status!=='A'||!test.after.includes('iframe')||!test.after.includes('Chơi 2D'))return false;
+ if(map.get('docs/releases/GMWW-V3.222-arena3d-home-portal-20261025.md')?.status!=='A')return false;
+ // CI-related workflow edits are allowed solely for this same verified V3.222
+ // release. They never authorize any change to production gameplay.
+ for(const p of ['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml']){
+   const row=map.get(p);
+   if(row&&(!row.after?.includes('3.222')||row.status!=='M'))return false;
+ }
+ return true;
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isArenaHome3222Scope(changes))return 'arena-home-3222';
   if(isRanking3221Scope(changes))return 'ranking-3221';
   if(isHomeSea3219Scope(changes))return 'home-sea-3219';
   if(isAudio3217Scope(changes))return 'audio-fix-3217';
@@ -809,6 +874,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isArenaHome3222Scope(changes))return{mode:'arena-home-3222',reason:'V3.222 cổng VÀO LÀNG → Arena 3D QA STAGING; OTA chốt an toàn'};
       if(isRanking3221Scope(changes))return{mode:'ranking-3221',reason:'GMWW V3.221 xếp hạng ưu tiên nhiều ván'};
       if(isHomeSea3219Scope(changes))return{mode:'home-sea-3219',reason:'V3.219 Top 3 bỏ bục, Character thật, kính mờ, version OTA'};
       if(isAudio3217Scope(changes))return{mode:'audio-fix-3217',reason:'V3.217 audio fixes only, preserve Top 3 Sea V3.216'};
