@@ -20,6 +20,7 @@ on:
       - "tests/arena3d-stage33-*"
       - "tests/arena3d-casting.test.mjs"
       - "tests/arena3d-player-public.test.mjs"
+      - "tests/arena3d-player-browser.mjs"
       - "tests/arena3d-stage13-*"
       - ".github/workflows/arena3d-stage14-16-research.yml"
   pull_request:
@@ -78,6 +79,7 @@ jobs:
           node --check tests/arena3d-casting.test.mjs
           node --check assets/village/arena-3d/player.mjs
           node --check tests/arena3d-player-public.test.mjs
+          node --check tests/arena3d-player-browser.mjs
           node --check tests/arena3d-stage29-31.test.mjs
           node --check tests/arena3d-stage30-crowd-core-e2e.mjs
       - name: "Kiểm thử GĐ14–16 và chuyển động phép"
@@ -151,6 +153,8 @@ jobs:
           npx playwright install --with-deps webkit
       - name: "Kiểm thử STAGING GĐ14–16: 6–30 Character, nghi lễ, Chrome và WebKit"
         run: node tests/arena3d-stage14-browser.mjs
+      - name: "Player 3D: cảnh công khai, WebKit iPhone và lá vai Core"
+        run: node tests/arena3d-player-browser.mjs
       - name: "GĐ13: hai client thực, phân quyền Core, GM làm phép, reconnect và bỏ phiếu"
         run: node tests/arena3d-stage16-standard-core-e2e.mjs
       - name: "GĐ16: Core thật — Vai Trò tự tạo và Artifact 3D"
