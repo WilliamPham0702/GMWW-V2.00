@@ -543,19 +543,34 @@ function gmwwHomeRenderTop3(rows){
     if(!member)continue;
     const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
     const button=document.createElement('button');
-    button.type='button';button.className='gmww-home-top3-card-v377';
+    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211';
     button.dataset.rank=String(place);
     button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
     const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
     crown.textContent=place===1?'♛':place===2?'✦':'✧';crown.setAttribute('aria-hidden','true');
     const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
-    const avatar=document.createElement('span');avatar.className='gmww-home-top3-avatar-v377';
+    // V3.211: Character thật, phóng lớn trên bục 2.5D. Không dùng hình preview tĩnh.
+    const stage=document.createElement('span');stage.className='gmww-home-podium-stage-v3211';stage.setAttribute('aria-hidden','true');
+    const glow=document.createElement('span');glow.className='gmww-home-podium-glow-v3211';
+    const character=document.createElement('span');character.className='gmww-home-podium-character-v3211';
+    const rim=document.createElement('span');rim.className='gmww-home-podium-rim-v3211';
     const avatarId=String(member.gameCharacterId||member.avatarId||'');
     if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
-      const image=document.createElement('img');image.src=memberAvatarUrl(avatarId);image.alt='';image.loading='lazy';
-      image.onerror=()=>{image.remove();avatar.textContent='✦'};
-      avatar.append(image);
-    }else avatar.textContent='✦';
+      const image=document.createElement('img');
+      const fullBodyId=avatarId==='character-41'?'character-39':avatarId==='character-42'?'character-40':avatarId;
+      const fullBody=/^character-(?:0[1-9]|[1-3][0-9]|40)$/.test(fullBodyId);
+      // Dùng ảnh Character nguyên thân (không phải ảnh portrait cắt). Có dự phòng nếu asset thiếu.
+      image.src=fullBody?GMWW_SERVER_BASE+'/characters/gmww40/originals/'+fullBodyId+'.webp?rev=c40-1':memberAvatarUrl(avatarId);
+      image.alt='';image.loading='lazy';image.decoding='async';
+      image.onerror=()=>{
+        if(fullBody&&image.dataset.portraitFallback!=='1'){
+          image.dataset.portraitFallback='1';image.src=memberAvatarUrl(avatarId);return;
+        }
+        image.remove();character.textContent='✦';
+      };
+      character.append(image);
+    }else character.textContent='✦';
+    stage.append(glow,character,rim);
     const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';
     name.textContent=String(member.displayName||member.loginId||'Thành viên');
     const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';
@@ -565,7 +580,7 @@ function gmwwHomeRenderTop3(rows){
     const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,rate))+'%';meter.append(fill);
     const record=document.createElement('small');record.className='gmww-home-top3-record-v377';
     record.textContent=stats.w+' thắng / '+stats.games+' ván';
-    button.append(crown,badge,avatar,name,percent,percentLabel,meter,record);
+    button.append(stage,crown,badge,name,percent,percentLabel,meter,record);
     button.addEventListener('click',()=>gmwwHomeOpenMemberRanking());
     target.append(button);
   }
