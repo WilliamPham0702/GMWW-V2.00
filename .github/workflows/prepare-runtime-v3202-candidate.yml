@@ -1,4 +1,4 @@
-name: GMWW V3.225 OTA Candidate SHA-256 (Active GM Action Icons)
+name: GMWW V3.226 OTA Candidate SHA-256 (Active GM Action Icons)
 on:
   pull_request:
     branches: [main]
@@ -68,12 +68,12 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-action-icons-in-battle.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
-      - name: Kiểm chứng SHA-256 từng file và manifest V3.225
-        run: node .github/scripts/verify-prepared-runtime.mjs 3.225
-      - name: Kiểm tra V3.225 lớn hơn bản đang chạy, chặn trùng phiên bản
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.226
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.226
+      - name: Kiểm tra V3.226 lớn hơn bản đang chạy, chặn trùng phiên bản
         shell: bash
         run: |
           set -euo pipefail
@@ -99,11 +99,11 @@ jobs:
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V3.225-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          name: GMWW-V3.226-OTA-CANDIDATE-SHA256-NO-DEPLOY
           path: |
-            out/gmww-runtime-v3.225-sha256.json
+            out/gmww-runtime-v3.226-sha256.json
             assets/updates/latest.json
-            assets/updates/runtime/V3.225/manifest.json
-            assets/updates/runtime/V3.225/manifest-runtime-3225.json
+            assets/updates/runtime/V3.226/manifest.json
+            assets/updates/runtime/V3.226/manifest-runtime-3226.json
           if-no-files-found: error
           retention-days: 14
