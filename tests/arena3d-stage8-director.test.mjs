@@ -47,3 +47,12 @@ test('GĐ8 public summary and Core-only integration without secret exposure',()=
  assert.match(src,/gmwwStage8=STAGE8_VERSION/);
  assert.match(src,/gmToken\)void refreshPrivateGmEffects/);
 });
+
+test('GĐ8 multi-target renderer uses separate beams and disposes shared resources',()=>{
+ const src=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+ assert.match(src,/const spellBeams=Array\.from\(\{length:5\}/);
+ assert.match(src,/for\(const \[index,targetId\] of activeBeam\.targetIds\.entries\(\)\)/);
+ assert.match(src,/get visibleBeamCount\(\)/);
+ assert.match(src,/for\(const beam of spellBeams\)beam\.material\.dispose\(\)/);
+ assert.doesNotMatch(src,/targetId:target\.id,start:spellStart/);
+});
