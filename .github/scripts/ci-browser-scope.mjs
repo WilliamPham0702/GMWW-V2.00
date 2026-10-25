@@ -450,6 +450,18 @@ function detect(){
     }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
     return{mode:'full',reason:'Main contains changes outside the verified scoped lists'};
   }
+  // Owner-initiated V3.210 release on main after approved PR #483 merged.
+  // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'){
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const release='docs/releases/GMWW-V3.210-icons-runtime-20261025.md';
+    const manifest='assets/action-icons/sea-v1/manifest.json';
+    if(pkg.version==='3.210.0'&&fs.existsSync(release)&&fs.existsSync(manifest)){
+      const icons=JSON.parse(fs.readFileSync(manifest,'utf8'));
+      if(icons.count===19&&Array.isArray(icons.icons)&&icons.icons.length===19)
+        return{mode:'icon-runtime-3210',reason:'Owner-dispatched V3.210 only, SHA-256 and icon scope verified'};
+    }
+  }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};
