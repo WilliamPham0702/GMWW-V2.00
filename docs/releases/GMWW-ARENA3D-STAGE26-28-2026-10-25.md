@@ -30,4 +30,14 @@
 - Không thay đổi Durable Objects Production, main, Worker Prod hoặc cấu hình IPA.
 
 ## Trạng thái phát hành ứng viên
-**Đang hoàn thiện kiểm thử thực tế.** Điền CI/Worker version và kết luận sau khi GitHub Actions hoàn thành; không tự đánh dấu PASS trước.
+Ứng viên **GĐ26–28 STAGING kỹ thuật PASS**, đã được xác minh CI/Chrome/WebKit/Core thật. **Nghiệm thu iPhone vật lý cho lô này chưa thực hiện**, chỉ mở một đợt nghiệm thu cuối sau khi hoàn tất cả lô.
+
+## Chốt kỹ thuật trên STAGING thực tế (25/10/2026)
+- **GitHub Actions SUCCESS**: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40175082772; build từ commit `9b2671d89eca6ea84b13fbb64126aaf9f08caebf`.
+- **Cloudflare Worker STAGING version**: `6e729ed6-9f3e-4e59-be59-563a144ff216`. Đây là Worker tách riêng Production.
+- **GĐ26: PASS** toàn bộ danh mục 28 vai dựng sẵn/26 mã hành động Core với VFX signatures riêng; thử với vai và Artifact tùy chỉnh theo quyền Core, deny viewer. 26 chữ ký là biến thể dựng trên 9 bộ hành vi/motif, **không có nghĩa 26 mô hình/clip hoạt ảnh tạo hình hoàn toàn độc lập**. Với danh mục mở rộng ngoài Core snapshot, cần cấu hình và xác nhận Core thì mới áp dụng được.
+- **GĐ27: PASS** 2 client GM/Player trong DO STAGING: tạo phòng, gắn người, khóa ghế, Phát Vai, Player reconnect khi Phát Vai, vào trận và đêm, GM hành động Bảo Vệ thật, Player reconnect lần nữa, qua ngày, đề cử/bỏ phiếu, kết thúc ván và công khai lobby. Viewer bị từ chối gm-visuals HTTP **401** kể cả sau reconnect. Test độc lập custom role Shield 2 mục tiêu và Artifact Heal 1 mục tiêu **PASS**.
+- **GĐ28: PASS** browser Chrome/WebKit headless giả lập iPhone, 6/12/20/30 Character với 46/46/42/37 draw calls; phép thử 4 VFX, thay đổi đội hình, telemetry ẩn danh, không có uncaught browser error.
+- **Không thay đổi gameplay/Core Production, game 2D, Player Web 2D, IPA, Runtime OTA hoặc dữ liệu.** PR #487 vẫn Draft, không merge.
+- **Ranh giới nghiệm thu:** đây là **hoàn thành kỹ thuật lô GĐ26–28 và ứng viên STAGING**, chưa phải người dùng đã nghiệm thu ứng viên GĐ28 trên iPhone vật lý. Các chỉ số FPS/pin/nhiệt iPhone vật lý và kiểm tra thủ công đủ 26 hành động/Artifact tùy chỉnh khác nhau chưa được đo trực tiếp riêng lẻ.
+- **Rollback STAGING:** version đã nghiệm thu trước của GĐ23–25 `755963dd-47f3-4c0a-bce7-65c0a21a2122`; không có thao tác rollback nào trên Production.
