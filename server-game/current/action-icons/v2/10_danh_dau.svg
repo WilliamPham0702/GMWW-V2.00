@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 800" width="1024" height="1024">
+<defs>
+<radialGradient id="sea" cx="42%" cy="37%" r="72%"><stop stop-color="#187da2"/><stop offset=".52" stop-color="#064c81"/><stop offset="1" stop-color="#031d43"/></radialGradient>
+<radialGradient id="aqua"><stop stop-color="#8cfffb"/><stop offset=".57" stop-color="#399bd9"/><stop offset="1" stop-color="#103e80"/></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a0641e"/><stop offset=".2" stop-color="#fbe4a3"/><stop offset=".42" stop-color="#ffcc65"/><stop offset=".66" stop-color="#9d5e21"/><stop offset=".82" stop-color="#ffdc91"/><stop offset="1" stop-color="#bc842f"/></linearGradient>
+<radialGradient id="iris"><stop stop-color="#a6faff"/><stop offset=".35" stop-color="#51dfff"/><stop offset=".7" stop-color="#2770e4"/><stop offset="1" stop-color="#502299"/></radialGradient>
+<radialGradient id="lens"><stop stop-color="#a0ffff"/><stop offset=".3" stop-color="#368eba"/><stop offset=".78" stop-color="#082c5d"/><stop offset="1" stop-color="#04152f"/></radialGradient>
+<linearGradient id="shield" x1="0" x2="1"><stop stop-color="#063669"/><stop offset=".5" stop-color="#1d97c2"/><stop offset="1" stop-color="#073a79"/></linearGradient>
+<linearGradient id="heal"><stop stop-color="#b8ffc9"/><stop offset=".4" stop-color="#2ce5ac"/><stop offset="1" stop-color="#00726f"/></linearGradient>
+<radialGradient id="poison"><stop stop-color="#e793f9"/><stop offset=".65" stop-color="#943dba"/><stop offset="1" stop-color="#33116c"/></radialGradient>
+<linearGradient id="ice" x1="0" x2="1"><stop stop-color="#e7fcff"/><stop offset=".5" stop-color="#44c8f3"/><stop offset="1" stop-color="#2769b9"/></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/><feOffset dx="0" dy="6" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<!-- Standalone action symbol, no plaque/backdrop/badge -->
+
+
+ <g filter="url(#shadow)" fill="none" stroke-linejoin="round">
+ <circle cx="400" cy="397" r="179" stroke="#621e40" stroke-width="40"/>
+ <circle cx="400" cy="397" r="173" stroke="#ffb063" stroke-width="17"/>
+ <circle cx="400" cy="397" r="123" stroke="#fa5469" stroke-width="24"/>
+ <circle cx="400" cy="397" r="58" fill="#8b1637" stroke="#ffd3af" stroke-width="12"/>
+ <path d="M400 175 V310 M400 484 V626 M178 397 H314 M485 397 H626" stroke="#ff6f5e" stroke-width="29" stroke-linecap="round"/>
+ <path d="M400 187 V310 M400 482 V608 M188 397 H310 M487 397 H608" stroke="#ffdfb2" stroke-width="10" stroke-linecap="round"/>
+ <path d="M327 523 479 297 519 325 359 545Z" fill="url(#gold)" stroke="#65252c" stroke-width="14"/>
+ <path d="M456 315 502 335 524 276Z" fill="#fff3c5" stroke="#ffac63" stroke-width="8" />
+ <path d="M320 541 286 577 314 584 361 537Z" fill="#9f5b35" stroke="#ffd38a" stroke-width="8"/>
+ </g>
+
+
+</svg>
