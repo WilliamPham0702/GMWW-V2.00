@@ -53,7 +53,7 @@ test('GĐ21: report only allowlisted metrics; never includes GM or player identi
  assert.match(s,/document\.addEventListener\('visibilitychange'/);
  assert.match(s,/paintScheduler\.shouldPaint\(now,frameHz,\{paused:webglLost\}\)/);
  assert.match(s,/mobileQa\.sample\(\{at:now,paintCpuMs:/);
- assert.match(s,/await navigator\.clipboard\.writeText\(mobileQa\.report\(\)\)/);
+ assert.match(s,/await navigator\.clipboard\.writeText\(JSON\.stringify\(report,null,2\)\)/);
  assert.match(html,/id="arena-mobile-diagnostics"/);
  assert.match(html,/id="arena-diag-refresh"/);
  assert.match(html,/id="arena-diag-copy"/);
