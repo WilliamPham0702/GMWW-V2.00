@@ -22,7 +22,7 @@ const api=ctx.window.GMWWActionIconLibrary;
 test('GM Icon library linked to GM page and parseable without gameplay initialization',()=>{
   assert.match(html,/<script src="action-icon-library\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(api);
-  assert.equal(api.get().length,19);
+  assert.equal(api.get().length,29);
 });
 test('Every built-in active role action is mapped to an icon',()=>{
   const chunk=core.slice(core.indexOf('  actions:{'),core.indexOf('  effects:['));
@@ -40,10 +40,10 @@ test('Multi-target, directional and card selection actions are not forced to cha
   assert.equal(api.resolve('action_seer').target,'character');
   assert.equal(api.resolve('action_wolf_bite').target,'character');
 });
-test('Approved icons use actual 19 individual PNG assets, not demo SVG or emoji',()=>{
+test('Approved icons use actual 29 individual PNG assets, not demo SVG or emoji',()=>{
  const icons=api.get();
- assert.equal(icons.length,19);
- assert.equal(new Set(icons.map(x=>x.assetId)).size,19);
+ assert.equal(icons.length,29);
+ assert.equal(new Set(icons.map(x=>x.assetId)).size,29);
  for(const icon of icons){
   const url=api.image(icon);
   assert.match(url,/^action-icons\/sea-v1\/[0-9]{2}_[a-z_]+\.png$/);
@@ -89,11 +89,11 @@ test('Device catalog scan discovers custom Artifact actions without inventing bu
   }finally{ctx.localStorage.getItem=original}
 });
 
-test('All 19 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
+test('All 29 files match the approved SHA-256 manifest, including editable SVG originals',()=>{
  const manifest=JSON.parse(fs.readFileSync(new URL('../assets/action-icons/sea-v1/manifest.json',import.meta.url),'utf8'));
- assert.equal(manifest.count,19);
- assert.equal(manifest.icons.length,19);
- assert.equal(new Set(manifest.icons.map(x=>x.id)).size,19);
+ assert.equal(manifest.count,29);
+ assert.equal(manifest.icons.length,29);
+ assert.equal(new Set(manifest.icons.map(x=>x.id)).size,29);
  for(const record of manifest.icons){
   const icon=api.get().find(x=>x.id===record.id);
   assert.ok(icon,record.id+' present');
@@ -104,4 +104,38 @@ test('All 19 files match the approved SHA-256 manifest, including editable SVG o
    assert.equal(crypto.createHash('sha256').update(file).digest('hex'),expected,name);
   }
  }
+});
+
+test('Ten new designs start unassigned; unknown device IDs are never invented',()=>{
+ const wave=api.get().filter(x=>/^2[0-9]_/.test(x.assetId));
+ assert.equal(wave.length,10);
+ assert.equal(wave.every(x=>x.actions.length===0),true);
+});
+test('Exact local-name match auto-assigns only the matching Artifact action',()=>{
+ const original=ctx.localStorage.getItem,originalSet=ctx.localStorage.setItem;
+ let written=null;
+ ctx.localStorage.getItem=key=>key==='GMWW_V258_STATE'?JSON.stringify({
+ cards:[],artifacts:[{name:'Artifact Thử',functions:[{actionId:'artifact_silence'},{actionId:'artifact_unknown'}]}],
+ actions:{role:[],artifacts:[{id:'artifact_silence',name:'Cấm bỏ phiếu'},{id:'artifact_unknown',name:'Không rõ chức năng'}]}
+ }):null;
+ ctx.localStorage.setItem=(key,value)=>{written={key,value}};
+ try{
+  assert.equal(api.autoMap(),1);
+  assert.ok(api.resolve('artifact_silence'));
+  assert.equal(api.resolve('artifact_silence').id,'cam-vote');
+  assert.equal(api.resolve('artifact_unknown'),null);
+  assert.ok(written?.key?.endsWith('_V3'));
+ }finally{ctx.localStorage.getItem=original;ctx.localStorage.setItem=originalSet}
+});
+test('Old V2 custom icon mappings survive migration and 10 approved new IDs appear',()=>{
+ const old=[{id:'soi-xet',name:'Soi đã sửa',target:'character',actions:['action_seer'],assetId:'01_soi_xet.png',image:''},
+ {id:'icon-custom-1',name:'Icon tuỳ biến',shape:'spark',target:'character',actions:['artifact_custom']}];
+ const next={window:{},document:{readyState:'loading',addEventListener(){}},
+ localStorage:{getItem(key){return key==='GMWW_ACTION_ICON_LIBRARY_V2'?JSON.stringify(old):null}},alert(){}};
+ vm.createContext(next);new vm.Script(script).runInContext(next);
+ const results=next.window.GMWWActionIconLibrary.get();
+ assert.equal(results.length,12);
+ assert.equal(results.find(x=>x.id==='soi-xet').name,'Soi đã sửa');
+ assert.ok(results.some(x=>x.id==='icon-custom-1'));
+ assert.equal(results.filter(x=>/^2[0-9]_/.test(x.assetId)).length,10);
 });
