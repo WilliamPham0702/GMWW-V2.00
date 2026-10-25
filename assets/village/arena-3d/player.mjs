@@ -136,7 +136,7 @@ requestAnimationFrame(frame);
 if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang từ liên kết phòng của GM, hoặc thêm ?room=MÃPHÒNG.');}
 else{
   message('Đang kết nối Core của phòng '+code+'…');
-  connectStagingRoom({roomCode:code,onFrame:drawFrame,
+  connectStagingRoom({roomCode:code,loadPublicGallows:false,onFrame:drawFrame,
     onGallows:ballot=>{if(ballot?.stage)message('Lên Giàn: '+ballot.stage+' · xem lá vai để đề cử/bỏ phiếu.');},
     onStatus:s=>{connection=s;if(s==='reconnecting')message('Mất kết nối, đang tự đồng bộ lại…');},
     onError:e=>message('Chưa đồng bộ được phòng: '+String(e?.message||e))});
