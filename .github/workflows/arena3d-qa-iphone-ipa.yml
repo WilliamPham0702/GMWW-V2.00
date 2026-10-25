@@ -1,5 +1,8 @@
 name: Arena 3D GĐ32 - IPA nghiệm thu iPhone (STAGING ONLY)
 on:
+  push:
+    branches: ["feature/arena3d-stage14-16-dynamic-artifacts-audio"]
+    paths: [".github/workflows/arena3d-qa-iphone-ipa.yml"]
   workflow_dispatch:
     inputs:
       publish_staging_qa:
@@ -18,7 +21,7 @@ concurrency:
 jobs:
   qa-ipa:
     name: 'GĐ32: build IPA QA độc lập + SHA-256 + đưa lên server STAGING'
-    if: github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' && inputs.publish_staging_qa == true
+    if: github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' && (github.event_name == 'push' || inputs.publish_staging_qa == true)
     runs-on: macos-latest
     timeout-minutes: 35
     env:
