@@ -86,9 +86,11 @@ export function createCoastalVillage(THREE,scene){
   const fireLight=new THREE.PointLight('#ffac61',10,6);fireLight.position.set(0,1.05,1.8);root.add(fireLight);
   const sunlight=new THREE.DirectionalLight('#fff5d5',1.8);sunlight.position.set(-8,14,5);root.add(sunlight);
   const ambient=new THREE.AmbientLight('#d3ecff',1.55);root.add(ambient);
-  let night=false,lowPower=false;
+  let night=null,lowPower=false;
   function setNight(next){
-    night=next===true;
+    const desired=next===true;
+    if(night===desired)return; // GĐ18: same public frame must not upload unchanged materials.
+    night=desired;
     sea.color.set(night?'#0a3156':'#30bec9');
     sand.color.set(night?'#998f9c':'#efd19b');
     foam.color.set(night?'#4e91a7':'#b0f7e7');
