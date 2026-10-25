@@ -4589,7 +4589,7 @@ function battleIconDock(actions,phase){
  const eligible=(Array.isArray(actions)?actions:[]).filter(a=>!a.unavailable&&a.actionId)
    .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
  const active=playSceneState.step==='battle'&&show&&eligible.length>0&&!battleState.busy&&!battleState.syncPending;
- dock.hidden=!active;if(!active){dock.replaceChildren();return}
+ dock.hidden=!active;if(!active){dock.replaceChildren();delete dock.dataset.sig;return}
  // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
  const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
  if(Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
@@ -4599,7 +4599,7 @@ function battleIconDock(actions,phase){
  const rect=fire?.getBoundingClientRect();
  if(rect){dock.style.left=(rect.left+rect.width/2)+'px';dock.style.top=Math.min(innerHeight-83,rect.bottom+10)+'px'}
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
+  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
  if(dock.dataset.sig===key)return;dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon})=>
