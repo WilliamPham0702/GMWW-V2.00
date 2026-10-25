@@ -26,7 +26,7 @@ export function matchConfiguredAction(card,actionId){
  const fn=entries.find(x=>x&&checked(String(x.actionId||x.id||''))===id);
  return fn||null;
 }
-export function familyForConfirmedAction({actionId='',type='',card=null,effectId=''}={}){
+export function familyForConfirmedAction({actionId='',type='',card=null,effectId='',stagingFamily=''}={}){
  const id=checked(actionId);
  if(!id)return null;
  const canonical=coreActionFamily(id);
@@ -34,7 +34,8 @@ export function familyForConfirmedAction({actionId='',type='',card=null,effectId
  const fn=matchConfiguredAction(card,id);
  if(!fn)return null; // Do not guess unconfigured/custom role actions from request text.
  const requested=String(fn.arenaVfxFamily||fn.vfxFamily||'');
- const explicit=ARENA_FAMILIES.includes(requested)?requested:null;
+ const explicit=ARENA_FAMILIES.includes(stagingFamily)?stagingFamily:
+   ARENA_FAMILIES.includes(requested)?requested:null;
  const effects=[...(Array.isArray(fn.effectIds)?fn.effectIds:[]),effectId].filter(Boolean);
  const byEffect=effects.map(x=>EFFECT_FAMILY[String(x)]).find(Boolean);
  const family=explicit||byEffect||TYPE_FAMILY[String(type)]||'scout';
@@ -60,4 +61,30 @@ export function verifiedPrivateCard({actorId='',roleId='',artifactId='',roles=[]
  const row=roles.find(x=>x&&String(x.loginId||actor)===actor&&String(x.roleId)===rid&&
    (!x.matchId||String(x.matchId)===String(matchId)));
  return row?.roleCard||null;
+}
+
+/**
+ * Snapshot only the visual family from the GM's Core-confirmed assignment
+ * BEFORE the Core strips visual-only custom Artifact metadata. The stored
+ * artifact action must still be present on the DELIVERED private card.
+ * Stage-only Durable Object storage, scoped by match, never broadcast.
+ */
+export function artifactVisualSnapshot(rows,ownedArtifacts,{matchId=''}={}){
+ const out=Object.create(null);
+ for(const row of (Array.isArray(rows)?rows:[]).slice(0,30)){
+  const loginId=checked(String(row?.loginId||'')),raw=row?.artifact||
+   (row?.artifactId?{artifactId:row.artifactId,artifactCard:row.artifactCard}:null);
+  const artifactId=checked(String(raw?.artifactId||raw?.id||''));
+  if(!loginId||!artifactId)continue;
+  const owned=ownedArtifacts?.[loginId],card=owned?.artifactCard;
+  if(!card||String(owned.artifactId)!==artifactId||String(owned.matchId)!==String(matchId))continue;
+  const input=raw?.artifactCard||{},incoming=[...(input.functions||[]),...(input.actions||[])];
+  for(const fn of incoming.slice(0,40)){
+   const id=checked(String(fn?.actionId||fn?.id||''));
+   if(!id||!matchConfiguredAction(card,id))continue;
+   const visual=familyForConfirmedAction({actionId:id,card:{functions:[fn]},type:'effect_notice'});
+   if(visual)out[loginId+':'+artifactId+':'+id]=visual.family;
+  }
+ }
+ return out;
 }
