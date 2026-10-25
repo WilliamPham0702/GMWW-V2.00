@@ -8,6 +8,14 @@ const COLORS=Object.freeze({
   shield:'#70f2ec',inspect:'#cab9ff',heal:'#74f1b6',attack:'#fd9ac7',vote:'#ffdfa0'
 });
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+// Decorative and bounded variation per Core-confirmed action.
+// Keep all hues in a marine cyan/blue/lavender palette; never imply gameplay results.
+export function spellActionAccent(signature){
+  if(!signature||!Number.isFinite(signature.accentHue))return null;
+  const phase=((Math.floor(signature.accentHue)%360)+360)%360/360;
+  const streaks=Number.isFinite(signature.streakCount)?Math.round(signature.streakCount):5;
+  return Object.freeze({hue:0.47+phase*.18,pearls:clamp(5+streaks,5,12)});
+}
 export function spellAppearance(kind){
   const art=ritualArt(kind);if(!art)return null;
   return {kind,color:art.color,motif:art.motif,
@@ -38,7 +46,7 @@ export function createArenaSpellVfx(THREE,root){
   pearls.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   pearls.name='arena-spell-pearls';group.add(pearls);
   const matrix=new THREE.Matrix4(),quaternion=new THREE.Quaternion(),
-    scale=new THREE.Vector3(),position=new THREE.Vector3(),color=new THREE.Color();
+    scale=new THREE.Vector3(),position=new THREE.Vector3(),color=new THREE.Color(),accentColor=new THREE.Color();
   let active=false,reducedMotion=false,lowPower=false,kind=null;
   function setReducedMotion(value){reducedMotion=value===true}
   function setLowPower(value){lowPower=value===true}
@@ -60,6 +68,8 @@ export function createArenaSpellVfx(THREE,root){
     const ritual=ritualFrame(type,now,{start,end,reducedMotion});
     const pulse=ritual.pulse;
     color.set(ritual.color);
+    const accent=spellActionAccent(signature);
+    if(accent){accentColor.setHSL(accent.hue,.72,.58);color.lerp(accentColor,.28);}
     for(const [i,ring] of rings.entries()){
       ring.visible=true;ring.material.color.copy(color);
       ring.material.opacity=(reducedMotion?.48:.68)*Math.min(1,remaining*5);
@@ -71,7 +81,7 @@ export function createArenaSpellVfx(THREE,root){
     glow.visible=true;glow.position.set(to.x,to.y,to.z);
     glow.scale.setScalar(ritual.glowScale*(signature?.impactScale||1)*Math.min(1,remaining*4));
     glow.material.color.copy(color);glow.material.opacity=.53*remaining;
-    const count=reducedMotion?4:lowPower?7:maxPearls;
+    const count=reducedMotion?4:lowPower?7:(accent?accent.pearls:maxPearls);
     pearls.count=count;pearls.material.color.copy(color);
     pearls.material.opacity=reducedMotion?.55:.85*remaining;
     for(let i=0;i<count;i++){
