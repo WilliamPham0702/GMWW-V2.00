@@ -7270,3 +7270,38 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
  }
  #battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{font-size:9px!important}
 }
+
+
+/* GMWW V3.208: negative EFFECTS are red text; dangerous ACTIONS have a red card. */
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-critical:not(.is-bad-action),
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-critical:not(.is-bad-action){
+  background:transparent!important;border-color:transparent!important;border-left:0!important;
+  color:#ff9d9d!important;padding:5px 9px!important;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-bad-action,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-bad-action{
+  background:rgba(148,38,46,.28)!important;border:1px solid rgba(245,121,135,.60)!important;
+  border-left:3px solid #ff6e82!important;color:#ffd0d3!important;
+}
+.gmww-missing-role-audio{border:1px solid rgba(244,185,92,.36);border-radius:12px;padding:12px;margin:8px 0;
+  color:#f9e4b9;background:rgba(100,67,12,.15);font-size:12px;line-height:1.5}
+.gmww-missing-role-audio p{margin:5px 0 6px;max-height:110px;overflow:auto;overflow-wrap:anywhere}
+.gmww-missing-role-audio small{opacity:.84}
+.audio-name-cut{display:inline-block;max-width:100%;margin-top:5px;padding:4px 8px;border-radius:8px;
+  color:#b9f5ef;background:rgba(18,90,107,.35);border:1px solid rgba(123,215,218,.45);
+  font-size:11px;font-weight:650;touch-action:manipulation}
+.gmww-audio-cut-backdrop{position:fixed;z-index:999999;inset:0;display:flex;align-items:center;
+  justify-content:center;background:rgba(0,15,30,.83);padding:12px;color:#e6fbff}
+.gmww-audio-cut-dialog{width:min(96vw,540px);max-height:89vh;overflow:auto;padding:16px;border-radius:18px;
+  border:1px solid rgba(141,232,233,.46);background:#0d2939;box-shadow:0 16px 44px rgba(0,0,0,.5)}
+.gmww-audio-cut-dialog h3{font-size:15px;margin:0 0 8px;color:#ffe59b}
+.gmww-audio-cut-dialog p{margin:0 0 12px;font-size:12px;line-height:1.5}
+.gmww-audio-cut-dialog canvas{display:block;width:100%;height:95px;border-radius:9px;background:#17475b}
+.gmww-audio-cut-values{display:grid;gap:10px;margin:12px 0}
+.gmww-audio-cut-values label{display:grid;gap:4px;font-size:12px}
+.gmww-audio-cut-values output{font-variant-numeric:tabular-nums;color:#ffe59b}
+.gmww-audio-cut-values input{width:100%;accent-color:#ffe59b}
+.gmww-audio-cut-actions{display:flex;gap:7px;flex-wrap:wrap}
+.gmww-audio-cut-actions button{flex:1 1 128px;min-height:38px;border-radius:10px;
+  border:1px solid rgba(141,232,233,.40);background:#17475b;color:#e6fbff;font-weight:700;font-size:12px}
+.gmww-audio-cut-actions [data-save]{background:#246e61;border-color:#82d9af}
