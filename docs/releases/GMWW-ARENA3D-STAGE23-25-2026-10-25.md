@@ -68,3 +68,9 @@ Bộ đo `gmww.arena.mobile-qa.19-21` được dùng trên bản STAGING GĐ23�
 **Diễn giải đúng:** FPS 19 là trung bình của **240 mẫu gần nhất**, có thể gồm khung idle 12Hz và khung lúc chuyển động mục tiêu 30Hz. `requestedPaintHz=12` chỉ là mục tiêu của khung mới nhất, không phải giới hạn của toàn bộ 240 mẫu. Median 34ms (~29Hz) và P95 87ms (~11Hz) phù hợp với chuỗi mẫu trộn chuyển động và nghỉ; **không xác nhận 30 FPS ổn định khi làm phép**. CPU vẽ P95 chỉ 3ms nhưng đã có khung đỉnh 31ms; điều này chưa chứng minh GPU/pin/nhiệt ổn định.
 
 **Kết luận nghiệm thu từng phạm vi:** ĐẠT về số Character 30, đúng 37 draw calls và không mất WebGL trong phiên đo ngắn trên iPhone thật. **CHƯA NGHIỆM THU** về chuyển động Core/animation cụ thể, FPS lúc đang thi triển phép, pin/nhiệt và độ ổn định phiên kéo dài (mới `minutesObserved=0`, không phải test 30–60 phút). Không tự merge PR hoặc deploy Production từ báo cáo này.
+
+## Nghiệm thu iPhone thực tế — người dùng xác nhận ĐẠT (25/10/2026)
+- Người dùng đã gửi báo cáo iPhone với 30 Character: 37 draw calls, 19 FPS trung bình trên 240 mẫu gần nhất, 0 lần mất WebGL; CI/STAGING đã SUCCESS.
+- Sau khi được hỏi trực tiếp về trải nghiệm 30 Character và các hành động làm phép (độ mượt, hiện tượng giật/nóng), người dùng xác nhận: **“Đạt”**. Ghi nhận **nghiệm thu trải nghiệm iPhone cho trọn lô GĐ23–25: ĐẠT**.
+- Lời xác nhận sử dụng không phải dữ liệu định lượng pin/nhiệt, không chứng minh FPS ổn định 30 khi làm phép, cũng không chứng minh kiểm tra vật lý liên tục 30–60 phút. Các chỉ số ấy vẫn **chưa được đo riêng** và không nên trình bày là có.
+- **Không xem nghiệm thu này là quyền merge/deploy Production.** Tiếp tục giữ PR #487 Draft và nghiên cứu Arena3D trên Worker/DO STAGING riêng; không đụng GMWW 2D, Player Web, Runtime OTA, IPA hay dữ liệu.
