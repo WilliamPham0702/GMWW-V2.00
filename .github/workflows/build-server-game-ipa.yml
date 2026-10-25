@@ -41,7 +41,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   build:
     needs: scope
-    if: needs.scope.outputs.mode != 'dual-renderer'
+    if: needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210'
     runs-on: macos-latest
     steps:
       - name: Checkout
