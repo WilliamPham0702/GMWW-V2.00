@@ -7660,7 +7660,8 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
 }
 
 /* GMWW character action icons: anchors follow the calibrated 🔥 of each scene. */
-.battle-fire-icon-dock{position:fixed;left:50%;top:50%;transform:translateX(-50%);z-index:125;max-width:min(74vw,330px);display:flex;gap:5px;overflow-x:auto;padding:4px 6px;scrollbar-width:thin;touch-action:pan-x;border-radius:17px;background:rgba(4,35,59,.72);border:1px solid rgba(155,238,255,.55);box-shadow:0 4px 16px #04283f8c}
+/* V3.226: dock lives under document.body; it must outrank the immersive village (#start z-index:1000) on iPhone Safari. */
+.battle-fire-icon-dock{position:fixed;left:50%;top:50%;transform:translateX(-50%);z-index:1200;max-width:min(74vw,330px);display:flex;gap:5px;overflow-x:auto;padding:4px 6px;scrollbar-width:thin;touch-action:pan-x;border-radius:17px;background:rgba(4,35,59,.72);border:1px solid rgba(155,238,255,.55);box-shadow:0 4px 16px #04283f8c}
 .battle-fire-icon-dock[hidden]{display:none}
 .battle-fire-icon-dock.is-pending .battle-fire-icon{opacity:.62;cursor:wait}
 .battle-fire-icon-dock.is-pending{pointer-events:none}
