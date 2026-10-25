@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
@@ -80,4 +81,246 @@ test('P0 atomic roster and role recovery changes select focused Chrome/Edge chec
   assert.equal(classifyBrowserScope([modified('src/gmww-player-private-card-patch.js',patcherBefore,
     patcherAfter+'\\nnew unrelated view')]),'full');
   assert.equal(classifyBrowserScope([{status:'A',path:'src/player-web-src/dangerous.js',after:'new',before:null}]),'full');
+});
+
+test('PR475 DEMO + staging chọn đúng kiểm thử liên quan và fail-closed với file lạ',()=>{
+ const changes=[
+  modified('src/gmww-demo-runner.js','old','new'),
+  modified('src/gmww-gallows-rules.js','old','new'),
+  {path:'tests/demo-assassin-gallows-divination.test.mjs',status:'A',after:'test'},
+  modified('src/index.js','old','new'),
+  modified('src/player-web-src/30-rooms-and-realtime.part','old','new'),
+  modified('src/gmww-members-live.js','old','new'),
+  {path:'.github/workflows/deploy-demo-pr475-staging.yml',status:'A',after:'workflow'},
+  {path:'wrangler.demo-pr475-staging.jsonc',status:'A',after:'isolated'},
+  modified('.github/scripts/ci-browser-scope.mjs','old','new')
+ ];
+ assert.equal(classifyBrowserScope(changes),'demo-475');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-player-private-card-patch.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'assets/village/village.css',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+});
+
+test('PR #463 chỉ kiểm thử Lên Giàn; bỏ qua browser card, ghế, Khám Phá và OTA không liên quan',()=>{
+ const c=[
+  {path:'.github/workflows/check-gallows-redesign.yml',status:'M'},
+  {path:'src/gmww-gallows-rules.js',status:'M'},
+  {path:'tests/gallows-panel-60s-controls.test.mjs',status:'A'},
+  modified('src/index.js','old Worker','gallows Worker code'),
+  modified('server-game/current/app.js','old GM','gallows GM panel'),
+  modified('src/player-web-src/30-rooms-and-realtime.part','old','gallows display'),
+  modified('src/gmww-members-live.js','old','gallows state'),
+  modified('.github/scripts/prepare-update-channel.mjs','old','version gate'),
+  {path:'docs/release-notes-gallows-panel-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(c),'gallows');
+ assert.equal(classifyBrowserScope([...c,modified('src/gmww-player-private-card-patch.js','old','new')]),'full');
+ assert.equal(classifyBrowserScope([...c,modified('tests/browser-private-cards.mjs','old','new')]),'full');
+ assert.equal(classifyBrowserScope([...c,{path:'assets/village/village.css',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...c,{path:'src/player-web-src/unrelated.js',status:'A'}]),'full');
+});
+
+test('Đổi riêng quy tắc CI chỉ kiểm tra unit của bộ chọn, không quét toàn bộ Chrome/Seat',()=>{
+ const c=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('.github/workflows/check-player-card-browsers.yml','old','new'),
+  modified('.github/workflows/deploy-production.yml','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new'),
+  {path:'docs/releases/ci-browser-focused-gallows-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(c),'ci-policy');
+ assert.equal(classifyBrowserScope([...c,modified('src/index.js','x','y')]),'full');
+});
+
+test('CI-only merge phải chặn auto-deploy Production',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  assert.match(workflow,/deploy-scope:/);
+  assert.match(workflow,/needs\.deploy-scope\.outputs\.should_deploy == 'true'/);
+  assert.match(workflow,/\.github\/workflows\/deploy-production\.yml/);
+  assert.match(workflow,/CHỈ CI: BỎ QUA DEPLOY PRODUCTION/);
+});
+
+test('Bản vá cổng phát hành V3.203 chỉ chạy CI policy, không kiểm Chrome/Seat',()=>{
+  const c=[
+    modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+    modified('.github/workflows/check-player-card-browsers.yml','old','new'),
+    modified('.github/workflows/deploy-production.yml','old','new'),
+    modified('tests/ci-browser-scope.test.mjs','old','new'),
+    {path:'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md',status:'A'}
+  ];
+  assert.equal(classifyBrowserScope(c),'ci-policy');
+  assert.equal(classifyBrowserScope([...c,modified('server-game/current/app.js','before','after')]),'full');
+});
+
+test('V3.203 manual release only passes with dedicated Gallows CI and matching Worker SHA',()=>{
+  const s=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  for(const required of [
+    'github.event_name == \'workflow_dispatch\'',
+    'git merge-base --is-ancestor d97ff983668a2e92729cf5718015b3250119b5e2 HEAD',
+    'Check Lên Giàn theo đúng phạm vi',
+    'Check Player Web Worker',
+    'r.head_sha===process.env.TESTED_SHA',
+    'steps.gallows_release.outputs.approved',
+    '3.203.0',
+    'verify-ota-version-advance.mjs',
+    'npx wrangler deploy'
+  ])assert.ok(s.includes(required),'Missing release guard: '+required);
+  assert.ok(s.includes('docs/release-notes-gallows-panel-20261024.md'));
+});
+
+test('V3.205 chỉ test Lên Giàn: cờ đỏ Player Web, toolbar iPhone, Ẩn/Hiện người chết',()=>{
+ const changes=[
+  {path:'assets/village/village.mjs',status:'M'},
+  {path:'src/player-web-src/30-rooms-and-realtime.part',status:'M'},
+  {path:'src/gmww-members-live.js',status:'M'},
+  {path:'tests/gallows-pirate-ui-v3205.test.mjs',status:'A'},
+  {path:'server-game/current/GMWW.html',status:'M'},
+  {path:'server-game/current/style.css',status:'M'},
+  {path:'server-game/current/app.js',status:'M'},
+  {path:'server-game/src/00-core-and-library.part',status:'M'},
+  {path:'server-game/src/40-battle-and-timeline.part',status:'M'},
+  {path:'.github/workflows/check-gallows-redesign.yml',status:'M'},
+  {path:'.github/workflows/deploy-production.yml',status:'M'},
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'docs/releases/GMWW-V3.205-gallows-pirate-flag-20261024.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(changes),'gallows');
+ for(const unrelated of ['tests/browser-private-cards.mjs','assets/village/arena-3d/main.mjs','tests/seat-presets-ota-v399.test.mjs']){
+   assert.equal(classifyBrowserScope([...changes,{path:unrelated,status:'M'}]),'full',unrelated);
+ }
+});
+
+
+test('PR475 release CI on main selects focused DEMO checks and fails closed',()=>{
+ const files=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','scope updated'),
+  modified('.github/workflows/check-player-web.yml','old','focused Worker'),
+  modified('.github/workflows/deploy-production.yml','old','same SHA release guard'),
+  modified('tests/ci-browser-scope.test.mjs','old','selector checks'),
+  {path:'docs/releases/GMWW-V3.207-demo475-production-20261025.md',status:'A',after:'# release'}
+ ];
+ assert.equal(classifyBrowserScope(files),'demo-475');
+ assert.equal(classifyBrowserScope([...files,modified('assets/village/village.css','old','changed')]),'full');
+ assert.equal(classifyBrowserScope(files.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+ const wf=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ for(const required of [
+  'demo475_release_3207',
+  '8772337ab95e7561aeba6d63b2ec2337d7bbee94',
+  'docs/releases/GMWW-V3.207-demo475-production-20261025.md',
+  'Check Lên Giàn theo đúng phạm vi',
+  'Check Player Web Worker'
+ ])assert.ok(wf.includes(required),'Missing focused release guard: '+required);
+});
+
+
+test('PR475 manual Gallows workflow dispatched on exact main SHA is scoped and fail-closed',()=>{
+ const changes=[
+  modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+  modified('.github/workflows/deploy-production.yml','before','after'),
+  modified('tests/ci-browser-scope.test.mjs','before','after'),
+  {path:'docs/releases/GMWW-V3.207-demo475-manual-gallows-ci-20261025.md',status:'A',after:'notes'}
+ ];
+ assert.equal(classifyBrowserScope(changes),'demo-475');
+ assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+ assert.equal(classifyBrowserScope([...changes,modified('src/index.js','x','y')]),'full');
+ const wf=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ assert.match(wf,/r\.event==='workflow_dispatch'&&r\.name==='Check Lên Giàn theo đúng phạm vi'/);
+});
+
+
+test('V3.207 final main push CI selector stays scoped for documented verified correction',()=>{
+ const c=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new'),
+  {path:'docs/releases/GMWW-V3.207-demo475-main-ci-final-20261025.md',status:'A',after:'# Corrected main push CI'}
+ ];
+ assert.equal(classifyBrowserScope(c),'demo-475');
+ assert.equal(classifyBrowserScope(c.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...c,modified('src/index.js','before','different runtime')]),'full');
+ const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+ assert.ok(selector.includes('isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)'));
+});
+
+test('AUTO VÁN CI-only selector is isolated; never treats gameplay as CI-only',()=>{
+ const files=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','new'),
+  modified('.github/workflows/check-player-web.yml','old','new'),
+  modified('.github/workflows/deploy-production.yml','old','new'),
+  modified('tests/ci-browser-scope.test.mjs','old','new')
+ ];
+ assert.equal(classifyBrowserScope(files),'auto-van-ci');
+ assert.equal(classifyBrowserScope([...files,modified('src/index.js','before','unknown gameplay')]),'full');
+});
+test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchanged gameplay',()=>{
+ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+ const files=[
+  modified('package.json',read('package.json'),read('package.json').replace('"version": "3.221.0"','"version": "3.222.0"')),
+  modified('package-lock.json',read('package-lock.json'),read('package-lock.json').split('"version": "3.221.0"').join('"version": "3.222.0"')),
+  modified('src/index.js',read('src/index.js'),read('src/index.js').replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
+  modified('server-game/src/00-core-and-library.part',read('server-game/src/00-core-and-library.part'),read('server-game/src/00-core-and-library.part').replace("const VERSION='3.221'","const VERSION='3.222'")),
+  modified('server-game/current/app.js',read('server-game/current/app.js'),read('server-game/current/app.js').replace("const VERSION='3.221'","const VERSION='3.222'")),
+  modified('server-game/current/GMWW.html',read('server-game/current/GMWW.html'),read('server-game/current/GMWW.html').replace('<title>GMWW V3.221</title>','<title>GMWW V3.222</title>')),
+  modified('.github/scripts/prepare-update-channel.mjs',read('.github/scripts/prepare-update-channel.mjs'),read('.github/scripts/prepare-update-channel.mjs').replace('releaseNotes:[','releaseNotes:["V3.222: AUTO VÁN đúng số người, lưu khi xác nhận; rollback V3.221.",')),
+  {path:'docs/releases/GMWW-V3.222-auto-van-20261025.md',status:'A',before:null,after:'AUTO VÁN\nrollback'}
+ ];
+ assert.equal(classifyBrowserScope(files),'auto-van-3222');
+ assert.equal(classifyBrowserScope([...files,modified('src/gmww-gallows-rules.js','x','y')]),'full');
+ const broken=files.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\n// gameplay changed'}:c);
+ assert.equal(classifyBrowserScope(broken),'full');
+});
+
+test('PR501 chỉ thu gọn CI khi chính xác 5 icon, phiên bản giữ nguyên và không có gameplay/Native',()=>{
+  const entries=[
+    modified('assets/village/village.mjs','old flag code',"flag.textContent='🚩'"),
+    modified('server-game/current/GMWW.html','<title>GMWW V3.218</title>','<title>GMWW V3.218</title> 🌈 🏖️ ⛱️ 🐦‍🔥'),
+    modified('server-game/current/app.js',"const VERSION='3.218';","const VERSION='3.218'; gmwwSetupFreeBattleIcons();"),
+    modified('server-game/current/style.css','old CSS','#battleFactionStatsFloat.gmww-free-icon'),
+    modified('server-game/src/30-village-and-setup.part','old UI',"const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'"),
+    modified('server-game/src/40-battle-and-timeline.part','old','new'),
+    {path:'tests/gm-free-floating-shortcuts-20261025.test.mjs',status:'A',after:'tests'},
+    {path:'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',status:'A',after:'webkit'},
+    {path:'.github/workflows/check-gm-free-icons-501.yml',status:'A',after:'CI'},
+    modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+    modified('.github/workflows/check-player-web.yml','before','after'),
+    modified('.github/workflows/build-server-game-ipa.yml','before','after'),
+    modified('.github/workflows/check-gallows-redesign.yml','before','after'),
+    modified('.github/workflows/prepare-runtime-v3202-candidate.yml','before','after'),
+    {path:'docs/acceptance-pr501-iphone-playerweb.md',status:'A',after:'Checklist'}
+  ];
+  assert.equal(classifyBrowserScope(entries),'gm-icons-501');
+  assert.equal(classifyBrowserScope([...entries,modified('src/index.js','old','new')]),'full','Worker logic expands scope');
+  assert.equal(classifyBrowserScope([...entries,modified('server-game/GMWW-Server/GameView.swift','old','new')]),'full','Native changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/gmww-gallows-rules.js',status:'A',after:'change'}]),'full','Gameplay changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,modified('package.json','3.218','3.219')]),'full','Runtime release needs own gate');
+  assert.equal(classifyBrowserScope(entries.map(c=>c.path==='server-game/current/app.js'?
+    {...c,after:"const VERSION='3.219'; gmwwSetupFreeBattleIcons();"}:c)),'full','Any version advance requires release gates');
+  assert.equal(classifyBrowserScope(entries.filter(c=>c.path!=='assets/village/village.mjs')),'full','Missing Player Web flag forces full');
+});
+
+
+test('V3.224 #501 release mode verifies exact 3.223 to 3.224 changes and fails closed',()=>{
+ const modified501=(path,before,after)=>({path,before,after,status:'M'});
+ const c=[
+  modified501('assets/village/village.mjs','old flag',"flag.textContent='🚩'"),
+  modified501('server-game/current/GMWW.html','<title>GMWW V3.223</title>','<title>GMWW V3.224</title> 🌈 🏖️ ⛱️ 🐦‍🔥'),
+  modified501('server-game/current/app.js',"const VERSION='3.223';","const VERSION='3.224'; gmwwSetupFreeBattleIcons();"),
+  modified501('server-game/current/style.css','old','#battleFactionStatsFloat.gmww-free-icon'),
+  modified501('server-game/src/00-core-and-library.part',"const VERSION='3.223';","const VERSION='3.224';"),
+  modified501('server-game/src/30-village-and-setup.part','old',"GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'"),
+  modified501('server-game/src/40-battle-and-timeline.part','old','new'),
+  modified501('src/index.js','VERSION="V3.223"','VERSION="V3.224"; UPDATE_CHANNEL_REV="runtime-3224"'),
+  modified501('package.json','"version": "3.223.0"','"version": "3.224.0"'),
+  modified501('package-lock.json','"version": "3.223.0"','"version": "3.224.0"'),
+  modified501('.github/scripts/prepare-update-channel.mjs','old','releaseNotes:["V3.224:'),
+  {path:'docs/releases/GMWW-V3.224-five-floating-icons-20261025.md',status:'A',after:'Rollback V3.223'},
+  {path:'tests/gm-free-floating-shortcuts-20261025.test.mjs',status:'A',after:'tests'},
+  {path:'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',status:'A',after:'WebKit'},
+  {path:'.github/workflows/check-gm-free-icons-501.yml',status:'A',after:'CI'}
+ ];
+ assert.equal(classifyBrowserScope(c),'gm-icons-501-release');
+ assert.equal(classifyBrowserScope([...c,modified501('src/gmww-gallows-rules.js','old','new')]),'full','No gameplay changes');
+ assert.equal(classifyBrowserScope([...c,modified501('server-game/GMWW-Server/Native.swift','a','b')]),'full','No IPA changes');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='package.json'?{...x,after:'"version": "3.225.0"'}:x)),'full','No arbitrary release version');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='server-game/current/app.js'?{...x,after:"const VERSION='3.223';"}:x)),'full','Missing runtime version fails closed');
+ assert.equal(classifyBrowserScope(c.filter(x=>x.path!=='docs/releases/GMWW-V3.224-five-floating-icons-20261025.md')),'full','Mandatory release notes');
 });

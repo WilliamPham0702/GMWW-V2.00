@@ -1,0 +1,550 @@
+{
+  "roleCount": 63,
+  "artifactCount": 44,
+  "totalActions": 87,
+  "previousMissingCount": 54,
+  "missing": [
+    {
+      "id": "action-cupid-pair",
+      "kind": "role",
+      "owners": [
+        "Cupid"
+      ],
+      "targetCount": 2,
+      "noTarget": false,
+      "label": "Ghép Đôi"
+    },
+    {
+      "id": "18",
+      "kind": "role",
+      "owners": [
+        "Già Làng"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Rung Chuông"
+    },
+    {
+      "id": "action-peek",
+      "kind": "role",
+      "owners": [
+        "Cô Bé Ti Hí"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Hí Mắt"
+    },
+    {
+      "id": "25",
+      "kind": "role",
+      "owners": [
+        "Trưởng Phái"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Giáo"
+    },
+    {
+      "id": "action-three-brothers-recognize",
+      "kind": "role",
+      "owners": [
+        "Ba Anh Em"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Nhận Biết Ba Anh Em"
+    },
+    {
+      "id": "action-knight-stab",
+      "kind": "role",
+      "owners": [
+        "Kỵ Sỹ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Đâm Kỵ Sỹ"
+    },
+    {
+      "id": "action-avenger-target",
+      "kind": "role",
+      "owners": [
+        "Kẻ Báo Thù"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Chọn Mục Tiêu Báo Thù"
+    },
+    {
+      "id": "action-disease-self",
+      "kind": "role",
+      "owners": [
+        "Con Bệnh"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Mang Bệnh"
+    },
+    {
+      "id": "action-news-role",
+      "kind": "role",
+      "owners": [
+        "Người Loan Tin"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Loan Tin"
+    },
+    {
+      "id": "action-judge-double",
+      "kind": "role",
+      "owners": [
+        "Thẩm Phán"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Phán Quyết Kép"
+    },
+    {
+      "id": "action-maid-inherit",
+      "kind": "role",
+      "owners": [
+        "Hầu Gái"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Nhận Vai Trò"
+    },
+    {
+      "id": "action-digan-scry",
+      "kind": "role",
+      "owners": [
+        "Cô Gái Digan"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Soi Digan"
+    },
+    {
+      "id": "action-g7-prince-stab",
+      "kind": "role",
+      "owners": [
+        "Hoàng Tử"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Đâm Một Người Bằng Dao"
+    },
+    {
+      "id": "action-g7-crow-votes",
+      "kind": "role",
+      "owners": [
+        "Con Quạ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Đặt Phiếu Con Quạ"
+    },
+    {
+      "id": "action-rotten-seer-check",
+      "kind": "role",
+      "owners": [
+        "Tiên Tri Thối"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Soi Chức Năng"
+    },
+    {
+      "id": "action-black-woman-leave",
+      "kind": "role",
+      "owners": [
+        "Bà Da Đen"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Buộc Rời Làng"
+    },
+    {
+      "id": "action-ghost-message",
+      "kind": "role",
+      "owners": [
+        "Hồn Ma"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Gửi Thông Điệp"
+    },
+    {
+      "id": "action-mad-doctor-cure",
+      "kind": "role",
+      "owners": [
+        "Bác Sỹ Điên"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Giải Độc"
+    },
+    {
+      "id": "action-demon-wolf-convert",
+      "kind": "role",
+      "owners": [
+        "Sói Quỷ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Cắn Chuyển Hóa"
+    },
+    {
+      "id": "action-fire-wolf-bite",
+      "kind": "role",
+      "owners": [
+        "Sói Lửa"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Cắn Sói Lửa"
+    },
+    {
+      "id": "action-wolf-brother-bite",
+      "kind": "role",
+      "owners": [
+        "Lang Huynh Đệ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Cắn Lang Huynh Đệ"
+    },
+    {
+      "id": "action-wild-child-idol",
+      "kind": "role",
+      "owners": [
+        "Con Hoang"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Chọn Hình Tượng"
+    },
+    {
+      "id": "action-vampire-check",
+      "kind": "role",
+      "owners": [
+        "Vampire"
+      ],
+      "targetCount": 3,
+      "noTarget": false,
+      "label": "Kiểm Tra Tiên Tri"
+    },
+    {
+      "id": "action-cult-add",
+      "kind": "role",
+      "owners": [
+        "Tà Đạo"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Thêm Thành Viên Tà Đạo"
+    },
+    {
+      "id": "action-cult-kill",
+      "kind": "role",
+      "owners": [
+        "Tà Đạo"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Tà Đạo Giết"
+    },
+    {
+      "id": "artifact_action_reclaim",
+      "kind": "artifact",
+      "owners": [
+        "Hổ Phách Bình Minh"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Thu Hồi Artifact"
+    },
+    {
+      "id": "artifact_action_view",
+      "kind": "artifact",
+      "owners": [
+        "Thạch Anh Tri Thức"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Xem Artifact"
+    },
+    {
+      "id": "action-disease-self",
+      "kind": "artifact",
+      "owners": [
+        "Máu Dịch Bệnh"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Mang Bệnh"
+    },
+    {
+      "id": "action-grudge-designate",
+      "kind": "artifact",
+      "owners": [
+        "Cung Săn Mệnh",
+        "Hơi Thở Lão Già"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Chỉ Định Chết"
+    },
+    {
+      "id": "artifact_action_disable_function",
+      "kind": "artifact",
+      "owners": [
+        "Ấn Dân Làng"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Vô Hiệu Chức Năng"
+    },
+    {
+      "id": "artifact_action_force_vote",
+      "kind": "artifact",
+      "owners": [
+        "Mũ Ngốc"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Buộc Bỏ Phiếu Loại"
+    },
+    {
+      "id": "artifact_action_check_villager",
+      "kind": "artifact",
+      "owners": [
+        "Vạc Ma Thuật"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Kiểm Tra Dân Thường"
+    },
+    {
+      "id": "artifact_action_exchange",
+      "kind": "artifact",
+      "owners": [
+        "Ngọc May Mắn"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Đổi Artifact"
+    },
+    {
+      "id": "action-lone-wolf-join",
+      "kind": "artifact",
+      "owners": [
+        "Vuốt Sói"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Về Bầy"
+    },
+    {
+      "id": "artifact_action_reveal_role",
+      "kind": "artifact",
+      "owners": [
+        "Đồng Xu Tuổi Trẻ"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Buộc Công Khai Vai Trò"
+    },
+    {
+      "id": "action-black-woman-leave",
+      "kind": "artifact",
+      "owners": [
+        "Gậy Mụ Già"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Buộc Rời Làng"
+    },
+    {
+      "id": "artifact_action_negate",
+      "kind": "artifact",
+      "owners": [
+        "Kim Cương Phủ Nhận"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Vô Hiệu Artifact"
+    },
+    {
+      "id": "artifact_action_check_awake",
+      "kind": "artifact",
+      "owners": [
+        "Nhật Ký Mất Ngủ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Kiểm Tra Thức Dậy"
+    },
+    {
+      "id": "artifact_action_steal",
+      "kind": "artifact",
+      "owners": [
+        "Ngọc Ghen Tuông"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Chiếm Artifact"
+    },
+    {
+      "id": "artifact_action_lock_function",
+      "kind": "artifact",
+      "owners": [
+        "Bình Giấc Mơ"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Khóa Chức Năng Tạm Thời"
+    },
+    {
+      "id": "artifact_action_silence",
+      "kind": "artifact",
+      "owners": [
+        "Mặt Nạ Câm Lặng"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Cấm Nói"
+    },
+    {
+      "id": "artifact_action_copy_function",
+      "kind": "artifact",
+      "owners": [
+        "Tráng Gương"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Sao Chép Chức Năng"
+    },
+    {
+      "id": "artifact_action_check_third_faction",
+      "kind": "artifact",
+      "owners": [
+        "Sương Hào Quang"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Kiểm Tra Phe Ba"
+    },
+    {
+      "id": "artifact_action_destroy",
+      "kind": "artifact",
+      "owners": [
+        "Hắc Ngọc Hủy Diệt"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Hủy Artifact"
+    },
+    {
+      "id": "artifact_action_judge_two_wolves",
+      "kind": "artifact",
+      "owners": [
+        "Quả Cầu Phán Đoán"
+      ],
+      "targetCount": 2,
+      "noTarget": false,
+      "label": "Phán Đoán Hai Sói"
+    },
+    {
+      "id": "action-ghost-message",
+      "kind": "artifact",
+      "owners": [
+        "Mặt Dây Chuyền Kiêu Hãnh",
+        "Khăn Hồn Ma"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Gửi Thông Điệp"
+    },
+    {
+      "id": "artifact_action_limit_wolf_targets",
+      "kind": "artifact",
+      "owners": [
+        "Lăng Kính Quyền Năng"
+      ],
+      "targetCount": 3,
+      "noTarget": false,
+      "label": "Giới Hạn Mục Tiêu Sói"
+    },
+    {
+      "id": "action-maid-inherit",
+      "kind": "artifact",
+      "owners": [
+        "Trượng Luân Hồi"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Nhận Vai Trò"
+    },
+    {
+      "id": "artifact_action_activate_two",
+      "kind": "artifact",
+      "owners": [
+        "Hồng Ngọc Cơ Duyên"
+      ],
+      "targetCount": 2,
+      "noTarget": false,
+      "label": "Kích Hoạt Hai Artifact"
+    },
+    {
+      "id": "artifact_action_link",
+      "kind": "artifact",
+      "owners": [
+        "Lam Ngọc Định Mệnh"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Liên Kết Artifact"
+    },
+    {
+      "id": "artifact_action_turn_away",
+      "kind": "artifact",
+      "owners": [
+        "Khăn Choàng Hổ Thẹn"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Buộc Quay Mặt"
+    },
+    {
+      "id": "artifact_action_swap_role",
+      "kind": "artifact",
+      "owners": [
+        "Đá Hoán Đổi"
+      ],
+      "targetCount": 1,
+      "noTarget": false,
+      "label": "Hoán Đổi Vai Trò"
+    },
+    {
+      "id": "action-judge-double",
+      "kind": "artifact",
+      "owners": [
+        "Bùa Tai Ương"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Phán Quyết Kép"
+    },
+    {
+      "id": "artifact_action_custom",
+      "kind": "artifact",
+      "owners": [
+        "Hư Không Vô Tận"
+      ],
+      "targetCount": 0,
+      "noTarget": true,
+      "label": "Sáng Tạo Artifact"
+    }
+  ]
+}

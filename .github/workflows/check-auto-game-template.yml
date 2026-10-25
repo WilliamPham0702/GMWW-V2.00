@@ -1,0 +1,25 @@
+name: Check AUTO VAN Game Templates
+on:
+  pull_request:
+    paths:
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/GMWW.html'
+      - 'tests/auto-game-template.test.mjs'
+      - '.github/workflows/check-auto-game-template.yml'
+  workflow_dispatch:
+jobs:
+  scoped-auto-game:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify GM runtime JavaScript syntax
+        run: node --check server-game/current/app.js
+      - name: Test saved-template ranking and balanced AUTO VAN only
+        run: node --test tests/auto-game-template.test.mjs

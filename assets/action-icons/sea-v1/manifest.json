@@ -1,0 +1,876 @@
+{
+  "schema": 1,
+  "name": "GMWW SEA action icons",
+  "version": "v1-wave5",
+  "status": "source-art-and-actions-mapped",
+  "count": 49,
+  "source": "39 prior originals + 10 independently drawn wave5 SVG 2026-10-25",
+  "icons": [
+    {
+      "id": "soi-xet",
+      "name": "Soi xét / Đọc chức năng",
+      "target": "character",
+      "actions": [
+        "action_seer",
+        "action_aura_read",
+        "action-digan-scry",
+        "action-rotten-seer-check",
+        "artifact_action_check_villager",
+        "artifact_action_check_awake",
+        "artifact_action_check_third_faction"
+      ],
+      "png": "01_soi_xet.png",
+      "svg": "01_soi_xet.svg",
+      "sha256_png": "e635abab365f3ae5850fd211ced98554314fb4683f3a38281a452bee955e0bc1",
+      "sha256_svg": "a8eddf83b9e1f7a3f73288aca3b19561e7a4ab737ea49a51143625d1b3c55094",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "soi-dac-biet",
+      "name": "Soi vai trò / Tìm tiên tri",
+      "target": "character",
+      "actions": [
+        "action_destroyer_scry",
+        "action_find_seer",
+        "action_wolf_seer",
+        "action_rotten_seer"
+      ],
+      "png": "02_soi_dac_biet.png",
+      "svg": "02_soi_dac_biet.svg",
+      "sha256_png": "0e28f84a3f685fda413beaf4e73f1b947dbf800f2ab599d2305e00c002edb337",
+      "sha256_svg": "fbb7d50d2384e671a59384a9fd6642da28de509b6782c5269e9d95584e52153d",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "soi-nhom",
+      "name": "Soi nhóm",
+      "target": "multi",
+      "actions": [
+        "action_scan_three",
+        "action_fox_scan",
+        "action_bear_scan",
+        "action-vampire-check",
+        "artifact_action_judge_two_wolves"
+      ],
+      "png": "03_soi_nhom.png",
+      "svg": "03_soi_nhom.svg",
+      "sha256_png": "953958f8e7ff771604c3a9cc41973b1904c3520350c1a717ac0a0e75d6be1ef5",
+      "sha256_svg": "bf4c0a33ebcc155a711714b68ebd099b098cc8f15d531891f47930fe8ffa00dc",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "so-sanh-phe",
+      "name": "So sánh phe",
+      "target": "multi",
+      "actions": [
+        "action_compare_faction"
+      ],
+      "png": "04_so_sanh_phe.png",
+      "svg": "04_so_sanh_phe.svg",
+      "sha256_png": "6b71bdea1e5db33e06c4ec1524e9fa009a6605354fe652f8931be28a6f9badec",
+      "sha256_svg": "03d1df891dae05bf8ed7f468304da75119175394b3d7ea5fec29e628c4a9c322",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "soi-can",
+      "name": "Sói cắn",
+      "target": "character",
+      "actions": [
+        "action_wolf_bite",
+        "action-fire-wolf-bite",
+        "action-wolf-brother-bite"
+      ],
+      "png": "05_soi_can.png",
+      "svg": "05_soi_can.svg",
+      "sha256_png": "799e096abe4711887f28bcb5434f705e17d6110118dfe7abdd9e072c6ee3a011",
+      "sha256_svg": "e8cfb785c5e06f9694457edb48f5e69a4cd89c234d1417eba592ab3dab2565aa",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "bao-ve",
+      "name": "Bảo vệ",
+      "target": "character",
+      "actions": [
+        "action_protect"
+      ],
+      "png": "06_bao_ve.png",
+      "svg": "06_bao_ve.svg",
+      "sha256_png": "964e2418b460ce0cecc5f8624e179ac44192c16c0c6ed2aa3f6080b4dd47f8a0",
+      "sha256_svg": "6c4f481e1d6db91fe3ecfc6cdfcc84eb97ff33a873dfa126ca68f3398db2cb24",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "cuu",
+      "name": "Cứu",
+      "target": "character",
+      "actions": [
+        "action_witch_save"
+      ],
+      "png": "07_cuu.png",
+      "svg": "07_cuu.svg",
+      "sha256_png": "bb3980cc6adcb8754fc3bd6f28b941c52d5c4778a67c3b20d9f578c7e73f588a",
+      "sha256_svg": "f519f3c41d6ff2b53785ece62b37ad802b294c2a15d8b77a7424bee34bf9d927",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "ha-doc",
+      "name": "Hạ độc",
+      "target": "character",
+      "actions": [
+        "action_witch_kill"
+      ],
+      "png": "08_ha_doc.png",
+      "svg": "08_ha_doc.svg",
+      "sha256_png": "b69876c672b85a09463c018b7d8520b372d9d9dfd5df181f38b9262ae3902e12",
+      "sha256_svg": "7515fc9d371af0d9f7ce5c61d79dd2d8491953334cacb7fae8860976aa444a14",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "dong-bang",
+      "name": "Đóng băng",
+      "target": "character",
+      "actions": [
+        "action_snow_wolf_freeze"
+      ],
+      "png": "09_dong_bang.png",
+      "svg": "09_dong_bang.svg",
+      "sha256_png": "4d42e08ce40673e3b5e43fbfa27d92173196bda0aafbc8ed8c5c386a55aebcc5",
+      "sha256_svg": "c7aff9b0f0ae45b6e75593294b0316b70f37b3638cf671341453a192c82de3b7",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "danh-dau",
+      "name": "Đánh dấu",
+      "target": "character",
+      "actions": [
+        "action_assassin_mark",
+        "action_hunter_mark",
+        "action-grudge-designate"
+      ],
+      "png": "10_danh_dau.png",
+      "svg": "10_danh_dau.svg",
+      "sha256_png": "4de56cbca9ad18ef0d81444d57ec3c3a7bc5b067aca3b57f714236051a46e035",
+      "sha256_svg": "68099552c780e33a92d424878d493729a541d7236a5064d1955dd0a309e37c7b",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "dich-trai",
+      "name": "Dịch vết cắn trái",
+      "target": "direction",
+      "actions": [
+        "action_transfer_bite"
+      ],
+      "png": "11_dich_trai.png",
+      "svg": "11_dich_trai.svg",
+      "sha256_png": "55fccef70b48baf23c99bf4ce2d580b633b048acf61c5a1586c76e4d778ad1c0",
+      "sha256_svg": "20cdd5cedc37edf18c0bb5e2b7b9905497905c1b4df86cc5667af7434e35a8a1",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "dich-phai",
+      "name": "Dịch vết cắn phải",
+      "target": "direction",
+      "actions": [
+        "action_transfer_bite"
+      ],
+      "png": "12_dich_phai.png",
+      "svg": "12_dich_phai.svg",
+      "sha256_png": "f1af7ab3bc67c8f0a584c69e9a6e8273f55940b52a58a35abcf3e7d545f855b8",
+      "sha256_svg": "52af3e4567b9581c65189b013141dbde452e059732b09db64390283750f0b7d4",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "hoi-sinh",
+      "name": "Hồi sinh",
+      "target": "character",
+      "actions": [
+        "action_revive"
+      ],
+      "png": "13_hoi_sinh.png",
+      "svg": "13_hoi_sinh.svg",
+      "sha256_png": "85815d7322f32dbab4020367eeb249a2e6356e38500ca7b380b5d2d3d6a587a4",
+      "sha256_svg": "22f4c1f00a8965454492bff3481049f21595db65627ad90ac5d2118f692e5219",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "duoi",
+      "name": "Đuổi khỏi làng",
+      "target": "character",
+      "actions": [
+        "action_exile",
+        "action-black-woman-leave"
+      ],
+      "png": "14_duoi_khoi_lang.png",
+      "svg": "14_duoi_khoi_lang.svg",
+      "sha256_png": "875c052832ad28161bf9aa2e7f8f84768906b49838fab8161a0a414b033dc2db",
+      "sha256_svg": "64465ac7fb9a05329f991adbabdfd168d3d0e750f1288b2f47ac7a5f963785ae",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "san-giet",
+      "name": "Săn / Giết / Đâm",
+      "target": "character",
+      "actions": [
+        "action_hunt",
+        "action_destroyer_kill",
+        "action_stab",
+        "action-g7-prince-stab",
+        "action-cult-kill"
+      ],
+      "png": "15_san_giet.png",
+      "svg": "15_san_giet.svg",
+      "sha256_png": "d9b19daba072507d844b9f251f1b6e2ffb850f08f3c50af72481bd6519a393f9",
+      "sha256_svg": "be6c770486b77f8f0c8df9a8f33074862ec62344c7fb709a8a17eeb2b2bce280",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "tham-nha",
+      "name": "Thăm nhà",
+      "target": "character",
+      "actions": [
+        "action_visit_house"
+      ],
+      "png": "16_tham_nha.png",
+      "svg": "16_tham_nha.svg",
+      "sha256_png": "36dad1f0528e89ffc66c62ddd7d1b8b8dfea0bcaf021a6a6eb84528b58c07751",
+      "sha256_svg": "97ede5a4221b63f00ca0224342e5a34a1b856fbbd66a8db4b145243165ab3b57",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "nhan-ban",
+      "name": "Nhân bản",
+      "target": "character",
+      "actions": [
+        "action_clone_target"
+      ],
+      "png": "17_nhan_ban.png",
+      "svg": "17_nhan_ban.svg",
+      "sha256_png": "836a5c436d166a44493852b5b3ecedca8edc6ff4dfd51e664a5b19ac4216c7a7",
+      "sha256_svg": "01462e17ac1afed09b6b72f3babf6d922aa08e436699c1e1a54bbd6681081aac",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "doi-vai",
+      "name": "Đổi vai trò / Rút bài",
+      "target": "card",
+      "actions": [
+        "action_thief_change_role",
+        "action_drunk_draw",
+        "action-maid-inherit",
+        "artifact_action_swap_role"
+      ],
+      "png": "18_doi_vai_tro.png",
+      "svg": "18_doi_vai_tro.svg",
+      "sha256_png": "d1553929bc7d6b22b95e4286858c36ab82189089f02896d75d891e1c35f3cced",
+      "sha256_svg": "0a73e636a7a05aa7934c0fa95fe68bb6b53fd357137a3e161341550d9e62c58f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "hiep-si",
+      "name": "Hiệp sĩ chọn chết",
+      "target": "character",
+      "actions": [
+        "action_knight_last_strike",
+        "action-knight-stab"
+      ],
+      "png": "19_hiep_si.png",
+      "svg": "19_hiep_si.svg",
+      "sha256_png": "de680456f00037f0cce571d058d7704bb8f43888864e465e904732edc8ec773c",
+      "sha256_svg": "653beb4ae0b515bc4249a3fb8997f8584e062a1d674a201cfd9c984feefcd8f5",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "phong-an",
+      "name": "Phong ấn",
+      "target": "character",
+      "actions": [
+        "artifact_action_disable_function",
+        "artifact_action_negate",
+        "artifact_action_lock_function",
+        "artifact_action_limit_wolf_targets"
+      ],
+      "png": "20_phong_an.png",
+      "svg": "20_phong_an.svg",
+      "sha256_png": "f64d5962bf5a4e94fe464947f30ca87350fce06aa6f1ea0fb18e46a64332e50d",
+      "sha256_svg": "cda554e5f788307c03fdb90dde5ce0b14d75118aa781fa1ece1a2a4653e2ca93",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cam-vote",
+      "name": "Cấm bỏ phiếu",
+      "target": "character",
+      "actions": [],
+      "png": "21_cam_vote.png",
+      "svg": "21_cam_vote.svg",
+      "sha256_png": "951ee1c951775b4d3b85b5f0557a0afbda2632173a8ed88149f0196030c36fbe",
+      "sha256_svg": "aed6ec868f580320eb76b26a76b8914a7e44014e69b45f43f2a82d6747ac3e9a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cam-de-cu",
+      "name": "Cấm đề cử",
+      "target": "character",
+      "actions": [],
+      "png": "22_cam_de_cu.png",
+      "svg": "22_cam_de_cu.svg",
+      "sha256_png": "710f238b2db3d3e3f009fecf9d1c41e79cda17dbf401b3abc6bc68105b0823dd",
+      "sha256_svg": "0de73c94924abac1a7a5490325d4b1dd41a4bac0f69a143209327f5f76b373c6",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "nguyen-rua",
+      "name": "Nguyền rủa",
+      "target": "character",
+      "actions": [],
+      "png": "23_nguyen_rua.png",
+      "svg": "23_nguyen_rua.svg",
+      "sha256_png": "087875ddd2a140721da3b0eec4a69f59fe1d476b6efed2c88b628eeca86907cc",
+      "sha256_svg": "b741350864b728c076104833db86223a080c3a170642ab7f617e156e7a4c6e26",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "ban-phuoc",
+      "name": "Ban phước",
+      "target": "character",
+      "actions": [
+        "artifact_action_activate_two"
+      ],
+      "png": "24_ban_phuoc.png",
+      "svg": "24_ban_phuoc.svg",
+      "sha256_png": "83fdc0ae862747e6cf6723b6794bfb1a6811a0c197697d75d5ecef1f4e22aae6",
+      "sha256_svg": "fd30f15adb5cf2fdafb2fd4fd36204defd2e400790dc99c8167ffe2a40460844",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cuop-artifact",
+      "name": "Cướp Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_reclaim",
+        "artifact_action_steal"
+      ],
+      "png": "25_cuop_artifact.png",
+      "svg": "25_cuop_artifact.svg",
+      "sha256_png": "739a50d3da88baea2ee384030040be198340699a387c0d382bdc4dde5b203b25",
+      "sha256_svg": "62793946b44ff0c86b2f34bb60183a2f93fef957e8ed4ba97d880ec3c89798cc",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "phan-don",
+      "name": "Phản đòn",
+      "target": "character",
+      "actions": [],
+      "png": "26_phan_don.png",
+      "svg": "26_phan_don.svg",
+      "sha256_png": "515c19eb0dc6c794c0846354ddf8c25d18a2a2e0888b1470c2fda62c5a4962a3",
+      "sha256_svg": "f7b78f9d65490eb3d0b222094cecefb47155ce5989180767e7fbfa2c6e376101",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "tang-hinh",
+      "name": "Tàng hình",
+      "target": "character",
+      "actions": [],
+      "png": "27_tang_hinh.png",
+      "svg": "27_tang_hinh.svg",
+      "sha256_png": "2cacfbb7c4730ad1391c806b4721ce131ec53e53b015330e56fea59391002a96",
+      "sha256_svg": "88dcb2f03d9ccdb48bbdb0e6081cebe475cfe1cae79ec9dcb6a2755555ffde3a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "dat-bay",
+      "name": "Đặt bẫy",
+      "target": "character",
+      "actions": [],
+      "png": "28_bay.png",
+      "svg": "28_bay.svg",
+      "sha256_png": "861342fd930e633dd1197af47c5476a34271010532a03422d02153964fd7af77",
+      "sha256_svg": "6d47c5201cf100e175ced3ffb03852a53ce7b64474d16f1f418d729e4e4df44f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "thanh-tay",
+      "name": "Thanh tẩy",
+      "target": "character",
+      "actions": [
+        "action-mad-doctor-cure"
+      ],
+      "png": "29_thanh_tay.png",
+      "svg": "29_thanh_tay.svg",
+      "sha256_png": "1bfdf503fec91a7a7276ed3e52fa62f8803a7399be192f9419cc9469a24f5491",
+      "sha256_svg": "a7030bda433c9b70eeb9f45e90af5f0a638a5b6b2e92a26985eedeb87b440e0d",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "ghep-doi",
+      "name": "Ghép Đôi",
+      "target": "multi",
+      "actions": [
+        "action-cupid-pair",
+        "artifact_action_link"
+      ],
+      "png": "30_ghep_doi.png",
+      "svg": "30_ghep_doi.svg",
+      "sha256_png": "557f216079d5626975a3358f558628a5b939636888cc1ef917a09b30be64d95e",
+      "sha256_svg": "8c0478d6f5099835833adcfe5b86fe676291c091f0525bbb2699a0dbfe3e2c8e",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "rung-chuong",
+      "name": "Rung Chuông",
+      "target": "none",
+      "actions": [
+        "18"
+      ],
+      "png": "31_rung_chuong.png",
+      "svg": "31_rung_chuong.svg",
+      "sha256_png": "54359d606101cfd88206cd46662264519704471e895cb720a9ae4a3298354da4",
+      "sha256_svg": "50dcb33cb915d9658dc278fc16bc79e4c4de36528032db98d1aa867ace4d4c1f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "hi-mat",
+      "name": "Hí Mắt",
+      "target": "none",
+      "actions": [
+        "action-peek"
+      ],
+      "png": "32_hi_mat.png",
+      "svg": "32_hi_mat.svg",
+      "sha256_png": "a8b2edaea6f9a425f40ff45730447274590ff4d8c6a15428efb1248fd5176782",
+      "sha256_svg": "c651ad6eaaca2201b5cf147b3567f15ee7f48d75efce7790829dd121880b2e42",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "giao",
+      "name": "Giáo",
+      "target": "character",
+      "actions": [
+        "25"
+      ],
+      "png": "33_giao.png",
+      "svg": "33_giao.svg",
+      "sha256_png": "22524cb7d50040bc15b894bf251b3b82cef3d0c06784d2903fabe33f81d5b042",
+      "sha256_svg": "b4266b0e5ac02cd97f9cbb2ca863d75530e2677c22969573612fd0bad52fafe0",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "ba-anh-em",
+      "name": "Nhận Biết / Về Bầy",
+      "target": "character",
+      "actions": [
+        "action-three-brothers-recognize",
+        "action-lone-wolf-join",
+        "action-cult-add"
+      ],
+      "png": "34_ba_anh_em.png",
+      "svg": "34_ba_anh_em.svg",
+      "sha256_png": "7ed4bed7155fc1caf42e095ef51bd332c6c6f89862b27ff189ea7697e904aa9b",
+      "sha256_svg": "3307234b2b7565630655f998ac62257eddf5b8f353215774b1fd75b2163b9c42",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "bao-thu",
+      "name": "Báo Thù",
+      "target": "character",
+      "actions": [
+        "action-avenger-target"
+      ],
+      "png": "35_bao_thu.png",
+      "svg": "35_bao_thu.svg",
+      "sha256_png": "3ef2db7c38bff767e0df6dfddd5982469e4dcc93ad079a69293552d68c39cb9c",
+      "sha256_svg": "c841993732abbb8f6bfa7f2cfbe490e5a14be8cb50437e1969da1292125d2317",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "mang-benh",
+      "name": "Mang Bệnh",
+      "target": "character",
+      "actions": [
+        "action-disease-self"
+      ],
+      "png": "36_mang_benh.png",
+      "svg": "36_mang_benh.svg",
+      "sha256_png": "24af46d8feb95aac56f287293cd7f17b17eac5b5f38269e83b415188445533c6",
+      "sha256_svg": "cdd0740bea8b14af8d58339b4e8865c2584d7931738280fa35d02781c89d9430",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "loan-tin",
+      "name": "Loan Tin / Thông Điệp",
+      "target": "character",
+      "actions": [
+        "action-news-role",
+        "action-ghost-message"
+      ],
+      "png": "37_loan_tin.png",
+      "svg": "37_loan_tin.svg",
+      "sha256_png": "648b11824c4348249a02b38ae13e95154930e07b0d9c76b711757af93605fe51",
+      "sha256_svg": "7433d11fbb627d43fba9ba9e075c8d8aeae9c235f7e3325689a6e15ac7295921",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "phan-quyet-kep",
+      "name": "Phán Quyết Kép",
+      "target": "none",
+      "actions": [
+        "action-judge-double",
+        "artifact_action_force_vote"
+      ],
+      "png": "38_phan_quyet_kep.png",
+      "svg": "38_phan_quyet_kep.svg",
+      "sha256_png": "ed05fc87da4177adf84759657d98d4936f4a17b75e9e2992159efe166906657b",
+      "sha256_svg": "526dc284ce9105bf150ea3f3e98183398beec86140ab43600a11dbf37f734e6b",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "cam-noi",
+      "name": "Cấm Nói",
+      "target": "character",
+      "actions": [
+        "artifact_action_silence"
+      ],
+      "png": "39_cam_noi.png",
+      "svg": "39_cam_noi.svg",
+      "sha256_png": "2db3eec5058dfd0c353f7ffea566fc0dd7a7895d2e6743c673d15eaf46e9fea9",
+      "sha256_svg": "a6fa772e6896d579824728cef91f1f5e1456fb2f028e561661bae3556f2abd3a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "phieu-con-qua",
+      "name": "Phiếu Con Quạ",
+      "target": "character",
+      "actions": [
+        "action-g7-crow-votes"
+      ],
+      "png": "40_phieu_con_qua.png",
+      "svg": "40_phieu_con_qua.svg",
+      "sha256_png": "787b18462fed9190771630d9343ae8ff548deb946967767a016a0bbed48d361e",
+      "sha256_svg": "7314571bba28216917890170c4b829d17881df9e0a5ee7cf4e93a7b52725a9bf",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "can-chuyen-hoa",
+      "name": "Cắn Chuyển Hóa",
+      "target": "character",
+      "actions": [
+        "action-demon-wolf-convert"
+      ],
+      "png": "41_can_chuyen_hoa.png",
+      "svg": "41_can_chuyen_hoa.svg",
+      "sha256_png": "bc768b5629e3c0bf9b1f14ec1a50ebfc261e1ec4e4940d418ec804669813fb33",
+      "sha256_svg": "5c647cee0806ec97d1e65de0022b2060f79a71070005242debfe0afd7e4cafb4",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "chon-hinh-tuong",
+      "name": "Chọn Hình Tượng",
+      "target": "character",
+      "actions": [
+        "action-wild-child-idol"
+      ],
+      "png": "42_chon_hinh_tuong.png",
+      "svg": "42_chon_hinh_tuong.svg",
+      "sha256_png": "4fd4580384c0d55066456d0cddcd4365e910efa9e38f3765cedf950eb7a07b92",
+      "sha256_svg": "61a3b31076c685e3a83d02e616095969610cefc57aa3a591e85eb806d6be1ee2",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "xem-artifact",
+      "name": "Xem Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_view"
+      ],
+      "png": "43_xem_artifact.png",
+      "svg": "43_xem_artifact.svg",
+      "sha256_png": "7e16e4a673b2182de8719868a76b98eda5e0a2c5f3f3dce38550746c8f46a994",
+      "sha256_svg": "04f49e3c6a91983f29bce8dd4f0a6723161907eadbaf06921f9c4eefced97699",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "doi-artifact",
+      "name": "Đổi Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_exchange"
+      ],
+      "png": "44_doi_artifact.png",
+      "svg": "44_doi_artifact.svg",
+      "sha256_png": "fa919714d8c318304e031651508d1194cdc8d769056b6a2b5b5509551590eb0b",
+      "sha256_svg": "f1d386099e076d0e95d451ca3773db4db82ee78df503402d69e9bc187b37d41f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "cong-khai-vai",
+      "name": "Công Khai Vai Trò",
+      "target": "none",
+      "actions": [
+        "artifact_action_reveal_role"
+      ],
+      "png": "45_cong_khai_vai.png",
+      "svg": "45_cong_khai_vai.svg",
+      "sha256_png": "057dc1399312eb481b8bb90928b326f677ae59dfe3aa0843a35b4d36e75a6bf1",
+      "sha256_svg": "b2bc907bd47e9a1b6ef590d3be9331787fb90f763b824a2a27804fa8a46aa747",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "sao-chep-chuc-nang",
+      "name": "Sao Chép Chức Năng",
+      "target": "character",
+      "actions": [
+        "artifact_action_copy_function"
+      ],
+      "png": "46_sao_chep_chuc_nang.png",
+      "svg": "46_sao_chep_chuc_nang.svg",
+      "sha256_png": "a3ae50b1f281b9ce944033e0e460f1772baf2add3aaf53d8368d5b9270c258fe",
+      "sha256_svg": "5015509e7e3ce971198a7dc32a2dff2e94d625bfed954cf54006103ee9a43372",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "huy-artifact",
+      "name": "Hủy Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_destroy"
+      ],
+      "png": "47_huy_artifact.png",
+      "svg": "47_huy_artifact.svg",
+      "sha256_png": "1d2768df37c1a788b0089ef5405f5963e595eca14e7c7d8160bd91536c752219",
+      "sha256_svg": "4ec3c162a3580b0ebcb414e624b6745ba9738b2143410ea5b59ec5d765e951d8",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "buoc-quay-mat",
+      "name": "Buộc Quay Mặt",
+      "target": "character",
+      "actions": [
+        "artifact_action_turn_away"
+      ],
+      "png": "48_buoc_quay_mat.png",
+      "svg": "48_buoc_quay_mat.svg",
+      "sha256_png": "0e8f2b9d1beba9c76885119692f5abca34a5e449a5efbf6691098d87bf6952d9",
+      "sha256_svg": "4f88c6040cea5320b1f7e97149e9cf0dd06ee2f9d0ebb758fce2fa37fa87e31b",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "sang-tao-artifact",
+      "name": "Sáng Tạo Artifact",
+      "target": "none",
+      "actions": [
+        "artifact_action_custom"
+      ],
+      "png": "49_sang_tao_artifact.png",
+      "svg": "49_sang_tao_artifact.svg",
+      "sha256_png": "29aaa91c42e0c15c479c473800dfd10870cbf4cd34bfe857ba71e0bf9b875538",
+      "sha256_svg": "5e62ee6bd2bb582b08d9e168324004ef89c6a6102f51d440cc1eda8e60ed33a3",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    }
+  ]
+}

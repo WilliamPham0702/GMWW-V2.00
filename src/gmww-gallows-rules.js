@@ -1,7 +1,7 @@
 import {gallowsTally} from '../shared/gallows-statistics.mjs';
 // Server-authoritative gallows: member nominations/votes or GM-operated voting.
-export const GALLOWS_VOTE_MS=10000;
-export const gallowsDurationSec=(value,fallback=10)=>{
+export const GALLOWS_VOTE_MS=60000;
+export const gallowsDurationSec=(value,fallback=60)=>{
   const n=Number(value);
   return Number.isFinite(n)&&n>=1?Math.max(1,Math.min(3600,Math.trunc(n))):fallback;
 };
@@ -26,6 +26,30 @@ export function gallowsOpen(ballot,now=Date.now()){
 
 /* All public tallies derive from accepted, still-eligible Server receipts.
    Tie for nomination needs GM choice; tied execution votes save the accused. */
+// Timing belongs to the active Gallows panel, not the pre-match template.
+export function gallowsSetDuration(ballot,kind,seconds,now=Date.now()){
+  const stage=gallowsStage(ballot,now),field=kind==='nomination'?'nominationDurationSec':kind==='vote'?'voteDurationSec':kind==='both'?'both':null;
+  if(gallowsMode(ballot)!=='auto'||!field||stage==='resolved'||
+     (kind==='both'&&stage!=='ready')||
+     (kind==='nomination'&&stage!=='ready')||
+     (kind==='vote'&&!['ready','nominating','selecting'].includes(stage)))
+    return {ok:false,error:'GALLOWS_TIMER_LOCKED'};
+  const duration=gallowsDurationSec(seconds,0);
+  if(!duration)return {ok:false,error:'INVALID_GALLOWS_DURATION'};
+  return {ok:true,value:{...ballot,...(kind==='both'?
+    {nominationDurationSec:duration,voteDurationSec:duration}:{[field]:duration}),updatedAt:now}};
+}
+// Force an early nomination close; choose the unique leader, otherwise ask GM to break the tie.
+export function gallowsCloseNomination(ballot,now=Date.now()){
+  if(gallowsMode(ballot)!=='auto'||!['nominating','selecting'].includes(gallowsStage(ballot,now)))
+    return {ok:false,error:'NOMINATION_NOT_OPEN'};
+  if(gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting')return {ok:true,value:ballot};
+  const candidate=gallowsAutomaticNominee(ballot);
+  // Closing the poll must NOT start voting: only GM's "Mở bỏ phiếu" does.
+  // A unique leader can hang visually while the voting panel awaits GM action.
+  return {ok:true,value:{...ballot,stage:'selecting',candidateId:candidate,
+    hangingStartedAt:candidate?now:null,nominationDeadlineAt:now,updatedAt:now}};
+}
 export function gallowsNominationTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedNomination(ballot)),counts=new Map();
   for(const [voter,target] of Object.entries(ballot?.nominations||{})){
@@ -41,9 +65,9 @@ export function gallowsAutomaticNominee(ballot){
 }
 export function gallowsVoteTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
-  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&!blocked.has(voter)&&['👍','👎'].includes(choice));
+  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice));
   return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length,cast:votes.length,
-    eligible:[...eligible].filter(id=>!blocked.has(id)).length};
+    eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
   const tally=gallowsVoteTotals(ballot);
@@ -55,7 +79,7 @@ export function gallowsRosterStats(ballot){
   const eligible=[...new Set(ballot?.eligible||[])];
   const candidate=String(ballot?.candidateId||'');
   const nominations=Object.entries(ballot?.nominations||{}).map(([voterId,targetId])=>({voterId,targetId}));
-  const votes=Object.entries(ballot?.votes||{}).map(([voterId,choice])=>({
+  const votes=Object.entries(ballot?.votes||{}).filter(([voterId])=>voterId!==candidate).map(([voterId,choice])=>({
     voterId,targetId:candidate,choice:choice==='👍'?'save':choice==='👎'?'kill':null
   }));
   return gallowsTally(eligible.map(id=>({id})),nominations,votes,{
@@ -88,7 +112,8 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     nominationDeadlineAt:ballot.nominationDeadlineAt||null,nominationStartedAt:ballot.nominationStartedAt||null,
     nominationDurationSec:gallowsDurationSec(ballot.nominationDurationSec),voteDurationSec:gallowsDurationSec(ballot.voteDurationSec),
     nominations:Object.fromEntries(Object.entries(ballot.nominations||{}).filter(([id])=>!blockedNomination.includes(id))),
-    votes:Object.fromEntries(Object.entries(ballot.votes||{}).filter(([id])=>!blockedVotes.includes(id))),
+    votes:Object.fromEntries(Object.entries(ballot.votes||{}).filter(([id])=>id!==String(ballot.candidateId||'')&&!blockedVotes.includes(id))),
+    resolvedAt:ballot.resolvedAt||null,updatedAt:ballot.updatedAt||null,
     blockedNomination,blockedVotes,gmBlockedVotes:gallowsGmBlockedVotes(ballot),
     artifactVoteBans:unique(ballot.artifactVoteBans),blocked:blockedVotes,outcome:ballot.outcome||null,
     eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),
@@ -96,13 +121,22 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
-  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
+  if(!validId(voter)||!validId(target)||voter===target||!(ballot?.eligible||[]).includes(voter)||!(ballot?.eligible||[]).includes(target)||gallowsStage(ballot,now)!=='nominating')return {ok:false,error:'NOMINATION_CLOSED'};
   if(gallowsBlockedNomination(ballot).includes(voter))return {ok:false,error:'NOMINATION_BANNED'};
   if(ballot.nominations?.[voter])return {ok:false,error:'NOMINATION_ALREADY_USED'};
   return {ok:true,value:{...ballot,nominations:{...ballot.nominations,[voter]:target},updatedAt:now}};
 }
 export function gallowsBegin(ballot,candidate,now=Date.now()){
-  if(!validId(candidate)||!['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
+  if(!validId(candidate)||!(ballot?.eligible||[]).includes(candidate)||
+     !['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
+  // When nominations have been closed, a unique leader is mandatory. On a
+  // positive tie the GM may choose only one of the top-scoring players.
+  // No nominations: keep legacy GM/demo selection available.
+  if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'){
+    const totals=gallowsNominationTotals(ballot),max=totals[0]?.votes||0;
+    if(max>0&&!totals.some(row=>row.loginId===candidate&&row.votes===max))
+      return {ok:false,error:'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE'};
+  }
   return {ok:true,value:{...ballot,candidateId:candidate,stage:'voting',hangingStartedAt:now,startedAt:now,
     deadlineAt:now+1000*gallowsDurationSec(ballot.voteDurationSec),updatedAt:now,votes:{}}};
 }
@@ -110,6 +144,7 @@ export function gallowsCast(ballot,voter,choice,now=Date.now()){
   if(!validId(voter)||!['👍','👎'].includes(choice))return {ok:false,error:'INVALID_VOTE'};
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
   if(ballot.stage!=='voting'||now>=ballot.deadlineAt)return {ok:false,error:'VOTE_DEADLINE_PASSED'};
+  if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(gallowsBlockedVotes(ballot).includes(voter))return {ok:false,error:'VOTER_BANNED'};
   if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(ballot.votes?.[voter])return ballot.votes[voter]===choice?{ok:true,idempotent:true,value:ballot}:{ok:false,error:'VOTE_ALREADY_USED'};
@@ -123,7 +158,17 @@ export function gallowsSetRestriction(ballot,voter,kind,banned=true,now=Date.now
   const current=kind==='nomination'?gallowsBlockedNomination(ballot):gallowsGmBlockedVotes(ballot);
   const next=banned?unique([...current,voter]):current.filter(id=>id!==voter);
   const changed={...ballot,[field]:next,updatedAt:now};
-  if(kind==='nomination'){const nominations={...(ballot.nominations||{})};delete nominations[voter];changed.nominations=nominations}
+  if(kind==='nomination'){
+    const nominations={...(ballot.nominations||{})};delete nominations[voter];changed.nominations=nominations;
+    // A ban made after closing nominations invalidates the old receipt.
+    // Recompute the leader *and* hanging Character before the GM opens voting.
+    if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting'){
+      const nominee=gallowsAutomaticNominee(changed);
+      if(nominee!==ballot.candidateId){
+        changed.candidateId=nominee;changed.hangingStartedAt=nominee?now:null;
+      }
+    }
+  }
   else {const votes={...(ballot.votes||{})};delete votes[voter];changed.votes=votes;changed.blocked=[]}
   return {ok:true,value:changed};
 }
@@ -143,6 +188,7 @@ export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
     return {ok:false,error:'GM_MANUAL_MODE_REQUIRED'};
   if(!validId(voter)||!(ballot.eligible||[]).includes(voter)||gallowsBlockedVotes(ballot).includes(voter))
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
+  if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
   const votes={...(ballot.votes||{})};
   if(choice===null)delete votes[voter];else votes[voter]=choice;

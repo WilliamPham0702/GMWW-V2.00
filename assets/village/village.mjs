@@ -175,52 +175,190 @@ if(game){
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   /* Pirate nomination gesture lives INSIDE the village iframe so pointerup
      can hit a Character. The parent sends a signed member request to the DO. */
+  /* V3.206: preview-only drag. The parent validates the player and sends the
+     actual vote only after explicit OK, so a dropped flag can be restored. */
   function syncPirateNominationFlag(){
     if(!embedded)return;
-    let button=document.getElementById('gmwwPirateNominate');
-    if(!button){
-      button=document.createElement('button');button.id='gmwwPirateNominate';button.type='button';
-      button.textContent='🏴‍☠️';button.setAttribute('aria-label','Kéo lá cờ lên người muốn đề cử, hoặc chạm hai lần để mở danh sách');
-      button.title='Kéo vào Character · chạm hai lần xem danh sách';
-      button.style.cssText='position:fixed;right:14px;bottom:max(92px,calc(env(safe-area-inset-bottom) + 92px));z-index:1005;width:58px;height:58px;border-radius:16px;border:2px solid #ffde92;background:#103749e8;box-shadow:0 6px 20px #0008;color:#fff;font-size:30px;touch-action:none;user-select:none';
-      document.body.append(button);
-      let gesture=null,lastTap=0,ghost=null;
-      const cleanup=()=>{ghost?.remove();ghost=null;gesture=null};
-      button.addEventListener('pointerdown',e=>{
+    let flag=document.getElementById('gmwwPirateNominate');
+    if(!flag){
+      const style=document.createElement('style');style.id='gmwwPirateSnapCss';
+      style.textContent=`
+        #gmwwPirateNominate{transition:filter .12s ease,scale .12s ease;cursor:grab}
+        #gmwwPirateNominate.gmww-snap-near{filter:drop-shadow(0 0 14px #ffe77b) drop-shadow(0 4px 7px #000b)!important;scale:1.14}
+        #gmwwPirateNominate.gmww-snap-picked{filter:drop-shadow(0 0 16px #ffe77b) drop-shadow(0 6px 8px #000d)!important}
+        #players .player.gmww-gallows-snap-target .portrait,
+        #players .player.gmww-gallows-snap-target img{outline:4px solid #ffdf6c!important;outline-offset:4px;
+          box-shadow:0 0 0 7px #ff5c5d88,0 0 28px 11px #ffdb66dd!important;
+          filter:brightness(1.28)!important;transition:box-shadow .12s ease,filter .12s ease}
+        #players .player.gmww-gallows-snap-target .name{background:#b32937!important;
+          border:2px solid #ffe69b!important;color:white!important;font-weight:900}
+        #gmwwPirateConfirm{position:fixed;z-index:1012;display:flex;align-items:center;justify-content:center;
+          gap:7px;transform:translate(-50%,0);pointer-events:auto}
+        #gmwwPirateConfirm[hidden]{display:none!important}
+        #gmwwPirateConfirm button{min-width:65px;min-height:38px;padding:5px 8px;border:2px solid #ffe2a0;
+          border-radius:12px;color:white;font-weight:900;background:#116b69eF;box-shadow:0 4px 12px #000a}
+        #gmwwPirateConfirm button[data-gallows-reset]{background:#214b60ee}
+        #gmwwPirateSnapHint{position:fixed;z-index:1011;transform:translate(-50%,-100%);
+          padding:3px 9px;border-radius:12px;background:#a92439f2;border:1px solid #ffe6a3;
+          color:white;font-size:12px;font-weight:900;white-space:nowrap;pointer-events:none}
+        #gmwwPirateSnapHint[hidden]{display:none!important}
+      `;
+      document.head.append(style);
+      flag=document.createElement('button');flag.id='gmwwPirateNominate';flag.type='button';
+      flag.setAttribute('aria-label','Kéo cờ đỏ gần Character để hút; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
+      flag.title='Cờ đỏ: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
+      // Use the native red-flag emoji at its regular icon scale, without a box.
+      flag.textContent='🚩';
+      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
+      flag.hidden=true;document.body.append(flag);
+      const controls=document.createElement('div');controls.id='gmwwPirateConfirm';controls.hidden=true;
+      controls.innerHTML='<button type="button" data-gallows-ok>✓ OK</button><button type="button" data-gallows-reset>↶ KHÔI PHỤC</button>';
+      document.body.append(controls);
+      const hint=document.createElement('span');hint.id='gmwwPirateSnapHint';hint.hidden=true;
+      hint.setAttribute('role','status');hint.setAttribute('aria-live','polite');document.body.append(hint);
+      const atFire=()=>{
+        const point=screenPoint(layout.fire),r=stageElement.getBoundingClientRect();
+        flag.style.left=Math.round(r.left+r.width*point.x/100)+'px';
+        flag.style.top=Math.round(r.top+r.height*point.y/100)+'px';
+      };
+      let gesture=null,lastTap=0,pendingId='',snapNode=null;
+      const playerId=node=>String(node?.dataset.playerId||'').replace(/^member:/,'');
+      const eligibleNode=node=>{
+        if(!node||node.classList.contains('gmww-sv-dead')||node.classList.contains('gm'))return false;
+        const id=playerId(node),allowed=Array.isArray(setupState.gallowsEligibleTargets)?setupState.gallowsEligibleTargets:[];
+        return !!id&&id!==String(setupState.viewerParticipantId||'').replace(/^member:/,'')&&allowed.includes(id);
+      };
+      const snapCandidate=(x,y)=>{
+        let best=null,score=Infinity;
+        document.querySelectorAll('#players .player[data-player-id]').forEach(node=>{
+          if(!eligibleNode(node))return;
+          const r=node.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+          const dist=Math.hypot(x-cx,y-cy);
+          const radius=Math.max(56,Math.min(103,Math.max(r.width,r.height)*.95));
+          if(dist<radius&&dist<score){best=node;score=dist}
+        });
+        return best;
+      };
+      const highlight=node=>{
+        if(snapNode!==node){
+          snapNode?.classList.remove('gmww-gallows-snap-target');
+          snapNode=node||null;
+          snapNode?.classList.add('gmww-gallows-snap-target');
+        }
+        flag.classList.toggle('gmww-snap-near',!!node);
+        hint.hidden=!node;
+        if(node)hint.textContent='🎯 '+String(node.querySelector('.name-text')?.textContent||node.dataset.playerId||'');
+      };
+      const moveTo=(x,y)=>{
+        flag.style.left=Math.max(34,Math.min(innerWidth-34,x))+'px';
+        flag.style.top=Math.max(50,Math.min(innerHeight-70,y))+'px';
+      };
+      const positionDecor=()=>{
+        const x=Number.parseFloat(flag.style.left)||innerWidth/2,y=Number.parseFloat(flag.style.top)||innerHeight/2;
+        controls.style.left=Math.max(110,Math.min(innerWidth-110,x))+'px';
+        controls.style.top=Math.max(56,Math.min(innerHeight-49,y+47))+'px';
+        hint.style.left=Math.max(78,Math.min(innerWidth-78,x))+'px';
+        hint.style.top=Math.max(55,y-46)+'px';
+      };
+      const post=(type,participantId='')=>{
+        try{window.parent.postMessage({type,participantId},window.location.origin)}catch{}
+      };
+      const syncSelected=()=>{
+        if(gesture?.dragged)return;
+        if(!setupState.gallowsCanNominate){
+          pendingId='';highlight(null);controls.hidden=true;hint.hidden=true;return;
+        }
+        const previousPending=pendingId;
+        pendingId=String(setupState.gallowsSelectedId||'');
+        if(previousPending&&!pendingId)atFire();
+        const node=[...document.querySelectorAll('#players .player[data-player-id]')].find(p=>playerId(p)===pendingId&&eligibleNode(p));
+        if(node){
+          const r=node.getBoundingClientRect();
+          moveTo(r.left+r.width/2,r.top+r.height/2);
+          highlight(node);
+        }else{
+          if(pendingId){pendingId='';post('gmww:gallows-reset-nominate')}
+          highlight(null);
+        }
+        flag.classList.toggle('gmww-snap-picked',!!node);
+        controls.hidden=!node;
+        if(node)hint.textContent='🎯 '+String(node.querySelector('.name-text')?.textContent||pendingId);
+        positionDecor();
+      };
+      flag.gmwwAtFire=atFire;
+      flag.gmwwSyncSelection=syncSelected;
+      const reset=()=>{
+        pendingId='';flag.classList.remove('gmww-snap-picked');
+        highlight(null);controls.hidden=true;hint.hidden=true;atFire();
+        post('gmww:gallows-reset-nominate');
+      };
+      controls.querySelector('[data-gallows-ok]').addEventListener('click',()=>{
+        if(!pendingId)return;
+        post('gmww:gallows-confirm-nominate',pendingId);
+      });
+      controls.querySelector('[data-gallows-reset]').addEventListener('click',reset);
+      flag.addEventListener('pointerdown',e=>{
         if(!setupState.gallowsCanNominate||e.button>0)return;
-        gesture={id:e.pointerId,x:e.clientX,y:e.clientY};
-        try{button.setPointerCapture(e.pointerId)}catch{}
+        const r=flag.getBoundingClientRect();
+        gesture={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left+r.width/2,top:r.top+r.height/2,dragged:false};
+        try{flag.setPointerCapture(e.pointerId)}catch{}
         e.preventDefault();
       });
-      button.addEventListener('pointermove',e=>{
+      flag.addEventListener('pointermove',e=>{
         if(!gesture||gesture.id!==e.pointerId)return;
-        if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<14)return;
-        if(!ghost){ghost=document.createElement('span');ghost.textContent='🏴‍☠️';
-          ghost.style.cssText='position:fixed;z-index:1010;pointer-events:none;font-size:36px;filter:drop-shadow(0 3px 6px #000);transform:translate(-50%,-50%)';
-          document.body.append(ghost)}
-        ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+        const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+        if(!gesture.dragged&&Math.hypot(dx,dy)<10)return;
+        if(!gesture.dragged){
+          gesture.dragged=true;pendingId='';controls.hidden=true;
+          flag.classList.remove('gmww-snap-picked');
+          post('gmww:gallows-reset-nominate');
+        }
+        const x=gesture.left+dx,y=gesture.top+dy,node=snapCandidate(x,y);
+        if(node){
+          const r=node.getBoundingClientRect();
+          moveTo(r.left+r.width/2,r.top+r.height/2);
+        }else moveTo(x,y);
+        highlight(node);positionDecor();
+        e.preventDefault();
       });
-      button.addEventListener('pointerup',e=>{
+      flag.addEventListener('pointerup',e=>{
         if(!gesture||gesture.id!==e.pointerId)return;
-        const distance=Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y);
-        if(distance>=20){
-          const target=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.player[data-player-id]');
-          const id=String(target?.dataset.playerId||'');
-          if(id&&id!==String(setupState.viewerParticipantId||'')&&id!=='gm'&&!target?.classList.contains('gmww-sv-dead'))
-            try{window.parent.postMessage({type:'gmww:gallows-drag-nominate',participantId:id},window.location.origin)}catch{}
+        const dragged=gesture.dragged;
+        gesture=null;
+        if(dragged){
+          if(snapNode&&eligibleNode(snapNode)){
+            pendingId=playerId(snapNode);
+            flag.classList.add('gmww-snap-picked');
+            controls.hidden=false;positionDecor();
+            post('gmww:gallows-preview-nominate',pendingId);
+          }else{
+            controls.hidden=true;highlight(null);
+          }
           lastTap=0;
         }else{
           const now=Date.now();
-          if(now-lastTap<450){lastTap=0;try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{}}
-          else lastTap=now;
+          if(now-lastTap<450){
+            lastTap=0;post('gmww:gallows-open-nominations');
+          }else lastTap=now;
         }
-        cleanup();e.preventDefault();
+        e.preventDefault();
       });
-      button.addEventListener('pointercancel',cleanup);
-      button.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){
-        try{window.parent.postMessage({type:'gmww:gallows-open-nominations'},window.location.origin)}catch{};e.preventDefault()}});
+      flag.addEventListener('pointercancel',()=>{
+        gesture=null;highlight(null);flag.gmwwSyncSelection?.();
+      });
+      flag.addEventListener('keydown',e=>{
+        if(e.key==='Enter'||e.key===' '){post('gmww:gallows-open-nominations');e.preventDefault()}
+      });
     }
-    button.hidden=!setupState.gallowsCanNominate;
+    const visible=!!setupState.gallowsCanNominate;
+    if(visible&&flag.hidden!==false)flag.gmwwAtFire?.();
+    if(!visible)flag.dataset.resetAtFire='1';
+    if(visible&&flag.dataset.resetAtFire==='1'){flag.gmwwAtFire?.();delete flag.dataset.resetAtFire}
+    flag.hidden=!visible;
+    const controls=document.getElementById('gmwwPirateConfirm'),hint=document.getElementById('gmwwPirateSnapHint');
+    if(!visible){if(controls)controls.hidden=true;if(hint)hint.hidden=true;
+      document.querySelectorAll('#players .gmww-gallows-snap-target').forEach(n=>n.classList.remove('gmww-gallows-snap-target'));
+    }
   }
   function makePlayerButton(data,position,seatId=null,index=0){
     const isGM=data?.isGM===true||data?.kind==="gm",actualSeat=Number(data?.seatId||seatId||0)||null,playerName=safeText(data.displayName||data.name||names[index]||"Người chơi"),button=document.createElement("button");
@@ -294,6 +432,16 @@ if(game){
   // Reconcile on every frame so 👍/👎 changes never recreate the Character rig.
   function syncGallowsVoteBadge(button,data){
     const host=button.querySelector('.player-over');if(!host)return;
+    const loginId=String(data?.loginId||data?.id||'').replace(/^member:/,''),
+      stat=(setupState.gallowsNominationTotals||[]).find(row=>String(row.loginId)===loginId),
+      count=Math.max(0,Math.trunc(Number(stat?.votes)||0));
+    let pearl=host.querySelector(':scope>.gmww-nomination-pearl');
+    if(count>0){
+      if(!pearl){pearl=document.createElement('span');pearl.className='gmww-nomination-pearl';
+        pearl.setAttribute('aria-label','Số phiếu đề cử')}
+      pearl.textContent='✦ '+count;pearl.title=count+' phiếu đề cử';
+      if(host.firstElementChild!==pearl)host.prepend(pearl);
+    }else pearl?.remove();
     const vote=(Array.isArray(data?.statusTags)?data.statusTags:[]).find(x=>x?.statusId==='gallows_vote')?.icon;
     let badge=host.querySelector(':scope>.gmww-gallows-vote');
     if(vote!=='👍'&&vote!=='👎'){badge?.remove();return}
@@ -301,6 +449,14 @@ if(game){
     if(badge.textContent!==vote)badge.textContent=vote;
     if(host.firstElementChild!==badge)host.prepend(badge);
   }
+  // Static sea-pearl count is public tally only; no faction/role details leak.
+  function ensureNominationPearlStyle(){
+    if(document.getElementById('gmwwNominationPearlCss'))return;
+    const css=document.createElement('style');css.id='gmwwNominationPearlCss';
+    css.textContent='#players .player .gmww-nomination-pearl{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:32px;padding:2px 9px;margin:0 auto 3px;border-radius:999px;border:2px solid #ffe3a5;color:#fffae3;font-weight:1000;font-size:16px;background:radial-gradient(circle at 20% 15%,#70e7e7,#116478 72%,#062f48);box-shadow:0 4px 16px #001a3188;text-shadow:0 1px 3px #002838;pointer-events:none}';
+    document.head.appendChild(css);
+  }
+  ensureNominationPearlStyle();
   function stablePlayerNode(data,pos,seatId,index){
     const id=String(data?.id||""),gm=data?.isGM===true||data?.kind==="gm";
     const appearance=JSON.stringify([gm,data?.gameCharacterId||"",data?.avatarId||"",data?.avatarUrl||""]);
@@ -423,6 +579,7 @@ if(game){
     });
     for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
     reconcileVillageChildren(players,desiredPlayers);
+    document.getElementById('gmwwPirateNominate')?.gmwwSyncSelection?.();
     syncGallowsHangingVisual();
     const alive=new Set(all.map(p=>String(p.id)));
     for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}

@@ -54,6 +54,170 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ xác minh quy tắc CI AUTO VÁN (không chạy gameplay không liên quan)
+        if: steps.scope.outputs.mode == 'auto-van-ci'
+        run: |
+          node --test tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ kiểm thử AUTO VÁN và chốt Runtime V3.222
+        if: steps.scope.outputs.mode == 'auto-van-3222'
+        run: |
+          node --test tests/auto-game-template.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
+          grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
+          grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: V3.226 – kiểm thử Icon không bị làng che trên iPhone
+        if: steps.scope.outputs.mode == 'fire-icons-3226'
+        run: |
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.226-fire-icon-visibility-20261025.md
+
+      - name: V3.225 – kiểm thử riêng Icon kéo thả iPhone và OTA
+        if: steps.scope.outputs.mode == 'active-icons-3225'
+        run: |
+          node --test tests/gmww-action-icons-in-battle.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.225-active-icon-drag-20261025.md
+
+      - name: 'V3.223: chỉ kiểm thử VÀO LÀNG → Arena3D STAGING và chốt OTA'
+        if: steps.scope.outputs.mode == 'arena-home-3223'
+        run: |
+          node --test tests/arena3d-home-portal-v3223.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md
+      - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
+        if: steps.scope.outputs.mode == 'ranking-3221'
+        run: |
+          node --test tests/member-ranking-games-first-v3221.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.221-ranking-games-first-20261025.md
+      - name: Chỉ test 5 icon PR501 và chốt bundle/Player Web
+        if: steps.scope.outputs.mode == 'gm-icons-501' || steps.scope.outputs.mode == 'gm-icons-501-release'
+        run: |
+          node --test tests/gm-free-floating-shortcuts-20261025.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/gallows-pirate-ui-v3205.test.mjs
+          node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          test -s docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
+      - name: Chỉ kiểm thử Top 3 KHÔNG BỤC V3.219 và chốt Runtime
+        if: steps.scope.outputs.mode == 'home-sea-3219'
+        run: |
+          node --test tests/home-top3-podium-sea-v3216.test.mjs tests/home-top3-podium-identity-v3214.test.mjs tests/home-top3-podium-v3211.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.219-top3-no-podium-frosted-glass-20261025.md
+      - name: Chỉ kiểm thử Top 3 style biển và Character V3.216
+        if: steps.scope.outputs.mode == 'home-sea-3216'
+        run: |
+          node --test tests/home-top3-podium-sea-v3216.test.mjs tests/home-top3-podium-identity-v3214.test.mjs tests/home-top3-podium-v3211.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+      - name: Chỉ kiểm thử Top 3 bục và Character thật V3.214
+        if: steps.scope.outputs.mode == 'home-podium-3214'
+        run: |
+          node --test tests/home-top3-podium-v3211.test.mjs tests/home-top3-podium-identity-v3214.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+      - name: Kiểm thử đúng 49 ICON V3.218 và 34 mã thực tế
+        if: steps.scope.outputs.mode == 'icon-wave5-3218'
+        run: |
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.218-49-icons-audit-20261025.md
+
+      - name: Kiểm thử trực tiếp Icon GM V3.215 và 39 ảnh đã được gán
+        if: steps.scope.outputs.mode == 'icon-game-3215'
+        run: |
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.215-action-icons-game-wave4-20261025.md
+
+      - name: Kiểm thử đúng phạm vi 29 ICON V3.213
+        if: steps.scope.outputs.mode == 'icon-wave3-3213'
+        run: |
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.213-icons-wave3-20261025.md
+
+      - name: Kiểm thử đúng phạm vi giao diện ICON V3.212
+        if: steps.scope.outputs.mode == 'icon-clean-3212'
+        run: |
+          node --test tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.212-icon-clean-ui-20261025.md
+
+      - name: Chỉ kiểm thử Icon và đóng gói Runtime V3.210
+        if: steps.scope.outputs.mode == 'icon-runtime-3210'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.210-icons-runtime-20261025.md
+
+      - name: Chỉ kiểm thử Top 3 bục 2.5D V3.211 và đóng gói GM
+        if: steps.scope.outputs.mode == 'home-podium-3211'
+        run: |
+          node --test tests/home-top3-podium-v3211.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+      - name: Chỉ kiểm thử ba lỗi audio V3.217
+        if: steps.scope.outputs.mode == 'audio-fix-3217'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --test tests/audio-v3217-role-day-verdict.test.mjs
+      - name: Chỉ xác minh bộ đóng gói GM/Player Web V3.209
+        if: steps.scope.outputs.mode == 'audio-gallows-3209'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-gallows-rules.js
+          node --check src/gmww-members-live.js
+          node --check assets/village/village.mjs
+      - name: Chỉ kiểm thử audio/Thông cáo/ghi chú phát hành V3.208
+        if: steps.scope.outputs.mode == 'audio-v3208'
+        run: |
+          node --test tests/update-release-notes-range.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3141-fairy-role-scan-day-audio.test.mjs tests/v3133-timeline-audio-role-intel.test.mjs tests/v3148-morning-report.test.mjs tests/demo-assassin-gallows-divination.test.mjs tests/ci-browser-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ kiểm thử PR475 - Sát Thủ, soi xét, audio và quyền vote
+        if: steps.scope.outputs.mode == 'demo-475'
+        run: |
+          node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

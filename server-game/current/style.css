@@ -7105,3 +7105,820 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 #battleGallowsPanel .battle-gallows-audio-target code{flex:1;min-width:0}
 #battleGallowsPanel .battle-gallows-audio-target button{flex:none;min-height:30px;font-size:10px;padding:3px 7px}
 #audioGrid .gallows-audio-upload-target{outline:2px solid #f3d38d;outline-offset:2px;background:rgba(16,108,127,.22)}
+
+
+/* Lên Giàn V3.203 candidate: compact full-width panel, exactly one row per living player.
+   Only the roster scrolls after ten rows; no Character or map geometry changes. */
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
+  width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;
+  max-height:calc(100dvh - 106px)!important;overflow-y:auto!important;
+  padding:9px!important;background:rgba(7,39,55,.73)!important;
+}
+#battleGallowsPanel[hidden],#battleGallowsAutomatic[hidden],
+#battleGallowsManualConclusion[hidden],#battleGallowsNominationBox[hidden],
+#battleGallowsVoteBox[hidden],#battleGallowsCandidateControl[hidden]{display:none!important}
+#battleGallowsPanel #battleGallowsBanDetails{display:block;min-width:0;margin:5px 0 7px}
+#battleGallowsPanel #battleGallowsBanDetails>summary{
+  display:list-item!important;list-style:disclosure-closed;min-height:34px;padding:7px 8px;
+  border:1px solid rgba(155,228,235,.36);border-radius:9px;
+  background:rgba(13,79,92,.33);color:#f6e6ac;font-size:11px;font-weight:850;
+}
+#battleGallowsPanel #battleGallowsBanDetails[open]>summary{list-style:disclosure-open}
+#battleGallowsPanel .gallows-roster-scroll{
+  width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;margin:4px 0 8px;
+}
+#battleGallowsPanel .gallows-roster-head,
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+  display:grid!important;grid-template-columns:30px minmax(132px,1fr) 58px 58px 58px 66px 64px!important;
+  min-width:530px!important;gap:4px!important;align-items:center;box-sizing:border-box;
+  padding:3px 5px!important;
+}
+#battleGallowsPanel .gallows-roster-head{
+  position:sticky;top:0;z-index:2;font-size:9px;font-weight:800;color:#ffe1a2;
+  background:rgba(7,40,55,.97);white-space:nowrap;min-height:26px;
+}
+#battleGallowsPanel #battleGallowsMembers{
+  display:block!important;max-height:380px!important;overflow-y:auto!important;
+  overflow-x:hidden!important;margin:0!important;padding:0!important;
+  overscroll-behavior-y:contain;
+}
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+  min-height:38px!important;height:38px;border-bottom:1px solid #9bccd92b;
+}
+#battleGallowsPanel .battle-gallows-member.is-selected{background:rgba(255,211,117,.16)}
+#battleGallowsPanel .battle-gallows-member .gallows-rank,
+#battleGallowsPanel .battle-gallows-member .gallows-count{font-size:11px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+#battleGallowsPanel #battleGallowsMembers .gallows-name{
+  display:block;min-width:0;text-align:left;font-weight:750;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding:4px!important;font-size:11px;min-height:30px!important;
+}
+#battleGallowsPanel #battleGallowsMembers button[data-gallows-kind]{
+  display:block;min-height:28px!important;height:28px;padding:2px!important;
+  font-size:11px!important;line-height:1;font-weight:900;
+}
+#battleGallowsPanel .gallows-mode-toolbar{
+  display:grid;grid-template-columns:1fr auto;gap:7px;margin:8px 0;
+}
+#battleGallowsPanel .gallows-mode-toolbar button{min-height:38px!important;font-size:12px!important;padding:5px 11px}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{
+  background:rgba(10,110,104,.72)!important;border-color:#f1d18f!important
+}
+#battleGallowsPanel .gallows-phase-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:7px 0}
+#battleGallowsPanel .gallows-phase-tabs button[aria-pressed="true"]{
+  background:rgba(15,114,103,.88)!important;border-color:#eeddac!important
+}
+#battleGallowsPanel .gallows-phase-box{
+  padding:8px;border-radius:10px;border:1px solid rgba(173,222,228,.36);
+  background:rgba(15,76,86,.24)
+}
+#battleGallowsPanel .gallows-timer-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#battleGallowsPanel .gallows-timer-row label{flex:1;min-width:0;font-size:11px}
+#battleGallowsPanel .gallows-timer-row input{
+  width:73px;min-width:0;height:36px;border:1px solid #8fcdd7;border-radius:9px;
+  background:rgba(3,30,44,.80);color:#fff;padding:4px;text-align:center;font-size:16px;font-weight:850;
+}
+#battleGallowsPanel .gallows-timer-row output{min-width:55px;text-align:right;font-size:18px;font-variant-numeric:tabular-nums;font-weight:900}
+#battleGallowsPanel #battleGallowsNominationStats{font-size:11px;margin:8px 1px!important;padding:5px 7px!important}
+#battleGallowsPanel .gallows-manual-outcome p{margin:7px 2px;font-size:11px;opacity:.9}
+#battleGallowsPanel .gallows-info{
+  padding:8px 9px;margin:8px 0;border:1px solid #9dd9e277;border-radius:10px;
+  background:rgba(16,73,79,.35);font-size:11px;font-weight:800;line-height:1.4;
+}
+#battleGallowsPanel .gallows-info[data-result-tone="negative"]{border-color:#ec8f92;color:#ffe7e2}
+#battleGallowsPanel .gallows-info[data-result-tone="positive"]{border-color:#92dcb6;color:#d2ffec}
+#battleGallowsPanel #battleGallowsVoteBreakdown{margin-top:4px;font-size:11px}
+#battleGallowsPanel #battleGallowsVoteBreakdown>summary{font-size:11px;min-height:30px;cursor:pointer}
+#battleGallowsPanel #battleGallowsVoteBreakdown #battleGallowsVotes{max-height:100px!important}
+#battleGallowsPanel #battleGallowsClock:empty{display:none}
+@media(max-width:380px){
+ #battleGallowsPanel .gallows-roster-head,
+ #battleGallowsPanel #battleGallowsMembers .battle-gallows-member{min-width:530px!important}
+}
+
+/* Lên Giàn — one shared clock, visible restrictions, one-row automatic controls. */
+#battleGallowsPanel .gallows-mode-toolbar{
+  display:grid!important;grid-template-columns:minmax(90px,1fr) 65px 59px auto!important;
+  align-items:end;gap:4px!important;margin:6px 0 9px!important
+}
+#battleGallowsPanel .gallows-mode-toolbar button{min-height:38px!important;font-size:10px!important;padding:4px!important}
+#battleGallowsPanel .gallows-mode-toolbar label{font-size:9px;text-align:center;white-space:nowrap;margin:0}
+#battleGallowsPanel .gallows-mode-toolbar input{
+  width:100%;height:26px;color:#fff;text-align:center;font-size:13px;font-weight:850;
+  background:rgba(3,30,44,.82);border:1px solid #8fcdd7;border-radius:7px
+}
+#battleGallowsPanel #battleGallowsClock{
+  min-width:0;min-height:38px;display:flex;align-items:center;justify-content:center;
+  font-size:16px!important;font-weight:900;font-variant-numeric:tabular-nums
+}
+#battleGallowsPanel .gallows-roster-head,
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+  grid-template-columns:22px minmax(70px,1fr) 49px 55px 55px!important;
+  min-width:0!important;gap:3px!important;padding:3px!important
+}
+#battleGallowsPanel #battleGallowsMembers .battle-gallows-member{min-height:39px!important;height:39px}
+#battleGallowsPanel #battleGallowsMembers button[data-gallows-kind]{
+  min-height:31px!important;height:31px!important;font-size:9px!important
+}
+#battleGallowsPanel #battleGallowsMembers button[data-gallows-kind][aria-pressed="true"]{
+  color:#ffeca7!important;background:rgba(162,67,67,.77)!important;border-color:#ffd590!important
+}
+#battleGallowsPanel .gallows-roster-head{font-size:9px!important;white-space:normal!important}
+#battleGallowsPanel .gallows-control-row{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:7px 0
+}
+#battleGallowsPanel .gallows-control-row button{min-width:0;min-height:40px!important;font-size:10px!important;padding:4px 2px!important}
+#battleGallowsPanel .gallows-summary{
+  margin-top:8px;padding:8px;border:1px solid rgba(173,222,228,.36);
+  background:rgba(15,76,86,.24);border-radius:10px;font-size:11px
+}
+#battleGallowsPanel .gallows-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0}
+#battleGallowsPanel .gallows-summary-grid span{background:rgba(6,42,57,.46);border-radius:8px;padding:7px}
+#battleGallowsPanel .gallows-summary-grid b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+#battleGallowsPanel #battleGallowsNominations{max-height:100px;overflow:auto;padding:4px 0}
+#battleGallowsPanel #battleGallowsVoteBreakdown strong{display:block;font-size:10px;padding-top:6px}
+#battleGallowsPanel .gallows-summary .battle-gallows-vote{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #bde8e633;padding:3px}
+@media(max-width:350px){
+ #battleGallowsPanel .gallows-mode-toolbar{grid-template-columns:minmax(82px,1fr) 55px 52px auto!important}
+ #battleGallowsPanel .gallows-mode-toolbar button{font-size:9px!important}
+ #battleGallowsPanel .gallows-roster-head,
+ #battleGallowsPanel #battleGallowsMembers .battle-gallows-member{
+   grid-template-columns:19px minmax(62px,1fr) 42px 49px 49px!important
+ }
+}
+
+/* V3.205: compact Gallows toolbar without clock collision on Safari/iPhone. */
+#battleGallowsPanel .gallows-mode-toolbar{
+ display:grid!important;grid-template-columns:minmax(106px,28%) minmax(62px,72px) minmax(57px,66px) minmax(76px,1fr)!important;
+ gap:5px!important;align-items:center!important;width:100%;box-sizing:border-box
+}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{
+ width:100%;min-width:0!important;min-height:36px!important;padding:5px 4px!important;white-space:nowrap;font-size:10px!important
+}
+#battleGallowsPanel .gallows-mode-toolbar label{display:grid!important;min-width:0!important;gap:1px;text-align:center;line-height:1.1}
+#battleGallowsPanel .gallows-mode-toolbar input{box-sizing:border-box;width:100%!important;height:31px!important;min-width:0!important}
+#battleGallowsPanel .gallows-mode-toolbar #battleGallowsClock{font-size:15px!important;letter-spacing:-.05em;min-width:0!important;white-space:nowrap}
+#battleGallowsPanel .gallows-mode-toolbar [data-gallows-command="restore"]{
+ min-width:0!important;max-width:100%!important;white-space:normal;font-size:9px!important;line-height:1.2;padding:4px 2px!important
+}
+/* Purely GM-local visibility: dead members stay in room/game data and Player Web. */
+#playShell.gmww-hide-dead-players #playPlayerRing .play-player-token.is-dead{display:none!important}
+@media(max-width:370px){
+ #battleGallowsPanel .gallows-mode-toolbar{
+ grid-template-columns:minmax(92px,29%) minmax(52px,65px) minmax(53px,60px) minmax(65px,1fr)!important;
+ gap:3px!important
+ }
+ #battleGallowsPanel .gallows-mode-toolbar #battleGallowsModeToggle{font-size:9px!important}
+}
+
+
+/* GMWW V3.208: negative EFFECTS are red text; dangerous ACTIONS have a red card. */
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-critical:not(.is-bad-action),
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-critical:not(.is-bad-action){
+  background:transparent!important;border-color:transparent!important;border-left:0!important;
+  color:#ff9d9d!important;padding:5px 9px!important;
+}
+#start #playShell[data-step="battle"] #battleMorningList p.battle-morning-line.is-bad-action,
+#start #playShell[data-step="battle"] #battleVillageHistoryList p.battle-morning-line.is-bad-action{
+  background:rgba(148,38,46,.28)!important;border:1px solid rgba(245,121,135,.60)!important;
+  border-left:3px solid #ff6e82!important;color:#ffd0d3!important;
+}
+.gmww-missing-role-audio{border:1px solid rgba(244,185,92,.36);border-radius:12px;padding:12px;margin:8px 0;
+  color:#f9e4b9;background:rgba(100,67,12,.15);font-size:12px;line-height:1.5}
+.gmww-missing-role-audio p{margin:5px 0 6px;max-height:110px;overflow:auto;overflow-wrap:anywhere}
+.gmww-missing-role-audio small{opacity:.84}
+.audio-name-cut{display:inline-block;max-width:100%;margin-top:5px;padding:4px 8px;border-radius:8px;
+  color:#b9f5ef;background:rgba(18,90,107,.35);border:1px solid rgba(123,215,218,.45);
+  font-size:11px;font-weight:650;touch-action:manipulation}
+.gmww-audio-cut-backdrop{position:fixed;z-index:999999;inset:0;display:flex;align-items:center;
+  justify-content:center;background:rgba(0,15,30,.83);padding:12px;color:#e6fbff}
+.gmww-audio-cut-dialog{width:min(96vw,540px);max-height:89vh;overflow:auto;padding:16px;border-radius:18px;
+  border:1px solid rgba(141,232,233,.46);background:#0d2939;box-shadow:0 16px 44px rgba(0,0,0,.5)}
+.gmww-audio-cut-dialog h3{font-size:15px;margin:0 0 8px;color:#ffe59b}
+.gmww-audio-cut-dialog p{margin:0 0 12px;font-size:12px;line-height:1.5}
+.gmww-audio-cut-dialog canvas{display:block;width:100%;height:95px;border-radius:9px;background:#17475b}
+.gmww-audio-cut-values{display:grid;gap:10px;margin:12px 0}
+.gmww-audio-cut-values label{display:grid;gap:4px;font-size:12px}
+.gmww-audio-cut-values output{font-variant-numeric:tabular-nums;color:#ffe59b}
+.gmww-audio-cut-values input{width:100%;accent-color:#ffe59b}
+.gmww-audio-cut-actions{display:flex;gap:7px;flex-wrap:wrap}
+.gmww-audio-cut-actions button{flex:1 1 128px;min-height:38px;border-radius:10px;
+  border:1px solid rgba(141,232,233,.40);background:#17475b;color:#e6fbff;font-weight:700;font-size:12px}
+.gmww-audio-cut-actions [data-save]{background:#246e61;border-color:#82d9af}
+
+
+/* V3.209: sea-glass faction/nomination/verdict UI, light-weight GPU-safe motion. */
+#start #playShell[data-step="battle"] .battle-faction-stats-float{display:flex;align-items:center;justify-content:center;min-width:58px}
+#start #playShell[data-step="battle"] #battleFactionStatsFloat[hidden],
+#start #playShell[data-step="battle"] #battleFactionStats[hidden],
+#start #playShell[data-step="battle"] #battleGallowsVerdict[hidden]{display:none!important}
+#battleFactionStatsToggle{border:1px solid rgba(247,217,149,.66)!important;
+  background:linear-gradient(160deg,rgba(10,122,138,.86),rgba(7,55,79,.95))!important;color:#fffce7;
+  border-radius:15px;min-width:52px;min-height:49px;font-size:23px;box-shadow:0 2px 12px rgba(8,106,127,.28)}
+#battleFactionStatsToggle small{display:block;font-size:8px;font-weight:900;letter-spacing:.06em;color:#d3fffc}
+#battleFactionStatsToggle[aria-pressed="true"]{outline:2px solid #f6dda0;box-shadow:0 0 20px rgba(106,237,227,.24)}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
+  position:fixed;z-index:1760;top:max(19%,env(safe-area-inset-top));right:max(9px,env(safe-area-inset-right));
+  left:auto;max-width:min(340px,91vw);width:340px;max-height:66dvh;overflow:auto;
+  padding:14px;border:1px solid rgba(198,240,235,.5);border-radius:18px;
+  background:linear-gradient(155deg,rgba(5,60,79,.95),rgba(4,35,57,.94));
+  box-shadow:0 18px 44px #001d31aa;color:#e8ffff;backdrop-filter:blur(13px)
+}
+#battleFactionStats header{display:flex;flex-direction:column;gap:3px;padding-bottom:10px;
+  border-bottom:1px solid #baf5eb55;font-weight:900;font-size:14px;color:#ffe4a6}
+#battleFactionStats header small{font-size:10px;color:#a8e8e5;font-weight:500}
+.battle-faction-counts{display:grid;gap:10px;margin:12px 0}
+.battle-faction-row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center;font-size:12px}
+.battle-faction-row b{color:#ffe49c;font-variant-numeric:tabular-nums;font-size:15px}
+.battle-faction-row i{grid-column:1/-1;height:5px;border-radius:10px;background:#123f54;
+  overflow:hidden;position:relative}
+.battle-faction-row i:before{content:"";display:block;height:100%;width:var(--faction-progress);
+  background:linear-gradient(90deg,#64cbd0,#e7d190);border-radius:10px}
+.battle-faction-forecast{margin:8px 0 0;line-height:1.5;font-size:11px;color:#cceae8;
+  border-top:1px solid #baf5eb33;padding-top:10px}
+#start #playShell[data-step="battle"] .battle-nomination-pearl{
+  display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;
+  padding:2px 8px;margin:0 auto 3px;border-radius:999px;color:#fffaf1;
+  font-size:16px;font-weight:1000;font-variant-numeric:tabular-nums;
+  border:2px solid #f5db96;background:radial-gradient(circle at 30% 15%,#50dce1,#086177 64%,#073d54);
+  box-shadow:0 0 0 2px rgba(10,51,70,.32),0 6px 17px rgba(0,0,0,.28);
+  text-shadow:0 1px 2px #082c45;white-space:nowrap;pointer-events:none
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
+  position:fixed;z-index:1860;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(400px,91vw);padding:0;max-height:78dvh;overflow:auto;
+  border-radius:25px;border:2px solid rgba(246,220,153,.85);
+  background:radial-gradient(ellipse at 50% -15%,rgba(27,162,172,.92),transparent 65%),
+   linear-gradient(155deg,#0d6073,#06253c 84%);color:#f5fffb;
+  box-shadow:0 0 0 250vmax rgba(0,20,34,.28),0 17px 65px rgba(0,26,45,.65);
+  animation:gmww-verdict-emerge .55s both;backdrop-filter:blur(16px)
+}
+.battle-verdict-shell{display:flex;align-items:center;flex-direction:column;gap:9px;text-align:center;padding:24px 16px 18px}
+.battle-verdict-wave{font-size:20px;letter-spacing:.25em;color:#ffdda4;
+  animation:gmww-tide-pulse 2.6s ease-in-out infinite}
+.battle-verdict-shell small{font-size:10px;font-weight:800;letter-spacing:.075em;color:#c6f6e9}
+.battle-verdict-shell h3{font-size:20px;color:#fff5c9;margin:0;overflow-wrap:anywhere}
+.battle-verdict-shell strong{font-size:30px;letter-spacing:.07em;
+  color:#ceffeb;text-shadow:0 0 15px #87eedc88}
+#battleGallowsVerdict[data-outcome="dead"] .battle-verdict-shell strong{color:#ffd5d9;text-shadow:0 0 15px #ef9ea488}
+.battle-verdict-shell p{font-size:13px;margin:0;color:#d2f6f8}
+.battle-verdict-shell button{min-height:44px;padding:7px 20px;border-radius:30px;
+  border:1px solid #f9dea0;background:linear-gradient(120deg,#288b92,#0d596b);
+  color:#fff4c8;font-size:12px;font-weight:900;letter-spacing:.03em}
+.gmww-winner-sea-glow{font-size:32px;text-align:center;letter-spacing:.25em;color:#ffe7a8;
+  text-shadow:0 0 18px #72f9f2;animation:gmww-tide-pulse 2.7s ease-in-out infinite}
+#playMatchCompletionSheet .play-completion-card{
+  border:2px solid #efd89d!important;border-radius:24px!important;
+  background:radial-gradient(circle at 50% 2%,rgba(27,161,177,.56),transparent 68%),
+    linear-gradient(165deg,#0e6173,#063147 75%)!important;
+  box-shadow:0 8px 52px #072a42aa,0 0 32px #7ad1cf44!important;
+  animation:gmww-verdict-emerge .56s both}
+#playMatchCompletionSheet .sheet-head h3{color:#ffecbd;letter-spacing:.07em}
+@keyframes gmww-verdict-emerge{from{opacity:0;transform:translate(-50%,-47%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes gmww-tide-pulse{0%,100%{opacity:.65}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ #battleGallowsVerdict,.gmww-winner-sea-glow,#playMatchCompletionSheet .play-completion-card{animation:none!important}
+}
+
+#start #playShell[data-step="battle"] .gmww-gallows-audio-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:8px 0}
+#start #playShell[data-step="battle"] .gmww-gallows-audio-links button{min-width:0;min-height:30px;padding:4px 5px;
+  font-size:10px;color:#baf0f0;border:1px solid #64c0bf77;background:#0d3e55ad;border-radius:10px}
+.gmww-winner-sea-glow[hidden]{display:none!important}
+#playMatchCompletionSheet[data-victory="false"] .play-completion-card{animation:none!important}
+
+/* Victory panel is a centered sheet card, not the centered verdict floating panel. */
+@keyframes gmww-victory-card-in{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+#playMatchCompletionSheet[data-victory="true"] .play-completion-card{animation:gmww-victory-card-in .55s both!important}
+@media(prefers-reduced-motion:reduce){#playMatchCompletionSheet[data-victory="true"] .play-completion-card{animation:none!important}}
+
+/* V3.211 — Top 3 podium: 3 bục 2.5D, Character gấp ~3 lần và nhún múa GPU-friendly.
+   Giữ toàn bộ dữ liệu xếp hạng từ API hiện hữu, không gắn ảnh preview tĩnh. */
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-board-v377{
+  overflow:visible!important;padding:11px 2px 16px!important;
+  border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-board-v377::before,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-board-v377::after{content:none!important}
+#home .gmww-home-top3-skin-v377 #gmwwHomeTop3{
+  padding-top:203px!important;gap:5px!important;align-items:end!important;
+  overflow:visible!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-card-v377.gmww-home-podium-v3211{
+  isolation:isolate;overflow:visible!important;position:relative;
+  min-height:170px!important;margin:0!important;padding:28px 4px 13px!important;gap:4px!important;
+  border:2px solid #c7dce5!important;border-bottom:11px solid #7aa7c2!important;
+  border-radius:18px 18px 10px 10px!important;
+  background:linear-gradient(90deg,#9bbccc 0%,#fafdff 12%,#e6f7ff 53%,#abc8d9 90%,#779fb8 100%)!important;
+  color:#165066!important;
+  box-shadow:inset 0 3px 0 #fff,3px 8px 0 #386b85,4px 13px 16px #002e4e91,0 0 14px #49d7f17a!important;
+  transition:filter .18s ease!important;transform:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"]{
+  z-index:3!important;min-height:198px!important;padding-top:33px!important;
+  border-color:#f0d37f!important;border-bottom-color:#b98a35!important;
+  background:linear-gradient(90deg,#c39038 0%,#fff9dd 14%,#fff6cc 57%,#e8be67 93%,#ab762b 100%)!important;
+  box-shadow:inset 0 4px #fffff0,4px 9px 0 #a7792e,5px 15px 19px #3d261d8a,0 0 19px #ffe1999c!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="2"]{z-index:2}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="3"]{
+  z-index:1;border-color:#e0b8a5!important;border-bottom-color:#a76f50!important;
+  background:linear-gradient(90deg,#c88e72 0%,#fff4e4 13%,#f8e5d7 55%,#d5a385 93%,#a76b4d 100%)!important;
+  box-shadow:inset 0 3px #fffaf2,3px 8px 0 #9d6c51,4px 13px 16px #442c2b7d,0 0 12px #ffc3996b!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211::before{
+  content:"";position:absolute;left:-4px;right:-4px;top:-12px;height:31px;z-index:3;
+  border:2px solid #d8f7ff;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 36%,#fcffff,#bceafa 67%,#5c9fc3 98%);
+  box-shadow:0 5px 9px #17496380,inset 0 3px 1px #fff
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"]::before{
+  border-color:#fff4c2;background:radial-gradient(ellipse at 50% 32%,#fffef1,#ffe498 63%,#d49f3d 99%);
+  box-shadow:0 5px 10px #9a702f88,inset 0 3px 1px #fff
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="3"]::before{
+  border-color:#ffdfc9;background:radial-gradient(ellipse at 50% 32%,#fff6e8,#f6d2bc 64%,#b77857 99%)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211::after{
+  content:"";position:absolute;bottom:-18px;left:8%;width:84%;height:8px;z-index:-1;
+  border-radius:50%;background:#18ceea90;filter:blur(6px);pointer-events:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-stage-v3211{
+  position:absolute;z-index:5;left:50%;top:-155px;width:clamp(135px,39vw,163px);height:160px;
+  transform:translateX(-50%);pointer-events:none;overflow:visible
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-podium-stage-v3211{
+  top:-198px;width:clamp(168px,47vw,202px);height:205px
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-glow-v3211{
+  position:absolute;inset:18% 16% 8%;border-radius:50%;
+  background:radial-gradient(ellipse,#86f8ffe0 0,#50caff72 38%,transparent 74%);
+  filter:blur(10px)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-podium-glow-v3211{
+  background:radial-gradient(ellipse,#fff9bcef 0,#ffe3869a 40%,transparent 73%)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-character-v3211{
+  position:absolute;inset:0;display:grid;place-items:end center;
+  transform-origin:50% 94%;animation:gmwwVictoryDance3211 3.3s ease-in-out infinite;
+  filter:drop-shadow(0 8px 6px #0932478e) drop-shadow(0 0 5px #b5eaff)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-podium-character-v3211{
+  animation-duration:2.8s;animation-delay:-.7s;
+  filter:drop-shadow(0 8px 7px #66451f9c) drop-shadow(0 0 6px #ffe4a2)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="3"] .gmww-home-podium-character-v3211{
+  animation-delay:-1.5s
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-character-v3211 img{
+  width:100%;height:100%;object-fit:contain;object-position:center bottom;
+  user-select:none;-webkit-user-drag:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-rim-v3211{
+  position:absolute;bottom:0;left:12%;width:76%;height:13px;
+  border-radius:50%;border:1px solid #fff9c2a8;
+  background:linear-gradient(#fffdf1b5,#99e9ffa6);
+  box-shadow:0 0 9px #69dfffa6
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-podium-rim-v3211{
+  background:linear-gradient(#fffed2,#f6c86acb);box-shadow:0 0 11px #ffe49ec4
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-crown-v377{
+  z-index:1;width:auto!important;height:22px!important;margin:1px 0 0!important;
+  font-size:26px!important;line-height:1!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-top3-crown-v377{
+  font-size:32px!important;color:#aa7c28!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-rank-v377{
+  z-index:1;padding:3px 6px;border-radius:7px;
+  background:linear-gradient(95deg,#2c759b,#11526e);color:#fff9e6!important;
+  box-shadow:0 2px 5px #0a49668a;font-size:9px!important;letter-spacing:.02em!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-top3-rank-v377{
+  background:linear-gradient(95deg,#aa741d,#76501a);color:#fff5d4!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="3"] .gmww-home-top3-rank-v377{
+  background:linear-gradient(95deg,#b57550,#8b5238)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-name-v377{
+  white-space:normal!important;overflow-wrap:anywhere;text-overflow:clip!important;
+  font-size:clamp(10px,2.8vw,13px)!important;line-height:1.15!important;
+  min-height:14px;margin-top:3px
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-percent-v377{
+  font-size:clamp(24px,6.5vw,34px)!important;line-height:1.05
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-top3-percent-v377{
+  font-size:clamp(27px,7vw,39px)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-record-v377{
+  font-size:clamp(8px,2.2vw,10px)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211 .gmww-home-top3-meter-v377{
+  height:4px!important;margin-top:3px
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211:active{
+  filter:brightness(1.05);transform:none!important
+}
+@keyframes gmwwVictoryDance3211{
+  0%,100%{transform:translate3d(-2px,0,0) rotate(-5deg)}
+  50%{transform:translate3d(3px,-8px,0) rotate(5deg)}
+}
+@media(max-width:390px){
+  #home .gmww-home-top3-skin-v377 #gmwwHomeTop3{padding-top:192px!important;gap:3px!important}
+  #home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211{padding:26px 2px 9px!important;min-height:161px!important}
+  #home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"]{min-height:187px!important;padding-top:31px!important}
+  #home .gmww-home-top3-skin-v377 .gmww-home-podium-stage-v3211{top:-148px;width:clamp(123px,39vw,149px);height:152px}
+  #home .gmww-home-top3-skin-v377 .gmww-home-podium-v3211[data-rank="1"] .gmww-home-podium-stage-v3211{top:-187px;width:clamp(153px,46vw,182px);height:193px}
+}
+@media(prefers-reduced-motion:reduce){
+  #home .gmww-home-top3-skin-v377 .gmww-home-podium-character-v3211{animation:none!important}
+}
+
+/* V3.213 — Bục đứng thật, thông tin ở DƯỚI bục, nhân vật từ atlas hiện hành. */
+#home .gmww-home-top3-skin-v377 #gmwwHomeTop3{
+  padding-top:12px!important;align-items:end!important;gap:6px!important;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-card-v377.gmww-home-podium-v3211.gmww-home-winner-v3213{
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  justify-content:flex-end!important;gap:0!important;min-height:0!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;overflow:visible!important;
+  transform:none!important;isolation:isolate!important;filter:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213::before,
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213::after{content:none!important}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-stage-v3211{
+  position:relative!important;left:auto!important;top:auto!important;
+  display:block!important;width:clamp(100px,31vw,141px)!important;
+  height:158px!important;flex:none!important;margin:0 auto!important;
+  transform:none!important;overflow:visible!important;z-index:5!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-stage-v3211{
+  width:clamp(125px,39vw,174px)!important;height:190px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-glow-v3211{
+  inset:20% 3% -8%!important;filter:blur(14px)!important;opacity:.72!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-character-v3211{
+  position:absolute!important;inset:0!important;display:grid!important;
+  place-items:end center!important;transform-origin:50% 94%!important;
+  will-change:transform;filter:drop-shadow(0 7px 4px #16384b8c)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-character-v3211 img{
+  width:100%!important;height:100%!important;object-fit:contain!important;
+  object-position:center bottom!important;transform:translateY(11px) scale(1.29)!important;
+  transform-origin:center bottom!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-character-unavailable-v3213{
+  display:grid;place-items:center;color:#fbf2ca;font-size:37px!important
+}
+/* Platform là khối rắn riêng biệt nằm dưới chân Character, không bao Character. */
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-platform-v3213{
+  position:relative;z-index:6;display:grid;place-items:center;
+  width:100%;height:52px;flex:none;margin:0 0 5px;border:2px solid #cee5f0;
+  border-top:0;border-bottom:9px solid #779eae;
+  border-radius:7px 7px 13px 13px;
+  background:linear-gradient(90deg,#4a8caa,#d0f2ff 18%,#f7fcff 50%,#b2d5e8 81%,#3b7894);
+  box-shadow:inset 0 2px #fff9,0 9px 0 #285b7b,0 14px 14px #032e4b8e;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-platform-v3213::before{
+  content:"";position:absolute;z-index:1;top:-15px;left:-4px;right:-4px;height:27px;
+  border:2px solid #dbf4ff;border-radius:50%;
+  background:radial-gradient(ellipse at 50% 20%,#ffffffe9,#c9ecfc 55%,#4892b2);
+  box-shadow:0 4px 5px #21637b80,inset 0 2px #fff;
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-platform-v3213{
+  height:70px;border-color:#ffe9a8;border-bottom-color:#ad7727;
+  background:linear-gradient(90deg,#a3691f,#ffe19a 18%,#fff6cf 50%,#e5b95e 82%,#9b671c);
+  box-shadow:inset 0 2px #fff9,0 9px 0 #8c5d28,0 15px 18px #4e36199c
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-platform-v3213::before{
+  background:radial-gradient(ellipse at 50% 15%,#fffff1,#ffe8a2 55%,#d39d39);border-color:#fff1c4
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="3"] .gmww-home-podium-platform-v3213{
+  border-color:#f7cfba;border-bottom-color:#a77050;
+  background:linear-gradient(90deg,#a96d54,#f4cfb6 18%,#fff1e4 50%,#deb09a 82%,#9e624c);
+  box-shadow:inset 0 2px #fff9,0 9px 0 #88523f,0 14px 14px #472b2a88
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="3"] .gmww-home-podium-platform-v3213::before{
+  background:radial-gradient(ellipse at 50% 15%,#fffdf6,#f1cfbb 55%,#bf8465);border-color:#ffe1cc
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-platform-v3213 .gmww-home-top3-crown-v377{
+  position:relative;z-index:2;display:grid;place-items:center;width:35px!important;
+  height:30px!important;font-size:29px!important;line-height:1!important;
+  margin:4px 0 0!important;color:#55798f!important;text-shadow:0 1px #fff8
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-platform-v3213 .gmww-home-top3-crown-v377{color:#a06d21!important;font-size:34px!important}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="3"] .gmww-home-podium-platform-v3213 .gmww-home-top3-crown-v377{color:#9f6a52!important}
+/* Bảng thông tin hoàn toàn dưới chân bục, không đè lên Character. */
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:5px;min-width:0;width:100%;min-height:166px;padding:14px 4px 12px;
+  border:2px solid #a5d2e5;border-radius:15px;
+  background:linear-gradient(150deg,#fdfefe,#e4f4fe 63%,#b9dce9);
+  box-shadow:inset 0 2px #fff,0 6px 0 #4e88a5,0 9px 13px #0036548c
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-info-v3213{
+  border-color:#f4d48c;background:linear-gradient(150deg,#fffcee,#ffedb9 67%,#efcb7c);
+  box-shadow:inset 0 2px #fff,0 6px 0 #bd8c39,0 9px 15px #62451f8b
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="3"] .gmww-home-podium-info-v3213{
+  border-color:#ddb59f;background:linear-gradient(150deg,#fff9f1,#f9e5d7 60%,#dfbea8);
+  box-shadow:inset 0 2px #fff,0 6px 0 #b88467,0 9px 13px #50372783
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213 .gmww-home-top3-rank-v377{
+  position:relative;z-index:1;padding:3px 7px;color:#fff!important;font-size:9px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213 .gmww-home-top3-name-v377{
+  white-space:normal!important;overflow-wrap:anywhere;line-height:1.15!important;
+  font-size:clamp(11px,2.8vw,14px)!important;min-height:25px!important;
+  display:grid;place-items:center;margin:0!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213 .gmww-home-top3-percent-v377{
+  font-size:clamp(26px,6vw,37px)!important;line-height:1.05!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213 .gmww-home-top3-meter-v377{height:4px!important;width:85%!important}
+#home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213 .gmww-home-top3-record-v377{
+  margin-top:2px!important;font-size:clamp(8px,2.2vw,10px)!important
+}
+@media(max-width:390px){
+ #home .gmww-home-top3-skin-v377 #gmwwHomeTop3{gap:4px!important;padding-top:9px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-stage-v3211{
+   width:clamp(93px,31vw,125px)!important;height:142px!important
+ }
+ #home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213[data-rank="1"] .gmww-home-podium-stage-v3211{
+   width:clamp(120px,38vw,150px)!important;height:176px!important
+ }
+ #home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-info-v3213{min-height:160px;padding:11px 3px}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .gmww-home-top3-skin-v377 .gmww-home-winner-v3213 .gmww-home-podium-character-v3211{
+   animation:none!important;will-change:auto!important
+ }
+}
+
+/* GMWW character action icons: anchors follow the calibrated 🔥 of each scene. */
+/* V3.226: dock lives under document.body; it must outrank the immersive village (#start z-index:1000) on iPhone Safari. */
+.battle-fire-icon-dock{position:fixed;left:50%;top:50%;transform:translateX(-50%);z-index:1200;max-width:min(74vw,330px);display:flex;gap:5px;overflow-x:auto;padding:4px 6px;scrollbar-width:thin;touch-action:pan-x;border-radius:17px;background:rgba(4,35,59,.72);border:1px solid rgba(155,238,255,.55);box-shadow:0 4px 16px #04283f8c}
+.battle-fire-icon-dock[hidden]{display:none}
+.battle-fire-icon-dock.is-pending .battle-fire-icon{opacity:.62;cursor:wait}
+.battle-fire-icon-dock.is-pending{pointer-events:none}
+.battle-fire-icon{flex:0 0 auto;display:grid;justify-items:center;align-items:center;gap:1px;width:62px;padding:2px 2px 4px;border:0;border-radius:11px;background:rgba(11,57,88,.62);color:#fff1c4;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.battle-fire-icon img{display:block;width:48px;height:48px;object-fit:contain;pointer-events:none}
+.battle-fire-icon small{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:12px}
+.battle-fire-icon[aria-pressed="true"]{outline:2px solid #91f9ff;background:rgba(16,108,134,.94)}
+.gmww-battle-icon-ghost{position:fixed;z-index:99999;transform:translate(-50%,-50%);width:78px;height:78px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 13px #8beaff);opacity:.95}
+#playPlayerRing [data-play-player-id].gmww-battle-icon-snap{outline:3px solid #a4ffff;outline-offset:4px;border-radius:50%;filter:drop-shadow(0 0 14px #9cfaff)}
+
+/* V3.219 — Top 3 không bục: Character thật nổi trên kính sương biển.
+   Bỏ hoàn toàn bệ/sàn, không thay ranking API, Player Web hoặc gameplay. */
+#home .gmww-home-top3-skin-v377 #gmwwHomeTop3{
+  padding-top:10px!important;gap:7px!important;align-items:end!important;overflow:visible!important
+}
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-card-v377.gmww-home-top3-sea-v3219{
+  --hero-aura:rgba(133,242,255,.40);
+  --hero-edge:rgba(205,255,255,.72);
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  justify-content:flex-end!important;gap:0!important;isolation:isolate!important;
+  position:relative!important;min-width:0!important;min-height:0!important;
+  margin:0!important;padding:0!important;overflow:visible!important;
+  border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;filter:none!important;
+  transform:none!important;text-align:center!important;transition:filter .2s ease!important
+}
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-sea-v3219::before,
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-sea-v3219::after{content:none!important}
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-sea-v3219[data-rank="1"]{
+  --hero-aura:rgba(255,231,157,.49);--hero-edge:rgba(255,240,196,.85);
+  z-index:3!important
+}
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-sea-v3219[data-rank="2"]{z-index:2!important}
+#home .gmww-home-top3-skin-v377 button.gmww-home-top3-sea-v3219[data-rank="3"]{
+  --hero-aura:rgba(255,207,189,.41);--hero-edge:rgba(254,230,220,.76);
+  z-index:1!important
+}
+/* Trục tâm 50% cố định cho ảnh Character đang sở hữu, không đặt bất cứ bục nào. */
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-stage-v3219{
+  position:relative!important;display:block!important;flex:none!important;
+  width:100%!important;height:153px!important;margin:0 auto!important;
+  overflow:visible!important;pointer-events:none!important;z-index:2!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-stage-v3219{
+  height:181px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-halo-v3219{
+  position:absolute!important;inset:28% -10% -6%!important;
+  background:radial-gradient(ellipse at 50% 75%,var(--hero-aura),transparent 67%)!important;
+  filter:blur(12px)!important;opacity:.9!important;pointer-events:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::before,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::after{
+  position:absolute;content:"✧";z-index:3;color:rgba(248,255,255,.94);
+  font:22px/1 Georgia,serif;text-shadow:0 0 9px var(--hero-aura);
+  pointer-events:none;animation:gmwwSeaGlisten3219 6.5s ease-in-out infinite
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::before{left:2%;top:21%}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::after{
+  content:"✦";font-size:11px;right:4%;top:42%;animation-delay:-3.2s
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-character-v3219{
+  position:absolute!important;inset:0!important;display:block!important;
+  transform-origin:50% 100%!important;
+  animation:gmwwSeaChampionDrift3219 4.2s ease-in-out infinite!important;
+  filter:drop-shadow(0 7px 5px rgba(1,39,58,.35))!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-character-v3219{
+  animation-delay:-.8s!important;animation-duration:3.9s!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="3"] .gmww-home-top3-character-v3219{
+  animation-delay:-1.9s!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-character-v3219 img{
+  position:absolute!important;left:50%!important;bottom:0!important;top:auto!important;right:auto!important;
+  display:block!important;width:clamp(130px,36vw,172px)!important;
+  max-width:none!important;height:auto!important;aspect-ratio:1/1!important;
+  object-fit:contain!important;object-position:center!important;
+  transform:translateX(-50%)!important;transform-origin:50% 100%!important;
+  filter:none!important;-webkit-user-drag:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-character-v3219 img{
+  width:clamp(155px,43vw,199px)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-character-unavailable-v3219{
+  display:grid!important;place-items:center!important;color:#fff!important;
+  font-size:35px!important;text-shadow:0 0 12px var(--hero-aura)!important
+}
+/* Kính mờ đậm nhưng trong suốt: bảng thông tin nằm ngay dưới Character, không có bục. */
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-glass-v3219{
+  position:relative!important;z-index:4!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  justify-content:flex-start!important;flex:none!important;gap:4px!important;
+  width:100%!important;min-width:0!important;min-height:153px!important;
+  margin:0!important;padding:12px 5px 13px!important;
+  border:1px solid var(--hero-edge)!important;border-radius:21px!important;
+  background:linear-gradient(155deg,rgba(244,255,255,.20),rgba(59,180,192,.17) 48%,rgba(4,80,113,.26))!important;
+  -webkit-backdrop-filter:blur(21px) saturate(170%)!important;
+  backdrop-filter:blur(21px) saturate(170%)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.53),0 7px 18px rgba(0,46,66,.23),0 0 13px var(--hero-aura)!important;
+  color:#fff!important;text-shadow:0 1px 4px rgba(1,37,55,.9)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-glass-v3219::before{
+  content:"✧";position:absolute;left:8px;top:8px;line-height:1;
+  color:rgba(255,255,255,.8);font-size:10px;pointer-events:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-glass-v3219::after{
+  content:"✦";position:absolute;bottom:7px;right:7px;line-height:1;
+  color:rgba(255,255,255,.76);font-size:9px;pointer-events:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-rank-v377{
+  position:relative!important;display:inline-block!important;padding:4px 8px!important;
+  border:1px solid rgba(255,255,255,.64)!important;border-radius:999px!important;
+  background:rgba(19,106,135,.35)!important;box-shadow:inset 0 1px rgba(255,255,255,.16)!important;
+  font-size:9px!important;letter-spacing:.06em!important;color:#fff!important;
+  text-shadow:0 1px 4px rgba(2,38,57,.9)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-rank-v377{
+  background:rgba(162,122,45,.25)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="3"] .gmww-home-top3-rank-v377{
+  background:rgba(164,99,85,.23)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-name-v377,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-percent-v377,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-percent-label-v377,
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-record-v377{
+  color:#fff!important;text-shadow:0 1px 5px rgba(1,35,53,.92),0 0 5px rgba(250,255,255,.17)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-name-v377{
+  width:100%!important;max-width:100%!important;white-space:normal!important;
+  overflow-wrap:anywhere!important;text-overflow:clip!important;
+  min-height:23px!important;margin:1px 0 0!important;
+  font-size:clamp(11px,3.1vw,15px)!important;line-height:1.22!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-percent-v377{
+  font-size:clamp(27px,7vw,39px)!important;line-height:1!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-percent-label-v377{
+  font-size:clamp(8px,2.15vw,10px)!important;letter-spacing:.045em!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-record-v377{
+  font-size:clamp(9px,2.35vw,11px)!important;line-height:1.25!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-meter-v377{
+  width:82%!important;height:4px!important;border-radius:999px!important;
+  border:1px solid rgba(241,255,255,.48)!important;background:rgba(243,255,255,.18)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-meter-v377>span{
+  background:linear-gradient(90deg,rgba(192,255,251,.9),#fff)!important;border-radius:999px!important
+}
+@keyframes gmwwSeaChampionDrift3219{
+  0%,100%{transform:translate3d(0,0,0) rotate(-1.25deg)}
+  50%{transform:translate3d(0,-4px,0) rotate(1.25deg)}
+}
+@keyframes gmwwSeaGlisten3219{
+  0%,100%{opacity:.33;transform:scale(.85)}
+  50%{opacity:.95;transform:scale(1.13)}
+}
+@media(max-width:390px){
+ #home .gmww-home-top3-skin-v377 #gmwwHomeTop3{gap:4px!important;padding-top:9px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-stage-v3219{height:137px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-stage-v3219{height:166px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-character-v3219 img{width:clamp(115px,36vw,151px)!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219[data-rank="1"] .gmww-home-top3-character-v3219 img{width:clamp(138px,42vw,180px)!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-sea-v3219 .gmww-home-top3-glass-v3219{min-height:148px!important;padding:11px 3px 12px!important;border-radius:17px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-character-v3219,
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::before,
+ #home .gmww-home-top3-skin-v377 .gmww-home-top3-stage-v3219::after{animation:none!important}
+}
+
+/* V3.217 — actual audio links live ONLY in Library → Âm Thanh → Hệ Thống. */
+.gmww-system-sound-links{margin:8px 0 12px;padding:11px 12px;border:1px solid #b2e8e099;
+  border-radius:15px;background:linear-gradient(140deg,#0c4e64c9,#083047d9);color:#eaffff}
+.gmww-system-sound-links strong{display:block;font-size:12px;letter-spacing:.04em;color:#ffeba8}
+.gmww-system-sound-links p{font-size:10px;line-height:1.5;color:#c8eae8;margin:6px 0 9px}
+.gmww-system-sound-links>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.gmww-system-sound-links button{display:grid;gap:3px;padding:8px;border:1px solid #a9e3df77;
+  border-radius:11px;background:#09516bd4;color:#eefdfa;font-size:11px;font-weight:800;min-height:42px}
+.gmww-system-sound-links button small{font-size:9px;color:#ffe6a5;font-weight:600}
+@media(max-width:340px){.gmww-system-sound-links>div{grid-template-columns:1fr}}
+
+
+/* 2026-10-25 — GM free shortcuts. Icons are unboxed, draggable and outside the bottom rail. */
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsFloat,#battleDayNoticeFloat,#battleDayGallowsFloat).gmww-free-icon{
+  position:fixed!important;z-index:1570!important;display:flex!important;
+  align-items:center!important;justify-content:center!important;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;flex:none!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;pointer-events:auto!important;touch-action:none!important;
+  transform:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStatsFloat.gmww-free-icon{
+  top:32%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDayNoticeFloat.gmww-free-icon{
+  top:43%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDayGallowsFloat.gmww-free-icon{
+  top:54%;left:12px;right:auto;bottom:auto
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsFloat,#battleDayNoticeFloat,#battleDayGallowsFloat).gmww-free-icon[hidden]{
+  display:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle){
+  display:grid!important;place-items:center!important;width:50px!important;height:50px!important;
+  min-width:50px!important;max-width:50px!important;
+  min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;filter:none!important;
+  color:inherit!important;font-size:36px!important;font-weight:400!important;line-height:1!important;
+  cursor:grab!important;touch-action:none!important;-webkit-tap-highlight-color:transparent;
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle):active{
+  cursor:grabbing!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle) small{
+  display:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] :is(#battleFactionStatsToggle,#battleDayNoticeToggle,#battleDayGallowsToggle):focus-visible{
+  outline:2px solid #ffe6ac!important;outline-offset:2px!important;border-radius:7px!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon{
+  position:fixed!important;z-index:1570!important;pointer-events:auto!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed{
+  top:calc(env(safe-area-inset-top) + 154px);right:12px;left:auto;bottom:auto;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;overflow:visible!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed>header{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:50px!important;height:50px!important;min-height:50px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed #battleDemoCollapse{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:50px!important;min-width:50px!important;max-width:50px!important;
+  height:50px!important;min-height:50px!important;max-height:50px!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;color:inherit!important;
+  font-size:34px!important;cursor:grab!important;touch-action:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed #battleDemoCollapse:active{
+  cursor:grabbing!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleDemoObserver.gmww-free-icon.is-collapsed.has-unread #battleDemoCollapse{
+  border:0!important;box-shadow:none!important;filter:drop-shadow(0 0 5px #fff2a4)!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
+  pointer-events:auto!important
+}

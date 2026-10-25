@@ -45,6 +45,10 @@ try{
   await day('/participants',{members:people,replace:true});await day('/seat-lock',{locked:true});
   await day('/assignments',{matchId:dayMatch,assignments:people.map((p,i)=>({...p,roleId:cards[i===0?0:4].id,roleName:cards[i===0?0:4].name,faction:cards[i===0?0:4].faction,roleCard:cards[i===0?0:4]}))});
   await day('/start',{matchId:dayMatch});await day('/demo',{command:'speed',speed:2});await day('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'});
+  // V3.203: Gallows ignores legacy Ván Mẫu timing. Configure the two
+  // per-stage 12-second timers through the real GM endpoint for this test.
+  await day('/gallows',{command:'set_duration',kind:'nomination',seconds:12});
+  await day('/gallows',{command:'set_duration',kind:'vote',seconds:12});
   await day('/gallows',{command:'open'});await day('/gallows',{command:'begin',targetId:people[0].loginId});
   let observedVotes=false,finished=false,manual=false;const until=Date.now()+15000;
   while(Date.now()<until){

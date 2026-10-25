@@ -30,8 +30,9 @@ test('Chọn Ván Mẫu owns per-match Artifact switch; including the Artifact p
 test('Timing panels are collapsed by default, with all timing inputs intact',()=>{
  assert.match(html,/<details class="play-template-collapsible" id="playGameTimingDetails">/);
  assert.match(html,/<details class="play-template-collapsible" id="playRoleTimingDetails">/);
- for(const id of ['playVillageDiscussionSec','playGallowsNominationSec','playGallowsVoteSec','playDefaultActionSec','playWolfDiscussionSec','playEarlyArtifactSec','playGameRoleTimingList'])assert.ok(html.includes('id="'+id+'"'),id);
+ for(const id of ['playVillageDiscussionSec','playDefaultActionSec','playWolfDiscussionSec','playEarlyArtifactSec','playGameRoleTimingList'])assert.ok(html.includes('id="'+id+'"'),id);
  assert.doesNotMatch(html,/<button id="playGameClose"/);
+ assert.doesNotMatch(html,/id="playGallowsNominationSec"|id="playGallowsVoteSec"/);
  assert.match(gm,/detailId of \['playGameTimingDetails','playRoleTimingDetails'\]/);
  assert.match(gm,/if\(e\.target===document\.getElementById\('playGameSheet'\)\)closePlayGameSheet\(\)/);
 });

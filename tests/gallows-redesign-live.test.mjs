@@ -79,6 +79,6 @@ test('Player Web keeps stage-scoped nomination and vote actions; configured audi
  assert.ok(server.includes('this.broadcast({type:"gallows_updated"'));
  for(const id of ['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved']){
    assert.ok(audio.includes("id:'"+id+"'"));
-   assert.ok(html.includes('<code>'+id+'</code>'));
+   assert.ok(!html.includes('<code>'+id+'</code>'),'Audio link must only be in Settings → Library');
  }
 });

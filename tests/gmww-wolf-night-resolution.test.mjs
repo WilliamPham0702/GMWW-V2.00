@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {resolveWolfNight,resolveMaidenNight} from '../src/gmww-wolf-night-resolution.js';
+import {resolveWolfNight,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
 
 const players=Object.fromEntries([['alice',1],['bob',2],['carol',3],['dave',4]].map(([loginId,seatId])=>['member:'+loginId,{loginId,seatId}]));
 const action=(actionId,loginId,{night=1,matchId='m1',direction='',actorId='gm'}={})=>
@@ -107,4 +107,21 @@ test('Fairy bite transfer checks whether Maiden is away at final bite destinatio
   const result=maidenWolf([bite('bob'),fairy('right'),visit('dave')]);
   assert.deepEqual(result.transfers,[{from:'bob',to:'alice',direction:'right'}]);
   assert.deepEqual(result.victims,[]);
+});
+
+
+test('Sói Tuyết duy nhất trong bầy được quyền Cắn',()=>{
+  assert.equal(canSnowWolfBite({assignments:[{roleId:'role_snow_wolf',loginId:'member:snow',factionId:'wolf'}],matchId:'m1'}),true);
+});
+test('Sói Tuyết không được Cắn khi còn Sói khác sống; mở lại khi Sói đó chết',()=>{
+  const assignments=[{roleId:'role_snow_wolf',loginId:'member:snow'},
+    {roleId:'role_alpha_wolf',loginId:'member:alpha',roleCard:{factionId:'wolf'}}];
+  assert.equal(canSnowWolfBite({assignments,matchId:'m1'}),false);
+  assert.equal(canSnowWolfBite({assignments,matchId:'m1',interactions:[{matchId:'m1',type:'dead',loginId:'alpha',effectActive:true}]}),true);
+});
+test('Đóng Băng không làm mất quyền Cắn của Sói Tuyết đơn độc',()=>{
+  const assignments=[{roleId:'role_snow_wolf',loginId:'snow'}];
+  const interactions=[action('action_snow_freeze','bob')];
+  assert.equal(canSnowWolfBite({assignments,interactions,matchId:'m1'}),true);
+  assert.deepEqual(resolve([...interactions,bite('carol')]).victims,['carol']);
 });

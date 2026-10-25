@@ -121,6 +121,28 @@ function gallowsCurrentStage(){
   if(g.stage==='nominating'&&g.nominationDeadlineAt&&!nominationRemaining)return 'selecting';
   return g.stage==='voting'&&!remaining?'closed':g.stage;
 }
+
+function renderPublicGallowsVerdict(){
+  const g=state.gallows||{},phase=String(state.room?.cyclePhase||''),
+    stamp=Number(g.resolvedAt||0),remaining=30000-(Date.now()+Number(state.serverClockOffsetMs||0)-stamp);
+  let panel=document.getElementById('gmwwGallowsPublicVerdict');
+  const visible=!!state.roomCode&&phase==='morning'&&g.stage==='resolved'&&
+    ['dead','alive'].includes(g.outcome)&&stamp>0&&remaining>0;
+  if(!visible){if(panel)panel.hidden=true;return}
+  if(!panel){
+    const style=document.createElement('style');style.id='gmwwGallowsVerdictCss';style.textContent="#gmwwGallowsPublicVerdict{position:fixed;z-index:998;top:22%;left:50%;transform:translateX(-50%);width:min(86vw,400px);padding:18px 15px;text-align:center;border-radius:24px;border:2px solid #ecd39c;background:radial-gradient(circle at 50% 0%,#187e91,#08283f 84%);color:#effff5;box-shadow:0 13px 40px #001e398c;pointer-events:none;animation:gmww-public-verdict-in .45s ease both}\n#gmwwGallowsPublicVerdict[hidden]{display:none!important}\n#gmwwGallowsPublicVerdict .gmww-verdict-pearls{display:block;font-size:20px;letter-spacing:.3em;color:#ffe0a2}\n#gmwwGallowsPublicVerdict strong{display:block;font-size:29px;color:#dcffec;letter-spacing:.045em}\n#gmwwGallowsPublicVerdict[data-outcome=\"dead\"] strong{color:#ffd0d5}\n#gmwwGallowsPublicVerdict b{display:block;font-size:18px;margin:8px 0;color:#fff3bb}\n#gmwwGallowsPublicVerdict p{margin:8px 0;font-size:13px}\n#gmwwGallowsPublicVerdict small{font-size:10px;color:#b3e8eb}\n@keyframes gmww-public-verdict-in{from{opacity:0;transform:translate(-50%,12px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}\n@media(prefers-reduced-motion:reduce){#gmwwGallowsPublicVerdict{animation:none}}";
+    document.head.append(style);
+    panel=document.createElement('section');panel.id='gmwwGallowsPublicVerdict';
+    panel.setAttribute('aria-label','Phán quyết Lên Giàn');
+    panel.innerHTML='<span class="gmww-verdict-pearls">✦ 🐚 ✦</span><small>⚖ PHÁN QUYẾT CỦA ĐẠI DƯƠNG</small><b></b><strong></strong><p></p><small>Tự đóng sau 30 giây</small>';
+    document.body.append(panel);
+  }
+  const target=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
+  panel.querySelector('b').textContent=String(target?.displayName||g.candidateId||'Người chơi');
+  panel.querySelector('strong').textContent=g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
+  panel.querySelector('p').textContent='👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
+  panel.dataset.outcome=g.outcome;panel.hidden=false;
+}
 function syncGallowsVoteTags(){
   const ballot=state.gallows;
   const active=ballot&&['voting','closed','resolved'].includes(gallowsCurrentStage());
@@ -134,102 +156,137 @@ function syncGallowsVoteTags(){
 }
 function gallowsWidget(){
   let el=document.getElementById('gmwwGallowsPlayer');if(el)return el;
-  const st=document.createElement('style');st.id='gmwwGallowsPlayerCss';
-  st.textContent='#gmwwGallowsPlayer{position:fixed;z-index:990;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,440px);max-height:58dvh;overflow:auto;padding:13px;border-radius:17px;border:1px solid #ace3e2;background:#103344ed;box-shadow:0 10px 40px #0007;color:#effcff;display:grid;gap:8px}#gmwwGallowsPlayer[hidden]{display:none!important}#gmwwGallowsPlayer h3{margin:0;font-size:17px;color:#ffda92}#gmwwGallowsPlayer button,#gmwwGallowsPlayer select{min-height:38px;border-radius:9px;border:1px solid #99cfda;background:#18516b;color:#fff;padding:7px;font-weight:800}#gmwwGallowsPlayer button:disabled{opacity:.38}#gmwwGallowsChoices{display:grid;grid-template-columns:1fr 1fr;gap:9px}#gmwwGallowsVotes{max-height:18dvh;overflow:auto;font-size:12px;line-height:1.7}#gmwwGallowsVotes div{display:flex;justify-content:space-between;border-bottom:1px solid #d7ffff33}';
-  st.textContent+='#gmwwGallowsPublicStage{flex:0 0 100%;text-align:center;font-size:12px;color:#ffe3ae;line-height:1.4}#gmwwGallowsDock{flex-wrap:wrap;max-width:96vw}';
-  st.textContent+='#gmwwGallowsDock{position:fixed;z-index:989;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:9px;align-items:center;justify-content:center;padding:8px 10px;background:#103344ee;border:1px solid #9edcde;border-radius:16px;box-shadow:0 7px 22px #0008}#gmwwGallowsDock[hidden]{display:none!important}#gmwwGallowsDock button{min-height:45px;min-width:58px;border:1px solid #a4ced8;border-radius:11px;background:#16556b;color:#fff;font-weight:850;font-size:15px}#gmwwGallowsDock button:disabled{opacity:.42}#gmwwGallowsPlayer{bottom:max(80px,calc(env(safe-area-inset-bottom) + 78px))}';
-  document.head.append(st);
+  const style=document.createElement('style');style.id='gmwwGallowsPlayerCss';
+  style.textContent=`
+#gmwwGallowsPlayer{position:fixed;z-index:990;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,460px);max-height:68dvh;overflow:auto;padding:12px;border-radius:17px;border:1px solid #a7d9df;background:rgba(9,49,65,.93);box-shadow:0 12px 36px #0008;color:#effcff;display:grid;gap:10px;box-sizing:border-box}
+#gmwwGallowsPlayer[hidden],#gmwwGallowsDock[hidden]{display:none!important}
+#gmwwGallowsPlayer h3{margin:0;text-align:center;font-size:15px;color:#ffe0a4}
+#gmwwGallowsPlayer .gallows-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#gmwwGallowsPlayer button{border:1px solid #8bd1da;background:#175872;color:#fff;border-radius:11px;min-height:40px;padding:7px;font-weight:850}
+#gmwwGallowsPlayer button:disabled{opacity:.42}
+#gmwwGallowsPlayer #gmwwGallowsNominate{background:#087e78;border-color:#f4d89e}
+#gmwwGallowsPlayer #gmwwGallowsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:43dvh;overflow-y:auto;align-content:start}
+#gmwwGallowsPlayer .gmww-gallows-candidate{min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,36,58,.94);gap:6px;padding:8px 4px}
+#gmwwGallowsPlayer .gmww-gallows-candidate b{font-size:13px}
+#gmwwGallowsPlayer .gmww-gallows-candidate span{font-size:11px;color:#84d2d0;max-width:98%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#gmwwGallowsPlayer .gmww-gallows-candidate[aria-pressed="true"]{border:2px solid #f8d489;background:rgba(13,119,112,.85);box-shadow:inset 0 0 0 1px #baf4de}
+#gmwwGallowsPlayer .gallows-helper{margin:0;text-align:center;font-size:11px;color:#b6e3e8}
+#gmwwGallowsDock{position:fixed;z-index:989;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;max-width:95vw;padding:8px 10px;background:#103344ee;border:1px solid #9edcde;border-radius:16px;box-shadow:0 7px 22px #0008}
+#gmwwGallowsDock button{min-width:58px;min-height:45px;border:1px solid #a4ced8;border-radius:11px;background:#16556b;color:#fff;font-size:18px}
+#gmwwGallowsDock button:disabled{opacity:.42}
+#gmwwGallowsPublicStage{flex:0 0 100%;text-align:center;font-size:12px;color:#ffe3ae;line-height:1.4}
+`;
+  document.head.append(style);
   el=document.createElement('section');el.id='gmwwGallowsPlayer';el.hidden=true;
-  el.innerHTML='<h3>⚖️ LÊN GIÀN · <output id="gmwwGallowsRemaining">00:10</output></h3><p id="gmwwGallowsPrompt"></p><select id="gmwwGallowsNominee" aria-label="Chọn người đề cử"></select><div id="gmwwGallowsChoices"><button id="gmwwGallowsNominate">ĐỀ CỬ</button><button id="gmwwGallowsSave">👍 CỨU</button><button id="gmwwGallowsKill">👎 GIẾT</button></div><div id="gmwwGallowsVotes"></div>';
+  el.setAttribute('aria-label','Danh sách đề cử người lên giàn');
+  el.innerHTML='<h3>🏴‍☠️ CHỌN NGƯỜI LÊN GIÀN · <output id="gmwwGallowsRemaining">01:00</output></h3>'+
+    '<div class="gallows-choice-actions"><button type="button" id="gmwwGallowsNominate" disabled>✓ OK</button>'+
+    '<button type="button" id="gmwwGallowsReset">↶ KHÔI PHỤC</button></div>'+
+    '<p class="gallows-helper">Chạm ô người chơi để chọn, OK để gửi đề cử.</p>'+
+    '<div id="gmwwGallowsGrid" role="group" aria-label="Thành viên còn sống đủ điều kiện lên giàn"></div>';
   document.body.append(el);
-  el.querySelector('#gmwwGallowsNominate').onclick=()=>sendGallowsChoice('nominate',el.querySelector('#gmwwGallowsNominee').value);
-  el.querySelector('#gmwwGallowsSave').onclick=()=>sendGallowsChoice('vote','', '👍');
-  el.querySelector('#gmwwGallowsKill').onclick=()=>sendGallowsChoice('vote','', '👎');
+  el.querySelector('#gmwwGallowsNominate').addEventListener('click',()=>{
+    const chosen=String(state.gallowsSelectedId||'');
+    if(chosen)void sendGallowsChoice('nominate',chosen);
+  });
+  el.querySelector('#gmwwGallowsReset').addEventListener('click',()=>{
+    state.gallowsSelectedId='';renderGallowsWidget();syncVillageFrame(true);
+  });
+  el.querySelector('#gmwwGallowsGrid').addEventListener('click',event=>{
+    const button=event.target.closest('button[data-gallows-nominee]');
+    if(!button||button.disabled)return;
+    state.gallowsSelectedId=button.dataset.gallowsNominee;
+    renderGallowsWidget();syncVillageFrame(true);
+  });
   setInterval(gallowsTick,500);
   return el;
 }
 function gallowsDock(){
   let dock=document.getElementById('gmwwGallowsDock');if(dock)return dock;
   dock=document.createElement('section');dock.id='gmwwGallowsDock';dock.hidden=true;
-  dock.setAttribute('aria-label','Menu Lên Giàn trên Player Web');
-  dock.innerHTML='<strong id="gmwwGallowsPublicStage" role="status" aria-live="polite"></strong>'+ 
-    '<button type="button" id="gmwwGallowsOpenNomination" title="Kéo cờ 🏴‍☠️ trong làng hoặc mở danh sách">🏴‍☠️ ĐỀ CỬ</button>'+
+  dock.setAttribute('aria-label','Bỏ phiếu Lên Giàn trên Player Web');
+  dock.innerHTML='<strong id="gmwwGallowsPublicStage" role="status" aria-live="polite"></strong>'+
     '<button type="button" data-gallows-vote="👍" aria-label="Bỏ phiếu cứu">👍</button>'+
     '<button type="button" data-gallows-vote="👎" aria-label="Bỏ phiếu giết">👎</button>';
   document.body.append(dock);
-  dock.querySelector('#gmwwGallowsOpenNomination').addEventListener('click',()=>{
-    state.gallowsNominationOpen=!state.gallowsNominationOpen;renderGallowsWidget();
-  });
   dock.querySelectorAll('[data-gallows-vote]').forEach(button=>button.addEventListener('click',()=>{
-    if(button.disabled)return;
-    void sendGallowsChoice('vote','',button.dataset.gallowsVote);
+    if(!button.disabled)void sendGallowsChoice('vote','',button.dataset.gallowsVote);
   }));
   return dock;
 }
 function gallowsTick(){
+  renderPublicGallowsVerdict();
   const g=state.gallows,el=document.getElementById('gmwwGallowsPlayer'),dock=document.getElementById('gmwwGallowsDock');
   if(g&&dock&&!dock.hidden){
     const stage=gallowsCurrentStage(),me=String(state.member?.loginId||'');
-    dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.disabled=stage!=='voting'||!!g.votes?.[me]||(g.blockedVotes||g.blocked||[]).includes(me)});
-    const nominate=dock.querySelector('#gmwwGallowsOpenNomination');
-    if(nominate)nominate.disabled=stage!=='nominating'||!!g.nominations?.[me]||(g.blockedNomination||[]).includes(me)||!(g.eligible||[]).includes(me);
+    dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{
+      b.disabled=stage!=='voting'||me===String(g.candidateId||'')||
+        !(g.eligible||[]).includes(me)||!!g.votes?.[me]||
+        (g.blockedVotes||g.blocked||[]).includes(me);
+    });
   }
   if(!g||!el||el.hidden)return;
-  const deadline=g.stage==='nominating'?g.nominationDeadlineAt:g.stage==='voting'?g.deadlineAt:null;
-  const remaining=deadline?Math.max(0,Math.ceil((Number(deadline)-Date.now()-Number(state.serverClockOffsetMs||0))/1000)):g.stage==='ready'?Math.max(1,Number(g.nominationDurationSec)||10):0;
+  const remaining=Math.max(0,Math.ceil((Number(g.nominationDeadlineAt||0)-Date.now()-Number(state.serverClockOffsetMs||0))/1000));
   el.querySelector('#gmwwGallowsRemaining').textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
-  const disabled=remaining<=0||g.stage!=='voting'||!!g.votes?.[state.member?.loginId]||(g.blockedVotes||g.blocked||[]).includes(state.member?.loginId);
-  el.querySelector('#gmwwGallowsSave').disabled=disabled;
-  el.querySelector('#gmwwGallowsKill').disabled=disabled;
-  const nominate=el.querySelector('#gmwwGallowsNominate');
-  if(nominate)nominate.disabled=gallowsCurrentStage()!=='nominating'||remaining<=0||!!g.nominations?.[state.member?.loginId]||(g.blockedNomination||[]).includes(state.member?.loginId);
+  const me=String(state.member?.loginId||''),blocked=(g.blockedNomination||[]).includes(me);
+  const selected=String(state.gallowsSelectedId||'');
+  el.querySelector('#gmwwGallowsNominate').disabled=state.gallowsSubmitPending||!selected||remaining<=0||
+    gallowsCurrentStage()!=='nominating'||blocked||!!g.nominations?.[me]||!(g.eligible||[]).includes(selected);
 }
 function renderGallowsWidget(){
+  renderPublicGallowsVerdict();
   syncGallowsVoteTags();
   const g=state.gallows,cycle=String(state.room?.cyclePhase||''),
     el=gallowsWidget(),dock=gallowsDock();
   if(!state.roomCode||cycle!=='morning'||!g||g.mode==='gm'){
-    el.hidden=true;dock.hidden=true;state.gallowsNominationOpen=false;return;
+    el.hidden=true;dock.hidden=true;state.gallowsNominationOpen=false;
+    state.gallowsSelectedId='';syncVillageFrame();return;
   }
   const me=String(state.member?.loginId||''),stage=gallowsCurrentStage(),
-    blockedNomination=(g.blockedNomination||[]).includes(me),
-    blockedVote=(g.blockedVotes||g.blocked||[]).includes(me);
-  const eligible=Array.isArray(g.eligible)?g.eligible:[],
-    canNominate=eligible.includes(me)&&stage==='nominating'&&!blockedNomination&&!g.nominations?.[me],
-    canVote=eligible.includes(me)&&stage==='voting'&&!blockedVote&&!g.votes?.[me];
-  dock.hidden=!(canNominate||canVote||['voting','closed','resolved'].includes(stage));
+    eligible=Array.isArray(g.eligible)?g.eligible:[],
+    canNominate=eligible.includes(me)&&stage==='nominating'&&
+      !(g.blockedNomination||[]).includes(me)&&!g.nominations?.[me],
+    canVote=eligible.includes(me)&&me!==String(g.candidateId||'')&&stage==='voting'&&
+      !(g.blockedVotes||g.blocked||[]).includes(me)&&!g.votes?.[me];
+  // While nominations are open the map displays ONLY the red pirate flag.
+  // The bottom dock is reserved for Save/Kill voting and finalized outcomes.
+  dock.hidden=!(['voting','closed','resolved'].includes(stage));
   const candidate=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
-  const name=String(candidate?.displayName||g.candidateId||'').slice(0,48),t=g.voteTotals||{save:0,kill:0,cast:0,eligible:0};
+  const candidateName=String(candidate?.displayName||g.candidateId||'').slice(0,48),totals=g.voteTotals||{save:0,kill:0,cast:0,eligible:0};
   const status=dock.querySelector('#gmwwGallowsPublicStage');
-  if(status)status.textContent=stage==='nominating'?'🏴‍☠️ CHỌN NGƯỜI LÊN GIÀN':
-    stage==='voting'?'⚖️ BỎ PHIẾU CHO '+name+' · '+t.cast+'/'+t.eligible:
-    stage==='closed'||stage==='resolved'?
-      '⚖️ '+name+' · 👍 '+t.save+' 👎 '+t.kill+' · '+
-      (stage==='resolved'?(g.outcome==='dead'?'KẾT LUẬN: CHẾT':'KẾT LUẬN: SỐNG'):'ĐANG CHỐT KẾT QUẢ'):'';
-  const open=dock.querySelector('#gmwwGallowsOpenNomination');
-  open.hidden=!canNominate;
+  if(status)status.textContent=stage==='voting'?'⚖️ BỎ PHIẾU CHO '+candidateName+' · '+totals.cast+'/'+totals.eligible:
+    stage==='closed'||stage==='resolved'?'⚖️ '+candidateName+' · 👍 '+totals.save+' 👎 '+totals.kill+' · '+
+    (stage==='resolved'?(g.outcome==='dead'?'KẾT LUẬN: CHẾT':'KẾT LUẬN: SỐNG'):'ĐANG CHỐT KẾT QUẢ'):'';
   dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.hidden=!canVote;b.disabled=!canVote});
+  const round=String(g.id||state.room?.matchId||'')+'|'+stage+'|'+me;
+  if(state.gallowsSelectionRound!==round){state.gallowsSelectedId='';state.gallowsSelectionRound=round}
   if(!canNominate)state.gallowsNominationOpen=false;
   el.hidden=!canNominate||!state.gallowsNominationOpen;
   if(el.hidden){gallowsTick();return}
-  const n=id=>(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===id)?.displayName||id;
-  el.querySelector('#gmwwGallowsPrompt').textContent='🏴‍☠️ Kéo cờ vào Character trong làng, hoặc chạm hai lần vào cờ để chọn người còn sống. Mỗi người một phiếu. Thời gian bỏ phiếu: '+(g.voteDurationSec||10)+' giây.';
-  const sel=el.querySelector('#gmwwGallowsNominee'),prev=sel.value;
-  sel.replaceChildren();
-  for(const p of state.players||[]){
-    if(p.kind&&p.kind!=='member')continue;
+  const items=(state.players||[]).filter(p=>{
+    if(p.kind&&p.kind!=='member')return false;
     const id=String(p.loginId||p.participantId||'').replace(/^member:/,'');
-    if(!id||id===me||!eligible.includes(id))continue;
-    const option=document.createElement('option');option.value=id;option.textContent=p.displayName||id;sel.append(option);
+    return !!id&&id!==me&&eligible.includes(id)&&
+      !(Array.isArray(p.statusTags)&&p.statusTags.some(t=>t.statusId==='dead'));
+  });
+  const selected=String(state.gallowsSelectedId||'');
+  const grid=el.querySelector('#gmwwGallowsGrid');
+  const signature=JSON.stringify(items.map(p=>[p.loginId,p.participantId,p.displayName,p.seatId]));
+  if(grid.dataset.gallowsRosterSignature!==signature){
+    grid.dataset.gallowsRosterSignature=signature;
+    grid.replaceChildren();
+    for(const [idx,p] of items.entries()){
+      const id=String(p.loginId||p.participantId||'').replace(/^member:/,'');
+      const tile=document.createElement('button');tile.type='button';tile.className='gmww-gallows-candidate';
+      tile.dataset.gallowsNominee=id;tile.setAttribute('aria-pressed','false');
+      const heading=document.createElement('b');heading.textContent='VỊ TRÍ '+String(Number(p.seatId)||idx+1);
+      const caption=document.createElement('span');caption.textContent=String(p.displayName||id);
+      tile.append(heading,caption);grid.append(tile);
+    }
   }
-  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
-  sel.hidden=false;sel.disabled=false;
-  const nominationButton=el.querySelector('#gmwwGallowsNominate');
-  nominationButton.textContent='OK · XÁC NHẬN';nominationButton.hidden=false;nominationButton.disabled=!sel.value;
-  const choices=el.querySelector('#gmwwGallowsChoices');choices.hidden=false;
-  el.querySelector('#gmwwGallowsSave').hidden=true;
-  el.querySelector('#gmwwGallowsKill').hidden=true;
-  el.querySelector('#gmwwGallowsVotes').replaceChildren();
+  grid.querySelectorAll('[data-gallows-nominee]').forEach(tile=>{
+    tile.setAttribute('aria-pressed',String(tile.dataset.gallowsNominee===selected));
+  });
   gallowsTick();
 }
 async function sendGallowsChoice(command,targetId='',choice=''){

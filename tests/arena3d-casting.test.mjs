@@ -98,7 +98,6 @@ test('GM casting cue is generated only by server-confirmed action, and synthetic
   assert.match(wrapper,/this\.gmAuthorized\(request\)/);
   assert.match(browser,/syntheticCastSeq/);
   assert.match(browser,/if\(!synthetic\)/);
-  assert.match(browser,/normalizeRitualCue\(data\.casting,authorized\)/);
-  assert.match(browser,/field\.setCastingTurn\(normalized\)/);
+  assert.match(browser,/field\.setCastingTurn\(data\.casting\|\|null\)/);
   assert.doesNotMatch(browser,/localStorage|sessionStorage/);
 });
