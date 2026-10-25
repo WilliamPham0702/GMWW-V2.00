@@ -1,7 +1,7 @@
 name: Arena 3D GĐ10 — kiểm thử đúng phạm vi
 on:
   push:
-    branches: ["feature/arena3d-stage10-full-match-sync"]
+    branches: ["feature/arena3d-stage10-role-animation-library"]
     paths:
       - "assets/village/arena-3d/**"
       - "tests/arena3d-stage10-*"
@@ -48,7 +48,7 @@ jobs:
   deploy-stage10-preview:
     name: "GĐ10: STAGING riêng + browser iPhone"
     needs: verify-stage10
-    if: github.ref == 'refs/heads/feature/arena3d-stage10-full-match-sync' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage10 == true
+    if: github.ref == 'refs/heads/feature/arena3d-stage10-role-animation-library' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage10 == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
