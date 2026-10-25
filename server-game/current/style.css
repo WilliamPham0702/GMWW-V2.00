@@ -7870,3 +7870,14 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
    animation:none!important
  }
 }
+
+/* V3.217 — actual audio links live ONLY in Library → Âm Thanh → Hệ Thống. */
+.gmww-system-sound-links{margin:8px 0 12px;padding:11px 12px;border:1px solid #b2e8e099;
+  border-radius:15px;background:linear-gradient(140deg,#0c4e64c9,#083047d9);color:#eaffff}
+.gmww-system-sound-links strong{display:block;font-size:12px;letter-spacing:.04em;color:#ffeba8}
+.gmww-system-sound-links p{font-size:10px;line-height:1.5;color:#c8eae8;margin:6px 0 9px}
+.gmww-system-sound-links>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.gmww-system-sound-links button{display:grid;gap:3px;padding:8px;border:1px solid #a9e3df77;
+  border-radius:11px;background:#09516bd4;color:#eefdfa;font-size:11px;font-weight:800;min-height:42px}
+.gmww-system-sound-links button small{font-size:9px;color:#ffe6a5;font-weight:600}
+@media(max-width:340px){.gmww-system-sound-links>div{grid-template-columns:1fr}}

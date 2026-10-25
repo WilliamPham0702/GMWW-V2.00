@@ -111,6 +111,14 @@ jobs:
           node --test tests/home-top3-podium-v3211.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
+      - name: Chỉ kiểm thử ba lỗi audio V3.217
+        if: steps.scope.outputs.mode == 'audio-fix-3217'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --test tests/audio-v3217-role-day-verdict.test.mjs
       - name: Chỉ xác minh bộ đóng gói GM/Player Web V3.209
         if: steps.scope.outputs.mode == 'audio-gallows-3209'
         run: |
