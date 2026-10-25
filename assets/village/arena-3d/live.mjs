@@ -10,6 +10,8 @@ import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} fro
 import {STAGE9_VERSION,createMatchSyncGate,publicMatchView,publicMatchStatus} from './stage9-match-sync.mjs';
 import {STAGE10_VERSION,resolveRoleAnimation} from './stage10-role-animations.mjs';
 import {createArenaAudioEngine,STAGE12_VERSION} from './stage12-audio-engine.mjs';
+import {createLocalArenaVoice,STAGE15_VERSION} from './stage15-local-audio.mjs';
+import {CORE_ACTION_CATALOG} from './stage11-core-catalog.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -32,6 +34,8 @@ let galleryPage=0,previewRitualKind=null;
 const qualityController=createArenaAdaptiveQuality();
 const matchSync=createMatchSyncGate();
 const arenaAudio=createArenaAudioEngine(window.AudioContext||window.webkitAudioContext);
+const localVoice=createLocalArenaVoice({createURL:file=>URL.createObjectURL(file),
+  revokeURL:url=>URL.revokeObjectURL(url),AudioCtor:window.Audio});
 function playArenaCastSound(cue,{syntheticPreview=false}={}){
   // GM-private Core cue, or local synthetic preview only; never public frames.
   if(!cue?.cast||(!syntheticPreview&&!gmToken)||!arenaAudio.enabled)return false;
@@ -39,6 +43,7 @@ function playArenaCastSound(cue,{syntheticPreview=false}={}){
   const profile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId,authorizedFamily:cast.visualFamily});
   const identity=[syntheticPreview?'preview':'gm',current?.room.matchId||'SYNTH',
     current?.room.cycleKey||'',cue.turnId,cast.startedAt,cast.actionId||''].join(':');
+  if(!syntheticPreview&&localVoice.play(cast.actionId,identity,{authorizedGM:Boolean(gmToken),enabled:arenaAudio.enabled}))return true;
   return arenaAudio.play(profile,identity);
 }
 
@@ -197,7 +202,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';}
+function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';localVoice.clear();}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
@@ -381,7 +386,18 @@ $('arena-audio').onclick=()=>{
   else if(arenaAudio.enableFromGesture())$('arena-audio').textContent='🔊 Tắt tiếng phép 3D';
   else notice('Trình duyệt không hỗ trợ AudioContext cho tiếng phép.');
 };
-window.addEventListener('pagehide',()=>arenaAudio.stop());
+window.addEventListener('pagehide',()=>{arenaAudio.stop();localVoice.clear()});
+const roleAudioOptions=$('arena-audio-action');
+for(const item of CORE_ACTION_CATALOG)roleAudioOptions.add(new Option(item.name,item.id));
+$('arena-audio-file').onchange=()=>{
+  const input=$('arena-audio-file'),file=input.files?.[0];
+  if(!synthetic&&!gmToken){input.value='';notice('Chỉ GM được gán bản ghi âm thật trong phòng Core.');return}
+  const actionId=String($('arena-audio-custom').value||'').trim()||roleAudioOptions.value;
+  const result=localVoice.attach(actionId,file);
+  input.value='';
+  notice(result.ok?'Đã gắn file âm thanh thật trong tab GM. Không tải lên Server; tự xoá khi rời tab.':
+    'Không thể gắn file âm thanh: '+result.error+' (MP3/WAV/OGG/AAC, tối đa 10MB).');
+};
 $('sample-cast').onclick=()=>playSyntheticRitual();
 for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventListener('click',()=>{
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
@@ -453,6 +469,7 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   previewImpactRings:synthetic?field.visibleImpactRings:0,
   pixelRatio:render.getPixelRatio(),reducedMotion,
   soundEnabled:arenaAudio.enabled,soundPlays:gmToken||synthetic?arenaAudio.playedCount:0,
+  loadedVoiceFiles:gmToken||synthetic?localVoice.count:0,
   activeShieldDomes:gmToken||synthetic?field.visibleShieldDomes:0,
   activeWolfHeads:gmToken||synthetic?field.visibleWolfHeads:0});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
