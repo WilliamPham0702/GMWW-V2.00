@@ -44,6 +44,6 @@ test('V3.217 audio release keeps six-part GM app exactly assembled',()=>{
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(read('server-game/current/app.js'),parts.map(x=>read('server-game/src/'+x)).join(''));
-  assert.match(read('server-game/src/00-core-and-library.part'),/const VERSION='3\.216'/);
-  assert.match(read('src/index.js'),/VERSION="V3\.216"/);
+  assert.match(read('server-game/src/00-core-and-library.part'),/const VERSION='3\.217'/);
+  assert.match(read('src/index.js'),/VERSION="V3\.217"/);
 });
