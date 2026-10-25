@@ -1,6 +1,5 @@
-// Show update notes only for releases newer than an installed GM Runtime.
-// The immutable release manifest still retains full history for old clients.
-// This helper only narrows the HTTP response when ?current= is provided.
+// Keep the installed release notes visible until a newer version replaces them.
+// Older installations still receive the relevant intervening release notes.
 const versionPattern = /^V?(\d+\.\d+(?:\.\d+)?)$/i;
 const notePattern = /^\s*V?(\d+\.\d+(?:\.\d+)?)\s*[:：\-–—]\s*\S/i;
 
@@ -18,13 +17,13 @@ export function compareGmwwUpdateVersions(a, b) {
 
 export function gmwwReleaseNotesBetween(notes, installed, latest) {
  if (!Array.isArray(notes) || compareGmwwUpdateVersions(latest, installed) === null) return [];
- if (compareGmwwUpdateVersions(latest, installed) <= 0) return [];
+ const comparison = compareGmwwUpdateVersions(latest, installed);
  return notes.filter(note => {
   if (typeof note !== 'string') return false;
   const match = note.match(notePattern);
   if (!match) return false; // Cannot prove an unversioned note is a new change.
-  return compareGmwwUpdateVersions(match[1], installed) > 0 &&
-   compareGmwwUpdateVersions(match[1], latest) <= 0;
+  return compareGmwwUpdateVersions(match[1], latest) <= 0 &&
+    (comparison > 0 ? compareGmwwUpdateVersions(match[1], installed) > 0 : compareGmwwUpdateVersions(match[1], latest) === 0);
  }).map(note => note.trim());
 }
 
