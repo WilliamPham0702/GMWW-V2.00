@@ -79,3 +79,5 @@ def main():
     print('GMWW Icon Action V2: generated',len(rows),'independent frameless artworks and PNGs')
 
 if __name__=='__main__': main()
+
+# Trigger verified artifact render when this workflow becomes available.
