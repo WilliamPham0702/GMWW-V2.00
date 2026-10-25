@@ -114,9 +114,10 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$QA_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::QA tag đã tồn tại, không ghi đè IPA của lần nghiệm thu trước"
-            exit 1
-          fi
+            echo "IPA QA đã đăng trong prerelease bất biến, chỉ kiểm tra & deploy lại trang STAGING"
+            gh release view "$QA_TAG" --repo "$GITHUB_REPOSITORY" \
+              --json assets --jq '.assets[].name' | grep -Fx "$QA_IPA"
+          else
           cat > QA-RELEASE-NOTES.md <<'NOTES'
           # GMWW Arena 3D · IPA QA GĐ32 (chỉ STAGING)
           - Ứng dụng QA có bundle ID riêng; mở Arena 3D từ Worker/Durable Objects STAGING; không dùng phòng/dữ liệu Production.
@@ -129,6 +130,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "GMWW Arena 3D QA - GĐ32 - STAGING (unsigned IPA)" \
             --notes-file QA-RELEASE-NOTES.md --prerelease
+          fi
           gh release view "$QA_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets
       - name: 'Đưa trang TẢI IPA QA lên Worker STAGING độc lập'
         env:
@@ -143,7 +145,17 @@ jobs:
           npm ci
           npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc
           URL="$QA_ORIGIN/api/arena-staging/ipa/metadata"
-          curl --fail --silent --show-error "$URL" > /tmp/arena-ipa-meta.json
+          # Cloudflare routes take time to propagate after Worker deployment.
+          # Do not mistake immediate eventual-consistency 404 for missing IPA.
+          HTTP=000
+          for ATTEMPT in $(seq 1 15); do
+            HTTP=$(curl -sS --max-time 10 -o /tmp/arena-ipa-meta.json \
+              -w '%{http_code}' "$URL?nonce=$ATTEMPT" || echo 000)
+            if [ "$HTTP" = 200 ]; then break; fi
+            echo "STAGING chưa sẵn sàng ($HTTP) sau deploy - kiểm lại lần $ATTEMPT/15"
+            sleep 3
+          done
+          test "$HTTP" = 200 || { cat /tmp/arena-ipa-meta.json; exit 1; }
           node - <<'NODE'
           const fs=require('fs');
           const d=JSON.parse(fs.readFileSync('/tmp/arena-ipa-meta.json','utf8'));
@@ -153,6 +165,8 @@ jobs:
              throw Error('STAGING QA IPA metadata invalid: '+JSON.stringify(d));
           console.log('STAGING IPA QA endpoint PASS',d.download);
           NODE
-          curl --fail -sS -o /dev/null "$QA_ORIGIN/village/arena-3d/ipa.html"
+          PAGE_HTTP=$(curl -sS -L --max-time 10 -o /dev/null -w '%{http_code}' \
+            "$QA_ORIGIN/village/arena-3d/ipa.html")
+          test "$PAGE_HTTP" = 200
           echo "Link Tải IPA QA: $QA_ORIGIN/village/arena-3d/ipa.html" >> "$GITHUB_STEP_SUMMARY"
           echo 'Không phải bản IPA đã ký. Giữ Production và IPA chính thức nguyên trạng.' >> "$GITHUB_STEP_SUMMARY"
