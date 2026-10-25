@@ -332,9 +332,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   try{await player.play();return true}
   catch(err){
     clearTimeout(startupTimer);
+    if(fallbackStarted)return true; // onerror/watchdog already owns recovery
+    fallbackStarted=true;finished=true;
     if(battleActiveAudio===player)battleActiveAudio=null;
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,excerpt))return true;
-    return battleSpeakCue(name,showError||String(targetId)==='role_old_witch',onFinished)
+    return battleSpeakCue(name,showError||['role_old_witch','source-18'].includes(String(targetId)),onFinished)
   }
 }
 function battleTurnAudioCue(turn){
