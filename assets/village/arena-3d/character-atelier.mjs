@@ -50,6 +50,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     ['hairTail',sphere,'hair',[.30,1.47,-.28],[.16,.36,.17]],
     ['stool',cylinder,'seat',[0,.15,-.12],[.48,.29,.46]]
   ];
+  // GĐ18: low-power LOD removes tiny decorative mesh draw calls, but never
+  // touches actor identity, seat positions, Core actions, heads or picking.
+  const ECO_DETAIL_PARTS=new Set(['shineL','shineR','pearl','shell','waistSash',
+    'shellCrown','shellpin','ribbon','cape','cheekL','cheekR','sailorCollar','hairTail']);
   const matOf=key=>new THREE.MeshLambertMaterial({color:key==='eye'?'#19273c':key==='shine'?'#fff4d5':key==='shoe'?'#35526a':key==='seat'?'#b99167':'white'});
   for(const [name,geometry,kind,offset,size] of parts){
     const mesh=new THREE.InstancedMesh(geometry,matOf(kind),limit);
@@ -222,7 +226,15 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
   function setReducedMotion(value){reducedMotion=value===true;spellVfx.setReducedMotion(reducedMotion)}
-  function setLowPower(value){qualityLowPower=value===true;spellVfx.setLowPower(qualityLowPower)}
+  function setLowPower(value){
+    const next=value===true;
+    if(next===qualityLowPower)return;
+    qualityLowPower=next;
+    for(const part of meshes)part.mesh.visible=!next||!ECO_DETAIL_PARTS.has(part.name);
+    spellVfx.setLowPower(next);
+    // Draw the restored high-detail matrices even if recovering from sleep.
+    lastDraw=-1;
+  }
   function setQualityFps(value){if(Number.isFinite(value)&&value>0)qualityFps=value}
   function draw(time,force=false){
     const animationHz=renderQualityBudget({characters:actors.length,fps:qualityFps,lowPower:qualityLowPower,reducedMotion}).animationHz;
@@ -245,6 +257,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
       if(!gesturing)actor.gesture='idle';
       for(const part of meshes){
+        if(!part.mesh.visible)continue;
         let [x,y,z]=part.offset,[sx,sy,sz]=part.size;
         if(part.name==='head'||part.name==='hair'||part.name==='fringe'||part.name==='sidehairL'||part.name==='sidehairR'||part.name.startsWith('eye')||part.name.startsWith('shine')||part.name==='pearl'||part.name.startsWith('cheek')||part.name==='hairTail'){y+=bounce+motion.breath;x+=motion.headTilt+(gesturing?.024*Math.sin(time*.016):0)}
         if(part.name==='head')sx*=actor.look.headScale;
@@ -344,8 +357,19 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       }
       if(!firstBeam)spellVfx.clear();
     }else{spellVfx.clear();if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
-    for(const item of [...meshes,...effects])item.mesh.instanceMatrix.needsUpdate=true;
+    for(const item of meshes)if(item.mesh.visible)item.mesh.instanceMatrix.needsUpdate=true;
+    for(const item of effects)item.mesh.instanceMatrix.needsUpdate=true;
     updates++;return true;
+  }
+  function hasActiveMotion(time=performance.now()){
+    if(activeBeam&&time<activeBeam.until)return true;
+    for(const actor of actors){
+      if(actor.walk||actor.gestureEnd>time||actor.castUntil>time)return true;
+      if(actor.travel&&time<actor.travel.startedAt+actor.travel.duration&&
+        Math.abs(actor.travel.from-actor.travel.to)>.01)return true;
+      for(const expires of actor.effects.values())if(expires>time)return true;
+    }
+    return false;
   }
   function pick(raycaster){
     // Uses instanced character HEAD; maps exact instanceId back to public player ID.
@@ -366,7 +390,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     wand.geometry.dispose();wand.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
+  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get peakVfxDrawBudget(){return spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1},
