@@ -14,8 +14,8 @@ import {privateTurnActionOptions} from '../assets/village/arena-3d/stage29-gm-ac
 const ids=(items)=>items.map(item=>item.id);
 const sorted=(items)=>[...items].sort();
 const source=readFileSync('server-game/src/00-core-and-library.part','utf8');
-const coreSourceActions=sorted(new Set([...source.matchAll(/\\bactionId:\\s*['"](action_[a-z0-9_]+)['"]/gi)].map(x=>x[1])));
-const coreSourceRoles=sorted(new Set([...source.matchAll(/\\bid:\\s*['"](role_[a-z0-9_]+)['"]/gi)].map(x=>x[1])));
+const coreSourceActions=sorted(new Set([...source.matchAll(/\bactionId:\s*['"](action_[a-z0-9_]+)['"]/gi)].map(x=>x[1])));
+const coreSourceRoles=sorted(new Set([...source.matchAll(/\bid:\s*['"](role_[a-z0-9_]+)['"]/gi)].map(x=>x[1])));
 
 test('GĐ33: 26 Core action IDs remain exactly in sync with the checked-out source',()=>{
  const catalog=ids(CORE_ACTION_CATALOG);
