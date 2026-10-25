@@ -1,0 +1,36 @@
+name: Build 10 independent GMWW icons (Wave 5)
+on:
+  push:
+    branches: [feat/gmww-icon-wave5-mapping-20261025]
+    paths:
+      - "assets/action-icons/sea-v1/wave5-sources.b64"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gmww-wave5-source-art-generation
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout design branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Prepare image renderer (icon build only)
+        run: |
+          python3 -m pip install --disable-pip-version-check cairosvg brotli
+      - name: Render independent icon assets and validate SHA-256
+        run: |
+          python3 tools/icons/build-wave5-assets.py
+      - name: Commit generated originals without changing gameplay
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/action-icons/sea-v1 server-game/current/action-icons/sea-v1
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(gmww): commit 10 verified independent Wave 5 PNG/SVG"
+            git push origin HEAD:feat/gmww-icon-wave5-mapping-20261025
+          fi
