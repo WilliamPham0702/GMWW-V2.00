@@ -9,9 +9,16 @@ const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/goog
 const ctx=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'vi-VN'});
 try{
  const gm=await ctx.newPage(),viewer=await ctx.newPage();
+ const coreRequests=[];
+ gm.on('response',async response=>{
+  const pathname=new URL(response.url()).pathname;
+  if(!/\/api\/gm\/rooms\/[^/]+\/(?:config|assignments|start)$/.test(pathname))return;
+  const data=await response.json().catch(()=>({}));
+  coreRequests.push({endpoint:pathname.split('/').at(-1),status:response.status(),ok:data.ok,error:data.error||null,message:String(data.message||'').slice(0,120)});
+ });
  const errors=[];gm.on('pageerror',e=>errors.push('gm '+e.message));viewer.on('pageerror',e=>errors.push('viewer '+e.message));
  await gm.goto(base+'/village/arena-3d/live.html',{waitUntil:'domcontentloaded',timeout:60000});
- await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===6,{timeout:45000});
+ await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===6,null,{timeout:45000});
  await gm.locator('#create').click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized',null,{timeout:35000});
  const code=await gm.locator('#room').inputValue();
@@ -31,7 +38,14 @@ try{
  await gm.locator('#lock').click();
  await gm.waitForFunction(()=>document.getElementById('log')?.textContent?.includes('Đã khóa Seat'),null,{timeout:25000});
  await gm.locator('#deal').click();
- await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',null,{timeout:40000});
+ try{
+  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='role_delivery',null,{timeout:18000});
+ }catch(error){
+  throw Error('Core STAGING phát vai chưa đạt: '+JSON.stringify({
+   state:await gm.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY?.()),
+   uiNotice:await gm.locator('#log').innerText(),coreRequests
+  })+'; '+String(error.message).slice(0,100));
+ }
  await gm.locator('#start').click();
  await gm.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='running',null,{timeout:35000});
  await gm.locator('#night').click();
