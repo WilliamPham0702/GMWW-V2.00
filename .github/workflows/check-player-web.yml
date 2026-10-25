@@ -70,6 +70,17 @@ jobs:
           test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
           grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
           grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: Kiểm thử trực tiếp GMWW Icon Action V2 — V3.227
+        if: steps.scope.outputs.mode == 'icon-action-v2-3227'
+        run: |
+          node --test tests/gmww-action-icons-in-battle.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
+          node -e "const fs=require('fs');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json'));if(m.count!==49||m.icons.length!==49)process.exit(1)"
+
       - name: V3.226 – kiểm thử Icon không bị làng che trên iPhone
         if: steps.scope.outputs.mode == 'fire-icons-3226'
         run: |
