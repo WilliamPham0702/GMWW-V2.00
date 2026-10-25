@@ -452,7 +452,9 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   previewWand:synthetic?field.wandVisible:false,
   previewImpactRings:synthetic?field.visibleImpactRings:0,
   pixelRatio:render.getPixelRatio(),reducedMotion,
-  soundEnabled:arenaAudio.enabled});
+  soundEnabled:arenaAudio.enabled,soundPlays:gmToken||synthetic?arenaAudio.playedCount:0,
+  activeShieldDomes:gmToken||synthetic?field.visibleShieldDomes:0,
+  activeWolfHeads:gmToken||synthetic?field.visibleWolfHeads:0});
 // Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
 function loop(now){
   const adaptive=qualityController.observe(now,!document.hidden);
