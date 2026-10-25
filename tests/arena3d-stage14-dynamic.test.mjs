@@ -92,3 +92,4 @@ test('GĐ14 regression: GM-assigned artifact retained VFX before Core sanitizes 
 
 // GĐ26–28 chạy trong suite Arena dynamic sẵn có: không mở CI ngoài phạm vi.
 import './arena3d-stage26-28.test.mjs';
+import './arena3d-stage29-31.test.mjs';
