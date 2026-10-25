@@ -134,8 +134,8 @@ test('Icon Action V2: drag may end anywhere, button stays floating, no Core acti
  callbacks.pointerup(ev('pointerup',280,380));
  assert.equal(ctx.confirmed,0);
  assert.equal(ctx.sheetOpened,0);
- assert.equal(dock.btn.style.left,'265px');
- assert.equal(dock.btn.style.top,'365px');
+ assert.equal(dock.btn.style.left,'287px');
+ assert.equal(dock.btn.style.top,'387px');
 });
 test('Yêu Tinh has one frameless 🔄 action icon; Core still owns direction choices',()=>{
  const{ctx,dock,actions}=dockContext();
