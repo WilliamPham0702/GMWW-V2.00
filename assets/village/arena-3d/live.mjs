@@ -562,7 +562,7 @@ function refreshMobileQa(){
     '\\nMất/khôi phục WebGL: '+info.contextLosses+'/'+info.contextRestores+
     ' | mẫu: '+info.sampleCount:
     'Chưa đủ mẫu đo. Xoay camera hoặc chạy nghi lễ để lấy mẫu.';
-  $('arena-diag-result').textContent=text.replaceAll('\\n','\n');
+  $('arena-diag-result').textContent=text.replaceAll('\\n',String.fromCharCode(10));
 }
 $('arena-diag-refresh').onclick=refreshMobileQa;
 $('arena-diag-reset').onclick=()=>{
