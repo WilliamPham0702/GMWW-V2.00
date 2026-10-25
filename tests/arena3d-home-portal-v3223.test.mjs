@@ -36,7 +36,7 @@ function runPortal() {
 }
 
 test('V3.223: VÀO LÀNG mở STAGING 3D trong iframe thay vì main-frame Safari',()=>{
-  assert.match(html,/GMWW V3\.222/);
+  assert.match(html,/GMWW V3\.223/);
   assert.match(html,/gmwwHomeEnterVillage[^>]+aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"/);
   assert.match(html,/<small>THỬ NGHIỆM ARENA 3D<\/small>/);
   assert.ok(script,'missing isolated Arena3D HOME portal script');
@@ -72,16 +72,16 @@ test('V3.223: nút Chơi 2D giữ nguyên điều hướng cũ, đóng Arena QA'
   assert.equal(body.child.children[1].src,'about:blank');
   const src=readFileSync('server-game/current/app.js','utf8');
   assert.match(src,/gmwwHomeNavigate\('start'\)/);
-  assert.match(src,/const VERSION='3\.222'/);
+  assert.match(src,/const VERSION='3\.223'/);
 });
 
 test('V3.223: OTA change is navigation-only, independent production/Core boundaries',()=>{
   const releases=readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
-  assert.match(releases,/V3\.222: Trang Chủ/);
+  assert.match(releases,/V3\.223: Trang Chủ/);
   assert.match(releases,/copy\('server-game\/current\/GMWW\.html','GMWW\.html'\)/);
   assert.match(releases,/sha256:sha\(path\.join\(outRoot,rel\)\)/);
   const worker=readFileSync('src/index.js','utf8');
-  assert.match(worker,/VERSION="V3\.222"/);
+  assert.match(worker,/VERSION="V3\.223"/);
   assert.doesNotMatch(script,/api\/gm\/rooms|localStorage|gmToken|fetch\(/);
   assert.match(script,/iframe/);
   assert.match(script,/frame\.src='about:blank'/);
