@@ -334,7 +334,7 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
             REPORT=$(printf '%s' "$RESP" | node -e "
               let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
-                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
                 const r=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
                 process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
               });")

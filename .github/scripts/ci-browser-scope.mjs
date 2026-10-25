@@ -396,8 +396,23 @@ function isIconRuntime3210Scope(changes){
   changes.filter(x=>x.path.startsWith('server-game/current/action-icons/sea-v1/')&&x.path.endsWith('.png')).length===19;
 }
 
+// CI-only correction for the owner-dispatched V3.210 release. No runtime,
+// gameplay or assets can be changed in this scope; otherwise run full suite.
+function isIcon3210DispatchGateScope(changes){
+ const names=new Set(changes.map(c=>c.path));
+ if(names.size!==2||!names.has('.github/scripts/ci-browser-scope.mjs')||
+   !names.has('.github/workflows/deploy-production.yml'))return false;
+ if(!changes.every(x=>x.status==='M'))return false;
+ const selector=changes.find(x=>x.path==='.github/scripts/ci-browser-scope.mjs')?.after||'';
+ const deploy=changes.find(x=>x.path==='.github/workflows/deploy-production.yml')?.after||'';
+ return selector.includes('Owner-initiated V3.210 release on main')&&
+  deploy.includes("['push','workflow_dispatch'].includes(x.event)")&&
+  deploy.includes('id: icon_release_3210');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isIcon3210DispatchGateScope(changes))return 'icon-runtime-3210';
   if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
@@ -438,6 +453,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIcon3210DispatchGateScope(changes))return{mode:'icon-runtime-3210',reason:'Verified CI-only V3.210 owner dispatch correction'};
       if(isIconRuntime3210Scope(changes))return{mode:'icon-runtime-3210',reason:'Verified V3.210 ICON Runtime/OTA release only'};
       if(isAudioGallows209Scope(changes))return{mode:'audio-gallows-3209',reason:'Verified V3.209 audio and public vote UI only'};
       if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
@@ -449,6 +465,18 @@ function detect(){
       if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return{mode:'gallows',reason:'Verified main Lên Giàn-only release: '+changes.map(c=>c.path).join(', ')};
     }catch(error){return{mode:'full',reason:'Unverified main diff: '+String(error.message||error)};}
     return{mode:'full',reason:'Main contains changes outside the verified scoped lists'};
+  }
+  // Owner-initiated V3.210 release on main after approved PR #483 merged.
+  // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'){
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const release='docs/releases/GMWW-V3.210-icons-runtime-20261025.md';
+    const manifest='assets/action-icons/sea-v1/manifest.json';
+    if(pkg.version==='3.210.0'&&fs.existsSync(release)&&fs.existsSync(manifest)){
+      const icons=JSON.parse(fs.readFileSync(manifest,'utf8'));
+      if(icons.count===19&&Array.isArray(icons.icons)&&icons.icons.length===19)
+        return{mode:'icon-runtime-3210',reason:'Owner-dispatched V3.210 only, SHA-256 and icon scope verified'};
+    }
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
