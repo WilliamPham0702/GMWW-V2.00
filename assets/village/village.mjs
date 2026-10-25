@@ -209,7 +209,7 @@ if(game){
       flag.title='Cờ đỏ: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
       // Use the native red-flag emoji at its regular icon scale, without a box.
       flag.textContent='🚩';
-      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
+      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
       flag.hidden=true;document.body.append(flag);
       const controls=document.createElement('div');controls.id='gmwwPirateConfirm';controls.hidden=true;
       controls.innerHTML='<button type="button" data-gallows-ok>✓ OK</button><button type="button" data-gallows-reset>↶ KHÔI PHỤC</button>';
