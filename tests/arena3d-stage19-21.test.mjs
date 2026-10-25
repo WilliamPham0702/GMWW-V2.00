@@ -51,7 +51,7 @@ test('GĐ21: report only allowlisted metrics; never includes GM or player identi
  assert.match(s,/canvas\.addEventListener\('webglcontextlost'/);
  assert.match(s,/canvas\.addEventListener\('webglcontextrestored'/);
  assert.match(s,/document\.addEventListener\('visibilitychange'/);
- assert.match(s,/if\(!webglLost&&frameHz>0/);
+ assert.match(s,/paintScheduler\.shouldPaint\(now,frameHz,\{paused:webglLost\}\)/);
  assert.match(s,/mobileQa\.sample\(\{at:now,paintCpuMs:/);
  assert.match(s,/await navigator\.clipboard\.writeText\(mobileQa\.report\(\)\)/);
  assert.match(html,/id="arena-mobile-diagnostics"/);
