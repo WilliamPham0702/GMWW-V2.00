@@ -30,6 +30,22 @@ async function check(engine,kind){
    assert.equal(state.privateOverlayCount,0,'synthetic demo must not show GM-private effects');
    roster.push({players:n,drawCalls:state.drawCalls,fps:state.fps,pixelRatio:state.pixelRatio});
   }
+  // GĐ18: verify a real WebGL scene loses draw calls in eco mode, not
+  // merely a badge claiming lower power. Keep Character/seat counts intact.
+  await page.getByRole('tab',{name:'Hiệu năng'}).click();
+  await page.getByRole('button',{name:'Mượt',exact:true}).click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().lowPower===false,null,{timeout:15000});
+  const qualityDraws=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY().drawCalls);
+  await page.getByRole('button',{name:'Tiết kiệm pin'}).click();
+  await page.waitForFunction(full=>{
+    const state=window.__GMWW_ARENA_STAGE_READONLY?.();
+    return state?.lowPower===true&&state.paintTargetHz===8&&state.drawCalls<full;
+  },qualityDraws,{timeout:30000});
+  const eco=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
+  assert.equal(eco.count,30);
+  assert.ok(eco.drawCalls<qualityDraws,'eco mode must reduce actual GPU draw calls');
+  await page.getByRole('button',{name:'Mượt',exact:true}).click();
+  await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().lowPower===false,null,{timeout:15000});
   await page.locator('#sample-cast').click();
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:18000});
