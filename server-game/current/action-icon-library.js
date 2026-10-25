@@ -142,6 +142,6 @@ function init(){
  document.getElementById('gmwwIconSearch').oninput=render;
  render();
 }
-window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),image:picture};
+window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),image:picture,audit:auditCatalog};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
