@@ -13,3 +13,12 @@
 - Cần tích hợp file audio thật vào thư viện và xác minh đồng bộ cue theo quyền.
 - Cần kiểm thử tương tác nhiều client / Core thật và đánh giá pin/nhiệt trên iPhone thật. Chỉ yêu cầu nghiệm thu toàn bộ GĐ10 sau khi đạt các bước này.
 - CI chỉ kiểm thử mã Stage10 và các phụ thuộc Stage8/9 cần thiết, không chạy kiểm thử 2D/OTA/IPA ngoài phạm vi.
+
+## Kết quả CI và STAGING — 25/10/2026
+- PR Draft #482: https://github.com/WilliamPham0702/GMWW-V2.00/pull/482
+- Unit tests + kiểm tra cú pháp + Wrangler dry-run: SUCCESS.
+- STAGING Worker độc lập: `gmww-arena3d-stage10-staging` — version `1f75a0bf-883b-43ab-b13b-d78650bac9ed`.
+- CI triển khai và browser smoke: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40152406578 — SUCCESS.
+- Chrome/WebKit 6, 12, 20, 30 Character: PASS; FPS Chrome headless ~16, WebKit headless ~2, không dùng làm chứng nhận hiệu năng iPhone vật lý.
+- Preview: https://gmww-arena3d-stage10-staging.williampham0702.workers.dev/village/arena-3d/live.html
+- Smoke hiện xác minh render/animation tổng quát, **chưa** kiểm thử trực quan riêng đầu sói/đũa/khiên trong trận Core thực tế. Giữ PR Draft, chưa nghiệm thu.
