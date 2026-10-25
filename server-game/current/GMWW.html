@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.208</title>
-<link rel="stylesheet" href="style.css?v=3.208-compact-room-mobile2-village-scene-align-1-actor-layer-fix1-gp2">
-<link rel="stylesheet" href="gallows-hanging.css?v=3.208-anchor">
+<title>GMWW V3.209</title>
+<link rel="stylesheet" href="style.css?v=3.209-compact-room-mobile2-village-scene-align-1-actor-layer-fix1-gp2">
+<link rel="stylesheet" href="gallows-hanging.css?v=3.209-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
 <style>
@@ -232,6 +232,9 @@
           <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
+        <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
+          <button id="battleFactionStatsToggle" type="button" aria-controls="battleFactionStats" aria-pressed="false" title="Thống kê và dự báo phe">⚖️<small>THỐNG KÊ</small></button>
+        </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
           <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Bảng Tin">📖<small>BẢNG TIN</small></button>
@@ -301,6 +304,12 @@
           </div>
           <section id="battleGallowsSummary" class="gallows-summary" aria-label="Thống kê và kết luận Lên Giàn">
             <strong>THỐNG KÊ</strong>
+            <div class="gmww-gallows-audio-links" role="group" aria-label="Tải các file audio Lên Giàn từ máy">
+              <button type="button" data-gallows-audio-upload="audio_system_gallows_day_long">🔊 NGÀY DÀI</button>
+              <button type="button" data-gallows-audio-upload="audio_system_gallows_vote_result">🔊 KẾT QUẢ PHIẾU</button>
+              <button type="button" data-gallows-audio-upload="audio_system_gallows_result_saved">🔊 SỐNG</button>
+              <button type="button" data-gallows-audio-upload="audio_system_gallows_result_dead">🔊 CHẾT</button>
+            </div>
             <div class="gallows-summary-grid" aria-live="polite">
               <span>ĐÃ CHỌN <b id="battleGallowsSelectedCount">0/0</b></span>
               <span>ĐÃ VOTE <b id="battleGallowsVotedCount">0/0</b></span>
@@ -314,6 +323,22 @@
             <p id="battleGallowsResult" role="status" aria-live="polite" hidden></p>
           </section>
           <section id="battleGallowsManual" hidden><select id="battleGallowsManualMember" aria-label="Phiếu thủ công cũ"></select></section>
+        </section>
+        <section id="battleFactionStats" class="battle-faction-stats" role="dialog" aria-modal="false" aria-label="⚖ Thống kê lực lượng các phe" hidden>
+          <header><span>⚖️ CÁN CÂN ĐẠI DƯƠNG</span><small>Chỉ GM thấy · Cập nhật theo Server</small></header>
+          <div data-faction-counts class="battle-faction-counts"></div>
+          <p data-faction-forecast class="battle-faction-forecast"></p>
+        </section>
+        <section id="battleGallowsVerdict" role="dialog" aria-modal="false" aria-label="Kết luận Lên Giàn" hidden>
+          <div class="battle-verdict-shell">
+            <span class="battle-verdict-wave" aria-hidden="true">✦ ◌ 🐚 ◌ ✦</span>
+            <small>⚖️ PHÁN QUYẾT CỦA ĐẠI DƯƠNG</small>
+            <h3 data-verdict-player>Người chơi</h3>
+            <strong data-verdict-outcome>ĐƯỢC SỐNG</strong>
+            <p data-verdict-votes></p>
+            <button type="button" data-verdict-continue>TIẾP TỤC ĐÊM TIẾP THEO <span aria-hidden="true">❯</span></button>
+            <small>Chạm để tiếp tục · tự đóng sau 30 giây</small>
+          </div>
         </section>
         <section id="battleMorningReport" role="dialog" aria-modal="false" aria-label="Thông báo Làng" hidden>
           <header title="Giữ và kéo để di chuyển Thông báo Làng"><strong>📖 THÔNG CÁO LÀNG</strong><button type="button" id="battleMorningAudio" aria-label="Phát lại thông báo">🔊</button></header>
@@ -831,7 +856,8 @@
 
 <div class="sheet play-center-sheet hidden" id="playMatchCompletionSheet">
  <section class="sheet-card play-completion-card" role="dialog" aria-modal="true" aria-labelledby="playCompletionTitle">
-  <div class="sheet-head"><h3 id="playCompletionTitle">KẾT QUẢ VÁN</h3><button id="playCompletionClose" type="button" aria-label="Đóng">×</button></div>
+  <div class="gmww-winner-sea-glow" aria-hidden="true">✦ 🐚 ✦</div>
+  <div class="sheet-head"><h3 id="playCompletionTitle">🏆 KHẢI HOÀN ĐẠI DƯƠNG</h3><button id="playCompletionClose" type="button" aria-label="Đóng">×</button></div>
   <p id="playCompletionMessage" role="status"></p>
   <div class="play-completion-winners" aria-label="Phe thắng">
    <button type="button" data-completion-winner="Phe Dân" aria-pressed="false">Phe Dân</button><button type="button" data-completion-winner="Phe Sói" aria-pressed="false">Phe Sói</button><button type="button" data-completion-winner="Phe Ba" aria-pressed="false">Phe Ba</button>
@@ -960,12 +986,12 @@
   </div>
 </div>
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
-<script src="village-layout.js?v=3.208-seat-map-drag-20261024"></script>
+<script src="village-layout.js?v=3.209-seat-map-drag-20261024"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.208-compact-room-village-gallows-anchor-scene-align-1-gp2&seat-map-drag=20261024&status=4"></script>
+<script src="app.js?v=3.209-compact-room-village-gallows-anchor-scene-align-1-gp2&seat-map-drag=20261024&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

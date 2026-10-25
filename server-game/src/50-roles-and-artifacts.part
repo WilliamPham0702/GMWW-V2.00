@@ -480,7 +480,10 @@ async function playFinishSeating(){
 const playCompletionState={key:'',dismissed:'',winner:'',completed:false,busy:false,matchId:'',roomCode:'',config:null,templateId:''};
 function renderPlayCompletion(){
   const s=playCompletionState,title=document.getElementById('playCompletionTitle'),text=document.getElementById('playCompletionMessage');
-  if(title)title.textContent=s.winner?s.winner.toUpperCase()+' THẮNG':'KẾT QUẢ VÁN';
+  if(title)title.textContent=s.completed&&s.winner?'🏆 '+s.winner.toUpperCase()+' CHIẾN THẮNG':s.winner?'XÁC NHẬN '+s.winner.toUpperCase():'KẾT QUẢ VÁN';
+  const ceremony=document.getElementById('playMatchCompletionSheet');
+  if(ceremony){ceremony.dataset.victory=String(!!s.completed);ceremony.dataset.faction=String(s.winner||'');}
+  const sparkle=ceremony?.querySelector('.gmww-winner-sea-glow');if(sparkle)sparkle.hidden=!s.completed;
   if(text)text.textContent=s.completed?'Ván đã hoàn thành. Chọn bước tiếp theo.':'Xác nhận phe thắng rồi hoàn thành ván.';
   for(const b of document.querySelectorAll('[data-completion-winner]')){b.setAttribute('aria-pressed',String(b.dataset.completionWinner===s.winner));b.disabled=s.completed||s.busy}
   const confirm=document.getElementById('playCompletionConfirm');if(confirm){confirm.hidden=s.completed;confirm.disabled=!s.winner||s.busy}

@@ -54,6 +54,14 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ xác minh bộ đóng gói GM/Player Web V3.209
+        if: steps.scope.outputs.mode == 'audio-gallows-3209'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-gallows-rules.js
+          node --check src/gmww-members-live.js
+          node --check assets/village/village.mjs
       - name: Chỉ kiểm thử audio/Thông cáo/ghi chú phát hành V3.208
         if: steps.scope.outputs.mode == 'audio-v3208'
         run: |
