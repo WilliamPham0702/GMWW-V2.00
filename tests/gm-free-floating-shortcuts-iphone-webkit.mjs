@@ -12,7 +12,7 @@ const browser=await webkit.launch({headless:true});
 try{
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:3});
   const page=await context.newPage();
-  const html=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
   <body class="play-immersive"><section id="start"><div id="playShell" data-step="battle" data-battle-phase="day">
     <section id="battleBottomControls">
       <section id="battleFactionStatsFloat" class="battle-faction-stats-float"><button id="battleFactionStatsToggle" aria-pressed="false">🌈</button></section>
@@ -28,7 +28,7 @@ try{
     </section>
     <section id="battleFactionStats" role="dialog" hidden><header>THỐNG KÊ PHE</header><div data-faction-counts></div></section>
   </div></section></body></html>`;
-  await page.route('https://gmww-pr501.test/**',route=>route.fulfill({status:200,contentType:'text/html',body:html}));
+  await page.route('https://gmww-pr501.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
   await page.goto('https://gmww-pr501.test/');
   await page.addStyleTag({content:readFileSync('server-game/current/style.css','utf8')});
   await page.addScriptTag({content:`${helper}
@@ -43,7 +43,7 @@ try{
 
   for(const [id,emoji] of [['battleFactionStatsToggle','🌈'],['battleDayNoticeToggle','🏖️'],['battleDayGallowsToggle','⛱️'],['battleDemoCollapse','🐦‍🔥']]){
     const node=page.locator('#'+id);
-    assert.equal((await node.textContent()).trim().includes(emoji),true,id+' incorrect emoji');
+    assert.equal((await node.textContent()).trim().includes(emoji),true,id+' incorrect emoji (rendered '+JSON.stringify(await node.textContent())+')');
     const shape=await node.evaluate(el=>{
       const style=getComputedStyle(el),r=el.getBoundingClientRect();
       return {width:r.width,height:r.height,background:style.backgroundColor,border:style.borderTopWidth,
