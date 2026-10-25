@@ -43,3 +43,28 @@ Rollback Worker STAGING về GĐ22 version `dd78c369-351c-4f5f-989c-00b71dfc55d7
 - Node unit: chứng minh 90 phút dữ liệu giả lập vẫn chỉ giữ tối đa 30 cửa sổ trong tab; background/WebGL loss loại trừ mẫu nền: **PASS**.
 - Các FPS số đo headless ở Chrome ~8, WebKit ~2 với GPU phần mềm không phản ánh hiệu năng Safari iPhone vật lý. **Chưa có số đo FPS khi 30 người làm phép đồng thời trên iPhone thật, chưa có kiểm chứng 30–60 phút chơi thật, pin/nhiệt thật**.
 - **Kết luận kỹ thuật:** hoàn tất lô GĐ23–25 trên nhánh nghiên cứu và STAGING riêng, đủ điều kiện trình một **đợt nghiệm thu iPhone thực tế cho cả lô**, không nghiệm thu từng giai đoạn. PR #487 vẫn Draft, không merge, không deploy Production. Rollback STAGING về GĐ22 version `dd78c369-351c-4f5f-989c-00b71dfc55d7`.
+
+## Báo cáo đo Safari iPhone thật — 30 Character (người dùng cung cấp)
+
+Bộ đo `gmww.arena.mobile-qa.19-21` được dùng trên bản STAGING GĐ23–25; chuỗi version này là module chẩn đoán, **không phải mã phiên bản Worker**.
+
+| Chỉ số | Số đo iPhone |
+|---|---:|
+| Character | 30 |
+| Draw calls | **37** (giảm 9 so với mức đầy đủ 46, xấp xỉ 19,6%) |
+| Tổng frame của phiên đo | 463 |
+| Mẫu giữ lại gần nhất | 240 |
+| FPS trung bình trên mẫu | **19 FPS** |
+| FPS mục tiêu của khung mới nhất | 12 Hz |
+| Khoảng cách khung hình: median / P95 | 34 / 87 ms |
+| CPU vẽ: median / P95 | 2 / 3 ms |
+| CPU vẽ đỉnh ghi theo phiên | 31 ms |
+| Khoảng khung lớn nhất theo phiên | 109 ms |
+| Pixel ratio | 1 |
+| WebGL context lost / restored | 0 / 0 |
+| Bộ nhớ thống kê phiên | 1 / 30 cửa sổ; `minutesObserved=0` |
+| Nhiệt / hao pin | Không đo được bằng API trình duyệt |
+
+**Diễn giải đúng:** FPS 19 là trung bình của **240 mẫu gần nhất**, có thể gồm khung idle 12Hz và khung lúc chuyển động mục tiêu 30Hz. `requestedPaintHz=12` chỉ là mục tiêu của khung mới nhất, không phải giới hạn của toàn bộ 240 mẫu. Median 34ms (~29Hz) và P95 87ms (~11Hz) phù hợp với chuỗi mẫu trộn chuyển động và nghỉ; **không xác nhận 30 FPS ổn định khi làm phép**. CPU vẽ P95 chỉ 3ms nhưng đã có khung đỉnh 31ms; điều này chưa chứng minh GPU/pin/nhiệt ổn định.
+
+**Kết luận nghiệm thu từng phạm vi:** ĐẠT về số Character 30, đúng 37 draw calls và không mất WebGL trong phiên đo ngắn trên iPhone thật. **CHƯA NGHIỆM THU** về chuyển động Core/animation cụ thể, FPS lúc đang thi triển phép, pin/nhiệt và độ ổn định phiên kéo dài (mới `minutesObserved=0`, không phải test 30–60 phút). Không tự merge PR hoặc deploy Production từ báo cáo này.
