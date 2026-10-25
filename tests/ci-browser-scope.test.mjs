@@ -189,3 +189,25 @@ test('V3.205 chỉ test Lên Giàn: cờ đỏ Player Web, toolbar iPhone, Ẩn/
    assert.equal(classifyBrowserScope([...changes,{path:unrelated,status:'M'}]),'full',unrelated);
  }
 });
+
+
+test('PR475 release CI on main selects focused DEMO checks and fails closed',()=>{
+ const files=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','scope updated'),
+  modified('.github/workflows/check-player-web.yml','old','focused Worker'),
+  modified('.github/workflows/deploy-production.yml','old','same SHA release guard'),
+  modified('tests/ci-browser-scope.test.mjs','old','selector checks'),
+  {path:'docs/releases/GMWW-V3.207-demo475-production-20261025.md',status:'A',after:'# release'}
+ ];
+ assert.equal(classifyBrowserScope(files),'demo-475');
+ assert.equal(classifyBrowserScope([...files,modified('assets/village/village.css','old','changed')]),'full');
+ assert.equal(classifyBrowserScope(files.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+ const wf=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+ for(const required of [
+  'demo475_release_3207',
+  '8772337ab95e7561aeba6d63b2ec2337d7bbee94',
+  'docs/releases/GMWW-V3.207-demo475-production-20261025.md',
+  'Check Lên Giàn theo đúng phạm vi',
+  'Check Player Web Worker'
+ ])assert.ok(wf.includes(required),'Missing focused release guard: '+required);
+});
