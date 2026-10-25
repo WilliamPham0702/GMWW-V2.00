@@ -86,6 +86,7 @@ jobs:
           node --check assets/village/arena-3d/player.mjs
           node --check tests/arena3d-player-public.test.mjs
           node --check tests/arena3d-portal-handoff.test.mjs
+          node --check tests/arena3d-ci-focused-scope.test.mjs
           node --check assets/village/arena-3d/production-gm-adapter.mjs
           node --check tests/arena3d-production-gm-adapter.test.mjs
           node --check assets/village/arena-3d/gm-native-bridge.mjs
