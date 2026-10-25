@@ -432,6 +432,16 @@ if(game){
   // Reconcile on every frame so 👍/👎 changes never recreate the Character rig.
   function syncGallowsVoteBadge(button,data){
     const host=button.querySelector('.player-over');if(!host)return;
+    const loginId=String(data?.loginId||data?.id||'').replace(/^member:/,''),
+      stat=(setupState.gallowsNominationTotals||[]).find(row=>String(row.loginId)===loginId),
+      count=Math.max(0,Math.trunc(Number(stat?.votes)||0));
+    let pearl=host.querySelector(':scope>.gmww-nomination-pearl');
+    if(count>0){
+      if(!pearl){pearl=document.createElement('span');pearl.className='gmww-nomination-pearl';
+        pearl.setAttribute('aria-label','Số phiếu đề cử')}
+      pearl.textContent='✦ '+count;pearl.title=count+' phiếu đề cử';
+      if(host.firstElementChild!==pearl)host.prepend(pearl);
+    }else pearl?.remove();
     const vote=(Array.isArray(data?.statusTags)?data.statusTags:[]).find(x=>x?.statusId==='gallows_vote')?.icon;
     let badge=host.querySelector(':scope>.gmww-gallows-vote');
     if(vote!=='👍'&&vote!=='👎'){badge?.remove();return}
@@ -439,6 +449,14 @@ if(game){
     if(badge.textContent!==vote)badge.textContent=vote;
     if(host.firstElementChild!==badge)host.prepend(badge);
   }
+  // Static sea-pearl count is public tally only; no faction/role details leak.
+  function ensureNominationPearlStyle(){
+    if(document.getElementById('gmwwNominationPearlCss'))return;
+    const css=document.createElement('style');css.id='gmwwNominationPearlCss';
+    css.textContent='#players .player .gmww-nomination-pearl{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:32px;padding:2px 9px;margin:0 auto 3px;border-radius:999px;border:2px solid #ffe3a5;color:#fffae3;font-weight:1000;font-size:16px;background:radial-gradient(circle at 20% 15%,#70e7e7,#116478 72%,#062f48);box-shadow:0 4px 16px #001a3188;text-shadow:0 1px 3px #002838;pointer-events:none}';
+    document.head.appendChild(css);
+  }
+  ensureNominationPearlStyle();
   function stablePlayerNode(data,pos,seatId,index){
     const id=String(data?.id||""),gm=data?.isGM===true||data?.kind==="gm";
     const appearance=JSON.stringify([gm,data?.gameCharacterId||"",data?.avatarId||"",data?.avatarUrl||""]);
