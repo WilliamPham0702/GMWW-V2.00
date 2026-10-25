@@ -361,6 +361,17 @@ jobs:
           cat /tmp/gmww-changed-files.txt
           export GMWW_CHANGED_FILES="$(cat /tmp/gmww-changed-files.txt)"
           TYPE=$(node .github/scripts/classify-update.mjs | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).releaseType))")
+          # PR #475 was merged BEFORE this CI-only release fix. The current
+          # diff alone is not the full set of unpublished Runtime assets.
+          # Publish the cumulative iPhone OTA once, scoped to the exact
+          # approved V3.207 merged commit (not a generic CI bypass).
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" = "3.207.0" ] && \
+             test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md && \
+             git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD; then
+            TYPE=runtime
+            echo "Cộng dồn bản sửa PR #475 đã merge: phát hành GM Runtime OTA V3.207, không phải server_only." >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "release_type=$TYPE" >> "$GITHUB_OUTPUT"
 
           # Restore the pinned canonical source, then publish ONLY the 63 clean originals.
