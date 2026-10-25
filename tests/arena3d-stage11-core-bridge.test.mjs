@@ -68,10 +68,10 @@ test('GĐ11 staging worker captures only confirmed actions and keeps them GM-onl
  const src=readFileSync('src/arena3d-stage-worker.mjs','utf8');
  assert.match(src,/if\(result\?\.ok!==true\|\|result\?\.idempotent===true\)return response/);
  assert.match(src,/if\(saved\?\.phase==='night'/);
- assert.match(src,/const roleId=coreRoleForActor\(control,String\(body\?\.actorId\|\|''\)\)/);
+ assert.match(src,/const roleId=stageAuthorizedRoleId\(control,String\(body\?\.actorId\|\|''\)\)/);
  assert.match(src,/if\(!auth\.ok\)return auth\.response/);
  assert.match(src,/redactStagingPublicBroadcast\(payload\)/);
- assert.match(src,/isCanonicalCoreAction\(actionId\)/);
+ assert.match(src,/familyForConfirmedAction\(\{actionId,type:body\?\.type,card,effectId:body\?\.effectId\}\)/);
 });
 
 test('GĐ11 regression: Phát Vai từ Core phải chuyển lobby -> role_delivery ngay, không mất vì duplicate gate',()=>{
