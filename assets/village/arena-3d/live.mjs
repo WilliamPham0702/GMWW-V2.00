@@ -16,7 +16,7 @@ import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
-import {arenaSceneSignature,createArenaAdaptiveQuality} from './render-optimization.mjs';
+import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION} from './render-optimization.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -30,7 +30,7 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=true,lastPaint=0,visibleGmEffects=0,lowPower=false,sceneNightPreview=false;
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
-let galleryPage=0,previewRitualKind=null;
+let galleryPage=0,previewRitualKind=null,lastPacingHz=-1;
 const qualityController=createArenaAdaptiveQuality();
 const matchSync=createMatchSyncGate();
 const arenaAudio=createArenaAudioEngine(window.AudioContext||window.webkitAudioContext);
@@ -47,14 +47,18 @@ function playArenaCastSound(cue,{syntheticPreview=false}={}){
   return arenaAudio.play(profile,identity);
 }
 
-function applyQuality(){
+function applyQuality(force=false){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
-  if(next===lowPower)return;
+  if(next===lowPower&&!force)return;
   lowPower=next;field.setLowPower(next);village.setQuality(next);
-  const budget=renderQualityBudget({characters:field.actorCount,fps,lowPower:next,reducedMotion});
-  render.setPixelRatio(Math.min(devicePixelRatio||1,budget.pixelRatioCap));
+  // Do not increase GPU resolution merely because a 30-seat snapshot arrived.
+  const budget=renderQualityBudget({characters:field.actorCount,fps:fps||60,
+    lowPower:next,reducedMotion});
+  const ratio=Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35,budget.pixelRatioCap);
+  if(Math.abs(render.getPixelRatio()-ratio)>.001){
+    render.setPixelRatio(ratio);lastResize='';
+  }
   field.setQualityFps(fps||60);
-  lastResize='';
 }
 function updateAutoQualityButton(){
   const btn=$('quality-auto');btn.textContent='⚡ Tối ưu tự động: '+(autoQualityEnabled?'Bật':'Tắt');
@@ -119,6 +123,7 @@ function drawFrame(frame){
   const nextSignature=arenaSceneSignature(frame.room,items);
   if(nextSignature!==sceneSignature){
     field.setActors(items,{seatCount:frame.room.seatCount,seatLayout:frame.room.seatLayout});
+    applyQuality(true);
     sceneSignature=nextSignature;sceneRebuilds++;
     document.body.dataset.gmwwArenaSceneRebuilds=String(sceneRebuilds);
   }
@@ -141,6 +146,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage9=STAGE9_VERSION;
   document.body.dataset.gmwwStage10=STAGE10_VERSION;
   document.body.dataset.gmwwStage12=STAGE12_VERSION;
+  document.body.dataset.gmwwStage18=ARENA_STAGE18_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
@@ -474,18 +480,25 @@ window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.ro
   previewShieldDomes:synthetic?field.visibleShieldDomes:0,
   previewWand:synthetic?field.wandVisible:false,
   previewImpactRings:synthetic?field.visibleImpactRings:0,
-  pixelRatio:render.getPixelRatio(),reducedMotion,
+  pixelRatio:render.getPixelRatio(),reducedMotion,paintTargetHz:lastPacingHz,
   soundEnabled:arenaAudio.enabled,soundPlays:gmToken||synthetic?arenaAudio.playedCount:0,
   loadedVoiceFiles:gmToken||synthetic?localVoice.count:0,
   activeShieldDomes:gmToken||synthetic?field.visibleShieldDomes:0,
   activeWolfHeads:gmToken||synthetic?field.visibleWolfHeads:0});
-// Cap repaint at 30FPS and pause hidden Safari tabs; animation reduces further for accessibility.
+// GĐ18: keep Core networking at normal cadence, but reduce GPU painting while idle.
 function loop(now){
   const adaptive=qualityController.observe(now,!document.hidden);
   if(autoQualityEnabled&&adaptive!==adaptiveLowPower){
     adaptiveLowPower=adaptive;applyQuality();
   }
-  if(!document.hidden&&now-lastPaint>=1000/(reducedMotion||lowPower?20:30)){
+  const frameHz=arenaTargetFrameHz({visible:!document.hidden,
+    active:field.hasActiveMotion(now),
+    interacting:trackedPointers.size>0||Boolean(drag?.moved),
+    lowPower,reducedMotion});
+  if(frameHz!==lastPacingHz){
+    lastPacingHz=frameHz;document.body.dataset.gmwwPaintTargetHz=String(frameHz);
+  }
+  if(frameHz>0&&now-lastPaint>=1000/frameHz){
     lastPaint=now;resize();
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,Math.sin(elevation)*radius,
       Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
