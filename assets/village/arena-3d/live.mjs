@@ -25,7 +25,10 @@ import {validateArenaGmContext} from './gm-native-bridge.mjs';
 const $=id=>document.getElementById(id);
 // STAGING keeps its isolated DO visual endpoint; the official Core hostname
 // uses the existing authenticated GM state. No production credentials cross origin.
-const productionCoreView=!location.hostname.includes('arena3d-stage14-staging');
+const stagingHost=location.hostname.includes('arena3d-stage14-staging');
+// STAGING opt-in exercises the exact production Core/GM adapter without
+// touching real Production or converting the QA Worker into a live room host.
+const productionCoreView=!stagingHost||new URLSearchParams(location.search).get('coreMode')==='live';
 const privateGmUrl=room=>productionCoreView?'/api/gm/rooms/'+encodeURIComponent(room):
  '/api/arena-staging/rooms/'+encodeURIComponent(room)+'/gm-visuals';
 const projectGmPayload=payload=>productionCoreView?projectAuthorizedGmCoreState(payload):payload;
