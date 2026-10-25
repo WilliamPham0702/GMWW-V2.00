@@ -1,6 +1,6 @@
 # Ghi chú thay đổi — GMWW: icon nổi độc lập (25/10/2026)
 
-**Trạng thái:** PR chờ kiểm thử và nghiệm thu, **chưa merge / chưa triển khai Production**. Không tăng số phiên bản Runtime/IPA trước khi phát hành.
+**Phê duyệt phát hành:** chủ dự án đã duyệt bỏ nghiệm thu STAGING, ứng viên Runtime OTA **V3.222** (không đổi IPA). Chỉ xem như Production đã phát hành sau khi có log triển khai và xác minh edge thực tế.
 
 1. **Player Web:** đổi cờ đề cử sang emoji 🚩 (48 × 48 px, không khung); giữ cơ chế hút Character, xem trước, OK và Khôi phục. Không thay quyền đề cử hoặc phiếu Server.
 2. **GM DEMO:** 📗 → 🐦‍🔥; icon đứng độc lập, có thể kéo/thả, mặc định thu gọn; chạm để mở bảng quan sát và lịch sử DEMO.
