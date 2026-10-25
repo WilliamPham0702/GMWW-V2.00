@@ -89,3 +89,6 @@ test('GĐ14 regression: GM-assigned artifact retained VFX before Core sanitizes 
  assert.match(worker,/await this\.ctx\.storage\.put\('arena:artifact-vfx:'\+matchId,visual\)/);
  assert.match(worker,/await this\.ctx\.storage\.delete\('arena:artifact-vfx:'\+matchId\)/);
 });
+
+// GĐ26–28 chạy trong suite Arena dynamic sẵn có: không mở CI ngoài phạm vi.
+import './arena3d-stage26-28.test.mjs';
