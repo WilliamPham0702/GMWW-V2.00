@@ -96,7 +96,7 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
       faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};
   });
   if(action==='action_aura_read'){
-    const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleName,functions})=>({loginId,roleName,functions})),
+    const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleId,roleName,functions})=>({loginId,roleId,roleName,functions})),
       message:result.roleName};
   }
   if(action==='action_destroyer_scry')
