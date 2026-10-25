@@ -1,7 +1,7 @@
 /* GMWW SEA icon library — V1. Draft feature: visual catalog only, no gameplay mutation. */
 (()=>{
 'use strict';
-const KEY='GMWW_ACTION_ICON_LIBRARY_V1';
+const KEY='GMWW_ACTION_ICON_LIBRARY_V2';
 const SHAPES={
 eye:'<path d="M15 48q33-40 66 0-33 40-66 0Z"/><circle cx="48" cy="48" r="11"/><circle cx="51" cy="44" r="3" fill="#fff6c7" stroke="none"/>',
 triple:'<path d="M17 35q15-17 30 0-15 17-30 0Zm34 0q15-17 30 0-15 17-30 0ZM33 64q15-17 30 0-15 17-30 0Z"/><circle cx="32" cy="35" r="3"/><circle cx="66" cy="35" r="3"/><circle cx="48" cy="64" r="3"/>',
@@ -24,34 +24,51 @@ draw:'<path d="M20 25l25-8 15 48-25 8-15-48Zm30 9 24-3 5 40-20 1" stroke="#ffe1a
 spark:'<path d="M48 11 57 38l28 10-28 10-9 27-9-27-28-10 28-10 9-27Z"/><circle cx="48" cy="48" r="7"/>'
 };
 const DEFAULT=[
-['soi-xet','Soi xét','eye','character','action_seer,action_aura_read,action_destroyer_scry,action_find_seer,action_wolf_seer,action_rotten_seer'],
-['soi-nhom','Soi nhiều người','triple','multi','action_scan_three,action_fox_scan,action_bear_scan'],
-['so-sanh-phe','So sánh phe','scale','multi','action_compare_faction'],
-['soi-can','Sói cắn','bite','character','action_wolf_bite'],
-['bao-ve','Bảo vệ','shield','character','action_protect'],
-['cuu','Cứu','heal','character','action_witch_save'],
-['giet','Giết / đầu độc','poison','character','action_witch_kill,action_destroyer_kill,action_stab'],
-['dong-bang','Đóng băng','ice','character','action_snow_wolf_freeze'],
-['danh-dau','Đánh dấu','mark','character','action_assassin_mark,action_hunter_mark'],
-['duoi','Đuổi khỏi làng','exile','character','action_exile'],
-['hoi-sinh','Hồi sinh','revive','character','action_revive'],
-['dich-vet-can','Dịch vết cắn','shift','direction','action_transfer_bite'],
-['tham-nha','Thăm nhà','visit','character','action_visit_house'],
-['san','Săn','hunt','character','action_hunt'],
-['nhan-ban','Nhân bản','clone','character','action_clone_target'],
-['doi-vai','Đổi Vai Trò','swap','card','action_thief_change_role'],
-['hiep-si','Hiệp sĩ chọn chết','sword','character','action_knight_last_strike'],
-['say-ruou','Rút / đổi lá','draw','card','action_drunk_draw'],
-['tac-dong','Tác động khác','spark','character','']
-].map(([id,name,shape,target,actions])=>({id,name,shape,target,actions:actions?actions.split(','):[],image:''}));
+["soi-xet","01_soi_xet","Soi xét / Đọc chức năng","character","action_seer,action_aura_read"],
+["soi-dac-biet","02_soi_dac_biet","Soi vai trò / Tìm tiên tri","character","action_destroyer_scry,action_find_seer,action_wolf_seer,action_rotten_seer"],
+["soi-nhom","03_soi_nhom","Soi nhóm","multi","action_scan_three,action_fox_scan,action_bear_scan"],
+["so-sanh-phe","04_so_sanh_phe","So sánh phe","multi","action_compare_faction"],
+["soi-can","05_soi_can","Sói cắn","character","action_wolf_bite"],
+["bao-ve","06_bao_ve","Bảo vệ","character","action_protect"],
+["cuu","07_cuu","Cứu","character","action_witch_save"],
+["ha-doc","08_ha_doc","Hạ độc","character","action_witch_kill"],
+["dong-bang","09_dong_bang","Đóng băng","character","action_snow_wolf_freeze"],
+["danh-dau","10_danh_dau","Đánh dấu","character","action_assassin_mark,action_hunter_mark"],
+["dich-trai","11_dich_trai","Dịch vết cắn trái","direction","action_transfer_bite"],
+["dich-phai","12_dich_phai","Dịch vết cắn phải","direction","action_transfer_bite"],
+["hoi-sinh","13_hoi_sinh","Hồi sinh","character","action_revive"],
+["duoi","14_duoi_khoi_lang","Đuổi khỏi làng","character","action_exile"],
+["san-giet","15_san_giet","Săn / Giết / Đâm","character","action_hunt,action_destroyer_kill,action_stab"],
+["tham-nha","16_tham_nha","Thăm nhà","character","action_visit_house"],
+["nhan-ban","17_nhan_ban","Nhân bản","character","action_clone_target"],
+["doi-vai","18_doi_vai_tro","Đổi vai trò / Rút bài","card","action_thief_change_role,action_drunk_draw"],
+["hiep-si","19_hiep_si","Hiệp sĩ chọn chết","character","action_knight_last_strike"]
+].map(([id,file,name,target,actions])=>({id,name,assetId:file+'.png',shape:'spark',target,actions:actions?actions.split(','):[],image:''}));
 const clone=x=>JSON.parse(JSON.stringify(x));
 const cleanActions=s=>[...new Set(String(s||'').split(/[,\n;]/).map(x=>x.trim()).filter(x=>/^[A-Za-z][A-Za-z0-9_:-]{0,100}$/.test(x)))].slice(0,80);
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function load(){try{const a=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(a)&&a.length<300)return a.filter(x=>x&&/^[a-z0-9-]{1,80}$/.test(x.id)).map(x=>({id:x.id,name:String(x.name||'').slice(0,100),shape:SHAPES[x.shape]?x.shape:'spark',target:['character','multi','card','direction'].includes(x.target)?x.target:'character',actions:cleanActions((x.actions||[]).join(',')),image:typeof x.image==='string'&&/^data:image\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''}));}catch(_){}return clone(DEFAULT)}
+function load(){
+ const known=new Map(DEFAULT.map(x=>[x.id,x.assetId]));
+ const parse=(arr)=>arr.filter(x=>x&&/^[a-z0-9-]{1,80}$/.test(x.id)).map(x=>({
+  id:x.id,name:String(x.name||'').slice(0,100),shape:SHAPES[x.shape]?x.shape:'spark',
+  target:['character','multi','card','direction'].includes(x.target)?x.target:'character',
+  actions:cleanActions((Array.isArray(x.actions)?x.actions:[]).join(',')),
+  assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
+ }));
+ try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return parse(saved)}catch(_){}
+ // Preserve only user-created icons from an earlier Draft prototype, never overwrite approved artwork with old demo SVG.
+ try{const old=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V1')||'null');
+  if(Array.isArray(old)){
+   const previous=new Set(['soi-xet','soi-nhom','so-sanh-phe','soi-can','bao-ve','cuu','giet','dong-bang','danh-dau','duoi','hoi-sinh','dich-vet-can','tham-nha','san','nhan-ban','doi-vai','hiep-si','say-ruou','tac-dong']);
+   return clone(DEFAULT).concat(parse(old.filter(x=>!previous.has(x?.id)&&!known.has(x?.id))));
+  }
+ }catch(_){}
+ return clone(DEFAULT);
+}
 let icons=load(),editing=null,pendingImage=null;
 function store(next){try{localStorage.setItem(KEY,JSON.stringify(next));icons=next;return true}catch(_){alert('Không đủ bộ nhớ. Hãy dùng ảnh PNG/WEBP nhỏ hơn hoặc xoá icon chưa sử dụng.');return false}}
 function svg(kind){const shape=SHAPES[kind]||SHAPES.spark;return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><radialGradient id="sea" cx="45%" cy="35%"><stop stop-color="#267fa5"/><stop offset="1" stop-color="#0a294d"/></radialGradient></defs><circle cx="48" cy="48" r="45" fill="#022842" stroke="#f0d18d" stroke-width="3"/><circle cx="48" cy="48" r="39" fill="url(#sea)" stroke="#65e3ed" stroke-width="2"/><g fill="none" stroke="#b1ecff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">'+shape+'</g><path d="M33 9q15-10 30 0M33 87q15 10 30 0" fill="none" stroke="#f7e0a1" stroke-width="4"/><circle cx="48" cy="6" r="4" fill="#fff0c1"/><circle cx="48" cy="90" r="4" fill="#fff0c1"/></svg>'}
-function picture(icon){return icon.image||'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg(icon.shape))}
+function picture(icon){return icon.image||(icon.assetId?'action-icons/sea-v1/'+encodeURIComponent(icon.assetId):'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg(icon.shape)))}
 
 function auditCatalog(){
  let state=null;
@@ -79,11 +96,13 @@ function renderAudit(){
  const report=auditCatalog();
  if(!report){box.textContent='Chưa tìm thấy danh mục Vai Trò/Artifact trên thiết bị này.';return}
  box.innerHTML='<b>KIỂM KÊ TRÊN THIẾT BỊ</b><p>'+report.roles+' Vai Trò · '+report.artifacts+' Artifact · '+report.actions.length+' kiểu hành động chủ động · '+report.missing.length+' hành động chưa gán icon.</p>'+
- (report.missing.length?'<details><summary>Xem hành động chưa gán</summary>'+report.missing.map(x=>'<div>'+esc(x.label)+' — '+esc(x.kind==='artifact'?'Artifact':'Vai Trò')+' ('+esc(x.owners.join(', '))+') <button type="button" data-icon-map="'+esc(x.id)+'">Gán icon</button></div>').join('')+'</details>':'<small>Đã gán icon cho tất cả hành động đọc được.</small>');
+ (report.missing.length?'<details><summary>Xem hành động chưa gán</summary>'+report.missing.map(x=>'<div>'+esc(x.label)+' — '+esc(x.kind==='artifact'?'Artifact':'Vai Trò')+' ('+esc(x.owners.join(', '))+') <select aria-label="Chọn icon" data-icon-select="'+esc(x.id)+'">'+icons.map(icon=>'<option value="'+esc(icon.id)+'">'+esc(icon.name)+'</option>').join('')+'</select> <button type="button" data-icon-map="'+esc(x.id)+'">Gán icon</button></div>').join('')+'</details>':'<small>Đã gán icon cho tất cả hành động đọc được.</small>');
  box.querySelectorAll('[data-icon-map]').forEach(b=>b.onclick=()=>{
-  const found=icons.find(x=>x.id==='tac-dong')||icons[0];if(!found)return;
-  edit(found.id);const input=document.getElementById('gmwwIconActions');
-  input.value=[...new Set(cleanActions(input.value).concat(b.dataset.iconMap))].join(', ');
+  const selected=[...box.querySelectorAll('[data-icon-select]')].find(x=>x.dataset.iconSelect===b.dataset.iconMap)?.value;
+  const next=clone(icons),found=next.find(x=>x.id===selected);
+  if(!found)return;
+  found.actions=[...new Set(found.actions.concat(b.dataset.iconMap))];
+  if(store(next))render();
  });
 }
 
@@ -120,7 +139,7 @@ function save(){
  if(!['character','multi','card','direction'].includes(target))return;
  const id=editing||('icon-'+Date.now().toString(36));
  const prev=icons.find(x=>x.id===id)||{};
- const next=icons.filter(x=>x.id!==id).concat({id,name,actions,target,image:pendingImage||'',shape:prev.shape||'spark'});
+ const next=icons.filter(x=>x.id!==id).concat({id,name,actions,target,image:pendingImage||'',assetId:prev.assetId||'',shape:prev.shape||'spark'});
  if(store(next)){document.getElementById('gmwwIconEditor').hidden=true;render()}
 }
 function init(){
@@ -142,6 +161,6 @@ function init(){
  document.getElementById('gmwwIconSearch').oninput=render;
  render();
 }
-window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),image:picture,audit:auditCatalog};
+window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),resolveAll:(actionId)=>clone(icons.filter(x=>x.actions.includes(String(actionId)))),image:picture,audit:auditCatalog};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
