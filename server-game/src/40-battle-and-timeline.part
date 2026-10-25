@@ -1667,8 +1667,7 @@ async function battleConfirm(confirmed=false){
       renderPlayBattle();
       battleAdvanceConfirmedTurn();
     };
-    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,finishConfirmAudio))
-      .then(started=>{if(started===false)finishConfirmAudio()},finishConfirmAudio);
+    // Do not announce success until the Durable Object accepted the action.
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     gmHapticFeedback();
@@ -1677,11 +1676,16 @@ async function battleConfirm(confirmed=false){
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
     // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
-    if(seerReveal&&result.revelation){
-      battlePresentRevelation(a.actionId,result.revelation);
-      // The result replaces confirmation audio; do not leave its navigation gate locked.
+    const revelation=seerReveal?result.revelation:null;
+    let confirmationFinished=false;
+    const afterConfirmation=()=>{
+      if(confirmationFinished)return;
+      confirmationFinished=true;
+      if(revelation)battlePresentRevelation(a.actionId,revelation);
       finishConfirmAudio();
-    }
+    };
+    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,afterConfirmation))
+      .then(started=>{if(started===false)afterConfirmation()},afterConfirmation);
     // Advance a confirmed turn after Server sync. Scan results stay visible until GM taps outside.
     battleState.pendingNextTurnId=t.id;
     battleClear();
@@ -1697,7 +1701,7 @@ async function battleConfirm(confirmed=false){
       renderPlayBattle();
       if(document.getElementById('battleResultPopup')?.hidden!==false)battleAdvanceConfirmedTurn();
     }).catch(err=>{playFlashError('Đã ghi nhận trên Server nhưng đồng bộ bị lỗi: '+String(err?.message||err));});
-  }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
+  }catch(err){battleConfirmAudioGate=false;playFlashError('Không thể xác nhận: '+String(err?.message||err))}
   finally{battleState.busy=false;renderPlayBattle()}
 }
 function battleToggleDetails(force){
