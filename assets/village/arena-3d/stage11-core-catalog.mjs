@@ -107,10 +107,51 @@ export const CORE_ROLE_CATALOG=Object.freeze([
     "id": "role_cursed",
     "name": "Kẻ Bị Nguyền",
     "faction": "village",
+    "actionIds": []
+  },
+  {
+    "id": "role_thug",
+    "name": "Du Côn",
+    "faction": "village",
     "actionIds": [
-      "action_stab",
-      "action_scan_three",
-      "action_find_seer",
+      "action_stab"
+    ]
+  },
+  {
+    "id": "role_bigfoot",
+    "name": "Chân To",
+    "faction": "village",
+    "actionIds": []
+  },
+  {
+    "id": "role_piper",
+    "name": "Kẻ Thổi Sáo",
+    "faction": "village",
+    "actionIds": [
+      "action_scan_three"
+    ]
+  },
+  {
+    "id": "role_wolf_seer",
+    "name": "Sói Tiên Tri",
+    "faction": "wolf",
+    "actionIds": [
+      "action_find_seer"
+    ]
+  },
+  {
+    "id": "role_wolf_cub",
+    "name": "Sói Con",
+    "faction": "wolf",
+    "actionIds": [
+      "action_wolf_bite"
+    ]
+  },
+  {
+    "id": "role_wolf_hunter",
+    "name": "Sói Thợ Săn",
+    "faction": "wolf",
+    "actionIds": [
       "action_wolf_bite",
       "action_hunter_mark"
     ]
