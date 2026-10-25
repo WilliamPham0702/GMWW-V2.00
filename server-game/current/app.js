@@ -6675,7 +6675,7 @@ function gmAutoComposeRoles(catalog,players,history=[]){
     for(let i=1;i<wolfCount;i++)add(variants.length&&i<=Math.min(2,Math.floor(n/8))?pick(variants,attempt+i*5):wolf);
     if(thirdCount)add(pick(neutrals,attempt+2));
     const villageSlots=n-wolfCount-thirdCount;
-    const ids=n<=5?['role_seer','role_guard','role_spiritualist','role_aura_seer','role_fox']:['role_seer','role_guard','role_witch','role_hunter','role_spiritualist','role_fox','role_aura_seer','role_piper','role_maiden','role_fairy','role_knight','role_bear_god'];
+    const ids=n<=4?['role_seer','role_guard','role_aura_seer']:n===5?['role_seer','role_guard','role_aura_seer','role_witch','role_hunter']:['role_seer','role_guard','role_witch','role_hunter','role_spiritualist','role_fox','role_aura_seer','role_piper','role_maiden','role_fairy','role_knight','role_bear_god'];
     const available=ids.map(id=>get(id,'village')).filter(Boolean);
     const required=n>=6?[seer]:[];
     if(n>=5){const defense=pick(['role_guard','role_witch'].map(id=>get(id,'village')).filter(Boolean),attempt+3);if(defense&&!required.some(r=>r.id===defense.id))required.push(defense)}
@@ -7035,7 +7035,7 @@ async function openPlayGameSheet(){
   if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
   const sel=document.getElementById('playGameTemplateSelect');if(sel){
     sel.onchange=e=>{if(e.target.value!=='__auto__')gmAutoShowSummary('');void applyPlayGameTemplate(e.target.value)};
-    if(!sel.value){const first=gmAutoRankTemplates(playSceneRuntime.gameTemplates,playLiveMembers().length)[0];if(first)sel.value=String(first.id)}
+    if(sel.value!=='__auto__'){const count=playLiveMembers().length,first=gmAutoRankTemplates(playSceneRuntime.gameTemplates,count)[0],selected=playSceneRuntime.gameTemplates.find(t=>String(t.id)===sel.value);if(first&&(!selected||Math.abs(Number(selected.playerCount||0)-count)>Math.abs(Number(first.playerCount||0)-count)))sel.value=String(first.id)}
     // Always rehydrate the SELECTED template rather than reusing another template's stale draft.
     if(sel.value)await applyPlayGameTemplate(sel.value);
   }if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
