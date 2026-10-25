@@ -161,12 +161,19 @@ function demo(n){
 function notice(s){$('log').textContent=String(s);dashboard.notify(s);}
 async function refreshPrivateGmEffects(){
   if(!gmToken||!code||!current?.room.matchId||current.room.phase!=='running')return;
+  // An old request may finish after GM logs out, reconnects or changes rooms.
+  // Bind the private response to the initiating GM session before touching VFX/audio.
+  const session={room:code,token:gmToken,matchId:String(current.room.matchId),
+    cycleKey:String(current.room.cycleKey)};
   try{
-    const response=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gm-visuals',{
-      headers:{authorization:'Bearer '+gmToken},cache:'no-store'
+    const response=await fetch('/api/arena-staging/rooms/'+encodeURIComponent(session.room)+'/gm-visuals',{
+      headers:{authorization:'Bearer '+session.token},cache:'no-store'
     });
     if(!response.ok)return;
     const data=await response.json();
+    if(code!==session.room||gmToken!==session.token||
+      String(current?.room.matchId||'')!==session.matchId||
+      String(current?.room.cycleKey||'')!==session.cycleKey)return;
     if(String(data.matchId)!==String(current.room.matchId)||String(data.cycleKey)!==String(current.room.cycleKey))return;
     if(Array.isArray(data.effects)){
       field.setServerEffects(data.effects);
@@ -202,7 +209,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';localVoice.clear();}
+function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
