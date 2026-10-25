@@ -357,12 +357,31 @@ function battleAudioCuesForTurn(turn){
   }
   return cues.length?cues:[battleTurnAudioCue(turn)].filter(Boolean);
 }
-function battlePlayTurnAudioSequence(cues,expectedKey,showError=false){
+function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=false){
   let index=0;
   const next=()=>{
     if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
     const cue=cues[index++];if(!cue)return;
-    void battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,next);
+    const first=index===1;
+    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,next)).then(started=>{
+      if(first&&automatic&&battleState.key===expectedKey){
+        battleState.audioPendingTurnKey='';
+        // A failed iPhone play() is not a played turn. Permit a later reattempt.
+        if(started||playAudioMuted())battleState.lastAudioTurnKey=expectedKey;
+        else {
+          const retries=battleState.audioRetryCount||(battleState.audioRetryCount=new Map());
+          retries.set(expectedKey,(retries.get(expectedKey)||0)+1);
+          if(retries.get(expectedKey)<=2)setTimeout(()=>{
+            if(battleState.key===expectedKey&&battleState.lastAudioTurnKey!==expectedKey)
+              battleAudioForTurn(battleTurn(),true);
+          },850);
+          else playFlashError('Audio '+cue.name+' chưa phát được. Chạm 🔊 để phát lại hoặc kiểm tra file.');
+        }
+      }
+    }).catch(error=>{
+      if(first&&automatic&&battleState.key===expectedKey)battleState.audioPendingTurnKey='';
+      console.warn('GMWW wake-up cue failed',cue.targetId,error)
+    });
   };
   next();
 }
@@ -389,11 +408,12 @@ function battleAudioForTurn(turn,auto=false){
     }
   }
   if(auto){
-    // Start on the current user activation: awaiting IndexedDB here suppressed
-    // WKWebView playback on Phù Thuỷ Già and the first role of later nights.
     const expectedKey=battleState.key;
-    if(battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night')
-      battlePlayTurnAudioSequence(cues,expectedKey);
+    if(battleState.audioPendingTurnKey===expectedKey)return;
+    if(battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
+      battleState.audioPendingTurnKey=expectedKey;
+      battlePlayTurnAudioSequence(cues,expectedKey,false,true);
+    }
   }
 }
 function battleReplayAudio(){
