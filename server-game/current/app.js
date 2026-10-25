@@ -4703,7 +4703,7 @@ function battleIconDock(actions,phase){
  if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
  const busy=battleState.busy||battleState.syncPending||battleState.undoBusy;
  const core=document.querySelector('.play-village-core');
- if(battleIconDragging)battleIconClearDrag();
+ if(battleIconDragging&&busy)battleIconClearDrag();
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.actionId,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
   ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'')+':'+String(busy);
  if(dock.dataset.sig!==key){
@@ -4737,51 +4737,89 @@ function battleIconClearDrag(){
 }
 function battleIconBind(){
  const dock=document.getElementById('battleFireIconDock');if(!dock||dock.dataset.bound)return;dock.dataset.bound='1';
- dock.addEventListener('pointerdown',e=>{
-  const btn=e.target.closest('[data-fire-action]');if(!btn||(e.button!==0&&e.pointerType!=='touch')||battleState.busy||battleState.syncPending)return;
+ const begin=(btn,x,y,source,pointerId)=>{
+  if(battleIconDragging||!btn||btn.disabled||battleState.busy||battleState.syncPending||battleState.undoBusy)return false;
   const action=battleActions().find(a=>a.id===btn.dataset.fireAction&&!a.unavailable);
-  if(!action)return;
-  battleIconClearDrag();battleIconDragging={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,actionId:action.id,moved:false,target:null,ghost:null};
-  try{btn.setPointerCapture(e.pointerId)}catch{}
-  e.preventDefault();
- });
- dock.addEventListener('pointermove',e=>{
-  const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  if(!d.moved&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<8)return;
+  if(!action)return false;
+  battleIconDragging={source,pointerId,startX:x,startY:y,actionId:action.id,iconId:btn.dataset.fireIcon,
+   moved:false,target:null,ghost:null};
+  return true;
+ };
+ const move=(x,y,source,id)=>{
+  const d=battleIconDragging;if(!d||d.source!==source||d.pointerId!==id)return false;
+  if(!d.moved&&Math.hypot(x-d.startX,y-d.startY)<8)return true;
   d.moved=true;
-  if(!d.ghost){d.ghost=document.createElement('img');d.ghost.className='gmww-battle-icon-ghost';d.ghost.src=[...dock.querySelectorAll('[data-fire-action]')].find(x=>x.dataset.fireAction===d.actionId)?.querySelector('img')?.src||'';
-    d.ghost.setAttribute('aria-hidden','true');document.body.appendChild(d.ghost)}
-  d.ghost.style.left=e.clientX+'px';d.ghost.style.top=e.clientY+'px';
+  if(!d.ghost){d.ghost=document.createElement('img');d.ghost.className='gmww-battle-icon-ghost';
+   d.ghost.src=[...dock.querySelectorAll('[data-fire-action]')].find(el=>el.dataset.fireAction===d.actionId&&el.dataset.fireIcon===d.iconId)?.querySelector('img')?.src||'';
+   d.ghost.setAttribute('aria-hidden','true');document.body.appendChild(d.ghost)}
+  d.ghost.style.left=x+'px';d.ghost.style.top=y+'px';
   const action=battleActions().find(a=>a.id===d.actionId&&!a.unavailable);
-  const candidate=action&&action.targetCount>0?battleIconTargetAt(e.clientX,e.clientY,action):null;
+  const candidate=action&&action.targetCount>0?battleIconTargetAt(x,y,action):null;
   if(candidate!==d.target){d.target?.classList.remove('gmww-battle-icon-snap');d.target=candidate;candidate?.classList.add('gmww-battle-icon-snap')}
-  e.preventDefault();
- });
- const finish=e=>{
-  const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  const target=d.target,id=d.actionId,moved=d.moved,btn=e.target.closest?.('[data-fire-action]');
+  return true;
+ };
+ const finish=(x,y,source,id,cancelled)=>{
+  const d=battleIconDragging;if(!d||d.source!==source||d.pointerId!==id)return;
+  const actionId=d.actionId,iconId=d.iconId,moved=d.moved;
+  const action=battleActions().find(a=>a.id===actionId&&!a.unavailable);
+  const target=d.target||(moved&&action&&action.targetCount>0?battleIconTargetAt(x,y,action):null);
   battleIconClearDrag();
-  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending)return;
-  const a=battleActions().find(x=>x.id===id&&!x.unavailable);if(!a)return;
-  if(!moved){
-   if(a.noTarget){
-    if(!confirm('Xác nhận '+a.name+'?'))return;
-    battleClear();battleState.actionId=a.id;void battleConfirm(true);return;
-   }
-   if(battleIsTransfer(a)){battlePickAction(a.id);return}
-   if(a.targetCount>0)battleOpenTargetSheet(a.id,'list');
+  if(cancelled||battleState.busy||battleState.syncPending||battleState.undoBusy||!action)return;
+  // Direction icons must preserve each distinct option, never silently treat
+  // both as an identical target. Core performs the actual direction validation.
+  if(battleIsTransfer(action)){
+   battlePickAction(action.id);
+   const direction=iconId==='dich-trai'?'left':iconId==='dich-phai'?'right':'';
+   if(!moved&&direction&&Number(action.targetCount)===0){
+    battleState.transferDir=direction;void battleConfirm(true);
+   }else battleOpenTargetSheet(action.id,'list');
    return;
   }
-  if(!target||!a.targetCount)return;
-  const accepted=battlePickTargetWithAudio(String(target.dataset.playPlayerId||''),id);
+  if(!moved){
+   if(action.noTarget||Number(action.targetCount)===0){
+    if(!confirm('Xác nhận '+action.name+'?'))return;
+    battleClear();battleState.actionId=action.id;void battleConfirm(true);return;
+   }
+   battleOpenTargetSheet(action.id,'list');return;
+  }
+  if(!target||!(Number(action.targetCount)>0))return;
+  const accepted=battlePickTargetWithAudio(String(target.dataset.playPlayerId||''),actionId);
   if(!accepted)return;
-  if(battleState.targets.length===a.targetCount){
-   // Keep special target semantics (e.g. assassin marker) on the existing confirmation UI.
-   if(a.actionId==='action_assassin_mark'||battleIsTransfer(a))battleOpenTargetSheet(a.id,'list');
+  if(battleState.targets.length===action.targetCount){
+   if(action.actionId==='action_assassin_mark')battleOpenTargetSheet(action.id,'list');
    else void battleConfirm(true);
   }
  };
- dock.addEventListener('pointerup',finish);dock.addEventListener('pointercancel',finish);
+ dock.addEventListener('pointerdown',e=>{
+  const btn=e.target.closest?.('[data-fire-action]');
+  if(e.button!==0&&e.pointerType!=='touch')return;
+  if(begin(btn,e.clientX,e.clientY,'pointer',e.pointerId)){
+   try{btn.setPointerCapture(e.pointerId)}catch{}
+   e.preventDefault();
+  }
+ });
+ dock.addEventListener('pointermove',e=>{if(move(e.clientX,e.clientY,'pointer',e.pointerId))e.preventDefault()});
+ dock.addEventListener('pointerup',e=>finish(e.clientX,e.clientY,'pointer',e.pointerId,false));
+ dock.addEventListener('pointercancel',e=>finish(e.clientX,e.clientY,'pointer',e.pointerId,true));
+ // WKWebView may cancel Pointer events during long drags. The Touch path is a
+ // fallback, not a second commit; a gesture belongs to exactly one input source.
+ dock.addEventListener('touchstart',e=>{
+  if(battleIconDragging)return;
+  const t=e.changedTouches?.[0],btn=e.target.closest?.('[data-fire-action]');
+  if(t&&begin(btn,t.clientX,t.clientY,'touch',t.identifier))e.preventDefault();
+ },{passive:false});
+ dock.addEventListener('touchmove',e=>{
+  const d=battleIconDragging;if(!d||d.source!=='touch')return;
+  const t=[...(e.changedTouches||[])].find(x=>x.identifier===d.pointerId);
+  if(t&&move(t.clientX,t.clientY,'touch',t.identifier))e.preventDefault();
+ },{passive:false});
+ const touchFinish=(e,cancelled)=>{
+  const d=battleIconDragging;if(!d||d.source!=='touch')return;
+  const t=[...(e.changedTouches||[])].find(x=>x.identifier===d.pointerId);
+  if(t){e.preventDefault();finish(t.clientX,t.clientY,'touch',t.identifier,cancelled)}
+ };
+ dock.addEventListener('touchend',e=>touchFinish(e,false),{passive:false});
+ dock.addEventListener('touchcancel',e=>touchFinish(e,true),{passive:false});
 }
 
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
