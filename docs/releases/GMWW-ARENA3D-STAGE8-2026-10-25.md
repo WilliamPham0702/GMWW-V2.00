@@ -16,3 +16,13 @@
 - Preview dự kiến: https://gmww-arena3d-stage8-staging.williampham0702.workers.dev/village/arena-3d/live.html
 - Chỉ bàn giao nghiệm thu iPhone khi CI, deploy và browser smoke đều SUCCESS; FPS giả lập không thay thế pin/nhiệt iPhone thật.
 - PR Draft xếp chồng GĐ7, không merge hoặc deploy Production.
+
+## Kết quả CI và STAGING (25/10/2026)
+- PR #476: https://github.com/WilliamPham0702/GMWW-V2.00/pull/476 (Draft, chưa merge).
+- CI unit/casting/ritual/dry-run: SUCCESS. Job triển khai và smoke: SUCCESS.
+- Workflow: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40147026998
+- Cloudflare Worker GĐ8 đã phát hành: `a312eda0-ccaa-409b-8e7e-bd6bd48497ab`.
+- Chrome/WebKit đều PASS 6, 12, 20, 30 Character và chuỗi animation nghi lễ trên Worker GĐ8 độc lập.
+- Chỉ số CI giả lập: 46 draw calls; Chrome 10 FPS; WebKit 1 FPS. **WebKit 1 FPS trên CI là dấu hiệu phải đo trực tiếp iPhone; chưa thể xác nhận đạt mục tiêu hiệu năng iPhone thật**.
+- Đã cập nhật bài kiểm thử trực tiếp liên quan đến Core cue: nhận cue chuẩn hóa GĐ8 thay cho chuyển thẳng cue chưa xác minh.
+- Không thay đổi Worker GĐ6/GĐ7, Production, game 2D hay dữ liệu.
