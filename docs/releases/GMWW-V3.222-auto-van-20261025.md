@@ -16,7 +16,7 @@ Ngày phát hành dự kiến: 25/10/2026. Nguồn: **PR #504**, merge `0b398ee3
 - Chỉ phát hành sau CI cùng commit SHA SUCCESS và preflight xác nhận V3.222 mới hơn Production; nếu không, không triển khai.
 - Dòng `releaseNotes` Runtime có V3.222 rõ ràng trong biểu mẫu cập nhật.
 
-## Rollback
+## Rollback (kế hoạch rollback)
 
 - Giữ lại Cloudflare Worker deployment Production ngay trước V3.222 và gói Runtime tương ứng; nếu nghiệm thu sau phát hành không đạt, khôi phục deployment trước, đối chiếu manifest OTA/Hash và kiểm tra kết nối.
 - Không xóa KV, D1, Durable Objects, phòng, vai đã phát, lịch sử, hồ sơ thành viên hoặc IPA.
