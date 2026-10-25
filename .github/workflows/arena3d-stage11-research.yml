@@ -6,6 +6,8 @@ on:
       - "assets/village/arena-3d/**"
       - "src/arena3d-stage-worker.mjs"
       - "tests/arena3d-stage11-*"
+      - "tests/arena3d-stage12-*"
+      - "tests/arena3d-stage13-*"
       - ".github/workflows/arena3d-stage11-research.yml"
   pull_request:
     branches: ["feature/arena3d-stage10-role-animation-library"]
@@ -38,13 +40,15 @@ jobs:
         run: |
           node --check assets/village/arena-3d/stage11-core-catalog.mjs
           node --check assets/village/arena-3d/stage11-core-action-bridge.mjs
+          node --check assets/village/arena-3d/stage12-audio-engine.mjs
+          node --check tests/arena3d-stage13-core-e2e.mjs
           node --check src/arena3d-stage-worker.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/live.mjs
           node --check tests/arena3d-stage11-browser.mjs
       - name: "Kiểm thử GĐ11 và chuyển động phép"
         run: |
-          node --test tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+          node --test tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
       - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
         run: npx wrangler deploy --config wrangler.arena3d-stage11-staging.jsonc --dry-run
 
@@ -102,6 +106,8 @@ jobs:
           npx playwright install --with-deps webkit
       - name: "Kiểm thử STAGING GĐ11: 6–30 Character, nghi lễ, Chrome và WebKit"
         run: node tests/arena3d-stage11-browser.mjs
+      - name: "GĐ13: hai client thực, phân quyền Core, GM làm phép, reconnect và bỏ phiếu"
+        run: node tests/arena3d-stage13-core-e2e.mjs
       - name: "Ghi nhận Preview GĐ11"
         run: |
           echo "Preview GĐ11: https://gmww-arena3d-stage11-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
