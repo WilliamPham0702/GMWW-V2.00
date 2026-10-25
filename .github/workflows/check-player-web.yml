@@ -54,6 +54,15 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: 'V3.222: chỉ kiểm thử VÀO LÀNG → Arena3D STAGING và chốt OTA'
+        if: steps.scope.outputs.mode == 'arena-home-3222'
+        run: |
+          node --test tests/arena3d-home-portal-v3222.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.222-arena3d-home-portal-20261025.md
       - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
         if: steps.scope.outputs.mode == 'ranking-3221'
         run: |
