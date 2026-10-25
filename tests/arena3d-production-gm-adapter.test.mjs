@@ -44,7 +44,8 @@ test('GM Production effects only include current Core match/cycle, expiry, known
  assert.equal(proj.effects[0].expiresAt<=now+1500,true);
 });
 test('GM Production retains original 2D Core auth and never imports trial assignment on official host',()=>{
- assert.match(source,/productionCoreView=!location\.hostname\.includes\('arena3d-stage14-staging'\)/);
+ assert.match(source,/const stagingHost=location\.hostname\.includes\('arena3d-stage14-staging'\)/);
+ assert.match(source,/const productionCoreView=!stagingHost\|\|new URLSearchParams\(location\.search\)\.get\('coreMode'\)==='live'/);
  assert.match(source,/privateGmUrl=room=>productionCoreView\?'\/api\/gm\/rooms\/'/);
  assert.match(source,/projectAuthorizedGmCoreState\(payload\)/);
  assert.match(source,/loadPublicGallows:!productionCoreView/);
