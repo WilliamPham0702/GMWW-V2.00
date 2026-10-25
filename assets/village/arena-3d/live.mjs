@@ -373,6 +373,7 @@ if(productionCoreView&&window.parent!==window){
 }
 let seeded=[];
 $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
+  if(productionCoreView)throw Error('Chỉ dành cho phòng STAGING, không tạo người giả trong phòng chính thức');
   if(!code||!gmToken)throw Error('Hãy tạo phòng trước');
   await feed?.refresh();
   const room=feed?.state.current?.room,players=feed?.state.current?.players||[];
@@ -403,6 +404,7 @@ $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',asy
 });
 $('lock').onclick=()=>guarded('Khóa Seat',async()=>{await gm('seat-lock',{locked:true});await feed?.refresh();notice('Đã khóa Seat trên Core staging.');});
 $('deal').onclick=()=>guarded('Phát Vai thử bằng Core V2',async()=>{
+  if(productionCoreView)throw Error('Chỉ dành cho STAGING; phòng chính thức dùng phân vai Core GMWW hiện hành');
   await feed?.refresh();
   const people=(feed?.state.current?.players||[]).filter(p=>p.id.startsWith('member:'));
   if(!people.length)throw Error('Chưa có thành viên nào trong phòng');
