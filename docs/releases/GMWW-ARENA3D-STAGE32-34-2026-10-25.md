@@ -26,3 +26,9 @@
 - Bản Runtime tích hợp cổng iPhone V3.223 đã nằm trên kênh chính; không liên quan merge #487. Production/room data được giữ nguyên.
 
 **Không dùng tài liệu này để tự cho rằng iPhone đã nghiệm thu 30 người, toàn bộ 63 vai/44 Artifact hoặc rằng PR đã sẵn sàng merge.**
+
+## GĐ33 — Nâng cấp thực tế hiệu ứng phép
+- Mã `spell-vfx.mjs` giờ đọc `accentHue` và `streakCount` từ **chữ ký 26 hành động đã xác nhận bởi Core**: cùng họ phép vẫn có thay đổi màu sắc nhẹ và số hạt khác nhau.
+- Dải màu bị giới hạn **xanh biển / lam / tím ngọc**, không thêm đỏ-đen; 5–12 hạt cho hiệu ứng đã xác nhận, các lượt preview/demo giữ cơ chế trước đó.
+- Không thêm draw call: vẫn dùng InstancedMesh và bốn nhóm đối tượng VFX hiện có; không đổi loại tác động, mục tiêu, GM/Player permissions, âm thanh, Core hoặc luật chơi.
+- Bài unit test kiểm tra toàn bộ Core signature, màu sắc và ngân sách hạt. Chỉ xác nhận chạy đúng kỹ thuật sau khi CI của commit cuối kết thúc SUCCESS.
