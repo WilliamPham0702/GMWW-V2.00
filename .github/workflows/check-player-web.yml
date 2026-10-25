@@ -54,6 +54,15 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ kiểm thử Icon và đóng gói Runtime V3.210
+        if: steps.scope.outputs.mode == 'icon-runtime-3210'
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.210-icons-runtime-20261025.md
+
       - name: Chỉ xác minh bộ đóng gói GM/Player Web V3.209
         if: steps.scope.outputs.mode == 'audio-gallows-3209'
         run: |

@@ -306,10 +306,53 @@ jobs:
           echo "::error::Không xác minh được 2 CI liên quan cùng SHA; dừng Production."
           exit 1
 
+      # The owner approved V3.210 with artwork-only changes; check the exact
+      # merged main SHA using the existing Worker CI, not unrelated Card/Seat tests.
+      - name: Xác minh phát hành V3.210 bằng CI Icon đúng phạm vi
+        id: icon_release_3210
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.210.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.210-icons-runtime-20261025.md
+          test -s assets/action-icons/sea-v1/manifest.json
+          test -s server-game/current/action-icon-library.js
+          grep -q "copyDir('server-game/current/action-icons','action-icons');" .github/scripts/prepare-update-channel.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs
+          REPORT=pending
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const r=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+              });")
+            echo "V3.210: Worker CI cùng SHA, lần $TRY: $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.210: Icon + OTA đã kiểm thử đúng phạm vi cùng SHA, không ép Card/Seat/IPA." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            case "$REPORT" in failure|timed_out|cancelled|action_required) echo "::error::CI V3.210 thất bại"; exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Không có Worker CI SUCCESS cùng SHA cho V3.210, chặn Production"; exit 1
+
       # Normal release: browser gate is retained except tightly scoped verified
       # V3.203 owner-dispatched release and V3.204 gallows-focused release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

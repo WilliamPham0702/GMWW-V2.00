@@ -356,8 +356,49 @@ function isAudioGallows209Scope(changes){
     pkg.includes('"version": "3.209.0"');
 }
 
+// Version-scoped Runtime V3.210: production-approved action ICON artwork only.
+// Fail closed on unrecognized paths, missing icon assets or mismatched version.
+const icon3210Paths=new Set([
+ 'src/index.js','package.json','package-lock.json',
+ 'server-game/current/GMWW.html','server-game/current/app.js','server-game/current/action-icon-library.js',
+ 'server-game/src/00-core-and-library.part',
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'tests/action-icon-library.test.mjs',
+ 'docs/plans/GMWW-ACTION-ICON-LIBRARY-2026-10-25.md',
+ 'docs/releases/GMWW-PR483-ICON-SEA-V1-2026-10-25.md',
+ 'docs/releases/GMWW-V3.210-icons-runtime-20261025.md'
+]);
+function icon3210Asset(path){
+ const main='assets/action-icons/sea-v1/';
+ const local='server-game/current/action-icons/sea-v1/';
+ if(path.startsWith(main))return /^(?:[0-9]{2}_[a-z_]+[.](?:png|svg)|manifest[.]json)$/.test(path.slice(main.length));
+ if(path.startsWith(local))return /^[0-9]{2}_[a-z_]+[.]png$/.test(path.slice(local.length));
+ return false;
+}
+function isIconRuntime3210Scope(changes){
+ const names=new Set(changes.map(c=>c.path));
+ for(const required of ['src/index.js','package.json','server-game/current/app.js',
+  'server-game/current/GMWW.html','server-game/current/action-icon-library.js',
+  '.github/scripts/prepare-update-channel.mjs','tests/action-icon-library.test.mjs',
+  'docs/releases/GMWW-V3.210-icons-runtime-20261025.md'])if(!names.has(required))return false;
+ if(!changes.every(x=>(icon3210Paths.has(x.path)||icon3210Asset(x.path))&&['A','M'].includes(x.status)))return false;
+ const worker=changes.find(x=>x.path==='src/index.js')?.after||'';
+ const gm=changes.find(x=>x.path==='server-game/current/app.js')?.after||'';
+ const pkg=changes.find(x=>x.path==='package.json')?.after||'';
+ const html=changes.find(x=>x.path==='server-game/current/GMWW.html')?.after||'';
+ return worker.includes('VERSION="V3.210"')&&gm.includes("const VERSION='3.210'")&&
+  pkg.includes('"version": "3.210.0"')&&html.includes('<title>GMWW V3.210</title>')&&
+  html.includes('action-icon-library.js')&&
+  changes.filter(x=>x.path.startsWith('assets/action-icons/sea-v1/')&&x.path.endsWith('.png')).length===19&&
+  changes.filter(x=>x.path.startsWith('assets/action-icons/sea-v1/')&&x.path.endsWith('.svg')).length===19&&
+  changes.filter(x=>x.path.startsWith('server-game/current/action-icons/sea-v1/')&&x.path.endsWith('.png')).length===19;
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
   if(isPolicyScope(changes))return 'ci-policy';
@@ -397,6 +438,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIconRuntime3210Scope(changes))return{mode:'icon-runtime-3210',reason:'Verified V3.210 ICON Runtime/OTA release only'};
       if(isAudioGallows209Scope(changes))return{mode:'audio-gallows-3209',reason:'Verified V3.209 audio and public vote UI only'};
       if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
       if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
@@ -428,6 +470,7 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='icon-runtime-3210')console.log('V3.210: chỉ test Icon và OTA, không test Card, Seat, DEMO hoặc Native IPA.');
   if(result.mode==='audio-gallows-3209')console.log('Chỉ xác minh cú pháp, assembled bundles và phiên bản/OTA; không chạy bộ test gameplay mở rộng.');
   if(result.mode==='audio-v3208')console.log('Chỉ xác minh cú pháp, SHA và luồng Audio/Tiên Tri/Thông cáo liên quan V3.208; bỏ kiểm thử khác.');
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
@@ -436,7 +479,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
