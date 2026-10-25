@@ -37,7 +37,7 @@ test('V3.213: Nhân vật đứng trên bục rắn; tên và tỷ lệ thắng 
   assert.match(css,/background:transparent!important;box-shadow:none!important;overflow:visible!important/);
   assert.match(css,/position:relative!important;left:auto!important;top:auto!important/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(html,/<title>GMWW V3\.214<\/title>/);
+  assert.match(html,/<title>GMWW V3\.216<\/title>/);
 });
 
 test('Bục 2.5D vàng–bạc–đồng, Character phóng 3 lần và hiệu ứng ăn mừng an toàn iPhone',()=>{

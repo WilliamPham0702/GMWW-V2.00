@@ -7668,3 +7668,205 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
 .battle-fire-icon[aria-pressed="true"]{outline:2px solid #91f9ff;background:rgba(16,108,134,.94)}
 .gmww-battle-icon-ghost{position:fixed;z-index:99999;transform:translate(-50%,-50%);width:78px;height:78px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 13px #8beaff);opacity:.95}
 #playPlayerRing [data-play-player-id].gmww-battle-icon-snap{outline:3px solid #a4ffff;outline-offset:4px;border-radius:50%;filter:drop-shadow(0 0 14px #9cfaff)}
+
+/* V3.216 — Top 3 Coastal Pearl: nhẹ, trong suốt, chân Character đúng tâm bục. 
+   Chỉ áp dụng trên Trang Chủ, giữ nguyên Character Idle do Worker trả về. */
+#home .gmww-home-top3-skin-v377 #gmwwHomeTop3{
+  padding-top:8px!important;gap:8px!important;align-items:end!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216{
+  --sea-glow:rgba(120,232,250,.45);
+  --sea-edge:rgba(191,252,255,.84);
+  --sea-body:rgba(44,183,215,.46);
+  --sea-front:rgba(16,127,168,.30);
+  min-width:0!important;padding:0!important;gap:0!important;
+  overflow:visible!important;box-shadow:none!important;border:0!important;
+  background:transparent!important;text-align:center!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"]{
+  --sea-glow:rgba(255,224,142,.55);
+  --sea-edge:rgba(255,244,186,.91);
+  --sea-body:rgba(242,196,108,.56);
+  --sea-front:rgba(155,105,34,.36)
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"]{
+  --sea-glow:rgba(255,192,171,.43);
+  --sea-edge:rgba(255,226,218,.84);
+  --sea-body:rgba(255,183,162,.48);
+  --sea-front:rgba(184,108,92,.28)
+}
+/* Cùng một trục trung tâm cho portrait và bệ, không offset theo ảnh/avatar. */
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-stage-v3211{
+  position:relative!important;inset:auto!important;margin:0!important;
+  width:100%!important;height:153px!important;min-width:0!important;
+  transform:none!important;overflow:visible!important;
+  z-index:4!important;flex:0 0 auto!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-stage-v3211{
+  width:100%!important;height:181px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-glow-v3211{
+  position:absolute!important;inset:27% 4% 0!important;
+  background:radial-gradient(ellipse at 50% 76%,var(--sea-glow) 0,transparent 65%)!important;
+  opacity:.75!important;filter:blur(9px)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-character-v3211{
+  position:absolute!important;inset:0!important;display:block!important;
+  transform-origin:50% 100%!important;
+  animation:gmwwCoastalVictory3216 3.4s ease-in-out infinite!important;
+  filter:drop-shadow(0 5px 3px rgba(3,51,69,.37))!important;will-change:auto!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-character-v3211{
+  animation-duration:3s!important;animation-delay:-.5s!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-podium-character-v3211{
+  animation-delay:-1.2s!important
+}
+/* Icon 256×256 đã căn giữa alpha theo atlas Idle: dùng left 50% và dịch đúng nửa chiều rộng. */
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-character-v3211 img{
+  position:absolute!important;left:50%!important;right:auto!important;
+  bottom:-18px!important;top:auto!important;
+  width:clamp(136px,36vw,173px)!important;height:auto!important;max-width:none!important;
+  aspect-ratio:1/1!important;object-fit:contain!important;object-position:center!important;
+  transform:translateX(-50%)!important;transform-origin:50% 100%!important;
+  filter:none!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-character-v3211 img{
+  bottom:-19px!important;width:clamp(150px,42vw,197px)!important
+}
+/* Bục vỏ sò mỏng và trong như ngọc trai; không còn hình hộp vuông dày. */
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-platform-v3213{
+  position:relative!important;z-index:5!important;flex:0 0 auto!important;
+  width:98%!important;height:39px!important;margin:0 auto 12px!important;
+  border:1px solid var(--sea-edge)!important;border-bottom:3px solid var(--sea-edge)!important;
+  border-radius:45% 45% 32% 32% / 27% 27% 55% 55%!important;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.73),transparent 65%),
+    linear-gradient(90deg,var(--sea-front),var(--sea-body) 20%,rgba(236,255,252,.43) 48%,var(--sea-body) 85%,var(--sea-front))!important;
+  box-shadow:inset 0 3px 4px rgba(255,255,255,.44),
+    inset 0 -6px 12px rgba(4,76,113,.13),
+    0 4px 6px rgba(1,50,75,.19),0 7px 12px var(--sea-glow)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-platform-v3213{
+  height:50px!important;margin-bottom:12px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-platform-v3213::before{
+  content:""!important;position:absolute!important;z-index:1!important;
+  top:-12px!important;left:-3px!important;right:-3px!important;height:23px!important;
+  border-radius:50%!important;border:1px solid var(--sea-edge)!important;
+  background:radial-gradient(ellipse at 45% 30%,rgba(255,255,255,.9),rgba(200,252,255,.60) 44%,var(--sea-body) 96%)!important;
+  box-shadow:inset 0 2px 2px rgba(255,255,255,.92),0 1px 5px var(--sea-glow)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-platform-v3213::before{
+  background:radial-gradient(ellipse at 45% 25%,rgba(255,255,251,.99),rgba(255,237,180,.78) 55%,rgba(197,135,48,.49))!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-podium-platform-v3213::before{
+  background:radial-gradient(ellipse at 45% 25%,rgba(255,255,253,.9),rgba(255,225,212,.73) 52%,rgba(199,121,100,.48))!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-platform-v3213::after{
+  content:"✧  🐚  ✧"!important;display:block!important;position:absolute!important;
+  left:0!important;right:0!important;bottom:-10px!important;
+  font-size:12px!important;letter-spacing:1px!important;line-height:1!important;
+  color:var(--sea-edge)!important;opacity:.88!important;pointer-events:none!important
+}
+/* Số hạng đặt giữa thân bục bằng huy hiệu ngọc trai nhỏ. */
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-platform-v3213 .gmww-home-top3-crown-v377{
+  position:relative!important;z-index:2!important;display:grid!important;place-items:center!important;
+  width:25px!important;height:25px!important;min-width:25px!important;
+  margin:10px auto 0!important;border-radius:50%!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  background:radial-gradient(circle at 30% 20%,rgba(255,255,252,.97),rgba(234,250,250,.67) 60%,rgba(31,133,158,.45))!important;
+  box-shadow:0 2px 5px rgba(15,75,97,.21)!important;
+  font:900 16px/1 Georgia,serif!important;color:#125373!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-top3-crown-v377{
+  color:#97611e!important;background:radial-gradient(circle at 30% 20%,rgba(255,255,253,.99),rgba(255,238,184,.85),rgba(234,183,85,.48))!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-top3-crown-v377{
+  color:#98654f!important;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.96),rgba(255,231,218,.83),rgba(218,144,126,.45))!important
+}
+/* Bảng thông tin kính biển bán trong suốt, thấy nền làng xuyên qua. */
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-info-v3213{
+  position:relative!important;width:100%!important;min-width:0!important;
+  min-height:161px!important;margin:0!important;padding:13px 5px 14px!important;
+  gap:5px!important;border:1px solid rgba(228,254,255,.76)!important;
+  border-radius:20px!important;
+  background:linear-gradient(154deg,rgba(240,255,253,.53) 0%,rgba(178,239,250,.35) 49%,rgba(81,194,216,.27) 100%)!important;
+  -webkit-backdrop-filter:blur(8px) saturate(125%)!important;
+  backdrop-filter:blur(8px) saturate(125%)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.72),inset 0 -2px rgba(159,249,255,.32),0 5px 12px rgba(0,45,75,.24)!important;
+  color:#083f5b!important;text-shadow:0 1px 1px rgba(255,255,255,.45)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-info-v3213{
+  background:linear-gradient(154deg,rgba(255,250,222,.62),rgba(255,232,166,.37) 52%,rgba(180,234,232,.23))!important;
+  border-color:rgba(255,239,182,.88)!important;box-shadow:inset 0 1px rgba(255,255,255,.79),0 5px 13px rgba(71,57,22,.25)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-podium-info-v3213{
+  background:linear-gradient(154deg,rgba(255,242,230,.57),rgba(255,200,181,.31) 55%,rgba(165,229,236,.27))!important;
+  border-color:rgba(255,227,215,.78)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-info-v3213::before{
+  content:"✧"!important;position:absolute;bottom:5px;left:6px;
+  font:16px/1 Georgia,serif;color:rgba(234,255,255,.93);pointer-events:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-info-v3213::after{
+  content:"🐚"!important;position:absolute;right:5px;bottom:4px;
+  font-size:14px;opacity:.88;pointer-events:none
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-podium-info-v3213::after{
+  content:"🪸"!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-rank-v377{
+  position:relative!important;padding:4px 7px!important;
+  border:1px solid rgba(255,255,255,.54)!important;border-radius:999px!important;
+  background:rgba(8,103,138,.77)!important;color:#fff!important;
+  box-shadow:0 2px 5px rgba(9,47,69,.18)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-top3-rank-v377{
+  background:rgba(151,107,39,.78)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="3"] .gmww-home-top3-rank-v377{
+  background:rgba(153,93,77,.72)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-name-v377{
+  color:#104a63!important;min-height:22px!important;margin-top:0!important;
+  font-size:clamp(11px,3.2vw,15px)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-top3-name-v377{
+  color:#805117!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-percent-v377{
+  color:#116882!important;font-size:clamp(25px,6.3vw,35px)!important;
+  line-height:1!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-top3-percent-v377{
+  color:#986620!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-percent-label-v377,
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-record-v377{
+  color:#245c6c!important;text-shadow:0 1px 1px rgba(255,255,255,.49)!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-meter-v377{
+  width:83%!important;height:4px!important;background:rgba(240,255,255,.38)!important;
+  border:1px solid rgba(221,253,248,.6)!important;border-radius:999px!important
+}
+#home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-top3-meter-v377>span{
+  background:linear-gradient(90deg,#14adb5,#80ecdf)!important;border-radius:999px!important
+}
+@keyframes gmwwCoastalVictory3216{
+  0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}
+  50%{transform:translate3d(0,-5px,0) rotate(2deg)}
+}
+@media(max-width:390px){
+ #home .gmww-home-top3-skin-v377 #gmwwHomeTop3{gap:4px!important;padding-top:7px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-stage-v3211{height:140px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-stage-v3211{height:166px!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-character-v3211 img{width:clamp(128px,37vw,155px)!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216[data-rank="1"] .gmww-home-podium-character-v3211 img{width:clamp(146px,43vw,182px)!important}
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-info-v3213{min-height:157px!important;padding:12px 3px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .gmww-home-top3-skin-v377 .gmww-home-sea-v3216 .gmww-home-podium-character-v3211{
+   animation:none!important
+ }
+}
