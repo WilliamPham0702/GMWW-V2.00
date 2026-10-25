@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 800" width="1024" height="1024">
+<defs>
+<radialGradient id="sea" cx="42%" cy="37%" r="72%"><stop stop-color="#187da2"/><stop offset=".52" stop-color="#064c81"/><stop offset="1" stop-color="#031d43"/></radialGradient>
+<radialGradient id="aqua"><stop stop-color="#8cfffb"/><stop offset=".57" stop-color="#399bd9"/><stop offset="1" stop-color="#103e80"/></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a0641e"/><stop offset=".2" stop-color="#fbe4a3"/><stop offset=".42" stop-color="#ffcc65"/><stop offset=".66" stop-color="#9d5e21"/><stop offset=".82" stop-color="#ffdc91"/><stop offset="1" stop-color="#bc842f"/></linearGradient>
+<radialGradient id="iris"><stop stop-color="#a6faff"/><stop offset=".35" stop-color="#51dfff"/><stop offset=".7" stop-color="#2770e4"/><stop offset="1" stop-color="#502299"/></radialGradient>
+<radialGradient id="lens"><stop stop-color="#a0ffff"/><stop offset=".3" stop-color="#368eba"/><stop offset=".78" stop-color="#082c5d"/><stop offset="1" stop-color="#04152f"/></radialGradient>
+<linearGradient id="shield" x1="0" x2="1"><stop stop-color="#063669"/><stop offset=".5" stop-color="#1d97c2"/><stop offset="1" stop-color="#073a79"/></linearGradient>
+<linearGradient id="heal"><stop stop-color="#b8ffc9"/><stop offset=".4" stop-color="#2ce5ac"/><stop offset="1" stop-color="#00726f"/></linearGradient>
+<radialGradient id="poison"><stop stop-color="#e793f9"/><stop offset=".65" stop-color="#943dba"/><stop offset="1" stop-color="#33116c"/></radialGradient>
+<linearGradient id="ice" x1="0" x2="1"><stop stop-color="#e7fcff"/><stop offset=".5" stop-color="#44c8f3"/><stop offset="1" stop-color="#2769b9"/></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/><feOffset dx="0" dy="6" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<!-- Standalone action symbol, no plaque/backdrop/badge -->
+
+
+ <g filter="url(#shadow)" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Moon, distant stars -->
+  <path d="M538 234Q495 273 532 307Q552 324 577 300Q554 342 512 319Q472 291 497 251Q513 231 538 234Z" fill="#e5faff" stroke="#8deafb" stroke-width="7"/>
+  <circle cx="260" cy="281" r="7" fill="#ffedbd"/><circle cx="475" cy="215" r="6" fill="#efffff"/>
+  <!-- Tropic hut and porch -->
+  <path d="M257 372 400 265 548 375" fill="none" stroke="#714521" stroke-width="34"/>
+  <path d="M251 370 400 261 556 371 527 388 400 302 279 395Z" fill="url(#gold)" stroke="#ffe6a8" stroke-width="11"/>
+  <path d="M289 377 H513 V534 H287Z" fill="#926440" stroke="#efc37e" stroke-width="11"/>
+  <path d="M303 393 H500 V520 H303Z" fill="#5a4858"/>
+  <rect x="340" y="403" width="56" height="51" rx="5" fill="#ffdb75" stroke="#ffeebb" stroke-width="9"/>
+  <path d="M368 405V452 M340 429H394" stroke="#995b2d" stroke-width="8"/>
+  <path d="M423 522V425 Q423 406 443 406H468Q487 410 487 430V522Z" fill="#b97844" stroke="#ffe3aa" stroke-width="11"/>
+  <circle cx="474" cy="468" r="6" fill="#fff1c1"/>
+  <path d="M258 535H547 L584 557 223 557Z" fill="#ae8658" stroke="#fff0c5" stroke-width="11"/>
+  <!-- Tropical leafy curl -->
+  <path d="M266 515 Q221 449 248 365" stroke="#4ad4ae" stroke-width="10" fill="none"/>
+  <path d="M250 430q-38-25-46 1q30 22 46-1ZM252 403q25-45 44-21q-14 29-44 21Z" fill="#41ad78" stroke="#caffb2" stroke-width="5"/>
+  <path d="M520 516 Q575 460 566 404" stroke="#35ceac" stroke-width="9" fill="none"/>
+ </g>
+
+
+</svg>
