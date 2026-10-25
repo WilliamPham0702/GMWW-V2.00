@@ -359,5 +359,7 @@ function init(){
  render();
 }
 window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),resolveAll:(actionId)=>clone(icons.filter(x=>x.actions.includes(String(actionId)))),image:picture,audit:auditCatalog,autoMap:mapUnambiguousLocalActions};
+// Wake up any GM scene rendered before the OTA icon library finished loading.
+if(typeof document.dispatchEvent==='function'&&typeof Event==='function')document.dispatchEvent(new Event('gmww-action-icons-ready'));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
