@@ -493,8 +493,46 @@ jobs:
 
       # Normal release: browser gate is retained except tightly scoped verified
       # V3.203 owner-dispatched release and V3.204 gallows-focused release.
+      - name: Chốt phát hành V3.222 #501 bằng CI 5 icon cùng SHA
+        id: gm501_release_3222
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.222.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.222-five-floating-icons-20261025.md
+          grep -q "releaseNotes:\[\"V3.222:" .github/scripts/prepare-update-channel.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          git merge-base --is-ancestor 070b94fdd013a32be8edca0c4bcde341bec2d173 HEAD
+          for TRY in $(seq 1 35); do
+            RES=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RES" | node -e "
+              let s='';process.stdin.on('data',c=>s+=c).on('end',()=>{
+              const rows=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&r.event==='push');
+              const good=n=>rows.some(r=>r.name===n&&r.conclusion==='success');
+              const bad=n=>rows.some(r=>r.name===n&&['failure','cancelled','timed_out'].includes(r.conclusion));
+              process.stdout.write(good('Kiểm tra 5 icon GM và Player Web #501')&&good('Check Player Web Worker')?'success':
+                bad('Kiểm tra 5 icon GM và Player Web #501')||bad('Check Player Web Worker')?'failure':'pending')
+              })")
+            if [ "$STATUS" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.222 PR501: CI 5 icon + Worker SUCCESS, same SHA $TESTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATUS" = failure ]; then echo "::error::V3.222 CI FAILED"; exit 1; fi
+            sleep 8
+          done
+          echo "::error::V3.222 thiếu CI 5 icon hoặc Worker cùng SHA"; exit 1
+
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.gm501_release_3222.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
