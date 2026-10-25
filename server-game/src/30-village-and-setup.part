@@ -736,6 +736,39 @@ function gmwwSetupFreeBattleIcons(){
   const stats=document.getElementById('battleFactionStats');
   if(stats&&stats.parentElement!==shell)shell.appendChild(stats);
 }
+function battleRenderFactionStats(){
+  const panel=document.getElementById('battleFactionStats');if(!panel||panel.hidden)return;
+  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
+    groups=new Map([['Phe Dân',{total:0,alive:0}],['Phe Sói',{total:0,alive:0}],['Phe Ba',{total:0,alive:0}]]);
+  for(const a of rows){
+    const id=String(a?.loginId||''),card=(state.cards||[]).find(r=>String(r.id)===String(a.roleId||'')),
+      raw=String(a?.roleCard?.factionId||card?.factionId||a?.factionId||a?.faction||'').toLowerCase();
+    const fac=raw==='wolf'||raw.includes('sói')||raw.includes('soi')?'Phe Sói':
+      raw==='third'||raw.includes('ba')?'Phe Ba':raw==='village'||raw.includes('dân')||raw.includes('dan')?'Phe Dân':'Phe Khác';
+    const stat=groups.get(fac)||{total:0,alive:0};stat.total++;
+    if(!['dead','expelled'].includes(playPlayerEffect(id)))stat.alive++;
+    groups.set(fac,stat);
+  }
+  const summary=panel.querySelector('[data-faction-counts]');
+  if(summary)summary.innerHTML=[...groups].filter(([,x])=>x.total>0).map(([name,v])=>
+    '<div class="battle-faction-row"><span>'+playEsc(name)+'</span><b>'+v.alive+' / '+v.total+'</b>'+
+    '<i style="--faction-progress:'+Math.round(100*v.alive/Math.max(1,v.total))+'%"></i></div>').join('')||'<p>Chưa phân vai.</p>';
+  const preview=panel.querySelector('[data-faction-forecast]');
+  const known=playSceneRuntime.winProposal;
+  if(preview){
+    const day=Math.max(1,Number(playSceneState.night)||1),wolf=groups.get('Phe Sói')?.alive||0,
+      other=[...groups].filter(([name])=>name!=='Phe Sói').reduce((n,[,g])=>n+g.alive,0),
+      villager=groups.get('Phe Dân')?.alive||0;
+    if(known)preview.textContent='Server xác định: '+String(known.winnerFaction||'Phe thắng')+' · Ngày '+day+'.';
+    else if(!rows.length)preview.textContent='Chưa có dữ liệu phe để dự báo.';
+    else{
+      const favored=wolf>=other?'Phe Sói':wolf===0?'Phe Dân':villager>=wolf?'Phe Dân':'Phe Sói';
+      const estimate=wolf>=other||wolf===0?day:day+Math.max(1,Math.ceil(Math.abs(other-wolf)/2));
+      preview.textContent='Dự báo tham khảo theo quân số: '+favored+' · khoảng ngày '+estimate+
+        '. Đây là giả định, không tính tác động vai trò/Artifact và không phải kết quả Server.';
+    }
+  }
+}
 function initDemoPanel(){
   const panel=document.getElementById('battleDemoObserver'),button=document.getElementById('battleDemoCollapse');
   if(!panel||!button||button.dataset.ready)return;
