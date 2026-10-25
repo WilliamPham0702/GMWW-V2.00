@@ -263,6 +263,14 @@ function memberDate(v,withTime=false){
   return d.toLocaleString('vi-VN',withTime?{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function memberStats(m){const s=m?.stats||{},w=Number(s.wins||0),l=Number(s.losses||0),games=w+l,rate=games?Math.round(w*100/games):0;return{w,l,games,rate}}
+// GMWW V3.221: xếp hạng nhiều ván trước, nếu bằng ván mới xét phần trăm thắng.
+function gmwwRankMembers(a,b){
+  const A=memberStats(a),B=memberStats(b);
+  return B.games-A.games
+    ||B.w*A.games-A.w*B.games
+    ||String(a.displayName||a.loginId||'').localeCompare(String(b.displayName||b.loginId||''),'vi');
+}
+
 function setMemberBusy(on){
   memberAdminState.busy=!!on;
   const refresh=document.getElementById('refreshMembers');if(refresh){refresh.disabled=!!on;refresh.classList.toggle('is-busy',!!on)}
@@ -334,10 +342,7 @@ function renderMemberDirectory(){
 }
 function renderMemberRanking(){
   const box=document.getElementById('memberRankingList');if(!box)return;
-  const rows=[...memberAdminState.members].sort((a,b)=>{
-    const A=memberStats(a),B=memberStats(b);
-    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi');
-  });
+  const rows=[...memberAdminState.members].sort(gmwwRankMembers);
   box.innerHTML='';
   if(!rows.length){box.innerHTML='<div class="member-empty">Chưa có dữ liệu xếp hạng.</div>';return}
   rows.forEach((m,i)=>{
@@ -521,11 +526,7 @@ function gmwwHomeTop3Ranked(rows){
   return (Array.isArray(rows)?rows:[]).filter(member=>{
     const stats=memberStats(member);
     return stats.games>0&&stats.w>=0&&stats.l>=0&&Number.isFinite(stats.games);
-  }).sort((left,right)=>{
-    const a=memberStats(left),b=memberStats(right);
-    return b.w*a.games-a.w*b.games||b.games-a.games||b.w-a.w
-      ||String(left.displayName||left.loginId||'').localeCompare(String(right.displayName||right.loginId||''),'vi');
-  }).slice(0,3);
+  }).sort(gmwwRankMembers).slice(0,3);
 }
 function gmwwHomeRenderTop3(rows){
   const target=document.getElementById('gmwwHomeTop3');
@@ -639,13 +640,10 @@ function gmwwHomeRenderMembers(rows){
   const played=rows.reduce((sum,m)=>sum+memberStats(m).games,0);
   const matches=new Set(rows.flatMap(m=>Array.isArray(m.history)?m.history:[]).map(h=>String(h.matchId||'')).filter(Boolean));
   gmwwHomeText('gmwwHomePlaysCount',matches.size||played);
-  const ranking=[...rows].sort((a,b)=>{
-    const A=memberStats(a),B=memberStats(b);
-    return B.w-A.w||B.rate-A.rate||B.games-A.games||String(a.displayName||a.loginId||'').localeCompare(String(b.displayName||b.loginId||''),'vi');
-  });
+  const ranking=[...rows].sort(gmwwRankMembers);
   const leader=ranking.find(m=>memberStats(m).games>0);
   gmwwHomeText('gmwwHomeLeaderboard',leader
-    ?'Dẫn đầu: '+String(leader.displayName||leader.loginId||'Thành viên')+' · '+memberStats(leader).w+' thắng'
+    ?'Dẫn đầu: '+String(leader.displayName||leader.loginId||'Thành viên')+' · '+memberStats(leader).games+' ván · '+memberStats(leader).rate+'% thắng'
     :'Chưa có kết quả để xếp hạng.');
   const last=rows.flatMap(m=>(Array.isArray(m.history)?m.history:[]).map(h=>({...h,memberName:m.displayName||m.loginId})))
     .filter(h=>Number.isFinite(Date.parse(h.playedAt||'')))
