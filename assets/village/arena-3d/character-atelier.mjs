@@ -72,8 +72,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   // The beam only appears after a Core-confirmed private cue, never on public replay.
   const beamMaterial=new THREE.MeshBasicMaterial({color:'#82edec',transparent:true,opacity:.82,depthWrite:false});
   const beamGeometry=new THREE.CylinderGeometry(.047,.08,1,6);
-  const spellBeam=new THREE.Mesh(beamGeometry,beamMaterial);spellBeam.visible=false;
-  spellBeam.frustumCulled=false;root.add(spellBeam);
+  const spellBeams=Array.from({length:5},(_,index)=>{
+    const beam=new THREE.Mesh(beamGeometry,index===0?beamMaterial:beamMaterial.clone());
+    beam.visible=false;beam.frustumCulled=false;root.add(beam);return beam;
+  });
+  const spellBeam=spellBeams[0];
+  const hideBeams=()=>{for(const beam of spellBeams)beam.visible=false};
   const beamDir=new THREE.Vector3(),beamFrom=new THREE.Vector3(),beamTo=new THREE.Vector3();
   const beamUp=new THREE.Vector3(0,1,0);
   let activeBeam=null;
@@ -157,7 +161,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     const authorizedIds=new Set((cue?.actorIds||[]).filter(id=>byId.has(id)));
     const changed=turn!==currentTurn;
     if(changed){
-      currentTurn=turn;currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
+      currentTurn=turn;currentCast='';activeBeam=null;hideBeams();spellVfx.clear();
       for(const actor of actors)actor.effects.clear();
     }
     for(const actor of actors){
@@ -185,12 +189,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const kind=['shield','inspect','heal','attack','vote'].includes(cast.kind)?cast.kind:'vote';
         caster.effects.set(kind,spellStart+elapsed);
         if(target)target.effects.set(kind,spellStart+elapsed);
-        activeBeam=target?{actorId:caster.id,targetId:target.id,start:spellStart,until:spellStart+elapsed,kind}:null;
+        activeBeam=target?{actorId:caster.id,targetIds:(cast.targetIds||[]).filter(id=>byId.has(id)).slice(0,5),start:spellStart,until:spellStart+elapsed,kind}:null;
       }
     }
   }
   function clearEffects(){
-    currentTurn='';currentCast='';activeBeam=null;spellBeam.visible=false;spellVfx.clear();
+    currentTurn='';currentCast='';activeBeam=null;hideBeams();spellVfx.clear();
     const now=performance.now();
     for(const actor of actors){actor.effects.clear();if(actor.travel?.to===1)moveActor(actor,0,now);actor.castUntil=0}
   }
@@ -266,27 +270,33 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         temp.compose(pos,quat,scale);effect.mesh.setMatrixAt(actor.index,temp);
       }
     }
+    hideBeams();
     if(activeBeam&&time>=activeBeam.start&&time<activeBeam.until){
-      const caster=byId.get(activeBeam.actorId),target=byId.get(activeBeam.targetId);
-      if(caster&&target){
-        const casterWorld=renderWalkPosition(caster.position,caster.approach,caster.travel,time);
+      const caster=byId.get(activeBeam.actorId);
+      const casterWorld=caster&&renderWalkPosition(caster.position,caster.approach,caster.travel,time);
+      let firstBeam=false;
+      for(const [index,targetId] of activeBeam.targetIds.entries()){
+        const target=byId.get(targetId),beam=spellBeams[index];
+        if(!casterWorld||!target||!beam)continue;
         const targetWorld=renderWalkPosition(target.position,target.approach,target.travel,time);
         beamFrom.set(casterWorld.x,1.4,casterWorld.z);
         beamTo.set(targetWorld.x,.82,targetWorld.z);
         beamDir.subVectors(beamTo,beamFrom);
         const distance=beamDir.length();
-        if(distance>.25){
-          spellBeam.position.copy(beamFrom).add(beamTo).multiplyScalar(.5);
-          spellBeam.quaternion.setFromUnitVectors(beamUp,beamDir.multiplyScalar(1/distance));
-          spellBeam.scale.set(1,distance,1);
-          beamMaterial.color.set({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec');
-          beamMaterial.opacity=reducedMotion?.55:.69+.13*Math.sin(time*.015);
-          spellBeam.visible=true;
-          spellVfx.update({type:activeBeam.kind,from:beamFrom,to:beamTo,
-            start:activeBeam.start,end:activeBeam.until},time);
-        }else {spellBeam.visible=false;spellVfx.clear();}
-      }else {spellBeam.visible=false;spellVfx.clear();}
-    }else{spellBeam.visible=false;spellVfx.clear();if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
+        if(distance<=.25)continue;
+        beam.position.copy(beamFrom).add(beamTo).multiplyScalar(.5);
+        beam.quaternion.setFromUnitVectors(beamUp,beamDir.multiplyScalar(1/distance));
+        beam.scale.set(1,distance,1);
+        beam.material.color.set({shield:'#69f2ed',heal:'#72f4af',inspect:'#d0b4ff',attack:'#ff94cb',vote:'#ffd680'}[activeBeam.kind]||'#82edec');
+        beam.material.opacity=reducedMotion?.55:.69+.13*Math.sin(time*.015);
+        beam.visible=true;
+        if(!firstBeam){
+          firstBeam=true;
+          spellVfx.update({type:activeBeam.kind,from:beamFrom,to:beamTo,start:activeBeam.start,end:activeBeam.until},time);
+        }
+      }
+      if(!firstBeam)spellVfx.clear();
+    }else{spellVfx.clear();if(activeBeam&&time>=activeBeam.until)activeBeam=null;}
     for(const item of [...meshes,...effects])item.mesh.instanceMatrix.needsUpdate=true;
     updates++;return true;
   }
@@ -302,7 +312,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const item of effects)item.mesh.material.dispose();
     // Each geometry may be shared by multiple instanced meshes; dispose only once.
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
-    spellBeam.geometry.dispose();spellBeam.material.dispose();spellVfx.dispose();
+    spellBeam.geometry.dispose();for(const beam of spellBeams)beam.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
@@ -310,7 +320,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
-    get beamVisible(){return spellBeam.visible},
+    get beamVisible(){return spellBeams.some(beam=>beam.visible)},
+    get visibleBeamCount(){return spellBeams.filter(beam=>beam.visible).length},
     get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
       renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
       progress:travelProgress(a.travel,now),yaw:a.yaw,statusIds:[...a.statusIds],
