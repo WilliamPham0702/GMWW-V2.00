@@ -32,3 +32,11 @@
 - Dải màu bị giới hạn **xanh biển / lam / tím ngọc**, không thêm đỏ-đen; 5–12 hạt cho hiệu ứng đã xác nhận, các lượt preview/demo giữ cơ chế trước đó.
 - Không thêm draw call: vẫn dùng InstancedMesh và bốn nhóm đối tượng VFX hiện có; không đổi loại tác động, mục tiêu, GM/Player permissions, âm thanh, Core hoặc luật chơi.
 - Bài unit test kiểm tra toàn bộ Core signature, màu sắc và ngân sách hạt. Chỉ xác nhận chạy đúng kỹ thuật sau khi CI của commit cuối kết thúc SUCCESS.
+
+## Kết quả thực thi cuối GĐ33 (25/10/2026)
+- Commit đã triển khai: `76918f0210b48a53d888930d1bf0bf358e7cf172`.
+- GitHub Actions `40194418159`: **SUCCESS** cả job kiểm toán/CI và job deploy/browser/Core E2E STAGING. https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40194418159
+- **Cloudflare STAGING Worker version:** `09fb836b-a115-4bc0-8d9c-2afc183e28e9`, có log Cloudflare xác nhận deploy. Kênh có thể truy cập từ nút VÀO LÀNG trên GMWW iPhone.
+- Browser Chrome/WebKit 6/12/20/30 Character **PASS**; Core E2E 2 client, quyền GM, reconnect, Role/Artifact tùy chỉnh **PASS**. Các FPS trên CI là **GPU phần mềm**, không đại diện iPhone vật lý.
+- **Rollback STAGING:** phiên bản GĐ29–31 `7ac53fa4-6449-49d0-a121-e82dd9572acc`. Chưa thử thao tác rollback thật vì triển khai hiện tại SUCCESS và không có lỗi.
+- **PR #487 Draft; không merge và không thay đổi Production/IPA/OTA/2D.** GĐ32 nghiệm thu trọn ván và GĐ34 nhánh tích hợp an toàn vẫn chưa đóng.
