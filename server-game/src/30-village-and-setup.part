@@ -190,7 +190,11 @@ async function battleWarmAudio(kind,item){
   if(battleAudioLoading.has(key))return battleAudioLoading.get(key);
   const promise=(async()=>{
     const rec=await dbGet(audioBlobKey(kind,item.id)).catch(()=>null);
-    const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(item);
+    // Legacy role_old_witch has one canonical bundled ROLE:source-18 sound;
+    // never let a stale filename or a mismatched local audio ID silence it.
+    const fallback=kind==='cards'&&String(item.targetId||'')==='role_old_witch'?
+      bundledAudioBlob({sourceKey:'ROLE:source-18'}):null;
+    const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(item)||fallback;
     const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\/)/i.test(item.url)?item.url:'');
     if(url)battleAudioReady.set(key,url);
     return url||null
@@ -233,16 +237,15 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     return true;
   }catch(_){return false}
 }
-async function battleOpenGallowsAudioUpload(id){
-  const allowed=['audio_system_gallows_day_long','audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
+function battleOpenGallowsAudioUpload(id){
+  // Resolve the authoritative system cue, then open that EXACT file picker.
+  // Navigation to the library used to land on the wrong row/category in V3.209.
+  const allowed=['audio_system_gallows_day_long','audio_system_gallows_vote_result',
+    'audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
   if(!allowed.includes(id))return;
-  document.querySelector('.nav[data-page="library"]')?.click();
-  document.querySelector('.libtab[data-lib="audio"]')?.click();
-  document.querySelector('#audioKindSeg [data-audio-kind="system"]')?.click();
-  await renderAudio();
-  const row=[...document.querySelectorAll('#audioGrid [data-audio-id]')].find(x=>x.dataset.audioId===id);
-  row?.scrollIntoView({block:'center'});
-  row?.classList.add('gallows-audio-upload-target');
+  const slot=(state.audio?.system||[]).find(x=>String(x.targetId||x.id)===id);
+  if(!slot){playFlashError('Chưa có ô âm thanh cho '+id+'.');return}
+  replaceAudioItem(slot,'system');
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
@@ -271,10 +274,37 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
+  // WKWebView can reject media that has not yet left the pending state.
+  // The user-unlocked WebAudio channel is the fallback, then Vietnamese speech.
+  let fallbackStarted=false;
+  const recover=async()=>{
+    if(fallbackStarted||requestId!==battleAudioRequestId)return;
+    fallbackStarted=true;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return;
+    battleSpeakCue(name,showError||String(targetId)==='role_old_witch',onFinished);
+  };
   let cutTimer=null,finished=false;
   const finish=()=>{if(finished)return;finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
     if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
-  battleActiveAudio=player;player.onended=finish;player.onerror=finish;
+  battleActiveAudio=player;player.onended=finish;
+  player.onerror=()=>{if(finished||requestId!==battleAudioRequestId)return;
+    finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;
+    void recover()};
+  // A missing 'playing' event on iPhone is not successful playback.
+  // Avoid leaving a silent turn indefinitely when play() resolved on 'canplay'.
+  let began=false;
+  player.addEventListener('playing',()=>{began=true},{once:true});
+  const startupTimer=setTimeout(()=>{
+    if(!began&&!finished&&requestId===battleAudioRequestId){
+      try{player.pause()}catch(_){}
+      if(battleActiveAudio===player)battleActiveAudio=null;
+      finished=true;void recover();
+    }
+  },2400);
+  player.addEventListener('playing',()=>clearTimeout(startupTimer),{once:true});
+  player.addEventListener('ended',()=>clearTimeout(startupTimer),{once:true});
+  player.addEventListener('error',()=>clearTimeout(startupTimer),{once:true});
   // Named V1.11 segment: the editor stores its start/end on the EXISTING
   // role wake-up audio, without duplicating binary data or changing its source.
   const excerpt=requestedCut;
@@ -295,12 +325,10 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   }
   try{await player.play();return true}
   catch(err){
-    // WebAudio was unlocked synchronously during the original finger gesture;
-    // it can start the confirmed turn cue even after the Durable Object round trip.
+    clearTimeout(startupTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,excerpt))return true;
-    if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
-    onFinished?.();
-    return false
+    return battleSpeakCue(name,showError||String(targetId)==='role_old_witch',onFinished)
   }
 }
 function battleTurnAudioCue(turn){
