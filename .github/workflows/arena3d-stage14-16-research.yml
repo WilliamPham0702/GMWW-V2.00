@@ -63,6 +63,7 @@ jobs:
           node --check src/arena3d-stage-worker.mjs
           node --check assets/village/arena-3d/character-atelier.mjs
           node --check assets/village/arena-3d/live.mjs
+          node --check assets/village/arena-3d/spell-vfx.mjs
           node --check tests/arena3d-stage14-browser.mjs
           node --check tests/arena3d-stage17-undo.test.mjs
           node --check tests/arena3d-stage18-performance.test.mjs
@@ -78,7 +79,10 @@ jobs:
   deploy-stage14-preview:
     name: "GĐ14–16: STAGING riêng + browser iPhone"
     needs: verify-stage14
-    if: github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' && github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true
+    if: >-
+      github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' &&
+      ((github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-arena3d-staging]')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
