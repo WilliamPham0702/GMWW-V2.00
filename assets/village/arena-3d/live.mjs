@@ -19,6 +19,7 @@ import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} fr
 import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
 import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION} from './stage19-mobile-diagnostics.mjs';
 import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mobile-budget.mjs';
+import {validateGmActionTargets,ARENA_STAGE29_VERSION} from './stage29-gm-actions.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
@@ -76,6 +77,25 @@ const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focus
       const turnId=args[0];if(!turnId)throw Error('Core chưa cấp lượt đêm');
       await gm('turn',{action:'next',source:'gm',expectedTurnId:turnId});
       await feed?.refresh();await refreshPrivateGmEffects();
+    });
+    if(id==='coreAction')return void guarded('Hành động vai trò/Artifact qua Core',async()=>{
+      const [turnId,action,targetIds]=args;
+      if(!gmToken||!current?.room?.matchId||current.room.cyclePhase!=='night')
+        throw Error('Chưa có lượt đêm do Core xác thực');
+      if(!turnId||typeof action?.actionId!=='string')
+        throw Error('Thiếu mã hành động thuộc lượt');
+      const ids=validateGmActionTargets(action,targetIds);
+      if(!ids)throw Error('Mục tiêu không đúng số lượng hoặc quyền tự chọn');
+      const body={
+        matchId:current.room.matchId,cycleKey:current.room.cycleKey,turnId,
+        actorId:action.actorId,targetIds:ids,
+        type:action.type||'effect_notice',actionId:action.actionId,
+        clientEventId:'arena-real-'+crypto.randomUUID()
+      };
+      if(action.artifactId)body.artifactId=action.artifactId;
+      const response=await gm('battle-action',body);
+      await feed?.refresh();await refreshPrivateGmEffects();
+      notice(response?.ok?'Core đã xác nhận hành động '+action.label:'Core chưa xác nhận');
     });
     if(id==='roleTrial')return void guarded('Thử diễn hoạt vai trò qua Core',async()=>{
       const [turnId,actorId,roleId,targetId]=args;
@@ -156,6 +176,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage19=ARENA_STAGE19_VERSION;
   document.body.dataset.gmwwStage22=ARENA_STAGE22_VERSION;
   document.body.dataset.gmwwStage25=ARENA_STAGE23_25_VERSION;
+  document.body.dataset.gmwwStage29=ARENA_STAGE29_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
