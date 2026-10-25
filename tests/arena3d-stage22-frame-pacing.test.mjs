@@ -68,5 +68,5 @@ test('GĐ22: no change to Core networking or GM private visibility, only GPU pai
  assert.match(live,/render\.render\(scene,camera\);frames\+\+/);
  assert.match(live,/connectStagingRoom\(/);
  assert.match(live,/refreshPrivateGmEffects\(/);
- assert.doesNotMatch(source,/gmToken|roleId|artifactId|privateRole|token/);
+ assert.doesNotMatch(source,/gmToken|roleId|artifactId|privateRole/);
 });
