@@ -1,7 +1,7 @@
 /* GMWW SEA icon library — V1. Draft feature: visual catalog only, no gameplay mutation. */
 (()=>{
 'use strict';
-const KEY='GMWW_ACTION_ICON_LIBRARY_V4';
+const KEY='GMWW_ACTION_ICON_LIBRARY_V5';
 const SHAPES={
 eye:'<path d="M15 48q33-40 66 0-33 40-66 0Z"/><circle cx="48" cy="48" r="11"/><circle cx="51" cy="44" r="3" fill="#fff6c7" stroke="none"/>',
 triple:'<path d="M17 35q15-17 30 0-15 17-30 0Zm34 0q15-17 30 0-15 17-30 0ZM33 64q15-17 30 0-15 17-30 0Z"/><circle cx="32" cy="35" r="3"/><circle cx="66" cy="35" r="3"/><circle cx="48" cy="64" r="3"/>',
@@ -62,14 +62,124 @@ const DEFAULT=[
 ["mang-benh", "36_mang_benh", "Mang Bệnh", "character", "action-disease-self"],
 ["loan-tin", "37_loan_tin", "Loan Tin / Thông Điệp", "character", "action-news-role,action-ghost-message"],
 ["phan-quyet-kep", "38_phan_quyet_kep", "Phán Quyết Kép", "none", "action-judge-double,artifact_action_force_vote"],
-["cam-noi", "39_cam_noi", "Cấm Nói", "character", "artifact_action_silence"]
+["cam-noi", "39_cam_noi", "Cấm Nói", "character", "artifact_action_silence"],
+["phieu-con-qua","40_phieu_con_qua","Phiếu Con Quạ","character","action-g7-crow-votes"],
+["can-chuyen-hoa","41_can_chuyen_hoa","Cắn Chuyển Hóa","character","action-demon-wolf-convert"],
+["chon-hinh-tuong","42_chon_hinh_tuong","Chọn Hình Tượng","character","action-wild-child-idol"],
+["xem-artifact","43_xem_artifact","Xem Artifact","character","artifact_action_view"],
+["doi-artifact","44_doi_artifact","Đổi Artifact","character","artifact_action_exchange"],
+["cong-khai-vai","45_cong_khai_vai","Công Khai Vai Trò","none","artifact_action_reveal_role"],
+["sao-chep-chuc-nang","46_sao_chep_chuc_nang","Sao Chép Chức Năng","character","artifact_action_copy_function"],
+["huy-artifact","47_huy_artifact","Hủy Artifact","character","artifact_action_destroy"],
+["buoc-quay-mat","48_buoc_quay_mat","Buộc Quay Mặt","character","artifact_action_turn_away"],
+["sang-tao-artifact","49_sang_tao_artifact","Sáng Tạo Artifact","none","artifact_action_custom"]
 ].map(([id,file,name,target,actions])=>({id,name,assetId:file+'.png',shape:'spark',target,actions:actions?actions.split(','):[],image:''}));
-const KNOWN_REAL_ACTIONS={"san-giet": ["action-knight-stab", "action-g7-prince-stab", "action-cult-kill", "artifact_action_destroy"], "soi-xet": ["action-digan-scry", "action-rotten-seer-check", "artifact_action_check_villager", "artifact_action_check_awake"], "soi-nhom": ["action-vampire-check", "artifact_action_judge_two_wolves"], "so-sanh-phe": ["artifact_action_check_third_faction"], "soi-dac-biet": ["artifact_action_view", "artifact_action_reveal_role"], "soi-can": ["action-demon-wolf-convert", "action-fire-wolf-bite", "action-wolf-brother-bite"], "danh-dau": ["action-g7-crow-votes", "action-wild-child-idol", "action-grudge-designate"], "duoi": ["action-black-woman-leave", "artifact_action_turn_away"], "thanh-tay": ["action-mad-doctor-cure"], "doi-vai": ["action-maid-inherit", "artifact_action_exchange", "artifact_action_swap_role"], "cuop-artifact": ["artifact_action_reclaim", "artifact_action_steal"], "phong-an": ["artifact_action_disable_function", "artifact_action_negate", "artifact_action_lock_function", "artifact_action_limit_wolf_targets"], "nhan-ban": ["artifact_action_copy_function"], "ban-phuoc": ["artifact_action_activate_two"]};
+const KNOWN_REAL_ACTIONS={
+  "san-giet": [
+    "action-g7-prince-stab",
+    "action-cult-kill"
+  ],
+  "soi-xet": [
+    "action-digan-scry",
+    "action-rotten-seer-check",
+    "artifact_action_check_villager",
+    "artifact_action_check_awake",
+    "artifact_action_check_third_faction"
+  ],
+  "soi-nhom": [
+    "action-vampire-check",
+    "artifact_action_judge_two_wolves"
+  ],
+  "so-sanh-phe": [],
+  "soi-dac-biet": [],
+  "soi-can": [
+    "action-fire-wolf-bite",
+    "action-wolf-brother-bite"
+  ],
+  "danh-dau": [
+    "action-grudge-designate"
+  ],
+  "duoi": [
+    "action-black-woman-leave"
+  ],
+  "thanh-tay": [
+    "action-mad-doctor-cure"
+  ],
+  "doi-vai": [
+    "action-maid-inherit",
+    "artifact_action_swap_role"
+  ],
+  "cuop-artifact": [
+    "artifact_action_reclaim",
+    "artifact_action_steal"
+  ],
+  "phong-an": [
+    "artifact_action_disable_function",
+    "artifact_action_negate",
+    "artifact_action_lock_function",
+    "artifact_action_limit_wolf_targets"
+  ],
+  "nhan-ban": [],
+  "ban-phuoc": [
+    "artifact_action_activate_two"
+  ],
+  "phieu-con-qua": [
+    "action-g7-crow-votes"
+  ],
+  "can-chuyen-hoa": [
+    "action-demon-wolf-convert"
+  ],
+  "chon-hinh-tuong": [
+    "action-wild-child-idol"
+  ],
+  "xem-artifact": [
+    "artifact_action_view"
+  ],
+  "doi-artifact": [
+    "artifact_action_exchange"
+  ],
+  "cong-khai-vai": [
+    "artifact_action_reveal_role"
+  ],
+  "sao-chep-chuc-nang": [
+    "artifact_action_copy_function"
+  ],
+  "huy-artifact": [
+    "artifact_action_destroy"
+  ],
+  "buoc-quay-mat": [
+    "artifact_action_turn_away"
+  ],
+  "sang-tao-artifact": [
+    "artifact_action_custom"
+  ],
+  "hiep-si": [
+    "action-knight-stab"
+  ]
+};
+const REASSIGNED_REAL_ACTIONS={
+  "action-g7-crow-votes": "phieu-con-qua",
+  "action-demon-wolf-convert": "can-chuyen-hoa",
+  "action-wild-child-idol": "chon-hinh-tuong",
+  "artifact_action_view": "xem-artifact",
+  "artifact_action_exchange": "doi-artifact",
+  "artifact_action_reveal_role": "cong-khai-vai",
+  "artifact_action_copy_function": "sao-chep-chuc-nang",
+  "artifact_action_destroy": "huy-artifact",
+  "artifact_action_turn_away": "buoc-quay-mat",
+  "artifact_action_custom": "sang-tao-artifact",
+  "action-knight-stab": "hiep-si",
+  "artifact_action_check_third_faction": "soi-xet"
+};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const cleanActions=s=>[...new Set(String(s||'').split(/[,\n;]/).map(x=>x.trim()).filter(x=>/^[A-Za-z0-9][A-Za-z0-9_:-]{0,100}$/.test(x)))].slice(0,100);
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function approvedMappings(rows){
- const next=clone(rows),mapped=new Set(next.flatMap(x=>x.actions||[]));
+ const next=clone(rows);
+ // Move ONLY user-supplied verified action IDs from their old generic icons to
+ // the appropriate dedicated art; keep all other user-created entries untouched.
+ for(const icon of next)icon.actions=(icon.actions||[]).filter(id=>!Object.hasOwn(REASSIGNED_REAL_ACTIONS,id)||REASSIGNED_REAL_ACTIONS[id]===icon.id);
+ const mapped=new Set(next.flatMap(x=>x.actions||[]));
  for(const [iconId,ids] of Object.entries(KNOWN_REAL_ACTIONS)){
   const icon=next.find(x=>x.id===iconId);if(!icon)continue;
   for(const id of ids)if(!mapped.has(id)){icon.actions.push(id);mapped.add(id)}
@@ -85,15 +195,21 @@ function load(){
   assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
  }));
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return approvedMappings(parse(saved))}catch(_){}
+ // Migrate V4 library and preserve every existing icon/custom edit; add only Wave 5 artwork.
+ try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V4')||'null');
+  if(Array.isArray(prior)&&prior.length<300){const old=parse(prior),ids=new Set(old.map(x=>x.id));
+   return approvedMappings(old.concat(clone(DEFAULT.filter(x=>/^4[0-9]_/.test(x.assetId)&&!ids.has(x.id)))));
+  }
+ }catch(_){}
  // Retain all V3 manually edited icons; add 10 independent wave-4 designs once.
  try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V3')||'null');
   if(Array.isArray(prior)&&prior.length<300){
     const old=parse(prior),ids=new Set(old.map(x=>x.id));
-    return approvedMappings(old.concat(clone(DEFAULT.filter(x=>/^3[0-9]_/.test(x.assetId)&&!ids.has(x.id)))));
+    return approvedMappings(old.concat(clone(DEFAULT.filter(x=>/^[34][0-9]_/.test(x.assetId)&&!ids.has(x.id)))));
   }
  }catch(_){}
  // Migrate V2 library without losing custom edits, deletions or role mappings; append ONLY the 10 newly approved IDs.
- try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V2')||'null');if(Array.isArray(prior)&&prior.length<300){const existing=parse(prior),ids=new Set(existing.map(x=>x.id));return approvedMappings(existing.concat(clone(DEFAULT.filter(x=>x.assetId&&/^[23][0-9]_/.test(x.assetId)&&!ids.has(x.id)))));}}catch(_){}
+ try{const prior=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V2')||'null');if(Array.isArray(prior)&&prior.length<300){const existing=parse(prior),ids=new Set(existing.map(x=>x.id));return approvedMappings(existing.concat(clone(DEFAULT.filter(x=>x.assetId&&/^[234][0-9]_/.test(x.assetId)&&!ids.has(x.id)))));}}catch(_){}
  // Preserve only user-created icons from an earlier Draft prototype, never overwrite approved artwork with old demo SVG.
  try{const old=JSON.parse(localStorage.getItem('GMWW_ACTION_ICON_LIBRARY_V1')||'null');
   if(Array.isArray(old)){
