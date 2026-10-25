@@ -6652,6 +6652,70 @@ function renderPlayScene(){
   renderPlayPlayers();renderPlayCards();renderPlayDeliveryProgress();renderPlayGatherToolbar();renderPlayRoleAssignmentPanel();renderPlayBattle();if(isLivePlayRoom())stopPlayGlobalVillagePoll();else ensurePlayGlobalVillagePoll();syncPlayAutoAdvance();
 }
 
+// AUTO VÁN chỉ ghép các roleId/phe có trong Core; không thay gameplay.
+function gmAutoRankTemplates(items,n){
+  const gap=t=>Math.abs(Math.max(0,Number(t?.playerCount)||0)-n);
+  return [...(items||[])].sort((a,b)=>gap(a)-gap(b)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
+}
+function gmAutoComposeRoles(catalog,players,history=[]){
+  const n=Math.trunc(Number(players)||0);
+  if(n<3||n>30)throw Error('AUTO VÁN hỗ trợ 3–30 người.');
+  const all=new Map((catalog||[]).map(r=>[String(r.id),r]));
+  const get=(id,team)=>{const r=all.get(id);return r&&String(r.factionId||r.faction||'').toLowerCase()===team?r:null};
+  const wolf=get('role_wolf','wolf'),villager=get('role_villager','village'),seer=get('role_seer','village');
+  if(!wolf||!villager||!seer)throw Error('Thiếu Sói Thường, Dân Làng hoặc Tiên Tri trong Thư Viện.');
+  const neutrals=['role_destroyer','role_assassin'].map(id=>get(id,'third')).filter(Boolean);
+  if(n>=10&&!neutrals.length)throw Error('Thiếu vai Phe Ba theo Core (Sát Thủ/Kẻ Hủy Diệt).');
+  const wolfCount=n<=6?1:Math.max(2,Math.round((n-1)/4.5)),thirdCount=n>=10?1:0;
+  const specialLimit=n<=4?1:n<=8?2:n<=11?3:n<=15?4:n<=20?5:Math.min(8,Math.floor(n/3));
+  const seen=new Set(history),pick=(arr,salt)=>arr.length?arr[Math.floor((Math.random()+salt*0.61803398875)%1*arr.length)]:null;
+  for(let attempt=0;attempt<160;attempt++){
+    const counts=new Map(),add=(r,num=1)=>{if(r)counts.set(r.id,(counts.get(r.id)||0)+num)};
+    add(wolf);const variants=(n>=12?['role_wolf_seer','role_wolf_cub']:[]).concat(n>=15?['role_alpha_wolf']:[],n>=17?['role_snow_wolf','role_wolf_hunter']:[]).map(id=>get(id,'wolf')).filter(Boolean);
+    for(let i=1;i<wolfCount;i++)add(variants.length&&i<=Math.min(2,Math.floor(n/8))?pick(variants,attempt+i*5):wolf);
+    if(thirdCount)add(pick(neutrals,attempt+2));
+    const villageSlots=n-wolfCount-thirdCount;
+    const ids=n<=5?['role_seer','role_guard','role_spiritualist','role_aura_seer','role_fox']:['role_seer','role_guard','role_witch','role_hunter','role_spiritualist','role_fox','role_aura_seer','role_piper','role_maiden','role_fairy','role_knight','role_bear_god'];
+    const available=ids.map(id=>get(id,'village')).filter(Boolean);
+    const required=n>=6?[seer]:[];
+    if(n>=5){const defense=pick(['role_guard','role_witch'].map(id=>get(id,'village')).filter(Boolean),attempt+3);if(defense&&!required.some(r=>r.id===defense.id))required.push(defense)}
+    for(const r of required)add(r);
+    const others=available.filter(r=>!counts.has(r.id)),extra=Math.min(Math.max(0,specialLimit-required.length),others.length,villageSlots-required.length-1);
+    for(let i=0;i<extra;i++){const r=pick(others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
+    if(n<=4){const s=pick(available,attempt+11);add(s)}
+    const chosenVillage=[...counts].reduce((sum,[id,count])=>sum+(String(all.get(id)?.factionId||'')==='village'?count:0),0);
+    if(chosenVillage>=villageSlots)continue;
+    add(villager,villageSlots-chosenVillage);
+    const roles=[...counts].map(([id,count])=>({roleId:id,roleName:String(all.get(id).name||id),factionId:String(all.get(id).factionId),count}));
+    const village=roles.filter(r=>r.factionId==='village').reduce((s,r)=>s+r.count,0);
+    const signature=roles.map(r=>r.roleId+':'+r.count).sort().join('|');
+    if(roles.reduce((s,r)=>s+r.count,0)!==n||village<=wolfCount||seen.has(signature))continue;
+    return {roles,signature,counts:{village,wolf:wolfCount,third:thirdCount},small:n<6};
+  }
+  throw Error('Đã hết đội hình khác nhau với thư viện hiện tại; hãy bổ sung Vai Trò.');
+}
+function gmAutoShowSummary(text=''){const el=document.getElementById('playGameAutoSummary');if(el){el.hidden=!text;el.textContent=text}}
+async function gmAutoPreviewGame(){
+  try{
+    const n=playLiveMembers().length,history=playSceneRuntime.autoGameHistory||[];
+    const deck=gmAutoComposeRoles(state.cards||[],n,history);
+    playSceneRuntime.autoGameHistory=[...history,deck.signature].slice(-100);
+    const cfg={id:'auto-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),
+      name:'AUTO '+n+' người • '+playSceneRuntime.autoGameHistory.length,playerCount:n,
+      roles:deck.roles.map((r,i)=>({roleId:r.roleId,roleName:r.roleName,faction:r.factionId==='wolf'?'Phe Sói':r.factionId==='third'?'Phe Ba':'Phe Dân',count:r.count,order:i+1,actionDurationSec:Number(playSceneState.gameTiming?.defaultActionSec??30)})),
+      artifactsEnabled:false,artifacts:[],timing:{...playSceneState.gameTiming},artifactLimitPerCycle:3};
+    playSceneRuntime.autoGameConfig=cfg;
+    playSceneState.gameTemplateId='';playSceneState.gameName=cfg.name;
+    playSceneState.rolePlan=Object.fromEntries(deck.roles.map(r=>[r.roleId,r.count]));
+    playSceneState.roleOrders=Object.fromEntries(deck.roles.map((r,i)=>[r.roleId,i+1]));
+    playSceneState.roleDurations={};savePlayScene();
+    const sel=document.getElementById('playGameTemplateSelect');
+    if(sel){let option=sel.querySelector('option[value="__auto__"]');if(!option){option=document.createElement('option');option.value='__auto__';sel.prepend(option)}option.textContent='✨ '+cfg.name;sel.value='__auto__'}
+    gmAutoShowSummary('Dân '+deck.counts.village+' • Sói '+deck.counts.wolf+' • Phe Ba '+deck.counts.third+' | '+deck.roles.filter(r=>r.roleId!=='role_villager').map(r=>r.roleName+(r.count>1?' ×'+r.count:'')).join(', ')+(deck.small?' • Phòng ít người: cân bằng hạn chế.':''));
+    await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
+  }catch(e){playFlashError(e?.message||'Không tạo được AUTO VÁN.')}
+}
+
 function playFactionLabel(role){const f=String(role?.factionId||role?.faction||'').toLowerCase();if(f==='wolf'||f.includes('sói')||f.includes('soi'))return'Phe Sói';if(f==='third'||f.includes('ba')||f.includes('third'))return'Phe Ba';return'Phe Dân'}
 function playRolePlanTotal(){return Object.values(playSceneState.rolePlan||{}).reduce((s,v)=>s+Math.max(0,Number(v)||0),0)}
 function playSortedRoles(){
