@@ -240,3 +240,32 @@ test('V3.207 final main push CI selector stays scoped for documented verified co
  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
  assert.ok(selector.includes('isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)'));
 });
+
+
+test('PR501 chỉ thu gọn CI khi chính xác 5 icon, phiên bản giữ nguyên và không có gameplay/Native',()=>{
+  const entries=[
+    modified('assets/village/village.mjs','old flag code',"flag.textContent='🚩'"),
+    modified('server-game/current/GMWW.html','<title>GMWW V3.218</title>','<title>GMWW V3.218</title> 🌈 🏖️ ⛱️ 🐦‍🔥'),
+    modified('server-game/current/app.js',"const VERSION='3.218';","const VERSION='3.218'; gmwwSetupFreeBattleIcons();"),
+    modified('server-game/current/style.css','old CSS','#battleFactionStatsFloat.gmww-free-icon'),
+    modified('server-game/src/30-village-and-setup.part','old UI',"const GMWW_BATTLE_ICON_POSITIONS='gmww_battle_free_icons_v1'"),
+    modified('server-game/src/40-battle-and-timeline.part','old','new'),
+    {path:'tests/gm-free-floating-shortcuts-20261025.test.mjs',status:'A',after:'tests'},
+    {path:'tests/gm-free-floating-shortcuts-iphone-webkit.mjs',status:'A',after:'webkit'},
+    {path:'.github/workflows/check-gm-free-icons-501.yml',status:'A',after:'CI'},
+    modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+    modified('.github/workflows/check-player-web.yml','before','after'),
+    modified('.github/workflows/build-server-game-ipa.yml','before','after'),
+    modified('.github/workflows/check-gallows-redesign.yml','before','after'),
+    modified('.github/workflows/prepare-runtime-v3202-candidate.yml','before','after'),
+    {path:'docs/acceptance-pr501-iphone-playerweb.md',status:'A',after:'Checklist'}
+  ];
+  assert.equal(classifyBrowserScope(entries),'gm-icons-501');
+  assert.equal(classifyBrowserScope([...entries,modified('src/index.js','old','new')]),'full','Worker logic expands scope');
+  assert.equal(classifyBrowserScope([...entries,modified('server-game/GMWW-Server/GameView.swift','old','new')]),'full','Native changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/gmww-gallows-rules.js',status:'A',after:'change'}]),'full','Gameplay changes expand scope');
+  assert.equal(classifyBrowserScope([...entries,modified('package.json','3.218','3.219')]),'full','Runtime release needs own gate');
+  assert.equal(classifyBrowserScope(entries.map(c=>c.path==='server-game/current/app.js'?
+    {...c,after:"const VERSION='3.219'; gmwwSetupFreeBattleIcons();"}:c)),'full','Any version advance requires release gates');
+  assert.equal(classifyBrowserScope(entries.filter(c=>c.path!=='assets/village/village.mjs')),'full','Missing Player Web flag forces full');
+});
