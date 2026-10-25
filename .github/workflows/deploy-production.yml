@@ -278,14 +278,14 @@ jobs:
           git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD || {
             echo "::error::Bản phát hành chưa có thay đổi PR #475"; exit 1;
           }
-          for FILE in src/gmww-demo-runner.js src/gmww-gallows-rules.js \\
+          for FILE in src/gmww-demo-runner.js src/gmww-gallows-rules.js \
             tests/demo-assassin-gallows-divination.test.mjs src/gmww-members-live.js; do
             test -s "$FILE" || { echo "::error::Thiếu thành phần DEMO #475: $FILE"; exit 1; }
           done
           for TRY in $(seq 1 40); do
-            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \\
-              -H "Authorization: Bearer $GH_TOKEN" \\
-              -H "Accept: application/vnd.github+json" \\
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
             REPORT=$(printf '%s' "$RESP" | node -e "
               let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
