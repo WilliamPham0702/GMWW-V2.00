@@ -193,6 +193,9 @@ function gmHapticFeedback(){
 }
 function demoConfirmedFeedback(){
   gmHapticFeedback();
+  // Gallows nominations and thumb votes may be numerous; no repeated OK cue.
+  if(playSceneState.phase==='day'&&['nominating','selecting','voting','closed','resolved']
+    .includes(String(playSceneRuntime.gallows?.stage||'')))return;
   if(!playAudioMuted())void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
 }
 
@@ -1271,16 +1274,21 @@ function battleGallowsTick(){
 }
 
 let battleVerdictTimer=null;
-function battleGallowsAcceptVerdict(expected){
-  if(expected!==battleState.gallowsVerdictKey||battleState.gallowsVerdictAcknowledged)return;
-  battleState.gallowsVerdictAcknowledged=true;
-  const notice=document.getElementById('battleGallowsVerdict');
-  if(notice)notice.hidden=true;
-  if(battleVerdictTimer){clearTimeout(battleVerdictTimer);battleVerdictTimer=null}
+async function battleGallowsAcceptVerdict(expected){
+  if(expected!==battleState.gallowsVerdictKey||battleState.gallowsVerdictAcknowledged||
+     battleState.gallowsVerdictAckPending)return;
   if(playSceneState.step!=='battle'||playSceneState.phase!=='day')return;
-  // Never bypass the existing verified Server winner flow.
-  if(playSceneRuntime.winProposal)void openPlayCompletionSheet();
-  else void advancePlayPhase();
+  battleState.gallowsVerdictAckPending=true;
+  try{
+    const done=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command:'acknowledge'})});
+    if(done?.ok!==true)throw Error(done?.message||done?.error||'Server chưa xác nhận phán quyết.');
+    battleState.gallowsVerdictAcknowledged=true;
+    const notice=document.getElementById('battleGallowsVerdict');if(notice)notice.hidden=true;
+    if(battleVerdictTimer){clearTimeout(battleVerdictTimer);battleVerdictTimer=null}
+    if(playSceneRuntime.winProposal)void openPlayCompletionSheet();
+    else void advancePlayPhase();
+  }catch(e){playFlashError('Phán quyết Lên Giàn: '+String(e.message||e))}
+  finally{battleState.gallowsVerdictAckPending=false}
 }
 function battleRenderGallowsVerdict(g,stage,phase){
   const notice=document.getElementById('battleGallowsVerdict');
