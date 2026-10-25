@@ -29,7 +29,7 @@ test('Active Core actions still drive fire icons, toggle, hit target and existin
  assert.ok(section.includes('battleIconResolve(a)'),'Icons use library mapping');
  assert.ok(section.includes('battleIconOn()'),'GM on/off toggle remains connected');
  assert.ok(section.includes('pointerdown')&&section.includes('pointermove')&&section.includes('pointerup'),'Pointer dragging retained');
- assert.ok(section.includes('battleIconTargetAt(e.clientX,e.clientY,aAtDrop)'),'Target snapping uses actual release position');
+ assert.ok(section.includes('battleIconTargetAt(e.clientX,e.clientY,a)'),'Target snapping uses actual release position');
  assert.ok(section.includes('battlePickTargetWithAudio'),'Use the same Core target selection');
  assert.ok(section.includes('battleConfirm(true)'),'Same Core confirmation');
  assert.ok(section.includes('battleIconClearDrag()'),'Cancel or restore dragging');
@@ -38,4 +38,13 @@ test('GM loads icon library before battle script and leaves the IPA shell unchan
  assert.ok(html.indexOf('src="action-icon-library.js')>=0);
  assert.ok(html.indexOf('src="action-icon-library.js')<html.indexOf('src="app.js'));
  assert.match(css,/\.battle-fire-icon\s*\{[^}]*touch-action:none/);
+});
+
+test('V2 overlays have no box, contain independent floating controls and halve artwork size',()=>{
+ assert.match(css,/#battleFireIconDock\.battle-fire-icon-dock\{[^}]*background:transparent!important/);
+ assert.match(css,/#battleFireIconDock \.battle-fire-icon\{[^}]*background:transparent!important/);
+ assert.match(css,/#battleFireIconDock \.battle-fire-icon img\{[^}]*width:24px!important/);
+ assert.match(app,/battleIconPositions\.set\(battleIconPositionKey\(id,d\.iconId\),point\)/);
+ assert.match(app,/battleIconFirePoint\(\)/);
+ assert.match(app,/\bis-sucked\b/);
 });

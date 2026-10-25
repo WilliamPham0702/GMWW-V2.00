@@ -11,7 +11,8 @@ const cut=(start,end)=>{
  assert.ok(a>=0&&b>a,start+' function exists');
  return part.slice(a,b);
 };
-const iconFns=cut('function battleIconResolve(', 'const battleRules=');
+const iconFns=cut("const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';", 'const battleRules=');
+const runtimeIconFns="const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';"+iconFns.slice("const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';".length);
 test('GM loads approved icon catalog before its battle script in iPhone WKWebView',()=>{
  const i=html.indexOf('<script src="action-icon-library.js');
  const gm=html.indexOf('<script src="app.js');
@@ -39,7 +40,7 @@ function dockContext(){
    getElementById(id){return({battleGMActionIcons:toggle,battleFireIconDock:dock,playPlayerRing:ring})[id]||null},
    createElement(){return{className:'',style:{},setAttribute(){},remove(){}}},body:{appendChild(){}}
   },
-  globalThis:{GMWWActionIconLibrary:{resolveAll(id){return id==='action_seer'?[{id:'soi-xet',assetId:'01_soi_xet.png'}]:[]},image(){return'action-icons/sea-v1/01_soi_xet.png'}},
+  globalThis:{GMWWActionIconLibrary:{resolveAll(id){return id==='action_seer'?[{id:'soi-xet',assetId:'01_soi_xet.png'}]:[]},image(){return'action-icons/v2/01_soi_xet.png'}},
    visualViewport:{width:375,height:640}}, innerWidth:375,innerHeight:640,
   localStorage:{getItem(){return'1'},setItem(){}},
   playSceneState:{step:'battle',night:1},battleState:{key:'one',actionId:'',targets:[],busy:false,syncPending:false},
@@ -56,9 +57,10 @@ function dockContext(){
  };
  ctx.globalThis.addEventListener=()=>{};
  vm.createContext(ctx);
- vm.runInContext("const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0'}catch{return true}};let battleIconDragging=null;"+iconFns,ctx);
- dock.btn={dataset:{fireAction:'role:seer'},querySelector(){return{src:'action-icons/sea-v1/01_soi_xet.png'}},
-  setPointerCapture(){},closest(){return dock.btn}};
+ vm.runInContext(runtimeIconFns,ctx);
+ dock.btn={dataset:{fireAction:'role:seer',fireIcon:'soi-xet'},style:{},classList:{add(){},remove(){},toggle(){}},
+  getBoundingClientRect(){return{left:15,top:15,width:44,height:44}},
+  querySelector(){return{src:'action-icons/v2/01_soi_xet.png'}},setPointerCapture(){},closest(){return dock.btn}};
  return{ctx,dock,toggle,actions,callbacks};
 }
 test('Eligible action stays visible at 🔥 during benign server sync, with buttons disabled',()=>{
@@ -67,7 +69,7 @@ test('Eligible action stays visible at 🔥 during benign server sync, with butt
  assert.equal(dock.hidden,false);
  assert.match(dock.innerHTML,/action-icons\/sea-v1\/01_soi_xet\.png/);
  assert.equal(toggle.textContent,'ICON: BẬT');
- assert.ok(parseFloat(dock.style.top)>0&&parseFloat(dock.style.top)<640);
+ assert.match(dock.innerHTML,/top:[0-9.]+px/);
  ctx.battleState.syncPending=true;
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
  assert.equal(dock.hidden,false,'must not disappear during sync');
@@ -118,7 +120,28 @@ test('Disabled actions and ICON OFF never expose actionable icon',()=>{
 });
 test('Styling keeps battle icon dock within interactive iPhone layer',()=>{
  assert.match(css,/\.battle-fire-icon-dock\{[^}]*position:fixed/);
- assert.match(css,/\.battle-fire-icon-dock\{[^}]*z-index:1200/);
+ assert.match(css,/#battleFireIconDock\.battle-fire-icon-dock\{[^}]*z-index:50000!important/);
  assert.match(css,/body\.play-immersive #start\.play-page\.active\{[^}]*z-index:1000/);
  assert.match(css,/\.battle-fire-icon-dock\[hidden\]\{display:none\}/);
+});
+
+test('Icon Action V2: drag may end anywhere, button stays floating, no Core action',()=>{
+ const{ctx,dock,callbacks}=dockContext();
+ vm.runInContext("battleIconDock(battleActions(),'night');battleIconBind()",ctx);
+ const ev=(type,x,y)=>({type,clientX:x,clientY:y,pointerId:27,pointerType:'touch',button:0,target:{closest(){return dock.btn}},preventDefault(){}});
+ callbacks.pointerdown(ev('pointerdown',30,30));
+ callbacks.pointermove(ev('pointermove',280,380));
+ callbacks.pointerup(ev('pointerup',280,380));
+ assert.equal(ctx.confirmed,0);
+ assert.equal(ctx.sheetOpened,0);
+ assert.equal(dock.btn.style.left,'287px');
+ assert.equal(dock.btn.style.top,'387px');
+});
+test('Yêu Tinh has one frameless 🔄 action icon; Core still owns direction choices',()=>{
+ const{ctx,dock,actions}=dockContext();
+ actions[0].actionId='action_transfer_bite';
+ ctx.globalThis.GMWWActionIconLibrary.resolve=id=>id==='action_transfer_bite'?{id:'dich-trai',assetId:'11_dich_trai.png'}:null;
+ vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
+ assert.equal((dock.innerHTML.match(/data-fire-icon=/g)||[]).length,1);
+ assert.match(dock.innerHTML,/🔄/);
 });

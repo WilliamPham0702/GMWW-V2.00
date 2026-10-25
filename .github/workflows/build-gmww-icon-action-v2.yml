@@ -1,0 +1,31 @@
+name: Build GMWW Icon Action V2 artwork
+on:
+  push:
+    branches: [feat/gmww-icon-action-v2-20261025]
+    paths:
+      - tools/icons/build-action-v2-assets.py
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gmww-icon-v2-assets
+  cancel-in-progress: true
+jobs:
+  render-icons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SVG rendering dependencies
+        run: python3 -m pip install --disable-pip-version-check cairosvg pillow
+      - name: Build and verify 49 independent transparent motifs
+        run: python3 tools/icons/build-action-v2-assets.py
+      - name: Commit approved frameless art assets on feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/action-icons/v2/ server-game/current/action-icons/v2/
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(icon-v2): render all 49 frameless SVG and PNG icon variants"
+            git push origin HEAD:feat/gmww-icon-action-v2-20261025
+          fi
