@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {CORE_ACTION_CATALOG} from '../assets/village/arena-3d/stage11-core-catalog.mjs';
-import {familyForConfirmedAction,matchConfiguredAction,stageAuthorizedRoleId,verifiedPrivateCard,ARENA_FAMILIES} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
+import {familyForConfirmedAction,matchConfiguredAction,stageAuthorizedRoleId,verifiedPrivateCard,artifactVisualSnapshot,ARENA_FAMILIES} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 import {stageCastingCue,publicCastingState} from '../assets/village/arena-3d/casting-choreography.mjs';
 import {normalizeRitualCue} from '../assets/village/arena-3d/stage8-ritual-director.mjs';
 import {resolveRoleAnimation} from '../assets/village/arena-3d/stage10-role-animations.mjs';
@@ -63,4 +63,26 @@ test('GĐ14 custom VFX survives sanitized GM-only cue, rejected for anonymous vi
  assert.match(source,/if\(!auth\.ok\)return auth\.response/);
  assert.match(source,/if\(!visual\)return response/);
  assert.doesNotMatch(source,/this\.broadcast\(\{[^}]*visualFamily/);
+});
+
+test('GĐ14 regression: GM-assigned artifact retained VFX before Core sanitizes functions/effectIds',()=>{
+ const matchId='m-custom',loginId='guest01',artifactId='artifact_pearl',actionId='action_pearl_restore';
+ // The actual Core private-card sanitizer keeps actions[].id, but strips
+ // functions[].effectIds. The stage-only visual snapshot must bridge this.
+ const incoming=[{loginId,artifact:{artifactId,artifactCard:{
+  actions:[{id:actionId}],functions:[{id:actionId,actionId,
+    phase:'night',effectIds:['effect_revive'],targetCount:1}]}}}];
+ const delivered={guest01:{loginId,matchId,artifactId,artifactCard:{
+  actions:[{id:actionId,targetCount:1}]}}};
+ const snapshot=artifactVisualSnapshot(incoming,delivered,{matchId});
+ assert.equal(snapshot[loginId+':'+artifactId+':'+actionId],'heal');
+ assert.equal(familyForConfirmedAction({actionId,type:'effect_notice',card:delivered.guest01.artifactCard,
+  stagingFamily:snapshot[loginId+':'+artifactId+':'+actionId]}).family,'heal');
+ assert.equal(artifactVisualSnapshot(incoming,{guest01:{...delivered.guest01,matchId:'other'}},{matchId})[loginId+':'+artifactId+':'+actionId],undefined);
+ const worker=readFileSync('src/arena3d-stage-worker.mjs','utf8');
+ assert.match(worker,/async gmAssign\(request,body\)/);
+ assert.match(worker,/const response=await super\.gmAssign\(request,body\)/);
+ assert.match(worker,/const visual=artifactVisualSnapshot\(roles,owned,\{matchId\}\)/);
+ assert.match(worker,/await this\.ctx\.storage\.put\('arena:artifact-vfx:'\+matchId,visual\)/);
+ assert.match(worker,/await this\.ctx\.storage\.delete\('arena:artifact-vfx:'\+matchId\)/);
 });
