@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const source=fs.readFileSync(new URL('../server-game/current/action-icon-library.js',import.meta.url),'utf8');
 const start=source.indexOf("box.innerHTML=rows.map(x=>");
-const stop=source.indexOf("box.querySelectorAll('[data-icon-edit]')",start);
+const stop=source.indexOf("function edit(id)",start);
 const card=start>=0&&stop>start?source.slice(start,stop):'';
-test('GM Icon card displays only artwork, name and edit/delete controls',()=>{
+test('GM Icon card displays only artwork and name, edit via double-tap',()=>{
  assert.ok(card.includes('<img src='));
  assert.ok(card.includes('<b>'));
- assert.ok(card.includes('data-icon-edit'));
- assert.ok(card.includes('data-icon-delete'));
+ assert.ok(!card.includes('data-icon-edit'));
+ assert.ok(!card.includes('data-icon-delete'));
  assert.ok(!card.includes('gmww-icon-actions'));
  assert.ok(!card.includes('x.actions.join'));
  assert.ok(!card.includes('Kéo vào người chơi'));

@@ -7658,3 +7658,13 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
    animation:none!important;will-change:auto!important
  }
 }
+
+/* GMWW character action icons: anchors follow the calibrated 🔥 of each scene. */
+.battle-fire-icon-dock{position:fixed;left:50%;top:calc(100% + 9px);transform:translateX(-50%);z-index:32;max-width:min(74vw,330px);display:flex;gap:5px;overflow-x:auto;padding:4px 6px;scrollbar-width:thin;touch-action:pan-x;border-radius:17px;background:rgba(4,35,59,.72);border:1px solid rgba(155,238,255,.55);box-shadow:0 4px 16px #04283f8c}
+.battle-fire-icon-dock[hidden]{display:none}
+.battle-fire-icon{flex:0 0 auto;display:grid;justify-items:center;align-items:center;gap:1px;width:62px;padding:2px 2px 4px;border:0;border-radius:11px;background:rgba(11,57,88,.62);color:#fff1c4;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.battle-fire-icon img{display:block;width:48px;height:48px;object-fit:contain;pointer-events:none}
+.battle-fire-icon small{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:12px}
+.battle-fire-icon[aria-pressed="true"]{outline:2px solid #91f9ff;background:rgba(16,108,134,.94)}
+.gmww-battle-icon-ghost{position:fixed;z-index:99999;transform:translate(-50%,-50%);width:78px;height:78px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 13px #8beaff);opacity:.95}
+#playPlayerRing [data-play-player-id].gmww-battle-icon-snap{outline:3px solid #a4ffff;outline-offset:4px;border-radius:50%;filter:drop-shadow(0 0 14px #9cfaff)}

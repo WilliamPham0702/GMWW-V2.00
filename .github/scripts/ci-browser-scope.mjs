@@ -536,9 +536,55 @@ function isHomePodium3214Scope(changes){
   html.includes('<title>GMWW V3.214</title>')&&pkg.includes('"version": "3.214.0"');
 }
 
+// V3.215: exact, fail-closed icon library, game presentation and art asset scope.
+const iconGame3215Files=new Set([
+ 'server-game/current/action-icon-library.js','server-game/current/GMWW.html','server-game/current/style.css',
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/40-battle-and-timeline.part',
+ 'src/index.js','package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+ '.github/workflows/build-server-game-ipa.yml','.github/workflows/deploy-production.yml',
+ '.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'assets/action-icons/sea-v1/manifest.json',
+ 'tests/action-icon-library.test.mjs','tests/action-icon-card-clean.test.mjs',
+ 'docs/plans/GMWW-ACTION-AUDIT-REAL-2026-10-25.json',
+ 'docs/releases/GMWW-V3.215-action-icons-game-wave4-20261025.md'
+]);
+function isIconGame3215Scope(changes){
+ const entries=new Map(changes.map(x=>[x.path,x]));
+ const required=['src/index.js','package.json','server-game/current/app.js',
+  'server-game/current/action-icon-library.js','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/GMWW.html','server-game/current/style.css',
+  'tests/action-icon-library.test.mjs','assets/action-icons/sea-v1/manifest.json',
+  'docs/plans/GMWW-ACTION-AUDIT-REAL-2026-10-25.json'];
+ if(required.some(x=>!entries.has(x)))return false;
+ function art(p){
+  if(p.startsWith('assets/action-icons/sea-v1/'))return /^3[0-9]_[a-z_]+[.](png|svg)$/.test(p.slice('assets/action-icons/sea-v1/'.length));
+  if(p.startsWith('server-game/current/action-icons/sea-v1/'))return /^3[0-9]_[a-z_]+[.]png$/.test(p.slice('server-game/current/action-icons/sea-v1/'.length));
+  return false;
+ }
+ if(!changes.every(x=>['A','M'].includes(x.status)&&(iconGame3215Files.has(x.path)||art(x.path))))return false;
+ for(const [prefix,ext,expected] of [['assets/action-icons/sea-v1/3','.png',10],
+  ['assets/action-icons/sea-v1/3','.svg',10],
+  ['server-game/current/action-icons/sea-v1/3','.png',10]]){
+  if(changes.filter(x=>x.path.startsWith(prefix)&&x.path.endsWith(ext)).length!==expected)return false;
+ }
+ const worker=entries.get('src/index.js')?.after||'';
+ const gm=entries.get('server-game/current/app.js')?.after||'';
+ const pkg=entries.get('package.json')?.after||'';
+ const html=entries.get('server-game/current/GMWW.html')?.after||'';
+ const lib=entries.get('server-game/current/action-icon-library.js')?.after||'';
+ const battle=entries.get('server-game/src/40-battle-and-timeline.part')?.after||'';
+ return worker.includes('VERSION="V3.215"')&&gm.includes("const VERSION='3.215'")&&
+  pkg.includes('"version": "3.215.0"')&&html.includes('<title>GMWW V3.215</title>')&&
+  lib.includes('39_cam_noi')&&lib.includes('gmwwIconDelete')&&
+  battle.includes('battleIconTargetAt')&&battle.includes('battleConfirm(true)')&&
+  battle.includes('battleIconSetOn(!battleIconOn())');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
   if(isHomePodium3214Scope(changes))return 'home-podium-3214';
+  if(isIconGame3215Scope(changes))return 'icon-game-3215';
   if(isIconWave3213Scope(changes))return 'icon-wave3-3213';
   if(isIconClean3212Scope(changes))return 'icon-clean-3212';
   if(isIcon3210DispatchGateScope(changes))return 'icon-runtime-3210';
@@ -584,6 +630,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
+      if(isIconGame3215Scope(changes))return{mode:'icon-game-3215',reason:'Verified V3.215 10 icons and GM-only fire drag via existing Core'};
       if(isIconWave3213Scope(changes))return{mode:'icon-wave3-3213',reason:'Verified 10 icons wave 3 and OTA only'};
       if(isIconClean3212Scope(changes))return{mode:'icon-clean-3212',reason:'Verified V3.212 ICON card UI and OTA only'};
       if(isIcon3210DispatchGateScope(changes))return{mode:'icon-runtime-3210',reason:'Verified CI-only V3.210 owner dispatch correction'};
@@ -602,6 +649,15 @@ function detect(){
   }
   // Owner-initiated V3.210 release on main after approved PR #483 merged.
   // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.215.0'){
+    const release='docs/releases/GMWW-V3.215-action-icons-game-wave4-20261025.md';
+    const manifest='assets/action-icons/sea-v1/manifest.json';
+    if(fs.existsSync(release)&&fs.existsSync(manifest)){
+      const m=JSON.parse(fs.readFileSync(manifest,'utf8'));
+      if(m.count===39&&Array.isArray(m.icons)&&m.icons.length===39)
+        return{mode:'icon-game-3215',reason:'Owner V3.215 verified exact 39-asset manifest and game Icon UI'};
+    }
+  }
   if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.213.0'){
     if(fs.existsSync('docs/releases/GMWW-V3.213-icons-wave3-20261025.md')){const m=JSON.parse(fs.readFileSync('assets/action-icons/sea-v1/manifest.json','utf8'));if(m.count===29&&m.icons.length===29)return{mode:'icon-wave3-3213',reason:'Owner V3.213 verified icon manifest'};}
   }
@@ -638,6 +694,7 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='icon-game-3215')console.log('V3.215: chỉ kiểm tra giao diện ICON, 54 ánh xạ, kéo thả GM và Runtime OTA.');
   if(result.mode==='icon-wave3-3213')console.log('V3.213: chỉ kiểm tra 29 icon/SHA-256 và bản cập nhật OTA.');
   if(result.mode==='icon-clean-3212')console.log('V3.212: chỉ kiểm tra giao diện ICON, phiên bản và OTA.');
   if(result.mode==='icon-runtime-3210')console.log('V3.210: chỉ test Icon và OTA, không test Card, Seat, DEMO hoặc Native IPA.');

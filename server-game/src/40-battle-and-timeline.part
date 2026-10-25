@@ -473,6 +473,110 @@ async function demoStep(epoch){
 }
 
 const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',morningOpen:false,morningDayKey:'',morningAudioKey:'',morningSig:'',gallowsOpen:false,dayActionsOpen:false,dayMenuSig:'',dayClockBusy:false,key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
+// UI-only skill icon drag: server remains sole action authority. Uses the same
+// GM battleConfirm() and existing rollback token as manual target selection.
+const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';
+let battleIconDragging=null;
+function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0'}catch{return true}}
+function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};renderPlayBattle()}
+function battleIconResolve(action){
+ const api=globalThis.GMWWActionIconLibrary;
+ return api?.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+}
+function battleIconDock(actions,phase){
+ const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
+ if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
+ const core=document.querySelector('.play-village-core');if(!core)return;
+ let dock=document.getElementById('battleFireIconDock');
+ if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
+  dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
+ const eligible=(Array.isArray(actions)?actions:[]).filter(a=>!a.unavailable&&a.actionId)
+   .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
+ const active=playSceneState.step==='battle'&&show&&eligible.length>0&&!battleState.busy&&!battleState.syncPending;
+ dock.hidden=!active;if(!active){dock.replaceChildren();return}
+ // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
+ const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
+ if(Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
+  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
+ }
+ const fire=core.querySelector('.play-core-pearl');
+ const rect=fire?.getBoundingClientRect();
+ if(rect){dock.style.left=(rect.left+rect.width/2)+'px';dock.style.top=Math.min(innerHeight-83,rect.bottom+10)+'px'}
+ const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
+  ':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
+ if(dock.dataset.sig===key)return;dock.dataset.sig=key;
+ const api=globalThis.GMWWActionIconLibrary;
+ dock.innerHTML=eligible.map(({a,icon})=>
+  '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
+  '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
+  '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
+}
+function battleIconTargetAt(x,y,action){
+ const ring=document.getElementById('playPlayerRing');if(!ring||!action)return null;
+ let candidate=null,dist=Infinity;
+ for(const el of ring.querySelectorAll('[data-play-player-id]')){
+  const id=String(el.dataset.playPlayerId||''),m=battleMember(id);
+  if(!m||!battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
+  const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const d=Math.hypot(x-cx,y-cy),limit=Math.max(42,Math.min(82,Math.max(r.width,r.height)*0.78));
+  if(d<limit&&d<dist){candidate=el;dist=d}
+ }
+ return candidate;
+}
+function battleIconClearDrag(){
+ const d=battleIconDragging;if(!d)return;
+ d.ghost?.remove();d.target?.classList.remove('gmww-battle-icon-snap');
+ battleIconDragging=null;
+}
+function battleIconBind(){
+ const dock=document.getElementById('battleFireIconDock');if(!dock||dock.dataset.bound)return;dock.dataset.bound='1';
+ dock.addEventListener('pointerdown',e=>{
+  const btn=e.target.closest('[data-fire-action]');if(!btn||(e.button!==0&&e.pointerType!=='touch')||battleState.busy||battleState.syncPending)return;
+  const action=battleActions().find(a=>a.id===btn.dataset.fireAction&&!a.unavailable);
+  if(!action)return;
+  battleIconClearDrag();battleIconDragging={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,actionId:action.id,moved:false,target:null,ghost:null};
+  try{btn.setPointerCapture(e.pointerId)}catch{}
+  e.preventDefault();
+ });
+ dock.addEventListener('pointermove',e=>{
+  const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
+  if(!d.moved&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<8)return;
+  d.moved=true;
+  if(!d.ghost){d.ghost=document.createElement('img');d.ghost.className='gmww-battle-icon-ghost';d.ghost.src=[...dock.querySelectorAll('[data-fire-action]')].find(x=>x.dataset.fireAction===d.actionId)?.querySelector('img')?.src||'';
+    d.ghost.setAttribute('aria-hidden','true');document.body.appendChild(d.ghost)}
+  d.ghost.style.left=e.clientX+'px';d.ghost.style.top=e.clientY+'px';
+  const action=battleActions().find(a=>a.id===d.actionId&&!a.unavailable);
+  const candidate=action&&action.targetCount>0?battleIconTargetAt(e.clientX,e.clientY,action):null;
+  if(candidate!==d.target){d.target?.classList.remove('gmww-battle-icon-snap');d.target=candidate;candidate?.classList.add('gmww-battle-icon-snap')}
+  e.preventDefault();
+ });
+ const finish=e=>{
+  const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
+  const target=d.target,id=d.actionId,moved=d.moved,btn=e.target.closest?.('[data-fire-action]');
+  battleIconClearDrag();
+  if(e.type!=='pointerup'||battleState.busy||battleState.syncPending)return;
+  const a=battleActions().find(x=>x.id===id&&!x.unavailable);if(!a)return;
+  if(!moved){
+   if(a.noTarget){
+    if(!confirm('Xác nhận '+a.name+'?'))return;
+    battleClear();battleState.actionId=a.id;void battleConfirm(true);return;
+   }
+   if(battleIsTransfer(a)){battlePickAction(a.id);return}
+   if(a.targetCount>0)battleOpenTargetSheet(a.id,'list');
+   return;
+  }
+  if(!target||!a.targetCount)return;
+  const accepted=battlePickTargetWithAudio(String(target.dataset.playPlayerId||''),id);
+  if(!accepted)return;
+  if(battleState.targets.length===a.targetCount){
+   // Keep special target semantics (e.g. assassin marker) on the existing confirmation UI.
+   if(a.actionId==='action_assassin_mark'||battleIsTransfer(a))battleOpenTargetSheet(a.id,'list');
+   else void battleConfirm(true);
+  }
+ };
+ dock.addEventListener('pointerup',finish);dock.addEventListener('pointercancel',finish);
+}
+
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleDayActions=()=>{
@@ -1548,7 +1652,7 @@ function renderPlayBattle(){
   const statsFloat=document.getElementById('battleFactionStatsFloat');if(statsFloat)statsFloat.hidden=!visible;
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
-  if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
+  if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
@@ -1580,6 +1684,7 @@ function renderPlayBattle(){
   const actions=phase==='day'?allActions.filter(a=>!a.unavailable):allActions,
     bar=document.getElementById('battleActionBar');
   const actionTray=document.getElementById('battleActionTray');
+   battleIconDock(actions,phase);battleIconBind();
   if(actionTray)actionTray.hidden=phase==='day';
   const dayToggle=document.getElementById('battleDayActionToggle');
   if(dayToggle){dayToggle.disabled=!actions.length;dayToggle.setAttribute('aria-expanded',String(!!actions.length&&battleState.dayActionsOpen));}
@@ -2262,7 +2367,8 @@ function initBattleControls(){
     renderPlayBattle();
   });
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
-  document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{
+  document.getElementById('battleGMActionIcons')?.addEventListener('click',()=>battleIconSetOn(!battleIconOn()));
+   document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{
     setGmHapticEnabled(!gmHapticEnabled());renderPlayBattle();
   });
   for(const [id,kind] of [['battleLabelArtifact','artifact'],['battleLabelRole','role'],['battleLabelPlayer','player'],['battleShowDead','dead']])
