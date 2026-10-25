@@ -1027,7 +1027,7 @@ const fireIcons3226Files=new Set([
  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
  '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
- 'tests/gmww-action-icon-stacking.test.mjs',
+ 'tests/gmww-action-icon-stacking.test.mjs','tests/gmww-action-icons-in-battle.test.mjs',
  'docs/releases/GMWW-V3.226-fire-icon-visibility-20261025.md'
 ]);
 function isFireIcons3226Scope(changes){
