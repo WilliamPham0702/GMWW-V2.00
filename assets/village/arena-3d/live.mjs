@@ -254,6 +254,7 @@ async function attach(room){
   code=room.trim().toUpperCase();$('room').value=code;
   const state=await json(roomUrl());
   $('joinlink').href='/join/'+encodeURIComponent(code);
+  $('join3d').href='./player.html?room='+encodeURIComponent(code);
   const query=new URL(location.href);query.searchParams.set('room',code);history.replaceState(null,'',query);
   const initial=createPublicRendererFrame(state);
   if(matchSync.accept(initial,{source:'snapshot'}).accepted)drawFrame(initial);
