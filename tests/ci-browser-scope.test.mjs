@@ -83,6 +83,24 @@ test('P0 atomic roster and role recovery changes select focused Chrome/Edge chec
   assert.equal(classifyBrowserScope([{status:'A',path:'src/player-web-src/dangerous.js',after:'new',before:null}]),'full');
 });
 
+test('PR475 DEMO + staging chọn đúng kiểm thử liên quan và fail-closed với file lạ',()=>{
+ const changes=[
+  modified('src/gmww-demo-runner.js','old','new'),
+  modified('src/gmww-gallows-rules.js','old','new'),
+  {path:'tests/demo-assassin-gallows-divination.test.mjs',status:'A',after:'test'},
+  modified('src/index.js','old','new'),
+  modified('src/player-web-src/30-rooms-and-realtime.part','old','new'),
+  modified('src/gmww-members-live.js','old','new'),
+  {path:'.github/workflows/deploy-demo-pr475-staging.yml',status:'A',after:'workflow'},
+  {path:'wrangler.demo-pr475-staging.jsonc',status:'A',after:'isolated'},
+  modified('.github/scripts/ci-browser-scope.mjs','old','new')
+ ];
+ assert.equal(classifyBrowserScope(changes),'demo-475');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-player-private-card-patch.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'assets/village/village.css',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+});
+
 test('PR #463 chỉ kiểm thử Lên Giàn; bỏ qua browser card, ghế, Khám Phá và OTA không liên quan',()=>{
  const c=[
   {path:'.github/workflows/check-gallows-redesign.yml',status:'M'},
