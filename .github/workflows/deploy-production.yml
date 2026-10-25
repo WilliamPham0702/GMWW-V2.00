@@ -289,12 +289,12 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
             REPORT=$(printf '%s' "$RESP" | node -e "
               let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
-                const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.event==='push'&&r.head_sha===process.env.TESTED_SHA);
+                const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&(r.event==='push'||(r.event==='workflow_dispatch'&&r.name==='Check Lên Giàn theo đúng phạm vi')));
                 const status=n=>{const r=a.filter(x=>x.name===n).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at))[0];return r?(r.conclusion||'pending'):'pending'};
                 const v=[status('Check Player Web Worker'),status('Check Lên Giàn theo đúng phạm vi')];
                 process.stdout.write(v.every(x=>x==='success')?'success':v.some(x=>['failure','timed_out','cancelled','action_required','skipped'].includes(x))?'failure':'pending');
               })")
-            echo "V3.207 DEMO #475: CI Worker + Lên Giàn $TRY = $REPORT"
+            echo "V3.207 DEMO #475: CI Worker push + Lên Giàn (push/owner dispatch) $TRY = $REPORT"
             if [ "$REPORT" = success ]; then
               echo "approved=true" >> "$GITHUB_OUTPUT"
               echo "V3.207: 2 CI trực tiếp liên quan cùng SHA SUCCESS; bỏ qua các test legacy ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
