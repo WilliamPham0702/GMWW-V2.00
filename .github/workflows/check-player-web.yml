@@ -54,6 +54,17 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ kiểm thử icon hành động Vai Trò/Artifact GM V3.220
+        if: steps.scope.outputs.mode == 'battle-icons-3220'
+        run: |
+          node --test tests/battle-fire-action-icons.test.mjs tests/action-icon-library.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/action-icon-library.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.220-battle-action-icons-20261025.md
+
       - name: Chỉ kiểm thử Top 3 KHÔNG BỤC V3.219 và chốt Runtime
         if: steps.scope.outputs.mode == 'home-sea-3219'
         run: |
