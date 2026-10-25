@@ -8,6 +8,7 @@ import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} from './stage8-ritual-director.mjs';
 import {STAGE9_VERSION,createMatchSyncGate,publicMatchView,publicMatchStatus} from './stage9-match-sync.mjs';
+import {STAGE10_VERSION,authorizedAnimationCue,animationAudioCue} from './stage10-role-animations.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -121,6 +122,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage7=STAGE7_VERSION;
   document.body.dataset.gmwwStage8=STAGE8_VERSION;
   document.body.dataset.gmwwStage9=STAGE9_VERSION;
+  document.body.dataset.gmwwStage10=STAGE10_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
@@ -154,6 +156,10 @@ async function refreshPrivateGmEffects(){
       const authorized=field.actors.map(a=>a.id);
       const normalized=normalizeRitualCue(data.casting,authorized);
       field.setCastingTurn(normalized);
+      const privateAnimation=authorizedAnimationCue(normalized,{gmAuthorized:Boolean(gmToken)});
+      document.body.dataset.gmwwStage10Motion=privateAnimation?.profile.motion||'none';
+      document.body.dataset.gmwwStage10Projectile=privateAnimation?.profile.projectile||'none';
+      document.body.dataset.gmwwStage10SoundId=animationAudioCue(privateAnimation?.profile,true)?.soundId||'';
       const summary=publicRitualSummary(normalized);
       document.body.dataset.gmwwStage8Ritual=summary.active?(summary.kind||'waiting'):'none';
       document.body.dataset.gmwwStage8Targets=String(summary.targets);
@@ -179,7 +185,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 }
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';}
+function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';document.body.dataset.gmwwStage10Motion='none';document.body.dataset.gmwwStage10Projectile='none';document.body.dataset.gmwwStage10SoundId='';}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
