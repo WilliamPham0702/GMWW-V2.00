@@ -853,7 +853,7 @@ function isArenaHome3223Scope(changes){
  if(stripped!==html.before)return false;
  const prep=map.get('.github/scripts/prepare-update-channel.mjs');
  if(prep?.status!=='M'||!prep.after.includes('V3.223: Trang Chủ')||
-    prep.after.replace(/"V3\.223:[^"\n]*",(?="V3\.222: AUTO VÁN)/,'')!==prep.before)return false;
+    prep.after.replace(/(releaseNotes:\[)"V3\.223:[^"\n]*",/,"$1")!==prep.before)return false;
  const test=map.get('tests/arena3d-home-portal-v3223.test.mjs');
  if(test?.status!=='A'||!test.after.includes('iframe')||!test.after.includes('Chơi 2D'))return false;
  if(map.get('docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md')?.status!=='A')return false;
