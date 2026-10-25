@@ -29,3 +29,14 @@ Nguyên nhân trong mã giao diện: điều kiện `now-lastPaint >= 1000/12` �
 - E2E Core staging thật: GM xác thực và bảo vệ, chuyển Đêm → Ngày, mở đề cử và bỏ phiếu, Player Web reconnect, người xem truy cập GM-only HTTP 401: **PASS**.
 - Core custom Role shield 2 mục tiêu + Artifact heal 1 mục tiêu, xác thực quyền xem **PASS**.
 - Kết quả iPhone bản cũ 10,4 FPS không được tự thay bằng FPS mô phỏng hay FPS headless. Cần người dùng đo lại trên Safari iPhone với phiên bản STAGING mới.
+
+## Báo cáo iPhone thật sau khi cập nhật GĐ22 (người dùng cung cấp)
+
+Bản đo tiếp theo bằng `gmww.arena.mobile-qa.19-21` trên iPhone với **6 Character đứng nghỉ**, lấy trực tiếp từ bộ đo trình duyệt của STAGING:
+- **FPS 12**, bằng đúng mục tiêu `requestedPaintHz: 12`, so với **10,4 FPS** trước khi sửa; tăng khoảng **15,4%**.
+- 80 mẫu / 80 khung được ghi nhận; `paintIntervalMedianMs: 83`, `paintIntervalP95Ms: 96` (trước sửa là 100/100 ms).
+- CPU vẽ median **2 ms**, p95 **4 ms**; **46 draw calls**; pixel ratio **1,2**.
+- Không ghi nhận mất WebGL (`contextLosses: 0`, `contextRestores: 0`).
+- Nhiệt độ máy và hao pin: chưa có số đo (`null`). Phiên mới có ít mẫu hơn bản cũ (80 so với 119), chỉ là kết quả của **6 Character nghỉ**, không phải chứng nhận tốc độ khi đang làm phép hay khi có 30 người.
+
+**Đánh giá kỹ thuật GĐ22: ĐẠT bài đo FPS nghỉ 6 Character trên iPhone thật.** Đây là báo cáo thực tế do người dùng cung cấp; không thay thế kiểm thử FPS khi thi triển nghi lễ, 30 Character hoặc thử nghiệm pin/nhiệt lâu dài. Nhãn version của bộ đo `19-21` là version module chẩn đoán, không phải version Worker STAGING.
