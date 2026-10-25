@@ -34,7 +34,25 @@ jobs:
         env:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: node .github/scripts/ci-browser-scope.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git diff --name-only origin/main...HEAD > /tmp/gmww-p0-scope.txt
+          ONLY_ARENA=true
+          test -s /tmp/gmww-p0-scope.txt || ONLY_ARENA=false
+          while IFS= read -r FILE; do
+            case "$FILE" in
+              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-player-web.yml|.github/workflows/check-p0-chrome-edge-realtime.yml) ;;
+              *) ONLY_ARENA=false ;;
+            esac
+          done < /tmp/gmww-p0-scope.txt
+          if [ "$ONLY_ARENA" = true ]; then
+            echo "mode=arena3d" >> "$GITHUB_OUTPUT"
+            echo "Chỉ thay Arena 3D: đã có browser WebKit/Chrome trong CI Arena, bỏ test Chrome Player Card ngoài phạm vi"
+          else
+            node .github/scripts/ci-browser-scope.mjs
+          fi
   chrome-edge:
     needs: scope
     if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'p0-roster'
