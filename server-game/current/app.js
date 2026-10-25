@@ -4854,7 +4854,7 @@ function battleMorningRows(){
   const entries=Array.isArray(playSceneRuntime.villageHistory)?playSceneRuntime.villageHistory:
     Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
   const labels={dead:'đã chết',expelled:'đã bị đuổi khỏi làng',
-    assassin_mark:'đã bị đánh dấu',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
+    assassin_mark:'đã bị Sát Thủ chọn',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
     silenced:'đã bị câm',infected:'đã bị nhiễm bệnh',protected:'được bảo vệ',
     saved:'đã được cứu',healed:'đã được hồi phục',revived:'đã hồi sinh',
     blessed:'đã được chúc phúc',shielded:'đã nhận khiên',poisoned:'đã bị đầu độc'};
