@@ -344,13 +344,13 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const ring=impactRings[index];
         ring.position.set(beamTo.x,beamTo.y+.1,beamTo.z);
         ring.material.color.set(profile.color||'#c9efff');
-        ring.scale.setScalar(reducedMotion?.85:1+.13*Math.sin(time*.014));
+        ring.scale.setScalar((reducedMotion?.85:1+.13*Math.sin(time*.014))*(profile.signature?.impactScale||1));
         ring.visible=true;
         if(profile.projectile==='spectral-wolf-head'){
           const head=wolfHeads[index];
           const progress=reducedMotion?.78:Math.min(1,Math.max(0,(time-activeBeam.start)/(activeBeam.until-activeBeam.start)));
           head.position.copy(beamFrom).lerp(beamTo,progress);
-          head.lookAt(beamTo);head.scale.setScalar(qualityLowPower?.8:1.2);
+          head.lookAt(beamTo);head.scale.setScalar((qualityLowPower?.8:1.2)*(profile.signature?.impactScale||1));
           head.visible=true;beam.visible=false;
           if(!firstBeam){firstBeam=true;spellVfx.clear();}
           continue;
@@ -367,7 +367,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         beam.visible=true;
         if(!firstBeam){
           firstBeam=true;
-          spellVfx.update({type:activeBeam.kind,from:beamFrom,to:beamTo,start:activeBeam.start,end:activeBeam.until},time);
+          spellVfx.update({type:activeBeam.kind,from:beamFrom,to:beamTo,start:activeBeam.start,end:activeBeam.until,
+            signature:profile.signature},time);
         }
       }
       if(!firstBeam)spellVfx.clear();
