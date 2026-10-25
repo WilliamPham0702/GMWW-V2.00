@@ -53,7 +53,7 @@ function load(){
   id:x.id,name:String(x.name||'').slice(0,100),shape:SHAPES[x.shape]?x.shape:'spark',
   target:['character','multi','card','direction'].includes(x.target)?x.target:'character',
   actions:cleanActions((Array.isArray(x.actions)?x.actions:[]).join(',')),
-  assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
+  assetId:known.get(x.id)||'',image:typeof x.image==='string'&&/^data:image\/(png|webp|jpeg);base64,/.test(x.image)?x.image:''
  }));
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(saved)&&saved.length<300)return parse(saved)}catch(_){}
  // Preserve only user-created icons from an earlier Draft prototype, never overwrite approved artwork with old demo SVG.
