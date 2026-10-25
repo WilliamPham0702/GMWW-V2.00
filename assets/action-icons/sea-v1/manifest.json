@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "name": "GMWW SEA action icons",
-  "version": "v1",
-  "status": "draft-not-released",
-  "count": 19,
-  "source": "approved independent 10+9 icon sets 2026-10-25",
+  "version": "v1-wave3",
+  "status": "artwork_ready_dynamic_assignment_needs_real_device_audit",
+  "count": 29,
+  "source": "19 previously approved + 10 independent proposed icons 2026-10-25",
   "icons": [
     {
       "id": "soi-xet",
@@ -338,6 +338,166 @@
         "height": 1024
       },
       "transparent": true
+    },
+    {
+      "id": "phong-an",
+      "name": "Phong ấn",
+      "target": "character",
+      "actions": [],
+      "png": "20_phong_an.png",
+      "svg": "20_phong_an.svg",
+      "sha256_png": "f64d5962bf5a4e94fe464947f30ca87350fce06aa6f1ea0fb18e46a64332e50d",
+      "sha256_svg": "cda554e5f788307c03fdb90dde5ce0b14d75118aa781fa1ece1a2a4653e2ca93",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cam-vote",
+      "name": "Cấm bỏ phiếu",
+      "target": "character",
+      "actions": [],
+      "png": "21_cam_vote.png",
+      "svg": "21_cam_vote.svg",
+      "sha256_png": "951ee1c951775b4d3b85b5f0557a0afbda2632173a8ed88149f0196030c36fbe",
+      "sha256_svg": "aed6ec868f580320eb76b26a76b8914a7e44014e69b45f43f2a82d6747ac3e9a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cam-de-cu",
+      "name": "Cấm đề cử",
+      "target": "character",
+      "actions": [],
+      "png": "22_cam_de_cu.png",
+      "svg": "22_cam_de_cu.svg",
+      "sha256_png": "710f238b2db3d3e3f009fecf9d1c41e79cda17dbf401b3abc6bc68105b0823dd",
+      "sha256_svg": "0de73c94924abac1a7a5490325d4b1dd41a4bac0f69a143209327f5f76b373c6",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "nguyen-rua",
+      "name": "Nguyền rủa",
+      "target": "character",
+      "actions": [],
+      "png": "23_nguyen_rua.png",
+      "svg": "23_nguyen_rua.svg",
+      "sha256_png": "087875ddd2a140721da3b0eec4a69f59fe1d476b6efed2c88b628eeca86907cc",
+      "sha256_svg": "b741350864b728c076104833db86223a080c3a170642ab7f617e156e7a4c6e26",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "ban-phuoc",
+      "name": "Ban phước",
+      "target": "character",
+      "actions": [],
+      "png": "24_ban_phuoc.png",
+      "svg": "24_ban_phuoc.svg",
+      "sha256_png": "83fdc0ae862747e6cf6723b6794bfb1a6811a0c197697d75d5ecef1f4e22aae6",
+      "sha256_svg": "fd30f15adb5cf2fdafb2fd4fd36204defd2e400790dc99c8167ffe2a40460844",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "cuop-artifact",
+      "name": "Cướp Artifact",
+      "target": "character",
+      "actions": [],
+      "png": "25_cuop_artifact.png",
+      "svg": "25_cuop_artifact.svg",
+      "sha256_png": "739a50d3da88baea2ee384030040be198340699a387c0d382bdc4dde5b203b25",
+      "sha256_svg": "62793946b44ff0c86b2f34bb60183a2f93fef957e8ed4ba97d880ec3c89798cc",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "phan-don",
+      "name": "Phản đòn",
+      "target": "character",
+      "actions": [],
+      "png": "26_phan_don.png",
+      "svg": "26_phan_don.svg",
+      "sha256_png": "515c19eb0dc6c794c0846354ddf8c25d18a2a2e0888b1470c2fda62c5a4962a3",
+      "sha256_svg": "f7b78f9d65490eb3d0b222094cecefb47155ce5989180767e7fbfa2c6e376101",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "tang-hinh",
+      "name": "Tàng hình",
+      "target": "character",
+      "actions": [],
+      "png": "27_tang_hinh.png",
+      "svg": "27_tang_hinh.svg",
+      "sha256_png": "2cacfbb7c4730ad1391c806b4721ce131ec53e53b015330e56fea59391002a96",
+      "sha256_svg": "88dcb2f03d9ccdb48bbdb0e6081cebe475cfe1cae79ec9dcb6a2755555ffde3a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "dat-bay",
+      "name": "Đặt bẫy",
+      "target": "character",
+      "actions": [],
+      "png": "28_bay.png",
+      "svg": "28_bay.svg",
+      "sha256_png": "861342fd930e633dd1197af47c5476a34271010532a03422d02153964fd7af77",
+      "sha256_svg": "6d47c5201cf100e175ced3ffb03852a53ce7b64474d16f1f418d729e4e4df44f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
+    },
+    {
+      "id": "thanh-tay",
+      "name": "Thanh tẩy",
+      "target": "character",
+      "actions": [],
+      "png": "29_thanh_tay.png",
+      "svg": "29_thanh_tay.svg",
+      "sha256_png": "1bfdf503fec91a7a7276ed3e52fa62f8803a7399be192f9419cc9469a24f5491",
+      "sha256_svg": "a7030bda433c9b70eeb9f45e90af5f0a638a5b6b2e92a26985eedeb87b440e0d",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true,
+      "pending_catalog_verification": true
     }
   ]
 }
