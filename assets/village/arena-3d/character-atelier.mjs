@@ -368,7 +368,8 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
-    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1+spellVfx.drawBudget},
+    get actorCount(){return actors.length},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
+    get peakVfxDrawBudget(){return spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
     get beamVisible(){return spellBeams.some(beam=>beam.visible)},
