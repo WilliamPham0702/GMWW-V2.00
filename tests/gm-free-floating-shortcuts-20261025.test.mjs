@@ -124,7 +124,7 @@ test('Kéo icon iPhone thực sự di chuyển, lưu vị trí, không kích ho�
   assert.equal(stats.parentElement,shell);
   const emit=(id,type,x,y)=>{
     const ev={
-      pointerId:1,pointerType:'touch',button:0,clientX:x,clientY:y,
+      type,pointerId:1,pointerType:'touch',button:0,clientX:x,clientY:y,
       prevented:false,stopped:false,
       preventDefault(){this.prevented=true},
       stopImmediatePropagation(){this.stopped=true}
