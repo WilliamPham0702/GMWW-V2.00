@@ -16,7 +16,7 @@ import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
-import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION} from './render-optimization.mjs';
+import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
 import {createArenaMobileDiagnostics,ARENA_STAGE19_VERSION} from './stage19-mobile-diagnostics.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
@@ -33,6 +33,7 @@ let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=t
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
 let galleryPage=0,previewRitualKind=null,lastPacingHz=-1;
 const qualityController=createArenaAdaptiveQuality();
+const paintScheduler=createArenaPaintScheduler();
 const mobileQa=createArenaMobileDiagnostics();
 let webglLost=false;
 const matchSync=createMatchSyncGate();
@@ -151,6 +152,7 @@ function drawFrame(frame){
   document.body.dataset.gmwwStage12=STAGE12_VERSION;
   document.body.dataset.gmwwStage18=ARENA_STAGE18_VERSION;
   document.body.dataset.gmwwStage19=ARENA_STAGE19_VERSION;
+  document.body.dataset.gmwwStage22=ARENA_STAGE22_VERSION;
   const publicView=publicMatchView(frame);
   document.body.dataset.gmwwStage9Match=publicView?.key||'';
   document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
@@ -503,7 +505,7 @@ function loop(now){
   if(frameHz!==lastPacingHz){
     lastPacingHz=frameHz;document.body.dataset.gmwwPaintTargetHz=String(frameHz);
   }
-  if(!webglLost&&frameHz>0&&now-lastPaint>=1000/frameHz){
+  if(paintScheduler.shouldPaint(now,frameHz,{paused:webglLost})){
     lastPaint=now;
     const cpuStart=performance.now();
     resize();
@@ -535,17 +537,17 @@ function loop(now){
 // preserve authoritative Core/WebSocket state, character seats and GM authorization.
 canvas.addEventListener('webglcontextlost',event=>{
   event.preventDefault();
-  webglLost=true;mobileQa.lost();lastPaint=0;frames=0;
+  webglLost=true;mobileQa.lost();paintScheduler.reset();lastPaint=0;frames=0;
   notice('WebGL tạm mất. Đang giữ trạng thái ván và đợi trình duyệt khôi phục đồ họa.');
 });
 canvas.addEventListener('webglcontextrestored',()=>{
-  webglLost=false;mobileQa.restored();lastPaint=0;lastResize='';
+  webglLost=false;mobileQa.restored();paintScheduler.reset();lastPaint=0;lastResize='';
   qualityController.reset();field.draw(performance.now(),true);
   notice('WebGL đã khôi phục; trạng thái ván và Character được giữ nguyên.');
 });
 document.addEventListener('visibilitychange',()=>{
   mobileQa.visibility(document.hidden);
-  lastPaint=0;fpsAt=performance.now();frames=0;
+  paintScheduler.reset();lastPaint=0;fpsAt=performance.now();frames=0;
   if(document.hidden)qualityController.observe(performance.now(),false);
   else if(!webglLost)field.draw(performance.now(),true);
 });
