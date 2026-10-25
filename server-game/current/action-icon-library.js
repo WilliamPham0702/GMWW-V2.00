@@ -358,6 +358,16 @@ function init(){
  document.getElementById('gmwwIconSearch').oninput=render;
  render();
 }
-window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>clone(icons.find(x=>x.actions.includes(String(actionId)))||null),resolveAll:(actionId)=>clone(icons.filter(x=>x.actions.includes(String(actionId)))),image:picture,audit:auditCatalog,autoMap:mapUnambiguousLocalActions};
+// Recover approved defaults when an older saved V5 library omits a newly-added icon.
+// Prefer user customizations; never mutate the saved library during a live game.
+function resolveActionIcons(actionId){
+ const key=String(actionId||'');if(!key)return [];
+ const customized=icons.filter(x=>x.actions.includes(key)&&!!(x.assetId||x.image));
+ if(customized.length)return clone(customized);
+ return clone(approvedMappings(clone(DEFAULT)).filter(x=>x.actions.includes(key)&&!!(x.assetId||x.image)));
+}
+window.GMWWActionIconLibrary={get:()=>clone(icons),resolve:(actionId)=>resolveActionIcons(actionId)[0]||null,resolveAll:resolveActionIcons,image:picture,audit:auditCatalog,autoMap:mapUnambiguousLocalActions};
+// The GM battle layer may already be mounted when the library finishes loading.
+if(typeof window.dispatchEvent==='function'&&typeof Event==='function')window.dispatchEvent(new Event('gmww-action-icons-ready'));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
