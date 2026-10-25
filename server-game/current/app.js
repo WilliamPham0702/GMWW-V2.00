@@ -6668,7 +6668,7 @@ function gmAutoComposeRoles(catalog,players,history=[]){
   if(n>=10&&!neutrals.length)throw Error('Thiếu vai Phe Ba theo Core (Sát Thủ/Kẻ Hủy Diệt).');
   const wolfCount=n<=6?1:Math.max(2,Math.round((n-1)/4.5)),thirdCount=n>=10?1:0;
   const specialLimit=n<=4?1:n<=8?2:n<=11?3:n<=15?4:n<=20?5:Math.min(8,Math.floor(n/3));
-  const seen=new Set(history),pick=(arr,salt)=>arr.length?arr[Math.floor((Math.random()+salt*0.61803398875)%1*arr.length)]:null;
+  const seen=new Set(history.slice(-1)),pick=(arr,salt)=>arr.length?arr[Math.floor((Math.random()+salt*0.61803398875)%1*arr.length)]:null;
   for(let attempt=0;attempt<160;attempt++){
     const counts=new Map(),add=(r,num=1)=>{if(r)counts.set(r.id,(counts.get(r.id)||0)+num)};
     add(wolf);const variants=(n>=12?['role_wolf_seer','role_wolf_cub']:[]).concat(n>=15?['role_alpha_wolf']:[],n>=17?['role_snow_wolf','role_wolf_hunter']:[]).map(id=>get(id,'wolf')).filter(Boolean);
