@@ -2196,6 +2196,9 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleMorningReport','header');
   battleBindAuxiliaryDrag('battleFactionStats','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
+  document.querySelector('[data-morning-audio-upload]')?.addEventListener('click',event=>{
+    battleOpenGallowsAudioUpload(String(event.currentTarget.dataset.morningAudioUpload||''));
+  });
   document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
     if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);
   });
