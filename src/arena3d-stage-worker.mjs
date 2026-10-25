@@ -4,7 +4,7 @@ import core,{RoomDurableObject as GameRoomDurableObject} from './index.js';
 import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
-import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction,artifactVisualSnapshot} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
+import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction,artifactVisualSnapshot,shouldRevokeVisualAfterUndo} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -39,11 +39,13 @@ export class RoomDurableObject extends GameRoomDurableObject{
     return response;
   }
   async gmEnd(request,body){
+    // Capture the previous match BEFORE Core resets the room on completion.
+    const previous=await this.ctx.storage.get('meta');
     const response=await super.gmEnd(request,body);
     if(response?.ok){
       const ack=await response.clone().json().catch(()=>null);
       if(ack?.ok===true){
-        const matchId=String(body?.matchId||ack?.matchId||'');
+        const matchId=String(previous?.matchId||ack?.matchId||body?.matchId||'');
         if(matchId){await this.ctx.storage.delete('arena:artifact-vfx:'+matchId);
           await this.ctx.storage.delete('arena:lastCast:'+matchId)}
       }
@@ -79,7 +81,9 @@ export class RoomDurableObject extends GameRoomDurableObject{
       turnId:phase==='night'?String(body?.turnId||''):'day:'+String(body?.clientEventId||'').slice(0,90),
       actorIds:['member:'+actorId],targetIds:targets.filter(id=>/^[a-z0-9._-]{1,80}$/i.test(String(id))).map(id=>'member:'+id),
       kind:visual.kind,actionId:visual.actionId,roleId:verifiedRole,
-      visualFamily:visual.family,createdAt:now,expiresAt:now+4500
+      visualFamily:visual.family,
+      undoToken:typeof result.undoToken==='string'?result.undoToken:'',
+      createdAt:now,expiresAt:now+4500
     });
     return response;
   }
@@ -95,6 +99,21 @@ export class RoomDurableObject extends GameRoomDurableObject{
   async gmDayAction(request,body){
     const response=await super.gmDayAction(request,body);
     return this.captureAuthorizedCast(response,body,'morning');
+  }
+  async gmBattleUndo(request,body){
+    // Core owns the undo decision. Only retract the private animation AFTER Core accepts it.
+    const response=await super.gmBattleUndo(request,body);
+    if(!response?.ok)return response;
+    const ack=await response.clone().json().catch(()=>null);
+    if(ack?.ok!==true)return response;
+    const meta=await this.ctx.storage.get('meta');
+    if(!meta?.matchId||!meta?.cycleKey)return response;
+    const key='arena:lastCast:'+String(meta.matchId);
+    const saved=await this.ctx.storage.get(key);
+    if(shouldRevokeVisualAfterUndo(saved,{matchId:meta.matchId,
+      cycleKey:meta.cycleKey,undoToken:body?.undoToken}))
+      await this.ctx.storage.delete(key);
+    return response;
   }
   async gmNightControls(meta){
     if(meta.phase!=='running'||meta.cyclePhase!=='night')return null;
