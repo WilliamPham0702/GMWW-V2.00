@@ -174,10 +174,10 @@ test('🌈 Thống kê phe tính số quân thật từ Server, cập nhật ng�
     playEsc:value=>String(value),
     Map,Math,Number,String,Array
   };
-  vm.runInNewContext(source.slice(from,to)+'\\nbattleRenderFactionStats();',scope);
-  assert.match(summary.innerHTML,/Phe Sói[\\s\\S]*?0 \\/ 1/,'Dead Wolf must not count alive');
-  assert.match(summary.innerHTML,/Phe Dân[\\s\\S]*?1 \\/ 1/,'Living village role counted');
-  assert.match(summary.innerHTML,/Phe Ba[\\s\\S]*?1 \\/ 1/,'Third faction counted');
+  vm.runInNewContext(source.slice(from,to)+'\nbattleRenderFactionStats();',scope);
+  assert.match(summary.innerHTML,/Phe Sói[\s\S]*?0 \/ 1/,'Dead Wolf must not count alive');
+  assert.match(summary.innerHTML,/Phe Dân[\s\S]*?1 \/ 1/,'Living village role counted');
+  assert.match(summary.innerHTML,/Phe Ba[\s\S]*?1 \/ 1/,'Third faction counted');
   assert.match(forecast.textContent,/Dự báo tham khảo/,'No invented Server victory declaration');
   panel.hidden=true;summary.innerHTML='sentinel';
   vm.runInNewContext('battleRenderFactionStats();',scope);
