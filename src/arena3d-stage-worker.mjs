@@ -5,6 +5,13 @@ import {gallowsSnapshot} from './gmww-gallows-rules.js';
 import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visual-effect-policy.mjs';
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
 import {coreRoleForActor,isCanonicalCoreAction} from '../assets/village/arena-3d/stage11-core-action-bridge.mjs';
+import {confirmedCustomVisual} from '../assets/village/arena-3d/stage14-dynamic-visuals.mjs';
+function privateTurnRole(control,actorId){
+  const id='member:'+String(actorId||'');
+  const group=Array.isArray(control?.roles)?control.roles.find(x=>x.actorIds?.includes(id)):null;
+  const hint=group?.roleId||(control?.actorIds?.includes(id)?control?.roleId:'');
+  return typeof hint==='string'&&/^[a-z0-9._-]{1,120}$/i.test(hint)?hint:'';
+}
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -27,14 +34,26 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const actorId=String(body?.actorId||'');
     const targets=Array.isArray(body?.targetIds)?body.targetIds:[];
     const actionId=String(body?.actionId||'');
-    const kind=classifyCastingAction(actionId);
-    if(!/^[a-z0-9._-]{1,80}$/i.test(actorId)||!kind)return response;
+    if(!/^[a-z0-9._-]{1,80}$/i.test(actorId))return response;
+    // The real Core must already accept the action. Visual metadata comes from
+    // its PRIVATE delivered card / owned Artifact, never from client names.
+    const privateRows=await this.ctx.storage.get('roles:'+actorId)||[];
+    const legacy=await this.ctx.storage.get('role:'+actorId);
+    const privateRoles=Array.isArray(privateRows)&&privateRows.length?privateRows:[legacy].filter(Boolean);
+    const ownedArtifact=body?.artifactId?await this.ctx.storage.get('artifact:'+actorId):null;
+    const privateVisual=confirmedCustomVisual({actorId,matchId:String(meta.matchId),
+      actionId,roleId,artifactId:String(body?.artifactId||''),privateRoles,
+      ownedArtifact,phase,actionType:String(body?.type||'')});
+    const kind=classifyCastingAction(actionId)||privateVisual?.kind;
+    if(!kind)return response;
     const now=Date.now();
     await this.ctx.storage.put('arena:lastCast:'+meta.matchId,{
       matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),phase,
       turnId:phase==='night'?String(body?.turnId||''):'day:'+String(body?.clientEventId||'').slice(0,90),
       actorIds:['member:'+actorId],targetIds:targets.filter(id=>/^[a-z0-9._-]{1,80}$/i.test(String(id))).map(id=>'member:'+id),
-      kind,actionId:isCanonicalCoreAction(actionId)?actionId:'',roleId,
+      kind,actionId:isCanonicalCoreAction(actionId)?actionId:privateVisual?.actionId||'',
+      roleId:privateVisual?.roleId||roleId,visualFamily:privateVisual?.visualFamily||'',
+      undoToken:String(result.undoToken||''),
       createdAt:now,expiresAt:now+4500
     });
     return response;
@@ -44,13 +63,26 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const meta=await this.ctx.storage.get('meta');
     const control=meta?.phase==='running'&&meta.cyclePhase==='night'
       ?await this.gmNightControls(meta).catch(()=>null):null;
-    const roleId=coreRoleForActor(control,String(body?.actorId||''));
+    const roleId=coreRoleForActor(control,String(body?.actorId||''))||
+      privateTurnRole(control,String(body?.actorId||''));
     const response=await super.gmBattleAction(request,body);
     return this.captureAuthorizedCast(response,body,'night',roleId);
   }
   async gmDayAction(request,body){
     const response=await super.gmDayAction(request,body);
-    return this.captureAuthorizedCast(response,body,'morning');
+    return this.captureAuthorizedCast(response,body,'morning',String(body?.roleId||''));
+  }
+  async gmBattleUndo(request,body){
+    const response=await super.gmBattleUndo(request,body);
+    if(!response?.ok)return response;
+    const data=await response.clone().json().catch(()=>null);
+    if(data?.ok!==true||data.idempotent===true)return response;
+    const meta=await this.ctx.storage.get('meta');
+    const key='arena:lastCast:'+String(meta?.matchId||'');
+    const saved=await this.ctx.storage.get(key);
+    if(saved?.undoToken&&saved.undoToken===String(body?.undoToken||'')&&
+       saved.cycleKey===meta?.cycleKey)await this.ctx.storage.delete(key);
+    return response;
   }
   async gmNightControls(meta){
     if(meta.phase!=='running'||meta.cyclePhase!=='night')return null;
