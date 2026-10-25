@@ -6,6 +6,7 @@ import {characterArtProfile,accessoryPartVisible,characterMotionFrame,CHARACTER_
 import {expressionFrame,renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TIMING} from './casting-choreography.mjs';
 import {createArenaSpellVfx} from './spell-vfx.mjs';
+import {resolveRoleAnimation,animationMotion} from './stage10-role-animations.mjs';
 const MAX=30,TAU=Math.PI*2;
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 export const atelierPalette=characterArtProfile;
@@ -76,8 +77,25 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     const beam=new THREE.Mesh(beamGeometry,index===0?beamMaterial:beamMaterial.clone());
     beam.visible=false;beam.frustumCulled=false;root.add(beam);return beam;
   });
+  const wolfHeads=Array.from({length:5},()=>{
+    const group=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color:'#77dfe7'});
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.21,7,5),mat);group.add(head);
+    for(const side of [-1,1]){
+      const ear=new THREE.Mesh(new THREE.ConeGeometry(.09,.23,5),mat);
+      ear.position.set(side*.13,.21,0);group.add(ear);
+    }
+    const muzzle=new THREE.Mesh(new THREE.ConeGeometry(.11,.22,6),mat);
+    muzzle.rotation.x=Math.PI/2;muzzle.position.z=.22;group.add(muzzle);
+    group.visible=false;root.add(group);return group;
+  });
+  const shieldDomes=Array.from({length:5},()=>{
+    const mesh=new THREE.Mesh(new THREE.SphereGeometry(.65,10,7),new THREE.MeshBasicMaterial({color:'#6cead9',wireframe:true,transparent:true,opacity:.45,depthWrite:false}));
+    mesh.visible=false;root.add(mesh);return mesh;
+  });
+  const wand=new THREE.Mesh(new THREE.CylinderGeometry(.018,.027,.57,5),new THREE.MeshBasicMaterial({color:'#f5e2a7'}));
+  wand.visible=false;root.add(wand);
   const spellBeam=spellBeams[0];
-  const hideBeams=()=>{for(const beam of spellBeams)beam.visible=false};
+  const hideBeams=()=>{for(const beam of spellBeams)beam.visible=false;for(const head of wolfHeads)head.visible=false;for(const dome of shieldDomes)dome.visible=false;wand.visible=false};
   const beamDir=new THREE.Vector3(),beamFrom=new THREE.Vector3(),beamTo=new THREE.Vector3();
   const beamUp=new THREE.Vector3(0,1,0);
   let activeBeam=null;
@@ -182,6 +200,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const elapsed=Math.max(250,Math.min(4000,Number(cast.expiresAt)-Date.now()));
         const walkEnd=(caster.travel?.startedAt||now)+(caster.travel?.duration||0);
         const spellStart=Math.max(now,Math.min(now+WALK_TIMING.approachMs,walkEnd));
+        caster.animationProfile=resolveRoleAnimation({kind:cast.kind,roleId:cast.roleId,actionId:cast.actionId});
         caster.gesture='cheer';caster.gestureEnd=spellStart+elapsed;
         caster.castStartedAt=spellStart;caster.castUntil=spellStart+elapsed;
         caster.standUntil=Math.max(caster.standUntil,spellStart+elapsed+WALK_TIMING.returnMs);
@@ -189,7 +208,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         const kind=['shield','inspect','heal','attack','vote'].includes(cast.kind)?cast.kind:'vote';
         caster.effects.set(kind,spellStart+elapsed);
         if(target)target.effects.set(kind,spellStart+elapsed);
-        activeBeam=target?{actorId:caster.id,targetIds:(cast.targetIds||[]).filter(id=>byId.has(id)).slice(0,5),start:spellStart,until:spellStart+elapsed,kind}:null;
+        activeBeam=target?{actorId:caster.id,targetIds:(cast.targetIds||[]).filter(id=>byId.has(id)).slice(0,5),start:spellStart,until:spellStart+elapsed,kind,profile:caster.animationProfile}:null;
       }
     }
   }
@@ -237,7 +256,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='tunic'||part.name==='skirt')x+=motion.robeSway;
         if(part.name==='armL'||part.name==='armR'){
           if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
-          else if(gesturing&&actor.gesture==='cheer')y+=.25+.09*Math.sin(time*.016);
+          else if(gesturing&&actor.gesture==='cheer')y+=animationMotion(actor.animationProfile,time,{reducedMotion}).armLift;
           else y+=motion.armLift;
         }
         if(gesturing&&actor.gesture==='nod'&&(part.name==='head'||part.name==='hair'||part.name.startsWith('eye')))y-=.055*Math.sin(time*.017);
@@ -273,6 +292,12 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     hideBeams();
     if(activeBeam&&time>=activeBeam.start&&time<activeBeam.until){
       const caster=byId.get(activeBeam.actorId);
+      const profile=activeBeam.profile||resolveRoleAnimation({kind:activeBeam.kind});
+      if(caster&&profile.motion==='wand-orbit'){
+        const casterPos=renderWalkPosition(caster.position,caster.approach,caster.travel,time);
+        wand.position.set(casterPos.x+.32,1.28+.16*Math.sin(time*.018),casterPos.z+.12);
+        wand.rotation.z=.45*Math.sin(time*.015);wand.visible=true;
+      }
       const casterWorld=caster&&renderWalkPosition(caster.position,caster.approach,caster.travel,time);
       let firstBeam=false;
       for(const [index,targetId] of activeBeam.targetIds.entries()){
@@ -284,6 +309,19 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         beamDir.subVectors(beamTo,beamFrom);
         const distance=beamDir.length();
         if(distance<=.25)continue;
+        if(profile.projectile==='spectral-wolf-head'){
+          const head=wolfHeads[index];
+          const progress=reducedMotion?.78:Math.min(1,Math.max(0,(time-activeBeam.start)/(activeBeam.until-activeBeam.start)));
+          head.position.copy(beamFrom).lerp(beamTo,progress);
+          head.lookAt(beamTo);head.scale.setScalar(qualityLowPower?.8:1.2);
+          head.visible=true;beam.visible=false;
+          if(!firstBeam){firstBeam=true;spellVfx.clear();}
+          continue;
+        }
+        if(profile.projectile==='pearl-shield'){
+          const dome=shieldDomes[index];dome.position.copy(beamTo);dome.visible=true;
+          dome.scale.setScalar(reducedMotion?1:1+.09*Math.sin(time*.012));
+        }
         beam.position.copy(beamFrom).add(beamTo).multiplyScalar(.5);
         beam.quaternion.setFromUnitVectors(beamUp,beamDir.multiplyScalar(1/distance));
         beam.scale.set(1,distance,1);
@@ -312,7 +350,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const item of effects)item.mesh.material.dispose();
     // Each geometry may be shared by multiple instanced meshes; dispose only once.
     for(const geo of new Set([...meshes.map(x=>x.mesh.geometry),...effects.map(x=>x.mesh.geometry)]))geo.dispose();
-    spellBeam.geometry.dispose();for(const beam of spellBeams)beam.material.dispose();spellVfx.dispose();
+    spellBeam.geometry.dispose();for(const beam of spellBeams)beam.material.dispose();
+    for(const head of wolfHeads){for(const part of head.children){part.geometry.dispose();part.material.dispose();}}
+    for(const dome of shieldDomes){dome.geometry.dispose();dome.material.dispose();}
+    wand.geometry.dispose();wand.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();
   }
   return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,pick,dispose,
@@ -322,6 +363,9 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     get spellVfxPearls(){return spellVfx.visiblePearls},
     get beamVisible(){return spellBeams.some(beam=>beam.visible)},
     get visibleBeamCount(){return spellBeams.filter(beam=>beam.visible).length},
+    get visibleWolfHeads(){return wolfHeads.filter(head=>head.visible).length},
+    get visibleShieldDomes(){return shieldDomes.filter(dome=>dome.visible).length},
+    get wandVisible(){return wand.visible},
     get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
       renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
       progress:travelProgress(a.travel,now),yaw:a.yaw,statusIds:[...a.statusIds],
