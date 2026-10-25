@@ -890,6 +890,13 @@ export class RoomDurableObject extends DurableObject {
     const {key,ballot,eligible}=await this.gallowsState(meta),command=String(body?.command||"");
     const target=normalizeLoginId(body?.targetId||body?.loginId);
     const now=Date.now();
+    if(command==="acknowledge"){
+      if(ballot.stage!=="resolved")return j({ok:false,error:"GALLOWS_VERDICT_NOT_READY"},409);
+      const updated={...ballot,acknowledgedAt:now,updatedAt:now};
+      await this.ctx.storage.put(key,updated);
+      this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(updated,meta,now),serverTime:now});
+      return j({ok:true,gallows:gallowsSnapshot(updated,meta,now)});
+    }
     if(meta.demo&&body?.source==="demo"&&["open","begin","resolve"].includes(command)){
       const c=await this.ctx.storage.get("demoClock");if(c&&projectDemoClock(c,now).remainingMs>0)return j({ok:false,error:"DEMO_TIMER_RUNNING"},409);
     }
@@ -1654,6 +1661,14 @@ export class RoomDurableObject extends DurableObject {
   }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
+    // Hold the adjudicated vote for 30 actual seconds or until explicit GM
+    // acknowledgment, including if Auto GM reaches the end of Day early.
+    if(p==="night"&&String(meta.cyclePhase||"")==="morning"&&n===Number(meta.cycleNight||0)+1&&!meta.demo){
+      const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
+      const at=Number(ballot?.resolvedAt||0);
+      if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+30000)
+        return {ok:false,error:"GALLOWS_VERDICT_PENDING",message:"Đang công bố kết quả Lên Giàn; GM xác nhận hoặc chờ đủ 30 giây."};
+    }
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
@@ -1743,7 +1758,16 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
-    if(cyclePhase==="morning"||cyclePhase==="day"){const deadline=Date.parse(meta.dayDeadlineAt||'');if(Number.isFinite(deadline))return deadline;const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
+    if(cyclePhase==="morning"||cyclePhase==="day"){
+      const deadline=Date.parse(meta.dayDeadlineAt||'');
+      const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
+        started=Date.parse(meta.cycleStartedAt||"");
+      const due=Number.isFinite(deadline)?deadline:sec&&Number.isFinite(started)?started+sec*1000:0;
+      if(meta.demo)return due;
+      const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
+      const at=Number(ballot?.resolvedAt||0);
+      return ballot?.stage==="resolved"&&!ballot.acknowledgedAt&&at>0?Math.max(due,at+30000):due;
+    }
     return 0
   }
   async scheduleRoomAlarm(meta=null){
