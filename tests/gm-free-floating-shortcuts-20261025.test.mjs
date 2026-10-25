@@ -154,9 +154,9 @@ test('Kéo icon iPhone thực sự di chuyển, lưu vị trí, không kích ho�
 
 
 test('🌈 Thống kê phe tính số quân thật từ Server, cập nhật người chết và hiện dự báo tham khảo',()=>{
-  const source=read('server-game/src/40-battle-and-timeline.part');
+  const source=read('server-game/src/30-village-and-setup.part');
   const from=source.indexOf('function battleRenderFactionStats(){');
-  const to=source.indexOf('function battleGallowsRender(phase){',from);
+  const to=source.indexOf('function initDemoPanel(){',from);
   assert.ok(from>0&&to>from,'Must test real GM faction renderer');
   const summary={innerHTML:''},forecast={textContent:''};
   const panel={hidden:false,querySelector:selector=>selector==='[data-faction-counts]'?summary:
