@@ -40,3 +40,19 @@
 - Browser Chrome/WebKit 6/12/20/30 Character **PASS**; Core E2E 2 client, quyền GM, reconnect, Role/Artifact tùy chỉnh **PASS**. Các FPS trên CI là **GPU phần mềm**, không đại diện iPhone vật lý.
 - **Rollback STAGING:** phiên bản GĐ29–31 `7ac53fa4-6449-49d0-a121-e82dd9572acc`. Chưa thử thao tác rollback thật vì triển khai hiện tại SUCCESS và không có lỗi.
 - **PR #487 Draft; không merge và không thay đổi Production/IPA/OTA/2D.** GĐ32 nghiệm thu trọn ván và GĐ34 nhánh tích hợp an toàn vẫn chưa đóng.
+
+## Bản tích hợp GĐ34 từ main — thực thi ngày 25/10/2026
+- Chủ dự án phê duyệt triển khai trọn gói đến Production **chỉ khi đạt các chốt an toàn**; không cần nghiệm thu giữa các lô. Trạng thái hiện tại **CHƯA PHÁT HÀNH CHÍNH THỨC**.
+- Tích hợp an toàn trên **PR duy nhất #487**: tạo merge commit `c379a30a040e232ac99cc44c90d298443a926512` với cả hai parent, lấy **toàn bộ tree main V3.226** (`7451fae4e01a2d73d4086544fd29c5b09f762721`) làm nền; chỉ ghép 60 tệp chuyên Arena 3D/kiểm thử/STAGING. GitHub compare main…PR sau tích hợp: **behind=0, ahead=245, 60 files**; PR base đã đổi thành main; không chạm main và phòng Production.
+- Khắc phục một kiểm thử cũ `arena3d-casting.test.mjs`: renderer hiện xác thực/chuẩn hoá lời gọi phép qua `normalizeRitualCue` trước `field.setCastingTurn`, không cấp trực tiếp response.
+- Xây dựng **Player Web 3D công khai**: `/village/arena-3d/player.html?room=<CODE>`, `player.mjs`, kết nối cùng Core và public room projection, xoay camera/Ngày-Đêm/reconnect/6–30 Character. Player tương tác lá Vai/Artifact, đề cử, vote bằng **iframe same-origin `/join/<CODE>`** của Player Web hiện hữu; không đưa GM bearer token hoặc dữ liệu Vai bí mật vào renderer 3D.
+- GM Arena liên kết cả Player Web Core và Player 3D theo mã phòng. Thêm unit test public secrecy 6/12/20/30 và Chrome/WebKit Player 3D browser smoke.
+- Cloudflare STAGING từng lỗi tải asset 10013 (đã kiểm tra là deploy thất bại), nên thêm retry **chỉ lỗi 10013, tối đa 3 lần**, vẫn bắt buộc chứng minh Cloudflare Worker mới 100% traffic và chạy E2E; tuyệt đối không coi retry là tự động PASS.
+- CI Arena trên nền main và test Player 3D/casting đã SUCCESS trước deploy mới. Đợt STAGING mới dùng message có marker riêng; test Chrome/WebKit/Core 30 phải có kết quả từ GitHub Actions mới coi là PASS.
+
+### Những việc chưa được xác nhận cho phát hành chính thức
+- Worker STAGING hiện vẫn sử dụng namespace biệt lập, giao diện GM còn nút tạo/lấp dữ liệu giả và nhãn STAGING; phải chuyển thành UX chính thức, không tự khởi tạo người chơi.
+- Player Web 3D dùng lớp 3D công khai cùng iframe Player Web Core 2D cho hành động; chưa phải UI tương tác 3D riêng hoàn toàn.
+- Chưa tạo Worker/Durable Objects kênh Production riêng cho Arena, chưa chuyển nút VÀO LÀNG trên Runtime OTA/IPA từ STAGING sang URL Production chính thức; chưa phát hành Player Web 3D cho người chơi thật.
+- Catalog animation xác nhận 28 role mặc định/26 action source tại thời điểm kiểm toán, không đủ bằng chứng phủ hết 63 role/44 Artifact và audio tên vai theo bản thu thật.
+- Chưa có đo dài phiên iPhone vật lý mới hoặc bằng chứng tất cả chốt Production CI/SHA-256/rollback sau lần phát hành cuối. **Giữ Draft #487 và không deploy Production trước khi đóng các mục trên.**
