@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.207';
+const VERSION='3.209';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -690,7 +690,11 @@ function applyV210Rules(s){
     {id:'audio_system_gallows_result_saved',name:'Lên Giàn · Kết quả Cứu',targetId:'audio_system_gallows_result_saved',fileName:'',verifiedBinary:false},
     // Morning announcement segments: uploaded clips are preserved during subsequent OTAs.
     {id:'audio_system_morning_expelled',name:'Đêm qua người chơi này đã bị đuổi khỏi làng',targetId:'audio_system_morning_expelled',fileName:'',verifiedBinary:false},
-    {id:'audio_system_morning_marked',name:'Đêm qua người chơi này đã bị đánh dấu',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_marked',name:'Sát Thủ đã chọn người chơi này',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_assassin_correct',name:'Sát Thủ · Chọn đúng',targetId:'audio_system_assassin_correct',fileName:'',verifiedBinary:false},
+    {id:'audio_system_assassin_wrong',name:'Sát Thủ · Chọn sai',targetId:'audio_system_assassin_wrong',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_maiden_wolf',name:'Thiếu Nữ chết vì thăm nhà Sói',targetId:'audio_system_morning_maiden_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_maiden_follow',name:'Thiếu Nữ chết theo người được thăm',targetId:'audio_system_morning_maiden_follow',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_frozen',name:'Người chơi bị đóng băng',targetId:'audio_system_morning_frozen',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_silenced',name:'Người chơi bị câm',targetId:'audio_system_morning_silenced',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
@@ -699,10 +703,10 @@ function applyV210Rules(s){
     ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
 
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_seer_wolf',name:'Tiên Tri · Người bạn soi là Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_seer_not_wolf',name:'Tiên Tri · Người bạn soi không phải là Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
     {id:'audio_system_time_up',name:'Hết giờ',targetId:'audio_system_time_up',fileName:'',verifiedBinary:false},
-    {id:'audio_system_aura_read',name:'Tiên Tri Hào Quang · Đọc Chức Năng',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
+    {id:'audio_system_aura_read',name:'Người bạn soi là',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
     {id:'audio_system_destroyer_role',name:'Kẻ Hủy Diệt · Kết Quả Soi Vai Trò',targetId:'audio_system_destroyer_role',fileName:'',verifiedBinary:false},
     {id:'audio_system_fox_wolf',name:'Hồ Ly · Có Sói',targetId:'audio_system_fox_wolf',fileName:'',verifiedBinary:false},
     {id:'audio_system_fox_no_wolf',name:'Hồ Ly · Không Có Sói',targetId:'audio_system_fox_no_wolf',fileName:'',verifiedBinary:false},

@@ -39,7 +39,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.207",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3207",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.209",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3209",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -890,6 +890,13 @@ export class RoomDurableObject extends DurableObject {
     const {key,ballot,eligible}=await this.gallowsState(meta),command=String(body?.command||"");
     const target=normalizeLoginId(body?.targetId||body?.loginId);
     const now=Date.now();
+    if(command==="acknowledge"){
+      if(ballot.stage!=="resolved")return j({ok:false,error:"GALLOWS_VERDICT_NOT_READY"},409);
+      const updated={...ballot,acknowledgedAt:now,updatedAt:now};
+      await this.ctx.storage.put(key,updated);
+      this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(updated,meta,now),serverTime:now});
+      return j({ok:true,gallows:gallowsSnapshot(updated,meta,now)});
+    }
     if(meta.demo&&body?.source==="demo"&&["open","begin","resolve"].includes(command)){
       const c=await this.ctx.storage.get("demoClock");if(c&&projectDemoClock(c,now).remainingMs>0)return j({ok:false,error:"DEMO_TIMER_RUNNING"},409);
     }
@@ -1654,6 +1661,14 @@ export class RoomDurableObject extends DurableObject {
   }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
+    // Hold the adjudicated vote for 30 actual seconds or until explicit GM
+    // acknowledgment, including if Auto GM reaches the end of Day early.
+    if(p==="night"&&String(meta.cyclePhase||"")==="morning"&&n===Number(meta.cycleNight||0)+1&&!meta.demo){
+      const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
+      const at=Number(ballot?.resolvedAt||0);
+      if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+30000)
+        return {ok:false,error:"GALLOWS_VERDICT_PENDING",message:"Đang công bố kết quả Lên Giàn; GM xác nhận hoặc chờ đủ 30 giây."};
+    }
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
@@ -1691,11 +1706,20 @@ export class RoomDurableObject extends DurableObject {
       const maidenVictims=resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
         interactions:rows,matchId:String(meta.matchId||""),night:n});
       for(const loginId of maidenVictims){
+        const visit=rows.find(row=>String(row?.actionId||"")==="action_visit_house"&&
+          normalizeLoginId(row?.actorId)===normalizeLoginId(loginId)&&
+          String(row?.matchId||"")===String(meta.matchId||"")&&Number(row?.night)===n);
+        const targetId=normalizeLoginId(visit?.loginId);
+        const assigned=(await this.ctx.storage.get("assignments"))||[];
+        const visited=assigned.find(row=>normalizeLoginId(row?.loginId)===targetId);
+        const faction=String(visited?.roleCard?.factionId||visited?.factionId||visited?.faction||"").toLowerCase();
+        const visitingWolf=String(visited?.roleId||"").includes("wolf")||faction==="wolf"||faction.includes("sói")||faction.includes("soi");
+        const maidenReason=visitingWolf?"Thiếu Nữ chết vì đến thăm nhà Sói.":"Thiếu Nữ chết vì người được thăm đã chết trong đêm.";
         const id="maiden-visit:"+String(meta.matchId)+":"+n+":"+loginId;
         if(rows.some(row=>String(row?.id||"")===id))continue;
         rows.push({id,clientEventId:id,type:"dead",loginId,matchId:String(meta.matchId||""),
           night:n,cycleKey:key,effectActive:true,actionId:"action_visit_house",
-          effectId:"effect_visit_house",effectName:"Thăm Nhà",message:"Thiếu Nữ chết vì quy tắc Thăm Nhà.",
+          effectId:"effect_visit_house",effectName:"Thăm Nhà",message:maidenReason,
           createdAt:now,source:"maiden-night-engine",status:"pending",response:null});
         await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,rows[rows.length-1]);
       }
@@ -1734,7 +1758,16 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
-    if(cyclePhase==="morning"||cyclePhase==="day"){const deadline=Date.parse(meta.dayDeadlineAt||'');if(Number.isFinite(deadline))return deadline;const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),started=Date.parse(meta.cycleStartedAt||"");return sec&&Number.isFinite(started)?started+sec*1000:0}
+    if(cyclePhase==="morning"||cyclePhase==="day"){
+      const deadline=Date.parse(meta.dayDeadlineAt||'');
+      const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
+        started=Date.parse(meta.cycleStartedAt||"");
+      const due=Number.isFinite(deadline)?deadline:sec&&Number.isFinite(started)?started+sec*1000:0;
+      if(meta.demo)return due;
+      const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
+      const at=Number(ballot?.resolvedAt||0);
+      return ballot?.stage==="resolved"&&!ballot.acknowledgedAt&&at>0?Math.max(due,at+30000):due;
+    }
     return 0
   }
   async scheduleRoomAlarm(meta=null){

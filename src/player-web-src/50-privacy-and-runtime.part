@@ -33,11 +33,24 @@ function resultFactionKey(v){
   const raw=String(v||'').trim();if(!raw)return'';const n=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();if(n.includes('phe dan')||n==='dan')return'dan';if(n.includes('phe soi')||n==='soi')return'soi';if(n.includes('phe ba')||n.includes('phe thu 3')||n.includes('phe thu ba')||n==='ba')return'ba';if(n.includes('phe khac')||n==='khac')return'khac';return n.replace(/[^a-z0-9]+/g,' ').trim();
 }
 function displayFaction(v){const k=resultFactionKey(v);if(k==='dan')return'Phe Dân';if(k==='soi')return'Phe Sói';if(k==='ba')return'Phe Ba';if(k==='khac')return'Phe Khác';return String(v||'').replace(/^[^A-Za-zÀ-ỹ0-9]+/u,'').trim()||'Phe chiến thắng'}
+
+function gmwwPrepareSeaVictory(){
+  if(!document.getElementById('gmwwSeaVictoryStyle')){
+    const style=document.createElement('style');style.id='gmwwSeaVictoryStyle';style.textContent="#resultOverlay.show{background:radial-gradient(circle at 50% 10%,rgba(23,130,149,.4),rgba(2,20,39,.89))!important;backdrop-filter:blur(9px)}\n#resultOverlay .gmww-sea-win-emblem{display:block;margin:0 auto 12px;font-size:37px;letter-spacing:.22em;color:#ffe4a4;text-shadow:0 0 22px #70e9e1;animation:gmww-sea-emblem 2.8s ease-in-out infinite}\n#resultOverlay h2{color:#ffe8ad!important;text-shadow:0 0 20px #44aabb88;line-height:1.35!important;font-weight:1000!important;letter-spacing:.065em}\n#resultOverlay p{color:#d3f8f5!important;letter-spacing:.035em}\n#resultOverlay[data-gmww-victory=\"true\"] h2{color:#fff2bd!important}\n#resultOverlay.show:before{content:\"\";position:absolute;pointer-events:none;inset:0;background:radial-gradient(circle at 20% 22%,#b6f9e322 2px,transparent 4px),radial-gradient(circle at 65% 60%,#c4f9e533 3px,transparent 5px),radial-gradient(circle at 82% 24%,#b6f9e522 2px,transparent 4px);background-size:150px 230px;animation:gmww-sea-ripples 11s linear infinite}\n@keyframes gmww-sea-emblem{0%,100%{opacity:.7;transform:translateY(3px)}50%{opacity:1;transform:translateY(-5px)}}\n@keyframes gmww-sea-ripples{from{background-position:0 0}to{background-position:0 -230px}}\n@media(prefers-reduced-motion:reduce){#resultOverlay .gmww-sea-win-emblem,#resultOverlay.show:before{animation:none!important}}";
+    document.head.append(style);
+  }
+  const overlay=document.getElementById('resultOverlay'),heading=overlay?.querySelector('h2');
+  if(heading&&!overlay.querySelector('.gmww-sea-win-emblem')){
+    const emblem=document.createElement('span');emblem.className='gmww-sea-win-emblem';
+    emblem.setAttribute('aria-hidden','true');emblem.textContent='✦ 🐚 🏆 ✦';heading.before(emblem);
+  }
+}
 function showResult(faction,matchId=''){
   const roomMatch=String(state.room?.matchId||''),currentMatch=String(state.role?.matchId||roomMatch||''),incoming=String(matchId||'');if(roomMatch&&incoming&&roomMatch!==incoming)return;
   const roleRows=Array.isArray(state.roles)&&state.roles.length?state.roles:(state.role?[state.role]:[]),playerFactions=roleRows.map(x=>{const pc=x?.roleCard||{};return pc.faction??x?.faction??x?.factionName??''}),winner=displayFaction(faction),hasWinner=!!resultFactionKey(faction),isWinner=hasWinner&&playerFactions.some(x=>resultFactionKey(x)===resultFactionKey(faction)),matchKey=resultMatchKey(incoming||currentMatch),key=matchKey+'|'+resultFactionKey(faction);
   if(dismissedResultKey()===matchKey||state.lastResultKey===key)return;state.lastResultKey=key;
   if(!hasWinner){closeResult().catch(()=>{});return}
+  gmwwPrepareSeaVictory();$('#resultOverlay').dataset.gmwwVictory=String(isWinner);
   const layer=$('#confettiLayer');layer.innerHTML='';if(isWinner){const colors=['#ffd66d','#ff6e6e','#7de2ff','#9bff92','#d18aff','#fff'];for(let i=0;i<80;i++){const c=document.createElement('i');c.className='confetti';c.style.left=Math.random()*100+'%';c.style.background=colors[i%colors.length];c.style.animationDuration=(2.2+Math.random()*2.8)+'s';c.style.animationDelay=(-Math.random()*4)+'s';c.style.setProperty('--drift',(-80+Math.random()*160)+'px');layer.appendChild(c)}}
   const resultSoundKey=key;if(resultSoundKey!==gmwwResultSoundKey){gmwwResultSoundKey=resultSoundKey;playVictorySound()}
   const h=$('#resultOverlay h2'),p=$('#resultOverlay p');if(hasWinner){h.textContent=(isWinner?'CHÚC MỪNG ':'')+winner.toUpperCase()+' THẮNG!';p.textContent=isWinner?'Bạn Đã Thắng':'Bạn Đã Thua'}else{h.textContent='VÁN CHƠI ĐÃ KẾT THÚC';p.textContent='Quản Trò đã kết thúc ván chơi.'}state.ready=true;state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};$('#resultOverlay').classList.add('show');clearTimeout(gmwwResultReturnTimer);gmwwResultReturnTimer=setTimeout(()=>{closeResult().catch(()=>{})},11000);

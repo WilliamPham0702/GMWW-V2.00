@@ -23,7 +23,7 @@ function harness(actionId='action_seer',roleId='role_seer'){
  const run=async(extra={})=>(await room.gmBattleAction({}, {clientEventId:'request',turnId:'turn',actorId:'seer',actionId,type:'effect_notice',targetIds:['seer'],revealTargetIds:['wolf'],matchId:'m',cycleKey:'n1',...extra})).json();
  return {run,data,room,meta};
 }
-for(const [action,role,targets,message] of [['action_seer','role_seer',['wolf'],'CÓ SÓI'],['action_aura_read','role_aura_seer',['wolf'],'wolf'],['action_compare_faction','role_spiritualist',['wolf','villager'],'KHÁC PHE']])test('real battle handler returns '+action+' for inspected targets, using private role data',async()=>{
+for(const [action,role,targets,message] of [['action_seer','role_seer',['wolf'],'Người bạn soi là Sói'],['action_aura_read','role_aura_seer',['wolf'],'wolf'],['action_compare_faction','role_spiritualist',['wolf','villager'],'KHÁC PHE']])test('real battle handler returns '+action+' for inspected targets, using private role data',async()=>{
  const h=harness(action,role),result=await h.run({revealTargetIds:targets});
  assert.equal(result.ok,true);assert.equal(result.revelation?.message,message);
  assert.equal(JSON.stringify(h.data.get('interactions')).includes('CÓ SÓI'),false,'result remains GM-private');

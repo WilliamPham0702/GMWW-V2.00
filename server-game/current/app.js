@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.207';
+const VERSION='3.209';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -690,7 +690,11 @@ function applyV210Rules(s){
     {id:'audio_system_gallows_result_saved',name:'Lên Giàn · Kết quả Cứu',targetId:'audio_system_gallows_result_saved',fileName:'',verifiedBinary:false},
     // Morning announcement segments: uploaded clips are preserved during subsequent OTAs.
     {id:'audio_system_morning_expelled',name:'Đêm qua người chơi này đã bị đuổi khỏi làng',targetId:'audio_system_morning_expelled',fileName:'',verifiedBinary:false},
-    {id:'audio_system_morning_marked',name:'Đêm qua người chơi này đã bị đánh dấu',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_marked',name:'Sát Thủ đã chọn người chơi này',targetId:'audio_system_morning_marked',fileName:'',verifiedBinary:false},
+    {id:'audio_system_assassin_correct',name:'Sát Thủ · Chọn đúng',targetId:'audio_system_assassin_correct',fileName:'',verifiedBinary:false},
+    {id:'audio_system_assassin_wrong',name:'Sát Thủ · Chọn sai',targetId:'audio_system_assassin_wrong',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_maiden_wolf',name:'Thiếu Nữ chết vì thăm nhà Sói',targetId:'audio_system_morning_maiden_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_maiden_follow',name:'Thiếu Nữ chết theo người được thăm',targetId:'audio_system_morning_maiden_follow',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_frozen',name:'Người chơi bị đóng băng',targetId:'audio_system_morning_frozen',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_silenced',name:'Người chơi bị câm',targetId:'audio_system_morning_silenced',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
@@ -699,10 +703,10 @@ function applyV210Rules(s){
     ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
 
     {id:'audio_system_early_artifacts',name:'Artifact đầu ván',targetId:'audio_system_early_artifacts',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_wolf',name:'Kết quả: Có Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
-    {id:'audio_system_seer_not_wolf',name:'Kết quả: Không phải Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_seer_wolf',name:'Tiên Tri · Người bạn soi là Sói',targetId:'audio_system_seer_wolf',fileName:'',verifiedBinary:false},
+    {id:'audio_system_seer_not_wolf',name:'Tiên Tri · Người bạn soi không phải là Sói',targetId:'audio_system_seer_not_wolf',fileName:'',verifiedBinary:false},
     {id:'audio_system_time_up',name:'Hết giờ',targetId:'audio_system_time_up',fileName:'',verifiedBinary:false},
-    {id:'audio_system_aura_read',name:'Tiên Tri Hào Quang · Đọc Chức Năng',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
+    {id:'audio_system_aura_read',name:'Người bạn soi là',targetId:'audio_system_aura_read',fileName:'',verifiedBinary:false},
     {id:'audio_system_destroyer_role',name:'Kẻ Hủy Diệt · Kết Quả Soi Vai Trò',targetId:'audio_system_destroyer_role',fileName:'',verifiedBinary:false},
     {id:'audio_system_fox_wolf',name:'Hồ Ly · Có Sói',targetId:'audio_system_fox_wolf',fileName:'',verifiedBinary:false},
     {id:'audio_system_fox_no_wolf',name:'Hồ Ly · Không Có Sói',targetId:'audio_system_fox_no_wolf',fileName:'',verifiedBinary:false},
@@ -1137,10 +1141,104 @@ function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
 // Original Old Witch voice from V2.16; bundled with the OTA application.
 const gmwwBundledLegacyAudio={ "ROLE:source-18":{type:"audio/mpeg",base64:"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"} };
 function bundledAudioBlob(a){const src=a?.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]||gmwwBundledLegacyAudio[a.sourceKey]);if(!src?.base64)return null;try{const raw=atob(src.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);return new Blob([u8],{type:src.type||'audio/mpeg'})}catch(_){return null}}
-async function audioHasFile(a){if(a?.sourceKey&&window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64)return true;if(a?.url)return true;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);return rec?.blob instanceof Blob}
-async function renderAudio(){const list=state.audio[audioKind]||[];const resolved=await Promise.all(list.map(async a=>({a,ok:await audioHasFile(a)})));$('#audioGrid').innerHTML='<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+resolved.map(({a,ok})=>{const file=String(a.fileName||'').trim(),meta=file?(file+' • '+(ok?'OK':'Rỗng')):(ok?'OK':'Rỗng');return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small></div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>'}).join('');
+async function audioHasFile(a){if(a?.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64||gmwwBundledLegacyAudio[a.sourceKey]?.base64))return true;if(a?.url)return true;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);return rec?.blob instanceof Blob}
+
+function gmwwAudioHasNameCut(a){return Number.isFinite(Number(a?.roleNameEnd))&&Number(a.roleNameEnd)>Number(a?.roleNameStart||0)}
+async function gmwwOpenAudioNameEditor(a){
+  if(!a||audioKind!=='cards')return;
+  const rec=await dbGet(audioBlobKey('cards',a.id)).catch(()=>null);
+  const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(a);
+  const ownBlob=!!blob,src=blob?URL.createObjectURL(blob):String(a.url||'');
+  if(!src){alert('Vai trò '+a.name+' chưa được gắn file Audio. Vui lòng tải file trước khi cắt Tên.');return}
+  const overlay=document.createElement('div');overlay.className='gmww-audio-cut-backdrop';
+  overlay.innerHTML='<section class="gmww-audio-cut-dialog" role="dialog" aria-modal="true" aria-label="Chọn đoạn tên vai trò">'+
+    '<h3>✂ CẮT TÊN: '+esc(a.name)+'</h3><p>Chọn đoạn chỉ đọc tên vai trò, bỏ phần “ơi dậy đi”. Chạm đúp vào ô Tên để chỉnh lại.</p>'+
+    '<canvas width="520" height="95" aria-label="Sóng âm thanh"></canvas>'+
+    '<div class="gmww-audio-cut-values"><label>Bắt đầu <output id="gmwwNameStartLabel"></output><input type="range" id="gmwwNameStart" min="0" max="30" step="0.05"></label>'+
+    '<label>Kết thúc <output id="gmwwNameEndLabel"></output><input type="range" id="gmwwNameEnd" min="0.05" max="30" step="0.05"></label></div>'+
+    '<div class="gmww-audio-cut-actions"><button type="button" data-preview>▶ NGHE ĐOẠN TÊN</button><button type="button" data-save>LƯU ĐOẠN TÊN</button><button type="button" data-close>ĐÓNG</button></div>'+
+    '</section>';
+  document.body.append(overlay);
+  const audio=new Audio(src);audio.preload='metadata';
+  const $cut=id=>overlay.querySelector('#'+id),from=$cut('gmwwNameStart'),to=$cut('gmwwNameEnd');
+  let duration=30;
+  const drawSelection=()=>{
+    $cut('gmwwNameStartLabel').textContent=Number(from.value).toFixed(2)+'s';
+    $cut('gmwwNameEndLabel').textContent=Number(to.value).toFixed(2)+'s';
+    const canvas=overlay.querySelector('canvas'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='#17475b';ctx.fillRect(0,0,w,h);
+    if(canvas._peaks){ctx.fillStyle='#67d4df';canvas._peaks.forEach((v,i)=>ctx.fillRect(i*w/canvas._peaks.length,(1-v)*h/2,Math.max(1,w/canvas._peaks.length),h*v));}
+    ctx.fillStyle='rgba(255,213,92,.28)';ctx.fillRect(Number(from.value)/duration*w,0,Math.max(2,(Number(to.value)-Number(from.value))/duration*w),h);
+    ctx.strokeStyle='#ffdd78';ctx.lineWidth=2;
+    [Number(from.value),Number(to.value)].forEach(v=>{ctx.beginPath();ctx.moveTo(v/duration*w,0);ctx.lineTo(v/duration*w,h);ctx.stroke()});
+  };
+  const clamp=changed=>{
+    if(changed==='start'&&Number(from.value)>=Number(to.value))to.value=Math.min(duration,Number(from.value)+0.05);
+    if(changed==='end'&&Number(to.value)<=Number(from.value))from.value=Math.max(0,Number(to.value)-0.05);
+    drawSelection();
+  };
+  from.value=String(Math.max(0,Number(a.roleNameStart)||0));
+  to.value=String(Math.max(Number(from.value)+.05,Number(a.roleNameEnd)||5));
+  from.addEventListener('input',()=>clamp('start'));to.addEventListener('input',()=>clamp('end'));
+  audio.onloadedmetadata=()=>{
+    if(Number.isFinite(audio.duration)&&audio.duration>.05)duration=audio.duration;
+    from.max=String(duration);to.max=String(duration);
+    from.value=String(Math.min(Number(from.value),duration-.05));
+    to.value=String(Math.min(Number(to.value),duration));
+    drawSelection();
+  };
+  audio.ontimeupdate=()=>{if(audio.currentTime>=Number(to.value))audio.pause()};
+  audio.onerror=()=>{overlay.querySelector('[data-preview]').textContent='⚠ Audio không thể phát';};
+  const ac=globalThis.AudioContext||globalThis.webkitAudioContext;
+  if(ac){(async()=>{let ctx;try{
+    ctx=new ac();
+    const bytes=blob?await blob.arrayBuffer():await (await fetch(src,{mode:'cors'})).arrayBuffer();
+    const decoded=await ctx.decodeAudioData(bytes),data=decoded.getChannelData(0),count=130,chunk=Math.max(1,Math.floor(data.length/count));
+    overlay.querySelector('canvas')._peaks=Array.from({length:count},(_,i)=>{let max=0;for(let j=i*chunk;j<Math.min(data.length,(i+1)*chunk);j+=8)max=Math.max(max,Math.abs(data[j]));return max});
+    if(overlay.isConnected)drawSelection();
+   }catch(_){ /* Audio remains editable even if remote CORS blocks waveform decoding. */ }
+   finally{if(ctx)void ctx.close().catch(()=>{})}
+  })();}
+  drawSelection();
+  const close=()=>{try{audio.pause();audio.removeAttribute('src');audio.load()}catch{}if(ownBlob)URL.revokeObjectURL(src);overlay.remove()};
+  overlay.querySelector('[data-close]').onclick=close;
+  overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
+  overlay.querySelector('[data-preview]').onclick=()=>{
+    try{audio.pause();audio.currentTime=Number(from.value);void audio.play().catch(()=>alert('Không thể phát đoạn tên.'))}catch{alert('Không thể phát đoạn tên.')}
+  };
+  overlay.querySelector('[data-save]').onclick=()=>{
+    if(Number(to.value)<=Number(from.value)){alert('Điểm kết thúc phải sau điểm bắt đầu.');return}
+    a.roleNameStart=Number(from.value);a.roleNameEnd=Number(to.value);
+    saveState();close();renderAudio();
+  };
+}
+async function renderAudio(){
+  const list=state.audio[audioKind]||[];
+  const resolved=await Promise.all(list.map(async a=>({a,ok:await audioHasFile(a)})));
+  const missing=audioKind==='cards'?(state.cards||[]).filter(card=>
+    !resolved.some(({a,ok})=>ok&&String(a.targetId||'')===String(card.id||''))):[];
+  const missingHtml=audioKind==='cards'?'<div class="gmww-missing-role-audio"><b>Vai trò chưa có liên kết Audio hoạt động ('+missing.length+')</b>'+
+    '<p>'+ (missing.length?missing.map(card=>esc(card.name)).join(' · '):'Tất cả vai trò trong Thư viện đều đã có nguồn Audio.')+
+    '</p><small>Danh sách đọc từ dữ liệu Thư viện trên máy này; chỉ đánh dấu có file thực hoặc URL, không tính tên file rỗng.</small></div>':'';
+  $('#audioGrid').innerHTML=missingHtml+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
+    resolved.map(({a,ok})=>{
+      const file=String(a.fileName||'').trim(),meta=file?(file+' • '+(ok?'Có Audio':'Thiếu Audio')):(ok?'Có Audio':'Thiếu Audio');
+      const nameBox=audioKind==='cards'?
+        '<button type="button" class="audio-name-cut" data-audio-name title="Nhấn đúp để chọn đoạn âm thanh chỉ đọc tên">Tên '+(gmwwAudioHasNameCut(a)?Number(a.roleNameStart||0).toFixed(1)+'–'+Number(a.roleNameEnd).toFixed(1)+'s':'· Chưa cắt')+'</button>':'';
+      return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
+    }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
-  $$('[data-audio-id]').forEach(row=>{const a=list.find(x=>String(x.id)===String(row.dataset.audioId));$('[data-audio-play]',row).onclick=()=>playAudioItem(a);$('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);$('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a)});
+  $$('[data-audio-id]').forEach(row=>{
+    const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
+    $('[data-audio-play]',row).onclick=()=>playAudioItem(a);
+    $('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);
+    $('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a);
+    const button=$('[data-audio-name]',row);
+    if(button){
+      let lastTap=0;button.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();lastTap=0;void gmwwOpenAudioNameEditor(a)});
+      button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
+    }
+  });
 }
 async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
 function replaceAudioItem(a){if(!a)return;const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;document.body.appendChild(i);i.onchange=async()=>{const f=i.files?.[0];i.remove();if(!f)return;await dbPut(audioBlobKey(audioKind,a.id),f);battleInvalidateAudioCache(audioKind,a.id);a.fileName=f.name;a.verifiedBinary=true;delete a.status;saveState();renderAudio()};i.click()}
@@ -1378,7 +1476,8 @@ function gmwwReleaseNotesList(manifest){
   const notes=Array.isArray(manifest?.releaseNotes)
     ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean):[];
   const current=gmwwRuntimeVersion(), latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
-  if(!latest||gmwwVersionCompare(latest,current)<=0)return ['Không có thay đổi mới so với phiên bản đang sử dụng.'];
+  if(!latest)return ['Chưa có thông tin phiên bản.'];
+  if(gmwwVersionCompare(latest,current)<=0)return notes.length?notes.slice(0,6):['Phiên bản V'+latest+' đang sử dụng; chưa có ghi chú cập nhật.'];
   const previous=String(manifest?.previousVersion||manifest?.fromVersion||'').replace(/^V/i,'');
   if(previous&&gmwwVersionCompare(previous,current)!==0)return ['Phiên bản V'+latest+' có bản cập nhật mới. Chưa có ghi chú riêng cho bước nâng cấp từ V'+current+'.'];
   return notes.length?notes.slice(0,6):['Có bản cập nhật V'+latest+'. Chưa có ghi chú thay đổi riêng cho phiên bản này.'];
@@ -2602,7 +2701,7 @@ function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)=
 // Battle audio must be tied to a real action or wake-up event, not just a
 // library Preview button. IndexedDB tracks user-supplied audio per category.
 const battleAudioReady=new Map(),battleAudioLoading=new Map();
-let battleActiveAudio=null,battleAudioLast={key:'',at:0},battleAudioRequestId=0;
+let battleActiveAudio=null,battleAudioLast={key:'',at:0,turn:''},battleAudioRequestId=0;
 function battleInvalidateAudioCache(kind,id){
   const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
@@ -2653,7 +2752,7 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
-async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId){
+async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId,excerpt=null){
   const ctx=battleUnlockedAudioContext;
   if(!ctx||ctx.state!=='running')return false;
   try{
@@ -2662,12 +2761,14 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     if(requestId!==battleAudioRequestId)return true;
     const source=ctx.createBufferSource();source.buffer=buffer;
     globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
-    source.connect(ctx.destination);source.start();
+    source.connect(ctx.destination);
+    if(excerpt){const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0)),end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);source.start(0,start,Math.max(.02,end-start));}
+    else source.start();
     return true;
   }catch(_){return false}
 }
 async function battleOpenGallowsAudioUpload(id){
-  const allowed=['audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
+  const allowed=['audio_system_gallows_day_long','audio_system_gallows_vote_result','audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
   if(!allowed.includes(id))return;
   document.querySelector('.nav[data-page="library"]')?.click();
   document.querySelector('.libtab[data-lib="audio"]')?.click();
@@ -2681,8 +2782,8 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   const row=battleFindAudio(kind,targetId,name);
   const key=kind+':'+(row?.id||targetId||name),now=Date.now();
-  if(!showError&&battleAudioLast.key===key&&now-battleAudioLast.at<500){onFinished?.();return false}
-  battleAudioLast={key,at:now};
+  if(!showError&&battleAudioLast.key===key&&battleAudioLast.turn===String(battleState?.key||'')&&now-battleAudioLast.at<350){onFinished?.();return false}
+  battleAudioLast={key,at:now,turn:String(battleState?.key||'')};
   const requestId=++battleAudioRequestId;
   if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
   if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
@@ -2694,23 +2795,43 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const src=ready||await battleWarmAudio(kind,row);
   if(requestId!==battleAudioRequestId){onFinished?.();return false}
   if(!src)return battleSpeakCue(name,showError,onFinished);
+  // Exact name clip: prefer decoded WebAudio with explicit offset and duration.
+  // WKWebView HTMLAudioElement timeupdate is not guaranteed to fire while hidden.
+  const nameStart=Math.max(0,Number(row.roleNameStart)||0);
+  const nameEnd=Number(row.roleNameEnd);
+  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:Number.isFinite(nameEnd)&&nameEnd>nameStart?nameEnd:nameStart+5}:null;
+  if(requestedCut&&battleUnlockedAudioContext?.state==='running'){
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
+  }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
-  battleActiveAudio=player;player.onended=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};player.onerror=()=>{if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
-  // V1.11 used a saved role-name cut point and played only that initial segment.
-  // Prefer that marker when present, otherwise a safe four-second excerpt.
-  const excerptSec=Number(maxSeconds)>0?Math.max(3,Math.min(5,Number(row.roleNameEnd)||Number(maxSeconds))):0;
-  if(excerptSec)player.ontimeupdate=()=>{
-    if(battleActiveAudio===player&&player.currentTime>=excerptSec){
-      player.ontimeupdate=null;try{player.pause()}catch{}
-      player.onended?.();
-    }
-  };
+  let cutTimer=null,finished=false;
+  const finish=()=>{if(finished)return;finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  battleActiveAudio=player;player.onended=finish;player.onerror=finish;
+  // Named V1.11 segment: the editor stores its start/end on the EXISTING
+  // role wake-up audio, without duplicating binary data or changing its source.
+  const excerpt=requestedCut;
+  if(excerpt){
+    const stop=()=>{if(finished||battleActiveAudio!==player)return;
+      try{player.pause()}catch(_){}finish()};
+    const seek=()=>{const end=Math.min(Number.isFinite(player.duration)?player.duration:excerpt.end,excerpt.end);
+      if(excerpt.start>=end){stop();return}
+      try{if(Math.abs(player.currentTime-excerpt.start)>.07)player.currentTime=excerpt.start}catch(_){}
+    };
+    player.onloadedmetadata=seek;
+    player.addEventListener('playing',()=>{
+      if(cutTimer!==null)clearTimeout(cutTimer);
+      cutTimer=setTimeout(stop,Math.max(100,Math.ceil((excerpt.end-excerpt.start)*1000)+120));
+    },{once:true});
+    player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
+    if(player.readyState>=1)seek();
+  }
   try{await player.play();return true}
   catch(err){
     // WebAudio was unlocked synchronously during the original finger gesture;
     // it can start the confirmed turn cue even after the Durable Object round trip.
-    if(await battlePlayWebAudioFallback(src,onFinished,requestId))return true;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,excerpt))return true;
     if(showError)playFlashError('iPhone đã chặn phát tự động. Chạm biểu tượng 🔊 để phát lại Audio.');
     onFinished?.();
     return false
@@ -2774,12 +2895,11 @@ function battleAudioForTurn(turn,auto=false){
     }
   }
   if(auto){
+    // Start on the current user activation: awaiting IndexedDB here suppressed
+    // WKWebView playback on Phù Thuỷ Già and the first role of later nights.
     const expectedKey=battleState.key;
-    void (async()=>{
-      if(audio)await battleWarmAudio(kind,audio);
-      if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+    if(battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night')
       battlePlayTurnAudioSequence(cues,expectedKey);
-    })().catch(error=>console.warn('GMWW first-turn audio:',error));
   }
 }
 function battleReplayAudio(){
@@ -4077,6 +4197,10 @@ async function advancePlayPhase(){
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
   if(playSceneState.step==='deal'){if(playDeliveryProgress().success){playSceneState.step='battle';savePlayScene();await advancePlayPhase();return}await playDealRoles();return}
   if(playSceneState.step!=='battle'){advancePlaySetup(1);return}
+  const verdict=playSceneRuntime.gallows;
+  if(playSceneState.phase==='day'&&verdict?.stage==='resolved'&&!battleState.gallowsVerdictAcknowledged){
+    battleRenderGallowsVerdict(verdict,'resolved','day');return;
+  }
   playSetBusy(true);
   try{
     let room=playSceneRuntime.room;
@@ -4149,6 +4273,9 @@ function gmHapticFeedback(){
 }
 function demoConfirmedFeedback(){
   gmHapticFeedback();
+  // Gallows nominations and thumb votes may be numerous; no repeated OK cue.
+  if(playSceneState.phase==='day'&&['nominating','selecting','voting','closed','resolved']
+    .includes(String(playSceneRuntime.gallows?.stage||'')))return;
   if(!playAudioMuted())void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
 }
 
@@ -4743,7 +4870,7 @@ function battleMorningRows(){
   const entries=Array.isArray(playSceneRuntime.villageHistory)?playSceneRuntime.villageHistory:
     Array.isArray(playSceneRuntime.recentInteractions)?playSceneRuntime.recentInteractions:[];
   const labels={dead:'đã chết',expelled:'đã bị đuổi khỏi làng',
-    assassin_mark:'đã bị đánh dấu',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
+    assassin_mark:'đã bị Sát Thủ chọn',marked:'đã bị đánh dấu',frozen:'đã bị đóng băng',
     silenced:'đã bị câm',infected:'đã bị nhiễm bệnh',protected:'được bảo vệ',
     saved:'đã được cứu',healed:'đã được hồi phục',revived:'đã hồi sinh',
     blessed:'đã được chúc phúc',shielded:'đã nhận khiên',poisoned:'đã bị đầu độc'};
@@ -4753,15 +4880,28 @@ function battleMorningRows(){
     if(!entry||Number(entry.night)!==night||
        (entry.matchId&&String(entry.matchId)!==match)||
        (entry.effectActive===false&&/UNDO|RESTORE|REVERT|GM_CLEAR/i.test(String(entry.expiredReason||''))))continue;
-    const isDay=['gallows','day-action'].includes(String(entry.source||''))||['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
-    if(isDay!==(timeOfDay==='day'))continue;
-    const type=String(entry.type||''),key=type==='status'?String(entry.statusId||'status'):type;
+    const type=String(entry.type||'');
+    // The Assassin mark is recorded at NIGHT; its verified response is a DAY
+    // event and must be announced once as a verdict, without leaking the GM sign.
+    const resolvedAssassin=type==='assassin_mark'&&entry.status==='responded'&&
+      ['👍','👎'].includes(String(entry.response||''))&&
+      ['👍','👎'].includes(String(entry.gmChoice||''));
+    const isDay=['gallows','day-action'].includes(String(entry.source||''))||
+      ['morning','day'].includes(String(entry.cyclePhase||entry.phase||'').toLowerCase());
+    if(timeOfDay==='day'?!(isDay||resolvedAssassin):isDay)continue;
+    const assassinCorrect=resolvedAssassin&&entry.response===entry.gmChoice;
+    const key=resolvedAssassin&&timeOfDay==='day'?(assassinCorrect?'assassin_correct':'assassin_wrong'):
+      (type==='status'?String(entry.statusId||'status'):type);
     if(!key||['pending','responded'].includes(key))continue;
     const id=String(entry.id||entry.clientEventId||'')||key+':'+String(entry.loginId||'')+':'+String(entry.createdAt||'');
     if(seen.has(id))continue;seen.add(id);
     const loginId=String(entry.loginId||entry.playerId||'').replace(/^member:/,'');
     const member=loginId?battleMember(loginId):null;
-    const rawLabel=labels[key]||String(entry.effectName||entry.message||entry.actionId||key).trim();
+    const maidenDeath=type==='dead'&&(String(entry.source||'')==='maiden-night-engine'||String(entry.actionId||'')==='action_visit_house');
+    const rawLabel=key==='assassin_correct'?'đã chọn đúng dấu Sát Thủ · SỐNG':
+      key==='assassin_wrong'?'đã chọn sai dấu Sát Thủ · CHẾT':
+      maidenDeath?String(entry.message||'Thiếu Nữ đã chết vì Thăm Nhà').replace(/^Thiếu Nữ\s*/i,''):
+      labels[key]||String(entry.effectName||entry.message||entry.actionId||key).trim();
     const targetRole=(playSceneRuntime.assignments||[]).find(a=>String(a.loginId)===loginId);
     const sourceId=String(entry.actorId||entry.sourceActorId||entry.causedBy||'').replace(/^member:/,'');
     const sourceMember=sourceId?battleMember(sourceId):null;
@@ -4770,22 +4910,32 @@ function battleMorningRows(){
     const role=String(targetRole?.roleName||targetRole?.roleCard?.name||targetRole?.roleId||'Vai Trò');
     const actor=sourceId?(String(sourceRole?.roleName||sourceRole?.roleCard?.name||sourceRole?.roleId||'Vai Trò')+
       ' ('+String(sourceMember?.displayName||sourceId)+')'):'';
-    const isNegative=negative.has(key);
-    rows.push({id,kind:key,name:targetName,role,actor,label:rawLabel,negative:isNegative,
-      at:String(entry.createdAt||''),day:isDay});
+    const isNegative=negative.has(key)||key==='assassin_wrong';
+    const badAction=(type==='dead'&&!maidenDeath&&
+      /wolf_bite|kill|poison|assassin_mark|stab|exile/i.test(String(entry.actionId||'')+' '+String(entry.effectId||'')))||
+      (type==='poisoned'&&!!entry.actionId);
+    rows.push({id,kind:key,name:targetName,role,actor,label:rawLabel,negative:isNegative,badAction,
+      at:String(entry.respondedAt||entry.createdAt||''),day:isDay||resolvedAssassin});
   }
-  return rows.sort((a,b)=>Number(b.negative)-Number(a.negative)||a.at.localeCompare(b.at));
+  return rows.sort((a,b)=>Number(b.negative)-Number(a.negative)||b.at.localeCompare(a.at));
 }
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
+  queue.push(['audio_system_gallows_day_long','Ngày dài rồi']);
   queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
   queue.push(['audio_system_morning_number_'+dead,String(dead)]);
   queue.push(['audio_system_morning_dead_noun','người chết']);
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')
-      queue.push(['audio_system_morning_marked',row.name+' đã bị đánh dấu']);
+      queue.push(['audio_system_morning_marked',row.name+' bị Sát Thủ chọn']);
+    else if(row.kind==='dead'&&row.role==='Thiếu Nữ')
+      queue.push([/nhà Sói/i.test(row.label)?'audio_system_morning_maiden_wolf':'audio_system_morning_maiden_follow',row.name+' '+row.label]);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
+  }
+  for(const row of battleMorningRows(Math.max(1,Number(playSceneState.night)||1),'day')){
+    if(row.kind==='assassin_correct')queue.push(['audio_system_assassin_correct','Chọn đúng']);
+    else if(row.kind==='assassin_wrong')queue.push(['audio_system_assassin_wrong','Chọn sai']);
   }
   let index=0;
   const next=()=>{
@@ -4823,12 +4973,14 @@ function battleMorningShow(){
   const appendRows=(host,notices)=>{
     for(const row of notices){
       const line=document.createElement('p'),name=document.createElement('strong');
-      line.className='battle-morning-line'+(row.negative?' is-critical':'');
+      line.className='battle-morning-line'+(row.negative?' is-critical':'')+(row.badAction?' is-bad-action':'');
       name.textContent=row.name+' ('+row.role+')';
       const action=String(row.label||'').trim();
-      const sentence=row.negative&&action.startsWith('đã bị ')?' đã bị ('+action.slice(6)+')':
-        row.negative&&!action.startsWith('đã ')?' đã bị ('+action+')':' '+action;
-      line.append(name,document.createTextNode(sentence+(row.actor?' bởi '+row.actor:'')+'.'));
+      const sentence=action.startsWith('đã ')?' '+action:
+        action.startsWith('chết ')||action.startsWith('đã chết ')?' '+action:
+        ' '+action;
+      const wording=sentence+(row.actor?' bởi '+row.actor:'');
+      line.append(name,document.createTextNode(wording+(wording.trim().endsWith('.')?'':'.')));
       host.append(line);
     }
   };
@@ -4856,6 +5008,17 @@ function battleMorningShow(){
   if(battleState.morningAudioKey!==key){
     battleState.morningAudioKey=key;battleMorningPlayAudio();
   }
+  // Assassin responses arrive after the morning announcement. Speak each
+  // committed verdict exactly once when GM sync sees the response.
+  const heard=battleState.morningVerdictsHeard||(battleState.morningVerdictsHeard=new Set());
+  for(const row of battleMorningRows(currentNight,'day')){
+    if(!['assassin_correct','assassin_wrong'].includes(row.kind))continue;
+    const verdictId=key+':'+row.id+':'+row.kind;
+    if(heard.has(verdictId))continue;
+    heard.add(verdictId);
+    const cue=row.kind==='assassin_correct'?'audio_system_assassin_correct':'audio_system_assassin_wrong';
+    void battlePlayConfiguredAudio('system',cue,row.kind==='assassin_correct'?'Chọn đúng':'Chọn sai');
+  }
 }
 function battleDivinationSystemAudioCue(actionId,result){
   const action=String(actionId||'');
@@ -4875,26 +5038,17 @@ function battlePresentRevelation(actionId,revelation){
   battleShowResultPopup('',String(revelation.message||''),true);
   const cue=battleDivinationSystemAudioCue(actionId,revelation);
   if(actionId==='action_compare_faction'){
-    // Linked verdict clip, then only the opening 3–5 seconds of each selected
-    // role's already-linked wake-up audio. This is GM-only private information.
-    const names=(Array.isArray(revelation.targets)?revelation.targets:[])
-      .filter(t=>t?.roleId&&t?.roleName).slice(0,2);
-    const next=i=>{
-      if(i>=names.length)return;
-      const target=names[i];
-      void battlePlayConfiguredAudio('cards',target.roleId,target.roleName,false,()=>next(i+1),4);
-    };
-    if(names.length===2){
-      if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>next(0));
-      else next(0);
-    }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+    // Spiritualist knows only SAME/DIFFERENT; never play or speak roles.
+    if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
   }else if(actionId==='action_aura_read'){
-    const roleName=String(revelation?.targets?.[0]?.roleName||revelation.message||'').trim();
-    if(!playAudioMuted()&&roleName){
-      if(cue&&battleFindAudio('system',cue,revelation.message))
-        void battlePlayConfiguredAudio('system',cue,revelation.message,false,()=>battleSpeakCue(roleName));
-      else battleSpeakCue(roleName);
-    }
+    // V1.11: “Người bạn soi là” + the saved NAME-only cut from the role
+    // wake-up audio. No full “ơi dậy đi” and no competing speech synthesis.
+    const target=revelation?.targets?.[0]||{};
+    const roleName=String(target.roleName||revelation.message||'').trim();
+    const playName=()=>{if(roleName)void battlePlayConfiguredAudio('cards',target.roleId||'',roleName,false,null,4)};
+    if(cue&&battleFindAudio('system',cue,revelation.message))
+      void battlePlayConfiguredAudio('system',cue,'Người bạn soi là',false,playName);
+    else void battleSpeakCue('Người bạn soi là',false,playName);
   }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
 }
 async function battleWakeupToDay(expectedKey){
@@ -5158,6 +5312,18 @@ function battleMarkPlayers(){
       if(voteMark.textContent!==vote)voteMark.textContent=vote;
       if(labels.firstElementChild!==voteMark)labels.prepend(voteMark);
     }else voteMark?.remove();
+    // Server-verified public nominations: ornamental pearl number above each Character.
+    const tally=playSceneState.phase==='day'&&['nominating','selecting','voting','closed'].includes(String(playSceneRuntime.gallows?.stage||''))?
+      (playSceneRuntime.gallows?.nominationTotals||[]).find(x=>String(x.loginId)===id):null;
+    const count=Math.max(0,Math.trunc(Number(tally?.votes)||0));
+    let countMark=labels?.querySelector(':scope>.battle-nomination-pearl');
+    if(count>0&&labels){
+      if(!countMark){countMark=document.createElement('span');countMark.className='battle-nomination-pearl';
+        countMark.setAttribute('aria-label','Số phiếu đề cử')}
+      countMark.textContent='✦ '+count;
+      countMark.title='Được đề cử '+count+' phiếu';
+      if(labels.firstElementChild!==countMark)labels.prepend(countMark);
+    }else countMark?.remove();
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
@@ -5186,6 +5352,89 @@ function battleGallowsTick(){
     battleState.gallowsClosedShown=true;battleGallowsRender('day');
   }
 }
+
+let battleVerdictTimer=null;
+async function battleGallowsAcceptVerdict(expected){
+  if(expected!==battleState.gallowsVerdictKey||battleState.gallowsVerdictAcknowledged||
+     battleState.gallowsVerdictAckPending)return;
+  if(playSceneState.step!=='battle'||playSceneState.phase!=='day')return;
+  battleState.gallowsVerdictAckPending=true;
+  try{
+    const done=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command:'acknowledge'})});
+    if(done?.ok!==true)throw Error(done?.message||done?.error||'Server chưa xác nhận phán quyết.');
+    battleState.gallowsVerdictAcknowledged=true;
+    const notice=document.getElementById('battleGallowsVerdict');if(notice)notice.hidden=true;
+    if(battleVerdictTimer){clearTimeout(battleVerdictTimer);battleVerdictTimer=null}
+    if(playSceneRuntime.winProposal)void openPlayCompletionSheet();
+    else void advancePlayPhase();
+  }catch(e){playFlashError('Phán quyết Lên Giàn: '+String(e.message||e))}
+  finally{battleState.gallowsVerdictAckPending=false}
+}
+function battleRenderGallowsVerdict(g,stage,phase){
+  const notice=document.getElementById('battleGallowsVerdict');
+  if(!notice)return;
+  if(phase!=='day'||stage!=='resolved'||!g?.candidateId||!['dead','alive'].includes(g.outcome)){
+    notice.hidden=true;return;
+  }
+  const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,g.resolvedAt||g.updatedAt||''].join(':');
+  if(battleState.gallowsVerdictKey!==key){
+    battleState.gallowsVerdictKey=key;battleState.gallowsVerdictAcknowledged=false;
+    if(battleVerdictTimer)clearTimeout(battleVerdictTimer);
+    // Timestamp belongs to the Server ballot: reconnect cannot restart 30s.
+    const start=Number(g.resolvedAt||Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0));
+    const elapsed=Math.max(0,Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)-start);
+    battleVerdictTimer=setTimeout(()=>battleGallowsAcceptVerdict(key),Math.max(0,30000-elapsed));
+    const name=battleMember(g.candidateId)?.displayName||g.candidateId;
+    const cue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
+    if(g.mode==='auto'){
+      void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
+        'Kết quả phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
+        false,()=>{if(battleState.gallowsVerdictKey===key)
+          void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'))});
+    }else void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'));
+  }
+  notice.hidden=!!battleState.gallowsVerdictAcknowledged;
+  notice.dataset.outcome=g.outcome;
+  const name=battleMember(g.candidateId)?.displayName||String(g.candidateId);
+  const who=notice.querySelector('[data-verdict-player]'),result=notice.querySelector('[data-verdict-outcome]'),
+    votes=notice.querySelector('[data-verdict-votes]');
+  if(who)who.textContent=name;
+  if(result)result.textContent=g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
+  if(votes)votes.textContent='👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
+}
+function battleRenderFactionStats(){
+  const panel=document.getElementById('battleFactionStats');if(!panel||panel.hidden)return;
+  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
+    groups=new Map([['Phe Dân',{total:0,alive:0}],['Phe Sói',{total:0,alive:0}],['Phe Ba',{total:0,alive:0}]]);
+  for(const a of rows){
+    const id=String(a?.loginId||''),card=(state.cards||[]).find(r=>String(r.id)===String(a.roleId||'')),
+      raw=String(a?.roleCard?.factionId||card?.factionId||a?.factionId||a?.faction||'').toLowerCase();
+    const fac=raw==='wolf'||raw.includes('sói')||raw.includes('soi')?'Phe Sói':
+      raw==='third'||raw.includes('ba')?'Phe Ba':raw==='village'||raw.includes('dân')||raw.includes('dan')?'Phe Dân':'Phe Khác';
+    const stat=groups.get(fac)||{total:0,alive:0};stat.total++;
+    if(!['dead','expelled'].includes(playPlayerEffect(id)))stat.alive++;
+    groups.set(fac,stat);
+  }
+  const summary=panel.querySelector('[data-faction-counts]');
+  if(summary)summary.innerHTML=[...groups].filter(([,x])=>x.total>0).map(([name,v])=>
+    '<div class="battle-faction-row"><span>'+playEsc(name)+'</span><b>'+v.alive+' / '+v.total+'</b>'+
+    '<i style="--faction-progress:'+Math.round(100*v.alive/Math.max(1,v.total))+'%"></i></div>').join('')||'<p>Chưa phân vai.</p>';
+  const preview=panel.querySelector('[data-faction-forecast]');
+  const known=playSceneRuntime.winProposal;
+  if(preview){
+    const day=Math.max(1,Number(playSceneState.night)||1),wolf=groups.get('Phe Sói')?.alive||0,
+      other=[...groups].filter(([name])=>name!=='Phe Sói').reduce((n,[,g])=>n+g.alive,0),
+      villager=groups.get('Phe Dân')?.alive||0;
+    if(known)preview.textContent='Server xác định: '+String(known.winnerFaction||'Phe thắng')+' · Ngày '+day+'.';
+    else if(!rows.length)preview.textContent='Chưa có dữ liệu phe để dự báo.';
+    else{
+      const favored=wolf>=other?'Phe Sói':wolf===0?'Phe Dân':villager>=wolf?'Phe Dân':'Phe Sói';
+      const estimate=wolf>=other||wolf===0?day:day+Math.max(1,Math.ceil(Math.abs(other-wolf)/2));
+      preview.textContent='Dự báo tham khảo theo quân số: '+favored+' · khoảng ngày '+estimate+
+        '. Đây là giả định, không tính tác động vai trò/Artifact và không phải kết quả Server.';
+    }
+  }
+}
 function battleGallowsRender(phase){
   const panel=document.getElementById('battleGallowsPanel');if(!panel)return;
   const g=playSceneRuntime.gallows||{stage:'ready',mode:'auto',nominationDurationSec:60,voteDurationSec:60,
@@ -5197,6 +5446,8 @@ function battleGallowsRender(phase){
   if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
     battleState.gallowsShowKey=key;battleState.gallowsOpen=true;
   }
+  battleRenderGallowsVerdict(g,stage,phase);
+  battleRenderFactionStats();
   panel.hidden=phase!=='day'||!battleState.gallowsOpen;
   if(panel.hidden)return;
   const eligibleIds=new Set(Array.isArray(g.eligible)?g.eligible.map(String):[]);
@@ -5315,18 +5566,8 @@ function battleGallowsRender(phase){
       result.textContent=memberName(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' được sống.')+
         ' · 👍 CỨU '+Number(g.voteTotals?.save||0)+' · 👎 GIẾT '+Number(g.voteTotals?.kill||0);
       result.dataset.resultTone=g.outcome==='dead'?'negative':'positive';
-      const audioKey=key+':'+stage;
-      if(battleState.gallowsAudioKey!==audioKey){
-        battleState.gallowsAudioKey=audioKey;
-        const verdictCue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
-        if(mode==='auto'){
-          // Read totals first, then the final verdict. Parallel audio would cut one cue off.
-          void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
-            'Công bố số phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
-            false,()=>{if(battleState.gallowsAudioKey===audioKey)
-              void battlePlayConfiguredAudio('system',verdictCue,result.textContent)});
-        }else void battlePlayConfiguredAudio('system',verdictCue,result.textContent);
-      }
+      // Final verdict audio is emitted once by battleRenderGallowsVerdict,
+      // even when this optional details panel is collapsed.
     }
   }
   for(const button of panel.querySelectorAll('[data-gallows-command]')){
@@ -5384,6 +5625,7 @@ function renderPlayBattle(){
   demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
+  const statsFloat=document.getElementById('battleFactionStatsFloat');if(statsFloat)statsFloat.hidden=!visible;
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
   for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
   if(!visible){const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
@@ -5398,7 +5640,14 @@ function renderPlayBattle(){
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
-  if(battleState.lastAudioTurnKey!==key&&!battleConfirmAudioGate){battleState.lastAudioTurnKey=key;if(t&&phase==='night'){if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);else battleAudioForTurn(t,true)}}
+  // Do not claim a wake-up cue was played during intermediate Server sync, or
+  // while the GM is navigating. The first stable role of EVERY night must speak.
+  if(t&&phase==='night'&&!battleConfirmAudioGate&&!battleState.busy&&!playSceneRuntime.busy&&
+     !battleState.syncPending&&battleState.lastAudioTurnKey!==key){
+    battleState.lastAudioTurnKey=key;
+    if(t.kind==='village-wakeup')battlePlayWakeupAndAdvance(t,key);
+    else battleAudioForTurn(t,true);
+  }
   const set=(id,s)=>{const e=document.getElementById(id);if(e)e.textContent=String(s)};
   const steps=battleRules().timeline(phase,rt,night,playSceneRuntime.artifactCycle?.accepted),timeline=document.getElementById('battleTimeline'),signature=JSON.stringify(steps.map(x=>[x.id,x.status,x.active,x.displayNumber]));
   const previous=document.getElementById('battleBack');
@@ -5601,8 +5850,7 @@ async function battleConfirm(confirmed=false){
       renderPlayBattle();
       battleAdvanceConfirmedTurn();
     };
-    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,finishConfirmAudio))
-      .then(started=>{if(started===false)finishConfirmAudio()},finishConfirmAudio);
+    // Do not announce success until the Durable Object accepted the action.
     const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
     if(result?.ok!==true)throw new Error(result?.message||result?.error||'Server chưa xác nhận');
     gmHapticFeedback();
@@ -5611,11 +5859,16 @@ async function battleConfirm(confirmed=false){
     console.info('GMWW battle-confirm timing',{ackMs,serverProcessingMs:result.serverProcessingMs??null,targetCount:targets.length});
     // One canonical status compositor; no duplicate oversized legacy impact pulses.
     if(result.undoToken)playSceneRuntime.battleUndo={token:result.undoToken,label:result.label||a.name,targets,turnId:t.id};
-    if(seerReveal&&result.revelation){
-      battlePresentRevelation(a.actionId,result.revelation);
-      // The result replaces confirmation audio; do not leave its navigation gate locked.
+    const revelation=seerReveal?result.revelation:null;
+    let confirmationFinished=false;
+    const afterConfirmation=()=>{
+      if(confirmationFinished)return;
+      confirmationFinished=true;
+      if(revelation)battlePresentRevelation(a.actionId,revelation);
       finishConfirmAudio();
-    }
+    };
+    void Promise.resolve(battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận',false,afterConfirmation))
+      .then(started=>{if(started===false)afterConfirmation()},afterConfirmation);
     // Advance a confirmed turn after Server sync. Scan results stay visible until GM taps outside.
     battleState.pendingNextTurnId=t.id;
     battleClear();
@@ -5631,7 +5884,7 @@ async function battleConfirm(confirmed=false){
       renderPlayBattle();
       if(document.getElementById('battleResultPopup')?.hidden!==false)battleAdvanceConfirmedTurn();
     }).catch(err=>{playFlashError('Đã ghi nhận trên Server nhưng đồng bộ bị lỗi: '+String(err?.message||err));});
-  }catch(err){playFlashError('Không thể xác nhận: '+String(err?.message||err))}
+  }catch(err){battleConfirmAudioGate=false;playFlashError('Không thể xác nhận: '+String(err?.message||err))}
   finally{battleState.busy=false;renderPlayBattle()}
 }
 function battleToggleDetails(force){
@@ -5915,7 +6168,17 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleWolfMenu','header');
   battleBindAuxiliaryDrag('battleDemoObserver','header');
   battleBindAuxiliaryDrag('battleMorningReport','header');
+  battleBindAuxiliaryDrag('battleFactionStats','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
+  document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
+    if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);
+  });
+  document.getElementById('battleFactionStatsToggle')?.addEventListener('click',()=>{
+    const panel=document.getElementById('battleFactionStats');
+    if(!panel)return;panel.hidden=!panel.hidden;
+    document.getElementById('battleFactionStatsToggle')?.setAttribute('aria-pressed',String(!panel.hidden));
+    battleRenderFactionStats();
+  });
   document.getElementById('battleDayNoticeToggle')?.addEventListener('click',()=>{
     if(playSceneState.phase!=='day')return;
     battleState.morningOpen=!battleState.morningOpen;
@@ -5925,7 +6188,7 @@ function initBattleControls(){
     if(playSceneState.phase!=='day')return;
     const opening=!battleState.gallowsOpen;
     battleState.gallowsOpen=opening;
-    if(opening){battleUnlockAudioFromGesture();void battlePlayConfiguredAudio('system','audio_system_gallows_day_long','');}
+    if(opening)battleUnlockAudioFromGesture(); // Day-long introduction is emitted at the start of the day, once.
     battleState.dayActionsOpen=false;battleState.morningOpen=false;renderPlayBattle();
   });
   document.getElementById('battleDayActionList')?.addEventListener('click',e=>{
@@ -5936,6 +6199,10 @@ function initBattleControls(){
     document.getElementById('battleDayActionToggle')?.setAttribute('aria-expanded','false');
     const action=battleActions().find(a=>a.id===id&&!a.unavailable);
     if(!action)return;
+    battleUnlockAudioFromGesture();
+    if(action.artifactId)void battlePlayConfiguredAudio('artifacts',action.artifactId,action.name);
+    else if(action.roleId)void battlePlayConfiguredAudio('cards',action.roleId,
+      (state.cards||[]).find(r=>r.id===action.roleId)?.name||action.name);
     if(action.noTarget){
       if(!confirm('Xác nhận thực hiện '+action.name+'?'))return;
       battleClear();battleState.actionId=id;void battleConfirmDay(true);
@@ -5948,6 +6215,8 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
+    const audio=event.target.closest('[data-gallows-audio-upload]');
+    if(audio){void battleOpenGallowsAudioUpload(String(audio.dataset.gallowsAudioUpload||''));return;}
     const tab=event.target.closest('[data-gallows-tab]');
     if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
     const pick=event.target.closest('[data-gallows-pick]');
@@ -5994,6 +6263,10 @@ function initBattleControls(){
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
   document.addEventListener('pointerdown',event=>{
     if(playSceneState.step!=='battle')return;
+    const stats=document.getElementById('battleFactionStats');
+    if(stats&&!stats.hidden&&!stats.contains(event.target)&&!event.target.closest?.('#battleFactionStatsToggle')){
+      stats.hidden=true;document.getElementById('battleFactionStatsToggle')?.setAttribute('aria-pressed','false');
+    }
     const target=event.target,inside=selector=>!!target.closest?.(selector);
     const result=document.getElementById('battleResultPopup');
     if(result&&!result.hidden&&!result.contains(target))battleCloseResultPopup();
@@ -7154,7 +7427,10 @@ async function playFinishSeating(){
 const playCompletionState={key:'',dismissed:'',winner:'',completed:false,busy:false,matchId:'',roomCode:'',config:null,templateId:''};
 function renderPlayCompletion(){
   const s=playCompletionState,title=document.getElementById('playCompletionTitle'),text=document.getElementById('playCompletionMessage');
-  if(title)title.textContent=s.winner?s.winner.toUpperCase()+' THẮNG':'KẾT QUẢ VÁN';
+  if(title)title.textContent=s.completed&&s.winner?'🏆 '+s.winner.toUpperCase()+' CHIẾN THẮNG':s.winner?'XÁC NHẬN '+s.winner.toUpperCase():'KẾT QUẢ VÁN';
+  const ceremony=document.getElementById('playMatchCompletionSheet');
+  if(ceremony){ceremony.dataset.victory=String(!!s.completed);ceremony.dataset.faction=String(s.winner||'');}
+  const sparkle=ceremony?.querySelector('.gmww-winner-sea-glow');if(sparkle)sparkle.hidden=!s.completed;
   if(text)text.textContent=s.completed?'Ván đã hoàn thành. Chọn bước tiếp theo.':'Xác nhận phe thắng rồi hoàn thành ván.';
   for(const b of document.querySelectorAll('[data-completion-winner]')){b.setAttribute('aria-pressed',String(b.dataset.completionWinner===s.winner));b.disabled=s.completed||s.busy}
   const confirm=document.getElementById('playCompletionConfirm');if(confirm){confirm.hidden=s.completed;confirm.disabled=!s.winner||s.busy}

@@ -113,6 +113,7 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     nominationDurationSec:gallowsDurationSec(ballot.nominationDurationSec),voteDurationSec:gallowsDurationSec(ballot.voteDurationSec),
     nominations:Object.fromEntries(Object.entries(ballot.nominations||{}).filter(([id])=>!blockedNomination.includes(id))),
     votes:Object.fromEntries(Object.entries(ballot.votes||{}).filter(([id])=>id!==String(ballot.candidateId||'')&&!blockedVotes.includes(id))),
+    resolvedAt:ballot.resolvedAt||null,updatedAt:ballot.updatedAt||null,
     blockedNomination,blockedVotes,gmBlockedVotes:gallowsGmBlockedVotes(ballot),
     artifactVoteBans:unique(ballot.artifactVoteBans),blocked:blockedVotes,outcome:ballot.outcome||null,
     eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),

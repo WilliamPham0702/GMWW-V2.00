@@ -51,7 +51,7 @@ test('V3.141 GM role labels: full wrapping and data-only faction coloring',()=>{
 });
 test('V3.141 role-result popup is scan-only and contains result without explanations',()=>{
  const code=read('server-game/src/40-battle-and-timeline.part');
- assert.ok(code.includes('if(seerReveal&&result.revelation)'));
+ assert.ok(code.includes('if(revelation)battlePresentRevelation(a.actionId,revelation)'));
  assert.ok(code.includes("battleShowResultPopup('',String(revelation.message||''),true)"));
  assert.ok(!code.includes("battleShowResultPopup('🐺 KẾT QUẢ VẾT CẮN'"));
  assert.ok(!code.includes("battleMarkPlayers();battleTickCountdown();if(t&&phase==='night')battleShowWitchIntel(t)"));
