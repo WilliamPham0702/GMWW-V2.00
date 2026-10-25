@@ -7305,3 +7305,77 @@ body.play-immersive #start #playShell[data-step="battle"] #battleGallowsPanel{
 .gmww-audio-cut-actions button{flex:1 1 128px;min-height:38px;border-radius:10px;
   border:1px solid rgba(141,232,233,.40);background:#17475b;color:#e6fbff;font-weight:700;font-size:12px}
 .gmww-audio-cut-actions [data-save]{background:#246e61;border-color:#82d9af}
+
+
+/* V3.209: sea-glass faction/nomination/verdict UI, light-weight GPU-safe motion. */
+#start #playShell[data-step="battle"] .battle-faction-stats-float{display:flex;align-items:center;justify-content:center;min-width:58px}
+#start #playShell[data-step="battle"] #battleFactionStatsFloat[hidden],
+#start #playShell[data-step="battle"] #battleFactionStats[hidden],
+#start #playShell[data-step="battle"] #battleGallowsVerdict[hidden]{display:none!important}
+#battleFactionStatsToggle{border:1px solid rgba(247,217,149,.66)!important;
+  background:linear-gradient(160deg,rgba(10,122,138,.86),rgba(7,55,79,.95))!important;color:#fffce7;
+  border-radius:15px;min-width:52px;min-height:49px;font-size:23px;box-shadow:0 2px 12px rgba(8,106,127,.28)}
+#battleFactionStatsToggle small{display:block;font-size:8px;font-weight:900;letter-spacing:.06em;color:#d3fffc}
+#battleFactionStatsToggle[aria-pressed="true"]{outline:2px solid #f6dda0;box-shadow:0 0 20px rgba(106,237,227,.24)}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
+  position:fixed;z-index:1760;top:max(19%,env(safe-area-inset-top));right:max(9px,env(safe-area-inset-right));
+  left:auto;max-width:min(340px,91vw);width:340px;max-height:66dvh;overflow:auto;
+  padding:14px;border:1px solid rgba(198,240,235,.5);border-radius:18px;
+  background:linear-gradient(155deg,rgba(5,60,79,.95),rgba(4,35,57,.94));
+  box-shadow:0 18px 44px #001d31aa;color:#e8ffff;backdrop-filter:blur(13px)
+}
+#battleFactionStats header{display:flex;flex-direction:column;gap:3px;padding-bottom:10px;
+  border-bottom:1px solid #baf5eb55;font-weight:900;font-size:14px;color:#ffe4a6}
+#battleFactionStats header small{font-size:10px;color:#a8e8e5;font-weight:500}
+.battle-faction-counts{display:grid;gap:10px;margin:12px 0}
+.battle-faction-row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center;font-size:12px}
+.battle-faction-row b{color:#ffe49c;font-variant-numeric:tabular-nums;font-size:15px}
+.battle-faction-row i{grid-column:1/-1;height:5px;border-radius:10px;background:#123f54;
+  overflow:hidden;position:relative}
+.battle-faction-row i:before{content:"";display:block;height:100%;width:var(--faction-progress);
+  background:linear-gradient(90deg,#64cbd0,#e7d190);border-radius:10px}
+.battle-faction-forecast{margin:8px 0 0;line-height:1.5;font-size:11px;color:#cceae8;
+  border-top:1px solid #baf5eb33;padding-top:10px}
+#start #playShell[data-step="battle"] .battle-nomination-pearl{
+  display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;
+  padding:2px 8px;margin:0 auto 3px;border-radius:999px;color:#fffaf1;
+  font-size:16px;font-weight:1000;font-variant-numeric:tabular-nums;
+  border:2px solid #f5db96;background:radial-gradient(circle at 30% 15%,#50dce1,#086177 64%,#073d54);
+  box-shadow:0 0 0 2px rgba(10,51,70,.32),0 6px 17px rgba(0,0,0,.28);
+  text-shadow:0 1px 2px #082c45;white-space:nowrap;pointer-events:none
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleGallowsVerdict{
+  position:fixed;z-index:1860;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(400px,91vw);padding:0;max-height:78dvh;overflow:auto;
+  border-radius:25px;border:2px solid rgba(246,220,153,.85);
+  background:radial-gradient(ellipse at 50% -15%,rgba(27,162,172,.92),transparent 65%),
+   linear-gradient(155deg,#0d6073,#06253c 84%);color:#f5fffb;
+  box-shadow:0 0 0 250vmax rgba(0,20,34,.28),0 17px 65px rgba(0,26,45,.65);
+  animation:gmww-verdict-emerge .55s both;backdrop-filter:blur(16px)
+}
+.battle-verdict-shell{display:flex;align-items:center;flex-direction:column;gap:9px;text-align:center;padding:24px 16px 18px}
+.battle-verdict-wave{font-size:20px;letter-spacing:.25em;color:#ffdda4;
+  animation:gmww-tide-pulse 2.6s ease-in-out infinite}
+.battle-verdict-shell small{font-size:10px;font-weight:800;letter-spacing:.075em;color:#c6f6e9}
+.battle-verdict-shell h3{font-size:20px;color:#fff5c9;margin:0;overflow-wrap:anywhere}
+.battle-verdict-shell strong{font-size:30px;letter-spacing:.07em;
+  color:#ceffeb;text-shadow:0 0 15px #87eedc88}
+#battleGallowsVerdict[data-outcome="dead"] .battle-verdict-shell strong{color:#ffd5d9;text-shadow:0 0 15px #ef9ea488}
+.battle-verdict-shell p{font-size:13px;margin:0;color:#d2f6f8}
+.battle-verdict-shell button{min-height:44px;padding:7px 20px;border-radius:30px;
+  border:1px solid #f9dea0;background:linear-gradient(120deg,#288b92,#0d596b);
+  color:#fff4c8;font-size:12px;font-weight:900;letter-spacing:.03em}
+.gmww-winner-sea-glow{font-size:32px;text-align:center;letter-spacing:.25em;color:#ffe7a8;
+  text-shadow:0 0 18px #72f9f2;animation:gmww-tide-pulse 2.7s ease-in-out infinite}
+#playMatchCompletionSheet .play-completion-card{
+  border:2px solid #efd89d!important;border-radius:24px!important;
+  background:radial-gradient(circle at 50% 2%,rgba(27,161,177,.56),transparent 68%),
+    linear-gradient(165deg,#0e6173,#063147 75%)!important;
+  box-shadow:0 8px 52px #072a42aa,0 0 32px #7ad1cf44!important;
+  animation:gmww-verdict-emerge .56s both}
+#playMatchCompletionSheet .sheet-head h3{color:#ffecbd;letter-spacing:.07em}
+@keyframes gmww-verdict-emerge{from{opacity:0;transform:translate(-50%,-47%) scale(.93)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes gmww-tide-pulse{0%,100%{opacity:.65}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ #battleGallowsVerdict,.gmww-winner-sea-glow,#playMatchCompletionSheet .play-completion-card{animation:none!important}
+}
