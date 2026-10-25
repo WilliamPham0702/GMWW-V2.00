@@ -6,6 +6,7 @@ import {CORE_ACTION_FAMILY,coreActionFamily,coreCastingKind,coreRoleForActor,cat
 import {resolveRoleAnimation} from '../assets/village/arena-3d/stage10-role-animations.mjs';
 import {stageCastingCue,publicCastingState,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
 import {normalizeRitualCue} from '../assets/village/arena-3d/stage8-ritual-director.mjs';
+import {createMatchSyncGate,publicMatchView} from '../assets/village/arena-3d/stage9-match-sync.mjs';
 test('GĐ11 actual builtin source: exactly 28 roles, 26 actions; none unclassified',()=>{
  const src=readFileSync('server-game/src/00-core-and-library.part','utf8');
  const roles=new Set([...src.matchAll(/\bid\s*:\s*['"](role_[a-z0-9_]+)['"]/g)].map(x=>x[1]));
@@ -71,4 +72,15 @@ test('GĐ11 staging worker captures only confirmed actions and keeps them GM-onl
  assert.match(src,/if\(!auth\.ok\)return auth\.response/);
  assert.match(src,/redactStagingPublicBroadcast\(payload\)/);
  assert.match(src,/isCanonicalCoreAction\(actionId\)/);
+});
+
+test('GĐ11 regression: Phát Vai từ Core phải chuyển lobby -> role_delivery ngay, không mất vì duplicate gate',()=>{
+ const gate=createMatchSyncGate(),players=[{id:'member:a',seatId:1,online:true}];
+ const lobby={room:{code:'ABC123',matchId:'m1',phase:'lobby'},players};
+ const delivered={room:{...lobby.room,phase:'role_delivery'},players};
+ assert.equal(gate.accept(lobby,{source:'snapshot',now:100}).accepted,true);
+ const next=gate.accept(delivered,{source:'realtime',now:200});
+ assert.equal(next.accepted,true,'real role delivery must not be dropped as duplicate lobby');
+ assert.equal(next.view.phase,'role_delivery');
+ assert.equal(publicMatchView(delivered).phase,'role_delivery');
 });
