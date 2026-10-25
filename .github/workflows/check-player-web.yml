@@ -229,6 +229,13 @@ jobs:
         run: |
           node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
+      - name: "Arena 3D chính thức — kiểm thử cổng GM, Player, Core và checksum nguồn"
+        if: steps.scope.outputs.mode == 'arena3d-official'
+        run: |
+          node --test tests/arena3d-portal-handoff.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-stage33-parity.test.mjs tests/dual-renderer-contract.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
