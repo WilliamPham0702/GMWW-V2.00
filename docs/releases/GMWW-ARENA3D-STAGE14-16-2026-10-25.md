@@ -26,7 +26,8 @@
 - Đã kiểm tra **Chrome và WebKit giả lập iPhone** với 6, 12, 20, 30 nhân vật, các mẫu Sói/Phù Thủy/Tiên Tri/Bảo Vệ và thao tác nhập audio cục bộ.
 - Kiểm thử 2 client Core: tạo phòng → phân vai → vào trận → Đêm/Bảo Vệ → refresh viewer → Ngày/Đề Cử/Bỏ Phiếu → kết thúc ván, viewer không đọc được dữ liệu GM (401): **PASS**.
 - Kiểm thử mới **Vai Trò tự tạo** (2 mục tiêu, phép khiên) và **Artifact tự tạo** (1 mục tiêu, phép hồi phục) qua Core thực với cùng người sở hữu, xác nhận `visualFamily` và quyền riêng tư người xem: **PASS** trên Worker STAGING.
-- Bằng chứng bản trước chỉnh sửa định dạng flat Artifact: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40158423704 — CI + STAGING browser/E2E đều SUCCESS; bản cuối được chạy lại sau ghi chú này.
+- **Bằng chứng STAGING và CI cuối cùng:** https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40158706271 — unit/đúng phạm vi, Chrome/WebKit và hai trận Core thật đều **SUCCESS**, bao gồm hỗ trợ Artifact dạng phẳng và dạng lồng.
+- **Cloudflare Worker STAGING version:** `17983261-ad90-43ad-b0e2-2e9e8c3272fe` (STAGING riêng; không Production).
 - WebKit/Chrome chạy trên môi trường headless, **không đại diện cho FPS/pin/nhiệt trên iPhone vật lý**. Không kết luận iPhone thật đã đạt.
 - Các tác động bất thường và luật vai trò trong trận thực vẫn do Core V2 xử lý; animation không quyết định kết quả Sống/Chết và không cấp quyền mới.
 
