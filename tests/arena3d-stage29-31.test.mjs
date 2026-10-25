@@ -75,6 +75,6 @@ test('GĐ31: browser + Core E2E remain isolated from production',()=>{
  assert.match(wf,/wrangler\.arena3d-stage14-staging\.jsonc/);
  assert.match(e2e,/viewer\.reload\(/);
  assert.match(e2e,/dealReconnect:true/);
- assert.match(e2e,/Core xác nhận hành động/);
+ assert.match(e2e,/Core đã xác nhận hành động/);
  assert.match(e2e,/viewerDenied:deny\.status/);
 });
