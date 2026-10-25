@@ -1220,7 +1220,25 @@ async function renderAudio(){
   const missingHtml=audioKind==='cards'?'<div class="gmww-missing-role-audio"><b>Vai trò chưa có liên kết Audio hoạt động ('+missing.length+')</b>'+
     '<p>'+ (missing.length?missing.map(card=>esc(card.name)).join(' · '):'Tất cả vai trò trong Thư viện đều đã có nguồn Audio.')+
     '</p><small>Danh sách đọc từ dữ liệu Thư viện trên máy này; chỉ đánh dấu có file thực hoặc URL, không tính tên file rỗng.</small></div>':'';
-  $('#audioGrid').innerHTML=missingHtml+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
+  // Dedicated SYSTEM audio shortcuts: the verdict's sounds are NOT part of the
+  // Gallows controls and must not be saved under Vai Trò or Hành Động.
+  const systemSlots=[
+    ['audio_system_day_wakeup','LÀNG ƠI DẬY ĐI'],
+    ['audio_system_gallows_day_long','NGÀY DÀI RỒI'],
+    ['audio_system_gallows_vote_result','CÔNG BỐ PHIẾU'],
+    ['audio_system_gallows_result_saved','👍 CHỐT SỐNG'],
+    ['audio_system_gallows_result_dead','👎 CHỐT CHẾT']
+  ];
+  const systemShortcuts=audioKind==='system'?
+    '<section class="gmww-system-sound-links" aria-label="Âm thanh Ngày và Lên Giàn">'+
+      '<strong>🔊 ÂM THANH NGÀY / LÊN GIÀN</strong>'+
+      '<p>Chạm đúng tên để gán file Audio từ máy. SỐNG và CHẾT là hai file riêng biệt.</p>'+
+      '<div>'+systemSlots.map(([id,label])=>{
+        const linked=resolved.find(x=>String(x.a?.targetId||x.a?.id)===id);
+        return '<button type="button" data-system-sound-slot="'+esc(id)+'">'+
+          esc(label)+' <small>'+(linked?.ok?'✓ CÓ FILE':'＋ CHƯA GÁN')+'</small></button>';
+      }).join('')+'</div></section>':'';
+  $('#audioGrid').innerHTML=missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
     resolved.map(({a,ok})=>{
       const file=String(a.fileName||'').trim(),meta=file?(file+' • '+(ok?'Có Audio':'Thiếu Audio')):(ok?'Có Audio':'Thiếu Audio');
       const nameBox=audioKind==='cards'?
@@ -1238,6 +1256,12 @@ async function renderAudio(){
       let lastTap=0;button.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();lastTap=0;void gmwwOpenAudioNameEditor(a)});
       button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
     }
+  });
+  $('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
+    const id=String(button.dataset.systemSoundSlot||'');
+    const item=(state.audio.system||[]).find(x=>String(x.targetId||x.id)===id);
+    if(item)replaceAudioItem(item,'system');
+    else playFlashError('Chưa tìm được ô Audio Hệ Thống '+id);
   });
 }
 async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
@@ -2810,16 +2834,6 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
     else source.start();
     return true;
   }catch(_){return false}
-}
-function battleOpenGallowsAudioUpload(id){
-  // Resolve the authoritative system cue, then open that EXACT file picker.
-  // Navigation to the library used to land on the wrong row/category in V3.209.
-  const allowed=['audio_system_day_wakeup','audio_system_gallows_day_long','audio_system_gallows_vote_result',
-    'audio_system_gallows_result_dead','audio_system_gallows_result_saved'];
-  if(!allowed.includes(id))return;
-  const slot=(state.audio?.system||[]).find(x=>String(x.targetId||x.id)===id);
-  if(!slot){playFlashError('Chưa có ô âm thanh cho '+id+'.');return}
-  replaceAudioItem(slot,'system');
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
@@ -6367,9 +6381,6 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleMorningReport','header');
   battleBindAuxiliaryDrag('battleFactionStats','header');
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
-  document.querySelector('[data-morning-audio-upload]')?.addEventListener('click',event=>{
-    battleOpenGallowsAudioUpload(String(event.currentTarget.dataset.morningAudioUpload||''));
-  });
   document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
     if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);
   });
@@ -6415,8 +6426,6 @@ function initBattleControls(){
   });
   battleBindAuxiliaryDrag('battleGallowsPanel','header');
   document.getElementById('battleGallowsPanel')?.addEventListener('click',event=>{
-    const audio=event.target.closest('[data-gallows-audio-upload]');
-    if(audio){void battleOpenGallowsAudioUpload(String(audio.dataset.gallowsAudioUpload||''));return;}
     const tab=event.target.closest('[data-gallows-tab]');
     if(tab){battleState.gallowsTab=tab.dataset.gallowsTab;battleGallowsRender('day');return}
     const pick=event.target.closest('[data-gallows-pick]');
