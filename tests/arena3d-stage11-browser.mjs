@@ -33,12 +33,15 @@ async function check(engine,kind){
   await page.locator('#sample-cast').click();
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:12000});
   await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='seated',null,{timeout:18000});
+  await page.locator('#arena-audio').click();
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).soundEnabled,true);
   // Real 3D draw checks: these cues are strictly synthetic, never live Core/GM secrets.
   for(const [role,visible] of [['soi-tuyet','previewWolfHeads'],['phu-thuy','previewImpactRings'],['tien-tri-hao-quang','previewWand'],['bao-ve','previewShieldDomes']]){
     await page.locator('[data-role-fx="'+role+'"]').click();
     await page.waitForFunction(()=>document.body.dataset.gmwwSyntheticCasting==='casting',null,{timeout:6000});
     await page.waitForFunction(key=>Boolean(window.__GMWW_ARENA_STAGE_READONLY?.()[key]),visible,{timeout:4500});
     assert.equal(await page.locator('body').getAttribute('data-gmww-stage10-projectile'),null,'never publish GM-only role animation metadata');
+    assert.ok((await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).soundPlays>=1);
   }
   assert.deepEqual(errors,[],kind+' uncaught browser errors');
   console.log('STAGE11_'+kind.toUpperCase()+'_PASS',JSON.stringify({roster,physicalIphone:false,staging:base}));
