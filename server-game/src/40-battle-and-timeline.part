@@ -2521,7 +2521,7 @@ async function gmAutoPreviewGame(){
     playSceneRuntime.autoGameHistory=[...history,deck.signature].slice(-100);
     const cfg={id:'auto-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),
       name:'AUTO '+n+' người • '+playSceneRuntime.autoGameHistory.length,playerCount:n,
-      roles:deck.roles.map((r,i)=>({roleId:r.roleId,roleName:r.roleName,faction:r.factionId==='wolf'?'Phe Sói':r.factionId==='third'?'Phe Ba':'Phe Dân',count:r.count,order:i+1,actionDurationSec:Number(playSceneState.gameTiming?.defaultActionSec??30)})),
+      roles:deck.roles.map((r,i)=>({roleId:r.roleId,roleName:r.roleName,description:String((state.cards||[]).find(card=>String(card.id)===String(r.roleId))?.information||''),faction:r.factionId==='wolf'?'Phe Sói':r.factionId==='third'?'Phe Ba':'Phe Dân',count:r.count,order:i+1,actionDurationSec:Number(playSceneState.gameTiming?.defaultActionSec??30)})),
       artifactsEnabled:false,artifacts:[],timing:{...playSceneState.gameTiming},artifactLimitPerCycle:3};
     playSceneRuntime.autoGameConfig=cfg;playSceneRuntime.autoGameRoomCode=String(playSceneState.roomCode||'');
     playSceneState.gameTemplateId='';playSceneState.gameName=cfg.name;
