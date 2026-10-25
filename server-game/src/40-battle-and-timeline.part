@@ -1229,6 +1229,18 @@ function battleMarkPlayers(){
       if(voteMark.textContent!==vote)voteMark.textContent=vote;
       if(labels.firstElementChild!==voteMark)labels.prepend(voteMark);
     }else voteMark?.remove();
+    // Server-verified public nominations: ornamental pearl number above each Character.
+    const tally=playSceneState.phase==='day'&&['nominating','selecting','voting','closed'].includes(String(playSceneRuntime.gallows?.stage||''))?
+      (playSceneRuntime.gallows?.nominationTotals||[]).find(x=>String(x.loginId)===id):null;
+    const count=Math.max(0,Math.trunc(Number(tally?.votes)||0));
+    let countMark=labels?.querySelector(':scope>.battle-nomination-pearl');
+    if(count>0&&labels){
+      if(!countMark){countMark=document.createElement('span');countMark.className='battle-nomination-pearl';
+        countMark.setAttribute('aria-label','Số phiếu đề cử')}
+      countMark.textContent='✦ '+count;
+      countMark.title='Được đề cử '+count+' phiếu';
+      if(labels.firstElementChild!==countMark)labels.prepend(countMark);
+    }else countMark?.remove();
     let orb=avatar?.querySelector(':scope>.battle-orbit');
     if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
     else orb?.remove();
