@@ -7,6 +7,7 @@ import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-ateli
 import {CHARACTER_ART_VERSION} from './character-art-direction.mjs';
 import {renderQualityBudget,STAGE7_VERSION} from './stage7-expression-motion.mjs';
 import {STAGE8_VERSION,normalizeRitualCue,publicRitualSummary,ritualQuality} from './stage8-ritual-director.mjs';
+import {STAGE9_VERSION,createMatchSyncGate,publicMatchView,publicMatchStatus} from './stage9-match-sync.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
@@ -27,6 +28,7 @@ let lastResize='',fps=0,fpsAt=performance.now(),frames=0,ballot=null,synthetic=t
 let sceneSignature='',sceneRebuilds=0,autoQualityEnabled=true,manualLowPower=false,adaptiveLowPower=false;
 let galleryPage=0,previewRitualKind=null;
 const qualityController=createArenaAdaptiveQuality();
+const matchSync=createMatchSyncGate();
 function applyQuality(){
   const next=manualLowPower||(autoQualityEnabled&&adaptiveLowPower);
   if(next===lowPower)return;
@@ -118,6 +120,11 @@ function drawFrame(frame){
   document.body.dataset.gmwwArtVersion=CHARACTER_ART_VERSION;
   document.body.dataset.gmwwStage7=STAGE7_VERSION;
   document.body.dataset.gmwwStage8=STAGE8_VERSION;
+  document.body.dataset.gmwwStage9=STAGE9_VERSION;
+  const publicView=publicMatchView(frame);
+  document.body.dataset.gmwwStage9Match=publicView?.key||'';
+  document.body.dataset.gmwwStage9Status=publicMatchStatus(publicView);
+  document.body.dataset.gmwwStage9Alive=String(publicView?.alive||0);
   document.body.dataset.gmwwRitualArtVersion=RITUAL_ART_VERSION;
   document.body.dataset.gmwwDrawBudget=String(field.drawBudget);
   document.body.dataset.gmwwVillageScene=COASTAL_VILLAGE_VERSION;
@@ -176,14 +183,19 @@ function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightCo
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken;
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
-  field.clearEffects();syntheticCastSeq++;
+  field.clearEffects();syntheticCastSeq++;matchSync.reset();
   if(feed)feed.close();
   code=room.trim().toUpperCase();$('room').value=code;
   const state=await json(roomUrl());
   $('joinlink').href='/join/'+encodeURIComponent(code);
   const query=new URL(location.href);query.searchParams.set('room',code);history.replaceState(null,'',query);
-  drawFrame(createPublicRendererFrame(state));
-  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{drawFrame(frame);if(gmToken)void refreshPrivateGmEffects();},
+  const initial=createPublicRendererFrame(state);
+  if(matchSync.accept(initial,{source:'snapshot'}).accepted)drawFrame(initial);
+  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{
+    const result=matchSync.accept(frame,{source:'realtime'});
+    if(result.accepted)drawFrame(frame);
+    if(result.accepted&&gmToken)void refreshPrivateGmEffects();
+  },
     onGallows:updated=>{ballot=updated;showBallot(updated);},onStatus:s=>$('connection').textContent=s,
     onError:e=>notice('Lỗi kết nối '+String(e.message||e))});
   notice('Đã kết nối phòng thật '+code+' trên Core V2 STAGING. Mở Player Web 2D tại liên kết phía trên.');
