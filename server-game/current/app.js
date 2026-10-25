@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.213';
+const VERSION='3.214';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -2349,39 +2349,39 @@ function gmwwHomeRenderTop3(rows){
     status.textContent=!Array.isArray(rows)?'Không tải được xếp hạng. Nhấn làm mới để thử lại.'
       :'Chưa có người chơi hoàn tất ván để xếp hạng.';
   }
+  // Bảng vinh danh thật: lấy gameCharacterId hiện tại từ cùng hồ sơ Worker/Player Web.
+  // Thứ tự bục cố định 02–01–03, dữ liệu và kết quả thắng luôn từ Server.
   for(const index of [1,0,2]){
     const member=best[index];
     if(!member)continue;
     const stats=memberStats(member),place=index+1,rate=Math.round(100*stats.w/stats.games);
     const button=document.createElement('button');
-    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211';
+    button.type='button';button.className='gmww-home-top3-card-v377 gmww-home-podium-v3211 gmww-home-winner-v3213';
     button.dataset.rank=String(place);
     button.setAttribute('aria-label','Hạng '+place+': '+String(member.displayName||member.loginId||'Thành viên')+', '+rate+' phần trăm thắng, '+stats.w+' thắng trong '+stats.games+' ván. Mở xếp hạng.');
-    const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
-    crown.textContent=place===1?'♛':place===2?'✦':'✧';crown.setAttribute('aria-hidden','true');
-    const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
-    // V3.211: Character thật, phóng lớn trên bục 2.5D. Không dùng hình preview tĩnh.
-    const stage=document.createElement('span');stage.className='gmww-home-podium-stage-v3211';stage.setAttribute('aria-hidden','true');
-    const glow=document.createElement('span');glow.className='gmww-home-podium-glow-v3211';
+    const stage=document.createElement('span');stage.className='gmww-home-podium-stage-v3211';
+    const glow=document.createElement('span');glow.className='gmww-home-podium-glow-v3211';glow.setAttribute('aria-hidden','true');
     const character=document.createElement('span');character.className='gmww-home-podium-character-v3211';
-    const rim=document.createElement('span');rim.className='gmww-home-podium-rim-v3211';
-    const avatarId=String(member.gameCharacterId||member.avatarId||'');
-    if(/^(?:character-(?:0[1-9]|[1-3][0-9]|4[0-2])|avatar-[A-Za-z0-9_-]+)$/.test(avatarId)){
+    const characterId=String(member.gameCharacterId||'').trim();
+    // Chỉ dùng ảnh Idle từ chính atlas Character 40 đang hiển thị trong làng/Player Web.
+    // Tuyệt đối không lấy originals cũ hoặc dùng avatarId lịch sử để giả danh người chơi.
+    if(/^character-(?:0[1-9]|[1-3][0-9]|4[0-2])$/.test(characterId)){
       const image=document.createElement('img');
-      const fullBodyId=avatarId==='character-41'?'character-39':avatarId==='character-42'?'character-40':avatarId;
-      const fullBody=/^character-(?:0[1-9]|[1-3][0-9]|40)$/.test(fullBodyId);
-      // Dùng ảnh Character nguyên thân (không phải ảnh portrait cắt). Có dự phòng nếu asset thiếu.
-      image.src=fullBody?GMWW_SERVER_BASE+'/characters/gmww40/originals/'+fullBodyId+'.webp?rev=c40-1':memberAvatarUrl(avatarId);
+      image.src=GMWW_SERVER_BASE+'/api/game-characters/'+encodeURIComponent(characterId)+'/image?rev=c40-4';
       image.alt='';image.loading='lazy';image.decoding='async';
-      image.onerror=()=>{
-        if(fullBody&&image.dataset.portraitFallback!=='1'){
-          image.dataset.portraitFallback='1';image.src=memberAvatarUrl(avatarId);return;
-        }
-        image.remove();character.textContent='✦';
-      };
+      image.dataset.memberCharacterId=characterId;
+      image.onerror=()=>{image.remove();character.textContent='✦';character.classList.add('gmww-home-character-unavailable-v3213')};
       character.append(image);
-    }else character.textContent='✦';
-    stage.append(glow,character,rim);
+    }else{
+      character.textContent='✦';
+      character.classList.add('gmww-home-character-unavailable-v3213');
+    }
+    stage.setAttribute('aria-hidden','true');stage.append(glow,character);
+    const podium=document.createElement('span');podium.className='gmww-home-podium-platform-v3213';podium.setAttribute('aria-hidden','true');
+    const crown=document.createElement('span');crown.className='gmww-home-top3-crown-v377';
+    crown.textContent=place===1?'♛':place===2?'✦':'✧';podium.append(crown);
+    const details=document.createElement('span');details.className='gmww-home-podium-info-v3213';
+    const badge=document.createElement('span');badge.className='gmww-home-top3-rank-v377';badge.textContent='HẠNG '+String(place).padStart(2,'0');
     const name=document.createElement('strong');name.className='gmww-home-top3-name-v377';
     name.textContent=String(member.displayName||member.loginId||'Thành viên');
     const percent=document.createElement('span');percent.className='gmww-home-top3-percent-v377';
@@ -2391,7 +2391,8 @@ function gmwwHomeRenderTop3(rows){
     const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,rate))+'%';meter.append(fill);
     const record=document.createElement('small');record.className='gmww-home-top3-record-v377';
     record.textContent=stats.w+' thắng / '+stats.games+' ván';
-    button.append(stage,crown,badge,name,percent,percentLabel,meter,record);
+    details.append(badge,name,percent,percentLabel,meter,record);
+    button.append(stage,podium,details);
     button.addEventListener('click',()=>gmwwHomeOpenMemberRanking());
     target.append(button);
   }

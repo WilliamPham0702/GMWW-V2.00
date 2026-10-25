@@ -506,8 +506,39 @@ function isIconWave3213Scope(changes){
   icons.includes('29_thanh_tay')&&icons.includes('mapUnambiguousLocalActions');
 }
 
+// GM Home Top 3 V3.214 only; maintain the separate Icon V3.213 release.
+const podium3214Paths=new Set([
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/src/20-members-and-roster.part','server-game/current/style.css',
+ 'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+ 'tests/home-top3-podium-v3211.test.mjs','tests/home-top3-podium-identity-v3214.test.mjs',
+ 'docs/releases/GMWW-V3.214-top3-podium-identity-20261025.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+]);
+function isHomePodium3214Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const map=new Map(changes.map(x=>[x.path,x]));
+ for(const required of [
+  'server-game/current/app.js','server-game/src/00-core-and-library.part',
+  'server-game/src/20-members-and-roster.part','server-game/current/style.css',
+  'server-game/current/GMWW.html','src/index.js','package.json',
+  'tests/home-top3-podium-identity-v3214.test.mjs',
+  'docs/releases/GMWW-V3.214-top3-podium-identity-20261025.md'
+ ])if(!map.has(required))return false;
+ if(!changes.every(x=>podium3214Paths.has(x.path)&&['A','M'].includes(x.status)))return false;
+ const worker=map.get('src/index.js')?.after||'';
+ const gm=map.get('server-game/current/app.js')?.after||'';
+ const html=map.get('server-game/current/GMWW.html')?.after||'';
+ const pkg=map.get('package.json')?.after||'';
+ const top3=gm.slice(gm.indexOf('function gmwwHomeRenderTop3'),gm.indexOf('function gmwwHomeOpenMemberRanking'));
+ return worker.includes('VERSION="V3.214"')&&gm.includes("const VERSION='3.214'")&&
+  top3.includes('image?rev=c40-4')&&!top3.includes('/originals/')&&
+  html.includes('<title>GMWW V3.214</title>')&&pkg.includes('"version": "3.214.0"');
+}
+
 export function classifyBrowserScope(changes){
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isHomePodium3214Scope(changes))return 'home-podium-3214';
   if(isIconWave3213Scope(changes))return 'icon-wave3-3213';
   if(isIconClean3212Scope(changes))return 'icon-clean-3212';
   if(isIcon3210DispatchGateScope(changes))return 'icon-runtime-3210';
@@ -552,6 +583,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isHomePodium3214Scope(changes))return{mode:'home-podium-3214',reason:'V3.214 Top 3 podium + current Character'};
       if(isIconWave3213Scope(changes))return{mode:'icon-wave3-3213',reason:'Verified 10 icons wave 3 and OTA only'};
       if(isIconClean3212Scope(changes))return{mode:'icon-clean-3212',reason:'Verified V3.212 ICON card UI and OTA only'};
       if(isIcon3210DispatchGateScope(changes))return{mode:'icon-runtime-3210',reason:'Verified CI-only V3.210 owner dispatch correction'};
@@ -617,7 +649,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }

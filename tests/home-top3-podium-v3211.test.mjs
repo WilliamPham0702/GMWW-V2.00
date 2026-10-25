@@ -17,17 +17,27 @@ test('Bảng vinh danh Top 3 dùng API xếp hạng cũ và thứ tự 02–01�
   assert.match(html,/id="gmwwHomeTop3Ranking"/);
 });
 
-test('Character trên bục là ảnh nguyên thân thực tế và có fallback',()=>{
+test('Top 3 chỉ hiển thị Character Idle đúng ID đang lưu trong hồ sơ',()=>{
   const code=app.slice(app.indexOf('function gmwwHomeRenderTop3'),app.indexOf('function gmwwHomeOpenMemberRanking'));
-  assert.match(code,/gmww-home-podium-stage-v3211/);
-  assert.match(code,/gmww-home-podium-character-v3211/);
-  assert.match(code,/characters\/gmww40\/originals\//);
-  assert.match(code,/image\.src=memberAvatarUrl\(avatarId\)/);
-  assert.match(code,/fullBodyId=avatarId==='character-41'/);
+  assert.match(code,/member\.gameCharacterId/);
+  assert.match(code,/api\/game-characters\//);
+  assert.match(code,/image\?rev=c40-4/);
+  assert.match(code,/image\.dataset\.memberCharacterId=characterId/);
+  assert.doesNotMatch(code,/gmww40\/originals\//);
+  assert.doesNotMatch(code,/member\.gameCharacterId\|\|member\.avatarId/);
   assert.match(code,/image\.loading='lazy'/);
   assert.match(code,/image\.decoding='async'/);
-  assert.match(code,/stage\.append\(glow,character,rim\)/);
-  assert.doesNotMatch(code,/button\.append\(crown,badge,avatar/);
+  assert.match(code,/button\.append\(stage,podium,details\)/);
+});
+
+test('V3.213: Nhân vật đứng trên bục rắn; tên và tỷ lệ thắng bên dưới',()=>{
+  assert.match(css,/V3\.213 — Bục đứng thật/);
+  assert.match(css,/gmww-home-podium-platform-v3213::before/);
+  assert.match(css,/gmww-home-podium-info-v3213/);
+  assert.match(css,/background:transparent!important;box-shadow:none!important;overflow:visible!important/);
+  assert.match(css,/position:relative!important;left:auto!important;top:auto!important/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(html,/<title>GMWW V3\.214<\/title>/);
 });
 
 test('Bục 2.5D vàng–bạc–đồng, Character phóng 3 lần và hiệu ứng ăn mừng an toàn iPhone',()=>{
@@ -40,5 +50,5 @@ test('Bục 2.5D vàng–bạc–đồng, Character phóng 3 lần và hiệu �
   assert.match(css,/@keyframes gmwwVictoryDance3211/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(css,/animation:none!important/);
-  assert.match(html,/<title>GMWW V3\.211<\/title>/);
+  assert.match(html,/<title>GMWW V3\.214<\/title>/);
 });
