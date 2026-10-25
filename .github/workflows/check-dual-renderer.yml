@@ -60,7 +60,7 @@ jobs:
           test -s /tmp/gmww-dual-3d-diff.txt || ONLY_ARENA=false
           while IFS= read -r file; do
             case "$file" in
-              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-player-web.yml) ;;
+              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-player-web.yml|.github/workflows/check-p0-chrome-edge-realtime.yml) ;;
               *) ONLY_ARENA=false ;;
             esac
           done < /tmp/gmww-dual-3d-diff.txt
