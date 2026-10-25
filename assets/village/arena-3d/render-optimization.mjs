@@ -47,3 +47,18 @@ export function createArenaAdaptiveQuality({windowSize=75,slowFrameMs=36,fastFra
   return {observe,reset(){clearSamples();lowPower=false;lastChange=-Infinity},
     get lowPower(){return lowPower}};
 }
+
+/**
+ * GĐ18: render cadence is presentation-only. Always keep Core networking and
+ * WebSocket reconciliation running; cap GPU painting only, not the simulation.
+ * An idle scene retains a 12Hz breathing animation instead of burning 30 FPS.
+ */
+export const ARENA_STAGE18_VERSION='gmww.arena.mobile-frame-pacing.18';
+export function arenaTargetFrameHz({
+ visible=true,active=false,interacting=false,lowPower=false,reducedMotion=false
+}={}){
+ if(!visible)return 0;
+ if(lowPower)return active||interacting?20:8;
+ if(reducedMotion)return active||interacting?20:10;
+ return active||interacting?30:12;
+}
