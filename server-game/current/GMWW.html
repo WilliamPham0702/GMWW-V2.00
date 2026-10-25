@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.223</title>
-<link rel="stylesheet" href="style.css?v=3.223-free-icons-top3-glass-compact-room-mobile2-village-scene-align-1-actor-layer-fix1-gp2">
+<title>GMWW V3.224</title>
+<link rel="stylesheet" href="style.css?v=3.221-top3-glass-compact-room-mobile2-village-scene-align-1-actor-layer-fix1-gp2">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -37,7 +37,7 @@
         <section class="gmww-home-scene-v350 gmww-home-scene-v351" aria-label="Làng biển WilliamPham">
           <div class="gmww-home-hero-artboard-v351"><img src="home-art/home-fantasy-hero-v337.webp" alt="Làng biển với nhân vật GM và sói trắng" class="gmww-home-scene-image-v350" decoding="async" fetchpriority="high"></div>
         </section>
-        <section class="gmww-home-enter-banner-v352" aria-label="Vào Làng"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350 gmww-home-portal-action-v352" type="button" aria-label="Vào Làng và mở Trang Chơi"><img src="home-art/home-sea-portal-v354.svg" alt="" class="gmww-home-portal-art-v352"><strong>VÀO LÀNG</strong><small>Tạo phòng · Chơi ngay</small></button></section>
+        <section class="gmww-home-enter-banner-v352" aria-label="Vào Làng"><button id="gmwwHomeEnterVillage" class="gmww-home-cta-v350 gmww-home-portal-action-v352" type="button" aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"><img src="home-art/home-sea-portal-v354.svg" alt="" class="gmww-home-portal-art-v352"><strong>VÀO LÀNG</strong><small>THỬ NGHIỆM ARENA 3D</small></button></section>
         <section class="gmww-home-discover-banner-v352" aria-label="Khám phá GMWW"><header class="gmww-home-discover-title-v352"><span class="gmww-home-heading-gem" aria-hidden="true">✦</span><h2>Khám Phá</h2><span class="gmww-home-heading-line" aria-hidden="true"></span></header><div class="gmww-home-tiles-v350 gmww-home-tiles-v351">
           <button type="button" data-home-destination="library" data-home-library-tab="cards"><img src="home-art/home-sea-cards-v354.svg" alt=""><b>Bộ Bài</b><small>Vai trò · Artifact</small></button>
           <button type="button" data-home-destination="members"><img src="home-art/home-sea-members-v354.svg" alt=""><b>Thành Viên</b><small>Quản lý · Xếp hạng</small></button>
@@ -987,7 +987,7 @@
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="app.js?v=3.221-top3-glass-compact-room-village-gallows-anchor-scene-align-1-gp2&seat-map-drag=20261024&status=4"></script>
+<script src="app.js?v=3.223-arena3d-qa-home-portal&seat-map-drag=20261024&status=4"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
@@ -1120,5 +1120,79 @@
 })();
 </script>
 <script src="action-icon-library.js?v=gmww-sea-icon-v3218-49" defer></script>
+<!-- Arena 3D GĐ32 / V3.222: temporary Home portal, isolated 3D STAGING inside existing iPhone WKWebView.
+     No GM token, room, current session or Production URL is passed into the sandboxed QA scene. -->
+<style>
+#gmwwArena3dQaPortal[hidden]{display:none!important}
+#gmwwArena3dQaPortal{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:#082633;color:#ecffff;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+#gmwwArena3dQaPortal .gmww-arena-qa-bar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 12px;min-height:48px;background:#153f50;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+#gmwwArena3dQaPortal .gmww-arena-qa-bar strong{font:600 13px system-ui,-apple-system,sans-serif;flex:1;min-width:145px}
+#gmwwArena3dQaPortal .gmww-arena-qa-bar button{border:1px solid #74bec4;color:#fff;background:#286077;border-radius:10px;padding:8px 10px;font:600 12px system-ui,-apple-system,sans-serif}
+#gmwwArena3dQaFrame{display:block;flex:1;width:100%;min-height:0;border:0;background:#0b2430}
+</style>
+<script>
+/* This Runtime-only experiment keeps the 2D menu/game untouched.
+ * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.
+ * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */
+(function(){
+  'use strict';
+  const arenaUrl='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html';
+  const button=document.getElementById('gmwwHomeEnterVillage');
+  if(!button)return;
+  let overlay=null,frame=null,lastFocus=null,originalOverflow='';
+  function closeArena(go2d){
+    if(!overlay||overlay.hidden)return;
+    overlay.hidden=true;
+    if(frame)frame.src='about:blank'; // unload 3D GPU scene/audio when leaving
+    document.body.style.overflow=originalOverflow;
+    if(go2d){
+      document.querySelector('#bottomNav .nav[data-page="start"]')?.click();
+    }else{
+      lastFocus?.focus?.();
+    }
+  }
+  function create(){
+    overlay=document.createElement('section');
+    overlay.id='gmwwArena3dQaPortal';
+    overlay.hidden=true;
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-label','Thử nghiệm Arena 3D · STAGING');
+    const bar=document.createElement('div');bar.className='gmww-arena-qa-bar';
+    const title=document.createElement('strong');title.textContent='🌊 ARENA 3D · STAGING';
+    const back=document.createElement('button');back.type='button';back.textContent='‹ Trang Chủ';
+    back.id='gmwwArena3dQaClose';back.addEventListener('click',()=>closeArena(false));
+    const to2d=document.createElement('button');to2d.type='button';to2d.textContent='Chơi 2D';
+    to2d.id='gmwwArena3dQa2d';to2d.addEventListener('click',()=>closeArena(true));
+    bar.append(back,title,to2d);
+    frame=document.createElement('iframe');frame.id='gmwwArena3dQaFrame';
+    frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';
+    frame.setAttribute('referrerpolicy','no-referrer');
+    frame.setAttribute('allow','fullscreen; autoplay');
+    overlay.append(bar,frame);
+    document.body.appendChild(overlay);
+  }
+  function openArena(){
+    if(!overlay)create();
+    lastFocus=document.activeElement;
+    originalOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    overlay.hidden=false;
+    frame.src=arenaUrl;
+    document.getElementById('gmwwArena3dQaClose')?.focus();
+  }
+  // Capture BEFORE app.js's target-level legacy "Vào Làng => Trang Chơi" handler.
+  document.addEventListener('click',function(event){
+    if(!event.target?.closest?.('#gmwwHomeEnterVillage'))return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    openArena();
+  },true);
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&overlay&&!overlay.hidden)closeArena(false);
+  });
+})();
+</script>
 </body>
 </html>

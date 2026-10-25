@@ -51,8 +51,8 @@ jobs:
       - name: Kiểm thử tương thích và phân quyền trực tiếp
         run: |
           node --test tests/dual-renderer-contract.test.mjs
-          if grep -q '"version": "3.223.0"' package.json && test -s docs/releases/GMWW-V3.223-five-floating-icons-20261025.md; then
-            node --test --test-name-pattern='PR501|V3.223' tests/ci-browser-scope.test.mjs
+          if grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
+            node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           else
             node --test tests/ci-browser-scope.test.mjs
           fi

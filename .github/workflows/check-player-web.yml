@@ -70,6 +70,15 @@ jobs:
           test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
           grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
           grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: 'V3.223: chỉ kiểm thử VÀO LÀNG → Arena3D STAGING và chốt OTA'
+        if: steps.scope.outputs.mode == 'arena-home-3223'
+        run: |
+          node --test tests/arena3d-home-portal-v3223.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md
       - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
         if: steps.scope.outputs.mode == 'ranking-3221'
         run: |
@@ -82,7 +91,7 @@ jobs:
         if: steps.scope.outputs.mode == 'gm-icons-501' || steps.scope.outputs.mode == 'gm-icons-501-release'
         run: |
           node --test tests/gm-free-floating-shortcuts-20261025.test.mjs tests/gallows-flag-snap-v3206.test.mjs tests/gallows-pirate-ui-v3205.test.mjs
-          node --test --test-name-pattern='PR501|V3.223' tests/ci-browser-scope.test.mjs
+          node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
           test -s docs/CHANGELOG_GM_FLOATING_ICONS_20261025.md
