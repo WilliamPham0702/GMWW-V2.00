@@ -1,0 +1,160 @@
+name: "PR501 isolated STAGING - GM iPhone and Player Web"
+on:
+  push:
+    branches: ["staging/pr501-5-icons-20261025"]
+    paths:
+      - "wrangler.pr501-icons-staging.jsonc"
+      - ".github/scripts/build-pr501-icons-staging.mjs"
+      - ".github/workflows/deploy-pr501-icons-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-pr501-icons-staging-unique
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: "Validate isolated staging and 5 icons"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: "Focused five-icon and Player Web checks ONLY"
+        run: |
+          node --check assets/village/village.mjs
+          node --check server-game/current/app.js
+          node --test tests/gm-free-floating-shortcuts-20261025.test.mjs tests/gallows-pirate-ui-v3205.test.mjs tests/gallows-flag-snap-v3206.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+      - name: "Guard new Worker, isolated DO and no Production binding"
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const c=JSON.parse(fs.readFileSync('wrangler.pr501-icons-staging.jsonc','utf8'));
+          if(c.name!=='gmww-pr501-icons-staging'||c.main!=='src/index.js'||c.workers_dev!==true)
+            throw Error('STAGING config name/source invalid');
+          for(const key of ['routes','route','services','env','vars','kv_namespaces','r2_buckets','d1_databases','dispatch_namespaces','unsafe','triggers'])
+            if(Object.hasOwn(c,key))throw Error('STAGING prohibited binding '+key);
+          const bindings=c.durable_objects?.bindings||[];
+          if(bindings.length!==1||bindings[0].name!=='ROOMS'||bindings[0].class_name!=='RoomDurableObject'||bindings[0].script_name)
+            throw Error('STAGING must bind only its own RoomDurableObject');
+          if(JSON.stringify(c).includes('gmww-v2-00_RoomDurableObject'))throw Error('Production DO binding detected');
+          console.log('PASS separate Worker, dedicated DO, no Production service/route/namespace');
+          NODE
+      - name: "Build isolated Safari GM and stage-only credentials"
+        run: node .github/scripts/build-pr501-icons-staging.mjs
+      - name: "Check syntax and safe Wrangler dry run"
+        run: |
+          node --check src/index.js
+          node --check assets/gm-pr501/app.js
+          test -s assets/gm-pr501/GMWW.html
+          test -s /tmp/gmww-pr501-staging-gm-token
+          npx wrangler deploy --config wrangler.pr501-icons-staging.jsonc --dry-run
+      - name: "Store no-secret candidate SHA256"
+        run: |
+          sha256sum assets/gm-pr501/app.js assets/gm-pr501/GMWW.html assets/gm-pr501/style.css assets/village/village.mjs > /tmp/gmww-pr501-stage-ui.sha256
+          sha256sum --check /tmp/gmww-pr501-stage-ui.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-PR501-STAGE-UI-HASH-ONLY
+          path: /tmp/gmww-pr501-stage-ui.sha256
+          retention-days: 14
+
+  deploy-staging:
+    name: "Deploy dedicated STAGING Worker/DO, never Production"
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging/pr501-5-icons-20261025'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: "Rebuild stage GM auth without printing credentials"
+        run: node .github/scripts/build-pr501-icons-staging.mjs
+      - name: "Deploy ONLY gmww-pr501-icons-staging"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.pr501-icons-staging.jsonc
+      - name: "Live HTTP smoke: separate Worker, GM UI, Player Web, red flag"
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-pr501-icons-staging.williampham0702.workers.dev"
+          for i in $(seq 1 25); do
+            if curl -fsS "$BASE/api/health" > /tmp/gmww-pr501-stage-health.json; then break; fi
+            sleep 2
+          done
+          grep -q '"project":"GMWW-V2.00"' /tmp/gmww-pr501-stage-health.json
+          curl -fsS "$BASE/gm-pr501/GMWW.html" > /tmp/gmww-pr501-stage-gm.html
+          grep -q 'GMWW PR #501 STAGING' /tmp/gmww-pr501-stage-gm.html
+          curl -fsS "$BASE/gm-pr501/app.js" > /tmp/gmww-pr501-stage-gm.js
+          grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gmww-pr501-stage-gm.js
+          grep -q 'gmwwSetupFreeBattleIcons()' /tmp/gmww-pr501-stage-gm.js
+          if grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gmww-pr501-stage-gm.js; then
+            echo "::error::Production origin in staging GM"; exit 1
+          fi
+          curl -fsS "$BASE/" > /tmp/gmww-pr501-stage-player.html
+          grep -q 'GMWW PLAYER' /tmp/gmww-pr501-stage-player.html
+          curl -fsS "$BASE/village/village.mjs" > /tmp/gmww-pr501-stage-player.mjs
+          grep -q "flag.textContent='🚩'" /tmp/gmww-pr501-stage-player.mjs
+          echo "PASS: STAGING health / GM Safari / Player Web / red flag"
+          echo "### GMWW PR501 isolated STAGING" >> "$GITHUB_STEP_SUMMARY"
+          echo "GM iPhone Safari: $BASE/gm-pr501/GMWW.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "Player Web: $BASE/" >> "$GITHUB_STEP_SUMMARY"
+          echo "PR501 icons: 🚩 🐦‍🔥 🌈 🏖️ ⛱️" >> "$GITHUB_STEP_SUMMARY"
+      - name: "Smoke create and remove STAGING-only DEMO room"
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-pr501-icons-staging.williampham0702.workers.dev"
+          TOKEN="$(cat /tmp/gmww-pr501-staging-gm-token)"
+          ROOM="$(curl -fsS -X POST "$BASE/api/rooms" -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' --data '{"demo":true,"roomMode":"offline","roomName":"PR501 QA","seatCount":8}')"
+          CODE="$(node -e 'const d=JSON.parse(process.argv[1]);if(!d.roomCode)process.exit(1);process.stdout.write(d.roomCode)' "$ROOM")"
+          test -n "$CODE"
+          curl -fsS "$BASE/join/$CODE" > /tmp/gmww-pr501-room-player.html
+          grep -q 'GMWW PLAYER' /tmp/gmww-pr501-room-player.html
+          curl -fsS -X POST "$BASE/api/gm/rooms/$CODE/delete" -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' --data '{}' > /tmp/gmww-pr501-room-cleanup.json
+          echo "PASS: isolated STAGING room created, Player Web opened, QA room cleaned."
+      - name: "WebKit iPhone viewport loads live GM and Player Web"
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+          node --input-type=module <<'NODE'
+          import {webkit} from 'playwright';
+          import assert from 'node:assert/strict';
+          const browser=await webkit.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
+          const base='https://gmww-pr501-icons-staging.williampham0702.workers.dev';
+          try{
+            await page.goto(base+'/gm-pr501/GMWW.html',{waitUntil:'domcontentloaded',timeout:60000});
+            assert.match(await page.title(),/PR #501 STAGING/);
+            await page.locator('#battleFactionStatsToggle').waitFor({state:'attached',timeout:30000});
+            await page.screenshot({path:'/tmp/gmww-pr501-staging-iphone-gm.png'});
+            await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:60000});
+            assert.ok((await page.content()).includes('GMWW PLAYER'));
+            await page.screenshot({path:'/tmp/gmww-pr501-staging-iphone-player.png'});
+            console.log('PASS real STAGING HTTP in WebKit iPhone-sized viewport; real iPhone remains to be accepted');
+          }finally{await browser.close()}
+          NODE
+      - name: "Save STAGING WebKit screenshots"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-PR501-STAGING-IPHONE-WEBKIT
+          path: /tmp/gmww-pr501-staging-iphone-*.png
+          if-no-files-found: ignore
+          retention-days: 14
