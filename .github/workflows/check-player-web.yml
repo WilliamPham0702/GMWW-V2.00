@@ -38,8 +38,34 @@ jobs:
           cache: npm
       - name: Cài thư viện theo tệp khóa
         run: npm ci
+      - name: Chỉ nhận diện chính xác thay đổi Arena 3D
+        id: arena3d_only
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git diff --name-only origin/main...HEAD > /tmp/gmww-arena-only-diff.txt
+          ONLY=true
+          test -s /tmp/gmww-arena-only-diff.txt || ONLY=false
+          while IFS= read -r FILE; do
+            case "$FILE" in
+              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-player-web.yml) ;;
+              *) ONLY=false ;;
+            esac
+          done < /tmp/gmww-arena-only-diff.txt
+          echo "only=$ONLY" >> "$GITHUB_OUTPUT"
+          echo "PR chỉ có Arena 3D: $ONLY"
+      - name: Xác minh trực tiếp hợp đồng Player 3D, Core và quyền riêng tư
+        if: steps.arena3d_only.outputs.only == 'true'
+        run: |
+          node --test tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage33-parity.test.mjs tests/arena3d-stage29-31.test.mjs
+          node --check assets/village/arena-3d/player.mjs
+          node --check src/arena3d-stage-worker.mjs
+          node .github/scripts/verify-gmww-versions.mjs
       - name: Chọn phạm vi test theo phần code thực sự thay đổi
         id: scope
+        if: steps.arena3d_only.outputs.only != 'true'
         env:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
