@@ -71,7 +71,7 @@ test('New custom action without a dedicated image uses preapproved GM PNG and re
  const dock=h.nodes.get('battleFireIconDock');
  assert.equal(dock.hidden,false);
  assert.equal(dock.dataset.unmappedCount,'1');
- assert.match(dock.innerHTML,/10_danh_dau\\.png/);
+ assert.match(dock.innerHTML,/10_danh_dau\.png/);
  assert.match(dock.innerHTML,/data-fire-action="turn-1"/);
  assert.match(dock.innerHTML,/icon chung/);
 });
