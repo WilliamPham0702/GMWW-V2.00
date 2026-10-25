@@ -25,9 +25,9 @@ test('GM dùng đúng bốn emoji không khung và không khóa vào thanh dư�
 });
 
 test('Bốn icon dùng cùng drag pointer, được lưu vị trí riêng tại thiết bị',()=>{
-  const gm=read('server-game/src/40-battle-and-timeline.part');
+  const gm=read('server-game/src/30-village-and-setup.part');
   const app=read('server-game/current/app.js');
-  const start=gm.indexOf('const GMWW_BATTLE_ICON_POSITIONS='),end=gm.indexOf('function renderPlayBattle(){',start);
+  const start=gm.indexOf('const GMWW_BATTLE_ICON_POSITIONS='),end=gm.indexOf('function initDemoPanel(){',start);
   assert.ok(start>0&&end>start);
   const fn=gm.slice(start,end);
   for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver'])
@@ -54,7 +54,7 @@ test('Chạm vẫn mở Thống kê phe và trả lại nội dung Server, khôn
   assert.match(gm,/playSceneRuntime\.assignments/);
   assert.match(html,/id="battleFactionStats"[^>]*role="dialog"/);
   assert.match(css,/#battleFactionStats\{\s*pointer-events:auto!important/);
-  assert.match(gm,/if\(stats&&stats\.parentElement!==shell\)shell\.appendChild\(stats\)/);
+  assert.match(read('server-game/src/30-village-and-setup.part'),/if\(stats&&stats\.parentElement!==shell\)shell\.appendChild\(stats\)/);
 });
 
 test('DEMO mặc định là icon; chạm mở nhật ký, vẫn kéo bằng tiêu đề khi mở rộng',()=>{
