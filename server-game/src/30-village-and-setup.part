@@ -668,10 +668,10 @@ function initDemoPanel(){
     panel.classList.toggle('is-collapsed',collapsed);
     button.setAttribute('aria-expanded',String(!collapsed));
     button.setAttribute('aria-label',collapsed?'Mở bảng hành động DEMO':'Thu gọn bảng hành động DEMO');
-    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 📗';
+    button.title=collapsed?'Mở lịch sử DEMO':'Thu gọn thành 🐦‍🔥';
     if(!collapsed)panel.classList.remove('has-unread');
   };
-  let collapsed=false;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)==='1'}catch{}
+  let collapsed=true;try{collapsed=localStorage.getItem(GMWW_DEMO_OBSERVER_COMPACT_KEY)!=='0'}catch{}
   toggle(collapsed);
   button.addEventListener('click',e=>{
     e.stopPropagation();
