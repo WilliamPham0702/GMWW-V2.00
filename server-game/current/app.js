@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.224';
+const VERSION='3.225';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4904,28 +4904,39 @@ function battleIconResolve(action){
 function battleIconDock(actions,phase){
  const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
  if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
- const core=document.querySelector('.play-village-core');if(!core)return;
+ const core=document.querySelector('.play-village-core');
  let dock=document.getElementById('battleFireIconDock');
  if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
  const eligible=(Array.isArray(actions)?actions:[]).filter(a=>!a.unavailable&&a.actionId)
    .flatMap(a=>battleIconResolve(a).map(icon=>({a,icon})));
- const active=playSceneState.step==='battle'&&show&&eligible.length>0&&!battleState.busy&&!battleState.syncPending;
- dock.hidden=!active;if(!active){dock.replaceChildren();delete dock.dataset.sig;return}
+ const active=playSceneState.step==='battle'&&show&&eligible.length>0;
+ const waiting=!!(battleState.busy||battleState.syncPending);
+ dock.hidden=!active;
+ dock.classList.toggle('is-pending',waiting);
+ if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
  // Fixed layer outside the transformed village stacking context: Safari can drag above Character cards.
  const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
- if(Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
+ if(core&&Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
   core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
  }
- const fire=core.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect();
- if(rect){dock.style.left=(rect.left+rect.width/2)+'px';dock.style.top=Math.min(innerHeight-83,rect.bottom+10)+'px'}
+ const fire=core?.querySelector('.play-core-pearl');
+ const rect=fire?.getBoundingClientRect(),viewWidth=globalThis.visualViewport?.width||innerWidth,
+   viewHeight=globalThis.visualViewport?.height||innerHeight;
+ if(rect&&rect.width>0&&rect.height>0){
+  dock.style.left=Math.max(70,Math.min(viewWidth-70,rect.left+rect.width/2))+'px';
+  dock.style.top=Math.max(65,Math.min(viewHeight-100,rect.bottom+10))+'px';
+ }else{
+  const shell=document.getElementById('playShell')?.getBoundingClientRect();
+  dock.style.left=(shell?.width?shell.left+shell.width/2:viewWidth/2)+'px';
+  dock.style.top=(shell?.height?shell.top+shell.height*0.51:viewHeight*0.51)+'px';
+ }
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'');
- if(dock.dataset.sig===key)return;dock.dataset.sig=key;
+  ':'+battleState.key+':'+battleState.actionId+':'+battleState.targets.length+':'+String(playSceneState.night||'')+':'+waiting;
+ if(dock.dataset.sig===key||battleIconDragging)return;dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon})=>
-  '<button type="button" class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
+  '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" data-fire-action="'+playEsc(a.id)+'" data-fire-icon="'+playEsc(icon.id)+
   '" aria-label="'+playEsc(a.name)+'" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
   '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt=""><small>'+playEsc(a.targetCount>1&&battleState.actionId===a.id?(battleState.targets.length+'/'+a.targetCount):a.name)+'</small></button>').join('');
 }
@@ -4970,16 +4981,17 @@ function battleIconBind(){
  });
  const finish=e=>{
   const d=battleIconDragging;if(!d||d.pointerId!==e.pointerId)return;
-  const target=d.target,id=d.actionId,moved=d.moved,btn=e.target.closest?.('[data-fire-action]');
+  const id=d.actionId,moved=d.moved,aAtDrop=battleActions().find(x=>x.id===id&&!x.unavailable),
+    target=moved&&aAtDrop?.targetCount>0?battleIconTargetAt(e.clientX,e.clientY,aAtDrop):null;
   battleIconClearDrag();
   if(e.type!=='pointerup'||battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===id&&!x.unavailable);if(!a)return;
   if(!moved){
-   if(a.noTarget){
+   if(battleIsTransfer(a)){battlePickAction(a.id);return}
+   if(a.noTarget||a.targetCount===0){
     if(!confirm('Xác nhận '+a.name+'?'))return;
     battleClear();battleState.actionId=a.id;void battleConfirm(true);return;
    }
-   if(battleIsTransfer(a)){battlePickAction(a.id);return}
    if(a.targetCount>0)battleOpenTargetSheet(a.id,'list');
    return;
   }
@@ -4995,6 +5007,10 @@ function battleIconBind(){
  dock.addEventListener('pointerup',finish);dock.addEventListener('pointercancel',finish);
 }
 
+// Repaint the current GM turn when the icon catalog becomes available after OTA.
+globalThis.addEventListener?.('gmww-action-icons-ready',()=>{
+ if(playSceneState.step==='battle')renderPlayBattle();
+});
 const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
 const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
 const battleDayActions=()=>{
@@ -5568,7 +5584,7 @@ function battleBindConfirmDrag(){
   };
   ok.addEventListener('pointerup',end);ok.addEventListener('pointercancel',end);
 }
-function battleClear(){battleState.assassinChoice='';battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
+function battleClear(){battleIconClearDrag();battleState.assassinChoice='';battleState.transferDir='';battleState.actionId='';battleState.targets=[];battleState.roster=false;battleState.targetSheet=false;battleState.targetMode='list';battleState.dragAmbiguous=false;battleState.nonce=''}
 function battlePickAction(id){if(battleState.busy||battleState.syncPending)return;const a=battleActions().find(a=>a.id===id);if(!a||a.unavailable||(a.noTarget&&!battleIsTransfer(a)))return;if(battleState.actionId!==id){battleClear();battleState.actionId=id}battleState.roster=true;renderPlayBattle()}
 function battlePickTarget(id,actionId){
   if(battleState.busy||battleState.syncPending)return;

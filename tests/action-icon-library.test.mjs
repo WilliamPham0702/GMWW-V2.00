@@ -20,7 +20,8 @@ vm.createContext(ctx);
 new vm.Script(script,{filename:'action-icon-library.js'}).runInContext(ctx);
 const api=ctx.window.GMWWActionIconLibrary;
 test('GM Icon library linked to GM page and parseable without gameplay initialization',()=>{
-  assert.match(html,/<script src="action-icon-library\.js\?v=[^"]+" defer><\/script>/);
+  assert.ok(html.includes('<script src="action-icon-library.js?'),'GM Icon library script must be linked');
+  assert.ok(html.indexOf('src="action-icon-library.js')<html.indexOf('src="app.js'),'Icon catalog must be available before GM battle code');
   assert.ok(api);
   assert.equal(api.get().length,49);
 });
