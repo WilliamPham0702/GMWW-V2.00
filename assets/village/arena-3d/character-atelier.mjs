@@ -266,7 +266,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
       // A long Core session must not retain stale effect deadlines or old
       // travel data after dozens of night/day cycles.
       for(const [kind,deadline] of actor.effects)if(deadline<=time)actor.effects.delete(kind);
-      if(actor.travel&&time>actor.travel.startedAt+actor.travel.duration+1000){
+      if(actor.travel?.to===0&&time>actor.travel.startedAt+actor.travel.duration+1000){
         actor.travel=null;
       }
       const gesturing=actor.gestureEnd>time&&!reducedMotion;
