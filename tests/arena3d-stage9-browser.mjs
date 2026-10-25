@@ -24,7 +24,7 @@ async function check(engine,kind){
    await page.waitForFunction(()=>window.__GMWW_ARENA_STAGE_READONLY?.().fps>0,null,{timeout:45000});
    const state=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
    assert.equal(state.artVersion,'gmww.arena.art.sea-chibi.6');
-   assert.equal(await page.locator('body').getAttribute('data-gmww-stage9'),'gmww.arena.core-ritual-director.8');
+   assert.equal(await page.locator('body').getAttribute('data-gmww-stage9'),'gmww.arena.full-match-sync.9');
    assert.ok(state.drawCalls>0&&state.drawCalls<=57,'30 actors share the expected draw-call budget');
    assert.ok(state.pixelRatio<=1.75,'Stage7 mobile pixel-ratio budget');
    assert.equal(state.privateOverlayCount,0,'synthetic demo must not show GM-private effects');
