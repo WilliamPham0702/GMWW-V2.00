@@ -724,6 +724,26 @@ let playSceneState=(()=>{
 const playSceneRuntime={room:null,players:[],assignments:[],battleActionUsage:[],gameConfig:null,gameTemplates:[],artifactCycle:{count:0,max:3},nightRuntime:null,battleUndo:null,winProposal:null,activeEffects:[],selectedWinnerFaction:'',busy:false,pollTimer:0,villagePollTimer:0,moveTicker:0,autoTurnTimer:0,autoTurnKey:'',roomSyncTimer:0,syncSerial:0,lastSyncAt:0,lastError:'',serverClockOffsetMs:0,socket:null,socketRoomCode:'',socketReconnect:0,setupPopupStep:'',setupPopupClosed:false};
 function savePlayScene(){try{localStorage.setItem(GMWW_PLAY_SCENE_KEY,JSON.stringify(playSceneState))}catch{}}
 function isLivePlayRoom(){return /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(playSceneState.roomCode||''))}
+
+/* Arena 3D official-room bridge: only the immediate trusted Production iframe
+ * may request the currently selected GM room context. Never expose the room
+ * bearer in URL/localStorage additions, DOM, logs, or cross-origin messages.
+ * Core verifies it AGAIN before showing any GM-private information. */
+const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';
+window.addEventListener('message',event=>{
+  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||
+     event.data?.kind!=='gmww-arena3d-ready')return;
+  const frame=document.getElementById('gmwwArena3dQaFrame');
+  if(!frame||!frame.isConnected||frame.closest('[hidden]')||
+     event.source!==frame.contentWindow)return;
+  const roomCode=String(playSceneState.roomCode||'').trim(),
+    gmToken=String(playSceneState.gmToken||'').trim();
+  if(!isLivePlayRoom()||!/^[A-Za-z0-9._~+\/=:-]{12,256}$/.test(gmToken))return;
+  frame.contentWindow.postMessage(
+    {kind:'gmww-arena3d-gm-context',roomCode,gmToken},
+    GMWW_ARENA_OFFICIAL_ORIGIN);
+});
+
 function playLiveMembers(){
   if(Array.isArray(playSceneRuntime.players)&&playSceneRuntime.players.length)return playSceneRuntime.players.filter(p=>p?.kind==='member');
   const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[],wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
