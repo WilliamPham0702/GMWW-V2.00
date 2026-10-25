@@ -33,7 +33,7 @@ test('GĐ10 reduced motion, no audio URL invention, GPU lifecycle',()=>{
  assert.match(art,/const impactRings=Array\.from\(\{length:5\}/);
  assert.match(art,/ring\.material\.color\.set\(profile\.color/);
  assert.match(art,/for\(const ring of impactRings\)\{ring\.geometry\.dispose\(\)/);
- assert.match(art,/get drawBudget\(\)\{return meshes\.length\+effects\.length\+spellBeams\.length/);
+ assert.match(art,/get peakVfxDrawBudget\(\)\{return spellBeams\.length/);
  assert.match(art,/profile\.projectile==='spectral-wolf-head'/);
  const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
  assert.match(live,/gmwwStage10=STAGE10_VERSION/);
