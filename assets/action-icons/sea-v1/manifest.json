@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "name": "GMWW SEA action icons",
-  "version": "v1-wave4",
-  "status": "accepted_icon_catalog_exact_codes_from_device",
-  "count": 39,
-  "source": "GMWW approved 29 old + 10 individually drawn from 54 real GM actions on 2026-10-25",
+  "version": "v1-wave5",
+  "status": "source-art-and-actions-mapped",
+  "count": 49,
+  "source": "39 prior originals + 10 independently drawn wave5 SVG 2026-10-25",
   "icons": [
     {
       "id": "soi-xet",
@@ -705,6 +705,176 @@
       "svg": "39_cam_noi.svg",
       "sha256_png": "2db3eec5058dfd0c353f7ffea566fc0dd7a7895d2e6743c673d15eaf46e9fea9",
       "sha256_svg": "a6fa772e6896d579824728cef91f1f5e1456fb2f028e561661bae3556f2abd3a",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "phieu-con-qua",
+      "name": "Phiếu Con Quạ",
+      "target": "character",
+      "actions": [
+        "action-g7-crow-votes"
+      ],
+      "png": "40_phieu_con_qua.png",
+      "svg": "40_phieu_con_qua.svg",
+      "sha256_png": "787b18462fed9190771630d9343ae8ff548deb946967767a016a0bbed48d361e",
+      "sha256_svg": "7314571bba28216917890170c4b829d17881df9e0a5ee7cf4e93a7b52725a9bf",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "can-chuyen-hoa",
+      "name": "Cắn Chuyển Hóa",
+      "target": "character",
+      "actions": [
+        "action-demon-wolf-convert"
+      ],
+      "png": "41_can_chuyen_hoa.png",
+      "svg": "41_can_chuyen_hoa.svg",
+      "sha256_png": "bc768b5629e3c0bf9b1f14ec1a50ebfc261e1ec4e4940d418ec804669813fb33",
+      "sha256_svg": "5c647cee0806ec97d1e65de0022b2060f79a71070005242debfe0afd7e4cafb4",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "chon-hinh-tuong",
+      "name": "Chọn Hình Tượng",
+      "target": "character",
+      "actions": [
+        "action-wild-child-idol"
+      ],
+      "png": "42_chon_hinh_tuong.png",
+      "svg": "42_chon_hinh_tuong.svg",
+      "sha256_png": "4fd4580384c0d55066456d0cddcd4365e910efa9e38f3765cedf950eb7a07b92",
+      "sha256_svg": "61a3b31076c685e3a83d02e616095969610cefc57aa3a591e85eb806d6be1ee2",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "xem-artifact",
+      "name": "Xem Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_view"
+      ],
+      "png": "43_xem_artifact.png",
+      "svg": "43_xem_artifact.svg",
+      "sha256_png": "7e16e4a673b2182de8719868a76b98eda5e0a2c5f3f3dce38550746c8f46a994",
+      "sha256_svg": "04f49e3c6a91983f29bce8dd4f0a6723161907eadbaf06921f9c4eefced97699",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "doi-artifact",
+      "name": "Đổi Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_exchange"
+      ],
+      "png": "44_doi_artifact.png",
+      "svg": "44_doi_artifact.svg",
+      "sha256_png": "fa919714d8c318304e031651508d1194cdc8d769056b6a2b5b5509551590eb0b",
+      "sha256_svg": "f1d386099e076d0e95d451ca3773db4db82ee78df503402d69e9bc187b37d41f",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "cong-khai-vai",
+      "name": "Công Khai Vai Trò",
+      "target": "none",
+      "actions": [
+        "artifact_action_reveal_role"
+      ],
+      "png": "45_cong_khai_vai.png",
+      "svg": "45_cong_khai_vai.svg",
+      "sha256_png": "057dc1399312eb481b8bb90928b326f677ae59dfe3aa0843a35b4d36e75a6bf1",
+      "sha256_svg": "b2bc907bd47e9a1b6ef590d3be9331787fb90f763b824a2a27804fa8a46aa747",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "sao-chep-chuc-nang",
+      "name": "Sao Chép Chức Năng",
+      "target": "character",
+      "actions": [
+        "artifact_action_copy_function"
+      ],
+      "png": "46_sao_chep_chuc_nang.png",
+      "svg": "46_sao_chep_chuc_nang.svg",
+      "sha256_png": "a3ae50b1f281b9ce944033e0e460f1772baf2add3aaf53d8368d5b9270c258fe",
+      "sha256_svg": "5015509e7e3ce971198a7dc32a2dff2e94d625bfed954cf54006103ee9a43372",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "huy-artifact",
+      "name": "Hủy Artifact",
+      "target": "character",
+      "actions": [
+        "artifact_action_destroy"
+      ],
+      "png": "47_huy_artifact.png",
+      "svg": "47_huy_artifact.svg",
+      "sha256_png": "1d2768df37c1a788b0089ef5405f5963e595eca14e7c7d8160bd91536c752219",
+      "sha256_svg": "4ec3c162a3580b0ebcb414e624b6745ba9738b2143410ea5b59ec5d765e951d8",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "buoc-quay-mat",
+      "name": "Buộc Quay Mặt",
+      "target": "character",
+      "actions": [
+        "artifact_action_turn_away"
+      ],
+      "png": "48_buoc_quay_mat.png",
+      "svg": "48_buoc_quay_mat.svg",
+      "sha256_png": "0e8f2b9d1beba9c76885119692f5abca34a5e449a5efbf6691098d87bf6952d9",
+      "sha256_svg": "4f88c6040cea5320b1f7e97149e9cf0dd06ee2f9d0ebb758fce2fa37fa87e31b",
+      "size": {
+        "width": 1024,
+        "height": 1024
+      },
+      "transparent": true
+    },
+    {
+      "id": "sang-tao-artifact",
+      "name": "Sáng Tạo Artifact",
+      "target": "none",
+      "actions": [
+        "artifact_action_custom"
+      ],
+      "png": "49_sang_tao_artifact.png",
+      "svg": "49_sang_tao_artifact.svg",
+      "sha256_png": "29aaa91c42e0c15c479c473800dfd10870cbf4cd34bfe857ba71e0bf9b875538",
+      "sha256_svg": "5e62ee6bd2bb582b08d9e168324004ef89c6a6102f51d440cc1eda8e60ed33a3",
       "size": {
         "width": 1024,
         "height": 1024
