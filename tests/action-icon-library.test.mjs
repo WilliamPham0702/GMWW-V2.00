@@ -181,7 +181,7 @@ test('Double-tap tiles never show external Edit/Delete buttons and delete action
 test('Fire icon uses battle targetAllowed and original Server commit, without a second action ledger',()=>{
  const battle=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
  assert.match(battle,/battleIconDock\(actions,phase\)/);
- assert.match(battle,/battleIconTargetAt\(e\.clientX,e\.clientY,action\)/);
+ assert.match(battle,/battleIconTargetAt\(x,y,action\)/);
  assert.match(battle,/battlePickTargetWithAudio\(String\(target\.dataset\.playPlayerId/);
  assert.match(battle,/battleConfirm\(true\)/);
  assert.match(battle,/battleRules\(\)\?\.targetAllowed/);
