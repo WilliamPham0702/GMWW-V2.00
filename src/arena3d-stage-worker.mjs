@@ -31,7 +31,7 @@ export class RoomDurableObject extends GameRoomDurableObject{
     const roles=Array.isArray(body?.assignments)?body.assignments:[],owned=Object.create(null);
     for(const row of roles.slice(0,30)){
       const login=String(row?.loginId||'');
-      if(/^[a-z0-9._-]{1,80}$/i.test(login)&&row?.artifact)
+      if(/^[a-z0-9._-]{1,80}$/i.test(login)&&(row?.artifact||row?.artifactId))
         owned[login]=await this.ctx.storage.get('artifact:'+login);
     }
     const visual=artifactVisualSnapshot(roles,owned,{matchId});
