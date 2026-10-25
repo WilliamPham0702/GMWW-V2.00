@@ -62,3 +62,34 @@ export function arenaTargetFrameHz({
  if(reducedMotion)return active||interacting?20:10;
  return active||interacting?30:12;
 }
+
+/**
+ * GĐ22: deadline-based animation pacing.
+ * A naive "now-lastPaint >= interval" quantizes 12Hz to 10Hz on common
+ * 60Hz Safari requestAnimationFrame. Advancing the absolute deadline,
+ * instead of resetting it to actual paint time, compensates for 16.7ms ticks
+ * while never attempting to "catch up" by rendering multiple frames.
+ * Presentation only: Core / WebSocket / action timers are not throttled.
+ */
+export const ARENA_STAGE22_VERSION='gmww.arena.deadline-frame-pacing.22';
+export function createArenaPaintScheduler(){
+ let nextDue=null,previousTime=null,previousHz=0;
+ function reset(){nextDue=null;previousTime=null;previousHz=0}
+ function shouldPaint(now,targetHz,{paused=false}={}){
+  if(paused||!Number.isFinite(now)||!Number.isFinite(targetHz)||targetHz<=0){
+   reset();return false;
+  }
+  const interval=1000/targetHz;
+  if(nextDue===null||previousHz!==targetHz||previousTime===null||
+   now<previousTime||now-previousTime>1400){
+   nextDue=now;previousHz=targetHz;
+  }
+  previousTime=now;
+  // One-millisecond tolerance prevents floating-point near-boundary jitter.
+  if(now+1<nextDue)return false;
+  const missed=Math.max(1,Math.floor((now+1-nextDue)/interval)+1);
+  nextDue+=missed*interval;
+  return true;
+ }
+ return Object.freeze({shouldPaint,reset});
+}
