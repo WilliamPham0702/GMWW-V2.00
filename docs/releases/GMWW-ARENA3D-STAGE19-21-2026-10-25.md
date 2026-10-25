@@ -22,3 +22,12 @@ Ngày: 25/10/2026. Thay đổi trên PR Draft #487; Worker STAGING và DO **riê
 ## Rollback
 - Hoàn nguyên các commit GĐ19–21 trên PR Draft #487; hoặc phát hành lại phiên bản Worker STAGING GĐ18: `9dcd0697-06a1-4ebe-bf8e-73e82132ddab`.
 - Production và dữ liệu phòng thật không bị sửa đổi. Không chạy kiểm thử game 2D, Chrome Player Card, Seat hoặc OTA/IPA vì không thuộc phạm vi thay đổi.
+
+## Kết quả thực tế sau triển khai STAGING (25/10/2026)
+- GitHub Actions: **SUCCESS** https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40168211591. Commit mã nguồn `b245dbac9712048027de7bf51ec6fb993dd52a60`.
+- Worker STAGING độc lập Cloudflare version: `f5139a2b-8413-4fd0-9cc1-243b771019fe`.
+- Browser Chrome 6/12/20/30 Character: **PASS**, đồng thời đo được draw calls và bảng thống kê GĐ19. Browser WebKit giả lập iPhone 6/12/20/30 Character: **PASS**. Không chạy trên iPhone vật lý.
+- E2E Core thật hai client: GM dùng `action_protect`, chuyển Đêm→Ngày, đề cử/bỏ phiếu, kết thúc ván, viewer không thể gọi GM-only API (HTTP 401), reconnect được: **PASS**.
+- Vai trò tùy chỉnh shield 2 mục tiêu và Artifact heal 1 mục tiêu từ Core: **PASS**; viewer GM-only HTTP 401.
+- Chrome chạy trên CI GPU phần mềm ~7 FPS; WebKit ~2 FPS. Đây không phải số đo hay cam kết hiệu năng iPhone thật. Kiểm chứng nhiệt độ, hao pin và FPS máy thật vẫn **chưa nghiệm thu**.
+- Bảo lưu PR #487 **Draft**, không merge, không Production, không đổi game 2D, IPA hay dữ liệu người chơi.
