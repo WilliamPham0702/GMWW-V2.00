@@ -88,20 +88,23 @@ jobs:
             sleep 2
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww475-health.json
-          curl -fsS "$BASE/gm-pr475/GMWW.html" | grep -q 'GMWW STAGING PR #475'
+          curl -fsS "$BASE/gm-pr475/GMWW.html" > /tmp/gmww475-gm.html
+          grep -q 'GMWW STAGING PR #475' /tmp/gmww475-gm.html
           curl -fsS "$BASE/gm-pr475/app.js" > /tmp/gmww475-app.js
           grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gmww475-app.js
           if grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gmww475-app.js; then
             echo "::error::Production origin leaked into staging"; exit 1
           fi
-          curl -fsS "$BASE/" | grep -q 'GMWW PLAYER'
+          curl -fsS "$BASE/" > /tmp/gmww475-player.html
+          grep -q 'GMWW PLAYER' /tmp/gmww475-player.html
           TOKEN="$(cat /tmp/gmww-pr475-staging-gm-token)"
           ROOM="$(curl -fsS -X POST "$BASE/api/rooms" -H "authorization: Bearer $TOKEN" \
             -H 'content-type: application/json' \
             --data '{"demo":true,"roomMode":"offline","roomName":"PR475 STAGING QA","seatCount":8}')"
           CODE="$(node -e 'const d=JSON.parse(process.argv[1]); if(!d.roomCode)process.exit(1);process.stdout.write(d.roomCode)' "$ROOM")"
           test -n "$CODE"
-          curl -fsS "$BASE/join/$CODE" | grep -q 'GMWW PLAYER'
+          curl -fsS "$BASE/join/$CODE" > /tmp/gmww475-room-player.html
+          grep -q 'GMWW PLAYER' /tmp/gmww475-room-player.html
           curl -fsS -X POST "$BASE/api/gm/rooms/$CODE/delete" -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' --data '{}' > /tmp/gmww475-cleanup.json
           echo "PASS: isolated GM Safari, Player Web and Demo room; temporary QA room deleted."
           echo "### GMWW PR #475 STAGING - doc lap Production" >> "$GITHUB_STEP_SUMMARY"
