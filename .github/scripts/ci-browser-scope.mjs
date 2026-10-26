@@ -1570,7 +1570,7 @@ function isPostMatchCIOnlyScope(changes){
 
 export function classifyBrowserScope(changes){
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
-  if(isPostMatchCIOnlyScope(changes))return 'ci-policy';
+  if(isPostMatchCIOnlyScope(changes))return 'postmatch-ci-532';
   if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
   if(isART01NightFlowScope(changes))return 'art01-night-flow';
   if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
@@ -1651,7 +1651,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
-      if(isPostMatchCIOnlyScope(changes))return{mode:'ci-policy',reason:'PR532 CI routing fix only, no game/IPA change'};
+      if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
       if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
       if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
