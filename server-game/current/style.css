@@ -8136,3 +8136,8 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
   #settings #settingsNoticePanel .settings-notice-head-actions{gap:5px}
   #settings #settingsNoticePanel .settings-notice-entry{gap:6px}
 }
+
+/* V3.231: frameless gameplay action icons doubled 40 → 80px. */
+#battleFireIconDock .battle-fire-icon{width:92px!important;height:92px!important;min-width:92px!important;min-height:92px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#battleFireIconDock .battle-fire-icon img{width:80px!important;height:80px!important;max-width:80px!important;object-fit:contain!important;background:transparent!important;border:0!important}
+#battleFireIconDock .gmww-icon-rotation{width:80px!important;height:80px!important;font-size:80px!important;line-height:1!important}
