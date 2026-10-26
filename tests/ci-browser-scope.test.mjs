@@ -375,3 +375,26 @@ test('V3.235 scoped GM glass dock checks only the exact UI release files',()=>{
  assert.equal(classifyBrowserScope(c.map(x=>x.path==='src/index.js'?{...x,after:'VERSION="V3.234"'}:x)),'full','Runtime version required');
  assert.equal(classifyBrowserScope(c.map(x=>x.path==='docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md'?{...x,after:'no notes'}:x)),'full','Release notes required');
 });
+
+test('V3.236 scoped change set excludes unrelated Seat/Card/3D/IPA but fails closed on extra Core changes',()=>{
+ const allowed=[".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/check-dual-renderer.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","docs/releases/GMWW-V3.236-menu-gallows-20261026.md","package-lock.json","package.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/gmww-gallows-rules.js","src/gmww-members-live.js","src/index.js","src/player-web-src/30-rooms-and-realtime.part","tests/ci-browser-scope.test.mjs","tests/gallows-panel-60s-controls.test.mjs","tests/gmww-v3236-menu-gallows.test.mjs"];
+ const tokens={
+  'src/index.js':'VERSION="V3.236"',
+  'server-game/current/app.js':"const VERSION='3.236'",
+  'server-game/current/GMWW.html':'id="battleGMChromeToggle"',
+  'server-game/current/style.css':'GMWW V3.236',
+  'src/gmww-gallows-rules.js':"outcome:'no_lynch'",
+  'src/player-web-src/30-rooms-and-realtime.part':"'no_lynch'",
+  'tests/gmww-v3236-menu-gallows.test.mjs':'V3.236 tied nomination',
+  'docs/releases/GMWW-V3.236-menu-gallows-20261026.md':'Rollback',
+  'package.json':'"version": "3.236.0"',
+  '.github/workflows/check-player-web.yml':"'gm-menu-gallows-3236'",
+  '.github/workflows/deploy-production.yml':'3.236.0'
+ };
+ const changes=allowed.map(path=>({path,status:path==='tests/gmww-v3236-menu-gallows.test.mjs'||path==='docs/releases/GMWW-V3.236-menu-gallows-20261026.md'?'A':'M',after:tokens[path]||'approved'}));
+ assert.equal(classifyBrowserScope(changes),'gm-menu-gallows-3236');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,modified('src/gmww-wolf-night-resolution.js','a','b')]),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/gmww-gallows-rules.js'?{...c,after:'missing no lynch'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,after:'"version": "3.235.0"'}:c)),'full');
+});
