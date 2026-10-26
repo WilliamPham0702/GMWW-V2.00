@@ -451,3 +451,11 @@ test('V3.238 deployment hotfix validates only duplicate-ID release workflow repa
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
  assert.equal(classifyBrowserScope([...rows,modified('server-game/current/app.js','a','b')]),'full');
 });
+
+test('V3.238 workflow revalidation: exactly one deploy job and only three repair files',()=>{
+ const paths=['.github/workflows/deploy-production.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
+ const c=paths.map(path=>({path,status:'M',after:path.endsWith('deploy-production.yml')?'V3.238 recovery:':path.endsWith('ci-browser-scope.test.mjs')?'V3.238 workflow revalidation':'classifier'}));
+ assert.equal(classifyBrowserScope(c),'gm238-deploy-repair');
+ assert.equal(classifyBrowserScope(c.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...c,modified('src/index.js','before','after')]),'full');
+});
