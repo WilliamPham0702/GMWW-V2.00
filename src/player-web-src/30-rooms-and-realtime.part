@@ -127,7 +127,7 @@ function renderPublicGallowsVerdict(){
     stamp=Number(g.resolvedAt||0),remaining=30000-(Date.now()+Number(state.serverClockOffsetMs||0)-stamp);
   let panel=document.getElementById('gmwwGallowsPublicVerdict');
   const visible=!!state.roomCode&&phase==='morning'&&g.stage==='resolved'&&
-    ['dead','alive'].includes(g.outcome)&&stamp>0&&remaining>0;
+    ['dead','alive','no_lynch'].includes(g.outcome)&&stamp>0&&remaining>0;
   if(!visible){if(panel)panel.hidden=true;return}
   if(!panel){
     const style=document.createElement('style');style.id='gmwwGallowsVerdictCss';style.textContent="#gmwwGallowsPublicVerdict{position:fixed;z-index:998;top:22%;left:50%;transform:translateX(-50%);width:min(86vw,400px);padding:18px 15px;text-align:center;border-radius:24px;border:2px solid #ecd39c;background:radial-gradient(circle at 50% 0%,#187e91,#08283f 84%);color:#effff5;box-shadow:0 13px 40px #001e398c;pointer-events:none;animation:gmww-public-verdict-in .45s ease both}\n#gmwwGallowsPublicVerdict[hidden]{display:none!important}\n#gmwwGallowsPublicVerdict .gmww-verdict-pearls{display:block;font-size:20px;letter-spacing:.3em;color:#ffe0a2}\n#gmwwGallowsPublicVerdict strong{display:block;font-size:29px;color:#dcffec;letter-spacing:.045em}\n#gmwwGallowsPublicVerdict[data-outcome=\"dead\"] strong{color:#ffd0d5}\n#gmwwGallowsPublicVerdict b{display:block;font-size:18px;margin:8px 0;color:#fff3bb}\n#gmwwGallowsPublicVerdict p{margin:8px 0;font-size:13px}\n#gmwwGallowsPublicVerdict small{font-size:10px;color:#b3e8eb}\n@keyframes gmww-public-verdict-in{from{opacity:0;transform:translate(-50%,12px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}\n@media(prefers-reduced-motion:reduce){#gmwwGallowsPublicVerdict{animation:none}}";
@@ -138,9 +138,9 @@ function renderPublicGallowsVerdict(){
     document.body.append(panel);
   }
   const target=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
-  panel.querySelector('b').textContent=String(target?.displayName||g.candidateId||'Người chơi');
-  panel.querySelector('strong').textContent=g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
-  panel.querySelector('p').textContent='👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
+  panel.querySelector('b').textContent=g.outcome==='no_lynch'?'Không ai lên giàn':String(target?.displayName||g.candidateId||'Người chơi');
+  panel.querySelector('strong').textContent=g.outcome==='no_lynch'?'HÒA PHIẾU ĐỀ CỬ':g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
+  panel.querySelector('p').textContent=g.outcome==='no_lynch'?'Hôm nay không có người bị treo giàn.':'👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
   panel.dataset.outcome=g.outcome;panel.hidden=false;
 }
 function syncGallowsVoteTags(){
