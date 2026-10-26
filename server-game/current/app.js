@@ -1667,6 +1667,7 @@ function setServerHealthState(kind,text,detail,data={}){
   put('serverHealthText',text);put('serverHealthDetail',detail);
   put('healthPlayerWeb',data.web||'—');put('healthApi',data.api||'—');put('healthLatency',data.latency||'—');put('healthVersion',data.version||'—');
   put('healthCheckedAt',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+  gmwwSettingsNoticeFromActive(['checkServerHealth','refreshServerData','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 async function checkServerHealth(){
   if(serverHealthBusy)return; serverHealthBusy=true;
@@ -1714,6 +1715,7 @@ function setMaintenanceState(kind,text,detail){
   if(pill){pill.className='maintenance-pill '+kind;pill.textContent=text}
   if(dot)dot.className='maintenance-dot '+kind;
   if(msg)msg.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['auditLocalData','clearRuntimeCache','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 function auditLocalData(){
   const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
@@ -1767,6 +1769,7 @@ function setDiagnosticState(kind,status,summary,detail=''){
   if(sum)sum.textContent=summary||'';
   if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
   if(det)det.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow','settingsRunHealth'],kind,String(status||'')+' · '+String(summary||'')+(detail?' · '+detail:''));
 }
 function renderDiagnosticItem(key,kind,text){
   const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
