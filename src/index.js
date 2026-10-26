@@ -19,6 +19,7 @@ import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-cat
 import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
+import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHeartbeat, shouldSkipDirectoryHeartbeat, GMWW_WRITE_OPTIMIZER_VERSION } from "./gmww-do-write-optimizer.js";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
@@ -39,7 +40,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.227",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3227",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.228",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3228",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -50,6 +51,19 @@ function publicGmPresence(rec,online=true){
 }
 
 export class RoomDurableObject extends DurableObject {
+  // In-memory diagnostics only: counting saved writes must NOT create writes.
+  gmwwWriteSkipped(kind){
+    if(!this._gmwwWriteSavings)this._gmwwWriteSavings={startedAt:new Date().toISOString(),counts:{memberHeartbeat:0,memberSession:0,gmHeartbeat:0,roomDirectory:0}};
+    if(Object.prototype.hasOwnProperty.call(this._gmwwWriteSavings.counts,kind))this._gmwwWriteSavings.counts[kind]++;
+  }
+  gmwwWriteOptimizerStatus(){
+    const stats=this._gmwwWriteSavings||{startedAt:null,counts:{memberHeartbeat:0,memberSession:0,gmHeartbeat:0,roomDirectory:0}};
+    return {ok:true,enabled:true,policyVersion:GMWW_WRITE_OPTIMIZER_VERSION,
+      scope:'member-store-instance',since:stats.startedAt,counts:stats.counts,
+      avoidedWrites:Object.values(stats.counts).reduce((sum,value)=>sum+value,0),
+      estimateOnly:true,cloudflareBilledRows:null,
+      note:'Chỉ thống kê ghi lặp được bỏ qua trong phiên Durable Object hiện tại; không phải tổng rows_written Cloudflare. Không xóa dữ liệu.'};
+  }
   async fetch(request){
     const path=new URL(request.url).pathname;
     // GR01 recovery marker: internal DO stub requests only, read-only.
@@ -92,6 +106,7 @@ export class RoomDurableObject extends DurableObject {
   async handleFetch(request){
     const url=new URL(request.url);
     if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
+    if(url.pathname==="/storage-optimizer/stats"&&request.method==="GET")return j(this.gmwwWriteOptimizerStatus());
     if(url.pathname==="/health/storage"&&request.method==="GET"){
       await this.ctx.storage.get("__gmww_health_read_only__");
       return j({ok:true,storage:"reachable"});
@@ -327,7 +342,14 @@ export class RoomDurableObject extends DurableObject {
     const token=bearer(request);if(!token)return j({ok:false,error:"UNAUTHORIZED"},401);const key="session:"+await sha256(token),ses=await this.ctx.storage.get(key);
     if(!ses||ses.expiresAt<=Date.now()){if(ses)await this.ctx.storage.delete(key);return j({ok:false,error:"SESSION_EXPIRED"},401)}
     const member=await this.ctx.storage.get("member:"+ses.loginId);if(!member)return j({ok:false,error:"UNAUTHORIZED"},401);
-    disableMemberPassword(member);member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();await this.ctx.storage.put("member:"+ses.loginId,member);
+    const needsLegacyCleanup=!!(member.passwordHash||member.passwordSalt||member.passwordRequired);
+    disableMemberPassword(member);
+    const now=Date.now();
+    if(!needsLegacyCleanup&&shouldSkipMemberSessionTouch(member,now))this.gmwwWriteSkipped('memberSession');
+    else{
+      member.presenceAt=now;member.lastSeenAt=new Date(now).toISOString();
+      await this.ctx.storage.put("member:"+ses.loginId,member);
+    }
     return j({ok:true,member:publicMember(member),expiresAt:ses.expiresAt});
   }
   async memberPresence(request,body){
@@ -337,6 +359,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async memberPresenceInternal(body){
     const loginId=normalizeLoginId(body?.loginId),member=await this.ctx.storage.get("member:"+loginId);if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND"},404);
+    const previousPresence={...member};
     // On GM disband retries, do not evict someone who has since joined another room.
     const expected=body?.expectedRoomCode?normalizeRoomCode(body.expectedRoomCode):null;
     if(expected&&!body?.roomCode&&member.currentRoomCode&&normalizeRoomCode(member.currentRoomCode)!==expected){
@@ -350,6 +373,10 @@ export class RoomDurableObject extends DurableObject {
     member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
     member.currentRoomCode=keepGmCall?calledRoomCode:requestedRoomCode;
     member.ready=keepGmCall?true:!!body?.ready;
+    if(shouldSkipMemberHeartbeat(previousPresence,member,member.presenceAt)){
+      this.gmwwWriteSkipped('memberHeartbeat');
+      return j({ok:true,member:directoryMember({...member,presenceAt:previousPresence.presenceAt,lastSeenAt:previousPresence.lastSeenAt})});
+    }
     await this.ctx.storage.put("member:"+loginId,member);return j({ok:true,member:directoryMember(member)});
   }
   async memberRecordResult(body){
@@ -682,6 +709,10 @@ export class RoomDurableObject extends DurableObject {
   }
   async globalGmPresencePut(body){
     const old=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),online=body?.online!==false,hasRoomCode=!!body&&Object.prototype.hasOwnProperty.call(body,"roomCode"),requestedRoomCode=hasRoomCode?normalizeRoomCode(body?.roomCode):"",roomCode=hasRoomCode&&isValidRoomCode(requestedRoomCode)?requestedRoomCode:"";
+    if(shouldSkipGmHeartbeat(old,online,hasRoomCode,roomCode,now)){
+      this.gmwwWriteSkipped('gmHeartbeat');
+      return j({ok:true,gm:publicGmPresence(old,true),lobbyGeneration:Number((await this.ctx.storage.get("globalSetting:lobbyReset"))?.generation||0)});
+    }
     if(!online){
       const rec={...(old||{}),online:false,roomCode:hasRoomCode?roomCode:String(old?.roomCode||""),lastSeenAt:now,updatedAt:new Date(now).toISOString()};
       await this.ctx.storage.put("globalSetting:gmPresence",rec);
@@ -719,6 +750,10 @@ export class RoomDurableObject extends DurableObject {
     const key="roomdir:"+code,old=await this.ctx.storage.get(key),incomingResetVersion=Math.max(0,Number(body?.resetVersion||0)),oldResetVersion=Math.max(0,Number(old?.resetVersion||0));
     if(old&&incomingResetVersion<oldResetVersion)return j({ok:true,staleIgnored:true,room:old});
     const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,demo:body?.demo===true,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatMoveMode:normalizeSeatMoveMode(body?.seatMoveMode||old?.seatMoveMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
+    if(shouldSkipDirectoryHeartbeat(old,rec,Date.now())){
+      this.gmwwWriteSkipped('roomDirectory');
+      return j({ok:true,room:old,unchanged:true});
+    }
     await this.ctx.storage.put(key,rec);return j({ok:true,room:rec});
   }
   async roomDirectoryList(url){
@@ -2771,6 +2806,10 @@ export default {async fetch(request,env){
     const rr=await memberStore(env).fetch(new Request("https://member.internal/global-settings/web-sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:VERSION,source:body?.source||"GM_APP"})}));
     if(!rr.ok)return rr;
     const data=await rr.json();return j({ok:true,...data,version:VERSION,serverVersion:VERSION,webVersion:VERSION});
+  }
+  if(url.pathname==="/api/gm/storage-optimizer"&&request.method==="GET"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch("https://member.internal/storage-optimizer/stats");
   }
   if(url.pathname==="/api/gm/presence"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
