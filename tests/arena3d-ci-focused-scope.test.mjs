@@ -32,6 +32,27 @@ function originalHtml(after){
   s=s.replace(now,before);
  }
  return s;
+,
+  ["  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler.","  // GMWW keeps the one authoritative Role/Artifact editor until native 3D\n  // forms cover every Core rule. A verified Arena child can request the existing\n  // 2D setup screen; it cannot mutate role assignments through postMessage.\n  window.addEventListener('message',event=>{\n    if(event.origin!==new URL(arenaUrl).origin||\n       event.source!==frame?.contentWindow||!overlay||overlay.hidden||\n       event.data?.kind!=='gmww-arena3d-open-setup')return;\n    closeArena(true);\n  });\n  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler."]ction originalHtml(after){
+ const pairs=[
+  ['aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"','aria-label="Vào Làng Arena 3D chính thức"'],
+  ['<small>THỬ NGHIỆM ARENA 3D</small>','<small>CHƠI ARENA 3D</small>'],
+  ["const arenaUrl='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html';",
+   "const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';"],
+  ["overlay.setAttribute('aria-label','Thử nghiệm Arena 3D · STAGING');",
+   "overlay.setAttribute('aria-label','GMWW Arena 3D · Phòng chơi thật');"],
+  ["title.textContent='🌊 ARENA 3D · STAGING';","title.textContent='🌊 ARENA 3D';"],
+  ["frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';",
+   "frame.title='GMWW Arena 3D — kết nối phòng chơi thật';"],
+  ["/* This Runtime-only experiment keeps the 2D menu/game untouched.\n * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.\n * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */",
+   "/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.\n * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host\n * credentials are only transmitted by origin-checked one-frame postMessage.\n * Never send a GM token in URL or across an untrusted origin. */"]
+ ];
+ let s=after;
+ for(const [before,now] of pairs){
+  assert.equal(s.split(now).length,2);
+  s=s.replace(now,before);
+ }
+ return s;
 }
 const gm=read('server-game/current/app.js'),part=read('server-game/src/20-members-and-roster.part'),
  html=read('server-game/current/GMWW.html');
