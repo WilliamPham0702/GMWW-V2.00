@@ -100,6 +100,16 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
 
+      - name: V3.232 — kiểm thử cảnh báo Runtime thật/giả và chốt phiên bản
+        if: steps.scope.outputs.mode == 'runtime-warning-3232'
+        run: |
+          node --test tests/gm-runtime-error-diagnostics.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.232-runtime-warning-20261026.md
+
       - name: V3.231 — chỉ kiểm thử icon 80px, vị trí cầu thang và chốt Runtime
         if: steps.scope.outputs.mode == 'entry-icons-3231'
         run: |
