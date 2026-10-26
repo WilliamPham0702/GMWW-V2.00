@@ -1348,6 +1348,9 @@ function isGM3234PostMergeReleaseGateScope(changes){
 function isGM235GlassDockScope(changes){
  const allowed=new Set([
   '.github/scripts/ci-browser-scope.mjs','.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/check-gallows-redesign.yml','.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
   '.github/workflows/check-player-web.yml',
   'docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md',
   'package-lock.json','package.json',
