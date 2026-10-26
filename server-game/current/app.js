@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.234';
+const VERSION='3.235';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1902,7 +1902,7 @@ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementByI
 const GMWW_SETTINGS_TOOL_LABELS=Object.freeze({
   settingsRunHealth:'HEALTHY CHECK',settingsOptimizeDO:'TỐI ƯU DO',
   auditLocalData:'KIỂM TRA',clearRuntimeCache:'DỌN CACHE',reloadApp:'TẢI LẠI',
-  gmwwCloudflareOpen:'QUẢN LÝ CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
+  gmwwCloudflareOpen:'CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
   opsRunFullAudit:'KIỂM TRA TỔNG',opsCheckRoom:'PHÒNG & REALTIME',opsCheckRelease:'PHIÊN BẢN',
   checkServerHealth:'KIỂM TRA SERVER',refreshServerData:'ĐỒNG BỘ SERVER',openPlayerWeb:'MỞ WEB',
   runSystemDiagnostics:'QUÉT LỖI',quickRepairSystem:'SỬA NHANH',checkPlayerWebNow:'CHECK WEB'
@@ -3425,7 +3425,7 @@ function gmwwSetupFreeBattleIcons(){
       node.style.setProperty(name,value,'important');
     return p;
   };
-  // V3.233: five exclusive slots, never stack 🏖️ and 🌈 or show Undo here.
+  // V3.235: five text slots; 🌈 is now a floating shortcut like DEMO.
   const rail=document.getElementById('battleBottomControls');
   if(rail){
     let actionSlot=document.getElementById('battleMainActionSlot');
@@ -3433,21 +3433,21 @@ function gmwwSetupFreeBattleIcons(){
     for(const id of ['battleDayActionFloat','battleActionTray']){
       const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
     }
-    for(const id of ['battleDayNoticeFloat','battleDayGallowsFloat','battleFactionStatsFloat']){
+    for(const id of ['battleDayNoticeFloat','battleDayGallowsFloat']){
       const item=document.getElementById(id);if(!item)continue;
       item.classList.remove('gmww-free-icon');
       for(const css of ['left','top','right','bottom','transform','width','height'])item.style.removeProperty(css);
     }
     for(const item of [document.getElementById('playBattleClockFloat'),
       document.getElementById('battleDayNoticeFloat'),actionSlot,
-      document.getElementById('battleDayGallowsFloat'),document.getElementById('battleFactionStatsFloat')])
+      document.getElementById('battleDayGallowsFloat')])
       if(item)rail.appendChild(item);
     document.getElementById('battleSeaShortcuts')?.remove();
     const undo=document.getElementById('battleUndoFloat');
     if(undo){rail.appendChild(undo);undo.hidden=true;}
   }
-  // DEMO alone keeps its independent floating shortcut/expanded panel.
-  for(const id of ['battleDemoObserver']){
+  // DEMO and rainbow keep independent, local-only floating positions.
+  for(const id of ['battleDemoObserver','battleFactionStatsFloat']){
     const panel=document.getElementById(id);if(!panel)continue;
     if(panel.parentElement!==shell)shell.appendChild(panel);
     const saved=read()[id];
@@ -3455,11 +3455,14 @@ function gmwwSetupFreeBattleIcons(){
       const width=panel.offsetWidth||48,height=panel.offsetHeight||48;
       place(panel,saved.x*Math.max(0,innerWidth-width),saved.y*Math.max(0,innerHeight-height));
     }
+    if(id==='battleFactionStatsFloat'&&!saved&&!panel.dataset.gmwwFreeRestored){
+      place(panel,innerWidth-64,Math.max(118,Math.min(innerHeight-80,Math.round(innerHeight*.23))));
+    }
     panel.dataset.gmwwFreeRestored='1';
     if(panel.dataset.gmwwFreeReady)continue;
     panel.dataset.gmwwFreeReady='1';
     panel.classList.add('gmww-free-icon');
-    const button=panel.querySelector(id==='battleDemoObserver'?'#battleDemoCollapse':'button');
+    const button=panel.querySelector(id==='battleDemoObserver'?'#battleDemoCollapse':'#battleFactionStatsToggle');
     if(!button)continue;
     let drag=null,blockClickUntil=0;
     const movable=()=>id!=='battleDemoObserver'||panel.classList.contains('is-collapsed');
@@ -6164,7 +6167,7 @@ function battleSyncPhaseDock(phase,visible){
   const shell=document.getElementById('playShell');
   if(shell)shell.dataset.battlePhase=visible?phase:'';
   const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
-    battleUndoFloat:night,battleDayNoticeFloat:day,battleDayActionFloat:day,
+    battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:day,
     battleDayGallowsFloat:day,battleFactionStatsFloat:day};
   for(const [id,show] of Object.entries(slots)){
     const el=document.getElementById(id);if(el)el.hidden=!show;
