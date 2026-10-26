@@ -1855,7 +1855,7 @@ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementByI
 
 
 /* GMWW Settings: one continuous scrolling screen with consistent health status. */
-/* GMWW V3.229 — thông báo thống nhất cho 16 công cụ Kiểm tra & bảo trì. */
+/* GMWW V3.230 — thông báo thống nhất cho 16 công cụ Kiểm tra & bảo trì. */
 const GMWW_SETTINGS_TOOL_LABELS=Object.freeze({
   settingsRunHealth:'HEALTHY CHECK',settingsOptimizeDO:'TỐI ƯU DO',
   auditLocalData:'KIỂM TRA',clearRuntimeCache:'DỌN CACHE',reloadApp:'TẢI LẠI',
@@ -1936,7 +1936,7 @@ function gmwwInitSettingsNoticePanel(){
   }
 }
 gmwwInitSettingsNoticePanel();
-/* END GMWW SETTINGS NOTICES V3.229 */
+/* END GMWW SETTINGS NOTICES V3.230 */
 
 function gmwwSettingsHubHealth(kind,message){
   const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
@@ -2093,8 +2093,18 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
     }
     gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
     gmwwOpsDraw(gmwwOpsSnapshot);
+    if(!silent){
+      const values=Object.values(checks),errors=values.filter(v=>v?.kind==='bad').length,
+        warnings=values.filter(v=>v?.kind==='warn').length;
+      const targetId=gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId;
+      pushSettingsNotice(targetId,errors?'bad':warnings?'warn':'ok',errors?
+        'Đã kiểm tra · '+errors+' lỗi cần xử lý.':warnings?
+        'Đã kiểm tra · '+warnings+' cảnh báo cần theo dõi.':'Đã kiểm tra · Không ghi nhận lỗi trong các mục được quét.');
+    }
     return gmwwOpsSnapshot;
   }catch(_){
+    if(!silent)pushSettingsNotice(gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId,
+      'bad','Không hoàn tất được kiểm tra vận hành. Vui lòng kiểm tra mạng rồi thử lại.');
     const advice=document.getElementById('opsAdvice');
     if(advice)advice.textContent='Không hoàn tất được chẩn đoán. Kiểm tra mạng rồi thử lại.';
     if(overall){overall.className='ops-pill bad';overall.textContent='KHÔNG KIỂM TRA ĐƯỢC'}
@@ -2124,30 +2134,37 @@ function gmwwOpsInitialize(){
   document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
   document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
   document.getElementById('settingsRunHealth')?.addEventListener('click',async()=>{
-    const button=document.getElementById('settingsRunHealth'),note=document.getElementById('settingsHealthSummary');
+    const button=document.getElementById('settingsRunHealth');
     if(button?.disabled)return;if(button)button.disabled=true;
-    if(note)note.textContent='Đang kiểm tra bảo trì, Server, realtime và chẩn đoán…';
-    try{auditLocalData();await gmwwOpsRun({kind:'all'});await checkServerHealth();await runSystemDiagnostics();if(note)note.textContent='Hoàn tất quét. Kết quả và cảnh báo hiển thị bên dưới.'}
-    catch(e){if(note)note.textContent='Còn mục chưa kiểm tra: '+String(e?.message||'Vui lòng thử lại.')}
+    try{
+      auditLocalData();
+      const operations=await gmwwOpsRun({kind:'all'});
+      await checkServerHealth();
+      const diagnostics=await runSystemDiagnostics();
+      const bad=!operations||diagnostics?.ok!==true;
+      pushSettingsNotice('settingsRunHealth',bad?'warn':diagnostics?.warnings?.length?'warn':'ok',
+        bad?'Đã kiểm tra nhưng còn mục chưa xác nhận. Xem chi tiết kết quả vận hành.':
+        diagnostics.warnings?.length?'Đã kiểm tra · Còn '+diagnostics.warnings.length+' cảnh báo.':
+        'Hoàn tất Health Check và chẩn đoán Server/Player Web.');
+    }catch(e){pushSettingsNotice('settingsRunHealth','bad','Không hoàn tất: '+String(e?.message||'Vui lòng thử lại.'))}
     finally{if(button)button.disabled=false}
   });
 }
 gmwwOpsInitialize();
 
-/* GMWW 3.228 — Bảo vệ hạn mức ghi Durable Objects, luôn chạy tự động trên Server. */
+/* GMWW 3.230 — báo cáo DO vào Thông báo hệ thống, không còn chữ trong lưới. */
 document.getElementById('settingsOptimizeDO')?.addEventListener('click',async()=>{
-  const button=document.getElementById('settingsOptimizeDO'),output=document.getElementById('settingsOptimizeDOStatus');
+  const button=document.getElementById('settingsOptimizeDO');
   if(button?.disabled)return;
   if(button)button.disabled=true;
-  if(output)output.textContent='Đang kiểm tra chính sách giảm ghi trùng trên Server…';
   try{
     const data=await gmApi('/api/gm/storage-optimizer',{method:'GET'});
     if(!data?.ok||data.enabled!==true)throw new Error('Chính sách tối ưu chưa hoạt động');
     const count=Number(data.avoidedWrites||0);
-    if(output)output.textContent='ĐANG BẬT TỰ ĐỘNG • Đã bỏ qua '+count.toLocaleString('vi-VN')+
-      ' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng/dữ liệu. Số này không phải hóa đơn Cloudflare.';
+    pushSettingsNotice('settingsOptimizeDO','ok','ĐANG BẬT TỰ ĐỘNG · Đã bỏ qua '+
+      count.toLocaleString('vi-VN')+' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng hoặc dữ liệu. Đây không phải số liệu hóa đơn Cloudflare.');
   }catch(error){
-    if(output)output.textContent='Chưa xác minh được công cụ trên Server: '+String(error?.message||error);
+    pushSettingsNotice('settingsOptimizeDO','bad','Chưa xác minh được công cụ trên Server: '+String(error?.message||error));
   }finally{if(button)button.disabled=false;}
 });
 
