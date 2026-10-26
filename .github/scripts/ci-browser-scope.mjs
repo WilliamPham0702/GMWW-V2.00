@@ -1500,6 +1500,74 @@ function isART01DeployGateScope(changes){
   by.get('tests/art01-deployment-gate.test.mjs')?.after?.includes('ART-01 release gate focused') &&
   by.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('isART01DeployGateScope');
 }
+// PR #532: the ONLY gameplay changes permitted here are post-match room reset
+// and GM's local selection reconciliation. All unrelated code still runs full CI.
+const postMatch532Paths=new Set([
+  'src/index.js',
+  'server-game/src/30-village-and-setup.part',
+  'server-game/src/50-roles-and-artifacts.part',
+  'server-game/current/app.js',
+  'tests/post-match-room-cleanup.test.mjs',
+  'docs/releases/post-match-room-demo-seat-20261026.md'
+]);
+function isPostMatch532Scope(changes){
+  if(!Array.isArray(changes)||changes.length!==postMatch532Paths.size)return false;
+  const by=new Map(changes.map(x=>[x.path,x]));
+  if(by.size!==postMatch532Paths.size||
+     changes.some(x=>!postMatch532Paths.has(x.path)||
+        x.status!==(x.path.startsWith('tests/')||x.path.startsWith('docs/')?'A':'M')))return false;
+  const boundaries={
+    'src/index.js':[
+      ['  async gmReset(request,body){','  async gmEnd(request,body){']
+    ],
+    'server-game/src/30-village-and-setup.part':[
+      ['async function selectPlayExistingRoom(r){','function renderPlayCreatedRooms(){'],
+      ['async function flushPlayRoomMode(){','function bindPlayRoomModeButtons(){']
+    ],
+    'server-game/src/50-roles-and-artifacts.part':[
+      ['async function playCompletionNext(choice){','function initPlayCompletion(){']
+    ],
+    'server-game/current/app.js':[
+      ['async function selectPlayExistingRoom(r){','function renderPlayCreatedRooms(){'],
+      ['async function flushPlayRoomMode(){','function bindPlayRoomModeButtons(){'],
+      ['async function playCompletionNext(choice){','function initPlayCompletion(){']
+    ]
+  };
+  for(const [p,sections] of Object.entries(boundaries)){
+    let before=by.get(p)?.before,after=by.get(p)?.after;
+    if(typeof before!=='string'||typeof after!=='string')return false;
+    for(const [a,b] of sections){
+      before=outsideScope(before,a,b);after=outsideScope(after,a,b);
+      if(before===null||after===null)return false;
+    }
+    if(before!==after)return false;
+  }
+  return by.get('src/index.js').after.includes('["demoLease","demoClock","demoPlan"]') &&
+    by.get('server-game/src/30-village-and-setup.part').after.includes('ROOM_MODE_REQUIRES_EMPTY_RESET') &&
+    by.get('server-game/src/50-roles-and-artifacts.part').after.includes("transactionId:'completed-leave-'") &&
+    by.get('tests/post-match-room-cleanup.test.mjs').after.includes('Hard room reset clears DEMO lease');
+}
+// CI-only followup: separate PR with exact CI files, never gameplay or IPA.
+const postMatchCIOnlyPaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml',
+ '.github/workflows/check-player-card-browsers.yml',
+ '.github/workflows/check-gm-free-icons-501.yml',
+ '.github/workflows/check-gallows-redesign.yml',
+ '.github/workflows/check-dual-renderer.yml',
+ '.github/workflows/build-server-game-ipa.yml',
+ 'tests/ci-browser-scope.test.mjs',
+ 'docs/releases/post-match-ci-scope-20261026.md'
+]);
+function isPostMatchCIOnlyScope(changes){
+ const by=new Map((changes||[]).map(x=>[x.path,x]));
+ return by.size===postMatchCIOnlyPaths.size&&
+  changes.length===postMatchCIOnlyPaths.size&&
+  changes.every(x=>postMatchCIOnlyPaths.has(x.path)&&
+    x.status===(x.path.startsWith('docs/')?'A':'M'))&&
+  by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('PR532 scoped CI selector');
+}
+
 /* WOLF-01: exact privacy-preserving Wolf recognition and runtime V3.239 scope.
  * Unknown paths fail closed into the standard CI gate. */
 function isWOLF01Scope(changes){
@@ -1535,6 +1603,8 @@ function isWOLF01Scope(changes){
 }
 export function classifyBrowserScope(changes){
   if(isWOLF01Scope(changes))return 'wolf01-private-pack';
+  if(isPostMatch532Scope(changes))return 'post-match-room-532';
+  if(isPostMatchCIOnlyScope(changes))return 'postmatch-ci-532';
   if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
   if(isART01NightFlowScope(changes))return 'art01-night-flow';
   if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
@@ -1614,8 +1684,10 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
-      if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
+      if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
+      if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
+      if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
       if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
@@ -1750,6 +1822,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
+  if(result.mode==='post-match-room-532')console.log('PR532: chỉ test kết thúc ván, Seat, DEMO, Worker syntax và nguồn app. Không build IPA.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');

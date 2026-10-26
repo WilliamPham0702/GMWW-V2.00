@@ -414,6 +414,17 @@ jobs:
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
+      - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
+        if: steps.scope.outputs.mode == 'post-match-room-532'
+        run: |
+          node --test tests/post-match-room-cleanup.test.mjs tests/forced-end-game.test.mjs tests/match-completion-server.test.mjs tests/v3175-post-create-room-mode.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/post-match-room-demo-seat-20261026.md
+      - name: Chỉ kiểm thử phân loại CI không thay đổi gameplay
+        if: steps.scope.outputs.mode == 'postmatch-ci-532'
+        run: node --test --test-name-pattern='PR532' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
