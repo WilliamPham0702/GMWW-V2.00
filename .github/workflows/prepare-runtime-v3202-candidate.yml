@@ -1,4 +1,4 @@
-name: GMWW V3.234 OTA Candidate SHA-256 (Dock Đêm/Ngày và Lên Giàn 5 dòng)
+name: GMWW V3.235 OTA Candidate SHA-256 (Dock Đêm/Ngày và Lên Giàn 5 dòng)
 on:
   pull_request:
     branches: [main]
@@ -72,12 +72,12 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3234-phase-dock-gallows.test.mjs
+          node --test tests/gmww-v3235-phase-dock-gallows.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
-      - name: Kiểm chứng SHA-256 từng file và manifest V3.234
-        run: node .github/scripts/verify-prepared-runtime.mjs 3.234
-      - name: Kiểm tra V3.234 lớn hơn bản đang chạy, chặn trùng phiên bản
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.235
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.235
+      - name: Kiểm tra V3.235 lớn hơn bản đang chạy, chặn trùng phiên bản
         shell: bash
         run: |
           set -euo pipefail
@@ -103,11 +103,11 @@ jobs:
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V3.234-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          name: GMWW-V3.235-OTA-CANDIDATE-SHA256-NO-DEPLOY
           path: |
-            out/gmww-runtime-v3.234-sha256.json
+            out/gmww-runtime-v3.235-sha256.json
             assets/updates/latest.json
-            assets/updates/runtime/V3.234/manifest.json
-            assets/updates/runtime/V3.234/manifest-runtime-3234.json
+            assets/updates/runtime/V3.235/manifest.json
+            assets/updates/runtime/V3.235/manifest-runtime-3235.json
           if-no-files-found: error
           retention-days: 14
