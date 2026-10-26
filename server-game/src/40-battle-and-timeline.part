@@ -2223,10 +2223,9 @@ function initBattleControls(){
   document.addEventListener('pointerdown',event=>{
     // The SAME campfire GM menu is available in Setup and Battle.
     // Outside tap dismisses it in either phase, including when chrome is hidden.
-    if(document.body.classList.contains('play-immersive')&&battleState.wolfOpen&&
-       !event.target.closest?.('#battleWolfMenu,.play-core-pearl')){
-      battleState.wolfOpen=false;
-      if(playSceneState.step!=='battle'){renderPlayBattle();return;}
+    if(document.body.classList.contains('play-immersive')&&playSceneState.step!=='battle'&&
+       battleState.wolfOpen&&!event.target.closest?.('#battleWolfMenu,.play-core-pearl')){
+      battleState.wolfOpen=false;renderPlayBattle();return;
     }
     if(playSceneState.step!=='battle')return;
     const stats=document.getElementById('battleFactionStats');
