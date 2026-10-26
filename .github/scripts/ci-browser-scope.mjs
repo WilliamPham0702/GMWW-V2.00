@@ -1217,7 +1217,37 @@ function isMaintenanceNotice3230Scope(changes){
     data.get('tests/settings-unified-notices-v3230.test.mjs').includes('Thông báo hiển thị an toàn');
 }
 
+// V3.231: small, verified GM-only visual change; exclude unrelated Seat, DEMO, IPA and Card checks.
+function isGMEntryIcons3231Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const allowed=new Set([
+  'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+  'server-game/current/style.css','server-game/src/00-core-and-library.part',
+  'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs',
+  'tests/gmww-action-icon-stacking.test.mjs',
+  'docs/releases/GMWW-V3.231-entrance-icons-20261026.md'
+ ]);
+ if(changes.some(x=>!allowed.has(x.path)||!['M','A'].includes(x.status)))return false;
+ const d=new Map(changes.map(x=>[x.path,x.after||'']));
+ const required=['src/index.js','server-game/current/app.js',
+   'server-game/src/40-battle-and-timeline.part','server-game/current/style.css',
+   'server-game/current/GMWW.html','package.json','package-lock.json',
+   'tests/gmww-v3228-battle-icons-footer.test.mjs',
+   'docs/releases/GMWW-V3.231-entrance-icons-20261026.md'];
+ return required.every(x=>d.has(x))&&
+  d.get('src/index.js').includes('VERSION="V3.231"')&&
+  d.get('server-game/current/app.js').includes("const VERSION='3.231'")&&
+  d.get('package.json').includes('"version": "3.231.0"')&&
+  d.get('server-game/current/GMWW.html').includes('<title>GMWW V3.231</title>')&&
+  d.get('server-game/current/app.js').includes("const entry=battleIconEntryPoint();")&&
+  d.get('server-game/current/style.css').includes('/* V3.231:');
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMEntryIcons3231Scope(changes))return 'entry-icons-3231';
   if(isMaintenanceNotice3230Scope(changes))return 'settings-notices-3230';
   if(isDOOptimizer3228Scope(changes))return 'do-optimizer-3228';
   if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
@@ -1283,6 +1313,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGMEntryIcons3231Scope(changes))return{mode:'entry-icons-3231',reason:'Only V3.231 GM entrance icon placement and 2x visual size'};
       if(isMaintenanceNotice3230Scope(changes))return{mode:'settings-notices-3230',reason:'V3.230 box thông báo riêng 16 tính năng, không sửa gameplay'};
       if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
@@ -1407,7 +1438,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3229'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3229','entry-icons-3231'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
