@@ -36,7 +36,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   candidate:
     needs: scope
-    if: needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'gm-icons-501'
+    if: needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'gm-icons-501'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
