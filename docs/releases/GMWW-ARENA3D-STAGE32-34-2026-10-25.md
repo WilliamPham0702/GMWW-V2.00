@@ -93,3 +93,13 @@
 1. Kiểm chứng STAGING WebKit/Chromium, Core 30/30 người, private 401, GM UI end ván và reconnect trên commit mới.
 2. Đảm bảo luồng tạo/tập hợp/phát vai trong Arena 3D có thể sử dụng Core thật, không còn hành động demo trong Production, dữ liệu trận không phân nhánh.
 3. Khi đủ phạm vi sản phẩm mới tạo Runtime OTA V3.228 **hoặc phiên bản lớn hơn nếu main thay đổi**, release notes tiếng Việt, manifest SHA-256, CI SUCCESS, rollback và xác minh Production thực tế.
+
+
+## GĐ36 — Đồng bộ V3.230 + vòng tạo phòng 3D → phân vai thật (26/10/2026)
+- Tích hợp trên cùng **PR Draft #487**, giữ `main` V3.230 (`c5c4a8c3bc0967b904768f912360dc394e7aa54c`) làm nền; commit tích hợp `ea67c0c21ae26913187fb631cebe9da89f4701ee`. Bảo toàn bản sửa 16 hộp thông báo Cài đặt, DO optimizer và V3.229. Không merge/deploy Production.
+- Bổ sung đường chuyển phòng **Arena 3D → GMWW Thiết lập/Phát Vai**: GM tạo phòng thật từ 3D, bấm Thiết lập/Phát Vai; iframe same-origin gửi roomCode/token không qua URL. Host chặn sai origin, sai source, iframe đã ẩn; gọi `GET /api/gm/rooms/:room` với bearer để Core xác thực trước khi ghi phòng vào registry GMWW cũ, đồng bộ với Core và mở trình cấu hình hiện hữu. Phòng thật **được giữ nguyên**, không tạo ván 4 role/bot mẫu.
+- Giữ các trường hợp khác: nếu Arena không có mã GM, mở màn thiết lập hiện hữu (không tự nhận quyền). Khi Core từ chối 401/403 hoặc phòng sai mã, giữ nguyên phòng đang chọn, không lưu token. Không thay đổi luật game, Player Web, dữ liệu, game 2D.
+- `tests/arena3d-room-adoption.test.mjs`: mô phỏng event nguồn giả, origin sai, iframe ẩn, token sai, Core trả 403, response phòng sai; chỉ sự kiện thành công mới cập nhật phòng chính thức. Thêm vào CI riêng Arena 3D; kiểm thử nguồn/bundle đồng nhất.
+- `tests/arena3d-ci-focused-scope.test.mjs` buộc **full release gates** khi thay đổi host GM/token trong runtime; không whitelist các thay đổi bảo mật để bỏ bài kiểm thử bắt buộc. Trước đó test lịch sử đã không còn khớp cấu trúc main V3.230 và được cập nhật theo fail-closed.
+- Kết quả CI code/logic Arena run [40258699522](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40258699522): **SUCCESS**. Một số CI Runtime chung đang FAIL do bài test V3.222 lạc phiên bản, chốt OTA riêng V3.229 kiểm tra version cố định, hoặc test DEMO audio ngoài phạm vi. **Không được tuyên bố PASS toàn bộ CI**; phải phân loại và giải quyết trước khi phát hành.
+- Chưa có ứng viên OTA >V3.230, chưa có SHA-256/rollback cho build chính thức, chưa có nghiệm thu Product trên iPhone vật lý hay bằng chứng Production. Không được gọi `HOÀN THÀNH` trước khi các chốt này đạt.
