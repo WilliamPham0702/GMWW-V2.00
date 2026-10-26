@@ -229,9 +229,9 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
       }
     }
     if(runAll){
-      const errorCount=Array.isArray(gmwwRuntimeErrors)?gmwwRuntimeErrors.length:0;
+      const recentRuntimeIssues=gmwwRecentRuntimeIssues(),errorCount=recentRuntimeIssues.length;
       checks.runtime=gmwwOpsResult(errorCount?'warn':'ok',errorCount?errorCount+' CẢNH BÁO':'KHÔNG LỖI',
-        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi gần đây.':'Chưa ghi nhận lỗi JavaScript gần đây.',
+        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi JavaScript/Promise: '+recentRuntimeIssues[0].message:'Chưa ghi nhận lỗi JavaScript gần đây.',
         {count:errorCount});
     }
     gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
