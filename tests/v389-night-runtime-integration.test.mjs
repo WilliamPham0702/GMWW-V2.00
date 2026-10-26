@@ -60,7 +60,12 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
   if(artifact)data.set('artifact:alice',{matchId:'test-match',artifactId:'mirror',artifactName:'Tráng Gương',priorityFirst:true,singleUse,artifactCard:{actions:[{id:'copy',name:'Tráng Gương'}]}});
   const meta=()=>storage.get('meta');
   const runtime=async()=>room.getNightRuntime(await meta(),1,true);
-  const jump=async kind=>{const rt=await runtime();return room.gmTurn(null,{action:'jump',targetIndex:rt.queue.findIndex(x=>x.kind===kind)})};
+  const jump=async kind=>{const rt=await runtime(),index=rt.queue.findIndex(x=>x.kind===kind);
+    // Night 1 may begin directly on a Role when WOLF-01 omits the solo-Wolf
+    // introduction. In the live room applyCycle initializes this meta pointer.
+    if(index===rt.cursor){const m=await meta();m.currentNightTurnId=rt.currentId;await storage.put('meta',m);return rt}
+    return room.gmTurn(null,{action:'jump',targetIndex:index});
+  };
   const act=async overrides=>{const rt=await runtime();return room.gmInteraction(null,{turnId:rt.currentId,artifactId:'mirror',actorId:'alice',actionId:'copy',actionNonce:'nonce-1',targetIds:['bob'],loginId:'bob',type:'effect_notice',night:1,clientEventId:'nonce-1:bob',...overrides})};
   return{data,room,events,storage,meta,runtime,jump,act};
 }
