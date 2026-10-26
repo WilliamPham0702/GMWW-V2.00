@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.229';
+const VERSION='3.230';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1667,6 +1667,7 @@ function setServerHealthState(kind,text,detail,data={}){
   put('serverHealthText',text);put('serverHealthDetail',detail);
   put('healthPlayerWeb',data.web||'—');put('healthApi',data.api||'—');put('healthLatency',data.latency||'—');put('healthVersion',data.version||'—');
   put('healthCheckedAt',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+  gmwwSettingsNoticeFromActive(['checkServerHealth','refreshServerData','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 async function checkServerHealth(){
   if(serverHealthBusy)return; serverHealthBusy=true;
@@ -1714,6 +1715,7 @@ function setMaintenanceState(kind,text,detail){
   if(pill){pill.className='maintenance-pill '+kind;pill.textContent=text}
   if(dot)dot.className='maintenance-dot '+kind;
   if(msg)msg.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['auditLocalData','clearRuntimeCache','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 function auditLocalData(){
   const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
@@ -1767,6 +1769,7 @@ function setDiagnosticState(kind,status,summary,detail=''){
   if(sum)sum.textContent=summary||'';
   if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
   if(det)det.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow','settingsRunHealth'],kind,String(status||'')+' · '+String(summary||'')+(detail?' · '+detail:''));
 }
 function renderDiagnosticItem(key,kind,text){
   const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
@@ -1852,6 +1855,89 @@ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementByI
 
 
 /* GMWW Settings: one continuous scrolling screen with consistent health status. */
+/* GMWW V3.230 — thông báo thống nhất cho 16 công cụ Kiểm tra & bảo trì. */
+const GMWW_SETTINGS_TOOL_LABELS=Object.freeze({
+  settingsRunHealth:'HEALTHY CHECK',settingsOptimizeDO:'TỐI ƯU DO',
+  auditLocalData:'KIỂM TRA',clearRuntimeCache:'DỌN CACHE',reloadApp:'TẢI LẠI',
+  gmwwCloudflareOpen:'QUẢN LÝ CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
+  opsRunFullAudit:'KIỂM TRA TỔNG',opsCheckRoom:'PHÒNG & REALTIME',opsCheckRelease:'PHIÊN BẢN',
+  checkServerHealth:'KIỂM TRA SERVER',refreshServerData:'ĐỒNG BỘ SERVER',openPlayerWeb:'MỞ WEB',
+  runSystemDiagnostics:'QUÉT LỖI',quickRepairSystem:'SỬA NHANH',checkPlayerWebNow:'CHECK WEB'
+});
+const gmwwSettingsNoticeHistory=[];
+let gmwwSettingsNoticeActive='',gmwwSettingsNoticeActiveAt=0;
+function pushSettingsNotice(toolId,kind,message){
+  const panel=document.getElementById('settingsNoticePanel'),list=document.getElementById('settingsNoticeList');
+  if(!panel||!list||!GMWW_SETTINGS_TOOL_LABELS[toolId])return;
+  const level={ok:'ok',success:'ok',warn:'warn',bad:'bad',error:'bad',checking:'checking',info:'info'}[kind]||'info';
+  const content=String(message||'').replace(/\s+/g,' ').trim().slice(0,430);
+  if(!content)return;
+  const last=gmwwSettingsNoticeHistory[0];
+  if(last&&last.toolId===toolId&&last.level===level&&last.message===content&&Date.now()-last.timestamp<1000)return;
+  const entry={toolId,level,message:content,timestamp:Date.now()};
+  gmwwSettingsNoticeHistory.unshift(entry);
+  if(gmwwSettingsNoticeHistory.length>12)gmwwSettingsNoticeHistory.length=12;
+  const item=document.createElement('li');
+  item.className='settings-notice-entry '+level;
+  const symbol=document.createElement('span');symbol.className='settings-notice-symbol';
+  symbol.textContent={ok:'✓',warn:'!',bad:'×',checking:'◷',info:'•'}[level];
+  const body=document.createElement('div');body.className='settings-notice-entry-text';
+  const title=document.createElement('b');title.textContent=GMWW_SETTINGS_TOOL_LABELS[toolId];
+  const detail=document.createElement('p');detail.textContent=content;
+  body.append(title,detail);
+  const time=document.createElement('time');time.dateTime=new Date(entry.timestamp).toISOString();
+  time.textContent=new Date(entry.timestamp).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  item.append(symbol,body,time);
+  list.prepend(item);
+  while(list.children.length>12)list.lastElementChild.remove();
+  const empty=document.getElementById('settingsNoticeEmpty');if(empty)empty.hidden=true;
+  const count=document.getElementById('settingsNoticeCount');if(count)count.textContent=String(gmwwSettingsNoticeHistory.length)+' thông báo';
+}
+function gmwwSettingsNoticeFromActive(allowed,kind,message){
+  const id=gmwwSettingsNoticeActive;
+  if(!id||!allowed.includes(id)||Date.now()-gmwwSettingsNoticeActiveAt>120000)return;
+  const button=document.getElementById(id);
+  if(!button?.disabled)return; // avoid old/stale background refreshes
+  pushSettingsNotice(id,kind,message);
+}
+function gmwwInitSettingsNoticePanel(){
+  const rail=document.getElementById('settingsToolsRail');
+  rail?.addEventListener('click',event=>{
+    const button=event.target?.closest?.('button[id]');
+    if(!button||!rail.contains(button)||button.disabled||!GMWW_SETTINGS_TOOL_LABELS[button.id])return;
+    gmwwSettingsNoticeActive=button.id;gmwwSettingsNoticeActiveAt=Date.now();
+    const navigation=['reloadApp','openPlayerWeb'].includes(button.id);
+    const openPanel=['gmwwCloudflareOpen','gmwwServerTrashOpen'].includes(button.id);
+    pushSettingsNotice(button.id,navigation||openPanel?'info':'checking',
+      navigation?'Đang mở trang…':openPanel?'Đang mở công cụ quản lý bên dưới…':'Đang thực hiện, kết quả sẽ hiển thị tại đây.');
+  },true);
+  document.getElementById('opsAutoCheck')?.addEventListener('change',event=>{
+    pushSettingsNotice('opsRunFullAudit','info',event.target.checked?
+      'Đã bật tự kiểm tra mỗi 2 phút.':'Đã tắt tự kiểm tra định kỳ.');
+  });
+  document.getElementById('settingsNoticeClear')?.addEventListener('click',()=>{
+    gmwwSettingsNoticeHistory.length=0;
+    const list=document.getElementById('settingsNoticeList');if(list)list.replaceChildren();
+    const empty=document.getElementById('settingsNoticeEmpty');if(empty)empty.hidden=false;
+    const count=document.getElementById('settingsNoticeCount');if(count)count.textContent='0 thông báo';
+  });
+  // The Cloudflare management module is independent of GM runtime: mirror its final status.
+  const cf=document.getElementById('gmwwCfState');
+  if(cf&&typeof MutationObserver==='function'){
+    let previous=cf.textContent?.trim()||'';
+    new MutationObserver(()=>{
+      const value=cf.textContent?.trim()||'';
+      if(!value||value===previous)return;
+      previous=value;
+      if(!['gmwwCloudflareOpen','gmwwServerTrashOpen'].includes(gmwwSettingsNoticeActive))return;
+      const bad=/LỖI|THẤT BẠI|KHÔNG THỂ/.test(value);
+      pushSettingsNotice(gmwwSettingsNoticeActive,bad?'bad':'info','Cloudflare: '+value);
+    }).observe(cf,{childList:true,characterData:true,subtree:true});
+  }
+}
+gmwwInitSettingsNoticePanel();
+/* END GMWW SETTINGS NOTICES V3.230 */
+
 function gmwwSettingsHubHealth(kind,message){
   const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
   if(box)box.dataset.status=kind||'idle';
@@ -2007,8 +2093,18 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
     }
     gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
     gmwwOpsDraw(gmwwOpsSnapshot);
+    if(!silent){
+      const values=Object.values(checks),errors=values.filter(v=>v?.kind==='bad').length,
+        warnings=values.filter(v=>v?.kind==='warn').length;
+      const targetId=gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId;
+      pushSettingsNotice(targetId,errors?'bad':warnings?'warn':'ok',errors?
+        'Đã kiểm tra · '+errors+' lỗi cần xử lý.':warnings?
+        'Đã kiểm tra · '+warnings+' cảnh báo cần theo dõi.':'Đã kiểm tra · Không ghi nhận lỗi trong các mục được quét.');
+    }
     return gmwwOpsSnapshot;
   }catch(_){
+    if(!silent)pushSettingsNotice(gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId,
+      'bad','Không hoàn tất được kiểm tra vận hành. Vui lòng kiểm tra mạng rồi thử lại.');
     const advice=document.getElementById('opsAdvice');
     if(advice)advice.textContent='Không hoàn tất được chẩn đoán. Kiểm tra mạng rồi thử lại.';
     if(overall){overall.className='ops-pill bad';overall.textContent='KHÔNG KIỂM TRA ĐƯỢC'}
@@ -2038,30 +2134,37 @@ function gmwwOpsInitialize(){
   document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
   document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
   document.getElementById('settingsRunHealth')?.addEventListener('click',async()=>{
-    const button=document.getElementById('settingsRunHealth'),note=document.getElementById('settingsHealthSummary');
+    const button=document.getElementById('settingsRunHealth');
     if(button?.disabled)return;if(button)button.disabled=true;
-    if(note)note.textContent='Đang kiểm tra bảo trì, Server, realtime và chẩn đoán…';
-    try{auditLocalData();await gmwwOpsRun({kind:'all'});await checkServerHealth();await runSystemDiagnostics();if(note)note.textContent='Hoàn tất quét. Kết quả và cảnh báo hiển thị bên dưới.'}
-    catch(e){if(note)note.textContent='Còn mục chưa kiểm tra: '+String(e?.message||'Vui lòng thử lại.')}
+    try{
+      auditLocalData();
+      const operations=await gmwwOpsRun({kind:'all'});
+      await checkServerHealth();
+      const diagnostics=await runSystemDiagnostics();
+      const bad=!operations||diagnostics?.ok!==true;
+      pushSettingsNotice('settingsRunHealth',bad?'warn':diagnostics?.warnings?.length?'warn':'ok',
+        bad?'Đã kiểm tra nhưng còn mục chưa xác nhận. Xem chi tiết kết quả vận hành.':
+        diagnostics.warnings?.length?'Đã kiểm tra · Còn '+diagnostics.warnings.length+' cảnh báo.':
+        'Hoàn tất Health Check và chẩn đoán Server/Player Web.');
+    }catch(e){pushSettingsNotice('settingsRunHealth','bad','Không hoàn tất: '+String(e?.message||'Vui lòng thử lại.'))}
     finally{if(button)button.disabled=false}
   });
 }
 gmwwOpsInitialize();
 
-/* GMWW 3.228 — Bảo vệ hạn mức ghi Durable Objects, luôn chạy tự động trên Server. */
+/* GMWW 3.230 — báo cáo DO vào Thông báo hệ thống, không còn chữ trong lưới. */
 document.getElementById('settingsOptimizeDO')?.addEventListener('click',async()=>{
-  const button=document.getElementById('settingsOptimizeDO'),output=document.getElementById('settingsOptimizeDOStatus');
+  const button=document.getElementById('settingsOptimizeDO');
   if(button?.disabled)return;
   if(button)button.disabled=true;
-  if(output)output.textContent='Đang kiểm tra chính sách giảm ghi trùng trên Server…';
   try{
     const data=await gmApi('/api/gm/storage-optimizer',{method:'GET'});
     if(!data?.ok||data.enabled!==true)throw new Error('Chính sách tối ưu chưa hoạt động');
     const count=Number(data.avoidedWrites||0);
-    if(output)output.textContent='ĐANG BẬT TỰ ĐỘNG • Đã bỏ qua '+count.toLocaleString('vi-VN')+
-      ' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng/dữ liệu. Số này không phải hóa đơn Cloudflare.';
+    pushSettingsNotice('settingsOptimizeDO','ok','ĐANG BẬT TỰ ĐỘNG · Đã bỏ qua '+
+      count.toLocaleString('vi-VN')+' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng hoặc dữ liệu. Đây không phải số liệu hóa đơn Cloudflare.');
   }catch(error){
-    if(output)output.textContent='Chưa xác minh được công cụ trên Server: '+String(error?.message||error);
+    pushSettingsNotice('settingsOptimizeDO','bad','Chưa xác minh được công cụ trên Server: '+String(error?.message||error));
   }finally{if(button)button.disabled=false;}
 });
 

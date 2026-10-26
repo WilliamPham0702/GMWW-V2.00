@@ -1193,7 +1193,32 @@ function isGMFooter3229Scope(changes){
   css.includes('/* GMWW V3.229');
 }
 
+
+/* V3.230: giao diện thông báo bảo trì, chỉ kiểm tra các file có liên quan. */
+function isMaintenanceNotice3230Scope(changes){
+  if(!Array.isArray(changes)||changes.length===0)return false;
+  const allowed=new Set([
+    'src/index.js','server-game/current/GMWW.html','server-game/current/app.js',
+    'server-game/current/style.css','server-game/src/00-core-and-library.part',
+    'server-game/src/10-library-and-settings.part','server-game/src/20-members-and-roster.part',
+    'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'docs/releases/GMWW-V3.230-settings-notices-20261026.md',
+    'tests/settings-unified-notices-v3230.test.mjs'
+  ]);
+  if(changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+  const data=new Map(changes.map(x=>[x.path,x.after||'']));
+  return ['src/index.js','server-game/current/GMWW.html','server-game/current/app.js',
+    'server-game/current/style.css','server-game/src/20-members-and-roster.part',
+    'tests/settings-unified-notices-v3230.test.mjs'].every(x=>data.has(x))&&
+    data.get('src/index.js').includes('VERSION="V3.230"')&&
+    data.get('server-game/current/app.js').includes("const VERSION='3.230'")&&
+    data.get('server-game/current/GMWW.html').includes('id="settingsNoticePanel"')&&
+    data.get('tests/settings-unified-notices-v3230.test.mjs').includes('Thông báo hiển thị an toàn');
+}
+
 export function classifyBrowserScope(changes){
+  if(isMaintenanceNotice3230Scope(changes))return 'settings-notices-3230';
   if(isDOOptimizer3228Scope(changes))return 'do-optimizer-3228';
   if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
@@ -1258,6 +1283,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isMaintenanceNotice3230Scope(changes))return{mode:'settings-notices-3230',reason:'V3.230 box thông báo riêng 16 tính năng, không sửa gameplay'};
       if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};

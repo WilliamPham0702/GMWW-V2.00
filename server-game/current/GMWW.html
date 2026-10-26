@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.229</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3229-footer-icons">
+<title>GMWW V3.230</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3230-settings-notices">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -657,16 +657,16 @@
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
-          <div class="settings-health-action"><small id="settingsHealthSummary" role="status">Nhấn kiểm tra để quét các công cụ bên dưới.</small></div>
-<p class="settings-tools-grid-summary" id="settingsToolsGridSummary">Đầy đủ 15 công cụ · Cuộn xuống để xem tất cả</p>
-          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="15 công cụ kiểm tra và bảo trì hiển thị theo lưới">
+          
+<p class="settings-tools-grid-summary" id="settingsToolsGridSummary">16 công cụ · Kết quả hiển thị trong Thông báo hệ thống</p>
+          <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="16 công cụ kiểm tra và bảo trì hiển thị theo lưới">
 <div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
           <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button><button class="settings-action settings-action-server" id="settingsOptimizeDO" type="button"><span>🛡️</span><b>TỐI ƯU DO</b></button>
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
             <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
           </div>
-          <small id="settingsOptimizeDOStatus" role="status">Tự động giảm ghi trùng · Nhấn TỐI ƯU DO để xem thống kê.</small>
+
           
         </div>
             <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
@@ -701,6 +701,18 @@
               </div>
             </div>
           </div>
+
+          <section class="settings-notice-panel" id="settingsNoticePanel" role="region" aria-labelledby="settingsNoticeTitle">
+            <div class="settings-notice-head">
+              <div class="settings-notice-head-title"><span aria-hidden="true">▤</span><h4 id="settingsNoticeTitle">Thông báo hệ thống</h4></div>
+              <div class="settings-notice-head-actions">
+                <small id="settingsNoticeCount">0 thông báo</small>
+                <button type="button" id="settingsNoticeClear" aria-label="Xóa lịch sử thông báo trong phiên này">Xóa</button>
+              </div>
+            </div>
+            <p class="settings-notice-empty" id="settingsNoticeEmpty">Chọn một công cụ phía trên để xem kết quả tại đây.</p>
+            <ol id="settingsNoticeList" class="settings-notice-list" aria-live="polite" aria-relevant="additions"></ol>
+          </section>
           <div class="settings-operation-console" id="gmwwCloudflarePanel" aria-label="Quản lý Cloudflare ngay trong Server" role="region" hidden>
             <div class="settings-operation-console-heading"><span class="ops-dot"></span><b>CLOUDFLARE · TÀI NGUYÊN &amp; BẢO TRÌ</b><span class="ops-pill" id="gmwwCfState">CHƯA TẢI</span></div>
             <div class="ops-status-grid" aria-live="polite">
@@ -989,7 +1001,7 @@
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=v3227-icon-action-v2"></script>
-<script src="app.js?v=gmww-v3229-footer-icons"></script>
+<script src="app.js?v=gmww-v3230-settings-notices"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
