@@ -12,3 +12,8 @@
 
 ## Rollback
 - Nếu lỗi sau cập nhật, rollback Runtime V3.233 và deployment Cloudflare trước đó. Không xóa dữ liệu Durable Objects hoặc thay IPA.
+
+## CI hậu merge V3.234
+- Sửa phân loại phạm vi trên **push main** để giữ đúng bài kiểm thử V3.234 đã được xác nhận từ PR #522; không chạy lại những bài thử DEMO, Chrome Card hoặc icon nổi không liên quan.
+- Bổ sung test chính sách CI chống mở rộng phạm vi và kiểm tra version guard.
+- Đây là sửa chốt phát hành, không thay đổi bytes ứng dụng sau bản kiểm thử V3.234. Vẫn xác minh đầy đủ manifest OTA SHA-256 từ phiên bản Worker khi phát hành.
