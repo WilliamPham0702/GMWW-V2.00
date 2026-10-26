@@ -486,7 +486,7 @@ function battleIconResolve(action){
  if(!api)return [];
  // Yêu Tinh already chooses direction in Core, so do not draw two arrows.
  if(action.actionId==='action_transfer_bite'&&api.resolve(action.actionId))
-  return [{id:'yeu-tinh-xoay',name:'Yêu Tinh',assetId:'',image:'',isRotation:true}];
+  return [{id:'yeu-tinh-xoay',name:'Yêu Tinh',assetId:'50_yeu_tinh_xoay.png',image:'',isRotation:true}];
  return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
@@ -548,8 +548,7 @@ function battleIconDock(actions,phase){
  dock.innerHTML=eligible.map(({a,icon},i)=>{
   const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
     battleIconSpawnPoint(entry,i,eligible.length);
-  const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
-    '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
+  const visual='<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
    '" data-fire-icon="'+playEsc(icon.id)+'" data-fire-index="'+i+'" aria-label="'+playEsc(a.name)+

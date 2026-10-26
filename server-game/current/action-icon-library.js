@@ -222,7 +222,7 @@ function load(){
 let icons=load(),editing=null,pendingImage=null;
 function store(next){try{localStorage.setItem(KEY,JSON.stringify(next));icons=next;return true}catch(_){alert('Không đủ bộ nhớ. Hãy dùng ảnh PNG/WEBP nhỏ hơn hoặc xoá icon chưa sử dụng.');return false}}
 function svg(kind){const shape=SHAPES[kind]||SHAPES.spark;return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><radialGradient id="sea" cx="45%" cy="35%"><stop stop-color="#267fa5"/><stop offset="1" stop-color="#0a294d"/></radialGradient></defs><circle cx="48" cy="48" r="45" fill="#022842" stroke="#f0d18d" stroke-width="3"/><circle cx="48" cy="48" r="39" fill="url(#sea)" stroke="#65e3ed" stroke-width="2"/><g fill="none" stroke="#b1ecff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">'+shape+'</g><path d="M33 9q15-10 30 0M33 87q15 10 30 0" fill="none" stroke="#f7e0a1" stroke-width="4"/><circle cx="48" cy="6" r="4" fill="#fff0c1"/><circle cx="48" cy="90" r="4" fill="#fff0c1"/></svg>'}
-function picture(icon){return icon.image||(icon.assetId?'action-icons/v2/'+encodeURIComponent(icon.assetId):'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg(icon.shape)))}
+function picture(icon){return icon.image||(icon.assetId?'action-icons/v3/'+encodeURIComponent(icon.assetId.replace(/\.png$/,'.webp')):'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg(icon.shape)))}
 
 function auditCatalog(){
  let state=null;
