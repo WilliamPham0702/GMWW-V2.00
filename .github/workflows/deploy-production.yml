@@ -68,7 +68,7 @@ jobs:
           fi
           # Separate artwork CI-policy PR never publishes a duplicate Runtime.
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
-          if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* ]]; then SHOULD_DEPLOY=false; fi
+          if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
@@ -914,9 +914,34 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "WITCH-01 V3.240: exact source scope and mandatory Worker CI SUCCESS; unrelated browser/IPA checks not required." >> "$GITHUB_STEP_SUMMARY"
 
+      # Immutable, exact-files release: the new Fairy/audio runtime never runs
+      # unrelated Card/Seat/DEMO/Native IPA browser suites.
+      - name: V3.242 — chốt audio icon và Yêu Tinh cùng SHA đã qua Worker CI
+        id: fairy242_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.242.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: fairy-audio-3242 |"* ]] || {
+            echo "::error::V3.242 code differs from reviewed focused scope"; exit 1;
+          }
+          node --test tests/gmww-v3242-icon-audio-fairy.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.242-icon-audio-fairy-20261027.md
+          RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$RESULT" = success || { echo "::error::Mandatory Worker CI did not pass on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.242 focused GM audio + Fairy/Server CI SUCCESS at exact SHA; no unrelated browser or IPA checks." >> "$GITHUB_STEP_SUMMARY"
+
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true'
+        if: steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1094,6 +1119,10 @@ jobs:
 
       - name: Kiểm tra Production bộ ảnh icon và OTA SHA-256
         if: steps.icon_artwork_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
+      - name: V3.242 — đối chiếu đủ 50 ảnh icon, OTA SHA-256, audio Runtime và IPA giữ nguyên
+        if: steps.fairy242_release.outputs.approved == 'true'
         run: node .github/scripts/verify-icon-artwork-production.mjs
 
       - name: Kiểm tra Production sau triển khai
