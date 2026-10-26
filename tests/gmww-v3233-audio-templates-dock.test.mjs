@@ -30,9 +30,9 @@ test('iPhone: Thư viện Audio không gọi forEach trên null',async()=>{
  button.onclick();assert.equal(called.length,1);assert.deepEqual(called[0],['audio_system_day_wakeup','system']);
  ctx.$$=()=>[];await ctx.renderAudio();
 });
-test('Cloudflare button has compact two-line name without changing 16 tools',()=>{
+test('Cloudflare button has compact single-line name without changing 16 tools',()=>{
  assert.match(html,/id="gmwwCloudflareOpen"[^>]*>[\s\S]*?gmww-cloudflare-label/);
- assert.match(html,/gmww-cloudflare-label"><span>QUẢN LÝ<\/span><span>CLOUDFLARE<\/span>/);
+ assert.match(html,/gmww-cloudflare-label">CLOUDFLARE<\/b>/);
  assert.match(css,/#gmwwCloudflareOpen \.gmww-cloudflare-label\{/);
  const tools=html.slice(html.indexOf('id="settingsToolsRail"'),html.indexOf('id="settingsNoticePanel"'));
  assert.equal([...tools.matchAll(/<button\b[^>]*\bid="[^"]+"/g)].length,16);
@@ -46,10 +46,10 @@ test('Ván gợi ý / AUTO VÁN / THÊM MỚI share one row without duplicate co
  assert.match(css,/#playGameSheet \.play-template-actions-row\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(html,/class="play-auto-game-area"/);
 });
-test('Battle day row is clock → 🏖️ → actions → ⛱️ → 🌈; Undo returns at night',()=>{
- const a=source.indexOf('// V3.233: five exclusive slots'),b=source.indexOf('// DEMO alone keeps',a),dock=source.slice(a,b);
+test('Battle day row is clock → Báo → actions → Lên Giàn, rainbow floats; Undo returns at night',()=>{
+ const a=source.indexOf('// V3.235: five text slots'),b=source.indexOf('// DEMO and rainbow keep independent',a),dock=source.slice(a,b);
  assert.ok(a>=0&&b>a);
- const names=['playBattleClockFloat','battleDayNoticeFloat','battleMainActionSlot','battleDayGallowsFloat','battleFactionStatsFloat'];
+ const names=['playBattleClockFloat','battleDayNoticeFloat','battleMainActionSlot','battleDayGallowsFloat'];
  const slots=dock.slice(dock.indexOf('for(const item of [document.getElementById('),dock.indexOf('])',dock.indexOf('for(const item of [document.getElementById(')));
  const order=names.map(x=>x==='battleMainActionSlot'?slots.indexOf('actionSlot'):slots.indexOf("document.getElementById('"+x+"')"));
  assert.ok(order.every((v,i)=>v>=0&&(i===0||v>order[i-1])),JSON.stringify(order));
@@ -61,8 +61,8 @@ test('Battle day row is clock → 🏖️ → actions → ⛱️ → 🌈; Undo 
 test('Runtime source bundle and OTA metadata are intact',()=>{
  const pieces=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(app,pieces.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
- assert.match(app,/const VERSION='3\.234';/);
- assert.match(html,/<title>GMWW V3\.234<\/title>/);
- assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.234"/);
+ assert.match(app,/const VERSION='3\.235';/);
+ assert.match(html,/<title>GMWW V3\.235<\/title>/);
+ assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.235"/);
  assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.233: Sửa lỗi/);
 });
