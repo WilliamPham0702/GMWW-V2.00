@@ -44,6 +44,34 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   assert.equal(await page.locator('#gm-key').inputValue(),'');
   assert.equal(paths.some(x=>x.includes('/api/arena-staging/')),false);
   assert.deepEqual(errors,[]);
+  // Exercise the same-origin authenticated GM iframe bridge in a real browser
+  // against the isolated STAGING Core. No Production room/credentials are used.
+  await page.close();
+  const host=await context.newPage();
+  const hostResponse=await host.goto(origin+'/village/arena-3d/ipa.html',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  assert.equal(hostResponse.status(),200);
+  await host.evaluate(({roomCode,gmToken})=>{
+    const iframe=document.createElement('iframe');iframe.id='verified-arena-gm';
+    window.addEventListener('message',event=>{
+      if(event.origin!==location.origin||event.source!==iframe.contentWindow||
+         event.data?.kind!=='gmww-arena3d-ready')return;
+      iframe.contentWindow.postMessage(
+        {kind:'gmww-arena3d-gm-context',roomCode,gmToken},location.origin);
+    });
+    document.body.replaceChildren(iframe);
+    iframe.src='/village/arena-3d/live.html?room='+encodeURIComponent(roomCode)+'&coreMode=live';
+  },{roomCode:body.roomCode,gmToken:body.gmToken});
+  await host.waitForFunction(()=>{
+    const frame=document.querySelector('#verified-arena-gm');
+    return frame?.contentWindow?.__GMWW_ARENA_STAGE_READONLY?.().gmConsole==='authorized';
+  },null,{timeout:60000});
+  const handshake=await host.evaluate(()=>{
+    const readonly=document.querySelector('#verified-arena-gm')?.contentWindow?.__GMWW_ARENA_STAGE_READONLY?.();
+    return {room:readonly?.room,gmConsole:readonly?.gmConsole};
+  });
+  assert.equal(handshake.room,body.roomCode);
+  assert.equal(handshake.gmConsole,'authorized');
   console.log('ARENA3D_GM_LIVE_CORE_'+name.toUpperCase()+'_PASS',JSON.stringify({
    roomCode:body.roomCode,verifiedGM:true,wrongTokenDenied:true,fakeRolesHidden:true,
    production:false,physicalIphone:false}));
