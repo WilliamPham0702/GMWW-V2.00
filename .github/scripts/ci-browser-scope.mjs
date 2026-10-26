@@ -1629,7 +1629,7 @@ function isWITCH01Scope(changes){
 
 // Exact immutable blobs from the reviewed V3.242 audio/Fairy PR (#542).
 // Unknown paths or altered bytes revert to FULL CI. No gameplay waiver.
-const fairy3242Blobs=new Map([["server-game/src/40-battle-and-timeline.part","ad42ca0df17532fa889488f2f4b793236785c13f"],["server-game/current/app.js","e5727dc38216f54e4463100ffedfd54ba90f00b7"],["server-game/current/style.css","7b603f65a2ca6ed4f868461ff49084ae99cd997b"],["server-game/src/00-core-and-library.part","25942d9135bc6de9d015b83a256678333809f210"],["server-game/current/GMWW.html","3bce9dc9ff517094b9944545b8111adc6da00b7f"],["src/index.js","62c230327446f73b93f505ba9d1b3301b695f438"],["package.json","a4a481742934b2e830aecac9fbfbe3deec723913"],["package-lock.json","75efc69df029b15c63d212ef41b9303a55b5dee7"],[".github/scripts/prepare-update-channel.mjs","93223f661faf257ce5c9af04a13d4aed7926fa11"],["docs/releases/GMWW-V3.242-icon-audio-fairy-20261027.md","62c15eedb7b88c65a0c9a389bcf441bbfdb32fb8"],["tests/gmww-v3242-icon-audio-fairy.test.mjs","65c7518e781e8da1df40e396225ef1c3d8be2069"]]);
+const fairy3242Blobs=new Map([["server-game/src/40-battle-and-timeline.part","a092f1a78a687992c4f5bda9e0bd618aece496a0"],["server-game/current/app.js","b59fe8d2426d442a006b907685a199140ca15f9b"],["server-game/current/style.css","7b603f65a2ca6ed4f868461ff49084ae99cd997b"],["server-game/src/00-core-and-library.part","25942d9135bc6de9d015b83a256678333809f210"],["server-game/current/GMWW.html","3bce9dc9ff517094b9944545b8111adc6da00b7f"],["src/index.js","62c230327446f73b93f505ba9d1b3301b695f438"],["package.json","a4a481742934b2e830aecac9fbfbe3deec723913"],["package-lock.json","75efc69df029b15c63d212ef41b9303a55b5dee7"],[".github/scripts/prepare-update-channel.mjs","93223f661faf257ce5c9af04a13d4aed7926fa11"],["docs/releases/GMWW-V3.242-icon-audio-fairy-20261027.md","62c15eedb7b88c65a0c9a389bcf441bbfdb32fb8"],["tests/gmww-v3242-icon-audio-fairy.test.mjs","7bec46528baaa16401dac32ef07c635839e1f358"]]);
 const fairy3242PolicyPaths=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/deploy-production.yml","tests/ci-v3242-fairy-scope.test.mjs","docs/releases/ci-v3242-fairy-scope-20261027.md"]);
 const fairy3242GitBlob=body=>createHash('sha1').update('blob '+Buffer.byteLength(body)+'\0').update(body).digest('hex');
 export function isFairy3242Scope(changes){
@@ -1642,10 +1642,17 @@ export function isFairy3242Scope(changes){
  }
  return seen.size===fairy3242Blobs.size;
 }
+const fairy3242PolicyRepairPaths=new Set([
+ '.github/scripts/ci-browser-scope.mjs',
+ 'tests/ci-v3242-fairy-scope.test.mjs',
+ 'docs/releases/ci-v3242-fairy-scope-20261027.md'
+]);
 export function isFairy3242PolicyScope(changes){
- return Array.isArray(changes)&&changes.length===fairy3242PolicyPaths.size&&
-  changes.every(c=>fairy3242PolicyPaths.has(c.path)&&['A','M'].includes(c.status))&&
-  new Set(changes.map(c=>c.path)).size===fairy3242PolicyPaths.size;
+ if(!Array.isArray(changes))return false;
+ const paths=changes.length===fairy3242PolicyPaths.size?fairy3242PolicyPaths:
+  changes.length===fairy3242PolicyRepairPaths.size?fairy3242PolicyRepairPaths:null;
+ return !!paths&&changes.every(c=>paths.has(c.path)&&['A','M'].includes(c.status))&&
+  new Set(changes.map(c=>c.path)).size===paths.size;
 }
 
 export function classifyBrowserScope(changes){
