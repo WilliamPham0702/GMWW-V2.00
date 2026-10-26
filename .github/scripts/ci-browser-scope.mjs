@@ -2,6 +2,7 @@
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
 // Production/main and manual release checks ALWAYS run the full browser suite.
 import fs from 'node:fs';
+import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
@@ -1305,6 +1306,8 @@ function isGM3233AudioUICIScope(changes){
 }
 
 export function classifyBrowserScope(changes){
+  if(isIconArtworkPolicyScope(changes))return 'icon-artwork-policy';
+  if(isIconArtworkScope(changes))return 'icon-artwork';
   if(isGM3233AudioUICIScope(changes))return 'gm-ui-audio-3233';
   if(isRuntimeWarning3232Scope(changes))return 'runtime-warning-3232';
   if(isGMEntryIcons3231Scope(changes))return 'entry-icons-3231';
@@ -1372,6 +1375,8 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
+      if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
       if(isGM3233AudioUICIScope(changes))return{mode:'gm-ui-audio-3233',reason:'V3.233: exactly four GM UI/Audio fixes'};
       if(isRuntimeWarning3232Scope(changes))return{mode:'runtime-warning-3232',reason:'Owner V3.232 Runtime diagnostics and OTA gates only'};
@@ -1500,7 +1505,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3229','entry-icons-3231'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['icon-artwork','icon-artwork-policy','icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3229','entry-icons-3231'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
