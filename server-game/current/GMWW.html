@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.235</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3235-glass-dock">
+<title>GMWW V3.236</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3236-gm-menu-vote">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -202,7 +202,7 @@
 
           <div class="play-village-core">
             <div class="play-core-halo"></div>
-            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Tạo phòng"></button>
+            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Mở/đóng Menu GM"></button>
             <small id="playCoreKicker">GMWW • SÂN CHƠI</small>
             <b id="playCoreTitle">PHÒNG CHỜ</b>
             <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
@@ -229,7 +229,7 @@
 
         <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục">
         <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
-          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true">ĐỒNG HỒ</small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 13v11l8 5"/></svg></small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
         <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
@@ -237,7 +237,7 @@
         </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
-          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng">BÁO</button>
+          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 35h20l-3.7-6.2V21c0-5.8-3-9.5-6.3-9.5S17.7 15.2 17.7 21v7.8L14 35Z"/><path d="M21 39h6M24 7v2"/></svg></button>
         </section>
         <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
           <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
@@ -251,10 +251,10 @@
           </div>
         </section>
         <section id="battleDayGallowsFloat" class="battle-day-icon-float" aria-label="Lên Giàn" hidden>
-          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">LÊN GIÀN</button>
+          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 38V11h22"/><path d="M10 39h29M33 11v8"/><path d="M28 19c0-2.4 2-4 5-4s5 1.6 5 4-2 4-5 4-5-1.6-5-4Z"/><path d="M24 35h18"/><path d="M28 32v3M39 32v3"/></svg></button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
-          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
+          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 15H7V7"/><path d="M8 15a18 18 0 1 1-1.4 17"/><path d="M7 15c3.5-5.7 9-8.7 16-8.7"/></svg></span><small class="gmww-footer-hidden-label">KHÔI PHỤC</small></button>
         </section>
         </section>
         <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
@@ -354,7 +354,8 @@
           <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="false"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong><button type="button" id="battleDemoCollapse" aria-expanded="true" aria-label="Thu gọn bảng hành động DEMO" title="Thu gọn thành 🐦‍🔥">🐦‍🔥<span id="battleDemoCount" aria-hidden="true"></span></button></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><details id="battleDemoHistory" hidden><summary id="battleDemoHistoryCount">LỊCH SỬ ĐÊM</summary><ol id="battleDemoHistoryList" aria-label="Các hành động trước đó, mới nhất ở trên"></ol></details><p id="battleDemoObserverError"></p></aside>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
-            <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
+            <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — lướt ngang để xem tất cả" tabindex="0">
+               <button id="battleGMChromeToggle" type="button" aria-pressed="false" title="Ẩn hoặc hiện menu trên và dưới trong Chơi">◉ ẨN MENU</button>
                <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Tạm dừng / Tiếp tục DEMO"><span class="demo-clockwise-orbit" aria-hidden="true">↻</span><b>DEMO</b></button>
                <span class="play-demo-speed" id="battleDemoSpeedWrap" hidden><button id="battleDemoSpeed" type="button" data-speed="1" aria-label="Tốc độ DEMO: 1 lần. Chạm để tăng tốc." title="Chạm đổi tốc độ: ×1 → ×2 → ×5 → ×10">×1</button></span>
               <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
@@ -1004,7 +1005,7 @@
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=v3227-icon-action-v2"></script>
-<script src="app.js?v=gmww-v3235-glass-dock"></script>
+<script src="app.js?v=gmww-v3236-gm-menu-vote"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
