@@ -6,3 +6,6 @@ Tách PR sửa chính sách CI khỏi mã gameplay PR #542. Nhận diện **đú
 - Workflow Lên Giàn, shortcut #501, menu candidate V3.238 và Native IPA bỏ test không liên quan, không hạ chuẩn cho code khác.
 - Production V3.242 yêu cầu Worker CI SUCCESS cùng SHA và kiểm tra thật 50 ảnh + OTA SHA-256; bản CI-only không deploy.
 - Không thay gameplay, GM/Player Web/IPA, dữ liệu. Mọi path hoặc bytes ngoài whitelist fail-closed.
+
+## Bổ sung sửa harness
+Test VM icon #501 thiếu mock chế độ âm thanh, không liên quan hành vi thực. Tinh gọn lời gọi audio để player đã có tự xử lý mute, cập nhật đúng SHA Git của ba file GM/test V3.242 đã sửa. Policy repair chỉ 3 file CI, không đổi gameplay; thiếu hoặc thêm file bất kỳ sẽ chạy full.

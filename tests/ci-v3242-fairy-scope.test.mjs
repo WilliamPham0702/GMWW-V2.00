@@ -24,3 +24,11 @@ test('V3.242 Fairy/audio scope fails closed if files, byte hashes or paths diffe
  assert.equal(isFairy3242Scope([...policy,{path:'src/index.js',status:'M',after:'unapproved'}]),false);
  assert.equal(classifyBrowserScope(pretend),'full');
 });
+
+test('CI-only narrow regression harness repair recognized without gameplay changes',()=>{
+ const repair=['.github/scripts/ci-browser-scope.mjs','tests/ci-v3242-fairy-scope.test.mjs','docs/releases/ci-v3242-fairy-scope-20261027.md']
+   .map(path=>({path,status:'M',before:'',after:'CI only'}));
+ assert.equal(isFairy3242PolicyScope(repair),true);
+ assert.equal(classifyBrowserScope(repair),'fairy-ci-policy');
+ assert.equal(classifyBrowserScope([...repair,{path:'server-game/current/app.js',status:'M',after:'unexpected'}]),'full');
+});
