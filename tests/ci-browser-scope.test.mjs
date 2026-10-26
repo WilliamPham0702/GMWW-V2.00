@@ -500,6 +500,6 @@ test('PR532 scoped CI selector permits only the exact isolated CI-only followup'
  ];
  const files=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M',
    before:'old',after:path==='tests/ci-browser-scope.test.mjs'?'PR532 scoped CI selector':'CI routing'}));
- assert.equal(classifyBrowserScope(files),'ci-policy');
+ assert.equal(classifyBrowserScope(files),'postmatch-ci-532');
  assert.equal(classifyBrowserScope([...files,modified('server-game/current/app.js','a','b')]),'full');
 });
