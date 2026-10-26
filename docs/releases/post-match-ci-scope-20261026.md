@@ -7,6 +7,6 @@ PR CI riêng chỉ điều chỉnh phân loại thay đổi, không sửa gamepl
 - Check Player Card chỉ chạy hồi quy vòng đời ván; không mở thử nghiệm Card Chrome/Edge.
 - Kiểm tra icon và Lên Giàn vẫn xác minh tính toàn vẹn mã nhưng không chạy bộ E2E không liên quan.
 - Chặn xây dựng Native IPA trong scope `post-match-room-532` và `ci-policy`.
-- `ci-policy` chỉ cho phép đúng tập tệp workflow/script/test và ghi chú này, không bao gồm mã game.
+- `ci-policy` chỉ cho phép đúng tập tệp workflow/script/test (bao gồm bỏ qua phép thử Arena 3D không liên quan) và ghi chú này, không bao gồm mã game.
 
 Rollback: hoàn nguyên PR sửa CI nếu phân loại sai; không chạm dữ liệu DO hay IPA. Production vẫn cần được phê duyệt phát hành sau khi kiểm tra chốt Runtime/OTA và SHA-256.
