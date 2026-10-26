@@ -1459,7 +1459,68 @@ function isGM238DeployGateRecovery(changes){
   by.get('.github/workflows/check-player-web.yml')?.after?.includes("'gm238-deploy-repair'") &&
   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.238 deployment hotfix');
 }
+
+// GMWW 26/10: do not launch the whole browser/IPA suite for completed-match
+// room cleanup. Both the file set and the changed function bodies are checked.
+const postMatchSeatPaths=new Map([
+ ['src/index.js','M'],
+ ['server-game/src/30-village-and-setup.part','M'],
+ ['server-game/src/50-roles-and-artifacts.part','M'],
+ ['server-game/current/app.js','M'],
+ ['tests/post-match-room-cleanup.test.mjs','A'],
+ ['docs/releases/post-match-room-demo-seat-20261026.md','A']
+]);
+function stripPostMatchRegions(source,regions){
+  let remaining=source;
+  for(const [a,b] of regions){
+    remaining=outsideScope(remaining,a,b);
+    if(remaining===null)return null;
+  }
+  return remaining;
+}
+function isPostMatchSeatScope(changes){
+  if(!Array.isArray(changes)||changes.length!==postMatchSeatPaths.size)return false;
+  const seen=new Set();
+  for(const {path,status,before,after} of changes){
+    if(seen.has(path)||postMatchSeatPaths.get(path)!==status)return false;
+    seen.add(path);
+    if(status==='A')continue;
+    const regions=path==='src/index.js'
+      ?[['  async gmReset(request,body){','  async gmEnd(request,body){']]
+      :path==='server-game/src/50-roles-and-artifacts.part'
+      ?[['async function playCompletionNext(choice){','function initPlayCompletion(){']]
+      :path==='server-game/src/30-village-and-setup.part'
+      ?[['async function selectPlayExistingRoom(r){','function renderPlayCreatedRooms(){'],
+         ['async function flushPlayRoomMode(){','function bindPlayRoomModeButtons(){']]
+      :[['async function selectPlayExistingRoom(r){','function renderPlayCreatedRooms(){'],
+         ['async function flushPlayRoomMode(){','function bindPlayRoomModeButtons(){'],
+         ['async function playCompletionNext(choice){','function initPlayCompletion(){']];
+    const oldOther=stripPostMatchRegions(before,regions);
+    const newOther=stripPostMatchRegions(after,regions);
+    if(oldOther===null||oldOther!==newOther)return false;
+    if(path==='src/index.js'&&!after.includes('["demoLease","demoClock","demoPlan"]'))return false;
+    if(path==='server-game/src/50-roles-and-artifacts.part'&&!after.includes("'completed-leave-'"))return false;
+    if(path==='server-game/src/30-village-and-setup.part'&&!after.includes("'completed-mode-'"))return false;
+  }
+  return true;
+}
+const postMatchCIFiles=new Map([
+ ['.github/scripts/ci-browser-scope.mjs','M'],
+ ['.github/workflows/check-player-web.yml','M'],
+ ['tests/ci-browser-scope.test.mjs','M'],
+ ['docs/releases/ci-post-match-seat-scope-20261026.md','A']
+]);
+function isPostMatchSeatCIScope(changes){
+  if(!Array.isArray(changes)||changes.length!==postMatchCIFiles.size)return false;
+  const seen=new Set();
+  for(const c of changes){if(seen.has(c.path)||postMatchCIFiles.get(c.path)!==c.status)return false;seen.add(c.path)}
+  return changes.find(c=>c.path==='.github/workflows/check-player-web.yml')?.after?.includes("'post-match-seat-cleanup'")===true&&
+    changes.find(c=>c.path==='tests/ci-browser-scope.test.mjs')?.after?.includes('GMWW post-match lifecycle CI')===true;
+}
+
 export function classifyBrowserScope(changes){
+  if(isPostMatchSeatCIScope(changes))return 'post-match-seat-ci';
+  if(isPostMatchSeatScope(changes))return 'post-match-seat-cleanup';
   if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
   if(isGM238UniformMenuScope(changes))return 'gm-ui-controls-3238';
   if(isGM237MenuFooterScope(changes))return 'gm-ui-menu-3237';
@@ -1536,6 +1597,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isPostMatchSeatCIScope(changes))return{mode:'post-match-seat-ci',reason:'Policy-only change for completed match / seat reset CI'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
