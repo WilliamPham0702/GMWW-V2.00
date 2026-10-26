@@ -2713,6 +2713,56 @@ window.addEventListener('message',event=>{
     GMWW_ARENA_OFFICIAL_ORIGIN);
 });
 
+// Adopt a room CREATED inside official Arena 3D into GMWW's existing setup
+// flow. This never trusts the iframe alone: confirm its origin and source,
+// then authenticate the supplied bearer against the same live RoomDurableObject.
+let gmwwArenaAdoptSerial=0;
+window.addEventListener('message',async event=>{
+  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||
+     event.data?.kind!=='gmww-arena3d-adopt-room')return;
+  const frame=document.getElementById('gmwwArena3dQaFrame');
+  if(!frame||!frame.isConnected||frame.closest('[hidden]')||
+     event.source!==frame.contentWindow)return;
+  const roomCode=String(event.data.roomCode||'').trim().toUpperCase(),
+    token=String(event.data.gmToken||'');
+  if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(roomCode)||
+     !/^[A-Za-z0-9._~+\\/=:-]{12,256}$/.test(token))return;
+  const serial=++gmwwArenaAdoptSerial;
+  try{
+    const response=await fetch(GMWW_SERVER_BASE+'/api/gm/rooms/'+encodeURIComponent(roomCode),{
+      headers:{Authorization:'Bearer '+token},cache:'no-store'
+    });
+    if(!response.ok)throw Error('Core từ chối quyền GM');
+    const verified=await response.json();
+    if(verified?.ok!==true||String(verified.room?.code||verified.room?.roomCode||roomCode)!==roomCode)
+      throw Error('Core không xác nhận đúng phòng');
+    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]')||
+       event.source!==frame.contentWindow)return;
+    const room=verified.room||{};
+    // The registry already owns GM tokens; no new storage or 3D-secret cache.
+    if(isLivePlayRoom()&&playSceneState.gmToken&&playSceneState.roomCode!==roomCode)
+      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
+    playSceneState.roomCode=roomCode;
+    playSceneState.gmToken=token;
+    playSceneState.roomMode=room.roomMode==='offline'?'offline':'online';
+    playSceneState.roomEnabled=room.enabled!==false;
+    playSceneState.seatCount=Math.max(6,Math.min(30,Number(room.seatCount)||12));
+    playSceneState.step='room';
+    playRoomUiState.selectedCode=roomCode;
+    playRoomUiState.stage='mode';
+    playRoomUiState.modeTouched=true;
+    playRoomUiState.editorMode='';
+    savePlayScene();
+    rememberPlayRoom(roomCode,token,room);
+    await playSyncRoom(true);
+    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]'))return;
+    renderPlayScene();
+    window.dispatchEvent(new Event('gmww-arena3d-room-adopted'));
+  }catch(error){
+    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]'))return;
+    frame.contentWindow.postMessage({kind:'gmww-arena3d-adopt-failed'},GMWW_ARENA_OFFICIAL_ORIGIN);
+  }
+});
 function playLiveMembers(){
   if(Array.isArray(playSceneRuntime.players)&&playSceneRuntime.players.length)return playSceneRuntime.players.filter(p=>p?.kind==='member');
   const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[],wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
