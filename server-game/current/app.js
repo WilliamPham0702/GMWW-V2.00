@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.228';
+const VERSION='3.229';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3279,7 +3279,38 @@ function gmwwSetupFreeBattleIcons(){
       node.style.setProperty(name,value,'important');
     return p;
   };
-  for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver']){
+  // Battle shortcuts are now fixed in the lower rail, not floating/draggable.
+  // The compact sea group contains 🏖️ and 🌈; the remaining slots follow
+  // clock → sea group → action tray → ⛱️ → undo. Day actions retain their own UI.
+  let sea=document.getElementById('battleSeaShortcuts');
+  let actionSlot=document.getElementById('battleMainActionSlot');
+  const rail=document.getElementById('battleBottomControls');
+  if(rail){
+    if(!sea){sea=document.createElement('div');sea.id='battleSeaShortcuts';sea.className='battle-sea-shortcuts';}
+    if(!actionSlot){actionSlot=document.createElement('div');actionSlot.id='battleMainActionSlot';actionSlot.className='battle-main-action-slot';}
+    for(const id of ['battleDayNoticeFloat','battleFactionStatsFloat']){
+      const item=document.getElementById(id);
+      if(!item)continue;
+      sea.appendChild(item);
+      item.classList.remove('gmww-free-icon');
+      for(const css of ['left','top','right','bottom','transform','width','height'])
+       item.style.removeProperty(css);
+    }
+    for(const id of ['battleDayActionFloat','battleActionTray']){
+      const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
+    }
+    for(const element of [document.getElementById('playBattleClockFloat'),sea,actionSlot,
+      document.getElementById('battleDayGallowsFloat'),document.getElementById('battleUndoFloat')])
+      if(element)rail.appendChild(element);
+    const gallows=document.getElementById('battleDayGallowsFloat');
+    if(gallows){
+      gallows.classList.remove('gmww-free-icon');
+      for(const css of ['left','top','right','bottom','transform','width','height'])
+       gallows.style.removeProperty(css);
+    }
+  }
+  // DEMO alone keeps its independent floating shortcut/expanded panel.
+  for(const id of ['battleDemoObserver']){
     const panel=document.getElementById(id);if(!panel)continue;
     if(panel.parentElement!==shell)shell.appendChild(panel);
     const saved=read()[id];
@@ -4925,6 +4956,13 @@ function battleIconResolve(action){
  return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
+// Separate simultaneous actions around the actual GM fire: no overlapping tap areas.
+function battleIconSpawnPoint(fire,index,count){
+ if(count<=1)return battleIconClamp(fire.x,fire.y);
+ const radius=count===2?59:count===3?70:count===4?76:Math.max(78,Math.ceil(count*13));
+ const theta=-Math.PI/2+(index/count)*Math.PI*2;
+ return battleIconClamp(fire.x+Math.cos(theta)*radius,fire.y+Math.sin(theta)*radius);
+}
 function battleIconClamp(x,y){
  const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
  return {x:Math.min(Math.max(24,x),Math.max(24,vw-24)),y:Math.min(Math.max(35,y),Math.max(35,vh-50))};
@@ -4968,21 +5006,24 @@ function battleIconDock(actions,phase){
   // If GM moved the fire, unused icons still spawn on its new coordinates.
   for(const button of dock.querySelectorAll('[data-fire-action]')){
    const position=battleIconPositions.get(battleIconPositionKey(button.dataset.fireAction,button.dataset.fireIcon));
-   if(!position){button.style.left=fire.x+'px';button.style.top=fire.y+'px'}
+   if(!position){
+    const slot=Number(button.dataset.fireIndex)||0;
+    const point=battleIconSpawnPoint(fire,slot,eligible.length);
+    button.style.left=point.x+'px';button.style.top=point.y+'px';
+   }
   }
   return;
  }
  dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon},i)=>{
-  const offset=eligible.length>1?{x:Math.cos((i/eligible.length)*Math.PI*2)*13,y:Math.sin((i/eligible.length)*Math.PI*2)*13}:{x:0,y:0};
   const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
-    battleIconClamp(fire.x+offset.x,fire.y+offset.y);
+    battleIconSpawnPoint(fire,i,eligible.length);
   const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
     '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
-   '" data-fire-icon="'+playEsc(icon.id)+'" aria-label="'+playEsc(a.name)+
+   '" data-fire-icon="'+playEsc(icon.id)+'" data-fire-index="'+i+'" aria-label="'+playEsc(a.name)+
    '" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
    visual+'</button>';
  }).join('');
@@ -4992,7 +5033,8 @@ function battleIconTargetAt(x,y,action){
  let candidate=null,dist=Infinity;
  for(const el of ring.querySelectorAll('[data-play-player-id]')){
   const id=String(el.dataset.playPlayerId||''),m=battleMember(id);
-  if(!m||!battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
+  if(!m||(battleState.actionId===action.id&&battleState.targets.includes(id))||
+     !battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
   const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
   const d=Math.hypot(x-cx,y-cy),limit=Math.max(68,Math.min(118,Math.max(r.width,r.height)*1.15));
   if(d<limit&&d<dist){candidate=el;dist=d}
@@ -5046,8 +5088,11 @@ function battleIconBind(){
    battleIconTargetAt(e.clientX,e.clientY,a):null;
   const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
   if(e.type==='pointerup'&&moved){
-   // Icon stays where released; moving around the village alone never submits gameplay.
-   battleIconPositions.set(battleIconPositionKey(id,d.iconId),point);
+   // For multi-target actions return the icon to its fire slot for the next drop.
+   // For single target/free moving keep the chosen location.
+   const key=battleIconPositionKey(id,d.iconId);
+   if(a?.targetCount>1&&target)battleIconPositions.delete(key);
+   else battleIconPositions.set(key,point);
   }else{
    d.button.style.left=d.baseX+'px';d.button.style.top=d.baseY+'px';
   }
