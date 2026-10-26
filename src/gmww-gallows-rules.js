@@ -164,8 +164,11 @@ export function gallowsSetRestriction(ballot,voter,kind,banned=true,now=Date.now
     // Recompute the leader *and* hanging Character before the GM opens voting.
     if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting'){
       const nominee=gallowsAutomaticNominee(changed);
-      if(nominee!==ballot.candidateId){
-        changed.candidateId=nominee;changed.hangingStartedAt=nominee?now:null;
+      if(!nominee){
+        changed.stage='resolved';changed.candidateId=null;changed.hangingStartedAt=null;
+        changed.outcome='no_lynch';changed.resolvedAt=now;changed.deadlineAt=null;
+      }else if(nominee!==ballot.candidateId){
+        changed.candidateId=nominee;changed.hangingStartedAt=now;
       }
     }
   }
