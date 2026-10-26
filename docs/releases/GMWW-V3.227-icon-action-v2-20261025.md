@@ -7,7 +7,7 @@
 4. Kết xuất 49 bộ SVG/PNG frameless từ **chính hình họa tiết nguồn đã kiểm duyệt trên server**; loại bỏ khung huy hiệu/vòng viền/nền medal, không cắt từ ảnh tổng. Giữ nguyên 49 file gốc tại `sea-v1` phục vụ đối chiếu/rollback, file dùng mới ở `action-icons/v2`. Giữ hình người dùng tự upload (không ghi đè ảnh custom).
 5. Yêu Tinh sử dụng **🔄** thay cho hai mũi tên trên màn hình trận, vẫn thao tác chọn trái/phải theo Core hiện có.
 6. Hình hành động không có nền hộp, viền nút hoặc nhãn chữ; nền PNG RGBA trong suốt và 49 SVG riêng.
- 
+
 ## Tính năng cần giữ nguyên
 - Tìm icon theo actionId và phân quyền GM, nút `ICON: BẬT/TẮT`.
 - Khi kéo gần Character hợp lệ, icon hít vào tâm Character, viền sáng nhấp nháy. Bỏ vào Character thực hiện theo `battlePickTargetWithAudio` / `battleConfirm` Core như trước. Không cho thao tác vào mục tiêu không hợp lệ.
