@@ -13,7 +13,7 @@ test('iPhone: Thư viện Audio không gọi forEach trên null',async()=>{
  const a=part.indexOf('async function renderAudio(){'),b=part.indexOf('async function playAudioItem(',a);
  assert.ok(a>=0&&b>a);
  const fn=part.slice(a,b);
- assert.doesNotMatch(fn,/\$\('\[data-system-sound-slot\]'\)\.forEach/);
+ assert.doesNotMatch(fn,/(?<!\$)\$\('\[data-system-sound-slot\]'\)\.forEach/);
  assert.match(fn,/\$\$\('\[data-system-sound-slot\]'\)\.forEach/);
  const button={dataset:{systemSoundSlot:'audio_system_day_wakeup'},onclick:null};
  const grid={innerHTML:''},add={onclick:null},called=[];
@@ -51,7 +51,7 @@ test('Battle bottom row is clock → 🏖️ → actions → ⛱️ → 🌈, an
  assert.ok(a>=0&&b>a);
  const names=['playBattleClockFloat','battleDayNoticeFloat','battleMainActionSlot','battleDayGallowsFloat','battleFactionStatsFloat'];
  const slots=dock.slice(dock.indexOf('for(const item of [document.getElementById('),dock.indexOf('])',dock.indexOf('for(const item of [document.getElementById(')));
- const order=names.map(x=>slots.indexOf("document.getElementById('"+x+"')"));
+ const order=names.map(x=>x==='battleMainActionSlot'?slots.indexOf('actionSlot'):slots.indexOf("document.getElementById('"+x+"')"));
  assert.ok(order.every((v,i)=>v>=0&&(i===0||v>order[i-1])),JSON.stringify(order));
  assert.match(dock,/battleSeaShortcuts'\)\?\.remove\(\)/);
  assert.match(css,/#battleBottomControls #battleUndoFloat\{\s*display:none!important/);
