@@ -40,6 +40,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Phân loại thay đổi icon cho đúng phạm vi
+        id: iconsscope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
       - name: Thiết lập Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -60,10 +66,12 @@ jobs:
             tests/gallows-flag-snap-v3206.test.mjs \
             tests/gallows-pirate-ui-v3205.test.mjs
       - name: Cài WebKit cho mô phỏng iPhone đúng phạm vi icon
+        if: steps.iconsscope.outputs.mode != 'entry-icons-3231'
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
       - name: Kiểm tra icon nổi và DEMO chạm kéo trên iPhone WebKit
+        if: steps.iconsscope.outputs.mode != 'entry-icons-3231'
         run: |
           node tests/gm-free-floating-shortcuts-iphone-webkit.mjs
           node tests/v3188-preview-iphone-webkit.mjs

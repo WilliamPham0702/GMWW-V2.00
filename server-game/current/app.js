@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.230';
+const VERSION='3.231';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5059,28 +5059,23 @@ function battleIconResolve(action){
  return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
-// Separate simultaneous actions around the actual GM fire: no overlapping tap areas.
-function battleIconSpawnPoint(fire,index,count){
- if(count<=1)return battleIconClamp(fire.x,fire.y);
- const radius=count===2?59:count===3?70:count===4?76:Math.max(78,Math.ceil(count*13));
- const theta=-Math.PI/2+(index/count)*Math.PI*2;
- return battleIconClamp(fire.x+Math.cos(theta)*radius,fire.y+Math.sin(theta)*radius);
+// V3.231: start above the fixed footer at the village entrance stairs, not GM fire.
+function battleIconSpawnPoint(entry,index,count){
+ const vw=globalThis.visualViewport?.width||innerWidth;
+ const columns=Math.min(count===4?2:3,Math.max(1,Math.floor((vw-12)/100)),Math.max(1,count));
+ const row=Math.floor(index/columns),slots=Math.min(columns,count-row*columns),col=index%columns;
+ return battleIconClamp(entry.x+(col-(slots-1)/2)*100,entry.y-row*102);
 }
 function battleIconClamp(x,y){
  const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
- return {x:Math.min(Math.max(24,x),Math.max(24,vw-24)),y:Math.min(Math.max(35,y),Math.max(35,vh-50))};
+ return {x:Math.min(Math.max(52,x),Math.max(52,vw-52)),y:Math.min(Math.max(52,y),Math.max(52,vh-52))};
 }
-function battleIconFirePoint(){
- // Same GM fire anchor as village layout. No secondary bottom-of-fire toolbar.
- const core=document.querySelector('.play-village-core');
- const locate=typeof villageFirePosition==='function'?villageFirePosition():null;
- if(core&&Array.isArray(locate)&&locate.length===2&&locate.every(Number.isFinite)){
-  core.style.left=locate[0]+'%';core.style.top=locate[1]+'%';
- }
- const rect=core?.querySelector('.play-core-pearl')?.getBoundingClientRect();
- if(rect&&rect.width>0&&rect.height>0)return battleIconClamp(rect.left+rect.width/2,rect.top+rect.height/2);
- const shell=document.getElementById('playShell')?.getBoundingClientRect();
- return battleIconClamp(shell?.width?shell.left+shell.width/2:innerWidth/2,shell?.height?shell.top+shell.height*.5:innerHeight*.5);
+function battleIconEntryPoint(){
+ const rail=document.getElementById('battleBottomControls');
+ const rect=rail?.getBoundingClientRect?.();
+ if(rect&&rect.width>0&&rect.height>0)
+  return battleIconClamp(rect.left+rect.width/2,rect.top-60);
+ return battleIconClamp((globalThis.visualViewport?.width||innerWidth)/2,(globalThis.visualViewport?.height||innerHeight)-150);
 }
 function battleIconResetPositions(){
  battleIconPositions.clear();battleIconClearDrag();
@@ -5101,17 +5096,17 @@ function battleIconDock(actions,phase){
  if(turn!==battleIconTurnKey){battleIconTurnKey=turn;battleIconResetPositions()}
  dock.hidden=!active;dock.classList.toggle('is-pending',waiting);
  if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
- const fire=battleIconFirePoint();
+ const entry=battleIconEntryPoint();
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
   ':'+turn+':'+battleState.actionId+':'+battleState.targets.length+':'+waiting;
  if(battleIconDragging)return;
  if(dock.dataset.sig===key){
-  // If GM moved the fire, unused icons still spawn on its new coordinates.
+  // Unused icons follow the entrance as the bottom menu moves.
   for(const button of dock.querySelectorAll('[data-fire-action]')){
    const position=battleIconPositions.get(battleIconPositionKey(button.dataset.fireAction,button.dataset.fireIcon));
    if(!position){
     const slot=Number(button.dataset.fireIndex)||0;
-    const point=battleIconSpawnPoint(fire,slot,eligible.length);
+    const point=battleIconSpawnPoint(entry,slot,eligible.length);
     button.style.left=point.x+'px';button.style.top=point.y+'px';
    }
   }
@@ -5121,7 +5116,7 @@ function battleIconDock(actions,phase){
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon},i)=>{
   const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
-    battleIconSpawnPoint(fire,i,eligible.length);
+    battleIconSpawnPoint(entry,i,eligible.length);
   const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
     '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
@@ -5191,7 +5186,7 @@ function battleIconBind(){
    battleIconTargetAt(e.clientX,e.clientY,a):null;
   const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
   if(e.type==='pointerup'&&moved){
-   // For multi-target actions return the icon to its fire slot for the next drop.
+   // For multi-target actions return the icon to its entrance slot for the next drop.
    // For single target/free moving keep the chosen location.
    const key=battleIconPositionKey(id,d.iconId);
    if(a?.targetCount>1&&target)battleIconPositions.delete(key);
