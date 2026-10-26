@@ -24,6 +24,7 @@ import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHe
 import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
+import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -1631,7 +1632,12 @@ export class RoomDurableObject extends DurableObject {
       });
     }
     const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
-    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(roleTurns),artifactTurns));
+    // WITCH-01: every Old Witch owner wakes immediately after the optional Wolf
+    // recognition, regardless of the configured order or ties with other roles.
+    const witch=roleTurns.find(row=>row.roleId==="role_old_witch");
+    const following=roleTurns.filter(row=>row.roleId!=="role_old_witch");
+    if(witch)queue.push(witch);
+    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(following),artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -2133,6 +2139,15 @@ export class RoomDurableObject extends DurableObject {
         !canSnowWolfBite({assignments:assigned,interactions,matchId}))
         return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",message:"Sói Tuyết chỉ được Cắn khi không còn Sói khác sống trong ván."},409);
       const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
+      if(roleId==="role_old_witch"){
+        // GM can submit forged action types or targets; enforce WITCH-01 before
+        // taking snapshots, writing interactions, debiting uses or broadcasting.
+        const required=actionId==="action_revive"?"revive":actionId==="action_exile"?"expelled":"";
+        if(!required||type!==required)return j({ok:false,error:"WITCH_INVALID_ACTION_TYPE"},409);
+        const checked=oldWitchActionCheck({actionId,actorId,targetIds:targets,
+          matchId,night:Number(meta.cycleNight||1),interactions,players});
+        if(!checked.ok)return j({ok:false,error:checked.error,message:checked.message},409);
+      }
       // Recover older confirmed battle actions in an already-running match.
       const known=new Set(currentUsage.map(x=>String(x?.eventId||"")).filter(Boolean));
       for(const hit of interactions){
@@ -2256,6 +2271,12 @@ export class RoomDurableObject extends DurableObject {
       if(!step||String(step.id)!==String(body.turnId))
         return j({ok:false,error:"STALE_TURN",message:"Lượt chức năng đã thay đổi. Vui lòng chọn lại."},409);
       const claimedActor=normalizeLoginId(body.actorId||"");
+      // Only the battle-action endpoint maintains the per-role nightly ledger,
+      // limits and atomic Undo; never allow legacy GM interaction to bypass it.
+      if(!verifiedAuth&&body?.artifactId==null&&String(body?.actionId||"")&&
+         (step.kind==="role"&&step.roleId==="role_old_witch"||
+          step.kind==="role-group"&&(step.roles||[]).some(r=>r.roleId==="role_old_witch")))
+        return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
       if(step.kind==="early-artifact-window"||(["role","role-group"].includes(step.kind)&&body.artifactId)){
