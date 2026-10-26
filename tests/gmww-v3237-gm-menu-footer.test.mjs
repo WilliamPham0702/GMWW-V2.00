@@ -24,7 +24,7 @@ test('V3.237 one GM menu at all campfires, tap outside and Escape dismiss in set
  assert.match(battle,/event\.key==='Escape'&&document\.body\.classList\.contains\('play-immersive'\)/);
 });
 test('V3.237 footer has no outer frame and icon buttons show no labels',()=>{
- assert.match(css,/GMWW V3\.238: shared campfire menu/);
+ assert.match(css,/GMWW V3\.237: shared campfire menu/);
  assert.match(css,/#battleBottomControls\{\s*background:none!important/);
  assert.match(css,/border:0!important;border-radius:0!important;box-shadow:none!important/);
  assert.match(css,/#battleUndoButton > small/);
