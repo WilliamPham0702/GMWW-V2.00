@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - "server-game/current/app.js"
+      - "server-game/current/style.css"
+      - "server-game/src/30-village-and-setup.part"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "tests/gmww-v3228-battle-icons-footer.test.mjs"
       - "server-game/current/GMWW.html"
       - "src/index.js"
       - "assets/village/**"
@@ -68,7 +72,7 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
       - name: Kiểm chứng SHA-256 từng file và manifest V3.228
