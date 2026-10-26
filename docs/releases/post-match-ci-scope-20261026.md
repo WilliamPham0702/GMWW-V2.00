@@ -10,3 +10,5 @@ PR CI riêng chỉ điều chỉnh phân loại thay đổi, không sửa gamepl
 - `ci-policy` chỉ cho phép đúng tập tệp workflow/script/test (bao gồm bỏ qua phép thử Arena 3D không liên quan) và ghi chú này, không bao gồm mã game.
 
 Rollback: hoàn nguyên PR sửa CI nếu phân loại sai; không chạm dữ liệu DO hay IPA. Production vẫn cần được phê duyệt phát hành sau khi kiểm tra chốt Runtime/OTA và SHA-256.
+
+Chốt độc lập `postmatch-ci-532` chỉ chạy bài test chính sách PR532, không hạ tiêu chuẩn bài `ci-policy` hiện hữu của các PR khác.
