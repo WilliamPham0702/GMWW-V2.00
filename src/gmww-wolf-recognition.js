@@ -11,7 +11,7 @@ export function wolfPackMembers(assignments=[],interactions=[],matchId=''){
     const id=login(row?.loginId);
     if(!id||blocked.has(id))continue;
     const faction=row?.faction??row?.factionId??row?.roleCard?.factionId;
-    const originallyWolf=wolfFaction(row?.roleCard?.factionId)||/^role_(?:.*wolf.*)$/.test(String(row?.roleId||''));
+    const originallyWolf=wolfFaction(row?.roleCard?.factionId)||/^(?:role_.*wolf.*|wolf|regular-wolf|alpha-wolf)$/.test(String(row?.roleId||''));
     if(!wolfFaction(faction)&&!originallyWolf)continue;
     // Original role identity survives a faction conversion; only the viewer's
     // private pack roster may see it, and only while the recognition turn is active.
