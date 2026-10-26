@@ -1601,7 +1601,32 @@ function isWOLF01Scope(changes){
   has('docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md','Rollback') &&
   has('.github/workflows/check-player-web.yml',"'wolf01-private-pack'");
 }
+/* WITCH-01: exact approved Old Witch rules, GM runtime & release gates. */
+function isWITCH01Scope(changes){
+ const allowed=new Set(["src/index.js","src/gmww-old-witch-rules.js","src/gmww-battle-action-policy.js","server-game/current/battle-controls.js","server-game/src/40-battle-and-timeline.part","server-game/src/00-core-and-library.part","server-game/current/app.js","server-game/current/GMWW.html","tests/witch01-old-witch-rules.test.mjs","tests/v389-night-runtime-integration.test.mjs","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.240-witch01-old-witch-20261026.md",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(row=>[row.path,row]));
+ if(by.size!==allowed.size||changes.some(row=>!allowed.has(row.path)||!['A','M'].includes(row.status)))return false;
+ const has=(path,token)=>by.get(path)?.after?.includes(token);
+ return has('src/index.js','WITCH-01: every Old Witch owner wakes') &&
+  has('src/gmww-old-witch-rules.js','oldWitchActionCheck') &&
+  has('src/gmww-battle-action-policy.js',"role==='role_old_witch'||") &&
+  has('server-game/current/battle-controls.js','oldWitchReviveEligible') &&
+  has('server-game/src/40-battle-and-timeline.part','WITCH-01: keep the last confirmed target') &&
+  has('server-game/src/00-core-and-library.part',"const VERSION='3.240'") &&
+  has('server-game/current/app.js',"const VERSION='3.240'") &&
+  has('server-game/current/GMWW.html','<title>GMWW V3.240</title>') &&
+  has('tests/witch01-old-witch-rules.test.mjs','WITCH-01') &&
+  has('tests/v389-night-runtime-integration.test.mjs','WITCH-01 real Durable Object') &&
+  has('package.json','"version": "3.240.0"') &&
+  has('package-lock.json','"version": "3.240.0"') &&
+  has('.github/scripts/prepare-update-channel.mjs','V3.240 WITCH-01:') &&
+  has('docs/releases/GMWW-V3.240-witch01-old-witch-20261026.md','Rollback') &&
+  has('.github/workflows/check-player-web.yml',"'witch01-old-witch'") &&
+  has('.github/workflows/deploy-production.yml','witch240_release');
+}
 export function classifyBrowserScope(changes){
+  if(isWITCH01Scope(changes))return 'witch01-old-witch';
   if(isWOLF01Scope(changes))return 'wolf01-private-pack';
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
   if(isPostMatchCIOnlyScope(changes))return 'postmatch-ci-532';
@@ -1686,6 +1711,7 @@ function detect(){
       });
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
+      if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
       if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
       if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};

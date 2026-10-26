@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.239';
+const VERSION='3.240';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5355,7 +5355,13 @@ const battleActions=()=>{
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
     let unavailableReason='';
-    if((action.type==='revive'||action.actionId==='action_revive')&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))return {...action,unavailable:true,unavailableReason:'Chưa có người chết để hồi sinh.'};
+    if(action.roleId==='role_old_witch'&&action.actionId==='action_revive'&&
+      !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'&&
+        battleRules().oldWitchReviveEligible(action,m,playSceneRuntime.activeEffects,night)))
+      return {...action,unavailable:true,unavailableReason:'Không có người chết hợp lệ từ ngày hoặc đêm trước để Hồi Sinh.'};
+    if(action.roleId!=='role_old_witch'&&(action.type==='revive'||action.actionId==='action_revive')&&
+      !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))
+      return {...action,unavailable:true,unavailableReason:'Chưa có người chết để hồi sinh.'};
     const actorIds=(action.actorIds||[]).filter(actorId=>{
       if(playPlayerBlocked(actorId)){unavailableReason=playBlockReason(actorId);return false}
       if(action.artifactId)return true; // Artifact use is governed by its existing cycle ledger.
@@ -5395,7 +5401,14 @@ const battleActions=()=>{
     const rawName=String(action.name||'').trim();
     const name=action.artifactId&&/^action[-_][a-z0-9_-]+$/i.test(rawName)
       ?'Hành động':rawName;
-    return {...action,name,actorIds,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
+    // WITCH-01: keep the last confirmed target unavailable on the next night.
+    // Older matches without ledger targets remain protected by the Server check.
+    const actor=actorIds[0];
+    const forbiddenTargets=action.roleId==='role_old_witch'&&action.actionId==='action_exile'&&actor?
+      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)==='role_old_witch'&&
+        String(x.actionId)==='action_exile'&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
+        .flatMap(x=>Array.isArray(x.targetIds)?x.targetIds:[]):[];
+    return {...action,name,actorIds,forbiddenTargets,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
   });
 };
 const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
