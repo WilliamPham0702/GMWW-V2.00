@@ -24,8 +24,8 @@ export function gallowsOpen(ballot,now=Date.now()){
     nominations:{},votes:{},updatedAt:now}};
 }
 
-/* All public tallies derive from accepted, still-eligible Server receipts.
-   Tie for nomination needs GM choice; tied execution votes save the accused. */
+/* All public tallies derive from accepted Server receipts.
+   Tied highest nominations = no gallows this day; tied save/kill = alive. */
 // Timing belongs to the active Gallows panel, not the pre-match template.
 export function gallowsSetDuration(ballot,kind,seconds,now=Date.now()){
   const stage=gallowsStage(ballot,now),field=kind==='nomination'?'nominationDurationSec':kind==='vote'?'voteDurationSec':kind==='both'?'both':null;
@@ -39,16 +39,19 @@ export function gallowsSetDuration(ballot,kind,seconds,now=Date.now()){
   return {ok:true,value:{...ballot,...(kind==='both'?
     {nominationDurationSec:duration,voteDurationSec:duration}:{[field]:duration}),updatedAt:now}};
 }
-// Force an early nomination close; choose the unique leader, otherwise ask GM to break the tie.
+// Force an early nomination close; a tie or empty ballot means NO hanging this day.
 export function gallowsCloseNomination(ballot,now=Date.now()){
   if(gallowsMode(ballot)!=='auto'||!['nominating','selecting'].includes(gallowsStage(ballot,now)))
     return {ok:false,error:'NOMINATION_NOT_OPEN'};
   if(gallowsStage(ballot,now)==='selecting'&&ballot.stage==='selecting')return {ok:true,value:ballot};
   const candidate=gallowsAutomaticNominee(ballot);
-  // Closing the poll must NOT start voting: only GM's "Mở bỏ phiếu" does.
-  // A unique leader can hang visually while the voting panel awaits GM action.
+  // No clear highest nominee: finish the gallows without a target, death or vote phase.
+  if(!candidate)return {ok:true,value:{...ballot,stage:'resolved',candidateId:null,
+    outcome:'no_lynch',resolvedAt:now,hangingStartedAt:null,deadlineAt:null,
+    nominationDeadlineAt:now,updatedAt:now}};
+  // Only the GM's "Mở bỏ phiếu" starts voting for the unique leader.
   return {ok:true,value:{...ballot,stage:'selecting',candidateId:candidate,
-    hangingStartedAt:candidate?now:null,nominationDeadlineAt:now,updatedAt:now}};
+    hangingStartedAt:now,nominationDeadlineAt:now,updatedAt:now}};
 }
 export function gallowsNominationTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedNomination(ballot)),counts=new Map();
@@ -129,13 +132,10 @@ export function gallowsNominate(ballot,voter,target,now=Date.now()){
 export function gallowsBegin(ballot,candidate,now=Date.now()){
   if(!validId(candidate)||!(ballot?.eligible||[]).includes(candidate)||
      !['nominating','selecting'].includes(gallowsStage(ballot,now)))return {ok:false,error:'BALLOT_NOT_READY'};
-  // When nominations have been closed, a unique leader is mandatory. On a
-  // positive tie the GM may choose only one of the top-scoring players.
-  // No nominations: keep legacy GM/demo selection available.
   if(gallowsMode(ballot)==='auto'&&gallowsStage(ballot,now)==='selecting'){
-    const totals=gallowsNominationTotals(ballot),max=totals[0]?.votes||0;
-    if(max>0&&!totals.some(row=>row.loginId===candidate&&row.votes===max))
-      return {ok:false,error:'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE'};
+    const unique=gallowsAutomaticNominee(ballot);
+    if(!unique)return {ok:false,error:'GALLOWS_NO_UNIQUE_NOMINEE'};
+    if(candidate!==unique)return {ok:false,error:'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE'};
   }
   return {ok:true,value:{...ballot,candidateId:candidate,stage:'voting',hangingStartedAt:now,startedAt:now,
     deadlineAt:now+1000*gallowsDurationSec(ballot.voteDurationSec),updatedAt:now,votes:{}}};
