@@ -629,7 +629,7 @@ function battleIconBind(){
   if(!moved){
    // A direct iPhone tap must play the configured action audio immediately,
    // before opening the target picker or Fairy direction choices.
-   if(!playAudioMuted())void battlePlayConfiguredAudio('actions',a.actionId,a.name);
+   void battlePlayConfiguredAudio('actions',a.actionId,a.name);
    if(battleIsTransfer(a)){battlePickAction(a.id);return}
    if(a.noTarget||a.targetCount===0){
     if(!confirm('Xác nhận '+a.name+'?'))return;

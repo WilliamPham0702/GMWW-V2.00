@@ -9,7 +9,7 @@ const server=fs.readFileSync('src/index.js','utf8');
 test('Icon tap invokes the configured action audio before opening either picker',()=>{
  const pointer=source.slice(source.indexOf('function battleIconBind(){'),source.indexOf('// Repaint the current GM turn',source.indexOf('function battleIconBind(){')));
  assert.match(pointer,/if\(!moved\)\{[\s\S]*?battlePlayConfiguredAudio\('actions',a\.actionId,a\.name\);[\s\S]*?if\(battleIsTransfer\(a\)\)/);
- assert.match(pointer,/if\(!playAudioMuted\(\)\)/);
+ assert.doesNotMatch(pointer,/if\(!playAudioMuted\(\)\)/);
  assert.ok(built.includes(pointer));
 });
 test('Yêu Tinh picker has exactly three illustrated directions and click confirmation',()=>{
