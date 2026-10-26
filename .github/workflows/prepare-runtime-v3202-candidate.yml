@@ -1,4 +1,4 @@
-name: GMWW V3.237 OTA Candidate SHA-256 (Menu GM và icon footer)
+name: GMWW V3.238 OTA Candidate SHA-256 (Menu GM và icon footer)
 on:
   pull_request:
     branches: [main]
@@ -72,13 +72,13 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3237-gm-menu-footer.test.mjs
+          node --test tests/gmww-v3238-uniform-gm-controls.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
-      - name: Kiểm chứng SHA-256 từng file và manifest V3.237
-        run: node .github/scripts/verify-prepared-runtime.mjs 3.237
-      - name: Kiểm tra V3.237 lớn hơn bản đang chạy, chặn trùng phiên bản
+      - name: Kiểm chứng SHA-256 từng file và manifest V3.238
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.238
+      - name: Kiểm tra V3.238 lớn hơn bản đang chạy, chặn trùng phiên bản
         shell: bash
         run: |
           set -euo pipefail
@@ -104,11 +104,11 @@ jobs:
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
         uses: actions/upload-artifact@v4
         with:
-          name: GMWW-V3.237-OTA-CANDIDATE-SHA256-NO-DEPLOY
+          name: GMWW-V3.238-OTA-CANDIDATE-SHA256-NO-DEPLOY
           path: |
-            out/gmww-runtime-v3.237-sha256.json
+            out/gmww-runtime-v3.238-sha256.json
             assets/updates/latest.json
-            assets/updates/runtime/V3.237/manifest.json
-            assets/updates/runtime/V3.237/manifest-runtime-3237.json
+            assets/updates/runtime/V3.238/manifest.json
+            assets/updates/runtime/V3.238/manifest-runtime-3238.json
           if-no-files-found: error
           retention-days: 14
