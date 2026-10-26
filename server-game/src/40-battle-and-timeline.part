@@ -1561,7 +1561,7 @@ function battleSyncPhaseDock(phase,visible){
   const shell=document.getElementById('playShell');
   if(shell)shell.dataset.battlePhase=visible?phase:'';
   const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
-    battleUndoFloat:night,battleDayNoticeFloat:day,battleDayActionFloat:day,
+    battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:day,
     battleDayGallowsFloat:day,battleFactionStatsFloat:day};
   for(const [id,show] of Object.entries(slots)){
     const el=document.getElementById(id);if(el)el.hidden=!show;
