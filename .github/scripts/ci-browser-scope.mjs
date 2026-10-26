@@ -1500,7 +1500,6 @@ function isART01DeployGateScope(changes){
   by.get('tests/art01-deployment-gate.test.mjs')?.after?.includes('ART-01 release gate focused') &&
   by.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('isART01DeployGateScope');
 }
-export 
 // PR #532: the ONLY gameplay changes permitted here are post-match room reset
 // and GM's local selection reconciliation. All unrelated code still runs full CI.
 const postMatch532Paths=new Set([
@@ -1555,6 +1554,7 @@ const postMatchCIOnlyPaths=new Set([
  '.github/workflows/check-player-card-browsers.yml',
  '.github/workflows/check-gm-free-icons-501.yml',
  '.github/workflows/check-gallows-redesign.yml',
+ '.github/workflows/check-dual-renderer.yml',
  '.github/workflows/build-server-game-ipa.yml',
  'tests/ci-browser-scope.test.mjs',
  'docs/releases/post-match-ci-scope-20261026.md'
@@ -1568,7 +1568,7 @@ function isPostMatchCIOnlyScope(changes){
   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('PR532 scoped CI selector');
 }
 
-function classifyBrowserScope(changes){
+export function classifyBrowserScope(changes){
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
   if(isPostMatchCIOnlyScope(changes))return 'ci-policy';
   if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
