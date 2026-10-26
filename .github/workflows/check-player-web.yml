@@ -383,6 +383,14 @@ jobs:
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
+      - name: Chỉ kiểm thử vòng đời kết thúc ván, Seat và chuyển chế độ DEMO
+        if: steps.scope.outputs.mode == 'post-match-seat-cleanup'
+        run: |
+          node --test tests/post-match-room-cleanup.test.mjs tests/forced-end-game.test.mjs tests/match-completion-server.test.mjs tests/v3175-post-create-room-mode.test.mjs tests/v3173-room-mode-cycle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ kiểm thử quy tắc phân loại CI kết thúc ván và Seat
+        if: steps.scope.outputs.mode == 'post-match-seat-ci'
+        run: node --test --test-name-pattern='GMWW post-match lifecycle CI' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
