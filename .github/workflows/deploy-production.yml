@@ -48,6 +48,14 @@ jobs:
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # V3.238 emergency: this exact workflow-only syntax repair unblocks
+          # the already-merged, SHA-verified Runtime V3.238; normal Worker CI
+          # and the strict Production/OTA manifest checks still apply.
+          if [ "$(node -p "require('./package.json').version")" = '3.238.0' ] && \
+             [ "$(wc -l < /tmp/gmww-production-change-scope.txt | tr -d ' ')" = 1 ] && \
+             grep -Fxq '.github/workflows/deploy-production.yml' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=true
+          fi
           # ICON_V2_CI_HOTFIX: verify the exact seven-file non-runtime repair.
           # Runtime V3.227 is already live; no package, Worker or GM logic changed.
           # Fail closed: a different file set, image, checksum or version deploys normally.
