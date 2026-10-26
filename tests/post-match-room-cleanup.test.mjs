@@ -13,7 +13,7 @@ const between=(source,a,b)=>{
 };
 
 test('Completed game: Room/Exit releases server seats before clearing the iPhone state',async()=>{
-  const calls=[],errors=[],state={step:'battle',phase:'day',roomCode:'ABCDEF',gmToken:'token'};
+  const calls=[],errors=[],state={step:'battle',phase:'day',roomCode:'ABCDEF',gmToken:'token',selectedMemberIds:['alice'],activePlayerId:'alice',matchId:'match-1'};
   const runtime={room:{resetVersion:3,demo:true},players:[{seatId:4}],assignments:[{loginId:'a'}]};
   const completion={completed:true,busy:false,roomCode:'ABCDEF',matchId:'match-1'};
   const ctx={playCompletionState:completion,playSceneState:state,playSceneRuntime:runtime,
@@ -36,6 +36,9 @@ test('Completed game: Room/Exit releases server seats before clearing the iPhone
   assert.equal(calls[0][2].expectedResetVersion,3);
   assert.ok(calls.findIndex(x=>x[0]==='disconnect')>0);
   assert.equal(state.roomCode,'—');
+  assert.deepEqual(state.selectedMemberIds,[]);
+  assert.equal(state.activePlayerId,'');
+  assert.equal(state.matchId,'');
   assert.equal(runtime.players.length,0);
   assert.equal(runtime.assignments.length,0);
   assert.ok(calls.some(x=>x[0]==='room-picker'));
