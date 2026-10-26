@@ -1271,7 +1271,41 @@ function isRuntimeWarning3232Scope(changes){
   return required.every(([p,token])=>by.get(p)?.after?.includes(token));
 }
 
+
+/* V3.233 — fail closed on exactly four GM Runtime/UI fixes and safety metadata. */
+function isGM3233AudioUICIScope(changes){
+ const allowed=new Set([
+  'server-game/src/00-core-and-library.part','server-game/src/10-library-and-settings.part',
+  'server-game/src/30-village-and-setup.part','server-game/current/app.js',
+  'server-game/current/GMWW.html','server-game/current/style.css',
+  'src/index.js','package.json','package-lock.json',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/gmww-v3233-audio-templates-dock.test.mjs',
+  'docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md'
+ ]);
+ const by=new Map(changes.map(item=>[item.path,item]));
+ if(changes.length!==allowed.size||by.size!==allowed.size)return false;
+ if(changes.some(item=>!allowed.has(item.path)||!['A','M'].includes(item.status)))return false;
+ const required=[
+  ['src/index.js','VERSION="V3.233"'],
+  ['server-game/current/app.js',"const VERSION='3.233'"],
+  ['server-game/src/10-library-and-settings.part',"$('[data-system-sound-slot]').forEach"],
+  ['server-game/src/30-village-and-setup.part','V3.233: five exclusive slots'],
+  ['server-game/current/GMWW.html','play-template-actions-row'],
+  ['server-game/current/style.css','GMWW V3.233: Cloudflare two-line'],
+  ['package.json','"version": "3.233.0"'],
+  ['tests/gmww-v3233-audio-templates-dock.test.mjs','iPhone: Thư viện Audio'],
+  ['docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md','Rollback'],
+  ['.github/workflows/check-player-web.yml',"'gm-ui-audio-3233'"],
+  ['.github/workflows/deploy-production.yml','gm_ui_audio_3233']
+ ];
+ return required.every(([p,token])=>by.get(p)?.after?.includes(token));
+}
+
 export function classifyBrowserScope(changes){
+  if(isGM3233AudioUICIScope(changes))return 'gm-ui-audio-3233';
   if(isRuntimeWarning3232Scope(changes))return 'runtime-warning-3232';
   if(isGMEntryIcons3231Scope(changes))return 'entry-icons-3231';
   if(isMaintenanceNotice3230Scope(changes))return 'settings-notices-3230';
@@ -1339,6 +1373,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM3233AudioUICIScope(changes))return{mode:'gm-ui-audio-3233',reason:'V3.233: exactly four GM UI/Audio fixes'};
       if(isRuntimeWarning3232Scope(changes))return{mode:'runtime-warning-3232',reason:'Owner V3.232 Runtime diagnostics and OTA gates only'};
       if(isGMEntryIcons3231Scope(changes))return{mode:'entry-icons-3231',reason:'Only V3.231 GM entrance icon placement and 2x visual size'};
       if(isMaintenanceNotice3230Scope(changes))return{mode:'settings-notices-3230',reason:'V3.230 box thông báo riêng 16 tính năng, không sửa gameplay'};
