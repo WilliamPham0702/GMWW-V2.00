@@ -8244,3 +8244,29 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
   width:38px!important;min-width:38px!important;max-width:38px!important;font-size:29px!important;
  }
 }
+
+/* V3.234 — Đêm: Đồng hồ | Hành động | Khôi phục; Ngày: Đồng hồ | 🏖️ | Hành động | ⛱️ | 🌈 */
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoFloat:not([hidden]){
+ display:flex!important;position:relative!important;inset:auto!important;
+ left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+ transform:none!important;align-items:stretch!important;justify-content:center!important;
+ flex:0 0 59px!important;width:59px!important;min-width:59px!important;max-width:59px!important;
+ height:64px!important;margin:0!important;padding:0!important;
+ pointer-events:auto!important;z-index:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoButton{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex-direction:column!important;width:100%!important;min-width:0!important;
+ min-height:60px!important;height:64px!important;touch-action:manipulation!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoFloat:not([hidden]){
+  flex-basis:52px!important;width:52px!important;min-width:52px!important;max-width:52px!important;
+ }
+}
+/* Lên Giàn: giữ 5 người (5 × 39px) trong khung, phần còn lại cuộn dọc. */
+#battleGallowsPanel #battleGallowsMembers{
+ display:block!important;height:auto!important;max-height:195px!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch;
+}
