@@ -2221,6 +2221,13 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
   document.addEventListener('pointerdown',event=>{
+    // The SAME campfire GM menu is available in Setup and Battle.
+    // Outside tap dismisses it in either phase, including when chrome is hidden.
+    if(document.body.classList.contains('play-immersive')&&battleState.wolfOpen&&
+       !event.target.closest?.('#battleWolfMenu,.play-core-pearl')){
+      battleState.wolfOpen=false;
+      if(playSceneState.step!=='battle'){renderPlayBattle();return;}
+    }
     if(playSceneState.step!=='battle')return;
     const stats=document.getElementById('battleFactionStats');
     if(stats&&!stats.hidden&&!stats.contains(event.target)&&!event.target.closest?.('#battleFactionStatsToggle')){
@@ -2264,7 +2271,8 @@ function initBattleControls(){
     if(changed)renderPlayBattle();
   },true);
   document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'&&playSceneState.step==='battle'&&(battleState.wolfOpen||battleState.clockOpen||battleState.dayActionsOpen||battleState.gallowsOpen)){
+    if(event.key==='Escape'&&document.body.classList.contains('play-immersive')&&
+       (battleState.wolfOpen||(playSceneState.step==='battle'&&(battleState.clockOpen||battleState.dayActionsOpen||battleState.gallowsOpen)))){
       battleState.wolfOpen=false;battleState.clockOpen=false;battleState.dayActionsOpen=false;battleState.gallowsOpen=false;renderPlayBattle();
       document.querySelector('.play-core-pearl')?.focus();
     }
