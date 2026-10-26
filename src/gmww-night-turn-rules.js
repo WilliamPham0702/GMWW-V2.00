@@ -28,12 +28,19 @@ export function jumpTarget(queue,index){
 // UI-facing schedule: preserve action ownership and never consume an Artifact merely by listing it.
 export function timelineDisplaySteps(queue){
   const steps=Array.isArray(queue)?queue:[];
+  // Preserve the authoritative server order, including ART-01 opening before Wolves.
+  // Collapse any legacy standalone priority steps into their first encountered slot.
   const early=steps.flatMap(step=>step?.kind==="early-artifact-window"?(step.actions||[]):step?.kind==="early-artifact"?[step]:[]);
-  const withoutEarly=steps.filter(step=>step?.kind!=="early-artifact"&&step?.kind!=="early-artifact-window"&&step?.kind!=="village-wakeup");
-  const intro=withoutEarly.filter(step=>step?.kind==="wolf-introduction");
-  const turns=withoutEarly.filter(step=>step?.kind!=="wolf-introduction");
-  // The source queue is authoritative. Later nights intentionally omit the wolf introduction.
-  return [...intro,...(steps.some(step=>step?.kind==="early-artifact-window"||step?.kind==="early-artifact")?[{kind:"early-artifact-window",label:"Artifact đầu ván",actions:early}]:[]),...turns,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
+  const display=[];let earlyAdded=false;
+  for(const step of steps){
+    if(step?.kind==="village-wakeup")continue;
+    if(step?.kind==="early-artifact-window"||step?.kind==="early-artifact"){
+      if(!earlyAdded)display.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:early});
+      earlyAdded=true;continue;
+    }
+    display.push(step);
+  }
+  return [...display,{kind:"village-wakeup",label:"Làng ơi dậy đi"}];
 }
 
 /** One waking turn per configured order, preserving every owner and role action.
