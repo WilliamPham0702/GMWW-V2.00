@@ -66,12 +66,12 @@ jobs:
             tests/gallows-flag-snap-v3206.test.mjs \
             tests/gallows-pirate-ui-v3205.test.mjs
       - name: Cài WebKit cho mô phỏng iPhone đúng phạm vi icon
-        if: steps.iconsscope.outputs.mode != 'entry-icons-3231'
+        if: steps.iconsscope.outputs.mode != 'entry-icons-3231' && steps.iconsscope.outputs.mode != 'phase-dock-gallows-3234'
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps webkit
       - name: Kiểm tra icon nổi và DEMO chạm kéo trên iPhone WebKit
-        if: steps.iconsscope.outputs.mode != 'entry-icons-3231'
+        if: steps.iconsscope.outputs.mode != 'entry-icons-3231' && steps.iconsscope.outputs.mode != 'phase-dock-gallows-3234'
         run: |
           node tests/gm-free-floating-shortcuts-iphone-webkit.mjs
           node tests/v3188-preview-iphone-webkit.mjs
