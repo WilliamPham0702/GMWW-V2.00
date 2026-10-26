@@ -674,7 +674,7 @@ jobs:
           test -s docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3229-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
+          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
           grep -q 'GMWW V3.229' server-game/current/style.css
           node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json'));if(m.count!==49||m.icons.length!==49)process.exit(1)"
           for TRY in $(seq 1 25); do
