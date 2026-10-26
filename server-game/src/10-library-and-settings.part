@@ -272,7 +272,7 @@ async function renderAudio(){
       button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
     }
   });
-  $('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
+  $$('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
     const id=String(button.dataset.systemSoundSlot||'');
     const item=(state.audio.system||[]).find(x=>String(x.targetId||x.id)===id);
     if(item)replaceAudioItem(item,'system');
