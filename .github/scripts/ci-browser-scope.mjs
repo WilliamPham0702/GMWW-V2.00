@@ -1227,6 +1227,10 @@ function isGMEntryIcons3231Scope(changes){
   '.github/scripts/prepare-update-channel.mjs',
   '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
   '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   'tests/gmww-v3228-battle-icons-footer.test.mjs',
   'tests/gmww-action-icon-stacking.test.mjs',
   'docs/releases/GMWW-V3.231-entrance-icons-20261026.md'
