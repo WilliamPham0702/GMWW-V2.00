@@ -1251,7 +1251,28 @@ function isGMEntryIcons3231Scope(changes){
   d.get('server-game/current/style.css').includes('/* V3.231:');
 }
 
+/* V3.232: đúng phạm vi Health Check trên iPhone và phát hành Runtime/OTA. */
+function isRuntimeWarning3232Scope(changes){
+  const allowed=new Set(["server-game/src/10-library-and-settings.part","server-game/src/20-members-and-roster.part","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/current/GMWW.html","src/index.js","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/prepare-runtime-v3202-candidate.yml","tests/gm-runtime-error-diagnostics.test.mjs","docs/releases/GMWW-V3.232-runtime-warning-20261026.md"]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+  const by=new Map(changes.map(row=>[row.path,row]));
+  if(by.size!==allowed.size||changes.some(row=>!allowed.has(row.path)||!['A','M'].includes(row.status)))return false;
+  const required=[
+    ['src/index.js','VERSION="V3.232"'],
+    ['server-game/current/app.js',"const VERSION='3.232'"],
+    ['server-game/current/GMWW.html','<title>GMWW V3.232</title>'],
+    ['package.json','"version": "3.232.0"'],
+    ['server-game/src/10-library-and-settings.part','GMWW Runtime Warning Diagnostics'],
+    ['server-game/src/20-members-and-roster.part','gmwwRecentRuntimeIssues()'],
+    ['tests/gm-runtime-error-diagnostics.test.mjs','Tái hiện cảnh báo giả'],
+    ['docs/releases/GMWW-V3.232-runtime-warning-20261026.md','Rollback V3.231'],
+    ['.github/workflows/check-player-web.yml',"'runtime-warning-3232'"]
+  ];
+  return required.every(([p,token])=>by.get(p)?.after?.includes(token));
+}
+
 export function classifyBrowserScope(changes){
+  if(isRuntimeWarning3232Scope(changes))return 'runtime-warning-3232';
   if(isGMEntryIcons3231Scope(changes))return 'entry-icons-3231';
   if(isMaintenanceNotice3230Scope(changes))return 'settings-notices-3230';
   if(isDOOptimizer3228Scope(changes))return 'do-optimizer-3228';
@@ -1318,6 +1339,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isRuntimeWarning3232Scope(changes))return{mode:'runtime-warning-3232',reason:'Owner V3.232 Runtime diagnostics and OTA gates only'};
       if(isGMEntryIcons3231Scope(changes))return{mode:'entry-icons-3231',reason:'Only V3.231 GM entrance icon placement and 2x visual size'};
       if(isMaintenanceNotice3230Scope(changes))return{mode:'settings-notices-3230',reason:'V3.230 box thông báo riêng 16 tính năng, không sửa gameplay'};
       if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
