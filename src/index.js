@@ -2145,7 +2145,8 @@ export class RoomDurableObject extends DurableObject {
         const required=actionId==="action_revive"?"revive":actionId==="action_exile"?"expelled":"";
         if(!required||type!==required)return j({ok:false,error:"WITCH_INVALID_ACTION_TYPE"},409);
         const checked=oldWitchActionCheck({actionId,actorId,targetIds:targets,
-          matchId,night:Number(meta.cycleNight||1),interactions,players});
+          matchId,night:Number(meta.cycleNight||1),interactions,players,
+          usage:await this.ctx.storage.get("battleRoleUsage:"+matchId)||[]});
         if(!checked.ok)return j({ok:false,error:checked.error,message:checked.message},409);
       }
       // Recover older confirmed battle actions in an already-running match.
