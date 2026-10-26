@@ -44,6 +44,7 @@ if(productionCoreView){
   document.title='GMWW Arena 3D · Chơi chính thức';
   $('joinlink').textContent='🎴 Player Web';
   $('[data-roster]')?.closest('.toolbar')?.setAttribute('hidden','');
+  $('open-setup').hidden=false;
   $('note').textContent='Arena 3D điều khiển phòng thật bằng Core GMWW V2.00: chỉ Thành Viên thật; Vai Trò và Artifact theo ván đã cấu hình. Không tạo dữ liệu DEMO.';
 
 }
@@ -271,6 +272,14 @@ async function json(url,{method='GET',body,gm=false,token}={}){
   if(!response.ok||value.ok===false)throw Error(value.message||value.error||('HTTP '+response.status));
   return value;
 }
+// Until the existing full Core deck/Artifact editor is rendered in 3D,
+// navigate back to GMWW's authoritative configuration flow. Do NOT invent
+// assignments or copy private decks into the public 3D scene.
+$('open-setup').onclick=()=>{
+  if(!productionCoreView)return;
+  if(window.parent===window){notice('Hãy mở Arena 3D từ nút VÀO LÀNG của GMWW để dùng thiết lập ván hiện tại.');return;}
+  window.parent.postMessage({kind:'gmww-arena3d-open-setup'},location.origin);
+};
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
 function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
