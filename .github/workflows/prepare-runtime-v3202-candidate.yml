@@ -72,7 +72,8 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3236-menu-gallows.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gmww-v3236-menu-gallows.test.mjs
+          node --test tests/gmww-v3236-menu-gallows.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gallows-redesign-live.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
       - name: Kiểm chứng SHA-256 từng file và manifest V3.236
