@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.237';
+const VERSION='3.238';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5120,7 +5120,7 @@ function battleIconResetPositions(){
 }
 function battleIconDock(actions,phase){
  const menuToggle=document.getElementById('battleGMActionIcons'),show=battleIconOn();
- if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent=show?'ICON: BẬT':'ICON: TẮT'}
+ if(menuToggle){menuToggle.setAttribute('aria-pressed',String(show));menuToggle.textContent='iCon';menuToggle.setAttribute('aria-label','Icon hành động: '+(show?'Bật':'Tắt'))}
  let dock=document.getElementById('battleFireIconDock');
  if(!dock){dock=document.createElement('div');dock.id='battleFireIconDock';dock.className='battle-fire-icon-dock';
   dock.setAttribute('role','group');dock.setAttribute('aria-label','Icon hành động hiện tại');document.body.appendChild(dock)}
@@ -6176,12 +6176,33 @@ function battleSyncPhaseDock(phase,visible){
     const el=document.getElementById(id);if(el)el.hidden=!show;
   }
 }
+function battleSyncGMMenuControls(){
+  // V3.238: one visual ON/OFF language, both Setup and Battle.
+  // Placement/Exit/End buttons are one-shot commands: do not misrepresent them as persistent switches.
+  const on=(id,value,label)=>{const el=document.getElementById(id);if(!el)return;
+    el.setAttribute('aria-pressed',String(!!value));el.setAttribute('aria-label',label+': '+(value?'Bật':'Tắt'));
+    el.classList.toggle('is-off',!value);
+  };
+  on('battleGMChromeToggle',!gmwwPlayChromeHidden,'Menu');
+  on('battleLabelArtifact',gmLabelVisibility.artifact,'Artifact');
+  on('battleLabelRole',gmLabelVisibility.role,'Vai Trò');
+  on('battleLabelPlayer',gmLabelVisibility.player,'Người Chơi');
+  on('battleShowDead',gmLabelVisibility.dead,'Người Chết');
+  on('battleGMActionIcons',battleIconOn(),'iCon');
+  on('battleGMAudio',!playAudioMuted(),'Audio');
+  on('battleGMHaptic',gmHapticEnabled(),'Rung');
+  on('battleGMAuto',!!playSceneState.autoGM,'Auto GM');
+  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
+    const el=document.getElementById(id);if(el)el.textContent=label;
+  }
+}
 function renderPlayBattle(){
   demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible&&!battleState.wolfOpen;
   gmwwSetupFreeBattleIcons();
   battleSyncPhaseDock(playSceneState.phase,visible);
+  battleSyncGMMenuControls();
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label','Đống lửa · Mở/đóng Menu GM');
   if(!visible){
     for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver','battleFactionStats']){
@@ -6351,8 +6372,8 @@ function renderPlayBattle(){
     const overlay=document.getElementById(overlayId);
     if(overlay&&!overlay.hidden)gmwwRestoreDock(overlay);
   }
-  if(audio){audio.textContent=(playAudioMuted()?'🔇 Audio TẮT':'🔊 Audio');audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.classList.toggle('is-off',playAudioMuted())}
-  const haptic=document.getElementById('battleGMHaptic');if(haptic){haptic.textContent=gmHapticEnabled()?'📳 Rung BẬT':'📴 Rung TẮT';haptic.setAttribute('aria-pressed',String(gmHapticEnabled()))}
+  if(audio){audio.textContent='Audio';audio.setAttribute('aria-pressed',String(!playAudioMuted()));audio.setAttribute('aria-label','Audio: '+(!playAudioMuted()?'Bật':'Tắt'));audio.classList.toggle('is-off',playAudioMuted())}
+  const haptic=document.getElementById('battleGMHaptic');if(haptic){haptic.textContent='Rung';haptic.setAttribute('aria-pressed',String(gmHapticEnabled()));haptic.setAttribute('aria-label','Rung: '+(gmHapticEnabled()?'Bật':'Tắt'))}
   for(const [id,type] of [['battleQuickRevive','revive'],['battleQuickKill','dead']]){
     const button=document.getElementById(id);if(button){button.setAttribute('aria-pressed',String(battleState.quickType===type));button.classList.toggle('is-selected',battleState.quickType===type);button.disabled=battleState.busy||playSceneRuntime.busy||(type==='revive'&&!playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))}
   }
@@ -6473,7 +6494,7 @@ function battleSyncLabelVisibility(){
   }
   const deadToggle=document.getElementById('battleShowDead');
   if(deadToggle){deadToggle.setAttribute('aria-pressed',String(gmLabelVisibility.dead));
-    deadToggle.textContent=gmLabelVisibility.dead?'☠️ Hiện người chết':'☠️ Ẩn người chết';
+    deadToggle.textContent='Người Chết';
     deadToggle.setAttribute('aria-label','Người chơi đã chết: '+(gmLabelVisibility.dead?'Đang hiện':'Đang ẩn'));
     deadToggle.classList.toggle('is-off',!gmLabelVisibility.dead);
   }
@@ -8399,7 +8420,7 @@ function setPlayGameChromeHidden(hidden){
     menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
   }
   const toggle=document.getElementById('battleGMChromeToggle');
-  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent='ẨN MENU';toggle.title=hidden?'Nhấn để hiện lại menu trên và dưới':'Nhấn để ẩn menu trên và dưới'}
+  if(toggle){toggle.setAttribute('aria-pressed',String(!hidden));toggle.textContent='Menu';toggle.title=hidden?'Nhấn để bật hiển thị menu trên và dưới':'Nhấn để tắt hiển thị menu trên và dưới';toggle.setAttribute('aria-label','Menu trên và dưới: '+(hidden?'Tắt':'Bật'))}
 }
 function gmwwTogglePlayChrome(){
   gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
