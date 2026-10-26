@@ -24,12 +24,12 @@ function runBridge({originOfSender=origin,token='AbCdEFGH1234567890',code='ABCDE
   playSceneState:{roomCode:code,gmToken:token},
   isLivePlayRoom:()=>/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)};
  vm.runInNewContext(bridgeFrom(source),context);
- assert.equal(listeners.length,1);
- assert.equal(listeners[0].name,'message');
- const send=(overrides={})=>listeners[0].fn({
+ assert.equal(listeners.length,2,'one ready listener and one strictly authenticated room-adoption listener');
+ assert.ok(listeners.every(x=>x.name==='message'));
+ const send=(overrides={})=>listeners.forEach(x=>x.fn({
   origin:originOfSender,data:{kind:'gmww-arena3d-ready'},
   source:frame.contentWindow,...overrides
- });
+ }));
  return {send,outbound,frame};
 }
 test('GM app compiled runtime contains exactly the same Arena 3D trusted-frame handoff',()=>{
@@ -74,8 +74,8 @@ test('Arena 3D only opens Core setup in owning same-origin host frame',()=>{
    closeArena:flag=>actions.push(flag),URL};
  const actions=[];
  vm.runInNewContext(snippet,root);
- assert.equal(bound.length,1);
- assert.equal(bound[0].type,'message');
+ assert.equal(bound.length,2,'setup message and authorized adoption-complete event');
+ assert.deepEqual(bound.map(x=>x.type),['message','gmww-arena3d-room-adopted']);
  const event={origin,source:frame.contentWindow,data:{kind:'gmww-arena3d-open-setup'}};
  const receive=bound[0].listener;
  receive({...event,origin:'https://evil.example'});
