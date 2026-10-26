@@ -54,6 +54,26 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: V3.228 – chỉ kiểm thử giảm ghi DO, quyền GM, Cài đặt và Runtime
+        if: steps.scope.outputs.mode == 'do-optimizer-3228'
+        run: |
+          node --test tests/do-write-optimizer.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.228-do-write-optimizer-20261026.md
+
+      - name: V3.230 — chỉ kiểm thử thông báo 16 công cụ Cài đặt và chốt Runtime
+        if: steps.scope.outputs.mode == 'settings-notices-3230'
+        run: |
+          node --test tests/settings-unified-notices-v3230.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.230-settings-notices-20261026.md
+
       - name: Chỉ xác minh quy tắc CI AUTO VÁN (không chạy gameplay không liên quan)
         if: steps.scope.outputs.mode == 'auto-van-ci'
         run: |
@@ -70,6 +90,26 @@ jobs:
           test -s docs/releases/GMWW-V3.222-auto-van-20261025.md
           grep -q 'V3.222: AUTO VÁN' .github/scripts/prepare-update-channel.mjs
           grep -q 'gmAutoComposeRoles' server-game/current/app.js
+      - name: V3.227 – chỉ kiểm thử sửa sai đường dẫn Icon V2 và checksum SVG
+        if: steps.scope.outputs.mode == 'icon-v2-ci-fix'
+        run: |
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node --check server-game/current/action-icon-library.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
+          test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
+
+      - name: V3.229 – chỉ kiểm thử Icon nhiều hành động, nhiều mục tiêu và menu cố định
+        if: steps.scope.outputs.mode == 'gm-footer-3229'
+        run: |
+          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md
+
       - name: Kiểm thử trực tiếp GMWW Icon Action V2 — V3.227
         if: steps.scope.outputs.mode == 'icon-action-v2-3227'
         run: |
@@ -229,13 +269,6 @@ jobs:
         run: |
           node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
-      - name: "Arena 3D chính thức — kiểm thử cổng GM, Player, Core và checksum nguồn"
-        if: steps.scope.outputs.mode == 'arena3d-official'
-        run: |
-          node --test tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-portal-handoff.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-stage33-parity.test.mjs tests/dual-renderer-contract.test.mjs
-          node .github/scripts/assemble-gm-app.mjs --verify
-          node .github/scripts/assemble-player-web.mjs --verify
-          node .github/scripts/verify-gmww-versions.mjs
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

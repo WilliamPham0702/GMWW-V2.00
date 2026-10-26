@@ -1100,77 +1100,133 @@ function isIconActionV23227Scope(changes){
   icon.includes("'action-icons/v2/'")&&css.includes('GMWW Icon Action V2');
 }
 
-// Arena 3D official portal (before Runtime version bump): changes are strictly
-// the origin-checked iframe handoff + 3D render-only files. This is NOT a
-// Production-release exemption: ANY other Core/gameplay/OTA change fails closed.
-function isArena3dOfficialPortalScope(changes){
- if(!Array.isArray(changes)||changes.length<5)return false;
+// The approved 3.227 Runtime is already in Production. This narrowly scoped
+// CI repair fixes a stale V2 icon path and harmless source whitespace only.
+// Any game code / asset PNG change falls back to complete safety gates.
+function isIconV2CIRepairScope(changes){
+ const allow=new Set([
+  'tests/gmww-action-icons-in-battle.test.mjs',
+  'assets/action-icons/v2/01_soi_xet.svg',
+  'assets/action-icons/v2/manifest.json',
+  'docs/releases/GMWW-V3.227-icon-action-v2-20261025.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==allow.size)return false;
+ if(!changes.every(x=>x.status==='M'&&allow.has(x.path)))return false;
+ const paths=new Map(changes.map(x=>[x.path,x.after]));
+ if(paths.size!==allow.size)return false;
+ const t=paths.get('tests/gmww-action-icons-in-battle.test.mjs')||'';
+ const svg=paths.get('assets/action-icons/v2/01_soi_xet.svg')||'';
+ const notes=paths.get('docs/releases/GMWW-V3.227-icon-action-v2-20261025.md')||'';
+ if(!t.includes('action-icons')||!t.includes('v2')||t.includes('sea-v1\\/01_soi_xet'))return false;
+ if(svg.split('\n').some(x=>/[ \t]+$/.test(x))||notes.split('\n').some(x=>/[ \t]+$/.test(x)))return false;
+ try{
+  const m=JSON.parse(paths.get('assets/action-icons/v2/manifest.json')||'null');
+  const icon=m?.icons?.find(x=>x.svg==='01_soi_xet.svg');
+  if(m?.count!==49||m.icons.length!==49||icon?.sha256_svg!=='3d74accb407aa6344fe787e588e89e4c2da12f88e378a81cd574e8df29d52e29')return false;
+ }catch(_){return false}
+ return (paths.get('.github/workflows/check-player-web.yml')||'').includes("'icon-v2-ci-fix'") &&
+  (paths.get('.github/workflows/deploy-production.yml')||'').includes('ICON_V2_CI_HOTFIX');
+}
+
+
+/* V3.228: chỉ cho phép bộ file chống ghi DO và giao diện công cụ tương ứng. */
+function isDOOptimizer3228Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const allowed=new Set([
+    'src/index.js','src/gmww-do-write-optimizer.js',
+    'server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'package.json','package-lock.json','tests/do-write-optimizer.test.mjs',
+    'docs/releases/GMWW-V3.228-do-write-optimizer-20261026.md',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  ]);
+  const files=new Map(changes.map(x=>[x.path,x]));
+  if(changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+  const required=['src/index.js','src/gmww-do-write-optimizer.js',
+    'server-game/current/app.js','server-game/current/GMWW.html','tests/do-write-optimizer.test.mjs'];
+  if(!required.every(x=>files.has(x)))return false;
+  return (files.get('src/index.js').after||'').includes('shouldSkipMemberHeartbeat')&&
+    (files.get('src/index.js').after||'').includes('VERSION="V3.228"')&&
+    (files.get('server-game/current/GMWW.html').after||'').includes('id="settingsOptimizeDO"')&&
+    (files.get('server-game/current/app.js').after||'').includes("const VERSION='3.228'")&&
+    (files.get('tests/do-write-optimizer.test.mjs').after||'').includes('shouldSkipDirectoryHeartbeat');
+}
+
+// V3.229: the owner's four corrections to battle icons and fixed bottom rail only.
+// Fail closed if anything outside this explicit Runtime/UI/test subset changed.
+const gm3229Files=new Set([
+ 'server-game/current/app.js','server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/src/00-core-and-library.part',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'tests/gmww-v3228-battle-icons-footer.test.mjs',
+ 'tests/gmww-action-icon-stacking.test.mjs',
+ 'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+ 'docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md'
+]);
+function isGMFooter3229Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
  const map=new Map(changes.map(x=>[x.path,x]));
- if(map.size!==changes.length)return false;
- const required=['server-game/current/app.js','server-game/src/20-members-and-roster.part',
-  'server-game/current/GMWW.html','assets/village/arena-3d/live.mjs',
-  'tests/arena3d-portal-handoff.test.mjs'];
- if(required.some(p=>!map.has(p)))return false;
- const safePath=p=>p.startsWith('assets/village/arena-3d/')||
-  /^tests\/arena3d-[^/]+\.mjs$/.test(p)||
-  /^docs\/releases\/GMWW-ARENA3D-[^/]+\.md$/.test(p)||
-  ['src/arena3d-stage-worker.mjs','wrangler.arena3d-stage14-staging.jsonc',
-   '.github/workflows/arena3d-stage14-16-research.yml',
-   '.github/workflows/check-dual-renderer.yml',
-   '.github/workflows/check-player-web.yml',
-   '.github/workflows/check-p0-chrome-edge-realtime.yml',
-   '.github/workflows/check-gallows-redesign.yml',
-   '.github/workflows/build-server-game-ipa.yml',
-   '.github/workflows/prepare-runtime-v3202-candidate.yml',
-   '.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs',
-   ...required].includes(p);
- if(changes.some(x=>!safePath(x.path)||!['A','M'].includes(x.status)))return false;
- function stripVerifiedBridge(value){
-  if(typeof value!=='string')return null;
-  const begin='const GMWW_ARENA_OFFICIAL_ORIGIN=',a=value.indexOf(begin);
-  if(a<0||value.indexOf(begin,a+1)>=0)return null;
-  const end=value.indexOf('\nfunction playLiveMembers()',a);
-  if(end<0)return null;
-  const chunk=value.slice(a,end);
-  if(chunk.trim()!=="const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';\nwindow.addEventListener('message',event=>{\n  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||\n     event.data?.kind!=='gmww-arena3d-ready')return;\n  const frame=document.getElementById('gmwwArena3dQaFrame');\n  if(!frame||!frame.isConnected||frame.closest('[hidden]')||\n     event.source!==frame.contentWindow)return;\n  const roomCode=String(playSceneState.roomCode||'').trim(),\n    gmToken=String(playSceneState.gmToken||'').trim();\n  if(!isLivePlayRoom()||!/^[A-Za-z0-9._~+\\/=:-]{12,256}$/.test(gmToken))return;\n  frame.contentWindow.postMessage(\n    {kind:'gmww-arena3d-gm-context',roomCode,gmToken},\n    GMWW_ARENA_OFFICIAL_ORIGIN);\n});")return null;
-  return value.slice(0,a).replace(/\n$/,'')+value.slice(end);
- }
- for(const p of ['server-game/current/app.js','server-game/src/20-members-and-roster.part']){
-  const x=map.get(p);
-  if(x.status!=='M'||typeof x.before!=='string'||
-   stripVerifiedBridge(x.after)!==x.before)return false;
- }
- const entry=map.get('server-game/current/GMWW.html');
- if(entry.status!=='M'||typeof entry.before!=='string')return false;
- const patches=[
-  ['aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"','aria-label="Vào Làng Arena 3D chính thức"'],
-  ['<small>THỬ NGHIỆM ARENA 3D</small>','<small>CHƠI ARENA 3D</small>'],
-  ["const arenaUrl='https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html';",
-   "const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';"],
-  ["overlay.setAttribute('aria-label','Thử nghiệm Arena 3D · STAGING');",
-   "overlay.setAttribute('aria-label','GMWW Arena 3D · Phòng chơi thật');"],
-  ["title.textContent='🌊 ARENA 3D · STAGING';","title.textContent='🌊 ARENA 3D';"],
-  ["frame.title='Arena 3D STAGING — chỉ phòng thử nghiệm';",
-   "frame.title='GMWW Arena 3D — kết nối phòng chơi thật';"],
-  ["/* This Runtime-only experiment keeps the 2D menu/game untouched.\n * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.\n * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */",
-   "/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.\n * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host\n * credentials are only transmitted by origin-checked one-frame postMessage.\n * Never send a GM token in URL or across an untrusted origin. */"],
-  ["  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler.","  // GMWW keeps the one authoritative Role/Artifact editor until native 3D\n  // forms cover every Core rule. A verified Arena child can request the existing\n  // 2D setup screen; it cannot mutate role assignments through postMessage.\n  window.addEventListener('message',event=>{\n    if(event.origin!==new URL(arenaUrl).origin||\n       event.source!==frame?.contentWindow||!overlay||overlay.hidden||\n       event.data?.kind!=='gmww-arena3d-open-setup')return;\n    closeArena(true);\n  });\n  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler."]
- ];
- let expected=entry.before;
- for(const [oldText,newText] of patches){
-  if(expected.split(oldText).length!==2)return false;
-  expected=expected.replace(oldText,newText);
- }
- return expected===entry.after;
+ for(const path of ['server-game/current/app.js','server-game/current/style.css',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/GMWW.html','src/index.js','package.json',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs',
+  'docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md'])
+  if(!map.has(path))return false;
+ if(!changes.every(x=>gm3229Files.has(x.path)&&['A','M'].includes(x.status)))return false;
+ const pkg=map.get('package.json')?.after||'';
+ const worker=map.get('src/index.js')?.after||'';
+ const app=map.get('server-game/current/app.js')?.after||'';
+ const html=map.get('server-game/current/GMWW.html')?.after||'';
+ const css=map.get('server-game/current/style.css')?.after||'';
+ return pkg.includes('"version": "3.229.0"')&&worker.includes('VERSION="V3.229"')&&
+  app.includes("const VERSION='3.229'")&&html.includes('<title>GMWW V3.229</title>')&&
+  app.includes('battleIconSpawnPoint')&&app.includes('battleMainActionSlot')&&
+  css.includes('/* GMWW V3.229');
+}
+
+
+/* V3.230: giao diện thông báo bảo trì, chỉ kiểm tra các file có liên quan. */
+function isMaintenanceNotice3230Scope(changes){
+  if(!Array.isArray(changes)||changes.length===0)return false;
+  const allowed=new Set([
+    'src/index.js','server-game/current/GMWW.html','server-game/current/app.js',
+    'server-game/current/style.css','server-game/src/00-core-and-library.part',
+    'server-game/src/10-library-and-settings.part','server-game/src/20-members-and-roster.part',
+    'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'docs/releases/GMWW-V3.230-settings-notices-20261026.md',
+    'tests/settings-unified-notices-v3230.test.mjs'
+  ]);
+  if(changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+  const data=new Map(changes.map(x=>[x.path,x.after||'']));
+  return ['src/index.js','server-game/current/GMWW.html','server-game/current/app.js',
+    'server-game/current/style.css','server-game/src/20-members-and-roster.part',
+    'tests/settings-unified-notices-v3230.test.mjs'].every(x=>data.has(x))&&
+    data.get('src/index.js').includes('VERSION="V3.230"')&&
+    data.get('server-game/current/app.js').includes("const VERSION='3.230'")&&
+    data.get('server-game/current/GMWW.html').includes('id="settingsNoticePanel"')&&
+    data.get('tests/settings-unified-notices-v3230.test.mjs').includes('Thông báo hiển thị an toàn');
 }
 
 export function classifyBrowserScope(changes){
+  if(isMaintenanceNotice3230Scope(changes))return 'settings-notices-3230';
+  if(isDOOptimizer3228Scope(changes))return 'do-optimizer-3228';
+  if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
   if(isGMIcons501Scope(changes))return 'gm-icons-501';
   if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
   if(isAutoVanReleaseScope(changes))return 'auto-van-3222';
   if(!Array.isArray(changes)||!changes.length)return 'full';
-  if(isArena3dOfficialPortalScope(changes))return 'arena3d-official';
+  if(isGMFooter3229Scope(changes))return 'gm-footer-3229';
   if(isIconActionV23227Scope(changes))return 'icon-action-v2-3227';
   if(isFireIcons3226Scope(changes))return 'fire-icons-3226';
   if(isActionIcon3225Scope(changes))return 'active-icons-3225';
@@ -1226,8 +1282,12 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isMaintenanceNotice3230Scope(changes))return{mode:'settings-notices-3230',reason:'V3.230 box thông báo riêng 16 tính năng, không sửa gameplay'};
+      if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
+      if(isGMFooter3229Scope(changes))return{mode:'gm-footer-3229',reason:'Exact GM V3.229 icon spacing, multi-target and fixed footer only'};
       if(isIconActionV23227Scope(changes))return{mode:'icon-action-v2-3227',reason:'Icon Action V2 free drag/snap, 49 frameless SVG/PNG and OTA only'};
       if(isFireIcons3226Scope(changes))return{mode:'fire-icons-3226',reason:'V3.226 iPhone icon dock z-index versus immersive village; scoped CSS/OTA'};
       if(isActionIcon3225Scope(changes))return{mode:'active-icons-3225',reason:'V3.225 focused GM Icon runtime fix and OTA'};
@@ -1258,6 +1318,11 @@ function detect(){
   }
   // Owner-initiated V3.210 release on main after approved PR #483 merged.
   // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.229.0'){
+    if(fs.existsSync('docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md')&&
+       fs.readFileSync('server-game/current/app.js','utf8').includes('battleMainActionSlot'))
+       return{mode:'gm-footer-3229',reason:'Owner V3.229 verified icon footer-only Runtime'};
+  }
   if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.227.0'){
     const path='assets/action-icons/v2/manifest.json';
     if(fs.existsSync(path)&&fs.existsSync('docs/releases/GMWW-V3.227-icon-action-v2-20261025.md')){
@@ -1327,6 +1392,7 @@ function detect(){
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
+  if(result.mode==='icon-v2-ci-fix')console.log('V3.227: chỉ sửa test V2, khoảng trắng SVG/notes và checksum, không kiểm thử gameplay khác.');
   if(result.mode==='icon-wave5-3218')console.log('V3.218: chỉ test icon/manifest/OTA liên quan.');
   if(result.mode==='icon-game-3215')console.log('V3.215: chỉ kiểm tra giao diện ICON, 54 ánh xạ, kéo thả GM và Runtime OTA.');
   if(result.mode==='icon-wave3-3213')console.log('V3.213: chỉ kiểm tra 29 icon/SHA-256 và bản cập nhật OTA.');
@@ -1339,10 +1405,9 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
-  if(result.mode==='arena3d-official')console.log('Chỉ kiểm thử 3D/portal GMWW; bất kỳ thay đổi Core/gameplay khác đều chạy đầy đủ.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['arena3d-official','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3229'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }

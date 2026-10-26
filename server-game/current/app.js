@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.227';
+const VERSION='3.230';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1667,6 +1667,7 @@ function setServerHealthState(kind,text,detail,data={}){
   put('serverHealthText',text);put('serverHealthDetail',detail);
   put('healthPlayerWeb',data.web||'—');put('healthApi',data.api||'—');put('healthLatency',data.latency||'—');put('healthVersion',data.version||'—');
   put('healthCheckedAt',new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+  gmwwSettingsNoticeFromActive(['checkServerHealth','refreshServerData','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 async function checkServerHealth(){
   if(serverHealthBusy)return; serverHealthBusy=true;
@@ -1714,6 +1715,7 @@ function setMaintenanceState(kind,text,detail){
   if(pill){pill.className='maintenance-pill '+kind;pill.textContent=text}
   if(dot)dot.className='maintenance-dot '+kind;
   if(msg)msg.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['auditLocalData','clearRuntimeCache','settingsRunHealth','quickRepairSystem'],kind,String(text||'')+(detail?' · '+detail:''));
 }
 function auditLocalData(){
   const btn=document.getElementById('auditLocalData');if(btn)btn.disabled=true;
@@ -1767,6 +1769,7 @@ function setDiagnosticState(kind,status,summary,detail=''){
   if(sum)sum.textContent=summary||'';
   if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
   if(det)det.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow','settingsRunHealth'],kind,String(status||'')+' · '+String(summary||'')+(detail?' · '+detail:''));
 }
 function renderDiagnosticItem(key,kind,text){
   const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
@@ -1852,6 +1855,89 @@ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementByI
 
 
 /* GMWW Settings: one continuous scrolling screen with consistent health status. */
+/* GMWW V3.230 — thông báo thống nhất cho 16 công cụ Kiểm tra & bảo trì. */
+const GMWW_SETTINGS_TOOL_LABELS=Object.freeze({
+  settingsRunHealth:'HEALTHY CHECK',settingsOptimizeDO:'TỐI ƯU DO',
+  auditLocalData:'KIỂM TRA',clearRuntimeCache:'DỌN CACHE',reloadApp:'TẢI LẠI',
+  gmwwCloudflareOpen:'QUẢN LÝ CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
+  opsRunFullAudit:'KIỂM TRA TỔNG',opsCheckRoom:'PHÒNG & REALTIME',opsCheckRelease:'PHIÊN BẢN',
+  checkServerHealth:'KIỂM TRA SERVER',refreshServerData:'ĐỒNG BỘ SERVER',openPlayerWeb:'MỞ WEB',
+  runSystemDiagnostics:'QUÉT LỖI',quickRepairSystem:'SỬA NHANH',checkPlayerWebNow:'CHECK WEB'
+});
+const gmwwSettingsNoticeHistory=[];
+let gmwwSettingsNoticeActive='',gmwwSettingsNoticeActiveAt=0;
+function pushSettingsNotice(toolId,kind,message){
+  const panel=document.getElementById('settingsNoticePanel'),list=document.getElementById('settingsNoticeList');
+  if(!panel||!list||!GMWW_SETTINGS_TOOL_LABELS[toolId])return;
+  const level={ok:'ok',success:'ok',warn:'warn',bad:'bad',error:'bad',checking:'checking',info:'info'}[kind]||'info';
+  const content=String(message||'').replace(/\s+/g,' ').trim().slice(0,430);
+  if(!content)return;
+  const last=gmwwSettingsNoticeHistory[0];
+  if(last&&last.toolId===toolId&&last.level===level&&last.message===content&&Date.now()-last.timestamp<1000)return;
+  const entry={toolId,level,message:content,timestamp:Date.now()};
+  gmwwSettingsNoticeHistory.unshift(entry);
+  if(gmwwSettingsNoticeHistory.length>12)gmwwSettingsNoticeHistory.length=12;
+  const item=document.createElement('li');
+  item.className='settings-notice-entry '+level;
+  const symbol=document.createElement('span');symbol.className='settings-notice-symbol';
+  symbol.textContent={ok:'✓',warn:'!',bad:'×',checking:'◷',info:'•'}[level];
+  const body=document.createElement('div');body.className='settings-notice-entry-text';
+  const title=document.createElement('b');title.textContent=GMWW_SETTINGS_TOOL_LABELS[toolId];
+  const detail=document.createElement('p');detail.textContent=content;
+  body.append(title,detail);
+  const time=document.createElement('time');time.dateTime=new Date(entry.timestamp).toISOString();
+  time.textContent=new Date(entry.timestamp).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  item.append(symbol,body,time);
+  list.prepend(item);
+  while(list.children.length>12)list.lastElementChild.remove();
+  const empty=document.getElementById('settingsNoticeEmpty');if(empty)empty.hidden=true;
+  const count=document.getElementById('settingsNoticeCount');if(count)count.textContent=String(gmwwSettingsNoticeHistory.length)+' thông báo';
+}
+function gmwwSettingsNoticeFromActive(allowed,kind,message){
+  const id=gmwwSettingsNoticeActive;
+  if(!id||!allowed.includes(id)||Date.now()-gmwwSettingsNoticeActiveAt>120000)return;
+  const button=document.getElementById(id);
+  if(!button?.disabled)return; // avoid old/stale background refreshes
+  pushSettingsNotice(id,kind,message);
+}
+function gmwwInitSettingsNoticePanel(){
+  const rail=document.getElementById('settingsToolsRail');
+  rail?.addEventListener('click',event=>{
+    const button=event.target?.closest?.('button[id]');
+    if(!button||!rail.contains(button)||button.disabled||!GMWW_SETTINGS_TOOL_LABELS[button.id])return;
+    gmwwSettingsNoticeActive=button.id;gmwwSettingsNoticeActiveAt=Date.now();
+    const navigation=['reloadApp','openPlayerWeb'].includes(button.id);
+    const openPanel=['gmwwCloudflareOpen','gmwwServerTrashOpen'].includes(button.id);
+    pushSettingsNotice(button.id,navigation||openPanel?'info':'checking',
+      navigation?'Đang mở trang…':openPanel?'Đang mở công cụ quản lý bên dưới…':'Đang thực hiện, kết quả sẽ hiển thị tại đây.');
+  },true);
+  document.getElementById('opsAutoCheck')?.addEventListener('change',event=>{
+    pushSettingsNotice('opsRunFullAudit','info',event.target.checked?
+      'Đã bật tự kiểm tra mỗi 2 phút.':'Đã tắt tự kiểm tra định kỳ.');
+  });
+  document.getElementById('settingsNoticeClear')?.addEventListener('click',()=>{
+    gmwwSettingsNoticeHistory.length=0;
+    const list=document.getElementById('settingsNoticeList');if(list)list.replaceChildren();
+    const empty=document.getElementById('settingsNoticeEmpty');if(empty)empty.hidden=false;
+    const count=document.getElementById('settingsNoticeCount');if(count)count.textContent='0 thông báo';
+  });
+  // The Cloudflare management module is independent of GM runtime: mirror its final status.
+  const cf=document.getElementById('gmwwCfState');
+  if(cf&&typeof MutationObserver==='function'){
+    let previous=cf.textContent?.trim()||'';
+    new MutationObserver(()=>{
+      const value=cf.textContent?.trim()||'';
+      if(!value||value===previous)return;
+      previous=value;
+      if(!['gmwwCloudflareOpen','gmwwServerTrashOpen'].includes(gmwwSettingsNoticeActive))return;
+      const bad=/LỖI|THẤT BẠI|KHÔNG THỂ/.test(value);
+      pushSettingsNotice(gmwwSettingsNoticeActive,bad?'bad':'info','Cloudflare: '+value);
+    }).observe(cf,{childList:true,characterData:true,subtree:true});
+  }
+}
+gmwwInitSettingsNoticePanel();
+/* END GMWW SETTINGS NOTICES V3.230 */
+
 function gmwwSettingsHubHealth(kind,message){
   const box=document.getElementById('settingsHubMiniHealth'),label=document.getElementById('settingsHubMiniText');
   if(box)box.dataset.status=kind||'idle';
@@ -2007,8 +2093,18 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
     }
     gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
     gmwwOpsDraw(gmwwOpsSnapshot);
+    if(!silent){
+      const values=Object.values(checks),errors=values.filter(v=>v?.kind==='bad').length,
+        warnings=values.filter(v=>v?.kind==='warn').length;
+      const targetId=gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId;
+      pushSettingsNotice(targetId,errors?'bad':warnings?'warn':'ok',errors?
+        'Đã kiểm tra · '+errors+' lỗi cần xử lý.':warnings?
+        'Đã kiểm tra · '+warnings+' cảnh báo cần theo dõi.':'Đã kiểm tra · Không ghi nhận lỗi trong các mục được quét.');
+    }
     return gmwwOpsSnapshot;
   }catch(_){
+    if(!silent)pushSettingsNotice(gmwwSettingsNoticeActive==='settingsRunHealth'?'settingsRunHealth':buttonId,
+      'bad','Không hoàn tất được kiểm tra vận hành. Vui lòng kiểm tra mạng rồi thử lại.');
     const advice=document.getElementById('opsAdvice');
     if(advice)advice.textContent='Không hoàn tất được chẩn đoán. Kiểm tra mạng rồi thử lại.';
     if(overall){overall.className='ops-pill bad';overall.textContent='KHÔNG KIỂM TRA ĐƯỢC'}
@@ -2038,15 +2134,39 @@ function gmwwOpsInitialize(){
   document.getElementById('opsCheckRoom')?.addEventListener('click',()=>gmwwOpsRun({kind:'room'}));
   document.getElementById('opsCheckRelease')?.addEventListener('click',()=>gmwwOpsRun({kind:'release'}));
   document.getElementById('settingsRunHealth')?.addEventListener('click',async()=>{
-    const button=document.getElementById('settingsRunHealth'),note=document.getElementById('settingsHealthSummary');
+    const button=document.getElementById('settingsRunHealth');
     if(button?.disabled)return;if(button)button.disabled=true;
-    if(note)note.textContent='Đang kiểm tra bảo trì, Server, realtime và chẩn đoán…';
-    try{auditLocalData();await gmwwOpsRun({kind:'all'});await checkServerHealth();await runSystemDiagnostics();if(note)note.textContent='Hoàn tất quét. Kết quả và cảnh báo hiển thị bên dưới.'}
-    catch(e){if(note)note.textContent='Còn mục chưa kiểm tra: '+String(e?.message||'Vui lòng thử lại.')}
+    try{
+      auditLocalData();
+      const operations=await gmwwOpsRun({kind:'all'});
+      await checkServerHealth();
+      const diagnostics=await runSystemDiagnostics();
+      const bad=!operations||diagnostics?.ok!==true;
+      pushSettingsNotice('settingsRunHealth',bad?'warn':diagnostics?.warnings?.length?'warn':'ok',
+        bad?'Đã kiểm tra nhưng còn mục chưa xác nhận. Xem chi tiết kết quả vận hành.':
+        diagnostics.warnings?.length?'Đã kiểm tra · Còn '+diagnostics.warnings.length+' cảnh báo.':
+        'Hoàn tất Health Check và chẩn đoán Server/Player Web.');
+    }catch(e){pushSettingsNotice('settingsRunHealth','bad','Không hoàn tất: '+String(e?.message||'Vui lòng thử lại.'))}
     finally{if(button)button.disabled=false}
   });
 }
 gmwwOpsInitialize();
+
+/* GMWW 3.230 — báo cáo DO vào Thông báo hệ thống, không còn chữ trong lưới. */
+document.getElementById('settingsOptimizeDO')?.addEventListener('click',async()=>{
+  const button=document.getElementById('settingsOptimizeDO');
+  if(button?.disabled)return;
+  if(button)button.disabled=true;
+  try{
+    const data=await gmApi('/api/gm/storage-optimizer',{method:'GET'});
+    if(!data?.ok||data.enabled!==true)throw new Error('Chính sách tối ưu chưa hoạt động');
+    const count=Number(data.avoidedWrites||0);
+    pushSettingsNotice('settingsOptimizeDO','ok','ĐANG BẬT TỰ ĐỘNG · Đã bỏ qua '+
+      count.toLocaleString('vi-VN')+' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng hoặc dữ liệu. Đây không phải số liệu hóa đơn Cloudflare.');
+  }catch(error){
+    pushSettingsNotice('settingsOptimizeDO','bad','Chưa xác minh được công cụ trên Server: '+String(error?.message||error));
+  }finally{if(button)button.disabled=false;}
+});
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
@@ -3277,7 +3397,38 @@ function gmwwSetupFreeBattleIcons(){
       node.style.setProperty(name,value,'important');
     return p;
   };
-  for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver']){
+  // Battle shortcuts are now fixed in the lower rail, not floating/draggable.
+  // The compact sea group contains 🏖️ and 🌈; the remaining slots follow
+  // clock → sea group → action tray → ⛱️ → undo. Day actions retain their own UI.
+  let sea=document.getElementById('battleSeaShortcuts');
+  let actionSlot=document.getElementById('battleMainActionSlot');
+  const rail=document.getElementById('battleBottomControls');
+  if(rail){
+    if(!sea){sea=document.createElement('div');sea.id='battleSeaShortcuts';sea.className='battle-sea-shortcuts';}
+    if(!actionSlot){actionSlot=document.createElement('div');actionSlot.id='battleMainActionSlot';actionSlot.className='battle-main-action-slot';}
+    for(const id of ['battleDayNoticeFloat','battleFactionStatsFloat']){
+      const item=document.getElementById(id);
+      if(!item)continue;
+      sea.appendChild(item);
+      item.classList.remove('gmww-free-icon');
+      for(const css of ['left','top','right','bottom','transform','width','height'])
+       item.style.removeProperty(css);
+    }
+    for(const id of ['battleDayActionFloat','battleActionTray']){
+      const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
+    }
+    for(const element of [document.getElementById('playBattleClockFloat'),sea,actionSlot,
+      document.getElementById('battleDayGallowsFloat'),document.getElementById('battleUndoFloat')])
+      if(element)rail.appendChild(element);
+    const gallows=document.getElementById('battleDayGallowsFloat');
+    if(gallows){
+      gallows.classList.remove('gmww-free-icon');
+      for(const css of ['left','top','right','bottom','transform','width','height'])
+       gallows.style.removeProperty(css);
+    }
+  }
+  // DEMO alone keeps its independent floating shortcut/expanded panel.
+  for(const id of ['battleDemoObserver']){
     const panel=document.getElementById(id);if(!panel)continue;
     if(panel.parentElement!==shell)shell.appendChild(panel);
     const saved=read()[id];
@@ -4923,6 +5074,13 @@ function battleIconResolve(action){
  return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
+// Separate simultaneous actions around the actual GM fire: no overlapping tap areas.
+function battleIconSpawnPoint(fire,index,count){
+ if(count<=1)return battleIconClamp(fire.x,fire.y);
+ const radius=count===2?59:count===3?70:count===4?76:Math.max(78,Math.ceil(count*13));
+ const theta=-Math.PI/2+(index/count)*Math.PI*2;
+ return battleIconClamp(fire.x+Math.cos(theta)*radius,fire.y+Math.sin(theta)*radius);
+}
 function battleIconClamp(x,y){
  const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
  return {x:Math.min(Math.max(24,x),Math.max(24,vw-24)),y:Math.min(Math.max(35,y),Math.max(35,vh-50))};
@@ -4966,21 +5124,24 @@ function battleIconDock(actions,phase){
   // If GM moved the fire, unused icons still spawn on its new coordinates.
   for(const button of dock.querySelectorAll('[data-fire-action]')){
    const position=battleIconPositions.get(battleIconPositionKey(button.dataset.fireAction,button.dataset.fireIcon));
-   if(!position){button.style.left=fire.x+'px';button.style.top=fire.y+'px'}
+   if(!position){
+    const slot=Number(button.dataset.fireIndex)||0;
+    const point=battleIconSpawnPoint(fire,slot,eligible.length);
+    button.style.left=point.x+'px';button.style.top=point.y+'px';
+   }
   }
   return;
  }
  dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon},i)=>{
-  const offset=eligible.length>1?{x:Math.cos((i/eligible.length)*Math.PI*2)*13,y:Math.sin((i/eligible.length)*Math.PI*2)*13}:{x:0,y:0};
   const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
-    battleIconClamp(fire.x+offset.x,fire.y+offset.y);
+    battleIconSpawnPoint(fire,i,eligible.length);
   const visual=icon.isRotation?'<span class="gmww-icon-rotation" aria-hidden="true">🔄</span>':
     '<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
-   '" data-fire-icon="'+playEsc(icon.id)+'" aria-label="'+playEsc(a.name)+
+   '" data-fire-icon="'+playEsc(icon.id)+'" data-fire-index="'+i+'" aria-label="'+playEsc(a.name)+
    '" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
    visual+'</button>';
  }).join('');
@@ -4990,7 +5151,8 @@ function battleIconTargetAt(x,y,action){
  let candidate=null,dist=Infinity;
  for(const el of ring.querySelectorAll('[data-play-player-id]')){
   const id=String(el.dataset.playPlayerId||''),m=battleMember(id);
-  if(!m||!battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
+  if(!m||(battleState.actionId===action.id&&battleState.targets.includes(id))||
+     !battleRules()?.targetAllowed(action,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night))continue;
   const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
   const d=Math.hypot(x-cx,y-cy),limit=Math.max(68,Math.min(118,Math.max(r.width,r.height)*1.15));
   if(d<limit&&d<dist){candidate=el;dist=d}
@@ -5044,8 +5206,11 @@ function battleIconBind(){
    battleIconTargetAt(e.clientX,e.clientY,a):null;
   const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
   if(e.type==='pointerup'&&moved){
-   // Icon stays where released; moving around the village alone never submits gameplay.
-   battleIconPositions.set(battleIconPositionKey(id,d.iconId),point);
+   // For multi-target actions return the icon to its fire slot for the next drop.
+   // For single target/free moving keep the chosen location.
+   const key=battleIconPositionKey(id,d.iconId);
+   if(a?.targetCount>1&&target)battleIconPositions.delete(key);
+   else battleIconPositions.set(key,point);
   }else{
    d.button.style.left=d.baseX+'px';d.button.style.top=d.baseY+'px';
   }
