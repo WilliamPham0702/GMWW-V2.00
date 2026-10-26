@@ -274,7 +274,7 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
 function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
-  for(const id of ['seed','lock','deal','start','night','day','nominate','vote'])$(id).disabled=!gmToken||(productionCoreView&&['seed','deal'].includes(id));
+  for(const id of ['seed','lock','deal','start','night','day','nominate','vote','end-match','winner-faction'])$(id).disabled=!gmToken||(productionCoreView&&['seed','deal'].includes(id));
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
   field.clearEffects();syntheticCastSeq++;matchSync.reset();
@@ -440,6 +440,20 @@ $('vote').onclick=()=>guarded('Bắt đầu bỏ phiếu',async()=>{
   const candidate=valid.id.slice(7);
   await gm('gallows',{command:'begin',targetId:candidate});
   await feed?.refresh();notice('Đã đưa '+candidate+' lên giàn trong Core V2 staging.');
+});
+// A confirmed match result must originate from an explicitly authorized GM
+// selecting a faction. Never infer the winner from the 3D display or demo.
+$('end-match').onclick=()=>guarded('Kết thúc ván',async()=>{
+  if(!gmToken||!code)throw Error('Phải xác thực GM trước khi kết thúc ván.');
+  const room=feed?.state.current?.room;
+  if(room?.phase!=='running'||!room?.matchId)throw Error('Không có ván đang chạy để kết thúc.');
+  const faction=$('winner-faction').value;
+  if(!['Phe Dân','Phe Sói','Phe Ba','Phe Khác'].includes(faction))
+    throw Error('Hãy chọn phe thắng trước khi kết thúc ván.');
+  if(!window.confirm('Xác nhận kết thúc ván '+room.matchId+' cho '+faction+'?'))return;
+  await gm('end',{matchId:room.matchId,winnerFaction:faction,winner:faction});
+  await feed?.refresh();$('winner-faction').value='';
+  notice('Đã kết thúc ván trên Core chính thức. Phe thắng: '+faction+'.');
 });
 for(const button of document.querySelectorAll('[data-roster]'))button.onclick=()=>{
   rosterSize=Number(button.dataset.roster);
