@@ -546,7 +546,20 @@ async function playCompletionNext(choice){
   s.busy=true;renderPlayCompletion();
   try{
     if(choice==='room'||choice==='exit'){
+      // Leave is a real server-side seat release, not a local screen reset.
+      // Match history and the already-recorded winner remain in matchCompletion storage.
+      const reset=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+        transactionId:'completed-leave-'+s.matchId,
+        expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),
+        postGame:false,preserveParticipants:false
+      })});
+      if(reset?.hardReset!==true||Number(reset?.playersCount||0)!==0||Number(reset?.assignmentsCount||0)!==0)
+        throw new Error('Server chưa giải phóng hết người chơi và Seat. Không thể rời ván.');
+      playSceneRuntime.room=reset.room||playSceneRuntime.room;
+      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
       disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Otherwise playLiveMembers() reconstructs ghost Seat occupants from GM's stale selection.
+      playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';playSceneState.matchId='';
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
       closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
     }

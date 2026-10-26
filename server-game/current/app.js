@@ -3389,6 +3389,8 @@ async function selectPlayExistingRoom(r){
     rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
     renderPlayScene();
   }
+  // Local room badges must be reconciled even when no legacy rename ran.
+  rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||data.room||{});
   renderPlayCreateRoomSheet()
 }
 function renderPlayCreatedRooms(){
@@ -4327,7 +4329,26 @@ async function flushPlayRoomMode(){
       if(!isLivePlayRoom()||!playRoomUiState.selectedCode){playRoomUiState.pendingMode='';break;}
       const target=playRoomUiState.pendingMode,roomCode=String(playSceneState.roomCode);
       const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};
-      const data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)});
+      let data;
+      try{data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)})}
+      catch(err){
+        const previous=playSceneRuntime.room||{};
+        const completed=!!previous.endedAt&&['lobby','waiting','ended'].includes(String(previous.phase||'').toLowerCase());
+        if(err?.code!=='ROOM_MODE_REQUIRES_EMPTY_RESET'||!completed)throw err;
+        if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
+        // Repair pre-fix completed rooms with seats/assignments left behind.
+        // Do not reset a running match or a normal occupied lobby.
+        const reset=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+          transactionId:'completed-mode-'+String(previous.lastEndedMatchId||previous.matchId||roomCode),
+          expectedResetVersion:Number(previous.resetVersion||0),postGame:false,preserveParticipants:false
+        })});
+        if(reset?.hardReset!==true||Number(reset?.playersCount||0)!==0||Number(reset?.assignmentsCount||0)!==0)
+          throw new Error('Chưa giải phóng xong Seat của ván trước.');
+        playSceneRuntime.room=reset.room||previous;playSceneRuntime.players=[];playSceneRuntime.assignments=[];
+        if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
+        playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';
+        data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)});
+      }
       if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
       playSceneRuntime.room=data.room||playSceneRuntime.room;
       playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
@@ -8152,7 +8173,20 @@ async function playCompletionNext(choice){
   s.busy=true;renderPlayCompletion();
   try{
     if(choice==='room'||choice==='exit'){
+      // Leave is a real server-side seat release, not a local screen reset.
+      // Match history and the already-recorded winner remain in matchCompletion storage.
+      const reset=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+        transactionId:'completed-leave-'+s.matchId,
+        expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),
+        postGame:false,preserveParticipants:false
+      })});
+      if(reset?.hardReset!==true||Number(reset?.playersCount||0)!==0||Number(reset?.assignmentsCount||0)!==0)
+        throw new Error('Server chưa giải phóng hết người chơi và Seat. Không thể rời ván.');
+      playSceneRuntime.room=reset.room||playSceneRuntime.room;
+      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
       disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Otherwise playLiveMembers() reconstructs ghost Seat occupants from GM's stale selection.
+      playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';playSceneState.matchId='';
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
       closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
     }
