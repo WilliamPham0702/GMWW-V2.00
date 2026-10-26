@@ -1568,7 +1568,41 @@ function isPostMatchCIOnlyScope(changes){
   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('PR532 scoped CI selector');
 }
 
+/* WOLF-01: exact privacy-preserving Wolf recognition and runtime V3.239 scope.
+ * Unknown paths fail closed into the standard CI gate. */
+function isWOLF01Scope(changes){
+ const allowed=new Set([
+ 'src/index.js','src/gmww-wolf-recognition.js',
+ 'src/player-web-src/20-village-and-profile.part','src/player-web-src/30-rooms-and-realtime.part',
+ 'src/gmww-members-live.js','tests/v389-night-runtime-integration.test.mjs',
+ 'tests/wolf01-private-pack-recognition.test.mjs',
+ 'server-game/src/00-core-and-library.part','server-game/current/app.js',
+ 'server-game/current/GMWW.html','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs',
+ 'docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(c=>[c.path,c]));
+ if(by.size!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['M','A'].includes(c.status)))return false;
+ const has=(path,needle)=>by.get(path)?.after?.includes(needle);
+ return has('src/index.js','WOLF-01: one waking turn only when at least two living wolves') &&
+  has('src/gmww-wolf-recognition.js','privateWolfRecognition') &&
+  has('src/player-web-src/20-village-and-profile.part','wolfLabel=wolfView') &&
+  has('src/player-web-src/30-rooms-and-realtime.part','setPrivateWolfRecognition(null)') &&
+  has('src/gmww-members-live.js','wolfRecognition') &&
+  has('tests/wolf01-private-pack-recognition.test.mjs','WOLF-01') &&
+  has('server-game/src/00-core-and-library.part',"const VERSION='3.239'") &&
+  has('server-game/current/app.js',"const VERSION='3.239'") &&
+  has('server-game/current/GMWW.html','<title>GMWW V3.239</title>') &&
+  has('package.json','"version": "3.239.0"') &&
+  has('package-lock.json','"version": "3.239.0"') &&
+  has('.github/scripts/prepare-update-channel.mjs','V3.239 WOLF-01:') &&
+  has('docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md','Rollback') &&
+  has('.github/workflows/check-player-web.yml',"'wolf01-private-pack'");
+}
 export function classifyBrowserScope(changes){
+  if(isWOLF01Scope(changes))return 'wolf01-private-pack';
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
   if(isPostMatchCIOnlyScope(changes))return 'postmatch-ci-532';
   if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
@@ -1652,6 +1686,7 @@ function detect(){
       });
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
+      if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
       if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
       if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
