@@ -88,7 +88,7 @@ jobs:
             node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gallows-redesign-live.test.mjs
           fi
       - name: "Kiem tra dung 4 loi DEMO - Sat Thu, soi xet, audio, quyen vote"
-        if: steps.scope.outputs.mode != 'gm-icons-501' && steps.scope.outputs.mode != 'gm-icons-501-release' && steps.scope.outputs.mode != 'entry-icons-3231' && steps.scope.outputs.mode != 'phase-dock-gallows-3234' && steps.scope.outputs.mode != 'gm-ui-glass-3235' && steps.scope.outputs.mode != 'gm-menu-gallows-3236' && steps.scope.outputs.mode != 'gm-ui-menu-3237' && steps.scope.outputs.mode != 'gm-ui-controls-3238'
+        if: steps.scope.outputs.mode != 'post-match-room-532' && steps.scope.outputs.mode != 'ci-policy' && steps.scope.outputs.mode != 'gm-icons-501' && steps.scope.outputs.mode != 'gm-icons-501-release' && steps.scope.outputs.mode != 'entry-icons-3231' && steps.scope.outputs.mode != 'phase-dock-gallows-3234' && steps.scope.outputs.mode != 'gm-ui-glass-3235' && steps.scope.outputs.mode != 'gm-menu-gallows-3236' && steps.scope.outputs.mode != 'gm-ui-menu-3237' && steps.scope.outputs.mode != 'gm-ui-controls-3238'
         run: node --test tests/demo-assassin-gallows-divination.test.mjs
       - name: Kiem tra 6 source GM khop ban app da dong goi
         if: steps.scope.outputs.mode != 'post-match-room-532' && steps.scope.outputs.mode != 'ci-policy' && steps.scope.outputs.mode != 'entry-icons-3231' && steps.scope.outputs.mode != 'phase-dock-gallows-3234' && steps.scope.outputs.mode != 'gm-ui-glass-3235' && steps.scope.outputs.mode != 'gm-menu-gallows-3236' && steps.scope.outputs.mode != 'gm-ui-menu-3237' && steps.scope.outputs.mode != 'gm-ui-controls-3238'
