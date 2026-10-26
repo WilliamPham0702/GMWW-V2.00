@@ -99,7 +99,7 @@
           descName=description.replace(/[.。;:].*$/s,"").trim().slice(0,70),
           name=exactName||knownName||(descName.length>=3&&!isPlaceholder(descName)?descName:"Chưa đặt tên hành động");
         return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
-          actionId:String(fn.actionId||fn.id||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
+          actionId:String(fn.actionId||fn.id||""),roleId:isArt?"":String(id),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
           allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,
           targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),
           effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds,
@@ -131,9 +131,21 @@
       return alreadyUsed(turn)?[]:build(turn,true);
     return [];
   }
+  function oldWitchReviveEligible(action,member,rows=[],night=0){
+    if(action?.roleId!=="role_old_witch"||action?.actionId!=="action_revive")return true;
+    const previous=Math.max(0,Number(night)||0)-1,target=loginOf(member?.loginId);
+    if(previous<1||!target)return false;
+    return (Array.isArray(rows)?rows:[]).some(x=>
+      loginOf(x?.loginId)===target&&x?.type==="dead"&&x?.effectActive!==false&&
+      Number(x?.night)===previous&&
+      (!x?.cycleKey||["night-"+previous,"morning-"+previous,"day-"+previous].includes(String(x.cycleKey))));
+  }
   function targetAllowed(action,member,effect,rows=[],night=0){
     if(!action||!member?.loginId||action.noTarget)return false;
     if(action.noSelf&&action.actorIds.includes(loginOf(member.loginId)))return false;
+    if((action.forbiddenTargets||[]).includes(loginOf(member.loginId)))return false;
+    if(action.roleId==="role_old_witch"&&action.actionId==="action_revive")
+      return effect==="dead"&&oldWitchReviveEligible(action,member,rows,night);
     if(action.type==="revive")return effect==="dead"||effect==="expelled";
     // A night victim is announced at dawn; the Seer may still scan them tonight.
     // Historical deaths remain ineligible on subsequent nights.
@@ -143,6 +155,6 @@
         x?.effectActive!==false&&Number(x?.night)===Number(night)&&night>0);
     return nightVictim||action.allowDead||effect!=="dead";
   }
-  const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
+  const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed,oldWitchReviveEligible});
   root.GMWW_BATTLE_CONTROLS=api;
 })(globalThis);
