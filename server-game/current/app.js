@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.227';
+const VERSION='3.228';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -2047,6 +2047,23 @@ function gmwwOpsInitialize(){
   });
 }
 gmwwOpsInitialize();
+
+/* GMWW 3.228 — Bảo vệ hạn mức ghi Durable Objects, luôn chạy tự động trên Server. */
+document.getElementById('settingsOptimizeDO')?.addEventListener('click',async()=>{
+  const button=document.getElementById('settingsOptimizeDO'),output=document.getElementById('settingsOptimizeDOStatus');
+  if(button?.disabled)return;
+  if(button)button.disabled=true;
+  if(output)output.textContent='Đang kiểm tra chính sách giảm ghi trùng trên Server…';
+  try{
+    const data=await gmApi('/api/gm/storage-optimizer',{method:'GET'});
+    if(!data?.ok||data.enabled!==true)throw new Error('Chính sách tối ưu chưa hoạt động');
+    const count=Number(data.avoidedWrites||0);
+    if(output)output.textContent='ĐANG BẬT TỰ ĐỘNG • Đã bỏ qua '+count.toLocaleString('vi-VN')+
+      ' lượt ghi trùng trong phiên Server hiện tại. Không xóa phòng/dữ liệu. Số này không phải hóa đơn Cloudflare.';
+  }catch(error){
+    if(output)output.textContent='Chưa xác minh được công cụ trên Server: '+String(error?.message||error);
+  }finally{if(button)button.disabled=false;}
+});
 
 /* V2.97 — Thành Viên dùng Bộ 42 Nhân Vật game, không dùng thumbnail Artwork */
 /* V2.29 — V1 Member management + Ranking + History */
